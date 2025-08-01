@@ -12,6 +12,17 @@ from .config import load_config
 from .logging_config import setup_logging
 from .service_manager import ServiceManager
 
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    # For Python <3.8 compatibility
+    from importlib_metadata import version, PackageNotFoundError
+
+def get_version():
+    try:
+        return version("mediamtx-camera-service")
+    except PackageNotFoundError:
+        return "unknown"
 
 async def main():
     """Main application entry point."""
@@ -22,8 +33,9 @@ async def main():
         # Setup logging
         setup_logging(config.logging)
         logger = logging.getLogger(__name__)
-        
-        logger.info("Starting MediaMTX Camera Service v0.1.0")
+
+        service_version = get_version()
+        logger.info(f"Starting MediaMTX Camera Service v{service_version}")
         
         # Create and start service manager
         service_manager = ServiceManager(config)

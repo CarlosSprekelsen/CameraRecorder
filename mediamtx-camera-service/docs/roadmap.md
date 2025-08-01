@@ -10,6 +10,13 @@
 - **E4: Future Extensibility**
     - Lay groundwork for cloud integration, advanced protocols, and pluggable camera sources.
 
+- **E5: Deployment & Operations Strategy**
+    - Story: Review and confirm system integration (systemd vs others)
+    - Story: Decide on user permission model (dedicated vs existing)
+    - Story: Validate and document production file system layout
+    - Story: Define update and rollback strategy
+    - Story: Establish backup & recovery procedures
+
 ---
 
 ## 📈 Stories (Major Features/Phases)
@@ -34,6 +41,13 @@
 - [ ] **[CLEANUP]** Remove outdated TODOs from all code files per audit
 - [ ] **[CLEANUP]** Remove development checklists from README.md
 - [ ] **[CLEANUP]** Delete or complete placeholder files in tests/ and examples/
+
+### 🟠 Decisions Needing Immediate Resolution (Priority: P0)
+- [ ] **[DECISION]** Confirm WebSocket-only API vs hybrid REST+WebSocket
+- [ ] **[DECISION]** Select authentication strategy (None, JWT, API keys, or client certs)
+- [ ] **[DECISION]** Choose logging format (structured JSON vs traditional)
+- [ ] **[DECISION]** Define initial performance targets (latency, throughput)
+- [ ] **[DECISION]** Set resource limits (memory, CPU, storage)
 
 ### 💻 Core Implementation (Priority: P1)  
 - [ ] **[IMPL]** ServiceManager stub with architecture alignment
