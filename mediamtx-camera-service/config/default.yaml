@@ -1,0 +1,44 @@
+﻿# MediaMTX Camera Service - Default Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+
+camera:
+  poll_interval: 0.1
+  detection_timeout: 2.0
+  device_range: [0, 9]  # /dev/video0 to /dev/video9
+  enable_capability_detection: true
+  auto_start_streams: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_enabled: true
+  file_path: "/opt/camera-service/logs/camera-service.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+recording:
+  auto_record: false
+  format: "mp4"
+  quality: "high"
+  max_duration: 3600  # 1 hour
+  cleanup_after_days: 30
+
+snapshots:
+  format: "jpg"
+  quality: 90
+  cleanup_after_days: 7

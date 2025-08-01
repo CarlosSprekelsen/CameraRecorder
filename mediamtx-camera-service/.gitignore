@@ -1,0 +1,63 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Configuration (sensitive)
+.env
+config/local.yaml
+config/production.yaml
+
+# Media files
+recordings/
+snapshots/
+*.mp4
+*.jpg
+*.png
+
+# Test files
+.coverage
+.pytest_cache/
+htmlcov/
+
+# MediaMTX
+mediamtx
+mediamtx.exe
