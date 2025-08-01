@@ -296,12 +296,12 @@ class WebSocketJsonRpcServer:
 
     def _register_builtin_methods(self) -> None:
         """Register built-in JSON-RPC methods."""
-        # TODO: Register ping method
-        # TODO: Register get_camera_list method
-        # TODO: Register get_camera_status method
-        # TODO: Register take_snapshot method
-        # TODO: Register start_recording method
-        # TODO: Register stop_recording method
+        self.register_method("ping", self._method_ping)
+        self.register_method("get_camera_list", self._method_get_camera_list)
+        self.register_method("get_camera_status", self._method_get_camera_status)
+        self.register_method("take_snapshot", self._method_take_snapshot)
+        self.register_method("start_recording", self._method_start_recording)
+        self.register_method("stop_recording", self._method_stop_recording)
         
         self._logger.debug("Registered built-in JSON-RPC methods")
 
@@ -313,26 +313,135 @@ class WebSocketJsonRpcServer:
             params: Method parameters (unused)
             
         Returns:
-            Pong response
+            "pong" response string
         """
         return "pong"
 
     async def _method_get_camera_list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Get list of available cameras.
+        Get list of all discovered cameras with their current status.
         
         Args:
-            params: Method parameters
+            params: Method parameters (unused)
             
         Returns:
-            Camera list response
+            Object with camera list and metadata containing:
+            - cameras: List of camera objects with device, status, name, etc.
+            - total: Total number of cameras discovered
+            - connected: Number of currently connected cameras
         """
-        # TODO: Query camera service for available cameras
+        # TODO: Query camera discovery service for available cameras
         # TODO: Format response according to API specification
+        # TODO: Include stream URLs for each connected camera
         return {
             "cameras": [],
             "total": 0,
             "connected": 0
+        }
+
+    async def _method_get_camera_status(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Get detailed status for a specific camera.
+        
+        Args:
+            params: Method parameters containing:
+                - device: Camera device path (e.g., "/dev/video0")
+                
+        Returns:
+            Detailed camera status object with device info, streams, and metrics
+            
+        Raises:
+            ValueError: If device parameter is missing or camera not found
+        """
+        # TODO: Validate device parameter is provided
+        # TODO: Query camera monitor for specific camera status
+        # TODO: Include stream information and health metrics
+        # TODO: Return error if camera not found
+        return {
+            "device": params.get("device") if params else None,
+            "status": "unknown",
+            "error": "Not implemented"
+        }
+
+    async def _method_take_snapshot(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Capture a snapshot from the specified camera.
+        
+        Args:
+            params: Method parameters containing:
+                - device: Camera device path (required)
+                - filename: Custom filename (optional)
+                
+        Returns:
+            Snapshot information object with filename, timestamp, and status
+            
+        Raises:
+            ValueError: If device parameter is missing or camera not available
+        """
+        # TODO: Validate device parameter is provided
+        # TODO: Check camera is connected and streaming
+        # TODO: Call MediaMTX controller to capture snapshot
+        # TODO: Generate filename if not provided
+        # TODO: Return snapshot metadata
+        return {
+            "device": params.get("device") if params else None,
+            "filename": None,
+            "status": "not_implemented",
+            "error": "Not implemented"
+        }
+
+    async def _method_start_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Start recording video from the specified camera.
+        
+        Args:
+            params: Method parameters containing:
+                - device: Camera device path (required)
+                - duration: Recording duration in seconds (optional)
+                - format: Recording format - "mp4" or "mkv" (optional)
+                
+        Returns:
+            Recording session information with filename, status, and metadata
+            
+        Raises:
+            ValueError: If device parameter is missing or camera not available
+        """
+        # TODO: Validate device parameter is provided
+        # TODO: Check camera is connected and not already recording
+        # TODO: Call MediaMTX controller to start recording
+        # TODO: Generate recording filename with timestamp
+        # TODO: Return recording session information
+        return {
+            "device": params.get("device") if params else None,
+            "filename": None,
+            "status": "not_implemented",
+            "error": "Not implemented"
+        }
+
+    async def _method_stop_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Stop active recording for the specified camera.
+        
+        Args:
+            params: Method parameters containing:
+                - device: Camera device path (required)
+                
+        Returns:
+            Recording completion information with final file details
+            
+        Raises:
+            ValueError: If device parameter is missing or not currently recording
+        """
+        # TODO: Validate device parameter is provided
+        # TODO: Check camera is currently recording
+        # TODO: Call MediaMTX controller to stop recording
+        # TODO: Get final recording metrics (duration, file size)
+        # TODO: Return recording completion information
+        return {
+            "device": params.get("device") if params else None,
+            "filename": None,
+            "status": "not_implemented",
+            "error": "Not implemented"
         }
 
     def get_connection_count(self) -> int:
