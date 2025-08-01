@@ -37,26 +37,25 @@
 
 ## 📝 Tasks (Immediate/Short-Term)
 
-### 🔧 Architecture Compliance (Priority: P0)
-- [X] **[CLEANUP]** Remove outdated TODOs from all code files per audit
-- [X] **[CLEANUP]** Remove development checklists from README.md
-- [X] **[CLEANUP]** Delete or complete placeholder files in tests/ and examples/
+### 💻 Core Implementation (Priority: P1)
 
-### 🟠 Decisions Needing Immediate Resolution (Priority: P0)
-- [X] **[DECISION]** Confirm WebSocket-only API vs hybrid REST+WebSocket
-- [X] **[DECISION]** Select authentication strategy (None, JWT, API keys, or client certs)
-- [X] **[DECISION]** Choose logging format (structured JSON vs traditional)
-- [X] **[DECISION]** Define initial performance targets (latency, throughput)
-- [X] **[DECISION]** Set resource limits (memory, CPU, storage)
+- [ ] **[IMPL]** MediaMTXController stub: Create `src/mediamtx_wrapper/controller.py` to define an async client/controller class for managing MediaMTX streams, recording, and health (stub only, with docstrings and TODOs).
+- [ ] **[IMPL]** MediaMTX config template: Add a starter YAML config file for MediaMTX in `config/mediamtx/templates/`, parameterized for your service’s needs.
+- [ ] **[IMPL]** Integrate camera discovery with MediaMTXController: Update `ServiceManager` and stubs so that camera connect/disconnect events will (eventually) trigger stream config updates via MediaMTXController (stub the integration point only).
+- [ ] **[IMPL]** WebSocket JSON-RPC server scaffold: Create a stub server in `src/websocket_server/server.py` with class, methods, and event handler structure per architecture (no business logic yet).
+- [ ] **[IMPL]** Define basic JSON-RPC method specs: Add minimal stub methods for `ping`, `get_camera_list`, etc. in the server scaffold.
+- [ ] **[IMPL]** API documentation stubs: For any new public API methods, add their names and parameters to `docs/api/json-rpc-methods.md` (as "not yet implemented" if so).
 
-### 💻 Core Implementation (Priority: P1)  
-- [X] **[IMPL]** ServiceManager stub with architecture alignment
-- [X] **[IMPL]** Logging configuration in logging_config.py
-- [X] **[IMPL]** Camera discovery hybrid approach (udev + polling)
+---
+
+### 🟢 (Optional, parallel) – Developer Experience/CI
+
+- [ ] **[DEV]** Add/validate test stubs for all new modules (unit test skeletons, “test import” at minimum).
+- [ ] **[DEV]** Update or add pre-commit hooks, linter configs, or CI workflow files for new paths/modules if not already present.
+
 
 ### 📚 Documentation (Priority: P2)
 - [ ] **[DOCS]** Complete setup instructions in setup.md
-- [ ] **[DOCS]** Finalize coding standards document
 
 ---
 
