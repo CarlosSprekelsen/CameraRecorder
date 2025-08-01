@@ -12,15 +12,20 @@ import logging
 from typing import Optional
 
 from .config import Config
+from ..mediamtx_wrapper.controller import MediaMTXController
+from ..camera_discovery.hybrid_monitor import CameraEventData, CameraEvent, CameraEventHandler
 
 
-class ServiceManager:
+class ServiceManager(CameraEventHandler):
     """
     Main service orchestrator that manages the lifecycle of all camera service components.
     
     The ServiceManager coordinates between the WebSocket JSON-RPC Server, Camera Discovery
     Monitor, MediaMTX Controller, and Health & Monitoring subsystems as defined in the
     architecture overview.
+    
+    Implements CameraEventHandler to receive camera connect/disconnect events and
+    coordinate with MediaMTX stream management.
     """
 
     def __init__(self, config: Config) -> None:
@@ -38,7 +43,7 @@ class ServiceManager:
         # Component references - TODO: Initialize actual components
         self._websocket_server = None
         self._camera_monitor = None
-        self._mediamtx_controller = None
+        self._mediamtx_controller: Optional[MediaMTXController] = None
         self._health_monitor = None
 
     async def start(self) -> None:
@@ -61,16 +66,16 @@ class ServiceManager:
         self._shutdown_event = asyncio.Event()
         
         try:
-            # TODO: Initialize and start MediaMTX Controller
+            # Initialize and start MediaMTX Controller
             await self._start_mediamtx_controller()
             
-            # TODO: Initialize and start Camera Discovery Monitor
+            # Initialize and start Camera Discovery Monitor
             await self._start_camera_monitor()
             
-            # TODO: Initialize and start Health & Monitoring
+            # Initialize and start Health & Monitoring
             await self._start_health_monitor()
             
-            # TODO: Initialize and start WebSocket JSON-RPC Server
+            # Initialize and start WebSocket JSON-RPC Server
             await self._start_websocket_server()
             
             self._running = True
@@ -98,16 +103,16 @@ class ServiceManager:
         
         try:
             # Stop components in reverse order
-            # TODO: Stop WebSocket JSON-RPC Server
+            # Stop WebSocket JSON-RPC Server
             await self._stop_websocket_server()
             
-            # TODO: Stop Health & Monitoring
+            # Stop Health & Monitoring
             await self._stop_health_monitor()
             
-            # TODO: Stop Camera Discovery Monitor
+            # Stop Camera Discovery Monitor
             await self._stop_camera_monitor()
             
-            # TODO: Stop MediaMTX Controller
+            # Stop MediaMTX Controller
             await self._stop_mediamtx_controller()
             
             self._running = False
@@ -132,16 +137,105 @@ class ServiceManager:
             
         await self._shutdown_event.wait()
 
+    async def handle_camera_event(self, event_data: CameraEventData) -> None:
+        """
+        Handle camera connect/disconnect events from the camera monitor.
+        
+        Coordinates MediaMTX stream configuration updates based on camera events.
+        
+        Args:
+            event_data: Camera event information including device path and type
+        """
+        self._logger.info(
+            f"Handling camera event: {event_data.event_type.value} - {event_data.device_path}"
+        )
+        
+        try:
+            if event_data.event_type == CameraEvent.CONNECTED:
+                await self._handle_camera_connected(event_data)
+            elif event_data.event_type == CameraEvent.DISCONNECTED:
+                await self._handle_camera_disconnected(event_data)
+            elif event_data.event_type == CameraEvent.STATUS_CHANGED:
+                await self._handle_camera_status_changed(event_data)
+                
+        except Exception as e:
+            self._logger.error(f"Error handling camera event: {e}", exc_info=True)
+
+    async def _handle_camera_connected(self, event_data: CameraEventData) -> None:
+        """
+        Handle camera connection event.
+        
+        Creates MediaMTX stream configuration for the newly connected camera.
+        
+        Args:
+            event_data: Camera connection event data
+        """
+        # TODO: Extract camera device number from device path (e.g., /dev/video0 -> 0)
+        # TODO: Create StreamConfig for the camera
+        # TODO: Call MediaMTXController.create_stream() with camera configuration
+        # TODO: Store stream information for client notifications
+        # TODO: Notify WebSocket clients of new camera availability
+        
+        self._logger.debug(f"Creating stream for connected camera: {event_data.device_path}")
+
+    async def _handle_camera_disconnected(self, event_data: CameraEventData) -> None:
+        """
+        Handle camera disconnection event.
+        
+        Removes MediaMTX stream configuration for the disconnected camera.
+        
+        Args:
+            event_data: Camera disconnection event data
+        """
+        # TODO: Extract stream name from device path
+        # TODO: Stop any active recordings for this camera
+        # TODO: Call MediaMTXController.delete_stream() to remove stream
+        # TODO: Clean up stored stream information
+        # TODO: Notify WebSocket clients of camera removal
+        
+        self._logger.debug(f"Removing stream for disconnected camera: {event_data.device_path}")
+
+    async def _handle_camera_status_changed(self, event_data: CameraEventData) -> None:
+        """
+        Handle camera status change event.
+        
+        Updates MediaMTX stream configuration based on camera status changes.
+        
+        Args:
+            event_data: Camera status change event data
+        """
+        # TODO: Determine if stream configuration needs updates
+        # TODO: Update MediaMTX stream settings if needed
+        # TODO: Notify WebSocket clients of status changes
+        
+        self._logger.debug(f"Handling status change for camera: {event_data.device_path}")
+
     async def _start_mediamtx_controller(self) -> None:
         """Start the MediaMTX REST API controller component."""
-        # TODO: Initialize MediaMTX Controller with config
+        self._logger.debug("Starting MediaMTX controller")
+        
+        # Initialize MediaMTX Controller with configuration
+        self._mediamtx_controller = MediaMTXController(
+            host=self._config.mediamtx.host,
+            api_port=self._config.mediamtx.api_port,
+            rtsp_port=self._config.mediamtx.rtsp_port,
+            webrtc_port=self._config.mediamtx.webrtc_port,
+            hls_port=self._config.mediamtx.hls_port,
+            config_path=self._config.mediamtx.config_path,
+            recordings_path=self._config.mediamtx.recordings_path,
+            snapshots_path=self._config.mediamtx.snapshots_path
+        )
+        
+        # TODO: Start MediaMTX controller
+        await self._mediamtx_controller.start()
+        
         # TODO: Verify MediaMTX connectivity and health
         # TODO: Setup MediaMTX configuration management
-        pass
 
     async def _start_camera_monitor(self) -> None:
         """Start the camera discovery and monitoring component."""
         # TODO: Initialize Camera Discovery Monitor with config
+        # TODO: Register this ServiceManager as camera event handler
         # TODO: Setup hybrid udev + polling camera detection
         # TODO: Start camera capability detection
         pass
@@ -174,15 +268,32 @@ class ServiceManager:
 
     async def _stop_camera_monitor(self) -> None:
         """Stop the camera discovery and monitoring component."""
+        # TODO: Unregister camera event handler
         # TODO: Stop camera monitoring
         # TODO: Cleanup camera resources and streams
         pass
 
     async def _stop_mediamtx_controller(self) -> None:
         """Stop the MediaMTX controller component."""
-        # TODO: Cleanup MediaMTX streams and configuration
-        # TODO: Stop MediaMTX controller
-        pass
+        if self._mediamtx_controller:
+            # TODO: Cleanup MediaMTX streams and configuration
+            await self._mediamtx_controller.stop()
+            self._mediamtx_controller = None
+
+    def _get_stream_name_from_device_path(self, device_path: str) -> str:
+        """
+        Extract stream name from camera device path.
+        
+        Args:
+            device_path: Camera device path (e.g., /dev/video0)
+            
+        Returns:
+            Stream name for MediaMTX (e.g., camera0)
+        """
+        # TODO: Parse device path and extract device number
+        # TODO: Return consistent stream name format
+        # Example: /dev/video0 -> camera0
+        return "camera0"  # Placeholder
 
     @property
     def is_running(self) -> bool:
@@ -202,6 +313,6 @@ class ServiceManager:
             "running": self._running,
             "websocket_server": "not_implemented",
             "camera_monitor": "not_implemented", 
-            "mediamtx_controller": "not_implemented",
+            "mediamtx_controller": "started" if self._mediamtx_controller else "not_started",
             "health_monitor": "not_implemented"
         }
