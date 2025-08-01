@@ -2,8 +2,11 @@
 End-to-end tests for complete camera service workflows.
 """
 
-# TODO: Implement end-to-end tests
-# - Test complete camera connect -> stream -> record workflow
-# - Test WebSocket JSON-RPC client interaction
-# - Test error recovery scenarios
-# - Test multi-camera scenarios
+import pytest
+
+@pytest.mark.skip(reason="End-to-end workflow tests not yet implemented")
+def test_camera_service_full_workflow():
+    """Test complete camera connect -> stream -> record workflow."""
+    # TODO: Implement test
+    pass
+

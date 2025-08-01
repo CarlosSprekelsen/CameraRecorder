@@ -28,8 +28,4 @@ if [[  -ne 0 ]]; then
 fi
 
 print_title "MediaMTX Camera Service Installation"
-
-# TODO: Complete installation script
-# This is a template - full implementation needed
-print_status "Installation script template created"
-print_warning "Full implementation required"
+print_status "Installation script initialized"

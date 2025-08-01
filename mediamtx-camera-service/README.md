@@ -94,4 +94,4 @@ const ws = new WebSocket('ws://localhost:8002/ws');
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
