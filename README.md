@@ -12,7 +12,7 @@ A lightweight WebSocket JSON-RPC 2.0 service that provides real-time USB camera 
 - **Lightweight**: Minimal wrapper (~30MB RAM) around robust MediaMTX core
 
 ### Problem & Solution
-Instead of building a complex media server from scratch, create a **thin wrapper** around MediaMTX that adds:
+Create a **thin wrapper** around a proven recomended solution like MediaMTX that adds:
 - Real-time USB camera monitoring
 - WebSocket JSON-RPC 2.0 API
 - Dynamic camera stream management
