@@ -38,21 +38,21 @@
 ## 📝 Tasks (Immediate/Short-Term)
 
 ### 🔧 Architecture Compliance (Priority: P0)
-- [ ] **[CLEANUP]** Remove outdated TODOs from all code files per audit
-- [ ] **[CLEANUP]** Remove development checklists from README.md
-- [ ] **[CLEANUP]** Delete or complete placeholder files in tests/ and examples/
+- [X] **[CLEANUP]** Remove outdated TODOs from all code files per audit
+- [X] **[CLEANUP]** Remove development checklists from README.md
+- [X] **[CLEANUP]** Delete or complete placeholder files in tests/ and examples/
 
 ### 🟠 Decisions Needing Immediate Resolution (Priority: P0)
-- [ ] **[DECISION]** Confirm WebSocket-only API vs hybrid REST+WebSocket
-- [ ] **[DECISION]** Select authentication strategy (None, JWT, API keys, or client certs)
-- [ ] **[DECISION]** Choose logging format (structured JSON vs traditional)
-- [ ] **[DECISION]** Define initial performance targets (latency, throughput)
-- [ ] **[DECISION]** Set resource limits (memory, CPU, storage)
+- [X] **[DECISION]** Confirm WebSocket-only API vs hybrid REST+WebSocket
+- [X] **[DECISION]** Select authentication strategy (None, JWT, API keys, or client certs)
+- [X] **[DECISION]** Choose logging format (structured JSON vs traditional)
+- [X] **[DECISION]** Define initial performance targets (latency, throughput)
+- [X] **[DECISION]** Set resource limits (memory, CPU, storage)
 
 ### 💻 Core Implementation (Priority: P1)  
-- [ ] **[IMPL]** ServiceManager stub with architecture alignment
-- [ ] **[IMPL]** Logging configuration in logging_config.py
-- [ ] **[IMPL]** Camera discovery hybrid approach (udev + polling)
+- [X] **[IMPL]** ServiceManager stub with architecture alignment
+- [X] **[IMPL]** Logging configuration in logging_config.py
+- [X] **[IMPL]** Camera discovery hybrid approach (udev + polling)
 
 ### 📚 Documentation (Priority: P2)
 - [ ] **[DOCS]** Complete setup instructions in setup.md

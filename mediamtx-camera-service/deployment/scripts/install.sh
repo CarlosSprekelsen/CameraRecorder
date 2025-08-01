@@ -29,4 +29,3 @@ fi
 
 print_title "MediaMTX Camera Service Installation"
 print_status "Installation script initialized"
-print_warning "Full implementation required"

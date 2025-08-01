@@ -254,3 +254,8 @@ The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, pr
 3. **Configuration Management**: YAML primary config, environment variable overrides, schema validation.
 4. **Error Recovery Strategy**: Health monitoring, exponential backoff, circuit breaker, health event logging.
 5. **API Versioning Strategy**: Method-level JSON-RPC versioning, structured deprecation, migration
+6. **API Protocol Strategy**: WebSocket-only JSON-RPC with minimal REST health endpoints
+7. **Authentication Strategy**: JWT for users, API keys for services, optional mTLS for high-security
+8. **Logging Format**: Structured JSON with correlation IDs, pretty-print for development  
+9. **Performance Targets**: <200ms camera detection, <50ms API calls, 16 cameras, 100 clients
+10. **Resource Limits**: <100MB RAM, <20% CPU, 500MB logs with rotation, disk usage warnings
