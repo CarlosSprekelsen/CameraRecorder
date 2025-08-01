@@ -145,16 +145,6 @@ mediamtx-camera-service/
 4. **Update Strategy** - In-place updates vs blue-green deployment?
 5. **Backup & Recovery** - Configuration and recording backup strategy
 
-## 🔧 Development Commands
-
-```bash
-make dev-install    # Set up development environment
-make test          # Run test suite
-make lint          # Code quality checks
-make format        # Auto-format code
-make run           # Start development server
-make clean         # Clean build artifacts
-```
 
 ## 📊 Success Metrics
 

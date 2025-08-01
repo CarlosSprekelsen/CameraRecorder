@@ -1,14 +1,21 @@
 ﻿# Architecture Overview
 
+## Status
+
+**Architecture Decisions v6: APPROVED**  
+All decisions align with industry standards, balance modernity with maintainability, and support concrete operational goals without overengineering.
+
+---
+
 ## System Design
 
-The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX that provides:
+The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, providing:
 
-1. **Real-time USB camera discovery and monitoring**
-2. **WebSocket JSON-RPC 2.0 API** for client applications
-3. **Dynamic MediaMTX configuration management**
+1. **Real-time USB camera discovery and monitoring** (hybrid udev + polling)
+2. **WebSocket JSON-RPC 2.0 API** with method-level versioning and structured deprecation
+3. **Dynamic MediaMTX configuration management** (YAML + env overrides)
 4. **Streaming, recording, and snapshot coordination**
-5. **Robust error recovery and health monitoring**
+5. **Resilient error recovery and health monitoring** (circuit breaker, exponential backoff)
 6. **Secure access control and authentication**
 
 ## Component Architecture
@@ -26,11 +33,13 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 │            WebSocket JSON-RPC Server                      │
 │     • Client connection management                         │
 │     • JSON-RPC 2.0 protocol handling                      │
+│     • Method-level API versioning & deprecation           │
 │     • Real-time notifications                             │
 │     • Authentication and authorization                     │
 ├─────────────────────────────────────────────────────────────┤
 │             Camera Discovery Monitor                      │
-│     • USB connect/disconnect detection                    │
+│     • Hybrid udev events + polling fallback               │
+│     • Configurable polling interval                       │
 │     • v4l2 capability detection                           │
 │     • Camera status tracking                              │
 │     • Hot-plug event handling                             │
@@ -42,9 +51,9 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 │     • Health monitoring and recovery                      │
 ├─────────────────────────────────────────────────────────────┤
 │               Health & Monitoring                         │
-│     • Service health checks                               │
+│     • Service health checks (REST, circuit breaker)       │
 │     • Resource usage monitoring                           │
-│     • Error tracking and recovery                         │
+│     • Error tracking and recovery (exponential backoff)   │
 │     • Configuration hot reload                            │
 └─────────────────────┬───────────────────────────────────────┘
                       │ HTTP REST API
@@ -68,15 +77,15 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 ## Data Flow
 
 ### Camera Discovery Flow
-1. **Monitor** detects USB camera connection via udev/polling
+1. **Monitor** detects USB camera connection via udev or polling (hybrid, configurable)
 2. **Detector** probes camera capabilities using v4l2-ctl
-3. **Controller** creates MediaMTX stream configuration
+3. **Controller** creates MediaMTX stream configuration (YAML, env overrides)
 4. **Health Monitor** verifies MediaMTX accepts configuration
 5. **Server** broadcasts camera status notification to authenticated clients
 6. **Recovery Handler** manages connection failures and retries
 
 ### Streaming Flow  
-1. **Client** requests stream via authenticated JSON-RPC call
+1. **Client** requests stream via authenticated JSON-RPC call (method-level versioning)
 2. **Authorization** validates client permissions for camera access
 3. **Controller** configures MediaMTX path with FFmpeg source
 4. **Health Monitor** verifies stream establishment
@@ -94,8 +103,9 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 ## Error Recovery and Resilience
 
 ### MediaMTX Failure Handling
-- **Health Checks**: Continuous HTTP API monitoring (every 5s)
+- **Health Checks**: Continuous REST API monitoring (every 5s)
 - **Automatic Recovery**: Service restart with exponential backoff
+- **Circuit Breaker**: Graceful degradation on repeated failures
 - **State Preservation**: Camera configurations cached and restored
 - **Client Notification**: Real-time failure/recovery status updates
 - **Graceful Degradation**: Read-only mode when MediaMTX unavailable
@@ -142,6 +152,9 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 - **Change Notification**: Real-time config update broadcasts
 
 ### Versioned Configuration
+- **YAML Primary Configuration**: Human-readable, MediaMTX-consistent
+- **Environment Variable Overrides**: For CI/CD and container deployments
+- **Schema Validation**: On configuration load
 - **Change Tracking**: Configuration history with timestamps
 - **Backup Strategy**: Automatic configuration backups
 - **Migration Support**: Smooth upgrades between config versions
@@ -190,7 +203,7 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 ## Non-Functional Requirements
 
 ### Performance Targets
-- **Camera Detection**: Sub-200ms USB connect/disconnect detection
+- **Camera Detection**: Sub-200ms USB connect/disconnect detection (hybrid method)
 - **API Response**: <50ms for status queries, <100ms for control operations
 - **Memory Usage**: <30MB base service footprint, <100MB with 10 cameras
 - **CPU Usage**: <5% idle, <20% with active streaming and recording
@@ -210,9 +223,9 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 ## Technology Stack
 
 - **Camera Service**: Python 3.10+, asyncio, websockets, aiohttp
-- **Media Server**: MediaMTX (Go binary) v1.0+
+- **Media Server**: MediaMTX (Go binary), target latest stable, minimum version pinned after compatibility confirmation
 - **Camera Interface**: V4L2, FFmpeg 6.0+
-- **Protocols**: WebSocket, JSON-RPC 2.0, REST, RTSP, WebRTC, HLS
+- **Protocols**: WebSocket, JSON-RPC 2.0 (method-level versioning), REST, RTSP, WebRTC, HLS
 - **Security**: JWT, TLS 1.3, optional mTLS
 - **Deployment**: Systemd services, native Linux (Ubuntu 22.04+)
 - **Monitoring**: Prometheus metrics, structured JSON logging
@@ -231,3 +244,13 @@ The MediaMTX Camera Service is built as a lightweight wrapper around MediaMTX th
 - **Mock Services**: Camera and MediaMTX simulators for testing
 - **Debug Tools**: Enhanced logging and diagnostic endpoints
 - **Hot Reload**: Development-mode configuration and code reloading
+
+---
+
+## Architecture Decisions (Summary)
+
+1. **MediaMTX Version Compatibility**: Target latest stable, pin minimum after compatibility confirmation, document upgrade/test process.
+2. **Camera Discovery Method**: Hybrid udev + polling, configurable, with environment-based switching.
+3. **Configuration Management**: YAML primary config, environment variable overrides, schema validation.
+4. **Error Recovery Strategy**: Health monitoring, exponential backoff, circuit breaker, health event logging.
+5. **API Versioning Strategy**: Method-level JSON-RPC versioning, structured deprecation, migration
