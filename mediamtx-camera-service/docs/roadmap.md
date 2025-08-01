@@ -1,68 +1,96 @@
 # Project Roadmap
 
 ## 🌍 Epics (Long-Term Goals)
+
 - **E1: Robust Real-Time Camera Service Core**
-    - Deliver a stable, production-ready camera monitoring and control backend fully aligned with the approved architecture.
+    - **S1: Complete Architecture Compliance**
+        - [ ] [FIX] Implement all missing JSON-RPC method stubs in `server.py` as referenced in API docs.
+        - [ ] [FIX] Correct all parameter typos in `api/json-rpc-methods.md`.
+        - [ ] [IMPL] Add notification handler stubs in `server.py`.
+        - [ ] [FIX] Refactor all hard-coded values (e.g., `hybrid_monitor.py`).
+        - [ ] [FIX] Standardize TODO comment formatting across codebase.
+        - [ ] [IMPL] Integrate correlation ID in WebSocket request logging.
+        - [ ] [IMPL] Add method-level API versioning stubs in `server.py`.
+
+    - **S2: Architecture Compliance IV&V (Control Point)**
+        - [ ] [IVV] API docs and code stubs match (method names, params, status).
+        - [ ] [IVV] All stubs/modules correspond to architecture.
+        - [ ] [IVV] No accidental scope/feature creep in stubs.
+        - [ ] [IVV] Coding standards and docstrings are present.
+        - [ ] [IVV] All CRITICAL/MEDIUM issues from IV&V resolved.
+        - **_Cannot proceed to S3 until all S2 IV&V tasks are complete._**
+
+    - **S3: Camera Discovery & Monitoring Implementation**
+        - [ ] [IMPL] Begin udev monitoring & device probing stubs in `hybrid_monitor.py`.
+        - [ ] [IMPL] Integrate camera connect/disconnect with MediaMTXController in `service_manager.py`.
+
+    - **S4: MediaMTX Integration**
+        - [ ] [IMPL] Integrate stream creation/deletion logic in `service_manager.py` and `controller.py`.
+        - [ ] [FIX] Add/complete MediaMTX config template in `config/mediamtx/templates/`.
+
+    - **S5: Core Integration IV&V (Control Point)**
+        - [ ] [IVV] MediaMTX integration tested with at least one camera/device.
+        - [ ] [IVV] Notification, error recovery, and authentication paths reviewed.
+        - [ ] [IVV] Tests cover all major workflows.
+        - **_Cannot proceed to next Epic until S5 IV&V is passed._**
+
 - **E2: Security and Production Hardening**
-    - Complete security features, error recovery, health checks, and deployment automation for a professional release.
+    - **S6: Security Features Implementation**
+        - [ ] [IMPL] Implement basic authentication framework (JWT/API key stubs) in `server.py`.
+        - [ ] [IMPL] Add health check endpoints, error recovery strategies.
+
+    - **S7: Security IV&V (Control Point)**
+        - [ ] [IVV] Authentication and health check features verified.
+        - [ ] [IVV] All endpoints have correct access control.
+        - [ ] [IVV] Security test cases in place.
+        - **_Cannot proceed to next Epic until S7 IV&V is passed._**
+
 - **E3: Client API & SDK Ecosystem**
-    - Provide reliable, well-documented client APIs/examples for easy third-party integration.
+    - **S8: Client APIs and Examples**
+        - [ ] [IMPL] Add client API usage examples in `/examples`.
+        - [ ] [DOCS] Document API usage and authentication.
+
+    - **S9: SDK & Docs IV&V (Control Point)**
+        - [ ] [IVV] Client API examples and docs reviewed for accuracy and completeness.
+        - [ ] [IVV] Usability tests or walkthroughs completed.
+
 - **E4: Future Extensibility**
-    - Lay groundwork for cloud integration, advanced protocols, and pluggable camera sources.
+    - **S10: Cloud/Protocol Extensions (Planning Only)**
+        - [ ] [IMPL] Prepare documentation and placeholders for future protocols/cloud (no implementation).
+
+    - **S11: Extensibility IV&V (Control Point)**
+        - [ ] [IVV] Future plans reviewed, documented, and approved.
+        - [ ] [IVV] All extension points and plugin mechanisms validated.
 
 - **E5: Deployment & Operations Strategy**
-    - Story: Review and confirm system integration (systemd vs others)
-    - Story: Decide on user permission model (dedicated vs existing)
-    - Story: Validate and document production file system layout
-    - Story: Define update and rollback strategy
-    - Story: Establish backup & recovery procedures
+    - **S12: Deployment Automation & Ops**
+        - [ ] [FIX] Complete `deployment/scripts/install.sh` with working steps.
+        - [ ] [DOCS] Add environment variable and system integration docs.
+        - [ ] [DOCS] Document update/rollback and backup procedures.
+
+    - **S13: Deployment IV&V (Control Point)**
+        - [ ] [IVV] Deployment scripts tested on target environments.
+        - [ ] [IVV] Operations documentation validated.
+        - [ ] [IVV] Backup/recovery procedures verified.
 
 ---
 
-## 📈 Stories (Major Features/Phases)
-- **S1: Complete Architecture Compliance**
-    - Ensure every module, config, and doc matches the approved architecture and principles.
-- **S2: Camera Discovery & Monitoring Implementation**
-    - Implement hybrid (udev + polling) camera discovery and monitoring logic.
-- **S3: MediaMTX Integration**
-    - Implement and verify REST API integration with MediaMTX for stream, record, and snapshot control.
-- **S4: WebSocket JSON-RPC API**
-    - Develop the JSON-RPC server, core methods, and client connection handling.
-- **S5: Automated Testing & Continuous Integration**
-    - Achieve >80% unit/integration test coverage with CI setup and test maintenance.
-- **S6: Documentation & Developer Onboarding**
-    - Complete usage, API, and contribution docs for new contributors.
+## 📈 Stories: Testing & Documentation (Cross-Epic)
+
+- **S14: Automated Testing & Continuous Integration**
+    - [ ] [IMPL] Add/validate minimal test scaffolding for all modules.
+    - [ ] [IMPL] Achieve >80% unit/integration test coverage.
+    - [ ] [DEV] Set up CI for linting, formatting, and tests.
+    - [ ] [DEV] Add/validate pre-commit hooks.
+
+- **S15: Documentation & Developer Onboarding**
+    - [ ] [DOCS] Complete setup instructions in `docs/development/setup.md`.
+    - [ ] [DOCS] Finalize/maintain coding standards.
+    - [ ] [DOCS] Document config/environment variables.
+    - [ ] [DOCS] Document IV&V workflow and control points.
 
 ---
 
-## 📝 Tasks (Immediate/Short-Term)
-
-### 💻 Core Implementation (Priority: P1)
-
-- [X] **[IMPL]** MediaMTXController stub: Create `src/mediamtx_wrapper/controller.py` to define an async client/controller class for managing MediaMTX streams, recording, and health (stub only, with docstrings and TODOs).
-- [X] **[IMPL]** MediaMTX config template: Add a starter YAML config file for MediaMTX in `config/mediamtx/templates/`, parameterized for your service’s needs.
-- [ ] **[IMPL]** Integrate camera discovery with MediaMTXController: Update `ServiceManager` and stubs so that camera connect/disconnect events will (eventually) trigger stream config updates via MediaMTXController (stub the integration point only).
-- [ ] **[IMPL]** WebSocket JSON-RPC server scaffold: Create a stub server in `src/websocket_server/server.py` with class, methods, and event handler structure per architecture (no business logic yet).
-- [ ] **[IMPL]** Define basic JSON-RPC method specs: Add minimal stub methods for `ping`, `get_camera_list`, etc. in the server scaffold.
-- [ ] **[IMPL]** API documentation stubs: For any new public API methods, add their names and parameters to `docs/api/json-rpc-methods.md` (as "not yet implemented" if so).
-
----
-
-### 🟢 (Optional, parallel) – Developer Experience/CI
-
-- [ ] **[DEV]** Add/validate test stubs for all new modules (unit test skeletons, “test import” at minimum).
-- [ ] **[DEV]** Update or add pre-commit hooks, linter configs, or CI workflow files for new paths/modules if not already present.
-
-
-### 📚 Documentation (Priority: P2)
-- [ ] **[DOCS]** Complete setup instructions in setup.md
-
----
-
-## 📅 How to use this Roadmap
-
-- **Short-term work goes under Tasks:** keep this list actionable and up-to-date; use it for day-to-day and weekly planning.
-- **Stories group related tasks into deliverable features or major work areas.**
-- **Epics are for tracking broad, multi-milestone project goals.**
-- **Review and update this file regularly. All contributors and AI must reference and update only this file for work status.**
-
+**How to use this Roadmap:**
+- **Cannot move to the next Story/Epic until the preceding IV&V Story is fully checked off.**
+- **Control points are explicit workflow blockers, ensuring quality before progress.**
