@@ -5,9 +5,9 @@ This document describes all available JSON-RPC 2.0 methods provided by the Camer
 ## Connection
 
 Connect to the WebSocket endpoint:
-`
+```
 ws://localhost:8002/ws
-`
+```
 
 ## Core Methods
 
@@ -18,8 +18,10 @@ Health check method that returns "pong".
 
 **Returns:** "pong"
 
+**Status:** Implemented
+
 **Example:**
-`json
+```json
 // Request
 {
   "jsonrpc": "2.0",
@@ -33,7 +35,7 @@ Health check method that returns "pong".
   "result": "pong",
   "id": 1
 }
-`
+```
 
 ### get_camera_list
 Get list of all discovered cameras with their current status.
@@ -42,8 +44,10 @@ Get list of all discovered cameras with their current status.
 
 **Returns:** Object with camera list and metadata
 
+**Status:** Not yet implemented
+
 **Example:**
-`json
+```json
 // Request
 {
   "jsonrpc": "2.0", 
@@ -74,7 +78,7 @@ Get list of all discovered cameras with their current status.
   },
   "id": 2
 }
-`
+```
 
 ## Camera Control Methods
 
@@ -84,34 +88,161 @@ Get detailed status for a specific camera.
 **Parameters:**
 - device (string): Camera device path (e.g., "/dev/video0")
 
-**Returns:** Detailed camera status object
+**Returns:** Detailed camera status object with device info, streams, and metrics
+
+**Status:** Not yet implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_camera_status",
+  "params": {
+    "device": "/dev/video0"
+  },
+  "id": 3
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "/dev/video0",
+    "status": "CONNECTED",
+    "name": "USB Camera",
+    "resolution": "1920x1080",
+    "fps": 30,
+    "streams": {
+      "rtsp": "rtsp://localhost:8554/camera0",
+      "webrtc": "http://localhost:8889/camera0/webrtc",
+      "hls": "http://localhost:8888/camera0"
+    },
+    "metrics": {
+      "bytes_sent": 1024000,
+      "readers": 2,
+      "uptime": 3600
+    }
+  },
+  "id": 3
+}
+```
 
 ### take_snapshot  
 Capture a snapshot from the specified camera.
 
 **Parameters:**
-- device (string): Camera device path
-- ilename (string, optional): Custom filename
+- device (string): Camera device path (required)
+- filename (string, optional): Custom filename
 
-**Returns:** Snapshot information object
+**Returns:** Snapshot information object with filename, timestamp, and status
+
+**Status:** Not yet implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "take_snapshot",
+  "params": {
+    "device": "/dev/video0",
+    "filename": "snapshot_001.jpg"
+  },
+  "id": 4
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "/dev/video0",
+    "filename": "snapshot_001.jpg",
+    "status": "completed",
+    "timestamp": "2025-01-15T14:30:00Z",
+    "file_size": 204800
+  },
+  "id": 4
+}
+```
 
 ### start_recording
 Start recording video from the specified camera.
 
 **Parameters:**
-- device (string): Camera device path  
+- device (string): Camera device path (required)
 - duration (number, optional): Recording duration in seconds
-- ormat (string, optional): Recording format ("mp4", "mkv")
+- format (string, optional): Recording format ("mp4", "mkv")
 
-**Returns:** Recording session information
+**Returns:** Recording session information with filename, status, and metadata
+
+**Status:** Not yet implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "start_recording",
+  "params": {
+    "device": "/dev/video0",
+    "duration": 3600,
+    "format": "mp4"
+  },
+  "id": 5
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "/dev/video0",
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "status": "started",
+    "start_time": "2025-01-15T14:30:00Z",
+    "duration": 3600,
+    "format": "mp4"
+  },
+  "id": 5
+}
+```
 
 ### stop_recording
 Stop active recording for the specified camera.
 
 **Parameters:**
-- device (string): Camera device path
+- device (string): Camera device path (required)
 
-**Returns:** Recording completion information
+**Returns:** Recording completion information with final file details
+
+**Status:** Not yet implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "stop_recording",
+  "params": {
+    "device": "/dev/video0"
+  },
+  "id": 6
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "/dev/video0",
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "status": "completed",
+    "duration": 1800,
+    "file_size": 1073741824,
+    "end_time": "2025-01-15T15:00:00Z"
+  },
+  "id": 6
+}
+```
 
 ## Notifications
 
@@ -120,8 +251,10 @@ The server sends real-time notifications for camera events.
 ### camera_status_update
 Sent when a camera connects, disconnects, or changes status.
 
+**Status:** Not yet implemented
+
 **Example:**
-`json
+```json
 {
   "jsonrpc": "2.0",
   "method": "camera_status_update", 
@@ -137,13 +270,15 @@ Sent when a camera connects, disconnects, or changes status.
     }
   }
 }
-`
+```
 
 ### recording_status_update
 Sent when recording starts, stops, or encounters an error.
 
+**Status:** Not yet implemented
+
 **Example:**
-`json
+```json
 {
   "jsonrpc": "2.0",
   "method": "recording_status_update",
@@ -154,7 +289,7 @@ Sent when recording starts, stops, or encounters an error.
     "duration": 0
   }
 }
-`
+```
 
 ## Error Codes
 
