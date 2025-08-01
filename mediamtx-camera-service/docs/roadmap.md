@@ -39,8 +39,8 @@
 
 ### 💻 Core Implementation (Priority: P1)
 
-- [ ] **[IMPL]** MediaMTXController stub: Create `src/mediamtx_wrapper/controller.py` to define an async client/controller class for managing MediaMTX streams, recording, and health (stub only, with docstrings and TODOs).
-- [ ] **[IMPL]** MediaMTX config template: Add a starter YAML config file for MediaMTX in `config/mediamtx/templates/`, parameterized for your service’s needs.
+- [X] **[IMPL]** MediaMTXController stub: Create `src/mediamtx_wrapper/controller.py` to define an async client/controller class for managing MediaMTX streams, recording, and health (stub only, with docstrings and TODOs).
+- [X] **[IMPL]** MediaMTX config template: Add a starter YAML config file for MediaMTX in `config/mediamtx/templates/`, parameterized for your service’s needs.
 - [ ] **[IMPL]** Integrate camera discovery with MediaMTXController: Update `ServiceManager` and stubs so that camera connect/disconnect events will (eventually) trigger stream config updates via MediaMTXController (stub the integration point only).
 - [ ] **[IMPL]** WebSocket JSON-RPC server scaffold: Create a stub server in `src/websocket_server/server.py` with class, methods, and event handler structure per architecture (no business logic yet).
 - [ ] **[IMPL]** Define basic JSON-RPC method specs: Add minimal stub methods for `ping`, `get_camera_list`, etc. in the server scaffold.
