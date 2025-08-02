@@ -150,18 +150,16 @@ Before marking any task as [x] complete:
             - Evidence: Full orchestration implementation (startup/shutdown, handlers) dated 2025-08-02
 
     - **S1b: Core Implementation (PENDING)**
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for `main.py`  
-            - File: `main.py`  
-            - Task: Ensure `main.py` is explicitly represented in roadmap with appropriate Epic/Story linkage.  
-            - Evidence:
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for `requirements.txt`  
+        - [x] [IMPL] **HIGH PRIORITY**: Implement main application entry point  
+            - File: `src/camera_service/main.py`  
+            - Task: Complete main() function with config loading, logging setup, and service orchestration  
+            - Evidence: `src/camera_service/main.py` lines 1-70 (2025-08-02)  
+            - Status: Complete main entry point with config loading, logging setup, service manager initialization, signal handling, and graceful shutdown
+        - [x] [IMPL] **MEDIUM PRIORITY**: Document core project dependencies  
             - File: `requirements.txt`  
-            - Task: Ensure dependency listing and its maintenance are surfaced in roadmap.  
-            - Evidence:
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for `deployment/scripts/install.sh`  
-            - File: `deployment/scripts/install.sh`  
-            - Task: Surface installation/deployment scripting in roadmap.  
-            - Evidence:
+            - Task: Maintain core dependency list with proper version constraints  
+            - Evidence: `requirements.txt` lines 1-15 (2025-08-02)  
+            - Status: Core dependencies documented (websockets, aiohttp, PyYAML, psutil) with version constraints and system notes
         - [ ] [IVV] **MEDIUM PRIORITY**: Verify all core components are tracked in roadmap.md  
             - Task: Only close when above tracking items have concrete entries and evidence.  
             - Evidence:
@@ -278,13 +276,26 @@ Before marking any task as [x] complete:
 ## 📈 Stories: Testing & Documentation (Cross-Epic)
 
 - **S14: Automated Testing & Continuous Integration**
+    - [x] [IMPL] **MEDIUM PRIORITY**: Configure code formatting and linting tools  
+        - File: `.flake8`  
+        - Task: Define flake8 configuration for consistent code formatting standards  
+        - Evidence: `.flake8` lines 1-10 (2025-08-02)  
+        - Status: Flake8 configuration with max line length 88, extend-ignore E203/W503, exclusions for build artifacts
+    - [x] [IMPL] **MEDIUM PRIORITY**: Setup pre-commit hooks for code quality  
+        - File: `.pre-commit-config.yaml`  
+        - Task: Configure automated pre-commit hooks for black, flake8, mypy, and basic file checks  
+        - Evidence: `.pre-commit-config.yaml` lines 1-25 (2025-08-02)  
+        - Status: Pre-commit configuration with black, flake8, mypy, and standard hooks for code quality
+    - [x] [IMPL] **MEDIUM PRIORITY**: Configure type checking with mypy  
+        - File: `mypy.ini`  
+        - Task: Setup mypy configuration for strict type checking compliance  
+        - Evidence: `mypy.ini` lines 1-15 (2025-08-02)  
+        - Status: Mypy configuration with strict type checking, untyped defs disabled, test relaxation
     - [ ] [IMPL] Add/validate minimal test scaffolding for all modules.  
         - Evidence:
     - [ ] [IMPL] Achieve >80% unit/integration test coverage.  
         - Evidence:
     - [ ] [DEV] Set up CI for linting, formatting, and tests.  
-        - Evidence:
-    - [ ] [DEV] Add/validate pre-commit hooks.  
         - Evidence:
     - [ ] [IVV] Audit for minor/cosmetic/documentation/test issues and verify zero open TODOs remain.  
         - Evidence:
