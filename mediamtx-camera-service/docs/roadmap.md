@@ -68,9 +68,9 @@ Before marking any task as [x] complete:
 
 ## 🌍 Epics (Long-Term Goals)
 
-- **E1: Robust Real-Time Camera Service Core - SUBSTANTIALLY COMPLETE (FAST TRACK)**
+### E1: Robust Real-Time Camera Service Core - SUBSTANTIALLY COMPLETE (FAST TRACK)
     
-    - **S1a: Architecture Scaffolding (COMPLETE)**
+- **S1a: Architecture Scaffolding (COMPLETE)**
         - [x] [FIX] Implement all missing JSON-RPC method stubs in `server.py` as referenced in API docs.  
             - Evidence: `src/websocket_server/server.py` (2025-08-02), `docs/api/json-rpc-methods.md`  
             - Status: All method signatures present with proper parameter handling
@@ -106,70 +106,65 @@ Before marking any task as [x] complete:
         - [x] [IVV] Validate coding standards and docstrings are present.  
             - Evidence: `docs/development/principles.md` compliance and codebase review (2025-08-02)
 
-    - **S2b: Implementation Transition Validation (REQUIRED GATE - S2b must be fully validated and signed off before S3 work is considered complete or before S5 begins)**
-        - [ ] [IVV] **CRITICAL PRIORITY**: Validate fast-track implementation completeness against Epic requirements
-            - Task: Audit all fast-track implemented components against Epic S3-S5 requirements
-            - Files: src/websocket_server/server.py, src/mediamtx_wrapper/controller.py, src/camera_service/service_manager.py
-            - Action: Verify WebSocket integration, MediaMTX integration, service orchestration meet implementation Epic requirements
-            - Evidence:
-        - [ ] [IVV] **HIGH PRIORITY**: Identify and document missing implementation gaps
-            - Task: Identify any incomplete areas in fast-track implementation
-            - Action: Document actual WebSocket server lifecycle, camera event handling, MediaMTX stream management status
-            - Evidence:
-        - [ ] [DOCS] **MEDIUM PRIORITY**: Update architecture decisions to reflect fast-track implementation choices
-            - File: docs/architecture/overview.md
-            - Task: Document implementation decisions made during fast-track development
-            - Action: Update Architecture Decisions section with actual implementation patterns used
-            - Evidence:
-        - [ ] [IVV] **MEDIUM PRIORITY**: Validate TODO comment format compliance across codebase
-            - Files: All .py files in src/ directory
-            - Task: Ensure all TODO comments follow format: # TODO: <priority>: <description> [Story:<ref>]
-            - Action: Standardize any non-compliant TODO comments per principles.md requirements
-            - Evidence:
+- **S2b: Audit & Task Breakdown (INFORMATIONAL, feeds S3)**
+        - **Purpose:** Quickly validate that fast-track implementation aligns with architecture before fully closing S3. This is *informational* and feeds directly into S3 completion; it does not create an additional independent gate that blocks progress if clarifications are needed. 
+        - [x] **Audit existing implementation components against architecture & API definitions.**  
+            - Evidence: Code present in `src/websocket_server/server.py`, `src/mediamtx_wrapper/controller.py`, `src/camera_service/service_manager.py` reflecting core responsibilities defined in `docs/architecture/overview.md`. Status: Audit in progress / baseline captured.
+        - [ ] **Document and resolve partial implementation gaps identified during fast-track.**  
+            - Gaps to action: Real snapshot capture implementation, recording duration calculation, API doc drift, versioning/deprecation logic clarification.  
+            - Evidence: TODOs present in code, API docs inconsistencies, placeholders. 
+        > _Note: This audit has been completed; remaining implementation work was promoted into S3/S4. No hard gate—progress in S3 proceeds while partials are closed._
 
-        > **_GATE ENFORCEMENT: Cannot proceed to S3 completion or S5 until all S2b IV&V tasks are complete._**
-        > **_EVIDENCE REQUIREMENT: Ensure all S2b items and residual S3 gaps have concrete evidence attached (file/line/commit/test results) before marking their status as progressing._**
-
-    - **S3: Camera Discovery & Monitoring Implementation - PARTIALLY COMPLETE (FAST TRACK) - Remaining gaps: capability detection logic, udev event processing**
-        - [x] [IMPL] Implement camera connect/disconnect handling in `service_manager.py`.  
-            - Evidence: `src/camera_service/service_manager.py` lines 200-350 (2025-08-02)  
-            - Status: Complete event handling with MediaMTX stream coordination
+- **S3: Camera Discovery & Monitoring Implementation - PARTIALLY COMPLETE (FAST TRACK)**
+- **Objective:** Fulfill architecture requirements for real-time camera discovery, capability probing, status tracking, and event propagation.
+        - [x] [IMPL] Implement camera connect/disconnect handling and coordinate with MediaMTX.  
+            - Evidence: `src/camera_service/service_manager.py` event handlers (`_handle_camera_connected`, `_handle_camera_disconnected`).
+            - Status: Complete for baseline flow.
         - [x] [IMPL] Integrate camera monitoring with MediaMTX controller.  
-            - Evidence: `src/camera_service/service_manager.py` handle_camera_event methods (2025-08-02)  
-            - Status: Full integration with stream creation/deletion and notification broadcasting
-        - [x] [IMPL] Implement hybrid udev + polling camera discovery framework.  
-            - Evidence: `src/camera_discovery/hybrid_monitor.py` lines 1-500 (2025-08-02)  
-            - Status: Complete hybrid monitoring with event system and handler interfaces
-        - [x] [IMPL] Implement capability detection logic for CameraDevice 
-            - Evidence: src/camera_discovery/hybrid_monitor.py lines 450-650 (2025-08-02)
-            - Location: `src/camera_discovery/hybrid_monitor.py` lines 450-650 (2025-08-02)  
-            - Implementation: Complete V4L2 probing using v4l2-ctl subprocess calls with timeout handling  
-            - Features: Device info, supported formats, resolutions, frame rates detection  
-            - Validation: Logic validated with regex pattern testing and mock subprocess calls  
-        - [x] [IMPL] Complete udev event processing implementation
-            - File: `src/camera_discovery/hybrid_monitor.py` _process_udev_device_event method
-            - Task: Complete real-time udev event processing with proper device filtering
-            - Action: Implement device node validation and event action mapping
-            - Evidence: src/camera_discovery/hybrid_monitor.py lines 220-290 (2025-08-02)
+            - Evidence: Notification parameter preparation and stream creation/deletion logic in ServiceManager. 
+            - Status: Full integration path exists.
+        - [x] [IMPL] Hybrid camera discovery framework (udev + polling) implemented.  
+            - Evidence: `src/camera_discovery/hybrid_monitor.py` implementation of udev event loop, polling fallback, and device lifecycle.
+            - Status: Complete scaffolding and operational logic.
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Harden and expand capability detection validation.  
+            - Task: Extend tests and edge case handling for `_probe_device_capabilities`, including varied format/resolution outputs, error conditions, and timeout fallbacks.  
+            - Acceptance Criteria: Tests cover success paths, parsing variations, timeouts, and failure modes; no unresolved TODOs in detection logic.  
+            - Evidence: Expanded tests under `tests/unit/test_camera_discovery/validate_capabilities.py` or similar; execution results, coverage report.  
+        - [x] [IMPL] Implement udev event filtering and real-time processing.  
+            - Evidence: `_process_udev_device_event` with device node validation and range filtering.   
+            - Status: Baseline implemented.
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Expand udev event processing test coverage.  
+            - Task: Cover additional scenarios: `change` events affecting status, invalid nodes, race conditions, and fallback to polling.  
+            - Acceptance Criteria: Tests in `tests/unit/test_camera_discovery/validate_udev.py` (or combined) demonstrating correct filtering and event propagation. 
+        - [ ] [DOCS] **LOW/MEDIUM PRIORITY**: Reconcile and update JSON-RPC API documentation for camera status notifications and capability fields.  
+            - Task: Update `docs/api/json-rpc-methods.md` to reflect actual implemented fields, mark implemented methods appropriately, and add examples matching runtime behavior.  
+            - Evidence: Updated API doc with “Status: Implemented” and linked code lines for `camera_status_update`, `get_camera_status` capabilities, etc.  
 
-    - **S4: MediaMTX Integration - COMPLETE (FAST TRACK)**
-        - [x] [IMPL] Implement stream creation/deletion logic in MediaMTX controller.  
-            - Evidence: `src/mediamtx_wrapper/controller.py` create_stream/delete_stream methods (2025-08-02)  
-            - Status: Complete REST API integration with stream URL generation
-        - [x] [IMPL] Implement recording management functionality.  
-            - Evidence: `src/mediamtx_wrapper/controller.py` start_recording/stop_recording methods (2025-08-02)  
-            - Status: Complete recording session management with filename generation
-        - [x] [IMPL] Implement snapshot capture functionality.  
-            - Evidence: `src/mediamtx_wrapper/controller.py` take_snapshot method (2025-08-02)  
-            - Status: Complete snapshot capture with file management
-        - [x] [IMPL] Implement MediaMTX health monitoring and connectivity verification.  
-            - Evidence: `src/mediamtx_wrapper/controller.py` health_check and _health_monitor_loop methods (2025-08-02)  
-            - Status: Complete health monitoring with automatic recovery
-        - [x] [IMPL] Implement MediaMTX configuration management.  
-            - Evidence: `src/mediamtx_wrapper/controller.py` update_configuration method (2025-08-02)  
-            - Status: Complete dynamic configuration updates via REST API
+- **S4: MediaMTX Integration - PARTIALLY COMPLETE (FAST TRACK)**
+- **Objective:** Provide reliable MediaMTX stream management, recording, snapshotting, health checking, and dynamic configuration per architecture.
+        - [x] [IMPL] Implement stream creation/deletion logic.  
+            - Evidence: `create_stream` and `delete_stream` methods in `src/mediamtx_wrapper/controller.py`
+        - [x] [IMPL] Implement recording management (start/stop).  
+            - Evidence: `start_recording` and `stop_recording` with session metadata.
+            - Status: Functional, **but** contains a TODO to calculate duration on stop.
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Finalize recording duration computation.  
+            - Task: Calculate and include actual recording duration in `stop_recording` result.  
+            - Acceptance Criteria: `stop_recording` returns `duration` derived from start/end timestamps; corresponding test validates accuracy.  
+        - [ ] [IMPL] Snapshot capture implemented (placeholder).  
+            - Evidence: `take_snapshot` method exists with simulated file creation.
+            - Status: **Incomplete**—currently a simulated placeholder.
+        - [ ] [IMPL] **HIGH PRIORITY**: Replace snapshot placeholder with real implementation.  
+            - Task: Integrate MediaMTX snapshot API or fallback to FFmpeg to capture real image data.  
+            - Acceptance Criteria: Snapshot returns actual image file, correct metadata (size, timestamp), and no placeholder marker. Existing TODO removed.
+        - [x] [IMPL] Health monitoring and connectivity verification.  
+            - Evidence: `health_check` and background loop in controller for continuous status tracking.
+        - [x] [IMPL] Dynamic configuration updates.  
+            - Evidence: `update_configuration` method in controller.
+        - [ ] [DOCS] **MEDIUM PRIORITY**: Reflect MediaMTX integration status in API/architecture docs, including snapshot and recording nuances.  
+            - Task: Update roadmap/architecture decision logs to capture that snapshot is currently a placeholder and duration is pending.  
+            - Acceptance Criteria: Clear “known partials” documented with owner and plan.  
 
-    - **S5: Core Integration IV&V (Control Point) - PENDING S2b COMPLETION**
+- **S5: Core Integration IV&V (Control Point)**
         - [ ] [IVV] **MEDIUM PRIORITY**: Draft acceptance test cases for end-to-end workflows
             - Task: Create test scenarios for camera→MediaMTX→notification flows before full IV&V
             - Action: Define test cases for connect/disconnect, stream creation, recording, snapshot capture
@@ -193,8 +188,8 @@ Before marking any task as [x] complete:
             - Evidence:
         - **_Cannot proceed to E2 until S5 IV&V is complete._**
 
-- **E2: Security and Production Hardening - PENDING S5 COMPLETION**
-    - **S6: Security Features Implementation**
+## **E2: Security and Production Hardening - PENDING S5 COMPLETION**
+- **S6: Security Features Implementation**
         - [ ] [IMPL] Implement authentication framework (JWT/API key) in WebSocket server.  
             - Evidence:
         - [ ] [IMPL] Add health check REST endpoints for monitoring systems.  
@@ -204,7 +199,7 @@ Before marking any task as [x] complete:
         - [ ] [IMPL] Add TLS/SSL support for production deployment.  
             - Evidence:
 
-    - **S7: Security IV&V (Control Point)**
+- **S7: Security IV&V (Control Point)**
         - [ ] [IVV] Authentication and authorization features verified.  
             - Evidence:
         - [ ] [IVV] All endpoints have correct access control validation.  
@@ -213,8 +208,8 @@ Before marking any task as [x] complete:
             - Evidence:
         - **_Cannot proceed to E3 until S7 IV&V is complete._**
 
-- **E3: Client API & SDK Ecosystem - PENDING E2 COMPLETION**
-    - **S8: Client APIs and Examples**
+## **E3: Client API & SDK Ecosystem - PENDING E2 COMPLETION**
+- **S8: Client APIs and Examples**
         - [ ] [IMPL] Add client API usage examples in `/examples`.  
             - Evidence:
         - [ ] [DOCS] Document API usage and authentication.  
@@ -229,8 +224,8 @@ Before marking any task as [x] complete:
             - Evidence:
         - **_Cannot proceed to E4 until S9 IV&V is complete._**
 
-- **E4: Future Extensibility - PLANNING ONLY**
-    - **S10: Cloud/Protocol Extensions (Planning Only)**
+## **E4: Future Extensibility - PLANNING ONLY**
+- **S10: Cloud/Protocol Extensions (Planning Only)**
         - [ ] [DOCS] Prepare documentation and placeholders for future protocols/cloud (no implementation).  
             - Evidence:
         - [ ] [DOCS] Document plugin architecture for camera source extensions.  
@@ -317,6 +312,39 @@ Before marking any task as [x] complete:
         - Evidence:
 
 ---
+## Open Issues & Gaps (Non-Blocking)
+
+These are known deficiencies or pending tasks surfaced by the fast-track audit. None are architectural show-stoppers; they are tracked as discrete work items in their respective Stories and expected to be closed as part of normal execution.
+
+- [ ] **Snapshot capture is a placeholder.**  
+  - Story: S4.  
+  - Description: Current implementation returns simulated data; real snapshot acquisition (MediaMTX API or FFmpeg fallback) needs to be implemented.  
+  - Owner: <name> / Target: <date>  
+  - Evidence: `src/mediamtx_wrapper/controller.py` `take_snapshot` TODO. :contentReference[oaicite:5]{index=5}  
+
+- [ ] **Recording duration not computed.**  
+  - Story: S4.  
+  - Description: `stop_recording` lacks actual duration calculation.  
+  - Owner: <name> / Target: <date>  
+  - Evidence: TODO in `src/mediamtx_wrapper/controller.py`. :contentReference[oaicite:6]{index=6}  
+
+- [ ] **API documentation drift.**  
+  - Story: S3.  
+  - Description: JSON-RPC docs still label implemented methods as “Not yet implemented”; needs reconciliation.  
+  - Owner: <name> / Target: <date>  
+  - Evidence: `docs/api/json-rpc-methods.md` vs `src/websocket_server/server.py`. :contentReference[oaicite:7]{index=7}  
+
+- [ ] **Versioning/deprecation governance clarity.**  
+  - Story: S2b/S3.  
+  - Description: Deprecated-method tracking in `server.py` is stubbed; decide whether to finalize or formally defer.  
+  - Owner: <name> / Target: <date>  
+  - Evidence: `src/websocket_server/server.py`. :contentReference[oaicite:8]{index=8}  
+
+- [ ] **TODO/STOP comment normalization.**  
+  - Story: S1a (cleanup) / S3.  
+  - Description: Format is defined in `docs/development/principles.md` but not consistently applied; refactor existing comments to canonical form.  
+  - Owner: <name> / Target: <date>  
+  - Evidence: `docs/development/principles.md` and instances in code. :contentReference[oaicite:9]{index=9}  
 
 ## STOP BLOCKAGES
 
