@@ -287,11 +287,44 @@ class ServiceManager(CameraEventHandler):
 
     async def _start_camera_monitor(self) -> None:
         """Start the camera discovery and monitoring component."""
-        # TODO: Initialize Camera Discovery Monitor with config
-        # TODO: Register this ServiceManager as camera event handler
-        # TODO: Setup hybrid udev + polling camera detection
-        # TODO: Start camera capability detection
-        pass
+        self._logger.debug("Starting camera discovery monitor")
+        
+        try:
+            # Initialize Camera Discovery Monitor with config
+            from ..camera_discovery.hybrid_monitor import HybridCameraMonitor
+            
+            self._camera_monitor = HybridCameraMonitor(
+                device_range=self._config.camera.device_range,
+                poll_interval=self._config.camera.poll_interval,
+                detection_timeout=self._config.camera.detection_timeout,
+                enable_capability_detection=self._config.camera.enable_capability_detection
+            )
+            
+            # Register this ServiceManager as camera event handler
+            self._camera_monitor.add_event_handler(self)
+            self._logger.debug("Registered ServiceManager as camera event handler")
+            
+            # Setup hybrid udev + polling camera detection and start monitoring
+            await self._camera_monitor.start()
+            self._logger.info("Camera discovery monitor started successfully")
+            
+            # Start camera capability detection (handled by HybridCameraMonitor)
+            capability_status = "enabled" if self._config.camera.enable_capability_detection else "disabled"
+            self._logger.debug(f"Camera capability detection {capability_status}")
+            
+            # Log configuration details
+            self._logger.debug(f"Camera monitor configuration: device_range={self._config.camera.device_range}, poll_interval={self._config.camera.poll_interval}s, detection_timeout={self._config.camera.detection_timeout}s")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start camera monitor: {e}")
+            # Cleanup on failure
+            if self._camera_monitor:
+                try:
+                    await self._camera_monitor.stop()
+                except Exception as cleanup_error:
+                    self._logger.error(f"Error during camera monitor cleanup: {cleanup_error}")
+                self._camera_monitor = None
+            raise
 
     async def _start_health_monitor(self) -> None:
         """Start the health monitoring and recovery component."""

@@ -108,12 +108,11 @@ Before marking any task as [x] complete:
         - [x] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
             - Evidence: `src/camera_service/service_manager.py` lines 150-190 (2025-08-02)
             - Status: Complete MediaMTX controller startup with health verification, directory setup, and error handling
+        - [x] [IMPL] **MEDIUM PRIORITY**: Complete camera monitor initialization in service_manager.py  
+            - Evidence: `src/camera_service/service_manager.py` lines 170-200 (2025-08-02)
+            - Status: Complete camera discovery monitor startup with HybridCameraMonitor, event handler registration, and error handling
 
     - **S1b: Core Implementation (PENDING)**
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete camera monitor initialization in service_manager.py  
-            - File: `src/camera_service/service_manager.py` line ~170
-            - Fix: Replace TODO comments in `_start_camera_monitor` with actual initialization
-            - Evidence:
         - [ ] [IVV] **LOW PRIORITY**: Document and validate logging infrastructure implementation
             - Evidence: `src/camera_service/logging_config.py` (150+ lines implemented)
             - Task: Add proper roadmap tracking for CorrelationIdFilter, JsonFormatter, structured logging
@@ -128,7 +127,7 @@ Before marking any task as [x] complete:
             - Task: Verify all JSON-RPC methods have working implementations (not NotImplementedError)
             - Task: Verify notification methods broadcast properly (not `pass` statements)
             - Evidence:
-        - [ ] [IVV] Re-validate CRITICAL/MEDIUM issue resolution after actual implementation
+        - [ ] [IVV] Re-validate all issue resolution after actual implementation
             - Task: Verify hard-coded values are refactored (not just TODO comments)
             - Task: Verify correlation ID integration is working (not just TODO comments)
             - Evidence:
