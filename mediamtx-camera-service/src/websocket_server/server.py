@@ -302,16 +302,15 @@ class WebSocketJsonRpcServer:
         self.register_method("take_snapshot", self._method_take_snapshot)
         self.register_method("start_recording", self._method_start_recording)
         self.register_method("stop_recording", self._method_stop_recording)
-        
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     async def _method_ping(self, params: Optional[Dict[str, Any]] = None) -> str:
         """
         Built-in ping method for health checks.
-        
+
         Args:
             params: Method parameters (unused)
-            
+
         Returns:
             "pong" response string
         """
@@ -320,19 +319,14 @@ class WebSocketJsonRpcServer:
     async def _method_get_camera_list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Get list of all discovered cameras with their current status.
-        
+
         Args:
             params: Method parameters (unused)
-            
+
         Returns:
-            Object with camera list and metadata containing:
-            - cameras: List of camera objects with device, status, name, etc.
-            - total: Total number of cameras discovered
-            - connected: Number of currently connected cameras
+            Object with camera list and metadata.
         """
-        # TODO: Query camera discovery service for available cameras
-        # TODO: Format response according to API specification
-        # TODO: Include stream URLs for each connected camera
+        # TODO: Implement camera discovery logic
         return {
             "cameras": [],
             "total": 0,
@@ -342,107 +336,142 @@ class WebSocketJsonRpcServer:
     async def _method_get_camera_status(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Get detailed status for a specific camera.
-        
+
+        Provides comprehensive status information for a camera device including
+        connection state, capabilities, active streams, and current configuration
+        as specified in the JSON-RPC API documentation.
+
         Args:
             params: Method parameters containing:
-                - device: Camera device path (e.g., "/dev/video0")
-                
+                - device (str): Camera device path (e.g., "/dev/video0")
+
         Returns:
-            Detailed camera status object with device info, streams, and metrics
-            
+            Dict containing detailed camera status information including:
+                - device: Camera device path
+                - status: Current connection status
+                - name: Camera display name
+                - resolution: Current resolution setting
+                - fps: Current frame rate
+                - streams: Available stream URLs
+                - capabilities: Device capabilities if available
+
         Raises:
-            ValueError: If device parameter is missing or camera not found
+            ValueError: If device parameter is missing or invalid
+            NotImplementedError: Method implementation pending
+
+        Architecture Reference:
+            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
+            Camera control and status reporting functionality
+
+        # TODO: [CRITICAL] Implement _method_get_camera_status stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        # TODO: Validate device parameter is provided
-        # TODO: Query camera monitor for specific camera status
-        # TODO: Include stream information and health metrics
-        # TODO: Return error if camera not found
-        return {
-            "device": params.get("device") if params else None,
-            "status": "unknown",
-            "error": "Not implemented"
-        }
+        raise NotImplementedError("get_camera_status method implementation pending")
 
     async def _method_take_snapshot(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Capture a snapshot from the specified camera.
-        
+
+        Initiates snapshot capture from an active camera stream and saves the
+        image to the configured snapshots directory with optional custom filename.
+
         Args:
             params: Method parameters containing:
-                - device: Camera device path (required)
-                - filename: Custom filename (optional)
-                
+                - device (str): Camera device path (e.g., "/dev/video0")
+                - filename (str, optional): Custom filename for snapshot
+
         Returns:
-            Snapshot information object with filename, timestamp, and status
-            
+            Dict containing snapshot capture information including:
+                - device: Source camera device path
+                - filename: Generated or custom filename
+                - status: Capture operation status
+                - timestamp: Capture timestamp
+                - file_size: Snapshot file size in bytes
+                - file_path: Full path to saved snapshot
+
         Raises:
-            ValueError: If device parameter is missing or camera not available
+            ValueError: If device parameter missing or camera not available
+            NotImplementedError: Method implementation pending
+
+        Architecture Reference:
+            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
+            MediaMTX integration for snapshot capture functionality
+
+        # TODO: [CRITICAL] Implement _method_take_snapshot stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        # TODO: Validate device parameter is provided
-        # TODO: Check camera is connected and streaming
-        # TODO: Call MediaMTX controller to capture snapshot
-        # TODO: Generate filename if not provided
-        # TODO: Return snapshot metadata
-        return {
-            "device": params.get("device") if params else None,
-            "filename": None,
-            "status": "not_implemented",
-            "error": "Not implemented"
-        }
+        raise NotImplementedError("take_snapshot method implementation pending")
 
     async def _method_start_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Start recording video from the specified camera.
-        
+
+        Initiates video recording from an active camera stream with configurable
+        duration and format options. Creates recording session and manages state.
+
         Args:
             params: Method parameters containing:
-                - device: Camera device path (required)
-                - duration: Recording duration in seconds (optional)
-                - format: Recording format - "mp4" or "mkv" (optional)
-                
+                - device (str): Camera device path (e.g., "/dev/video0")
+                - duration (int, optional): Recording duration in seconds (None for unlimited)
+                - format (str, optional): Recording format ("mp4", "mkv")
+
         Returns:
-            Recording session information with filename, status, and metadata
-            
+            Dict containing recording session information including:
+                - device: Source camera device path
+                - session_id: Unique recording session identifier
+                - filename: Generated recording filename
+                - status: Recording operation status ("STARTED", "FAILED")
+                - start_time: Recording start timestamp
+                - duration: Requested duration (None if unlimited)
+                - format: Recording format being used
+
         Raises:
-            ValueError: If device parameter is missing or camera not available
+            ValueError: If device missing, camera not available, or already recording
+            NotImplementedError: Method implementation pending
+
+        Architecture Reference:
+            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
+            MediaMTX integration for recording management functionality
+
+        # TODO: [CRITICAL] Implement _method_start_recording stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        # TODO: Validate device parameter is provided
-        # TODO: Check camera is connected and not already recording
-        # TODO: Call MediaMTX controller to start recording
-        # TODO: Generate recording filename with timestamp
-        # TODO: Return recording session information
-        return {
-            "device": params.get("device") if params else None,
-            "filename": None,
-            "status": "not_implemented",
-            "error": "Not implemented"
-        }
+        raise NotImplementedError("start_recording method implementation pending")
 
     async def _method_stop_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Stop active recording for the specified camera.
-        
+
+        Terminates ongoing recording session for a camera and provides final
+        recording information including duration and file metadata.
+
         Args:
             params: Method parameters containing:
-                - device: Camera device path (required)
-                
+                - device (str): Camera device path (e.g., "/dev/video0")
+
         Returns:
-            Recording completion information with final file details
-            
+            Dict containing recording completion information including:
+                - device: Source camera device path
+                - session_id: Recording session identifier that was stopped
+                - filename: Final recording filename
+                - status: Recording completion status ("STOPPED", "FAILED")
+                - start_time: Original recording start timestamp
+                - end_time: Recording stop timestamp
+                - duration: Actual recording duration in seconds
+                - file_size: Final recording file size
+
         Raises:
             ValueError: If device parameter is missing or not currently recording
+            NotImplementedError: Method implementation pending
+
+        Architecture Reference:
+            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
+            MediaMTX integration for recording management functionality
+
+        # TODO: [CRITICAL] Implement _method_stop_recording stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        # TODO: Validate device parameter is provided
-        # TODO: Check camera is currently recording
-        # TODO: Call MediaMTX controller to stop recording
-        # TODO: Get final recording metrics (duration, file size)
-        # TODO: Return recording completion information
-        return {
-            "device": params.get("device") if params else None,
-            "filename": None,
-            "status": "not_implemented",
-            "error": "Not implemented"
-        }
+        raise NotImplementedError("stop_recording method implementation pending")
 
     def get_connection_count(self) -> int:
         """Get current number of connected clients."""
