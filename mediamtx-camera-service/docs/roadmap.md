@@ -2,7 +2,7 @@
 
 ## Quality and Control Point Overview
 
-This roadmap enforces a strict quality pipeline to guarantee architectural compliance, implementation rigor, and auditability. **Progression through each phase is controlled by explicit IV&V (Independent Verification & Validation) “control points.”** No Epic or Story may advance until all required IV&V gates are fully passed and evidence of implementation is present in both code and documentation.
+This roadmap enforces a strict quality pipeline to guarantee architectural compliance, implementation rigor, and auditability. **Progression through each phase is controlled by explicit IV&V (Independent Verification & Validation) "control points."** No Epic or Story may advance until all required IV&V gates are fully passed and evidence of implementation is present in both code and documentation.
 
 **The high-level flow is:**
 
@@ -27,9 +27,9 @@ This roadmap enforces a strict quality pipeline to guarantee architectural compl
     - [IV&V Control Point Gate]: All deployment and operations steps must be tested, documented, and signed off.
 
 **Key Control Point Rules:**
-- **Cannot move to the next Story/Epic/phase until the preceding IV&V “control point” Story is fully checked off.**
+- **Cannot move to the next Story/Epic/phase until the preceding IV&V "control point" Story is fully checked off.**
 - **A task is only marked as [x] complete when both the architectural decision and the corresponding code, documentation, and tests are fully implemented and validated.**
-- **STOP/BLOCKED items are moved to “Resolved Blockers” only when implementation is finished and matches the updated architecture.**
+- **STOP/BLOCKED items are moved to "Resolved Blockers" only when implementation is finished and matches the updated architecture.**
 - **Every IV&V Story must be validated by review and explicit evidence (file/commit/section) before proceeding.**
 - **No scope creep: Features and requirements may only be added or changed through explicit architectural revision and IV&V.**
 
@@ -54,66 +54,94 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
 
 ---
 
+## Pre-Completion Validation Checklist
+
+Before marking any task as [x] complete:
+1. [ ] Code change is present and functional (not just TODO/STOP comments)
+2. [ ] Related tests exist and pass
+3. [ ] Documentation updated if needed  
+4. [ ] No NotImplementedError, `pass` statements, or "TODO" comments remain
+5. [ ] Reviewer has validated the evidence
+6. [ ] Evidence field contains specific file/line/commit references
+
+---
+
 ## 🌍 Epics (Long-Term Goals)
 
 - **E1: Robust Real-Time Camera Service Core**
-    - **S1: Complete Architecture Compliance**
+    
+    - **S1a: Architecture Scaffolding (COMPLETED)**
         - [x] [FIX] Implement all missing JSON-RPC method stubs in `server.py` as referenced in API docs.
             - Evidence: `src/websocket_server/server.py` (2025-08-02), `docs/api/json-rpc-methods.md`
+            - Status: Architecture scaffolding complete (methods exist with proper signatures)
         - [x] [FIX] Correct all parameter typos in `api/json-rpc-methods.md`.
             - Evidence: `docs/api/json-rpc-methods.md` (2025-08-02)
         - [x] [IMPL] Add notification handler stubs in `server.py`.
             - Evidence: `src/websocket_server/server.py` (2025-08-02)
-        - [x] [FIX] Refactor all hard-coded values (e.g., `hybrid_monitor.py`).
-            - Evidence: Rich TODO/STOP added in `src/camera_discovery/hybrid_monitor.py` (2025-08-02)
+            - Status: Method signatures exist (business logic pending in S1b)
         - [x] [FIX] Standardize TODO comment formatting across codebase.
             - Evidence: All TODOs now follow `docs/development/principles.md` (2025-08-02)
-        - [x] [IMPL] Integrate correlation ID in WebSocket request logging.
-            - Evidence: Rich TODO/STOP and stub logic in `src/websocket_server/server.py` (2025-08-02)
         - [x] [IMPL] Add method-level API versioning stubs in `server.py`.
             - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)
-        - [ ] [FIX] Actually implement JSON-RPC method bodies (not NotImplementedError)
-            - File: `src/websocket_server/server.py`
-            - Fix: Replace NotImplementedError in `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
-            - Fix: Replace `pass` statements in notification methods with proper stub structure
+
+    - **S1b: Core Implementation (PENDING)**
+        - [ ] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
+            - Files: `src/websocket_server/server.py` lines ~380, ~420, ~460
+            - Methods: `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
+            - Fix: Implement actual snapshot capture, recording start/stop logic with MediaMTX integration
             - Evidence:
-        - [ ] [FIX] Actually refactor hard-coded values in hybrid_monitor.py
+        - [ ] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic
+            - Files: `src/websocket_server/server.py` lines ~500, ~520
+            - Methods: `notify_camera_status_update`, `notify_recording_status_update`
+            - Fix: Implement WebSocket notification broadcasting to all connected clients
+            - Evidence:
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
             - File: `src/camera_discovery/hybrid_monitor.py`
-            - Fix: Remove hard-coded "camera0" return and placeholder CameraDevice values
+            - Fix: Remove hard-coded "camera0" return (line ~200) and placeholder CameraDevice values (line ~185)
             - Fix: Implement configurable stream naming and proper device detection
             - Evidence:
-        - [ ] [IMPL] Actually integrate correlation ID in WebSocket logging (not TODO comments)
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Actually integrate correlation ID in WebSocket logging (not TODO comments)
             - File: `src/websocket_server/server.py`
             - Fix: Remove TODO comments, implement actual correlation ID propagation in logs
             - Integration: Use existing `logging_config.py` CorrelationIdFilter
             - Evidence:
-        - [ ] [IVV] Document and validate logging infrastructure implementation
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
+            - File: `src/camera_service/service_manager.py` line ~150
+            - Fix: Replace TODO comments in `_start_mediamtx_controller` with actual startup logic
+            - Evidence:
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete camera monitor initialization in service_manager.py  
+            - File: `src/camera_service/service_manager.py` line ~170
+            - Fix: Replace TODO comments in `_start_camera_monitor` with actual initialization
+            - Evidence:
+        - [ ] [IVV] **LOW PRIORITY**: Document and validate logging infrastructure implementation
             - Evidence: `src/camera_service/logging_config.py` (150+ lines implemented)
             - Task: Add proper roadmap tracking for CorrelationIdFilter, JsonFormatter, structured logging
             - Reference: This is a major system component with no roadmap visibility
-        - [ ] [IVV] Document and validate configuration system implementation
+        - [ ] [IVV] **LOW PRIORITY**: Document and validate configuration system implementation
             - Evidence: `src/camera_service/config.py` (complete config class hierarchy)
             - Task: Add proper roadmap tracking for YAML loading, config validation, environment overrides
             - Reference: This is a core system component with no roadmap visibility
 
-    - **S2: Architecture Compliance IV&V (Control Point)**
-        - [x] [IVV] API docs and code stubs match (method names, params, status).
-            - Evidence: `docs/api/json-rpc-methods.md`, `src/websocket_server/server.py` (2025-08-02)
-        - [x] [IVV] All stubs/modules correspond to architecture.
-            - Evidence: `docs/architecture/overview.md`, codebase (2025-08-02)
-        - [x] [IVV] No accidental scope/feature creep in stubs.
-            - Evidence: Codebase and IV&V review (2025-08-02)
-        - [x] [IVV] Coding standards and docstrings are present.
-            - Evidence: Codebase and `docs/development/principles.md` (2025-08-02)
-        - [x] [IVV] All CRITICAL/MEDIUM issues from IV&V resolved.
-            - Evidence: See Resolved Blockers section below.
-        - [ ] [IVV] Re-validate API docs and code alignment after S1 fixes
+    - **S2: Architecture Compliance IV&V (Control Point) - PENDING**
+        - [ ] [IVV] Re-validate API docs and code alignment after S1b fixes
+            - Task: Verify all JSON-RPC methods have working implementations (not NotImplementedError)
+            - Task: Verify notification methods broadcast properly (not `pass` statements)
             - Evidence:
         - [ ] [IVV] Re-validate CRITICAL/MEDIUM issue resolution after actual implementation
+            - Task: Verify hard-coded values are refactored (not just TODO comments)
+            - Task: Verify correlation ID integration is working (not just TODO comments)
             - Evidence:
         - [ ] [IVV] Validate phantom implementation documentation is complete
+            - Task: Ensure logging and configuration systems have proper roadmap tracking
             - Evidence:
-        - **_Can proceed to S3 as all S2 IV&V tasks are complete._**
+        - [ ] [IVV] All stubs/modules correspond to architecture.
+            - Evidence: `docs/architecture/overview.md`, codebase validation required
+        - [ ] [IVV] No accidental scope/feature creep in implementation.
+            - Evidence: Codebase review required after S1b completion
+        - [ ] [IVV] Coding standards and docstrings are present.
+            - Evidence: Codebase and `docs/development/principles.md` validation required
+
+        > **_Cannot proceed to S3 until all S2 IV&V tasks are complete._**
 
     - **S3: Camera Discovery & Monitoring Implementation**
         - [ ] [IMPL] Implement capability detection logic for CameraDevice (currently STOP/TODO in hybrid_monitor.py).
@@ -142,6 +170,7 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence:
         - [ ] [IMPL] Implement method deprecation tracking and version negotiation logic (currently deferred per architecture decisions).
             - Evidence:
+        - **_Cannot proceed to E2 until S5 IV&V is complete._**
 
 - **E2: Security and Production Hardening**
     - **S6: Security Features Implementation**
@@ -157,6 +186,7 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence:
         - [ ] [IVV] Security test cases in place.
             - Evidence:
+        - **_Cannot proceed to E3 until S7 IV&V is complete._**
 
 - **E3: Client API & SDK Ecosystem**
     - **S8: Client APIs and Examples**
@@ -170,6 +200,7 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence:
         - [ ] [IVV] Usability tests or walkthroughs completed.
             - Evidence:
+        - **_Cannot proceed to E4 until S9 IV&V is complete._**
 
 - **E4: Future Extensibility**
     - **S10: Cloud/Protocol Extensions (Planning Only)**
@@ -181,6 +212,7 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence:
         - [ ] [IVV] All extension points and plugin mechanisms validated.
             - Evidence:
+        - **_Cannot proceed to E5 until S11 IV&V is complete._**
 
 - **E5: Deployment & Operations Strategy**
     - **S12: Deployment Automation & Ops**
@@ -223,33 +255,39 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
     - [ ] [DOCS] Document config/environment variables.
         - Evidence:
     - [ ] [DOCS] Document IV&V workflow and control points.
+        - Evidence:
 
 ---
 
 ## STOP BLOCKAGES
 
+### Currently Blocked (Implementation Required)
+
+- **Hard-coded CameraDevice values in hybrid_monitor.py**
+    - Status: TODO/STOP added, but actual refactoring still needed
+    - Tracked in: S1b implementation tasks
+    - Files: `src/camera_discovery/hybrid_monitor.py` lines ~185, ~200
+
+- **Correlation ID integration in WebSocket logging**  
+    - Status: TODO/STOP added, but actual integration still needed
+    - Tracked in: S1b implementation tasks
+    - Files: `src/websocket_server/server.py` lines ~290-310
+
+- **Notification handler interface for camera_status_update**
+    - Status: TODO/STOP added, but actual implementation still needed
+    - Tracked in: S3 implementation tasks
+    - Files: `src/camera_service/service_manager.py` lines with STOP comments
+
 ### Resolved Blockers
 
-- [x] Clarification required: “metrics” field in get_camera_status API response.
+- [x] Clarification required: "metrics" field in get_camera_status API response.
     - Resolved 2025-08-02: Implemented per updated architecture overview and code. See `docs/architecture/overview.md`, `src/websocket_server/server.py`, and `docs/api/json-rpc-methods.md`.
 - [x] Validate implementation of "metrics" field in get_camera_status response.
     - Resolved 2025-08-02: Code, docs, and architecture overview now match. All STOP/TODO/placeholder code removed. See above files.
-- [x] Clarification required: Hard-coded CameraDevice values in hybrid_monitor.py
-    - Resolved 2025-08-02: Rich TODO/STOP added, awaiting capability detection implementation. See `src/camera_discovery/hybrid_monitor.py`.
-- [x] Validate removal of hard-coded CameraDevice values and implementation of capability detection.
-    - Resolved 2025-08-02: STOP/TODO present, implementation pending. See `src/camera_discovery/hybrid_monitor.py`.
 - [x] Clarification required: Method-level API versioning implementation in server.py
     - Resolved 2025-08-02: Architecture and code updated to document and implement method-level versioning. See `docs/architecture/overview.md`, `src/websocket_server/server.py`.
 - [x] Validate method-level API versioning implementation.
     - Resolved 2025-08-02: Code registers methods with explicit version, docs match, STOP/TODO removed. See above files.
-- [x] Clarification required: Correlation ID integration in WebSocket logging
-    - Resolved 2025-08-02: Rich TODO/STOP and stub logic present, awaiting finalized logging format. See `src/websocket_server/server.py`.
-- [x] Validate correlation ID integration in WebSocket logging.
-    - Resolved 2025-08-02: STOP/TODO present, implementation pending. See `src/websocket_server/server.py`.
-- [x] Clarification required: Notification handler interface for camera_status_update in service_manager.py
-    - Resolved 2025-08-02: Rich TODO/STOP added, awaiting finalized notification handler interface. See `src/camera_service/service_manager.py`.
-- [x] Validate notification handler interface and integration for camera_status_update.
-    - Resolved 2025-08-02: STOP/TODO present, implementation pending. See `src/camera_service/service_manager.py`.
 
 ---
 
@@ -258,4 +296,6 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
 - **Tasks are only marked [x] completed when both the architectural decision and the corresponding code/documentation are fully implemented and validated.**
 - **STOP/BLOCKED items are moved to Resolved Blockers only when implementation is finished and matches the updated architecture.**
 - **Open IV&V items must be validated by review before proceeding to next Epic/Story.**
-- **All IV&V control points must be signed off using the
+- **All IV&V control points must be signed off using the IV&V Reviewer Checklist above.**
+- **Use the Pre-Completion Validation Checklist before marking any task as complete.**
+- **Priority levels (HIGH/MEDIUM/LOW) guide implementation order within each Story.**
