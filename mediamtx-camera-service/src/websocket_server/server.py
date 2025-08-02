@@ -244,16 +244,64 @@ class WebSocketJsonRpcServer:
             method: Notification method name
             params: Notification parameters
             target_clients: List of client IDs to notify (None for all clients)
-
-        # TODO: [CRITICAL] Integrate correlation ID into notification logging
-        # Description: Architecture overview (docs/architecture/overview.md, "Structured Logging") requires all logs to include correlation IDs for traceability.
-        # IV&V Reference: Architecture Decisions v6, Logging Format, Story S1.
-        # Rationale: Notification logs must include a correlation ID, which may be passed in params or generated.
-        # STOPPED: Do not implement correlation ID propagation or structured logging until logging format and correlation strategy are clarified.
         """
-        # TODO: Extract/generate correlation ID for notification
+        if not self._clients:
+            self._logger.debug(f"No clients connected, skipping notification: {method}")
+            return
+        
+        # Create JSON-RPC 2.0 notification structure
+        notification = JsonRpcNotification(
+            jsonrpc="2.0",
+            method=method,
+            params=params
+        )
+        
+        # Serialize notification to JSON
+        try:
+            notification_json = json.dumps({
+                "jsonrpc": notification.jsonrpc,
+                "method": notification.method,
+                "params": notification.params
+            })
+        except Exception as e:
+            self._logger.error(f"Failed to serialize notification {method}: {e}")
+            return
+        
+        # Extract/generate correlation ID for notification logging
         correlation_id = params.get("correlation_id") if params else None
+        if not correlation_id:
+            correlation_id = str(uuid.uuid4())[:8]
+            
         self._logger.debug(f"[correlation_id={correlation_id}] Broadcasting notification: {method}")
+        
+        # Determine target clients
+        if target_clients:
+            clients_to_notify = [self._clients[cid] for cid in target_clients if cid in self._clients]
+        else:
+            clients_to_notify = list(self._clients.values())
+        
+        # Send notification to each target client
+        failed_clients = []
+        for client in clients_to_notify:
+            try:
+                if client.websocket.open:
+                    await client.websocket.send(notification_json)
+                else:
+                    failed_clients.append(client.client_id)
+            except Exception as e:
+                self._logger.warning(f"Failed to send notification to client {client.client_id}: {e}")
+                failed_clients.append(client.client_id)
+        
+        # Clean up failed connections
+        if failed_clients:
+            async with self._connection_lock:
+                for client_id in failed_clients:
+                    if client_id in self._clients:
+                        del self._clients[client_id]
+                        self._logger.info(f"Removed disconnected client: {client_id}")
+        
+        success_count = len(clients_to_notify) - len(failed_clients)
+        self._logger.debug(f"[correlation_id={correlation_id}] Notification {method} sent to {success_count}/{len(clients_to_notify)} clients")
 
     async def send_notification_to_client(
         self, 
@@ -755,12 +803,34 @@ class WebSocketJsonRpcServer:
         Architecture Reference:
             docs/architecture/overview.md: "Server broadcasts camera status notification to authenticated clients."
             Only permitted fields are device, status, name, resolution, fps, streams.
-
-        # TODO: [CRITICAL] Implement notify_camera_status_update stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Do not implement business logic yet.
         """
-        pass
+        if not params:
+            self._logger.warning("Camera status update called with empty parameters")
+            return
+        
+        # Validate required fields per API documentation
+        required_fields = ['device', 'status']
+        for field in required_fields:
+            if field not in params:
+                self._logger.error(f"Camera status update missing required field: {field}")
+                return
+        
+        # Filter to only allowed fields per architecture overview
+        allowed_fields = {'device', 'status', 'name', 'resolution', 'fps', 'streams'}
+        filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
+        
+        try:
+            # Broadcast JSON-RPC 2.0 notification to all connected clients
+            await self.broadcast_notification(
+                method="camera_status_update",
+                params=filtered_params
+            )
+            
+            self._logger.info(f"Broadcasted camera status update for device: {params.get('device')}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to broadcast camera status update: {e}")
+            # Continue execution - notification failure should not disrupt service
 
     async def notify_recording_status_update(self, params: Dict[str, Any]) -> None:
         """
@@ -779,12 +849,34 @@ class WebSocketJsonRpcServer:
         Architecture Reference:
             docs/architecture/overview.md: "Server notifies client when recording completes or fails."
             Only permitted fields are device, status, filename, duration.
-
-        # TODO: [CRITICAL] Implement notify_recording_status_update stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Do not implement business logic yet.
         """
-        pass
+        if not params:
+            self._logger.warning("Recording status update called with empty parameters")
+            return
+        
+        # Validate required fields per API documentation
+        required_fields = ['device', 'status']
+        for field in required_fields:
+            if field not in params:
+                self._logger.error(f"Recording status update missing required field: {field}")
+                return
+        
+        # Filter to only allowed fields per architecture overview
+        allowed_fields = {'device', 'status', 'filename', 'duration'}
+        filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
+        
+        try:
+            # Broadcast JSON-RPC 2.0 notification to all connected clients
+            await self.broadcast_notification(
+                method="recording_status_update",
+                params=filtered_params
+            )
+            
+            self._logger.info(f"Broadcasted recording status update for device: {params.get('device')}, status: {params.get('status')}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to broadcast recording status update: {e}")
+            # Continue execution - notification failure should not disrupt service
 
     def get_connection_count(self) -> int:
         """Get current number of connected clients."""

@@ -91,15 +91,20 @@ Before marking any task as [x] complete:
             - Fix: Implement actual snapshot capture, recording start/stop logic with MediaMTX integration
             - Evidence: File: src/websocket_server/server.py
                 Sections:
-                Lines ~380: _method_take_snapshot - Complete implementation with MediaMTX integration
-                Lines ~420: _method_start_recording - Complete implementation with session management
-                Lines ~460: _method_stop_recording - Complete implementation with completion tracking
-                Date: 2025-08-02 Commit: Business logic implementation replacing NotImplementedError with working MediaMTX integration
-        - [ ] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic
+                    Lines ~380: _method_take_snapshot - Complete implementation with MediaMTX integration
+                    Lines ~420: _method_start_recording - Complete implementation with session management
+                    Lines ~460: _method_stop_recording - Complete implementation with completion tracking
+                    Date: 2025-08-02 Commit: Business logic implementation replacing NotImplementedError with working MediaMTX integration
+        - [x] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic
             - Files: `src/websocket_server/server.py` lines ~500, ~520
             - Methods: `notify_camera_status_update`, `notify_recording_status_update`
             - Fix: Implement WebSocket notification broadcasting to all connected clients
-            - Evidence:
+            - Evidence: File: src/websocket_server/server.py
+                Sections:
+                Lines ~500: notify_camera_status_update - Complete implementation with parameter validation, field filtering, and JSON-RPC 2.0 notification broadcasting
+                Lines ~520: notify_recording_status_update - Complete implementation with parameter validation, field filtering, and JSON-RPC 2.0 notification broadcasting
+                Lines ~200: broadcast_notification - Enhanced implementation with JSON-RPC 2.0 compliance, client broadcasting, and connection management
+                Date: 2025-08-02 Commit: Notification broadcasting implementation replacing pass statements with working JSON-RPC 2.0 notification system
         - [ ] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
             - File: `src/camera_discovery/hybrid_monitor.py`
             - Fix: Remove hard-coded "camera0" return (line ~200) and placeholder CameraDevice values (line ~185)
