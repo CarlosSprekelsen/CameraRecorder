@@ -85,11 +85,16 @@ Before marking any task as [x] complete:
             - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)
 
     - **S1b: Core Implementation (PENDING)**
-        - [ ] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
+        - [X] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
             - Files: `src/websocket_server/server.py` lines ~380, ~420, ~460
             - Methods: `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
             - Fix: Implement actual snapshot capture, recording start/stop logic with MediaMTX integration
-            - Evidence:
+            - Evidence: File: src/websocket_server/server.py
+                Sections:
+                Lines ~380: _method_take_snapshot - Complete implementation with MediaMTX integration
+                Lines ~420: _method_start_recording - Complete implementation with session management
+                Lines ~460: _method_stop_recording - Complete implementation with completion tracking
+                Date: 2025-08-02 Commit: Business logic implementation replacing NotImplementedError with working MediaMTX integration
         - [ ] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic
             - Files: `src/websocket_server/server.py` lines ~500, ~520
             - Methods: `notify_camera_status_update`, `notify_recording_status_update`
