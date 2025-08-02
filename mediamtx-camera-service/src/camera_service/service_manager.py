@@ -164,51 +164,74 @@ class ServiceManager(CameraEventHandler):
     async def _handle_camera_connected(self, event_data: CameraEventData) -> None:
         """
         Handle camera connection event.
-        
-        Creates MediaMTX stream configuration for the newly connected camera.
-        
+
+        Creates MediaMTX stream configuration for the newly connected camera and
+        triggers camera_status_update notification as specified in the architecture overview.
+
         Args:
             event_data: Camera connection event data
+
+        Architecture Reference:
+            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
+            - Must create stream config, update MediaMTX, and notify clients via camera_status_update.
+
+        # TODO: [CRITICAL] Align _handle_camera_connected signature and responsibilities with architecture overview.
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Rationale: Must trigger camera_status_update notification after stream creation.
+        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
-        # TODO: Extract camera device number from device path (e.g., /dev/video0 -> 0)
-        # TODO: Create StreamConfig for the camera
-        # TODO: Call MediaMTXController.create_stream() with camera configuration
-        # TODO: Store stream information for client notifications
-        # TODO: Notify WebSocket clients of new camera availability
-        
         self._logger.debug(f"Creating stream for connected camera: {event_data.device_path}")
+        # TODO: Create stream config and call MediaMTXController.create_stream()
+        # TODO: Prepare camera_status_update notification payload
+        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
 
     async def _handle_camera_disconnected(self, event_data: CameraEventData) -> None:
         """
         Handle camera disconnection event.
-        
-        Removes MediaMTX stream configuration for the disconnected camera.
-        
+
+        Removes MediaMTX stream configuration for the disconnected camera and
+        triggers camera_status_update notification as specified in the architecture overview.
+
         Args:
             event_data: Camera disconnection event data
+
+        Architecture Reference:
+            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
+            - Must remove stream config, update MediaMTX, and notify clients via camera_status_update.
+
+        # TODO: [CRITICAL] Align _handle_camera_disconnected signature and responsibilities with architecture overview.
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Rationale: Must trigger camera_status_update notification after stream removal.
+        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
-        # TODO: Extract stream name from device path
-        # TODO: Stop any active recordings for this camera
-        # TODO: Call MediaMTXController.delete_stream() to remove stream
-        # TODO: Clean up stored stream information
-        # TODO: Notify WebSocket clients of camera removal
-        
         self._logger.debug(f"Removing stream for disconnected camera: {event_data.device_path}")
+        # TODO: Remove stream config and call MediaMTXController.delete_stream()
+        # TODO: Prepare camera_status_update notification payload
+        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
 
     async def _handle_camera_status_changed(self, event_data: CameraEventData) -> None:
         """
         Handle camera status change event.
-        
-        Updates MediaMTX stream configuration based on camera status changes.
-        
+
+        Updates MediaMTX stream configuration based on camera status changes and
+        triggers camera_status_update notification as specified in the architecture overview.
+
         Args:
             event_data: Camera status change event data
+
+        Architecture Reference:
+            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
+            - Must update stream config if needed and notify clients via camera_status_update.
+
+        # TODO: [CRITICAL] Align _handle_camera_status_changed signature and responsibilities with architecture overview.
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Rationale: Must trigger camera_status_update notification after stream update.
+        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
-        # TODO: Determine if stream configuration needs updates
-        # TODO: Update MediaMTX stream settings if needed
-        # TODO: Notify WebSocket clients of status changes
-        
         self._logger.debug(f"Handling status change for camera: {event_data.device_path}")
+        # TODO: Update stream config and call MediaMTXController.update_stream() if needed
+        # TODO: Prepare camera_status_update notification payload
+        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
 
     async def _start_mediamtx_controller(self) -> None:
         """Start the MediaMTX REST API controller component."""

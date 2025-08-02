@@ -90,6 +90,41 @@
     - [ ] [DOCS] Document IV&V workflow and control points.
 
 ---
+## STOP BLOCKAGES
+- [ ] [BLOCKED] Clarification required: “metrics” field in get_camera_status API response.
+      - Context: While implementing get_camera_status (src/websocket_server/server.py), found that API doc (docs/api/json-rpc-methods.md) defines a "metrics" field (bytes_sent, readers, uptime), but this is NOT present or permitted per docs/architecture/overview.md.
+      - Action: STOPPED implementation and flagged with a rich TODO in code as required by docs/development/principles.md.
+      - Rationale: Per principles.md, do not implement undocumented features; require project architect decision whether "metrics" should be included in camera status response.
+      - IV&V Reference: Architecture Compliance IV&V - S2
+      - Needed: Update to overview.md or project owner guidance to resolve.
+
+- [ ] [BLOCKED] Clarification required: Hard-coded CameraDevice values in hybrid_monitor.py
+    - Context: src/camera_discovery/hybrid_monitor.py, lines 322–328
+    - Action taken: Implementation stopped, rich TODO added to document intentional stub and block further development until v4l2 capability detection is integrated.
+    - Rationale: Architecture overview requires real capability detection; hard-coded values violate production requirements.
+    - IV&V reference: Story S1, Epic E1
+    - Needed: Confirmation of capability detection implementation plan and removal of hard-coded placeholders.
+
+- [ ] [BLOCKED] Clarification required: Method-level API versioning implementation in server.py
+    - Context: src/websocket_server/server.py, class WebSocketJsonRpcServer, method registration/versioning stubs
+    - Action taken: Implementation stopped, rich TODO added for version negotiation and migration logic.
+    - Rationale: Architecture overview requires method-level versioning, but details for negotiation and migration are not documented.
+    - IV&V reference: Architecture Decisions v6, API Versioning Strategy, Story S1
+    - Needed: Explicit documentation of versioning requirements, negotiation, and migration strategy.
+
+- [ ] [BLOCKED] Clarification required: Correlation ID integration in WebSocket logging
+    - Context: src/websocket_server/server.py, all message handling and notification logging methods
+    - Action taken: Implementation stopped, rich TODO added for correlation ID extraction and propagation in logs.
+    - Rationale: Architecture overview requires structured logging with correlation IDs, but correlation strategy and propagation details are not documented.
+    - IV&V reference: Architecture Decisions v6, Logging Format, Story S1
+    - Needed: Explicit documentation of correlation ID format, propagation, and integration with logging system.
+
+- [ ] [BLOCKED] Clarification required: Notification handler interface for camera_status_update in service_manager.py
+    - Context: src/camera_service/service_manager.py, _handle_camera_connected/_disconnected/_status_changed methods
+    - Action taken: Implementation stopped, rich TODO added to document required notification integration.
+    - Rationale: Architecture overview requires camera_status_update notifications, but notification handler interface is not finalized.
+    - IV&V reference: Story S1, Epic E1
+    - Needed: Finalized notification handler interface and integration guidance.
 
 **How to use this Roadmap:**
 - **Cannot move to the next Story/Epic until the preceding IV&V Story is fully checked off.**

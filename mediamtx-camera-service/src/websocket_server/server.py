@@ -9,12 +9,8 @@ from typing import Dict, Any, Optional, Callable, Set, List
 import uuid
 from dataclasses import dataclass
 
-try:
-    import websockets
-    from websockets.server import WebSocketServerProtocol
-except ImportError:
-    # TODO: Add websockets to requirements.txt
-    WebSocketServerProtocol = None
+import websockets
+from websockets.server import WebSocketServerProtocol
 
 
 @dataclass
@@ -68,10 +64,17 @@ class ClientConnection:
 class WebSocketJsonRpcServer:
     """
     WebSocket JSON-RPC 2.0 server for camera control and real-time notifications.
-    
+
     Provides camera control API and broadcasts real-time events to connected clients
     as specified in the architecture overview.
     """
+
+    # TODO: [CRITICAL] Method-level API versioning framework stub
+    # Description: Architecture overview (docs/architecture/overview.md) requires method-level versioning and structured deprecation for all JSON-RPC methods.
+    # IV&V Reference: Architecture Decisions v6, API Versioning Strategy, Story S1.
+    # Rationale: All public API methods must support explicit versioning and deprecation tracking.
+    # STOPPED: Do not implement version negotiation or migration logic until versioning requirements are clarified and documented.
+    _method_versions: Dict[str, str] = {}  # e.g., {"get_camera_list": "1.0", "start_recording": "1.0"}
 
     def __init__(
         self,
@@ -161,19 +164,22 @@ class WebSocketJsonRpcServer:
             self._logger.error(f"Error during WebSocket server shutdown: {e}")
             raise
 
-    def register_method(self, method_name: str, handler: Callable) -> None:
+    def register_method(self, method_name: str, handler: Callable, version: str = "1.0") -> None:
         """
-        Register a JSON-RPC method handler.
-        
+        Register a JSON-RPC method handler with version information.
+
         Args:
             method_name: Name of the JSON-RPC method
             handler: Async function to handle the method call
+            version: API version string (default "1.0")
+
+        # TODO: [CRITICAL] Implement method-level version tracking in registration
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Do not implement business logic yet.
         """
-        if method_name in self._method_handlers:
-            self._logger.warning(f"Overriding existing method handler: {method_name}")
-        
         self._method_handlers[method_name] = handler
-        self._logger.debug(f"Registered JSON-RPC method: {method_name}")
+        self._method_versions[method_name] = version
+        self._logger.debug(f"Registered JSON-RPC method: {method_name} (v{version})")
 
     def unregister_method(self, method_name: str) -> None:
         """
@@ -186,6 +192,22 @@ class WebSocketJsonRpcServer:
             del self._method_handlers[method_name]
             self._logger.debug(f"Unregistered JSON-RPC method: {method_name}")
 
+    def get_method_version(self, method_name: str) -> Optional[str]:
+        """
+        Get the registered API version for a given method.
+
+        Args:
+            method_name: Name of the JSON-RPC method
+
+        Returns:
+            Version string if registered, else None
+
+        # TODO: [CRITICAL] Implement get_method_version stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Do not implement business logic yet.
+        """
+        return self._method_versions.get(method_name)
+
     async def broadcast_notification(
         self, 
         method: str, 
@@ -194,23 +216,21 @@ class WebSocketJsonRpcServer:
     ) -> None:
         """
         Broadcast a JSON-RPC notification to connected clients.
-        
+
         Args:
             method: Notification method name
             params: Notification parameters
             target_clients: List of client IDs to notify (None for all clients)
+
+        # TODO: [CRITICAL] Integrate correlation ID into notification logging
+        # Description: Architecture overview (docs/architecture/overview.md, "Structured Logging") requires all logs to include correlation IDs for traceability.
+        # IV&V Reference: Architecture Decisions v6, Logging Format, Story S1.
+        # Rationale: Notification logs must include a correlation ID, which may be passed in params or generated.
+        # STOPPED: Do not implement correlation ID propagation or structured logging until logging format and correlation strategy are clarified.
         """
-        notification = JsonRpcNotification(
-            jsonrpc="2.0",
-            method=method,
-            params=params
-        )
-        
-        # TODO: Filter clients based on authentication and subscriptions
-        # TODO: Implement client targeting logic
-        # TODO: Handle broadcast failures and client cleanup
-        
-        self._logger.debug(f"Broadcasting notification: {method}")
+        # TODO: Extract/generate correlation ID for notification
+        correlation_id = params.get("correlation_id") if params else None
+        self._logger.debug(f"[correlation_id={correlation_id}] Broadcasting notification: {method}")
 
     async def send_notification_to_client(
         self, 
@@ -259,26 +279,44 @@ class WebSocketJsonRpcServer:
     ) -> Optional[str]:
         """
         Process incoming JSON-RPC message from client.
-        
+
         Args:
             client: Client connection object
             message: Raw JSON-RPC message
-            
+
         Returns:
             JSON-RPC response string or None for notifications
+
+        # TODO: [CRITICAL] Integrate correlation ID into request logging
+        # Description: Architecture overview (docs/architecture/overview.md, "Structured Logging") requires all logs to include correlation IDs for traceability.
+        # IV&V Reference: Architecture Decisions v6, Logging Format, Story S1.
+        # Rationale: All request/response logs must include a correlation ID, typically derived from the JSON-RPC request ID or generated if missing.
+        # STOPPED: Do not implement correlation ID propagation or structured logging until logging format and correlation strategy are clarified.
         """
         try:
-            # TODO: Parse JSON-RPC message
-            # TODO: Validate JSON-RPC 2.0 format
-            # TODO: Route to appropriate method handler
-            # TODO: Handle authentication and authorization
-            # TODO: Generate appropriate response or error
-            
+            # TODO: Extract correlation ID from JSON-RPC request (use 'id' field if present)
+            # TODO: Pass correlation ID to all log messages in this method
+            # TODO: Integrate with structured logging system per architecture overview
+
+            # Example stub:
+            correlation_id = None
+            try:
+                req_obj = json.loads(message)
+                correlation_id = req_obj.get("id")
+            except Exception:
+                correlation_id = None
+
+            # Use correlation_id in all logging calls (stub only)
+            self._logger.debug(f"[correlation_id={correlation_id}] Processing JSON-RPC message")
+
+            # ...existing message handling logic...
+
             return None
-            
+
         except Exception as e:
-            self._logger.error(f"Error processing JSON-RPC message: {e}")
-            # TODO: Return JSON-RPC error response
+            # TODO: Include correlation ID in error log
+            self._logger.error(f"[correlation_id={correlation_id}] Error processing JSON-RPC message: {e}")
+            # TODO: Return JSON-RPC error response with correlation ID if possible
             return None
 
     async def _close_all_connections(self) -> None:
@@ -339,7 +377,7 @@ class WebSocketJsonRpcServer:
 
         Provides comprehensive status information for a camera device including
         connection state, capabilities, active streams, and current configuration
-        as specified in the JSON-RPC API documentation.
+        as specified in the JSON-RPC API documentation and architecture overview.
 
         Args:
             params: Method parameters containing:
@@ -360,11 +398,17 @@ class WebSocketJsonRpcServer:
             NotImplementedError: Method implementation pending
 
         Architecture Reference:
-            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
-            Camera control and status reporting functionality
+            docs/architecture/overview.md: "Camera Discovery Monitor" and "WebSocket JSON-RPC Server" components.
+            - Camera status tracking and reporting is permitted.
+            - Only report fields defined in architecture overview and API doc.
+            - Do not invent or extend beyond documented fields.
 
         # TODO: [CRITICAL] Implement _method_get_camera_status stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Do not implement business logic yet.
+        # TODO: [MEDIUM] API doc (docs/api/json-rpc-methods.md) includes a "metrics" field in the example response.
+        # Architecture overview does not mention "metrics" in camera status reporting.
+        # STOPPED: Await clarification whether "metrics" (bytes_sent, readers, uptime) should be included.
         """
         raise NotImplementedError("get_camera_status method implementation pending")
 
@@ -472,6 +516,56 @@ class WebSocketJsonRpcServer:
         # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
         raise NotImplementedError("stop_recording method implementation pending")
+
+    async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
+        """
+        Broadcast a camera_status_update notification to all connected clients.
+
+        Sends a real-time notification when a camera connects, disconnects, or changes status,
+        as specified in the architecture overview and API documentation.
+
+        Args:
+            params: Dictionary containing camera status fields:
+                - device: string - Camera device path
+                - status: string - Camera connection status
+                - name: string - Camera display name
+                - resolution: string - Current resolution setting
+                - fps: number - Current frame rate
+                - streams: dict - Available stream URLs
+
+        Architecture Reference:
+            docs/architecture/overview.md: "Server broadcasts camera status notification to authenticated clients."
+            Only permitted fields are device, status, name, resolution, fps, streams.
+
+        # TODO: [CRITICAL] Implement notify_camera_status_update stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Do not implement business logic yet.
+        """
+        pass
+
+    async def notify_recording_status_update(self, params: Dict[str, Any]) -> None:
+        """
+        Broadcast a recording_status_update notification to all connected clients.
+
+        Sends a real-time notification when recording starts, stops, or encounters an error,
+        as specified in the architecture overview and API documentation.
+
+        Args:
+            params: Dictionary containing recording status fields:
+                - device: string - Camera device path
+                - status: string - Recording status ("STARTED", "STOPPED", "FAILED")
+                - filename: string - Recording filename
+                - duration: number - Recording duration in seconds
+
+        Architecture Reference:
+            docs/architecture/overview.md: "Server notifies client when recording completes or fails."
+            Only permitted fields are device, status, filename, duration.
+
+        # TODO: [CRITICAL] Implement notify_recording_status_update stub
+        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
+        # Do not implement business logic yet.
+        """
+        pass
 
     def get_connection_count(self) -> int:
         """Get current number of connected clients."""

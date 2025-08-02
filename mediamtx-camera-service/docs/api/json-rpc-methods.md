@@ -44,7 +44,7 @@ Get list of all discovered cameras with their current status.
 
 **Returns:** Object with camera list and metadata
 
-**Status:** Not yet implemented
+**Status:** Implemented
 
 **Example:**
 ```json
@@ -86,7 +86,7 @@ Get list of all discovered cameras with their current status.
 Get detailed status for a specific camera.
 
 **Parameters:**
-- device (string): Camera device path (e.g., "/dev/video0")
+- device: string - Camera device path (e.g., "/dev/video0")
 
 **Returns:** Detailed camera status object with device info, streams, and metrics
 
@@ -132,8 +132,8 @@ Get detailed status for a specific camera.
 Capture a snapshot from the specified camera.
 
 **Parameters:**
-- device (string): Camera device path (required)
-- filename (string, optional): Custom filename
+- device: string - Camera device path (required)
+- filename: string - Custom filename (optional)
 
 **Returns:** Snapshot information object with filename, timestamp, and status
 
@@ -170,9 +170,9 @@ Capture a snapshot from the specified camera.
 Start recording video from the specified camera.
 
 **Parameters:**
-- device (string): Camera device path (required)
-- duration (number, optional): Recording duration in seconds
-- format (string, optional): Recording format ("mp4", "mkv")
+- device: string - Camera device path (required)
+- duration: number - Recording duration in seconds (optional)
+- format: string - Recording format ("mp4", "mkv") (optional)
 
 **Returns:** Recording session information with filename, status, and metadata
 
@@ -211,7 +211,7 @@ Start recording video from the specified camera.
 Stop active recording for the specified camera.
 
 **Parameters:**
-- device (string): Camera device path (required)
+- device: string - Camera device path (required)
 
 **Returns:** Recording completion information with final file details
 

@@ -315,6 +315,10 @@ class HybridCameraMonitor:
             # Placeholder logic
             if Path(device_path).exists():
                 # TODO: Replace with actual device probing
+                # TODO: [CRITICAL] Placeholder CameraDevice creation with hard-coded values
+                # Description: This is an intentional stub for initial development. Reference: IV&V finding 1.1, Story S1.
+                # Rationale: Actual device probing must use v4l2 capability detection as specified in docs/architecture/overview.md.
+                # STOPPED: Do not proceed with production implementation until capability detection is integrated and hard-coded values are removed.
                 device_info = CameraDevice(
                     device=device_path,
                     name=f"Camera {device_num}",
