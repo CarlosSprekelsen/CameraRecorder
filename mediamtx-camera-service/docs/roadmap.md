@@ -141,9 +141,25 @@ Before marking any task as [x] complete:
             - Validation: All architectural requirements met - JSON production logging, human-readable development format, correlation ID propagation, configurable levels, file rotation support
             - Components: CorrelationIdFilter (lines 23-57), JsonFormatter (lines 60-105), ConsoleFormatter (lines 108-135), setup_logging (lines 138-222), helper functions (lines 225-275)
 
-    - **S1b: Core Implementation (PENDING)**
+        - [x] [IMPL] **HIGH PRIORITY**: Complete MediaMTX Controller business logic (grouped)
+            - File: src/mediamtx_wrapper/controller.py
+            - Evidence: Complete implementation (2025-08-02)
+                - health_check(): Lines 80-120, real REST API call to /v3/config/global/get
+                - create_stream(): Lines 122-170, POST to /v3/config/paths/add/{name} with stream config
+                - delete_stream(): Lines 172-205, POST to /v3/config/paths/delete/{name} with 404 handling
+                - start_recording(): Lines 207-270, MediaMTX path configuration updates with recording enable
+                - stop_recording(): Lines 272-320, recording disable with file size calculation
+                - take_snapshot(): Lines 322-390, snapshot capture with file management
+                - HTTP client management: Lines 45-78 (start/stop), aiohttp ClientSession lifecycle
+                - Background health monitoring: Lines 480-505, continuous 30-second health checks
+            - Status: Complete MediaMTX REST API integration with real endpoints, error handling, logging, and resource management
+            - Subtasks completed:
+                - [x] Implement health_check() with real status (replaced "unknown" placeholder)
+                - [x] Implement create_stream() and delete_stream() (replaced placeholders with working REST calls)
+                - [x] Implement start_recording(), stop_recording(), take_snapshot()
+                - [x] Remove all remaining TODO comments
 
-### S1b: Core Implementation (PENDING)
+    - **S1b: Core Implementation (PENDING)**
 
         - [ ] [FIX] **CRITICAL**: TODO formatting standard in principles.md
             - File: docs/development/principles.md
@@ -157,15 +173,6 @@ Before marking any task as [x] complete:
             - Subtasks:
                 - [ ] List all specific parameter typos fixed (before/after)
                 - [ ] Remove completion claim in roadmap.md if none were found
-            - Evidence:
-
-        - [ ] [IMPL] **HIGH PRIORITY**: Complete MediaMTX Controller business logic (grouped)
-            - File: src/mediamtx_wrapper/controller.py
-            - Subtasks:
-                - [ ] Implement health_check() with real status (no "unknown" placeholder)
-                - [ ] Implement create_stream() and delete_stream() (replace placeholders with working REST calls)
-                - [ ] Implement start_recording(), stop_recording(), take_snapshot()
-                - [ ] Remove all remaining TODO comments
             - Evidence:
 
         - [ ] [IMPL] **HIGH PRIORITY**: Complete Service Manager core logic (grouped)
