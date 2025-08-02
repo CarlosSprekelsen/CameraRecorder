@@ -83,37 +83,28 @@ Before marking any task as [x] complete:
             - Evidence: All TODOs now follow `docs/development/principles.md` (2025-08-02)
         - [x] [IMPL] Add method-level API versioning stubs in `server.py`.
             - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)
-        - [X] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
-            - Files: `src/websocket_server/server.py` lines ~380, ~420, ~460
-            - Methods: `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
-            - Fix: Implement actual snapshot capture, recording start/stop logic with MediaMTX integration
+        - [x] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
+            - Evidence: `src/websocket_server/server.py` lines 380-550 (2025-08-02)
+            - Status: Complete MediaMTX integration with error handling and logging
+        - [x] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic  
+            - Evidence: `src/websocket_server/server.py` lines 500-600 (2025-08-02)
+            - Status: Complete JSON-RPC 2.0 notification system with client broadcasting
+        - [x] [IMPL] **MEDIUM PRIORITY**: Actually integrate correlation ID in WebSocket logging (not TODO comments)
+            - File: `src/websocket_server/server.py`
+            - Fix: Remove TODO comments, implement actual correlation ID propagation in logs
+            - Integration: Use existing `logging_config.py` CorrelationIdFilter
             - Evidence: File: src/websocket_server/server.py
                 Sections:
-                    Lines ~380: _method_take_snapshot - Complete implementation with MediaMTX integration
-                    Lines ~420: _method_start_recording - Complete implementation with session management
-                    Lines ~460: _method_stop_recording - Complete implementation with completion tracking
-                    Date: 2025-08-02 Commit: Business logic implementation replacing NotImplementedError with working MediaMTX integration
-        - [x] [IMPL] **HIGH PRIORITY**: Replace `pass` statements with proper notification broadcasting logic
-            - Files: `src/websocket_server/server.py` lines ~500, ~520
-            - Methods: `notify_camera_status_update`, `notify_recording_status_update`
-            - Fix: Implement WebSocket notification broadcasting to all connected clients
-            - Evidence: File: src/websocket_server/server.py
-                Sections:
-                Lines ~500: notify_camera_status_update - Complete implementation with parameter validation, field filtering, and JSON-RPC 2.0 notification broadcasting
-                Lines ~520: notify_recording_status_update - Complete implementation with parameter validation, field filtering, and JSON-RPC 2.0 notification broadcasting
-                Lines ~200: broadcast_notification - Enhanced implementation with JSON-RPC 2.0 compliance, client broadcasting, and connection management
-                Date: 2025-08-02 Commit: Notification broadcasting implementation replacing pass statements with working JSON-RPC 2.0 notification system
+                Lines ~10: Added import for correlation ID functions from logging_config.py
+                Lines ~290-310: _handle_json_rpc_message - Removed TODO comments and implemented correlation ID extraction from JSON-RPC requests with thread context setting
+                Lines ~200-250: broadcast_notification - Enhanced to use proper correlation ID infrastructure with set_correlation_id() integration
+                Date: 2025-08-02 Commit: Correlation ID integration implementation replacing TODO comments with working structured logging using existing CorrelationIdFilter infrastructure
 
     - **S1b: Core Implementation (PENDING)**
         - [ ] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
             - File: `src/camera_discovery/hybrid_monitor.py`
             - Fix: Remove hard-coded "camera0" return (line ~200) and placeholder CameraDevice values (line ~185)
             - Fix: Implement configurable stream naming and proper device detection
-            - Evidence:
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Actually integrate correlation ID in WebSocket logging (not TODO comments)
-            - File: `src/websocket_server/server.py`
-            - Fix: Remove TODO comments, implement actual correlation ID propagation in logs
-            - Integration: Use existing `logging_config.py` CorrelationIdFilter
             - Evidence:
         - [ ] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
             - File: `src/camera_service/service_manager.py` line ~150

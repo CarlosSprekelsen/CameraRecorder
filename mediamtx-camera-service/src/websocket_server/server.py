@@ -14,6 +14,8 @@ from pathlib import Path
 import websockets
 from websockets.server import WebSocketServerProtocol
 
+from ..camera_service.logging_config import set_correlation_id, get_correlation_id
+
 
 @dataclass
 class JsonRpcRequest:
@@ -249,6 +251,14 @@ class WebSocketJsonRpcServer:
             self._logger.debug(f"No clients connected, skipping notification: {method}")
             return
         
+        # Extract or generate correlation ID for notification tracing
+        correlation_id = params.get("correlation_id") if params else None
+        if not correlation_id:
+            correlation_id = str(uuid.uuid4())[:8]
+        
+        # Set correlation ID for structured logging
+        set_correlation_id(correlation_id)
+        
         # Create JSON-RPC 2.0 notification structure
         notification = JsonRpcNotification(
             jsonrpc="2.0",
@@ -266,13 +276,8 @@ class WebSocketJsonRpcServer:
         except Exception as e:
             self._logger.error(f"Failed to serialize notification {method}: {e}")
             return
-        
-        # Extract/generate correlation ID for notification logging
-        correlation_id = params.get("correlation_id") if params else None
-        if not correlation_id:
-            correlation_id = str(uuid.uuid4())[:8]
             
-        self._logger.debug(f"[correlation_id={correlation_id}] Broadcasting notification: {method}")
+        self._logger.debug(f"Broadcasting notification: {method}")
         
         # Determine target clients
         if target_clients:
@@ -301,7 +306,7 @@ class WebSocketJsonRpcServer:
                         self._logger.info(f"Removed disconnected client: {client_id}")
         
         success_count = len(clients_to_notify) - len(failed_clients)
-        self._logger.debug(f"[correlation_id={correlation_id}] Notification {method} sent to {success_count}/{len(clients_to_notify)} clients")
+        self._logger.debug(f"Notification {method} sent to {success_count}/{len(clients_to_notify)} clients")
 
     async def send_notification_to_client(
         self, 
@@ -357,37 +362,35 @@ class WebSocketJsonRpcServer:
 
         Returns:
             JSON-RPC response string or None for notifications
-
-        # TODO: [CRITICAL] Integrate correlation ID into request logging
-        # Description: Architecture overview (docs/architecture/overview.md, "Structured Logging") requires all logs to include correlation IDs for traceability.
-        # IV&V Reference: Architecture Decisions v6, Logging Format, Story S1.
-        # Rationale: All request/response logs must include a correlation ID, typically derived from the JSON-RPC request ID or generated if missing.
-        # STOPPED: Do not implement correlation ID propagation or structured logging until logging format and correlation strategy are clarified.
         """
+        correlation_id = None
+        
         try:
-            # TODO: Extract correlation ID from JSON-RPC request (use 'id' field if present)
-            # TODO: Pass correlation ID to all log messages in this method
-            # TODO: Integrate with structured logging system per architecture overview
-
-            # Example stub:
-            correlation_id = None
+            # Extract correlation ID from JSON-RPC request ID field
             try:
                 req_obj = json.loads(message)
                 correlation_id = req_obj.get("id")
-            except Exception:
-                correlation_id = None
-
-            # Use correlation_id in all logging calls (stub only)
-            self._logger.debug(f"[correlation_id={correlation_id}] Processing JSON-RPC message")
-
-            # ...existing message handling logic...
-
+                if correlation_id is not None:
+                    correlation_id = str(correlation_id)
+            except (json.JSONDecodeError, AttributeError):
+                # Generate correlation ID if request parsing fails or ID is missing
+                correlation_id = str(uuid.uuid4())[:8]
+            
+            # Set correlation ID for current thread to enable structured logging
+            if correlation_id:
+                set_correlation_id(correlation_id)
+            
+            self._logger.debug(f"Processing JSON-RPC message from client {client.client_id}")
+            
+            # TODO: Implement JSON-RPC message parsing and method dispatch
+            # TODO: Call appropriate method handlers
+            # TODO: Return JSON-RPC response or None for notifications
+            
             return None
 
         except Exception as e:
-            # TODO: Include correlation ID in error log
-            self._logger.error(f"[correlation_id={correlation_id}] Error processing JSON-RPC message: {e}")
-            # TODO: Return JSON-RPC error response with correlation ID if possible
+            self._logger.error(f"Error processing JSON-RPC message from client {client.client_id}: {e}")
+            # TODO: Return JSON-RPC error response
             return None
 
     async def _close_all_connections(self) -> None:
