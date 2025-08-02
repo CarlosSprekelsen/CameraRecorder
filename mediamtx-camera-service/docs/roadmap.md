@@ -72,6 +72,29 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence: Rich TODO/STOP and stub logic in `src/websocket_server/server.py` (2025-08-02)
         - [x] [IMPL] Add method-level API versioning stubs in `server.py`.
             - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)
+        - [ ] [FIX] Actually implement JSON-RPC method bodies (not NotImplementedError)
+            - File: `src/websocket_server/server.py`
+            - Fix: Replace NotImplementedError in `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
+            - Fix: Replace `pass` statements in notification methods with proper stub structure
+            - Evidence:
+        - [ ] [FIX] Actually refactor hard-coded values in hybrid_monitor.py
+            - File: `src/camera_discovery/hybrid_monitor.py`
+            - Fix: Remove hard-coded "camera0" return and placeholder CameraDevice values
+            - Fix: Implement configurable stream naming and proper device detection
+            - Evidence:
+        - [ ] [IMPL] Actually integrate correlation ID in WebSocket logging (not TODO comments)
+            - File: `src/websocket_server/server.py`
+            - Fix: Remove TODO comments, implement actual correlation ID propagation in logs
+            - Integration: Use existing `logging_config.py` CorrelationIdFilter
+            - Evidence:
+        - [ ] [IVV] Document and validate logging infrastructure implementation
+            - Evidence: `src/camera_service/logging_config.py` (150+ lines implemented)
+            - Task: Add proper roadmap tracking for CorrelationIdFilter, JsonFormatter, structured logging
+            - Reference: This is a major system component with no roadmap visibility
+        - [ ] [IVV] Document and validate configuration system implementation
+            - Evidence: `src/camera_service/config.py` (complete config class hierarchy)
+            - Task: Add proper roadmap tracking for YAML loading, config validation, environment overrides
+            - Reference: This is a core system component with no roadmap visibility
 
     - **S2: Architecture Compliance IV&V (Control Point)**
         - [x] [IVV] API docs and code stubs match (method names, params, status).
@@ -84,60 +107,97 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
             - Evidence: Codebase and `docs/development/principles.md` (2025-08-02)
         - [x] [IVV] All CRITICAL/MEDIUM issues from IV&V resolved.
             - Evidence: See Resolved Blockers section below.
+        - [ ] [IVV] Re-validate API docs and code alignment after S1 fixes
+            - Evidence:
+        - [ ] [IVV] Re-validate CRITICAL/MEDIUM issue resolution after actual implementation
+            - Evidence:
+        - [ ] [IVV] Validate phantom implementation documentation is complete
+            - Evidence:
         - **_Can proceed to S3 as all S2 IV&V tasks are complete._**
 
     - **S3: Camera Discovery & Monitoring Implementation**
+        - [ ] [IMPL] Implement capability detection logic for CameraDevice (currently STOP/TODO in hybrid_monitor.py).
+            - Evidence:
         - [ ] [IMPL] Begin udev monitoring & device probing stubs in `hybrid_monitor.py`.
+            - Evidence:
         - [ ] [IMPL] Integrate camera connect/disconnect with MediaMTXController in `service_manager.py`.
+            - Evidence:
+        - [ ] [IMPL] Implement notification handler interface for camera_status_update (currently STOP/TODO in service_manager.py).
+            - Evidence:
 
     - **S4: MediaMTX Integration**
         - [ ] [IMPL] Integrate stream creation/deletion logic in `service_manager.py` and `controller.py`.
+            - Evidence:
         - [ ] [FIX] Add/complete MediaMTX config template in `config/mediamtx/templates/`.
+            - Evidence:
 
     - **S5: Core Integration IV&V (Control Point)**
         - [ ] [IVV] MediaMTX integration tested with at least one camera/device.
+            - Evidence:
         - [ ] [IVV] Notification, error recovery, and authentication paths reviewed.
+            - Evidence:
         - [ ] [IVV] Tests cover all major workflows.
-        - **_Cannot proceed to next Epic until S5 IV&V is passed._**
+            - Evidence:
+        - [ ] [IMPL] Implement correlation ID propagation and structured logging (currently STOP/TODO in server.py).
+            - Evidence:
+        - [ ] [IMPL] Implement method deprecation tracking and version negotiation logic (currently deferred per architecture decisions).
+            - Evidence:
 
 - **E2: Security and Production Hardening**
     - **S6: Security Features Implementation**
         - [ ] [IMPL] Implement basic authentication framework (JWT/API key stubs) in `server.py`.
+            - Evidence:
         - [ ] [IMPL] Add health check endpoints, error recovery strategies.
+            - Evidence:
 
     - **S7: Security IV&V (Control Point)**
         - [ ] [IVV] Authentication and health check features verified.
+            - Evidence:
         - [ ] [IVV] All endpoints have correct access control.
+            - Evidence:
         - [ ] [IVV] Security test cases in place.
-        - **_Cannot proceed to next Epic until S7 IV&V is passed._**
+            - Evidence:
 
 - **E3: Client API & SDK Ecosystem**
     - **S8: Client APIs and Examples**
         - [ ] [IMPL] Add client API usage examples in `/examples`.
+            - Evidence:
         - [ ] [DOCS] Document API usage and authentication.
+            - Evidence:
 
     - **S9: SDK & Docs IV&V (Control Point)**
         - [ ] [IVV] Client API examples and docs reviewed for accuracy and completeness.
+            - Evidence:
         - [ ] [IVV] Usability tests or walkthroughs completed.
+            - Evidence:
 
 - **E4: Future Extensibility**
     - **S10: Cloud/Protocol Extensions (Planning Only)**
         - [ ] [IMPL] Prepare documentation and placeholders for future protocols/cloud (no implementation).
+            - Evidence:
 
     - **S11: Extensibility IV&V (Control Point)**
         - [ ] [IVV] Future plans reviewed, documented, and approved.
+            - Evidence:
         - [ ] [IVV] All extension points and plugin mechanisms validated.
+            - Evidence:
 
 - **E5: Deployment & Operations Strategy**
     - **S12: Deployment Automation & Ops**
         - [ ] [FIX] Complete `deployment/scripts/install.sh` with working steps.
+            - Evidence:
         - [ ] [DOCS] Add environment variable and system integration docs.
+            - Evidence:
         - [ ] [DOCS] Document update/rollback and backup procedures.
+            - Evidence:
 
     - **S13: Deployment IV&V (Control Point)**
         - [ ] [IVV] Deployment scripts tested on target environments.
+            - Evidence:
         - [ ] [IVV] Operations documentation validated.
+            - Evidence:
         - [ ] [IVV] Backup/recovery procedures verified.
+            - Evidence:
 
 ---
 
@@ -145,14 +205,23 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
 
 - **S14: Automated Testing & Continuous Integration**
     - [ ] [IMPL] Add/validate minimal test scaffolding for all modules.
+        - Evidence:
     - [ ] [IMPL] Achieve >80% unit/integration test coverage.
+        - Evidence:
     - [ ] [DEV] Set up CI for linting, formatting, and tests.
+        - Evidence:
     - [ ] [DEV] Add/validate pre-commit hooks.
+        - Evidence:
+    - [ ] [IVV] Audit for minor/cosmetic/documentation/test issues and verify zero open TODOs remain.
+        - Evidence:
 
 - **S15: Documentation & Developer Onboarding**
     - [ ] [DOCS] Complete setup instructions in `docs/development/setup.md`.
+        - Evidence:
     - [ ] [DOCS] Finalize/maintain coding standards.
+        - Evidence:
     - [ ] [DOCS] Document config/environment variables.
+        - Evidence:
     - [ ] [DOCS] Document IV&V workflow and control points.
 
 ---
