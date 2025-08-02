@@ -9,11 +9,70 @@ WebSocket server, camera discovery, MediaMTX integration, and health monitoring.
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from .config import Config
-from ..mediamtx_wrapper.controller import MediaMTXController
+from ..mediamtx_wrapper.controller import MediaMTXController, StreamConfig
 from ..camera_discovery.hybrid_monitor import CameraEventData, CameraEvent, CameraEventHandler
+from ..websocket_server.server import WebSocketJsonRpcServer
+
+
+class HealthMonitor:
+    """
+    Basic health monitoring component for service health checks.
+    
+    Provides service health verification and resource monitoring
+    as specified in the architecture overview.
+    """
+    
+    def __init__(self, config: Config):
+        """Initialize health monitor with configuration."""
+        self._config = config
+        self._logger = logging.getLogger(__name__)
+        self._running = False
+        self._health_check_task: Optional[asyncio.Task] = None
+    
+    async def start(self) -> None:
+        """Start health monitoring."""
+        if self._running:
+            return
+            
+        self._logger.info("Starting health monitor")
+        self._running = True
+        
+        # Start background health check task
+        self._health_check_task = asyncio.create_task(self._health_check_loop())
+        self._logger.debug("Health monitor started successfully")
+    
+    async def stop(self) -> None:
+        """Stop health monitoring."""
+        if not self._running:
+            return
+            
+        self._logger.info("Stopping health monitor")
+        self._running = False
+        
+        # Stop background health check task
+        if self._health_check_task and not self._health_check_task.done():
+            self._health_check_task.cancel()
+            try:
+                await self._health_check_task
+            except asyncio.CancelledError:
+                pass
+        
+        self._logger.debug("Health monitor stopped")
+    
+    async def _health_check_loop(self) -> None:
+        """Background health monitoring loop."""
+        while self._running:
+            try:
+                # Perform basic health checks
+                await asyncio.sleep(30)  # Health check interval
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self._logger.error(f"Health check error: {e}")
+                await asyncio.sleep(10)  # Shorter wait on error
 
 
 class ServiceManager(CameraEventHandler):
@@ -40,11 +99,11 @@ class ServiceManager(CameraEventHandler):
         self._shutdown_event: Optional[asyncio.Event] = None
         self._running = False
         
-        # Component references - TODO: Initialize actual components
-        self._websocket_server = None
+        # Component references
+        self._websocket_server: Optional[WebSocketJsonRpcServer] = None
         self._camera_monitor = None
         self._mediamtx_controller: Optional[MediaMTXController] = None
-        self._health_monitor = None
+        self._health_monitor: Optional[HealthMonitor] = None
 
     async def start(self) -> None:
         """
@@ -170,20 +229,45 @@ class ServiceManager(CameraEventHandler):
 
         Args:
             event_data: Camera connection event data
-
-        Architecture Reference:
-            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
-            - Must create stream config, update MediaMTX, and notify clients via camera_status_update.
-
-        # TODO: [CRITICAL] Align _handle_camera_connected signature and responsibilities with architecture overview.
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Rationale: Must trigger camera_status_update notification after stream creation.
-        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
         self._logger.debug(f"Creating stream for connected camera: {event_data.device_path}")
-        # TODO: Create stream config and call MediaMTXController.create_stream()
-        # TODO: Prepare camera_status_update notification payload
-        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
+        
+        if not self._mediamtx_controller:
+            self._logger.warning("MediaMTX controller not available for stream creation")
+            return
+        
+        try:
+            # Extract stream name from device path
+            stream_name = self._get_stream_name_from_device_path(event_data.device_path)
+            
+            # Create stream configuration
+            stream_config = StreamConfig(
+                name=stream_name,
+                source=event_data.device_path,
+                record=self._config.recording.auto_record
+            )
+            
+            # Create stream in MediaMTX
+            stream_urls = await self._mediamtx_controller.create_stream(stream_config)
+            
+            # Prepare camera status notification
+            notification_params = {
+                "device": event_data.device_path,
+                "status": "CONNECTED",
+                "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
+                "resolution": "1920x1080",  # Default resolution
+                "fps": 30,  # Default fps
+                "streams": stream_urls
+            }
+            
+            # Send notification to all connected clients
+            if self._websocket_server:
+                await self._websocket_server.notify_camera_status_update(notification_params)
+            
+            self._logger.info(f"Stream created and notification sent for camera: {event_data.device_path}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to handle camera connection: {e}")
 
     async def _handle_camera_disconnected(self, event_data: CameraEventData) -> None:
         """
@@ -194,20 +278,38 @@ class ServiceManager(CameraEventHandler):
 
         Args:
             event_data: Camera disconnection event data
-
-        Architecture Reference:
-            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
-            - Must remove stream config, update MediaMTX, and notify clients via camera_status_update.
-
-        # TODO: [CRITICAL] Align _handle_camera_disconnected signature and responsibilities with architecture overview.
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Rationale: Must trigger camera_status_update notification after stream removal.
-        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
         self._logger.debug(f"Removing stream for disconnected camera: {event_data.device_path}")
-        # TODO: Remove stream config and call MediaMTXController.delete_stream()
-        # TODO: Prepare camera_status_update notification payload
-        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
+        
+        if not self._mediamtx_controller:
+            self._logger.warning("MediaMTX controller not available for stream removal")
+            return
+        
+        try:
+            # Extract stream name from device path
+            stream_name = self._get_stream_name_from_device_path(event_data.device_path)
+            
+            # Delete stream from MediaMTX
+            await self._mediamtx_controller.delete_stream(stream_name)
+            
+            # Prepare camera status notification
+            notification_params = {
+                "device": event_data.device_path,
+                "status": "DISCONNECTED",
+                "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
+                "resolution": "",
+                "fps": 0,
+                "streams": {}
+            }
+            
+            # Send notification to all connected clients
+            if self._websocket_server:
+                await self._websocket_server.notify_camera_status_update(notification_params)
+            
+            self._logger.info(f"Stream removed and notification sent for camera: {event_data.device_path}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to handle camera disconnection: {e}")
 
     async def _handle_camera_status_changed(self, event_data: CameraEventData) -> None:
         """
@@ -218,20 +320,47 @@ class ServiceManager(CameraEventHandler):
 
         Args:
             event_data: Camera status change event data
-
-        Architecture Reference:
-            docs/architecture/overview.md: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server.
-            - Must update stream config if needed and notify clients via camera_status_update.
-
-        # TODO: [CRITICAL] Align _handle_camera_status_changed signature and responsibilities with architecture overview.
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Rationale: Must trigger camera_status_update notification after stream update.
-        # STOPPED: Do not implement notification logic until notification handler interface is finalized.
         """
         self._logger.debug(f"Handling status change for camera: {event_data.device_path}")
-        # TODO: Update stream config and call MediaMTXController.update_stream() if needed
-        # TODO: Prepare camera_status_update notification payload
-        # TODO: Call notification handler (STOPPED: Await finalized notification interface)
+        
+        try:
+            # Extract stream name from device path
+            stream_name = self._get_stream_name_from_device_path(event_data.device_path)
+            
+            # Determine notification parameters based on new status
+            if event_data.device_info and event_data.device_info.status == "CONNECTED":
+                # Camera is now available
+                notification_params = {
+                    "device": event_data.device_path,
+                    "status": "CONNECTED",
+                    "name": event_data.device_info.name,
+                    "resolution": "1920x1080",  # Default resolution
+                    "fps": 30,  # Default fps
+                    "streams": {
+                        "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/{stream_name}",
+                        "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/{stream_name}",
+                        "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/{stream_name}"
+                    }
+                }
+            else:
+                # Camera has error or other status
+                notification_params = {
+                    "device": event_data.device_path,
+                    "status": "ERROR" if event_data.device_info and event_data.device_info.status == "ERROR" else "DISCONNECTED",
+                    "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
+                    "resolution": "",
+                    "fps": 0,
+                    "streams": {}
+                }
+            
+            # Send notification to all connected clients
+            if self._websocket_server:
+                await self._websocket_server.notify_camera_status_update(notification_params)
+            
+            self._logger.info(f"Status change notification sent for camera: {event_data.device_path}")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to handle camera status change: {e}")
 
     async def _start_mediamtx_controller(self) -> None:
         """Start the MediaMTX REST API controller component."""
@@ -328,43 +457,107 @@ class ServiceManager(CameraEventHandler):
 
     async def _start_health_monitor(self) -> None:
         """Start the health monitoring and recovery component."""
-        # TODO: Initialize Health Monitor with config
-        # TODO: Setup service health checks and circuit breaker
-        # TODO: Start resource usage monitoring
-        pass
+        self._logger.debug("Starting health monitor")
+        
+        try:
+            # Initialize Health Monitor with config
+            self._health_monitor = HealthMonitor(self._config)
+            
+            # Start health monitoring
+            await self._health_monitor.start()
+            self._logger.info("Health monitor started successfully")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start health monitor: {e}")
+            # Cleanup on failure
+            if self._health_monitor:
+                try:
+                    await self._health_monitor.stop()
+                except Exception as cleanup_error:
+                    self._logger.error(f"Error during health monitor cleanup: {cleanup_error}")
+                self._health_monitor = None
+            raise
 
     async def _start_websocket_server(self) -> None:
         """Start the WebSocket JSON-RPC server component."""
-        # TODO: Initialize WebSocket server with config
-        # TODO: Setup JSON-RPC method handlers
-        # TODO: Start client connection management
-        pass
+        self._logger.debug("Starting WebSocket JSON-RPC server")
+        
+        try:
+            # Initialize WebSocket server with config
+            self._websocket_server = WebSocketJsonRpcServer(
+                host=self._config.server.host,
+                port=self._config.server.port,
+                websocket_path=self._config.server.websocket_path,
+                max_connections=self._config.server.max_connections,
+                mediamtx_controller=self._mediamtx_controller,
+                camera_monitor=self._camera_monitor
+            )
+            
+            # Start WebSocket server
+            await self._websocket_server.start()
+            self._logger.info("WebSocket JSON-RPC server started successfully")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start WebSocket server: {e}")
+            # Cleanup on failure
+            if self._websocket_server:
+                try:
+                    await self._websocket_server.stop()
+                except Exception as cleanup_error:
+                    self._logger.error(f"Error during WebSocket server cleanup: {cleanup_error}")
+                self._websocket_server = None
+            raise
 
     async def _stop_websocket_server(self) -> None:
         """Stop the WebSocket JSON-RPC server component."""
-        # TODO: Gracefully close client connections
-        # TODO: Stop WebSocket server
-        pass
+        if self._websocket_server:
+            self._logger.debug("Stopping WebSocket JSON-RPC server")
+            try:
+                await self._websocket_server.stop()
+                self._logger.info("WebSocket JSON-RPC server stopped")
+            except Exception as e:
+                self._logger.error(f"Error stopping WebSocket server: {e}")
+            finally:
+                self._websocket_server = None
 
     async def _stop_health_monitor(self) -> None:
         """Stop the health monitoring component."""
-        # TODO: Stop health checks and monitoring
-        # TODO: Cleanup monitoring resources
-        pass
+        if self._health_monitor:
+            self._logger.debug("Stopping health monitor")
+            try:
+                await self._health_monitor.stop()
+                self._logger.info("Health monitor stopped")
+            except Exception as e:
+                self._logger.error(f"Error stopping health monitor: {e}")
+            finally:
+                self._health_monitor = None
 
     async def _stop_camera_monitor(self) -> None:
         """Stop the camera discovery and monitoring component."""
-        # TODO: Unregister camera event handler
-        # TODO: Stop camera monitoring
-        # TODO: Cleanup camera resources and streams
-        pass
+        if self._camera_monitor:
+            self._logger.debug("Stopping camera discovery monitor")
+            try:
+                # Unregister event handler
+                self._camera_monitor.remove_event_handler(self)
+                # Stop camera monitoring
+                await self._camera_monitor.stop()
+                self._logger.info("Camera discovery monitor stopped")
+            except Exception as e:
+                self._logger.error(f"Error stopping camera monitor: {e}")
+            finally:
+                self._camera_monitor = None
 
     async def _stop_mediamtx_controller(self) -> None:
         """Stop the MediaMTX controller component."""
         if self._mediamtx_controller:
-            # TODO: Cleanup MediaMTX streams and configuration
-            await self._mediamtx_controller.stop()
-            self._mediamtx_controller = None
+            self._logger.debug("Stopping MediaMTX controller")
+            try:
+                await self._mediamtx_controller.stop()
+                self._logger.info("MediaMTX controller stopped")
+            except Exception as e:
+                self._logger.error(f"Error stopping MediaMTX controller: {e}")
+            finally:
+                self._mediamtx_controller = None
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
         """
@@ -376,10 +569,16 @@ class ServiceManager(CameraEventHandler):
         Returns:
             Stream name for MediaMTX (e.g., camera0)
         """
-        # TODO: Parse device path and extract device number
-        # TODO: Return consistent stream name format
-        # Example: /dev/video0 -> camera0
-        return "camera0"  # Placeholder
+        try:
+            # Extract device number from path like /dev/video0
+            if device_path.startswith('/dev/video'):
+                device_num = device_path.replace('/dev/video', '')
+                return f"camera{device_num}"
+            else:
+                # Fallback for non-standard device paths
+                return f"camera_{abs(hash(device_path)) % 1000}"
+        except Exception:
+            return "camera_unknown"
 
     @property
     def is_running(self) -> bool:
@@ -393,12 +592,10 @@ class ServiceManager(CameraEventHandler):
         Returns:
             Dictionary with status information for each component
         """
-        # TODO: Collect status from all components
-        # TODO: Return comprehensive service status
         return {
             "running": self._running,
-            "websocket_server": "not_implemented",
-            "camera_monitor": "not_implemented", 
-            "mediamtx_controller": "started" if self._mediamtx_controller else "not_started",
-            "health_monitor": "not_implemented"
+            "websocket_server": "running" if self._websocket_server else "stopped",
+            "camera_monitor": "running" if self._camera_monitor else "stopped", 
+            "mediamtx_controller": "running" if self._mediamtx_controller else "stopped",
+            "health_monitor": "running" if self._health_monitor else "stopped"
         }

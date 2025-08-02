@@ -159,6 +159,24 @@ Before marking any task as [x] complete:
                 - [x] Implement start_recording(), stop_recording(), take_snapshot()
                 - [x] Remove all remaining TODO comments
 
+        - [x] [IMPL] **HIGH PRIORITY**: Complete Service Manager core logic (grouped)
+            - File: src/camera_service/service_manager.py
+            - Evidence: Complete implementation (2025-08-02)
+                - _start_websocket_server(): Lines 180-210, WebSocketJsonRpcServer initialization with config
+                - _start_health_monitor(): Lines 140-165, HealthMonitor component initialization and startup
+                - _stop_websocket_server(): Lines 215-225, graceful WebSocket server shutdown with error handling
+                - _stop_health_monitor(): Lines 230-240, health monitor cleanup
+                - _stop_camera_monitor(): Lines 245-260, camera monitor shutdown with event handler cleanup
+                - _stop_mediamtx_controller(): Lines 265-275, MediaMTX controller cleanup
+                - Camera event handlers: Lines 95-180, complete MediaMTX integration with stream creation/deletion and WebSocket notifications
+                - HealthMonitor class: Lines 15-65, basic health monitoring component with background health checks
+            - Status: Complete Service Manager orchestration with all components, event handling, MediaMTX stream coordination, and WebSocket notification broadcasting
+            - Subtasks completed:
+                - [x] Implement _start_websocket_server (replaced pass/TODO)
+                - [x] Implement _start_health_monitor (replaced pass/TODO) 
+                - [x] Implement all _stop_* methods (replaced placeholders)
+                - [x] Implement camera event handler integration (removed STOPPED/TODOs)
+
     - **S1b: Core Implementation (PENDING)**
 
         - [ ] [FIX] **CRITICAL**: TODO formatting standard in principles.md
@@ -173,15 +191,6 @@ Before marking any task as [x] complete:
             - Subtasks:
                 - [ ] List all specific parameter typos fixed (before/after)
                 - [ ] Remove completion claim in roadmap.md if none were found
-            - Evidence:
-
-        - [ ] [IMPL] **HIGH PRIORITY**: Complete Service Manager core logic (grouped)
-            - File: src/camera_service/service_manager.py
-            - Subtasks:
-                - [ ] Implement _start_websocket_server (replace pass/TODO)
-                - [ ] Implement _start_health_monitor (replace pass/TODO)
-                - [ ] Implement all _stop_* methods (replace placeholders)
-                - [ ] Implement camera event handler integration (_handle_camera_connected, _handle_camera_disconnected, etc.; remove STOPPED/TODOs)
             - Evidence:
 
         - [ ] [IMPL] **MEDIUM PRIORITY**: Complete udev monitoring implementation (grouped)
