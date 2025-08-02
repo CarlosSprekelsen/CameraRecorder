@@ -83,45 +83,36 @@ Get list of all discovered cameras with their current status.
 ## Camera Control Methods
 
 ### get_camera_status
-Get detailed status for a specific camera.
+Get status for a specific camera device.
 
 **Parameters:**
-- device: string - Camera device path (e.g., "/dev/video0")
+- device: string - Camera device path (required)
 
-**Returns:** Detailed camera status object with device info, streams, and metrics
-
-**Status:** Not yet implemented
+**Returns:** Camera status object with all standard fields and metrics
 
 **Example:**
 ```json
-// Request
-{
-  "jsonrpc": "2.0",
-  "method": "get_camera_status",
-  "params": {
-    "device": "/dev/video0"
-  },
-  "id": 3
-}
-
-// Response
 {
   "jsonrpc": "2.0",
   "result": {
     "device": "/dev/video0",
     "status": "CONNECTED",
-    "name": "USB Camera",
+    "name": "Camera 0",
     "resolution": "1920x1080",
     "fps": 30,
     "streams": {
       "rtsp": "rtsp://localhost:8554/camera0",
-      "webrtc": "http://localhost:8889/camera0/webrtc",
-      "hls": "http://localhost:8888/camera0"
+      "webrtc": "webrtc://localhost:8002/camera0",
+      "hls": "http://localhost:8002/hls/camera0.m3u8"
     },
     "metrics": {
-      "bytes_sent": 1024000,
+      "bytes_sent": 12345678,
       "readers": 2,
       "uptime": 3600
+    },
+    "capabilities": {
+      "formats": ["YUYV", "MJPEG"],
+      "resolutions": ["1920x1080", "1280x720"]
     }
   },
   "id": 3

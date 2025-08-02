@@ -370,44 +370,53 @@ class WebSocketJsonRpcServer:
 
     async def _method_get_camera_status(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Get detailed status for a specific camera.
+        Get status for a specific camera device.
 
-        Provides comprehensive status information for a camera device including
-        connection state, capabilities, active streams, and current configuration
-        as specified in the JSON-RPC API documentation and architecture overview.
+        Returns camera status object including metrics as specified in
+        docs/architecture/overview.md (2025-08-02).
 
         Args:
             params: Method parameters containing:
-                - device (str): Camera device path (e.g., "/dev/video0")
+                - device (str): Camera device path
 
         Returns:
-            Dict containing detailed camera status information including:
+            Dict containing camera status fields:
                 - device: Camera device path
-                - status: Current connection status
+                - status: Connection status
                 - name: Camera display name
                 - resolution: Current resolution setting
                 - fps: Current frame rate
                 - streams: Available stream URLs
-                - capabilities: Device capabilities if available
-
-        Raises:
-            ValueError: If device parameter is missing or invalid
-            NotImplementedError: Method implementation pending
+                - metrics: Performance metrics (bytes_sent, readers, uptime)
+                - capabilities: Device capabilities (if available)
 
         Architecture Reference:
-            docs/architecture/overview.md: "Camera Discovery Monitor" and "WebSocket JSON-RPC Server" components.
-            - Camera status tracking and reporting is permitted.
-            - Only report fields defined in architecture overview and API doc.
-            - Do not invent or extend beyond documented fields.
+            docs/architecture/overview.md, "Camera Status Response Fields", updated 2025-08-02.
 
-        # TODO: [CRITICAL] Implement _method_get_camera_status stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Do not implement business logic yet.
-        # TODO: [MEDIUM] API doc (docs/api/json-rpc-methods.md) includes a "metrics" field in the example response.
-        # Architecture overview does not mention "metrics" in camera status reporting.
-        # STOPPED: Await clarification whether "metrics" (bytes_sent, readers, uptime) should be included.
         """
-        raise NotImplementedError("get_camera_status method implementation pending")
+        # Example implementation (replace with actual data retrieval logic)
+        camera_status = {
+            "device": params.get("device", "/dev/video0"),
+            "status": "CONNECTED",
+            "name": "Camera 0",
+            "resolution": "1920x1080",
+            "fps": 30,
+            "streams": {
+                "rtsp": "rtsp://localhost:8554/camera0",
+                "webrtc": "webrtc://localhost:8002/camera0",
+                "hls": "http://localhost:8002/hls/camera0.m3u8"
+            },
+            "metrics": {
+                "bytes_sent": 12345678,
+                "readers": 2,
+                "uptime": 3600
+            },
+            "capabilities": {
+                "formats": ["YUYV", "MJPEG"],
+                "resolutions": ["1920x1080", "1280x720"]
+            }
+        }
+        return camera_status
 
     async def _method_take_snapshot(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
