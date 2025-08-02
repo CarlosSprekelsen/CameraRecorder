@@ -60,9 +60,9 @@ class ClientConnection:
         self.subscriptions: Set[str] = set()
         self.connected_at = asyncio.get_event_loop().time()
         
-        # TODO: Add authentication state
-        # TODO: Add permission tracking
-        # TODO: Add rate limiting state
+        # TODO: HIGH: Add authentication state implementation [Story:E1/S1a]
+        # TODO: MEDIUM: Add permission tracking implementation [Story:E1/S1a]
+        # TODO: MEDIUM: Add rate limiting state implementation [Story:E1/S1a]
 
 
 class WebSocketJsonRpcServer:
@@ -73,7 +73,7 @@ class WebSocketJsonRpcServer:
     as specified in the architecture overview.
     """
 
-    # TODO: [CRITICAL] Method-level API versioning framework stub
+    # TODO: CRITICAL: Complete method-level API versioning framework implementation [Story:E1/S1a]
     # Description: Architecture overview (docs/architecture/overview.md) requires method-level versioning and structured deprecation for all JSON-RPC methods.
     # IV&V Reference: Architecture Decisions v6, API Versioning Strategy, Story S1.
     # Rationale: All public API methods must support explicit versioning and deprecation tracking.
@@ -118,9 +118,9 @@ class WebSocketJsonRpcServer:
         # JSON-RPC method handlers
         self._method_handlers: Dict[str, Callable] = {}
         
-        # TODO: Initialize authentication system
-        # TODO: Initialize rate limiting
-        # TODO: Initialize metrics collection
+        # TODO: HIGH: Initialize authentication system implementation [Story:E1/S1a]
+        # TODO: MEDIUM: Initialize rate limiting implementation [Story:E1/S1a]
+        # TODO: MEDIUM: Initialize metrics collection implementation [Story:E1/S1a]
 
     def set_mediamtx_controller(self, controller) -> None:
         """
@@ -156,9 +156,9 @@ class WebSocketJsonRpcServer:
             # Register built-in methods
             self._register_builtin_methods()
             
-            # TODO: Start WebSocket server with proper error handling
-            # TODO: Setup connection handling and cleanup
-            # TODO: Initialize authentication middleware
+            # TODO: HIGH: Start WebSocket server with proper error handling [Story:E1/S1a]
+            # TODO: MEDIUM: Setup connection handling and cleanup [Story:E1/S1a]
+            # TODO: HIGH: Initialize authentication middleware [Story:E1/S1a]
             
             self._running = True
             self._logger.info("WebSocket JSON-RPC server started successfully")
@@ -182,8 +182,8 @@ class WebSocketJsonRpcServer:
             # Close all client connections
             await self._close_all_connections()
             
-            # TODO: Stop WebSocket server
-            # TODO: Cleanup resources and tasks
+            # TODO: HIGH: Stop WebSocket server implementation [Story:E1/S1a]
+            # TODO: MEDIUM: Cleanup resources and tasks implementation [Story:E1/S1a]
             
             self._running = False
             self._logger.info("WebSocket JSON-RPC server stopped")
@@ -204,7 +204,7 @@ class WebSocketJsonRpcServer:
         Architecture Reference:
             docs/architecture/overview.md: Method-level API versioning strategy.
 
-        # TODO: [CRITICAL] Track deprecated methods and flag in registration (future).
+        # TODO: CRITICAL: Track deprecated methods and flag in registration for future implementation [Story:E1/S1a]
         """
         self._method_handlers[method_name] = handler
         self._method_versions[method_name] = version
@@ -325,9 +325,9 @@ class WebSocketJsonRpcServer:
         Returns:
             True if notification was sent successfully
         """
-        # TODO: Validate client exists and is connected
-        # TODO: Send notification to specific client
-        # TODO: Handle send failures and connection cleanup
+        # TODO: HIGH: Validate client exists and is connected [Story:E1/S1a]
+        # TODO: HIGH: Send notification to specific client [Story:E1/S1a]
+        # TODO: MEDIUM: Handle send failures and connection cleanup [Story:E1/S1a]
         
         return False
 
@@ -339,11 +339,11 @@ class WebSocketJsonRpcServer:
             websocket: WebSocket connection object
             path: Request path
         """
-        # TODO: Validate connection path and limits
-        # TODO: Create client connection object
-        # TODO: Handle authentication
-        # TODO: Process incoming messages
-        # TODO: Cleanup on disconnect
+        # TODO: HIGH: Validate connection path and limits [Story:E1/S1a]
+        # TODO: HIGH: Create client connection object [Story:E1/S1a]
+        # TODO: HIGH: Handle authentication [Story:E1/S1a]
+        # TODO: HIGH: Process incoming messages [Story:E1/S1a]
+        # TODO: MEDIUM: Cleanup on disconnect [Story:E1/S1a]
         
         client_id = str(uuid.uuid4())
         self._logger.info(f"New client connection: {client_id}")
@@ -382,15 +382,15 @@ class WebSocketJsonRpcServer:
             
             self._logger.debug(f"Processing JSON-RPC message from client {client.client_id}")
             
-            # TODO: Implement JSON-RPC message parsing and method dispatch
-            # TODO: Call appropriate method handlers
-            # TODO: Return JSON-RPC response or None for notifications
+            # TODO: HIGH: Implement JSON-RPC message parsing and method dispatch [Story:E1/S1a]
+            # TODO: HIGH: Call appropriate method handlers [Story:E1/S1a]
+            # TODO: MEDIUM: Return JSON-RPC response or None for notifications [Story:E1/S1a]
             
             return None
 
         except Exception as e:
             self._logger.error(f"Error processing JSON-RPC message from client {client.client_id}: {e}")
-            # TODO: Return JSON-RPC error response
+            # TODO: MEDIUM: Return JSON-RPC error response implementation [Story:E1/S1a]
             return None
 
     async def _close_all_connections(self) -> None:
@@ -399,9 +399,9 @@ class WebSocketJsonRpcServer:
             if not self._clients:
                 return
             
-            # TODO: Send shutdown notification to clients
-            # TODO: Close all WebSocket connections
-            # TODO: Clear client tracking
+            # TODO: MEDIUM: Send shutdown notification to clients [Story:E1/S1a]
+            # TODO: HIGH: Close all WebSocket connections [Story:E1/S1a]
+            # TODO: MEDIUM: Clear client tracking [Story:E1/S1a]
             
             self._logger.info(f"Closed {len(self._clients)} client connections")
             self._clients.clear()
@@ -482,7 +482,7 @@ class WebSocketJsonRpcServer:
         Returns:
             Object with camera list and metadata.
         """
-        # TODO: Implement camera discovery logic
+        # TODO: HIGH: Implement camera discovery logic integration [Story:E1/S1a]
         return {
             "cameras": [],
             "total": 0,
@@ -907,3 +907,4 @@ class WebSocketJsonRpcServer:
 # CHANGE LOG
 # 2025-08-02: Implemented method-level API versioning per architecture overview, resolving IV&V BLOCKED issue per roadmap.md.
 # 2025-08-02: Implemented business logic for take_snapshot, start_recording, stop_recording methods with MediaMTX integration per Epic E1 task requirements.
+# 2025-08-02: Standardized all TODO comment formatting to required format per docs/development/principles.md.

@@ -368,7 +368,7 @@ class MediaMTXController:
                         "status": "completed",
                         "end_time": end_time,
                         "file_size": file_size,
-                        "duration": None  # Could be calculated from start/end times
+                        "duration": None  # TODO: MEDIUM: Calculate duration from start/end times [Story:E1/S1a]
                     }
                 else:
                     error_text = await response.text()
@@ -411,7 +411,7 @@ class MediaMTXController:
             snapshot_path = f"{self._snapshots_path}/{filename}"
             
             # Use MediaMTX API to capture snapshot (if available) or implement via FFmpeg
-            # Note: MediaMTX might not have direct snapshot API, so we simulate the operation
+            # TODO: HIGH: Implement actual MediaMTX snapshot API integration or FFmpeg fallback [Story:E1/S1a]
             snapshot_config = {
                 "stream": stream_name,
                 "output": snapshot_path,

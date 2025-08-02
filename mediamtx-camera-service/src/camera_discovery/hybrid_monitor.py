@@ -465,8 +465,7 @@ class HybridCameraMonitor:
                     
                     # Add capabilities if detected
                     if capabilities:
-                        # Add capability information to device_info if the CameraDevice supports it
-                        # This depends on the actual CameraDevice structure
+                        # TODO: MEDIUM: Add capability information to device_info when CameraDevice supports it [Story:E1/S1a]
                         pass
                     
                     current_devices[device_path] = device_info
@@ -579,7 +578,7 @@ class HybridCameraMonitor:
         # Notify callback functions
         for callback in self._event_callbacks:
             try:
-                # TODO: Consider making callbacks async or running in thread pool
+                # TODO: MEDIUM: Consider making callbacks async or running in thread pool [Story:E1/S1a]
                 callback(event_data)
             except Exception as e:
                 self._logger.error(f"Error in event callback: {e}")
@@ -605,11 +604,10 @@ class HybridCameraMonitor:
                 "accessible": Path(device_path).exists()
             }
             
-            # TODO: Use v4l2-ctl or python v4l2 bindings to probe:
-            # TODO: - Supported formats and resolutions
-            # TODO: - Frame rates
-            # TODO: - Device name and capabilities
-            # TODO: - Driver information
+            # TODO: HIGH: Use v4l2-ctl or python v4l2 bindings to probe supported formats and resolutions [Story:E1/S1a]
+            # TODO: MEDIUM: Probe frame rates capability information [Story:E1/S1a]
+            # TODO: MEDIUM: Probe device name and capabilities from v4l2 [Story:E1/S1a]
+            # TODO: LOW: Probe driver information from v4l2 [Story:E1/S1a]
             
             self._logger.debug(f"Basic capability detection for {device_path}: {capabilities}")
             return capabilities
