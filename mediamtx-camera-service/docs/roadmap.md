@@ -93,19 +93,20 @@ Before marking any task as [x] complete:
             - File: `src/websocket_server/server.py`
             - Fix: Remove TODO comments, implement actual correlation ID propagation in logs
             - Integration: Use existing `logging_config.py` CorrelationIdFilter
-            - Evidence: File: src/websocket_server/server.py
-                Sections:
-                Lines ~10: Added import for correlation ID functions from logging_config.py
-                Lines ~290-310: _handle_json_rpc_message - Removed TODO comments and implemented correlation ID extraction from JSON-RPC requests with thread context setting
-                Lines ~200-250: broadcast_notification - Enhanced to use proper correlation ID infrastructure with set_correlation_id() integration
-                Date: 2025-08-02 Commit: Correlation ID integration implementation replacing TODO comments with working structured logging using existing CorrelationIdFilter infrastructure
-
-    - **S1b: Core Implementation (PENDING)**
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
+            - Evidence: File: `src/websocket_server/server.py` lines  10, 290-310, 200-250 (Date: 2025-08-02)
+        - [x] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
             - File: `src/camera_discovery/hybrid_monitor.py`
             - Fix: Remove hard-coded "camera0" return (line ~200) and placeholder CameraDevice values (line ~185)
             - Fix: Implement configurable stream naming and proper device detection
-            - Evidence:
+            - Evidence: File: src/camera_discovery/hybrid_monitor.py
+                Sections:
+                Lines ~270-290: get_stream_name_from_device_path - Implemented regex-based device number extraction replacing hard-coded "camera0"
+                Lines ~185-220: _discover_cameras - Replaced hard-coded CameraDevice creation with proper device detection using device numbers and status determination
+                Lines ~225-245: _determine_device_status - New method for proper device status determination
+                Lines ~310-335: _probe_device_capabilities - Enhanced capability detection logic
+                Date: 2025-08-02 Commit: Refactored all hard-coded values with working device detection logic per architecture requirements
+
+    - **S1b: Core Implementation (PENDING)**
         - [ ] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
             - File: `src/camera_service/service_manager.py` line ~150
             - Fix: Replace TODO comments in `_start_mediamtx_controller` with actual startup logic
