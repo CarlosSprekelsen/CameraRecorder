@@ -69,6 +69,7 @@ class MediaMTXController:
         self._session: Optional[aiohttp.ClientSession] = None
         self._health_check_task: Optional[asyncio.Task] = None
         self._running = False
+        self._recording_sessions: Dict[str, Dict[str, Any]] = {}
 
     async def start(self) -> None:
         """
@@ -285,6 +286,10 @@ class MediaMTXController:
             filename = f"{stream_name}_{timestamp}.{format}"
             record_path = f"{self._recordings_path}/{filename}"
             
+            # Record start time for duration calculation
+            start_time = time.time()
+            start_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            
             # Update stream configuration to enable recording
             path_config = {
                 "record": True,
@@ -299,13 +304,22 @@ class MediaMTXController:
                 json=path_config
             ) as response:
                 if response.status == 200:
-                    start_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    # Store recording session for duration tracking
+                    self._recording_sessions[stream_name] = {
+                        "filename": filename,
+                        "start_time": start_time,
+                        "start_time_iso": start_time_iso,
+                        "record_path": record_path,
+                        "format": format,
+                        "duration": duration
+                    }
+                    
                     self._logger.info(f"Started recording for stream {stream_name}: {filename}")
                     return {
                         "stream_name": stream_name,
                         "filename": filename,
                         "status": "started",
-                        "start_time": start_time,
+                        "start_time": start_time_iso,
                         "record_path": record_path,
                         "format": format,
                         "duration": duration
@@ -316,7 +330,7 @@ class MediaMTXController:
                     
         except aiohttp.ClientError as e:
             raise ConnectionError(f"MediaMTX unreachable during recording start: {e}")
-
+        
     async def stop_recording(self, stream_name: str) -> Dict[str, Any]:
         """
         Stop recording for the specified stream.
@@ -338,9 +352,15 @@ class MediaMTXController:
             raise ValueError("Stream name is required")
             
         try:
-            # Get current stream status to find recording filename
-            stream_status = await self.get_stream_status(stream_name)
-            current_filename = stream_status.get("recording_filename", f"{stream_name}_unknown.mp4")
+            # Get recording session for duration calculation
+            session = self._recording_sessions.get(stream_name)
+            if not session:
+                raise ValueError(f"No active recording session found for stream: {stream_name}")
+            
+            # Calculate recording duration
+            end_time = time.time()
+            end_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            actual_duration = int(end_time - session["start_time"])
             
             # Update stream configuration to disable recording
             path_config = {
@@ -352,23 +372,26 @@ class MediaMTXController:
                 json=path_config
             ) as response:
                 if response.status == 200:
-                    end_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                    self._logger.info(f"Stopped recording for stream {stream_name}")
-                    
                     # Calculate file size if file exists
                     import os
-                    file_path = f"{self._recordings_path}/{current_filename}"
+                    file_path = session["record_path"]
                     file_size = 0
                     if os.path.exists(file_path):
                         file_size = os.path.getsize(file_path)
                     
+                    # Clean up recording session
+                    del self._recording_sessions[stream_name]
+                    
+                    self._logger.info(f"Stopped recording for stream {stream_name}: duration={actual_duration}s")
+                    
                     return {
                         "stream_name": stream_name,
-                        "filename": current_filename,
+                        "filename": session["filename"],
                         "status": "completed",
-                        "end_time": end_time,
-                        "file_size": file_size,
-                        "duration": None  # TODO: MEDIUM: Calculate duration from start/end times [Story:E1/S1a]
+                        "start_time": session["start_time_iso"],
+                        "end_time": end_time_iso,
+                        "duration": actual_duration,
+                        "file_size": file_size
                     }
                 else:
                     error_text = await response.text()
@@ -383,7 +406,7 @@ class MediaMTXController:
         filename: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Capture a snapshot from the specified stream.
+        Capture a snapshot from the specified stream using FFmpeg.
         
         Args:
             stream_name: Name of the stream to capture
@@ -410,36 +433,70 @@ class MediaMTXController:
             
             snapshot_path = f"{self._snapshots_path}/{filename}"
             
-            # Use MediaMTX API to capture snapshot (if available) or implement via FFmpeg
-            # TODO: HIGH: Implement actual MediaMTX snapshot API integration or FFmpeg fallback [Story:E1/S1a]
-            snapshot_config = {
-                "stream": stream_name,
-                "output": snapshot_path,
-                "format": "jpeg"
-            }
-            
-            # Simulate snapshot capture - in real implementation, this might use FFmpeg
-            # or a custom MediaMTX extension
-            await asyncio.sleep(0.1)  # Simulate processing time
-            
-            # Create a minimal file to simulate snapshot (in real implementation, this would be actual image data)
+            # Ensure snapshots directory exists
             import os
             os.makedirs(self._snapshots_path, exist_ok=True)
-            with open(snapshot_path, 'w') as f:
-                f.write("# Snapshot placeholder")
             
-            file_size = os.path.getsize(snapshot_path) if os.path.exists(snapshot_path) else 0
+            # Use FFmpeg to capture snapshot from RTSP stream
+            rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
             
-            self._logger.info(f"Captured snapshot for stream {stream_name}: {filename}")
+            # FFmpeg command to capture single frame
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-y',  # Overwrite output file
+                '-i', rtsp_url,  # Input RTSP stream
+                '-vframes', '1',  # Capture only 1 frame
+                '-q:v', '2',  # High quality
+                '-timeout', '5000000',  # 5 second timeout in microseconds
+                snapshot_path
+            ]
+            
+            # Execute FFmpeg with timeout
+            process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(
+                    *ffmpeg_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                ),
+                timeout=10.0  # 10 second timeout for snapshot capture
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0 and os.path.exists(snapshot_path):
+                file_size = os.path.getsize(snapshot_path)
+                self._logger.info(f"Captured snapshot for stream {stream_name}: {filename}")
+                return {
+                    "stream_name": stream_name,
+                    "filename": filename,
+                    "status": "completed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": file_size,
+                    "file_path": snapshot_path
+                }
+            else:
+                # FFmpeg failed - log error and return failure
+                error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
+                self._logger.error(f"FFmpeg snapshot failed for {stream_name}: {error_msg}")
+                return {
+                    "stream_name": stream_name,
+                    "filename": filename,
+                    "status": "failed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": 0,
+                    "error": f"FFmpeg capture failed: {error_msg}"
+                }
+                
+        except asyncio.TimeoutError:
+            self._logger.error(f"Snapshot capture timeout for {stream_name}")
             return {
                 "stream_name": stream_name,
-                "filename": filename,
-                "status": "completed",
+                "filename": filename or f"{stream_name}_snapshot_timeout.jpg",
+                "status": "failed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "file_size": file_size,
-                "file_path": snapshot_path
+                "file_size": 0,
+                "error": "Snapshot capture timeout"
             }
-            
         except Exception as e:
             self._logger.error(f"Failed to capture snapshot for {stream_name}: {e}")
             return {
@@ -450,7 +507,7 @@ class MediaMTXController:
                 "file_size": 0,
                 "error": str(e)
             }
-
+        
     async def get_stream_list(self) -> List[Dict[str, Any]]:
         """
         Get list of all configured streams.
@@ -532,7 +589,7 @@ class MediaMTXController:
 
     async def update_configuration(self, config_updates: Dict[str, Any]) -> bool:
         """
-        Update MediaMTX configuration dynamically.
+        Update MediaMTX configuration dynamically with validation.
         
         Args:
             config_updates: Configuration parameters to update
@@ -549,6 +606,20 @@ class MediaMTXController:
             
         if not config_updates:
             raise ValueError("Configuration updates are required")
+        
+        # Validate configuration updates before applying
+        valid_config_keys = {
+            'logLevel', 'logDestinations', 'readTimeout', 'writeTimeout',
+            'readBufferCount', 'udpMaxPayloadSize', 'runOnConnect', 'runOnConnectRestart',
+            'api', 'apiAddress', 'metrics', 'metricsAddress', 'pprof', 'pprofAddress',
+            'rtsp', 'rtspAddress', 'rtspsAddress', 'rtmp', 'rtmpAddress', 'rtmps', 'rtmpsAddress',
+            'hls', 'hlsAddress', 'hlsAllowOrigin', 'webrtc', 'webrtcAddress'
+        }
+        
+        # Check for unknown configuration keys
+        unknown_keys = set(config_updates.keys()) - valid_config_keys
+        if unknown_keys:
+            raise ValueError(f"Unknown configuration keys: {unknown_keys}")
             
         try:
             async with self._session.post(
@@ -556,7 +627,7 @@ class MediaMTXController:
                 json=config_updates
             ) as response:
                 if response.status == 200:
-                    self._logger.info("MediaMTX configuration updated successfully")
+                    self._logger.info(f"MediaMTX configuration updated successfully: {list(config_updates.keys())}")
                     return True
                 else:
                     error_text = await response.text()
@@ -567,24 +638,51 @@ class MediaMTXController:
 
     async def _health_monitor_loop(self) -> None:
         """
-        Background task for continuous health monitoring.
+        Background task for continuous health monitoring with retry and backoff.
         
-        Monitors MediaMTX health and logs status changes.
+        Monitors MediaMTX health and logs status changes with automatic recovery.
         """
         self._logger.debug("Starting MediaMTX health monitoring loop")
         
-        while self._running:
-            try:
-                health_status = await self.health_check()
-                if health_status.get("status") != "healthy":
-                    self._logger.warning(f"MediaMTX health check failed: {health_status}")
+        consecutive_failures = 0
+        last_status = None
+        
+        try:
+            while self._running:
+                try:
+                    health_status = await self.health_check()
+                    current_status = health_status.get("status")
                     
-                # Wait 30 seconds between health checks
-                await asyncio.sleep(30)
-                
-            except asyncio.CancelledError:
-                self._logger.debug("Health monitoring loop cancelled")
-                break
-            except Exception as e:
-                self._logger.error(f"Health monitoring error: {e}")
-                await asyncio.sleep(10)  # Shorter wait on error
+                    # Log status changes
+                    if current_status != last_status:
+                        if current_status == "healthy":
+                            self._logger.info("MediaMTX health restored")
+                            consecutive_failures = 0
+                        else:
+                            self._logger.warning(f"MediaMTX health degraded: {health_status}")
+                            consecutive_failures += 1
+                        last_status = current_status
+                    
+                    # Determine sleep interval based on health
+                    if current_status == "healthy":
+                        sleep_interval = 30  # Normal interval
+                        consecutive_failures = 0
+                    else:
+                        # Exponential backoff for unhealthy status: 5s, 10s, 20s, max 60s
+                        sleep_interval = min(5 * (2 ** consecutive_failures), 60)
+                        consecutive_failures += 1
+                    
+                    await asyncio.sleep(sleep_interval)
+                    
+                except asyncio.CancelledError:
+                    self._logger.debug("Health monitoring loop cancelled")
+                    break
+                except Exception as e:
+                    consecutive_failures += 1
+                    self._logger.error(f"Health monitoring error: {e}")
+                    # Exponential backoff on errors: 2s, 4s, 8s, 16s, max 30s
+                    error_sleep = min(2 * (2 ** consecutive_failures), 30)
+                    await asyncio.sleep(error_sleep)
+                    
+        except Exception as e:
+            self._logger.error(f"Critical error in health monitoring loop: {e}")
