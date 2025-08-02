@@ -105,12 +105,11 @@ Before marking any task as [x] complete:
                 Lines ~225-245: _determine_device_status - New method for proper device status determination
                 Lines ~310-335: _probe_device_capabilities - Enhanced capability detection logic
                 Date: 2025-08-02 Commit: Refactored all hard-coded values with working device detection logic per architecture requirements
+        - [x] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
+            - Evidence: `src/camera_service/service_manager.py` lines 150-190 (2025-08-02)
+            - Status: Complete MediaMTX controller startup with health verification, directory setup, and error handling
 
     - **S1b: Core Implementation (PENDING)**
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete MediaMTX controller initialization in service_manager.py
-            - File: `src/camera_service/service_manager.py` line ~150
-            - Fix: Replace TODO comments in `_start_mediamtx_controller` with actual startup logic
-            - Evidence:
         - [ ] [IMPL] **MEDIUM PRIORITY**: Complete camera monitor initialization in service_manager.py  
             - File: `src/camera_service/service_manager.py` line ~170
             - Fix: Replace TODO comments in `_start_camera_monitor` with actual initialization

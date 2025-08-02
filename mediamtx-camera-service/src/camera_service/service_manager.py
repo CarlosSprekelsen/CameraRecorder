@@ -237,23 +237,53 @@ class ServiceManager(CameraEventHandler):
         """Start the MediaMTX REST API controller component."""
         self._logger.debug("Starting MediaMTX controller")
         
-        # Initialize MediaMTX Controller with configuration
-        self._mediamtx_controller = MediaMTXController(
-            host=self._config.mediamtx.host,
-            api_port=self._config.mediamtx.api_port,
-            rtsp_port=self._config.mediamtx.rtsp_port,
-            webrtc_port=self._config.mediamtx.webrtc_port,
-            hls_port=self._config.mediamtx.hls_port,
-            config_path=self._config.mediamtx.config_path,
-            recordings_path=self._config.mediamtx.recordings_path,
-            snapshots_path=self._config.mediamtx.snapshots_path
-        )
-        
-        # TODO: Start MediaMTX controller
-        await self._mediamtx_controller.start()
-        
-        # TODO: Verify MediaMTX connectivity and health
-        # TODO: Setup MediaMTX configuration management
+        try:
+            # Initialize MediaMTX Controller with configuration
+            self._mediamtx_controller = MediaMTXController(
+                host=self._config.mediamtx.host,
+                api_port=self._config.mediamtx.api_port,
+                rtsp_port=self._config.mediamtx.rtsp_port,
+                webrtc_port=self._config.mediamtx.webrtc_port,
+                hls_port=self._config.mediamtx.hls_port,
+                config_path=self._config.mediamtx.config_path,
+                recordings_path=self._config.mediamtx.recordings_path,
+                snapshots_path=self._config.mediamtx.snapshots_path
+            )
+            
+            # Start MediaMTX controller (initializes HTTP client and monitoring)
+            await self._mediamtx_controller.start()
+            self._logger.info("MediaMTX controller started successfully")
+            
+            # Verify MediaMTX connectivity and health
+            try:
+                health_status = await self._mediamtx_controller.health_check()
+                if health_status.get("status") == "unknown":
+                    self._logger.warning("MediaMTX health check returned unknown status - continuing with startup")
+                else:
+                    self._logger.info(f"MediaMTX connectivity verified: {health_status}")
+            except Exception as health_error:
+                self._logger.warning(f"MediaMTX health check failed during startup: {health_error}")
+                # Continue startup - health monitoring will handle recovery
+            
+            # Setup MediaMTX configuration management
+            # Validate that required directories exist for recordings and snapshots
+            import os
+            os.makedirs(self._config.mediamtx.recordings_path, exist_ok=True)
+            os.makedirs(self._config.mediamtx.snapshots_path, exist_ok=True)
+            self._logger.debug(f"Verified MediaMTX directories: recordings={self._config.mediamtx.recordings_path}, snapshots={self._config.mediamtx.snapshots_path}")
+            
+            self._logger.info("MediaMTX controller initialization completed")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start MediaMTX controller: {e}")
+            # Cleanup on failure
+            if self._mediamtx_controller:
+                try:
+                    await self._mediamtx_controller.stop()
+                except Exception as cleanup_error:
+                    self._logger.error(f"Error during MediaMTX controller cleanup: {cleanup_error}")
+                self._mediamtx_controller = None
+            raise
 
     async def _start_camera_monitor(self) -> None:
         """Start the camera discovery and monitoring component."""
