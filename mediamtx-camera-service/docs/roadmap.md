@@ -178,15 +178,22 @@ Before marking any task as [x] complete:
                 - [x] Implement camera event handler integration (removed STOPPED/TODOs)
         - [x] [FIX] Correct all parameter typos in `api/json-rpc-methods.md`.
         - Evidence: `docs/api/json-rpc-methods.md` (2025-08-02)
+        - [x] [IMPL] **MEDIUM PRIORITY**: Complete udev monitoring implementation (grouped)
+            - File: src/camera_discovery/hybrid_monitor.py
+            - Evidence: Complete udev implementation (2025-08-02)
+                - _setup_udev_monitoring(): Lines 140-170, real pyudev context and monitor initialization for video4linux subsystem
+                - _udev_event_loop(): Lines 190-230, full event processing loop with device filtering and timeout handling
+                - _cleanup_udev_monitoring(): Lines 175-190, proper udev resource cleanup
+                - _process_udev_device_event(): Lines 235-290, individual event processing with add/remove action mapping
+                - _create_camera_device_info(): Lines 295-310, CameraDevice creation from udev events
+                - Optional dependency handling: Lines 15-20, graceful pyudev fallback with HAS_PYUDEV flag
+                - Enhanced _discover_cameras(): Lines 350-380, udev-aware device discovery to avoid duplicate events
+            - Status: Complete real-time udev monitoring with graceful fallback to polling-only mode when pyudev unavailable
+            - Subtasks completed:
+                - [x] Implement _setup_udev_monitoring() (replaced placeholder with actual udev logic)
+                - [x] Implement _udev_event_loop() (removed sleep-only loop, implemented full event handling)
 
     - **S1b: Core Implementation (PENDING)**
-
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete udev monitoring implementation (grouped)
-            - File: src/camera_discovery/hybrid_monitor.py
-            - Subtasks:
-                - [ ] Implement _setup_udev_monitoring() (replace placeholder with actual udev logic)
-                - [ ] Implement _udev_event_loop() (remove sleep-only loop, implement full event handling)
-            - Evidence:
 
         - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for main.py
             - File: main.py

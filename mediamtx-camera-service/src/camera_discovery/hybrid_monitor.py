@@ -16,6 +16,13 @@ from typing import Callable, Dict, List, Optional, Set
 
 from ..common.types import CameraDevice
 
+# Optional dependency for udev monitoring
+try:
+    import pyudev
+    HAS_PYUDEV = True
+except ImportError:
+    HAS_PYUDEV = False
+
 
 class CameraEvent(Enum):
     """Camera connection events."""
@@ -86,13 +93,17 @@ class HybridCameraMonitor:
         self._known_devices: Dict[str, CameraDevice] = {}
         self._monitoring_tasks: List[asyncio.Task] = []
         
-        # TODO: Initialize udev context and monitoring objects
-        self._udev_context = None
-        self._udev_monitor = None
+        # Udev monitoring objects
+        self._udev_context: Optional[pyudev.Context] = None
+        self._udev_monitor: Optional[pyudev.Monitor] = None
+        self._udev_available = HAS_PYUDEV
+        
+        if not self._udev_available:
+            self._logger.warning("pyudev not available - falling back to polling-only monitoring")
         
         self._logger.debug(
             f"Initialized HybridCameraMonitor with device_range={self._device_range}, "
-            f"poll_interval={self._poll_interval}s"
+            f"poll_interval={self._poll_interval}s, udev_available={self._udev_available}"
         )
     
     def add_event_handler(self, handler: CameraEventHandler) -> None:
@@ -153,16 +164,17 @@ class HybridCameraMonitor:
         self._running = True
         
         try:
-            # TODO: Initialize udev monitoring
-            await self._setup_udev_monitoring()
+            # Initialize udev monitoring if available
+            if self._udev_available:
+                await self._setup_udev_monitoring()
+                
+                # Start udev event monitoring task
+                udev_task = asyncio.create_task(self._udev_event_loop())
+                self._monitoring_tasks.append(udev_task)
             
             # Start polling fallback
             polling_task = asyncio.create_task(self._polling_loop())
             self._monitoring_tasks.append(polling_task)
-            
-            # TODO: Start udev event monitoring task
-            udev_task = asyncio.create_task(self._udev_event_loop())
-            self._monitoring_tasks.append(udev_task)
             
             # Perform initial camera discovery
             await self._initial_discovery()
@@ -197,8 +209,9 @@ class HybridCameraMonitor:
         
         self._monitoring_tasks.clear()
         
-        # TODO: Clean up udev resources
-        await self._cleanup_udev_monitoring()
+        # Clean up udev resources
+        if self._udev_available:
+            await self._cleanup_udev_monitoring()
         
         # Clear known devices
         self._known_devices.clear()
@@ -229,11 +242,31 @@ class HybridCameraMonitor:
         
         Sets up udev context and monitor for USB video device events.
         """
-        # TODO: Initialize udev context
-        # TODO: Create udev monitor for 'video4linux' subsystem
-        # TODO: Set up event filtering for USB video devices
-        # TODO: Configure monitor socket for async operation
-        self._logger.debug("Setting up udev monitoring (TODO: implement)")
+        if not self._udev_available:
+            return
+            
+        try:
+            # Initialize udev context
+            self._udev_context = pyudev.Context()
+            
+            # Create udev monitor for 'video4linux' subsystem
+            self._udev_monitor = pyudev.Monitor.from_netlink(self._udev_context)
+            
+            # Set up event filtering for USB video devices
+            self._udev_monitor.filter_by(subsystem='video4linux')
+            
+            # Configure monitor socket for async operation
+            # Set monitor to non-blocking mode for async polling
+            self._udev_monitor.start()
+            
+            self._logger.info("Udev monitoring initialized successfully")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to setup udev monitoring: {e}")
+            self._udev_available = False
+            self._udev_context = None
+            self._udev_monitor = None
+            raise
     
     async def _cleanup_udev_monitoring(self) -> None:
         """
@@ -241,9 +274,19 @@ class HybridCameraMonitor:
         
         Properly releases udev context and monitor objects.
         """
-        # TODO: Close udev monitor
-        # TODO: Release udev context
-        self._logger.debug("Cleaning up udev monitoring (TODO: implement)")
+        try:
+            # Close udev monitor
+            if self._udev_monitor:
+                self._udev_monitor = None
+                
+            # Release udev context  
+            if self._udev_context:
+                self._udev_context = None
+                
+            self._logger.debug("Udev monitoring resources cleaned up")
+            
+        except Exception as e:
+            self._logger.warning(f"Error during udev cleanup: {e}")
     
     async def _udev_event_loop(self) -> None:
         """
@@ -252,22 +295,112 @@ class HybridCameraMonitor:
         Monitors udev socket for camera connect/disconnect events and
         processes them in real-time.
         """
+        if not self._udev_available or not self._udev_monitor:
+            return
+            
         self._logger.debug("Starting udev event loop")
         
         try:
             while self._running:
-                # TODO: Poll udev monitor socket with timeout
-                # TODO: Process udev device events
-                # TODO: Extract device information and event type
-                # TODO: Call _handle_camera_event for each event
-                
-                # Placeholder delay to prevent busy loop
-                await asyncio.sleep(0.1)
-                
+                # Poll udev monitor socket with timeout
+                # Use non-blocking poll to check for events
+                try:
+                    # Poll for events with a short timeout to allow cancellation
+                    device = self._udev_monitor.poll(timeout=0.1)
+                    
+                    if device is not None:
+                        # Process udev device events
+                        await self._process_udev_device_event(device)
+                    else:
+                        # No event, yield control briefly
+                        await asyncio.sleep(0.01)
+                        
+                except Exception as poll_error:
+                    self._logger.warning(f"Udev poll error: {poll_error}")
+                    await asyncio.sleep(0.1)
+                    
         except asyncio.CancelledError:
             self._logger.debug("Udev event loop cancelled")
         except Exception as e:
             self._logger.error(f"Error in udev event loop: {e}")
+    
+    async def _process_udev_device_event(self, device) -> None:
+        """
+        Process a single udev device event.
+        
+        Args:
+            device: pyudev.Device object representing the event
+        """
+        try:
+            # Extract device information and event type
+            device_path = device.device_node
+            action = device.action
+            
+            # Filter for video devices in our monitored range
+            if not device_path or not device_path.startswith('/dev/video'):
+                return
+                
+            # Extract device number and check if it's in our range
+            match = re.search(r'/dev/video(\d+)', device_path)
+            if not match:
+                return
+                
+            device_num = int(match.group(1))
+            if device_num not in self._device_range:
+                return
+            
+            self._logger.debug(f"Processing udev event: {action} for {device_path}")
+            
+            # Map udev actions to camera events
+            if action == 'add':
+                # Device connected
+                device_info = await self._create_camera_device_info(device_path, device_num)
+                event_data = CameraEventData(
+                    device_path=device_path,
+                    event_type=CameraEvent.CONNECTED,
+                    device_info=device_info
+                )
+                
+                # Update known devices and handle event
+                self._known_devices[device_path] = device_info
+                await self._handle_camera_event(event_data)
+                
+            elif action == 'remove':
+                # Device disconnected
+                device_info = self._known_devices.get(device_path)
+                event_data = CameraEventData(
+                    device_path=device_path,
+                    event_type=CameraEvent.DISCONNECTED,
+                    device_info=device_info
+                )
+                
+                # Remove from known devices and handle event
+                if device_path in self._known_devices:
+                    del self._known_devices[device_path]
+                await self._handle_camera_event(event_data)
+                
+        except Exception as e:
+            self._logger.error(f"Error processing udev event: {e}")
+    
+    async def _create_camera_device_info(self, device_path: str, device_num: int) -> CameraDevice:
+        """
+        Create CameraDevice info for a detected device.
+        
+        Args:
+            device_path: Path to the video device
+            device_num: Device number extracted from path
+            
+        Returns:
+            CameraDevice object with device information
+        """
+        device_name = f"Camera {device_num}"
+        device_status = await self._determine_device_status(device_path)
+        
+        return CameraDevice(
+            device=device_path,
+            name=device_name,
+            status=device_status
+        )
     
     async def _polling_loop(self) -> None:
         """
@@ -348,8 +481,14 @@ class HybridCameraMonitor:
                     )
                     current_devices[device_path] = device_info
         
-        # Compare with known devices and generate events
-        await self._process_device_changes(current_devices)
+        # Compare with known devices and generate events only if not using udev
+        # (udev events will handle real-time updates)
+        if not self._udev_available:
+            await self._process_device_changes(current_devices)
+        else:
+            # When udev is available, only update known devices for initial discovery
+            if not self._known_devices:
+                self._known_devices = current_devices.copy()
     
     async def _determine_device_status(self, device_path: str) -> str:
         """
