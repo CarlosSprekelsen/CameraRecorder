@@ -250,13 +250,16 @@ class ServiceManager(CameraEventHandler):
             # Create stream in MediaMTX
             stream_urls = await self._mediamtx_controller.create_stream(stream_config)
             
-            # Prepare camera status notification
+            # Get real camera metadata from device info and capability detection
+            camera_metadata = await self._get_camera_metadata(event_data)
+            
+            # Prepare camera status notification with real metadata
             notification_params = {
                 "device": event_data.device_path,
                 "status": "CONNECTED",
-                "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
-                "resolution": "1920x1080",  # Default resolution
-                "fps": 30,  # Default fps
+                "name": camera_metadata["name"],
+                "resolution": camera_metadata["resolution"],
+                "fps": camera_metadata["fps"],
                 "streams": stream_urls
             }
             
@@ -292,13 +295,16 @@ class ServiceManager(CameraEventHandler):
             # Delete stream from MediaMTX
             await self._mediamtx_controller.delete_stream(stream_name)
             
+            # Get camera metadata for notification
+            camera_metadata = await self._get_camera_metadata(event_data)
+            
             # Prepare camera status notification
             notification_params = {
                 "device": event_data.device_path,
                 "status": "DISCONNECTED",
-                "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
-                "resolution": "",
-                "fps": 0,
+                "name": camera_metadata["name"],
+                "resolution": "",  # Empty for disconnected cameras
+                "fps": 0,          # Zero for disconnected cameras
                 "streams": {}
             }
             
@@ -327,15 +333,18 @@ class ServiceManager(CameraEventHandler):
             # Extract stream name from device path
             stream_name = self._get_stream_name_from_device_path(event_data.device_path)
             
+            # Get camera metadata for notification
+            camera_metadata = await self._get_camera_metadata(event_data)
+            
             # Determine notification parameters based on new status
             if event_data.device_info and event_data.device_info.status == "CONNECTED":
                 # Camera is now available
                 notification_params = {
                     "device": event_data.device_path,
                     "status": "CONNECTED",
-                    "name": event_data.device_info.name,
-                    "resolution": "1920x1080",  # Default resolution
-                    "fps": 30,  # Default fps
+                    "name": camera_metadata["name"],
+                    "resolution": camera_metadata["resolution"],
+                    "fps": camera_metadata["fps"],
                     "streams": {
                         "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/{stream_name}",
                         "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/{stream_name}",
@@ -347,7 +356,7 @@ class ServiceManager(CameraEventHandler):
                 notification_params = {
                     "device": event_data.device_path,
                     "status": "ERROR" if event_data.device_info and event_data.device_info.status == "ERROR" else "DISCONNECTED",
-                    "name": event_data.device_info.name if event_data.device_info else f"Camera {stream_name}",
+                    "name": camera_metadata["name"],
                     "resolution": "",
                     "fps": 0,
                     "streams": {}
@@ -361,6 +370,125 @@ class ServiceManager(CameraEventHandler):
             
         except Exception as e:
             self._logger.error(f"Failed to handle camera status change: {e}")
+            
+    async def _get_camera_metadata(self, event_data: CameraEventData) -> Dict[str, Any]:
+        """
+        Get camera metadata including resolution and fps from capability detection.
+        
+        Args:
+            event_data: Camera event data containing device info
+            
+        Returns:
+            Dictionary with camera name, resolution, and fps
+            
+        Note: Currently falls back to default values when capability detection
+        data is not available. This is a documented interim state pending
+        full integration of capability detection results.
+        
+        TODO: HIGH: Integrate capability detection results from camera monitor [Story:E1/S3]
+        Owner: Camera Discovery team
+        Dependencies: camera_discovery.hybrid_monitor capability data propagation
+        """
+        # Extract device number for default naming
+        device_num = "unknown"
+        try:
+            import re
+            match = re.search(r'/dev/video(\d+)', event_data.device_path)
+            if match:
+                device_num = match.group(1)
+        except Exception:
+            pass
+        
+        # Default camera metadata
+        camera_metadata = {
+            "name": f"Camera {device_num}",
+            "resolution": "1920x1080",  # Default resolution
+            "fps": 30                   # Default fps
+        }
+        
+        # Override with device info if available
+        if event_data.device_info:
+            camera_metadata["name"] = event_data.device_info.name or camera_metadata["name"]
+        
+        # TODO: HIGH: Extract real resolution/fps from capability detection
+        # The camera monitor's capability detection (_probe_device_capabilities) 
+        # collects formats, resolutions, and frame rates but this data is not 
+        # currently propagated through CameraEventData or CameraDevice.
+        #
+        # Required changes:
+        # 1. Extend CameraDevice or CameraEventData to include capability info
+        # 2. Modify hybrid_monitor to pass capability results in events
+        # 3. Update this method to use real detected values
+        #
+        # For now, using documented default values with clear annotation.
+        
+        try:
+            # Attempt to get real capability data if camera monitor supports it
+            if (self._camera_monitor and 
+                hasattr(self._camera_monitor, 'get_camera_capabilities')):
+                
+                capabilities = await self._camera_monitor.get_camera_capabilities(
+                    event_data.device_path
+                )
+                
+                if capabilities:
+                    # Extract first available resolution and fps
+                    resolutions = capabilities.get("resolutions", [])
+                    frame_rates = capabilities.get("frame_rates", [])
+                    
+                    if resolutions:
+                        camera_metadata["resolution"] = resolutions[0]
+                    if frame_rates:
+                        camera_metadata["fps"] = int(float(frame_rates[0]))
+                        
+                    self._logger.debug(
+                        f"Using real capability data for {event_data.device_path}: "
+                        f"{camera_metadata['resolution']}@{camera_metadata['fps']}fps"
+                    )
+            else:
+                self._logger.debug(
+                    f"Using default metadata for {event_data.device_path} - "
+                    f"capability integration pending"
+                )
+                
+        except Exception as e:
+            self._logger.warning(
+                f"Failed to get capability data for {event_data.device_path}, "
+                f"using defaults: {e}"
+            )
+        
+        return camera_metadata
+
+    async def _validate_camera_monitor_integration(self) -> None:
+        """
+        Validate camera monitor integration and log capability detection status.
+        
+        This method checks what capability data is available from the camera monitor
+        and logs the current integration status for debugging and validation.
+        """
+        if not self._camera_monitor:
+            self._logger.warning("Camera monitor not available")
+            return
+        
+        try:
+            # Check if camera monitor has capability detection
+            has_capabilities = hasattr(self._camera_monitor, 'get_camera_capabilities')
+            
+            if has_capabilities:
+                self._logger.info("Camera monitor capability detection integration: AVAILABLE")
+            else:
+                self._logger.info(
+                    "Camera monitor capability detection integration: PENDING - "
+                    "using default metadata values"
+                )
+            
+            # Get current connected cameras for validation
+            if hasattr(self._camera_monitor, 'get_connected_cameras'):
+                connected_cameras = await self._camera_monitor.get_connected_cameras()
+                self._logger.debug(f"Currently connected cameras: {len(connected_cameras)}")
+                
+        except Exception as e:
+            self._logger.error(f"Error validating camera monitor integration: {e}")
 
     async def _start_mediamtx_controller(self) -> None:
         """Start the MediaMTX REST API controller component."""
@@ -437,6 +565,9 @@ class ServiceManager(CameraEventHandler):
             await self._camera_monitor.start()
             self._logger.info("Camera discovery monitor started successfully")
             
+            # Validate integration capabilities
+            await self._validate_camera_monitor_integration()
+            
             # Start camera capability detection (handled by HybridCameraMonitor)
             capability_status = "enabled" if self._config.camera.enable_capability_detection else "disabled"
             self._logger.debug(f"Camera capability detection {capability_status}")
@@ -454,29 +585,28 @@ class ServiceManager(CameraEventHandler):
                     self._logger.error(f"Error during camera monitor cleanup: {cleanup_error}")
                 self._camera_monitor = None
             raise
-
-    async def _start_health_monitor(self) -> None:
-        """Start the health monitoring and recovery component."""
-        self._logger.debug("Starting health monitor")
-        
-        try:
-            # Initialize Health Monitor with config
-            self._health_monitor = HealthMonitor(self._config)
+        async def _start_health_monitor(self) -> None:
+            """Start the health monitoring and recovery component."""
+            self._logger.debug("Starting health monitor")
             
-            # Start health monitoring
-            await self._health_monitor.start()
-            self._logger.info("Health monitor started successfully")
-            
-        except Exception as e:
-            self._logger.error(f"Failed to start health monitor: {e}")
-            # Cleanup on failure
-            if self._health_monitor:
-                try:
-                    await self._health_monitor.stop()
-                except Exception as cleanup_error:
-                    self._logger.error(f"Error during health monitor cleanup: {cleanup_error}")
-                self._health_monitor = None
-            raise
+            try:
+                # Initialize Health Monitor with config
+                self._health_monitor = HealthMonitor(self._config)
+                
+                # Start health monitoring
+                await self._health_monitor.start()
+                self._logger.info("Health monitor started successfully")
+                
+            except Exception as e:
+                self._logger.error(f"Failed to start health monitor: {e}")
+                # Cleanup on failure
+                if self._health_monitor:
+                    try:
+                        await self._health_monitor.stop()
+                    except Exception as cleanup_error:
+                        self._logger.error(f"Error during health monitor cleanup: {cleanup_error}")
+                    self._health_monitor = None
+                raise
 
     async def _start_websocket_server(self) -> None:
         """Start the WebSocket JSON-RPC server component."""
