@@ -143,10 +143,68 @@ Before marking any task as [x] complete:
 
     - **S1b: Core Implementation (PENDING)**
 
-        - [ ] [IVV] **LOW PRIORITY**: Document and validate configuration system implementation
-            - Evidence: `src/camera_service/config.py` (complete config class hierarchy)
-            - Task: Add proper roadmap tracking for YAML loading, config validation, environment overrides
-            - Reference: This is a core system component with no roadmap visibility
+### S1b: Core Implementation (PENDING)
+
+        - [ ] [FIX] **CRITICAL**: TODO formatting standard in principles.md
+            - File: docs/development/principles.md
+            - Subtasks:
+                - [ ] Add section specifying the standard TODO comment format (e.g., "# TODO: <priority>: <description> [IV&V|StoryRef]")
+                - [ ] Remove completion claim in roadmap.md if standard is not specified
+            - Evidence:
+
+        - [ ] [FIX] **CRITICAL**: Document parameter typo corrections in API docs
+            - File: docs/api/json-rpc-methods.md
+            - Subtasks:
+                - [ ] List all specific parameter typos fixed (before/after)
+                - [ ] Remove completion claim in roadmap.md if none were found
+            - Evidence:
+
+        - [ ] [IMPL] **HIGH PRIORITY**: Complete MediaMTX Controller business logic (grouped)
+            - File: src/mediamtx_wrapper/controller.py
+            - Subtasks:
+                - [ ] Implement health_check() with real status (no "unknown" placeholder)
+                - [ ] Implement create_stream() and delete_stream() (replace placeholders with working REST calls)
+                - [ ] Implement start_recording(), stop_recording(), take_snapshot()
+                - [ ] Remove all remaining TODO comments
+            - Evidence:
+
+        - [ ] [IMPL] **HIGH PRIORITY**: Complete Service Manager core logic (grouped)
+            - File: src/camera_service/service_manager.py
+            - Subtasks:
+                - [ ] Implement _start_websocket_server (replace pass/TODO)
+                - [ ] Implement _start_health_monitor (replace pass/TODO)
+                - [ ] Implement all _stop_* methods (replace placeholders)
+                - [ ] Implement camera event handler integration (_handle_camera_connected, _handle_camera_disconnected, etc.; remove STOPPED/TODOs)
+            - Evidence:
+
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete udev monitoring implementation (grouped)
+            - File: src/camera_discovery/hybrid_monitor.py
+            - Subtasks:
+                - [ ] Implement _setup_udev_monitoring() (replace placeholder with actual udev logic)
+                - [ ] Implement _udev_event_loop() (remove sleep-only loop, implement full event handling)
+            - Evidence:
+
+        - [ ] [FIX] **HIGH PRIORITY**: Clean up roadmap section S1b
+            - File: docs/roadmap.md
+            - Subtasks:
+                - [ ] Remove duplicate/copy-paste entries in S1b
+                - [ ] Clarify actual requirements
+            - Evidence:
+
+        - [ ] [IVV] **CRITICAL**: Add roadmap tracking for MediaMTX Controller implementation (phantom tracking)
+            - File: docs/roadmap.md (Epic/Story tracking)
+            - Subtasks:
+                - [ ] Create or update roadmap.md to reflect all work in controller.py (REST API client, stream management, health monitoring)
+                - [ ] Ensure all features in code have a corresponding roadmap item
+            - Evidence:
+
+        - [ ] [IVV] **MEDIUM PRIORITY**: Add roadmap tracking for missing core components
+            - Files: main.py, requirements.txt, deployment/scripts/install.sh
+            - Subtasks:
+                - [ ] Review each implemented file/component for roadmap coverage
+                - [ ] Ensure all implemented code has a corresponding roadmap.md task or item
+            - Evidence:
+
 
     - **S2: Architecture Compliance IV&V (Control Point) - PENDING**
         - [ ] [IVV] Re-validate API docs and code alignment after S1b fixes
