@@ -5,9 +5,11 @@ WebSocket JSON-RPC 2.0 server for camera control and notifications.
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, Callable, Set, List
+import time
 import uuid
+from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
+from pathlib import Path
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -81,7 +83,9 @@ class WebSocketJsonRpcServer:
         host: str,
         port: int,
         websocket_path: str,
-        max_connections: int
+        max_connections: int,
+        mediamtx_controller=None,
+        camera_monitor=None
     ):
         """
         Initialize WebSocket JSON-RPC server.
@@ -91,11 +95,15 @@ class WebSocketJsonRpcServer:
             port: Server port
             websocket_path: WebSocket endpoint path
             max_connections: Maximum concurrent client connections
+            mediamtx_controller: MediaMTX controller instance for stream operations
+            camera_monitor: Camera monitor instance for device information
         """
         self._host = host
         self._port = port
         self._websocket_path = websocket_path
         self._max_connections = max_connections
+        self._mediamtx_controller = mediamtx_controller
+        self._camera_monitor = camera_monitor
         
         self._logger = logging.getLogger(__name__)
         self._server = None
@@ -111,6 +119,24 @@ class WebSocketJsonRpcServer:
         # TODO: Initialize authentication system
         # TODO: Initialize rate limiting
         # TODO: Initialize metrics collection
+
+    def set_mediamtx_controller(self, controller) -> None:
+        """
+        Set the MediaMTX controller for stream operations.
+        
+        Args:
+            controller: MediaMTX controller instance
+        """
+        self._mediamtx_controller = controller
+
+    def set_camera_monitor(self, monitor) -> None:
+        """
+        Set the camera monitor for device information.
+        
+        Args:
+            monitor: Camera monitor instance
+        """
+        self._camera_monitor = monitor
 
     async def start(self) -> None:
         """
@@ -339,6 +365,50 @@ class WebSocketJsonRpcServer:
         self.register_method("stop_recording", self._method_stop_recording, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
+    def _get_stream_name_from_device_path(self, device_path: str) -> str:
+        """
+        Extract stream name from camera device path.
+        
+        Args:
+            device_path: Camera device path (e.g., /dev/video0)
+            
+        Returns:
+            Stream name for MediaMTX (e.g., camera0)
+        """
+        try:
+            # Extract device number from path like /dev/video0
+            if device_path.startswith('/dev/video'):
+                device_num = device_path.replace('/dev/video', '')
+                return f"camera{device_num}"
+            else:
+                # Fallback for non-standard device paths
+                return f"camera_{abs(hash(device_path)) % 1000}"
+        except Exception:
+            return "camera_unknown"
+
+    def _generate_filename(self, device_path: str, extension: str, custom_filename: Optional[str] = None) -> str:
+        """
+        Generate filename for snapshots and recordings.
+        
+        Args:
+            device_path: Camera device path
+            extension: File extension (jpg, mp4, etc.)
+            custom_filename: Custom filename if provided
+            
+        Returns:
+            Generated filename with timestamp
+        """
+        if custom_filename:
+            # Ensure custom filename has correct extension
+            if not custom_filename.endswith(f'.{extension}'):
+                return f"{custom_filename}.{extension}"
+            return custom_filename
+        
+        # Generate timestamp-based filename
+        timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+        stream_name = self._get_stream_name_from_device_path(device_path)
+        return f"{stream_name}_{timestamp}.{extension}"
+
     async def _method_ping(self, params: Optional[Dict[str, Any]] = None) -> str:
         """
         Built-in ping method for health checks.
@@ -441,16 +511,61 @@ class WebSocketJsonRpcServer:
 
         Raises:
             ValueError: If device parameter missing or camera not available
-            NotImplementedError: Method implementation pending
 
         Architecture Reference:
             WebSocket JSON-RPC Server component (docs/architecture/overview.md)
             MediaMTX integration for snapshot capture functionality
-
-        # TODO: [CRITICAL] Implement _method_take_snapshot stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        raise NotImplementedError("take_snapshot method implementation pending")
+        if not params or 'device' not in params:
+            raise ValueError("device parameter is required")
+        
+        device_path = params['device']
+        custom_filename = params.get('filename')
+        
+        # Validate MediaMTX controller is available
+        if not self._mediamtx_controller:
+            return {
+                "device": device_path,
+                "filename": None,
+                "status": "FAILED",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": "MediaMTX controller not available"
+            }
+        
+        try:
+            # Convert device path to stream name
+            stream_name = self._get_stream_name_from_device_path(device_path)
+            
+            # Generate filename
+            filename = self._generate_filename(device_path, "jpg", custom_filename)
+            
+            # Call MediaMTX controller to take snapshot
+            snapshot_result = await self._mediamtx_controller.take_snapshot(
+                stream_name=stream_name,
+                filename=filename
+            )
+            
+            # Return successful result based on MediaMTX response
+            return {
+                "device": device_path,
+                "filename": snapshot_result.get("filename", filename),
+                "status": "completed",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": snapshot_result.get("file_size", 0),
+                "file_path": snapshot_result.get("file_path", f"/opt/camera-service/snapshots/{filename}")
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error taking snapshot for {device_path}: {e}")
+            return {
+                "device": device_path,
+                "filename": custom_filename or self._generate_filename(device_path, "jpg"),
+                "status": "FAILED",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": str(e)
+            }
 
     async def _method_start_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -477,16 +592,68 @@ class WebSocketJsonRpcServer:
 
         Raises:
             ValueError: If device missing, camera not available, or already recording
-            NotImplementedError: Method implementation pending
 
         Architecture Reference:
             WebSocket JSON-RPC Server component (docs/architecture/overview.md)
             MediaMTX integration for recording management functionality
-
-        # TODO: [CRITICAL] Implement _method_start_recording stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        raise NotImplementedError("start_recording method implementation pending")
+        if not params or 'device' not in params:
+            raise ValueError("device parameter is required")
+        
+        device_path = params['device']
+        duration = params.get('duration')
+        format_type = params.get('format', 'mp4')
+        
+        # Validate MediaMTX controller is available
+        if not self._mediamtx_controller:
+            return {
+                "device": device_path,
+                "session_id": None,
+                "filename": None,
+                "status": "FAILED",
+                "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": duration,
+                "format": format_type,
+                "error": "MediaMTX controller not available"
+            }
+        
+        try:
+            # Convert device path to stream name
+            stream_name = self._get_stream_name_from_device_path(device_path)
+            
+            # Generate session ID
+            session_id = str(uuid.uuid4())
+            
+            # Call MediaMTX controller to start recording
+            recording_result = await self._mediamtx_controller.start_recording(
+                stream_name=stream_name,
+                duration=duration,
+                format=format_type
+            )
+            
+            # Return successful result based on MediaMTX response
+            return {
+                "device": device_path,
+                "session_id": session_id,
+                "filename": recording_result.get("filename"),
+                "status": "STARTED",
+                "start_time": recording_result.get("start_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+                "duration": duration,
+                "format": format_type
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error starting recording for {device_path}: {e}")
+            return {
+                "device": device_path,
+                "session_id": None,
+                "filename": None,
+                "status": "FAILED",
+                "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": duration,
+                "format": format_type,
+                "error": str(e)
+            }
 
     async def _method_stop_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -512,16 +679,62 @@ class WebSocketJsonRpcServer:
 
         Raises:
             ValueError: If device parameter is missing or not currently recording
-            NotImplementedError: Method implementation pending
 
         Architecture Reference:
             WebSocket JSON-RPC Server component (docs/architecture/overview.md)
             MediaMTX integration for recording management functionality
-
-        # TODO: [CRITICAL] Implement _method_stop_recording stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1. Do not implement business logic yet.
         """
-        raise NotImplementedError("stop_recording method implementation pending")
+        if not params or 'device' not in params:
+            raise ValueError("device parameter is required")
+        
+        device_path = params['device']
+        
+        # Validate MediaMTX controller is available
+        if not self._mediamtx_controller:
+            return {
+                "device": device_path,
+                "session_id": None,
+                "filename": None,
+                "status": "FAILED",
+                "start_time": None,
+                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": 0,
+                "file_size": 0,
+                "error": "MediaMTX controller not available"
+            }
+        
+        try:
+            # Convert device path to stream name
+            stream_name = self._get_stream_name_from_device_path(device_path)
+            
+            # Call MediaMTX controller to stop recording
+            recording_result = await self._mediamtx_controller.stop_recording(stream_name)
+            
+            # Return successful result based on MediaMTX response
+            return {
+                "device": device_path,
+                "session_id": recording_result.get("session_id"),
+                "filename": recording_result.get("filename"),
+                "status": "STOPPED",
+                "start_time": recording_result.get("start_time"),
+                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": recording_result.get("duration", 0),
+                "file_size": recording_result.get("file_size", 0)
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Error stopping recording for {device_path}: {e}")
+            return {
+                "device": device_path,
+                "session_id": None,
+                "filename": None,
+                "status": "FAILED",
+                "start_time": None,
+                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": 0,
+                "file_size": 0,
+                "error": str(e)
+            }
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
         """
@@ -598,3 +811,4 @@ class WebSocketJsonRpcServer:
 
 # CHANGE LOG
 # 2025-08-02: Implemented method-level API versioning per architecture overview, resolving IV&V BLOCKED issue per roadmap.md.
+# 2025-08-02: Implemented business logic for take_snapshot, start_recording, stop_recording methods with MediaMTX integration per Epic E1 task requirements.
