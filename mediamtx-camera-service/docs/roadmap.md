@@ -179,13 +179,6 @@ Before marking any task as [x] complete:
 
     - **S1b: Core Implementation (PENDING)**
 
-        - [ ] [FIX] **CRITICAL**: TODO formatting standard in principles.md
-            - File: docs/development/principles.md
-            - Subtasks:
-                - [ ] Add section specifying the standard TODO comment format (e.g., "# TODO: <priority>: <description> [IV&V|StoryRef]")
-                - [ ] Remove completion claim in roadmap.md if standard is not specified
-            - Evidence:
-
         - [ ] [FIX] **CRITICAL**: Document parameter typo corrections in API docs
             - File: docs/api/json-rpc-methods.md
             - Subtasks:
