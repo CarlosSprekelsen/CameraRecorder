@@ -83,8 +83,6 @@ Before marking any task as [x] complete:
             - Evidence: All TODOs now follow `docs/development/principles.md` (2025-08-02)
         - [x] [IMPL] Add method-level API versioning stubs in `server.py`.
             - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)
-
-    - **S1b: Core Implementation (PENDING)**
         - [X] [IMPL] **HIGH PRIORITY**: Replace NotImplementedError with actual business logic in JSON-RPC methods
             - Files: `src/websocket_server/server.py` lines ~380, ~420, ~460
             - Methods: `_method_take_snapshot`, `_method_start_recording`, `_method_stop_recording`
@@ -105,6 +103,8 @@ Before marking any task as [x] complete:
                 Lines ~520: notify_recording_status_update - Complete implementation with parameter validation, field filtering, and JSON-RPC 2.0 notification broadcasting
                 Lines ~200: broadcast_notification - Enhanced implementation with JSON-RPC 2.0 compliance, client broadcasting, and connection management
                 Date: 2025-08-02 Commit: Notification broadcasting implementation replacing pass statements with working JSON-RPC 2.0 notification system
+
+    - **S1b: Core Implementation (PENDING)**
         - [ ] [IMPL] **MEDIUM PRIORITY**: Actually refactor hard-coded values in hybrid_monitor.py
             - File: `src/camera_discovery/hybrid_monitor.py`
             - Fix: Remove hard-coded "camera0" return (line ~200) and placeholder CameraDevice values (line ~185)
