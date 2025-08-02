@@ -34,8 +34,10 @@ The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, pr
 │     • Client connection management                         │
 │     • JSON-RPC 2.0 protocol handling                      │
 │     • Method-level API versioning & deprecation           │
+│         - Each JSON-RPC method is registered with an explicit version string. │
+│         - Deprecated methods must be tracked.             │
 │     • Real-time notifications                             │
-│     • Authentication and authorization                     │
+│     • Authentication and authorization                    │
 ├─────────────────────────────────────────────────────────────┤
 │             Camera Discovery Monitor                      │
 │     • Hybrid udev events + polling fallback               │
@@ -54,7 +56,6 @@ The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, pr
 │                 - bytes_sent (int): Total bytes sent by camera stream.      │
 │                 - readers (int): Active stream consumers.                   │
 │                 - uptime (int): Seconds since last connect.                 │
-│             <!-- This change aligns architecture with API contract and resolves roadmap.md IV&V blocker. -->
 ├─────────────────────────────────────────────────────────────┤
 │              MediaMTX Controller                          │
 │     • REST API client                                     │
@@ -271,3 +272,17 @@ The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, pr
 8. **Logging Format**: Structured JSON with correlation IDs, pretty-print for development  
 9. **Performance Targets**: <200ms camera detection, <50ms API calls, 16 cameras, 100 clients
 10. **Resource Limits**: <100MB RAM, <20% CPU, 500MB logs with rotation, disk usage warnings
+
+---
+
+## Architecture Decisions
+
+### Method-Level API Versioning
+
+- Each JSON-RPC method is registered with an explicit version string (e.g., `"1.0"`).
+- Deprecated methods must be tracked and flagged in registration.
+- Version negotiation and migration logic are deferred until a future architecture update.
+- Example implementation:
+    - `register_method("get_camera_list", handler, version="1.0")`
+- Rationale: This separation maintains architectural clarity and traceability, as required by project standards and IV&V review.
+- CHANGE LOG: 2025-08-02, moved implementation notes and migration strategy out of diagram/list to this

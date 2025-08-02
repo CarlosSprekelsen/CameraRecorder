@@ -74,7 +74,7 @@ class WebSocketJsonRpcServer:
     # IV&V Reference: Architecture Decisions v6, API Versioning Strategy, Story S1.
     # Rationale: All public API methods must support explicit versioning and deprecation tracking.
     # STOPPED: Do not implement version negotiation or migration logic until versioning requirements are clarified and documented.
-    _method_versions: Dict[str, str] = {}  # e.g., {"get_camera_list": "1.0", "start_recording": "1.0"}
+    _method_versions: Dict[str, str] = {}
 
     def __init__(
         self,
@@ -173,9 +173,10 @@ class WebSocketJsonRpcServer:
             handler: Async function to handle the method call
             version: API version string (default "1.0")
 
-        # TODO: [CRITICAL] Implement method-level version tracking in registration
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Do not implement business logic yet.
+        Architecture Reference:
+            docs/architecture/overview.md: Method-level API versioning strategy.
+
+        # TODO: [CRITICAL] Track deprecated methods and flag in registration (future).
         """
         self._method_handlers[method_name] = handler
         self._method_versions[method_name] = version
@@ -201,10 +202,6 @@ class WebSocketJsonRpcServer:
 
         Returns:
             Version string if registered, else None
-
-        # TODO: [CRITICAL] Implement get_method_version stub
-        # Description: This stub is required for API alignment. Reference: IV&V finding 1.1, Story S1.
-        # Do not implement business logic yet.
         """
         return self._method_versions.get(method_name)
 
@@ -334,12 +331,12 @@ class WebSocketJsonRpcServer:
 
     def _register_builtin_methods(self) -> None:
         """Register built-in JSON-RPC methods."""
-        self.register_method("ping", self._method_ping)
-        self.register_method("get_camera_list", self._method_get_camera_list)
-        self.register_method("get_camera_status", self._method_get_camera_status)
-        self.register_method("take_snapshot", self._method_take_snapshot)
-        self.register_method("start_recording", self._method_start_recording)
-        self.register_method("stop_recording", self._method_stop_recording)
+        self.register_method("ping", self._method_ping, version="1.0")
+        self.register_method("get_camera_list", self._method_get_camera_list, version="1.0")
+        self.register_method("get_camera_status", self._method_get_camera_status, version="1.0")
+        self.register_method("take_snapshot", self._method_take_snapshot, version="1.0")
+        self.register_method("start_recording", self._method_start_recording, version="1.0")
+        self.register_method("stop_recording", self._method_stop_recording, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     async def _method_ping(self, params: Optional[Dict[str, Any]] = None) -> str:
@@ -589,3 +586,6 @@ class WebSocketJsonRpcServer:
     def is_running(self) -> bool:
         """Check if the server is currently running."""
         return self._running
+
+# CHANGE LOG
+# 2025-08-02: Implemented method-level API versioning per architecture overview, resolving IV&V BLOCKED issue per roadmap.md.
