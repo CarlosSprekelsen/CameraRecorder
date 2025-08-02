@@ -176,15 +176,10 @@ Before marking any task as [x] complete:
                 - [x] Implement _start_health_monitor (replaced pass/TODO) 
                 - [x] Implement all _stop_* methods (replaced placeholders)
                 - [x] Implement camera event handler integration (removed STOPPED/TODOs)
+        - [x] [FIX] Correct all parameter typos in `api/json-rpc-methods.md`.
+        - Evidence: `docs/api/json-rpc-methods.md` (2025-08-02)
 
     - **S1b: Core Implementation (PENDING)**
-
-        - [ ] [FIX] **CRITICAL**: Document parameter typo corrections in API docs
-            - File: docs/api/json-rpc-methods.md
-            - Subtasks:
-                - [ ] List all specific parameter typos fixed (before/after)
-                - [ ] Remove completion claim in roadmap.md if none were found
-            - Evidence:
 
         - [ ] [IMPL] **MEDIUM PRIORITY**: Complete udev monitoring implementation (grouped)
             - File: src/camera_discovery/hybrid_monitor.py
@@ -193,29 +188,27 @@ Before marking any task as [x] complete:
                 - [ ] Implement _udev_event_loop() (remove sleep-only loop, implement full event handling)
             - Evidence:
 
-        - [ ] [FIX] **HIGH PRIORITY**: Clean up roadmap section S1b
-            - File: docs/roadmap.md
-            - Subtasks:
-                - [ ] Remove duplicate/copy-paste entries in S1b
-                - [ ] Clarify actual requirements
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for main.py
+            - File: main.py
+            - Task: Ensure main.py is implemented, maintained, and explicitly tracked in roadmap.md. Reference the relevant Epic/Story.
             - Evidence:
 
-        - [ ] [IVV] **CRITICAL**: Add roadmap tracking for MediaMTX Controller implementation (phantom tracking)
-            - File: docs/roadmap.md (Epic/Story tracking)
-            - Subtasks:
-                - [ ] Create or update roadmap.md to reflect all work in controller.py (REST API client, stream management, health monitoring)
-                - [ ] Ensure all features in code have a corresponding roadmap item
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for requirements.txt
+            - File: requirements.txt
+            - Task: Ensure requirements.txt is present, maintained, and explicitly tracked in roadmap.md. Reference the relevant Epic/Story.
             - Evidence:
 
-        - [ ] [IVV] **MEDIUM PRIORITY**: Add roadmap tracking for missing core components
-            - Files: main.py, requirements.txt, deployment/scripts/install.sh
-            - Subtasks:
-                - [ ] Review each implemented file/component for roadmap coverage
-                - [ ] Ensure all implemented code has a corresponding roadmap.md task or item
+        - [ ] [IMPL] **MEDIUM PRIORITY**: Add roadmap tracking for deployment/scripts/install.sh
+            - File: deployment/scripts/install.sh
+            - Task: Ensure install.sh is present, maintained, and explicitly tracked in roadmap.md. Reference the relevant Epic/Story.
+            - Evidence:
+
+        - [ ] [IVV] **MEDIUM PRIORITY**: Verify all core components are tracked in roadmap.md
+            - Task: Only mark as complete when each of the above [IMPL] tasks is present and evidenced.
             - Evidence:
 
 
-    - **S2: Architecture Compliance IV&V (Control Point) - PENDING**
+  - **S2: Architecture Compliance IV&V (Control Point) - PENDING**
         - [ ] [IVV] Re-validate API docs and code alignment after S1b fixes
             - Task: Verify all JSON-RPC methods have working implementations (not NotImplementedError)
             - Task: Verify notification methods broadcast properly (not `pass` statements)
