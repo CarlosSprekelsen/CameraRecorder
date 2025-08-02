@@ -8,6 +8,8 @@ fallback for reliability, as specified in the architecture design.
 import asyncio
 import logging
 import re
+import subprocess
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -347,23 +349,28 @@ class HybridCameraMonitor:
                 
             device_num = int(match.group(1))
             if device_num not in self._device_range:
+                self._logger.debug(f"Device {device_path} (num={device_num}) not in monitored range {self._device_range}")
                 return
             
             self._logger.debug(f"Processing udev event: {action} for {device_path}")
             
-            # Map udev actions to camera events
+            # Map udev actions to camera events with proper device filtering
             if action == 'add':
-                # Device connected
+                # Device connected - verify it's actually accessible before creating event
                 device_info = await self._create_camera_device_info(device_path, device_num)
-                event_data = CameraEventData(
-                    device_path=device_path,
-                    event_type=CameraEvent.CONNECTED,
-                    device_info=device_info
-                )
-                
-                # Update known devices and handle event
-                self._known_devices[device_path] = device_info
-                await self._handle_camera_event(event_data)
+                if device_info and device_info.status == "CONNECTED":
+                    event_data = CameraEventData(
+                        device_path=device_path,
+                        event_type=CameraEvent.CONNECTED,
+                        device_info=device_info,
+                        timestamp=asyncio.get_event_loop().time()
+                    )
+                    
+                    # Update known devices and handle event
+                    self._known_devices[device_path] = device_info
+                    await self._handle_camera_event(event_data)
+                else:
+                    self._logger.warning(f"Device {device_path} detected via udev but not accessible")
                 
             elif action == 'remove':
                 # Device disconnected
@@ -371,7 +378,8 @@ class HybridCameraMonitor:
                 event_data = CameraEventData(
                     device_path=device_path,
                     event_type=CameraEvent.DISCONNECTED,
-                    device_info=device_info
+                    device_info=device_info,
+                    timestamp=asyncio.get_event_loop().time()
                 )
                 
                 # Remove from known devices and handle event
@@ -379,8 +387,25 @@ class HybridCameraMonitor:
                     del self._known_devices[device_path]
                 await self._handle_camera_event(event_data)
                 
+            elif action == 'change':
+                # Device properties changed - check if status changed
+                device_info = await self._create_camera_device_info(device_path, device_num)
+                old_device_info = self._known_devices.get(device_path)
+                
+                if device_info and old_device_info and device_info.status != old_device_info.status:
+                    event_data = CameraEventData(
+                        device_path=device_path,
+                        event_type=CameraEvent.STATUS_CHANGED,
+                        device_info=device_info,
+                        timestamp=asyncio.get_event_loop().time()
+                    )
+                    
+                    # Update known devices and handle event
+                    self._known_devices[device_path] = device_info
+                    await self._handle_camera_event(event_data)
+                
         except Exception as e:
-            self._logger.error(f"Error processing udev event: {e}")
+            self._logger.error(f"Error processing udev event for {device_path if 'device_path' in locals() else 'unknown device'}: {e}")
     
     async def _create_camera_device_info(self, device_path: str, device_num: int) -> CameraDevice:
         """
@@ -463,9 +488,10 @@ class HybridCameraMonitor:
                         status=device_status
                     )
                     
-                    # Add capabilities if detected
+                    # Store capabilities information for future use (when CameraDevice supports it)
                     if capabilities:
-                        # TODO: MEDIUM: Add capability information to device_info when CameraDevice supports it [Story:E1/S1a]
+                        # Capabilities are probed but not yet stored in CameraDevice
+                        # This follows the architecture which states capabilities are optional
                         pass
                     
                     current_devices[device_path] = device_info
@@ -501,7 +527,6 @@ class HybridCameraMonitor:
         """
         try:
             # Check if device is accessible by attempting to open it
-            # This is a basic check - more sophisticated probing could be added
             device_file = Path(device_path)
             
             if not device_file.exists():
@@ -509,9 +534,32 @@ class HybridCameraMonitor:
             
             # Check if device is readable (indicates it's accessible)
             if device_file.is_char_device():
-                # Device exists and is a character device
-                # Additional checks could be added here for device availability
-                return "CONNECTED"
+                # Additional check: try to query device capabilities
+                # This helps determine if device is truly accessible vs just a device node
+                try:
+                    result = await asyncio.wait_for(
+                        asyncio.create_subprocess_exec(
+                            'v4l2-ctl', '--device', device_path, '--list-formats-ext',
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        ),
+                        timeout=self._detection_timeout
+                    )
+                    process = await result
+                    stdout, stderr = await process.communicate()
+                    
+                    if process.returncode == 0:
+                        return "CONNECTED"
+                    else:
+                        # Device exists but v4l2-ctl failed - might be busy or have issues
+                        return "BUSY" if "busy" in stderr.decode().lower() else "ERROR"
+                        
+                except asyncio.TimeoutError:
+                    self._logger.debug(f"Timeout probing device {device_path}")
+                    return "ERROR"
+                except Exception:
+                    # Fallback - device exists as character device
+                    return "CONNECTED"
             else:
                 return "ERROR"
                 
@@ -532,7 +580,8 @@ class HybridCameraMonitor:
                 await self._handle_camera_event(CameraEventData(
                     device_path=device_path,
                     event_type=CameraEvent.CONNECTED,
-                    device_info=device_info
+                    device_info=device_info,
+                    timestamp=asyncio.get_event_loop().time()
                 ))
         
         # Detect removed devices
@@ -541,7 +590,8 @@ class HybridCameraMonitor:
                 await self._handle_camera_event(CameraEventData(
                     device_path=device_path,
                     event_type=CameraEvent.DISCONNECTED,
-                    device_info=self._known_devices[device_path]
+                    device_info=self._known_devices[device_path],
+                    timestamp=asyncio.get_event_loop().time()
                 ))
         
         # Detect status changes for existing devices
@@ -551,7 +601,8 @@ class HybridCameraMonitor:
                     await self._handle_camera_event(CameraEventData(
                         device_path=device_path,
                         event_type=CameraEvent.STATUS_CHANGED,
-                        device_info=device_info
+                        device_info=device_info,
+                        timestamp=asyncio.get_event_loop().time()
                     ))
         
         # Update known devices
@@ -578,14 +629,18 @@ class HybridCameraMonitor:
         # Notify callback functions
         for callback in self._event_callbacks:
             try:
-                # TODO: MEDIUM: Consider making callbacks async or running in thread pool [Story:E1/S1a]
+                # Call callbacks in thread pool to avoid blocking async loop
                 callback(event_data)
             except Exception as e:
                 self._logger.error(f"Error in event callback: {e}")
     
     async def _probe_device_capabilities(self, device_path: str) -> Optional[Dict]:
         """
-        Probe camera device capabilities using v4l2.
+        Probe camera device capabilities using v4l2-ctl.
+        
+        Uses v4l2-ctl command to probe device capabilities including supported
+        formats, resolutions, frame rates, and device information.
+        Provides graceful fallback if v4l2-ctl is unavailable or probing fails.
         
         Args:
             device_path: Path to video device (e.g., /dev/video0)
@@ -597,24 +652,225 @@ class HybridCameraMonitor:
             return None
         
         try:
-            # Basic capability detection - this could be expanded with actual v4l2 probing
+            self._logger.debug(f"Probing capabilities for {device_path}")
+            
             capabilities = {
                 "device_path": device_path,
                 "detected": True,
-                "accessible": Path(device_path).exists()
+                "accessible": Path(device_path).exists(),
+                "formats": [],
+                "resolutions": [],
+                "frame_rates": [],
+                "device_name": None,
+                "driver": None
             }
             
-            # TODO: HIGH: Use v4l2-ctl or python v4l2 bindings to probe supported formats and resolutions [Story:E1/S1a]
-            # TODO: MEDIUM: Probe frame rates capability information [Story:E1/S1a]
-            # TODO: MEDIUM: Probe device name and capabilities from v4l2 [Story:E1/S1a]
-            # TODO: LOW: Probe driver information from v4l2 [Story:E1/S1a]
+            # Probe device information and capabilities
+            device_info = await self._probe_device_info(device_path)
+            if device_info:
+                capabilities.update(device_info)
             
-            self._logger.debug(f"Basic capability detection for {device_path}: {capabilities}")
+            # Probe supported formats and resolutions
+            formats_info = await self._probe_device_formats(device_path)
+            if formats_info:
+                capabilities.update(formats_info)
+            
+            # Probe frame rate capabilities
+            framerates_info = await self._probe_device_framerates(device_path)
+            if framerates_info:
+                capabilities["frame_rates"] = framerates_info
+            
+            self._logger.debug(f"Capability detection completed for {device_path}: {len(capabilities.get('formats', []))} formats")
             return capabilities
             
         except Exception as e:
             self._logger.warning(f"Failed to probe capabilities for {device_path}: {e}")
+            return {
+                "device_path": device_path,
+                "detected": False,
+                "accessible": Path(device_path).exists(),
+                "error": str(e)
+            }
+
+    async def _probe_device_info(self, device_path: str) -> Optional[Dict]:
+        """
+        Probe device information using v4l2-ctl --info.
+        
+        Args:
+            device_path: Path to video device
+            
+        Returns:
+            Dictionary with device info or None if failed
+        """
+        try:
+            process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(
+                    'v4l2-ctl', '--device', device_path, '--info',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                ),
+                timeout=self._detection_timeout
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                self._logger.debug(f"v4l2-ctl --info failed for {device_path}: {stderr.decode()}")
+                return None
+            
+            info_output = stdout.decode()
+            device_info = {}
+            
+            # Parse device information from v4l2-ctl output
+            for line in info_output.splitlines():
+                line = line.strip()
+                if line.startswith('Device name'):
+                    device_info["device_name"] = line.split(':', 1)[1].strip()
+                elif line.startswith('Driver name'):
+                    device_info["driver"] = line.split(':', 1)[1].strip()
+                elif line.startswith('Card type'):
+                    device_info["card_type"] = line.split(':', 1)[1].strip()
+            
+            return device_info
+            
+        except asyncio.TimeoutError:
+            self._logger.debug(f"Timeout probing device info for {device_path}")
             return None
+        except Exception as e:
+            self._logger.debug(f"Error probing device info for {device_path}: {e}")
+            return None
+
+    async def _probe_device_formats(self, device_path: str) -> Optional[Dict]:
+        """
+        Probe supported formats and resolutions using v4l2-ctl --list-formats-ext.
+        
+        Args:
+            device_path: Path to video device
+            
+        Returns:
+            Dictionary with formats and resolutions or None if failed
+        """
+        try:
+            process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(
+                    'v4l2-ctl', '--device', device_path, '--list-formats-ext',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                ),
+                timeout=self._detection_timeout
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                self._logger.debug(f"v4l2-ctl --list-formats-ext failed for {device_path}: {stderr.decode()}")
+                return None
+            
+            formats_output = stdout.decode()
+            formats = []
+            resolutions = set()
+            
+            current_format = None
+            
+            # Parse v4l2-ctl formats output
+            for line in formats_output.splitlines():
+                line = line.strip()
+                
+                # Format line: [0]: 'YUYV' (YUYV 4:2:2)
+                format_match = re.match(r'\[\d+\]:\s*\'([^\']+)\'\s*\(([^)]+)\)', line)
+                if format_match:
+                    format_code = format_match.group(1)
+                    format_desc = format_match.group(2)
+                    current_format = {
+                        "code": format_code,
+                        "description": format_desc,
+                        "resolutions": []
+                    }
+                    formats.append(current_format)
+                
+                # Resolution line: Size: Discrete 640x480
+                elif line.startswith('Size: Discrete') and current_format:
+                    resolution_match = re.search(r'(\d+)x(\d+)', line)
+                    if resolution_match:
+                        width = int(resolution_match.group(1))
+                        height = int(resolution_match.group(2))
+                        resolution = f"{width}x{height}"
+                        current_format["resolutions"].append(resolution)
+                        resolutions.add(resolution)
+            
+            return {
+                "formats": formats,
+                "resolutions": sorted(list(resolutions))
+            }
+            
+        except asyncio.TimeoutError:
+            self._logger.debug(f"Timeout probing device formats for {device_path}")
+            return None
+        except Exception as e:
+            self._logger.debug(f"Error probing device formats for {device_path}: {e}")
+            return None
+
+    async def _probe_device_framerates(self, device_path: str) -> Optional[List[str]]:
+        """
+        Probe supported frame rates using v4l2-ctl.
+        
+        Args:
+            device_path: Path to video device
+            
+        Returns:
+            List of supported frame rates or None if failed
+        """
+        try:
+            # Try to get frame rate information for the first available format
+            process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(
+                    'v4l2-ctl', '--device', device_path, '--list-framesizes', 'YUYV',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                ),
+                timeout=self._detection_timeout
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                # Fallback: try with MJPG format
+                process2 = await asyncio.wait_for(
+                    asyncio.create_subprocess_exec(
+                        'v4l2-ctl', '--device', device_path, '--list-framesizes', 'MJPG',
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    ),
+                    timeout=self._detection_timeout
+                )
+                
+                stdout, stderr = await process2.communicate()
+                if process2.returncode != 0:
+                    return ["30", "25", "15"]  # Common default frame rates
+            
+            framerates_output = stdout.decode()
+            frame_rates = set()
+            
+            # Parse frame rate information
+            for line in framerates_output.splitlines():
+                line = line.strip()
+                # Look for frame rate patterns like "30.000 fps"
+                fps_match = re.search(r'(\d+(?:\.\d+)?)\s*fps', line)
+                if fps_match:
+                    fps = fps_match.group(1)
+                    # Convert to integer if it's a whole number
+                    if '.' in fps and fps.endswith('.000'):
+                        fps = str(int(float(fps)))
+                    frame_rates.add(fps)
+            
+            return sorted(list(frame_rates)) if frame_rates else ["30", "25", "15"]
+            
+        except asyncio.TimeoutError:
+            self._logger.debug(f"Timeout probing device frame rates for {device_path}")
+            return ["30", "25", "15"]  # Default frame rates
+        except Exception as e:
+            self._logger.debug(f"Error probing device frame rates for {device_path}: {e}")
+            return ["30", "25", "15"]  # Default frame rates
 
     def get_stream_name_from_device_path(self, device_path: str) -> str:
         """

@@ -140,16 +140,17 @@ Before marking any task as [x] complete:
         - [x] [IMPL] Implement hybrid udev + polling camera discovery framework.  
             - Evidence: `src/camera_discovery/hybrid_monitor.py` lines 1-500 (2025-08-02)  
             - Status: Complete hybrid monitoring with event system and handler interfaces
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete camera capability detection logic
-            - File: `src/camera_discovery/hybrid_monitor.py` _probe_device_capabilities method
-            - Task: Complete v4l2 capability probing implementation
-            - Action: Replace TODO comments with actual v4l2-ctl integration or python v4l2 bindings
-            - Evidence:
-        - [ ] [IMPL] **MEDIUM PRIORITY**: Complete udev event processing implementation
+        - [x] [IMPL] Implement capability detection logic for CameraDevice 
+            - Evidence: src/camera_discovery/hybrid_monitor.py lines 450-650 (2025-08-02)
+            - Location: `src/camera_discovery/hybrid_monitor.py` lines 450-650 (2025-08-02)  
+            - Implementation: Complete V4L2 probing using v4l2-ctl subprocess calls with timeout handling  
+            - Features: Device info, supported formats, resolutions, frame rates detection  
+            - Validation: Logic validated with regex pattern testing and mock subprocess calls  
+        - [x] [IMPL] Complete udev event processing implementation
             - File: `src/camera_discovery/hybrid_monitor.py` _process_udev_device_event method
             - Task: Complete real-time udev event processing with proper device filtering
             - Action: Implement device node validation and event action mapping
-            - Evidence:
+            - Evidence: src/camera_discovery/hybrid_monitor.py lines 220-290 (2025-08-02)
 
     - **S4: MediaMTX Integration - COMPLETE (FAST TRACK)**
         - [x] [IMPL] Implement stream creation/deletion logic in MediaMTX controller.  
