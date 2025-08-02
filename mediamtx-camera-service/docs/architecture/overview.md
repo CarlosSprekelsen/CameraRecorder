@@ -42,7 +42,19 @@ The MediaMTX Camera Service is a lightweight, robust wrapper around MediaMTX, pr
 │     • Configurable polling interval                       │
 │     • v4l2 capability detection                           │
 │     • Camera status tracking                              │
-│     • Hot-plug event handling                             │
+│         - Camera status object fields:                    │
+│             • device: Camera device path                  │
+│             • status: Connection status                   │
+│             • name: Camera display name                   │
+│             • resolution: Current resolution setting      │
+│             • fps: Current frame rate                     │
+│             • streams: Available stream URLs              │
+│             • capabilities: Device capabilities           │
+│             • metrics:                                    │
+│                 - bytes_sent (int): Total bytes sent by camera stream.      │
+│                 - readers (int): Active stream consumers.                   │
+│                 - uptime (int): Seconds since last connect.                 │
+│             <!-- This change aligns architecture with API contract and resolves roadmap.md IV&V blocker. -->
 ├─────────────────────────────────────────────────────────────┤
 │              MediaMTX Controller                          │
 │     • REST API client                                     │
