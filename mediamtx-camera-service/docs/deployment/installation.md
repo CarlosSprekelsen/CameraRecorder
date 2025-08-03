@@ -11,12 +11,12 @@
 ## Prerequisites
 
 ### System Updates
-`ash
+`
 sudo apt update && sudo apt upgrade -y
 `
 
 ### Required Packages
-`ash
+`
 sudo apt install -y python3 python3-pip python3-venv v4l-utils ffmpeg git
 `
 
@@ -24,26 +24,24 @@ sudo apt install -y python3 python3-pip python3-venv v4l-utils ffmpeg git
 
 ### Method 1: Automated Installation (Recommended)
 
-`ash
-# Download and run installation script
-curl -sSL https://raw.githubusercontent.com/your-org/mediamtx-camera-service/main/deployment/scripts/install.sh | sudo bash
-`
+`# Download and run installation script`
+`curl -sSL https://raw.githubusercontent.com/your-org/mediamtx-camera-service/main/deployment/scripts/install.sh | sudo bash`
 
 ### Method 2: Manual Installation
 
 #### Step 1: Clone Repository
-`ash
+`
 git clone https://github.com/your-org/mediamtx-camera-service
 cd mediamtx-camera-service
 `
 
 #### Step 2: Run Installation Script
-`ash
+`
 sudo ./deployment/scripts/install.sh
 `
 
 #### Step 3: Verify Installation
-`ash
+`
 sudo systemctl status camera-service
 sudo systemctl status mediamtx
 `
@@ -51,13 +49,13 @@ sudo systemctl status mediamtx
 ## Post-Installation Setup
 
 ### Start Services
-`ash
+`
 sudo systemctl enable camera-service mediamtx
 sudo systemctl start camera-service mediamtx
 `
 
 ### Check Status
-`ash
+`
 # Service status
 sudo systemctl status camera-service
 sudo systemctl status mediamtx
@@ -68,7 +66,7 @@ sudo journalctl -u mediamtx -f
 `
 
 ### Test Connection
-`ash
+`
 # Test WebSocket connection
 curl -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Key: test" -H "Sec-WebSocket-Version: 13" http://localhost:8002/ws
 
@@ -95,7 +93,7 @@ mediamtx:
 ### Environment Variables  
 Edit /etc/systemd/system/camera-service.env:
 
-`ash
+`
 CAMERA_SERVICE_HOST=0.0.0.0
 CAMERA_SERVICE_PORT=8002
 MEDIAMTX_API_PORT=9997
@@ -103,7 +101,7 @@ LOG_LEVEL=INFO
 `
 
 After editing configuration:
-`ash
+`
 sudo systemctl daemon-reload
 sudo systemctl restart camera-service
 `
@@ -111,7 +109,7 @@ sudo systemctl restart camera-service
 ## Verification
 
 ### Camera Detection
-`ash
+`
 # List video devices
 ls -la /dev/video*
 
@@ -121,7 +119,7 @@ v4l2-ctl --device=/dev/video0 --list-formats-ext
 `
 
 ### Service Health
-`ash
+`
 # Check process status
 ps aux | grep camera-service
 ps aux | grep mediamtx
@@ -138,7 +136,7 @@ curl http://localhost:9997/v3/config/global/get
 ### Common Issues
 
 #### Services Won't Start
-`ash
+`
 # Check service logs
 sudo journalctl -u camera-service -n 50
 sudo journalctl -u mediamtx -n 50
@@ -149,7 +147,7 @@ sudo ls -la /opt/camera-service/logs/
 `
 
 #### Camera Not Detected
-`ash
+`
 # Check camera permissions
 ls -la /dev/video*
 groups camera-service
@@ -159,7 +157,7 @@ sudo -u camera-service v4l2-ctl --list-devices
 `
 
 #### Port Conflicts
-`ash
+`
 # Check port usage
 sudo netstat -tlnp | grep -E ':(8002|8554|8889|9997)'
 
@@ -174,12 +172,12 @@ sudo fuser -k 8002/tcp
 
 ## Uninstallation
 
-`ash
+`
 sudo ./deployment/scripts/uninstall.sh
 `
 
 Or manually:
-`ash
+`
 sudo systemctl stop camera-service mediamtx
 sudo systemctl disable camera-service mediamtx
 sudo rm /etc/systemd/system/camera-service.service
