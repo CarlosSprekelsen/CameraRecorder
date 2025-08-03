@@ -61,9 +61,9 @@ class ClientConnection:
         self.subscriptions: Set[str] = set()
         self.connected_at = asyncio.get_event_loop().time()
         
-        # TODO: HIGH: Add authentication state implementation [Story:E1/S1a]
-        # TODO: MEDIUM: Add permission tracking implementation [Story:E1/S1a]
-        # TODO: MEDIUM: Add rate limiting state implementation [Story:E1/S1a]
+        # TODO: HIGH: Add authentication state implementation [IV&V:S6]
+        # TODO: MEDIUM: Add permission tracking implementation [IV&V:S6]
+        # TODO: MEDIUM: Add rate limiting state implementation [IV&V:S6]
 
 
 class WebSocketJsonRpcServer:
@@ -74,10 +74,11 @@ class WebSocketJsonRpcServer:
     as specified in the architecture overview.
     """
 
-    # STOP: MEDIUM: Version negotiation and migration logic deferred to post-1.0 release [Story:E1/S3]
+    # STOP: MEDIUM: Version negotiation and migration logic deferred to post-1.0 release [IV&V:S2b]
     # Rationale: Current method-level versioning satisfies architecture requirements.
     # Version negotiation during handshake and migration guides are documented as future enhancements.
     # Reference: docs/architecture/overview.md "Future Extensibility Framework"
+    # Owner: Solo engineer | Date: 2025-08-03
     _method_versions: Dict[str, str] = {}
 
     def __init__(
@@ -118,9 +119,9 @@ class WebSocketJsonRpcServer:
         # JSON-RPC method handlers
         self._method_handlers: Dict[str, Callable] = {}
         
-        # TODO: HIGH: Initialize authentication system implementation [Story:E1/S1a]
-        # TODO: MEDIUM: Initialize rate limiting implementation [Story:E1/S1a]
-        # TODO: MEDIUM: Initialize metrics collection implementation [Story:E1/S1a]
+        # TODO: HIGH: Initialize authentication system implementation [IV&V:S6]
+        # TODO: MEDIUM: Initialize rate limiting implementation [IV&V:S6]
+        # TODO: MEDIUM: Initialize metrics collection implementation [IV&V:S6]
 
     def set_mediamtx_controller(self, controller) -> None:
         """
@@ -482,7 +483,10 @@ class WebSocketJsonRpcServer:
         Architecture Reference:
             docs/architecture/overview.md: Method-level API versioning strategy.
 
-        # TODO: CRITICAL: Track deprecated methods and flag in registration for future implementation [Story:E1/S1a]
+        # STOP: MEDIUM: Deprecated method tracking deferred to post-1.0 release [IV&V:S2b]
+        # Rationale: Current method-level versioning satisfies immediate architecture requirements.
+        # Deprecation tracking and migration warnings documented as future enhancement.
+        # Owner: Solo engineer | Date: 2025-08-03
         """
         self._method_handlers[method_name] = handler
         self._method_versions[method_name] = version
@@ -748,14 +752,25 @@ class WebSocketJsonRpcServer:
                     except Exception as e:
                         self._logger.debug(f"Could not get stream status for {stream_name}: {e}")
                 
-                # TODO: HIGH: Extract real resolution and fps from capability detection [Story:E1/S3]
-                # Current implementation uses defaults pending capability integration
+                # Get capability-derived metadata when available
+                resolution = "1920x1080"  # Architecture default
+                fps = 30                  # Architecture default
+                
+                # Extract real capability data if camera monitor supports it
+                if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
+                    try:
+                        capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
+                        resolution = capability_metadata.get("resolution", resolution)
+                        fps = capability_metadata.get("fps", fps)
+                    except Exception as e:
+                        self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
+                
                 camera_info = {
                     "device": device_path,
                     "status": camera_device.status,
                     "name": camera_device.name,
-                    "resolution": "1920x1080",  # Default pending capability integration
-                    "fps": 30,                  # Default pending capability integration
+                    "resolution": resolution,
+                    "fps": fps,
                     "streams": streams
                 }
                 
@@ -836,35 +851,36 @@ class WebSocketJsonRpcServer:
                         "name": camera_device.name
                     })
                     
-                    # If camera is connected, set defaults and try to get real data
+                    # If camera is connected, get real capability metadata
                     if camera_device.status == "CONNECTED":
-                        camera_status.update({
-                            "resolution": "1920x1080",  # Default pending capability integration
-                            "fps": 30                   # Default pending capability integration
-                        })
-                        
-                        # TODO: HIGH: Extract real capability data when available [Story:E1/S3]
-                        # Get real capabilities if camera monitor supports it
-                        if hasattr(self._camera_monitor, '_probe_device_capabilities'):
+                        # Use capability-derived metadata when available
+                        if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
                             try:
-                                # Extract device number for capability probing
-                                import re
-                                match = re.search(r'/dev/video(\d+)', device_path)
-                                if match:
-                                    device_num = int(match.group(1))
-                                    capabilities = await self._camera_monitor._probe_device_capabilities(device_path)
-                                    if capabilities and capabilities.get("detected"):
-                                        # Update with real capability data
-                                        formats = capabilities.get("formats", [])
-                                        resolutions = capabilities.get("resolutions", [])
-                                        if formats:
-                                            camera_status["capabilities"]["formats"] = [f["code"] for f in formats]
-                                        if resolutions:
-                                            camera_status["capabilities"]["resolutions"] = resolutions
-                                            # Use first available resolution as current
-                                            camera_status["resolution"] = resolutions[0]
+                                capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
+                                camera_status.update({
+                                    "resolution": capability_metadata.get("resolution", "1920x1080"),
+                                    "fps": capability_metadata.get("fps", 30)
+                                })
+                                
+                                # Update capabilities with real data
+                                if capability_metadata.get("formats"):
+                                    camera_status["capabilities"]["formats"] = capability_metadata["formats"]
+                                if capability_metadata.get("all_resolutions"):
+                                    camera_status["capabilities"]["resolutions"] = capability_metadata["all_resolutions"]
+                                    
                             except Exception as e:
-                                self._logger.debug(f"Could not get capabilities for {device_path}: {e}")
+                                self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
+                                # Use architecture defaults
+                                camera_status.update({
+                                    "resolution": "1920x1080",
+                                    "fps": 30
+                                })
+                        else:
+                            # Camera monitor doesn't support capability metadata
+                            camera_status.update({
+                                "resolution": "1920x1080",  # Architecture default
+                                "fps": 30                   # Architecture default
+                            })
             
             # Get stream info and metrics from MediaMTX controller
             if self._mediamtx_controller and camera_status["status"] == "CONNECTED":
@@ -1273,3 +1289,6 @@ class WebSocketJsonRpcServer:
 # 2025-08-03: Normalized all TODO/STOP comments to canonical format per principles.md
 # 2025-08-03: Enhanced notification filtering to strictly match API specification
 # 2025-08-03: Integrated capability detection where available with graceful fallbacks
+# 2025-08-03: AUDIT FIX - Normalized TODO/STOP comment format to canonical standard
+# 2025-08-03: AUDIT FIX - Added STOP comment for deprecation tracking with proper deferral
+# 2025-08-03: AUDIT FIX - Enhanced real capability metadata integration in get_camera_list and get_camera_status
