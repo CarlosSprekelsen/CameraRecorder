@@ -10,6 +10,9 @@ import logging
 import re
 import subprocess
 import json
+import time
+import random
+import hashlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -56,6 +59,7 @@ class CapabilityDetectionResult:
     error: Optional[str] = None
     timeout_context: Optional[str] = None
     probe_timestamp: float = 0.0
+    structured_diagnostics: Dict[str, Any] = None
     
     def __post_init__(self):
         if self.formats is None:
@@ -64,8 +68,9 @@ class CapabilityDetectionResult:
             self.resolutions = []
         if self.frame_rates is None:
             self.frame_rates = []
+        if self.structured_diagnostics is None:
+            self.structured_diagnostics = {}
         if self.probe_timestamp == 0.0:
-            import time
             self.probe_timestamp = time.time()
 
 
@@ -79,6 +84,23 @@ class DeviceCapabilityState:
     consecutive_failures: int = 0
     last_probe_time: float = 0.0
     confirmation_threshold: int = 2  # Require N consistent probes for confirmation
+    validation_history: List[Dict[str, Any]] = None
+    
+    # Enhanced frequency-based merge tracking
+    format_frequency: Dict[str, int] = None
+    resolution_frequency: Dict[str, int] = None
+    frame_rate_frequency: Dict[str, int] = None
+    stability_threshold: int = 3  # Require N detections for stable capability
+    
+    def __post_init__(self):
+        if self.validation_history is None:
+            self.validation_history = []
+        if self.format_frequency is None:
+            self.format_frequency = {}
+        if self.resolution_frequency is None:
+            self.resolution_frequency = {}
+        if self.frame_rate_frequency is None:
+            self.frame_rate_frequency = {}
     
     def get_effective_capability(self) -> Optional[CapabilityDetectionResult]:
         """Get the capability data to use (confirmed or provisional)."""
@@ -148,390 +170,286 @@ class HybridCameraMonitor:
         self._monitoring_tasks: List[asyncio.Task] = []
         self._state_lock = asyncio.Lock()  # Protect against race conditions
         
-        # Adaptive polling configuration
+        # Enhanced adaptive polling configuration
         self._base_poll_interval = poll_interval
         self._current_poll_interval = poll_interval
-        self._min_poll_interval = max(0.1, poll_interval)
-        self._max_poll_interval = min(30.0, poll_interval * 10)
+        self._min_poll_interval = max(0.05, poll_interval * 0.1)
+        self._max_poll_interval = min(60.0, poll_interval * 50)
         self._last_udev_event_time = 0.0
-        self._udev_event_freshness_threshold = 10.0  # seconds
+        self._udev_event_freshness_threshold = 15.0  # seconds
         self._polling_failure_count = 0
+        self._max_consecutive_failures = 5
+        
+        # Enhanced frame rate patterns for robust parsing
+        self._frame_rate_patterns = [
+            # Standard patterns
+            r'(\d+(?:\.\d+)?)\s*fps\b',                       # 30.000 fps
+            r'(\d+(?:\.\d+)?)\s*FPS\b',                       # 30.000 FPS
+            r'Frame\s*rate[:\s]+(\d+(?:\.\d+)?)',             # Frame rate: 30.0
+            r'(\d+(?:\.\d+)?)\s*Hz\b',                        # 30 Hz
+            r'@(\d+(?:\.\d+)?)\b',                            # 1920x1080@60
+            
+            # Interval patterns
+            r'Interval:\s*\[1/(\d+(?:\.\d+)?)\]',             # Interval: [1/30]
+            r'\[1/(\d+(?:\.\d+)?)\]',                         # [1/30]
+            r'1/(\d+(?:\.\d+)?)\s*s',                         # 1/30 s
+            
+            # More complex patterns
+            r'(\d+(?:\.\d+)?)\s*frame[s]?\s*per\s*second',    # 30 frames per second
+            r'rate:\s*(\d+(?:\.\d+)?)',                       # rate: 30
+            r'fps:\s*(\d+(?:\.\d+)?)',                        # fps: 30
+        ]
         
         # Udev monitoring objects
         self._udev_context: Optional[pyudev.Context] = None
         self._udev_monitor: Optional[pyudev.Monitor] = None
         self._udev_available = HAS_PYUDEV
         
-        # Diagnostic counters for observability
+        # Enhanced diagnostic counters for observability
         self._stats = {
             'udev_events_processed': 0,
             'udev_events_filtered': 0,
+            'udev_events_skipped': 0,
             'polling_cycles': 0,
             'capability_probes_attempted': 0,
             'capability_probes_successful': 0,
             'capability_probes_confirmed': 0,
             'capability_timeouts': 0,
+            'capability_parse_errors': 0,
             'device_state_changes': 0,
             'adaptive_poll_adjustments': 0,
-            'current_poll_interval': poll_interval
+            'provisional_confirmations': 0,
+            'confirmation_failures': 0,
+            'current_poll_interval': poll_interval,
+            'running': False,
+            'active_tasks': 0
         }
         
+        # Initialize deterministic random for jitter
+        self._rng = random.Random()
+        self._rng.seed(hashlib.md5(str(id(self)).encode()).hexdigest())
+        
         if not self._udev_available:
-            self._logger.warning("pyudev not available - falling back to polling-only monitoring")
+            self._logger.warning(
+                "pyudev not available - falling back to polling-only monitoring",
+                extra={'component': 'hybrid_monitor', 'mode': 'polling_only'}
+            )
         
         self._logger.debug(
             f"Initialized HybridCameraMonitor with device_range={self._device_range}, "
-            f"poll_interval={self._poll_interval}s, udev_available={self._udev_available}"
+            f"poll_interval={self._poll_interval}s, udev_available={self._udev_available}",
+            extra={
+                'component': 'hybrid_monitor', 
+                'device_range': self._device_range,
+                'poll_interval': self._poll_interval,
+                'udev_available': self._udev_available
+            }
         )
-    
+
     def add_event_handler(self, handler: CameraEventHandler) -> None:
-        """
-        Add a camera event handler.
-        
-        Args:
-            handler: Event handler implementing CameraEventHandler interface
-        """
-        if handler not in self._event_handlers:
-            self._event_handlers.append(handler)
-            self._logger.debug(f"Added event handler: {handler.__class__.__name__}")
-    
-    def remove_event_handler(self, handler: CameraEventHandler) -> None:
-        """
-        Remove a camera event handler.
-        
-        Args:
-            handler: Event handler to remove
-        """
-        if handler in self._event_handlers:
-            self._event_handlers.remove(handler)
-            self._logger.debug(f"Removed event handler: {handler.__class__.__name__}")
-    
+        """Add a camera event handler."""
+        self._event_handlers.append(handler)
+        self._logger.debug(f"Added event handler: {handler.__class__.__name__}")
+
     def add_event_callback(self, callback: Callable[[CameraEventData], None]) -> None:
-        """
-        Add a callback function for camera events.
-        
-        Args:
-            callback: Function to call when camera events occur
-        """
-        if callback not in self._event_callbacks:
-            self._event_callbacks.append(callback)
-            self._logger.debug("Added event callback function")
-    
-    def remove_event_callback(self, callback: Callable[[CameraEventData], None]) -> None:
-        """
-        Remove a callback function for camera events.
-        
-        Args:
-            callback: Function to remove from callbacks
-        """
-        if callback in self._event_callbacks:
-            self._event_callbacks.remove(callback)
-            self._logger.debug("Removed event callback function")
-    
+        """Add a camera event callback function."""
+        self._event_callbacks.append(callback)
+        self._logger.debug(f"Added event callback: {callback.__name__}")
+
+    @property
+    def is_running(self) -> bool:
+        """Check if the monitor is currently running."""
+        return self._running
+
+    def get_monitor_stats(self) -> Dict[str, Any]:
+        """Get monitoring statistics and diagnostic information."""
+        stats = self._stats.copy()
+        stats['known_devices_count'] = len(self._known_devices)
+        stats['capability_states_count'] = len(self._capability_states)
+        stats['active_tasks'] = len([t for t in self._monitoring_tasks if not t.done()])
+        stats['running'] = self._running
+        return stats
+
     async def start(self) -> None:
-        """
-        Start the hybrid camera monitoring system.
-        
-        Initializes both udev event monitoring and polling fallback systems.
-        """
+        """Start the camera monitoring system."""
         if self._running:
-            self._logger.warning("Camera monitor is already running")
+            self._logger.warning("Monitor already running")
             return
-        
-        self._logger.info("Starting hybrid camera monitor")
+
         self._running = True
-        
+        self._stats['running'] = True
+        self._logger.info("Starting hybrid camera monitor", extra={'component': 'hybrid_monitor'})
+
         try:
             # Initialize udev monitoring if available
             if self._udev_available:
-                await self._setup_udev_monitoring()
-                
-                # Start udev event monitoring task
-                udev_task = asyncio.create_task(self._udev_event_loop())
-                self._monitoring_tasks.append(udev_task)
-                self._logger.info("Udev event monitoring enabled")
-            else:
-                self._logger.info("Udev monitoring not available - using polling-only mode")
-            
-            # Start polling fallback (always enabled for validation and fallback)
-            polling_task = asyncio.create_task(self._polling_loop())
+                await self._initialize_udev_monitoring()
+
+            # Start polling fallback task
+            polling_task = asyncio.create_task(self._adaptive_polling_loop())
             self._monitoring_tasks.append(polling_task)
-            self._logger.info("Polling fallback monitoring enabled")
             
-            # Perform initial camera discovery
-            await self._initial_discovery()
-            
-            self._logger.info("Hybrid camera monitor started successfully")
-            
+            if self._udev_available and self._udev_monitor:
+                udev_task = asyncio.create_task(self._udev_monitoring_loop())
+                self._monitoring_tasks.append(udev_task)
+
+            self._stats['active_tasks'] = len(self._monitoring_tasks)
+            self._logger.info(
+                f"Monitor started with {len(self._monitoring_tasks)} active tasks",
+                extra={'component': 'hybrid_monitor', 'task_count': len(self._monitoring_tasks)}
+            )
+
         except Exception as e:
-            self._logger.error(f"Failed to start camera monitor: {e}", exc_info=True)
-            await self.stop()
+            self._logger.error(f"Failed to start monitor: {e}", exc_info=True)
+            self._running = False
+            self._stats['running'] = False
             raise
-    
+
     async def stop(self) -> None:
-        """
-        Stop the hybrid camera monitoring system.
-        
-        Cleanly shuts down all monitoring tasks and releases resources.
-        """
+        """Stop the camera monitoring system."""
         if not self._running:
             return
-        
-        self._logger.info("Stopping hybrid camera monitor")
+
+        self._logger.info("Stopping hybrid camera monitor", extra={'component': 'hybrid_monitor'})
         self._running = False
-        
+        self._stats['running'] = False
+
         # Cancel all monitoring tasks
         for task in self._monitoring_tasks:
             if not task.done():
                 task.cancel()
-        
-        # Wait for tasks to complete with timeout
+
+        # Wait for tasks to complete
         if self._monitoring_tasks:
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*self._monitoring_tasks, return_exceptions=True),
-                    timeout=5.0
-                )
-            except asyncio.TimeoutError:
-                self._logger.warning("Some monitoring tasks did not complete within timeout")
-        
+            await asyncio.gather(*self._monitoring_tasks, return_exceptions=True)
+
         self._monitoring_tasks.clear()
         
-        # Clean up udev resources
-        if self._udev_available:
-            await self._cleanup_udev_monitoring()
-        
-        # Clear known devices under lock
-        async with self._state_lock:
-            self._known_devices.clear()
-        
-        # Log final statistics for diagnostics
-        self._logger.info(f"Camera monitor stopped. Final stats: {self._stats}")
-    
-    async def get_connected_cameras(self) -> Dict[str, CameraDevice]:
-        """
-        Get currently connected cameras.
-        
-        Returns:
-            Dictionary mapping device paths to camera device information
-        """
-        async with self._state_lock:
-            return self._known_devices.copy()
-    
-    async def refresh_camera_list(self) -> None:
-        """
-        Force a refresh of the camera list.
-        
-        Triggers immediate discovery of all cameras in the configured range.
-        """
-        self._logger.debug("Refreshing camera list")
-        await self._discover_cameras()
-    
-    def get_monitor_stats(self) -> Dict[str, Any]:
-        """
-        Get comprehensive monitoring statistics for diagnostics.
-        
-        Returns:
-            Dictionary containing monitoring metrics, adaptive polling state, and capability validation
-        """
-        capability_stats = {
-            'total_devices_tracked': len(self._capability_states),
-            'confirmed_capabilities': sum(1 for state in self._capability_states.values() if state.is_confirmed()),
-            'provisional_capabilities': sum(1 for state in self._capability_states.values() 
-                                          if state.provisional_data and not state.is_confirmed()),
-            'capability_failures': sum(state.consecutive_failures for state in self._capability_states.values())
-        }
-        
-        return {
-            **self._stats,
-            'running': self._running,
-            'udev_available': self._udev_available,
-            'device_range': self._device_range,
-            'known_devices_count': len(self._known_devices),
-            'active_tasks': len([t for t in self._monitoring_tasks if not t.done()]),
-            'adaptive_polling': {
-                'base_interval': self._base_poll_interval,
-                'current_interval': self._current_poll_interval,
-                'min_interval': self._min_poll_interval,
-                'max_interval': self._max_poll_interval,
-                'last_udev_event_age': asyncio.get_event_loop().time() - self._last_udev_event_time,
-                'failure_count': self._polling_failure_count
-            },
-            'capability_validation': capability_stats
-        }
-    
-    async def _setup_udev_monitoring(self) -> None:
-        """
-        Initialize udev monitoring for real-time camera events.
-        
-        Sets up udev context and monitor for USB video device events.
-        """
-        if not self._udev_available:
-            return
-            
+        # Cleanup udev resources
+        if self._udev_monitor:
+            self._udev_monitor = None
+        if self._udev_context:
+            self._udev_context = None
+
+        self._stats['active_tasks'] = 0
+        self._logger.info("Monitor stopped", extra={'component': 'hybrid_monitor'})
+
+    async def _initialize_udev_monitoring(self) -> None:
+        """Initialize udev monitoring for real-time device events."""
         try:
-            # Initialize udev context
             self._udev_context = pyudev.Context()
-            
-            # Create udev monitor for 'video4linux' subsystem
             self._udev_monitor = pyudev.Monitor.from_netlink(self._udev_context)
-            
-            # Set up event filtering for USB video devices
             self._udev_monitor.filter_by(subsystem='video4linux')
-            
-            # Configure monitor socket for async operation
-            # Set monitor to non-blocking mode for async polling
             self._udev_monitor.start()
             
-            self._logger.info("Udev monitoring initialized successfully")
-            
+            self._logger.info(
+                "Udev monitoring initialized", 
+                extra={'component': 'hybrid_monitor', 'subsystem': 'video4linux'}
+            )
         except Exception as e:
-            self._logger.error(f"Failed to setup udev monitoring: {e}", exc_info=True)
+            self._logger.error(f"Failed to initialize udev monitoring: {e}", exc_info=True)
             self._udev_available = False
-            self._udev_context = None
             self._udev_monitor = None
-            # Don't raise - continue with polling-only mode
-    
-    async def _cleanup_udev_monitoring(self) -> None:
-        """
-        Clean up udev monitoring resources.
-        
-        Properly releases udev context and monitor objects.
-        """
-        try:
-            # Close udev monitor
-            if self._udev_monitor:
-                self._udev_monitor = None
-                
-            # Release udev context  
-            if self._udev_context:
-                self._udev_context = None
-                
-            self._logger.debug("Udev monitoring resources cleaned up")
-            
-        except Exception as e:
-            self._logger.warning(f"Error during udev cleanup: {e}")
-    
-    async def _udev_event_loop(self) -> None:
-        """
-        Main loop for processing udev events.
-        
-        Monitors udev socket for camera connect/disconnect events and
-        processes them in real-time with robust error handling.
-        """
-        if not self._udev_available or not self._udev_monitor:
-            return
-            
-        self._logger.debug("Starting udev event loop")
-        
-        consecutive_poll_errors = 0
-        max_consecutive_errors = 10
+            self._udev_context = None
+
+    async def _udev_monitoring_loop(self) -> None:
+        """Main udev event monitoring loop."""
+        self._logger.debug("Starting udev monitoring loop")
         
         try:
-            while self._running:
+            while self._running and self._udev_monitor:
                 try:
-                    # Poll udev monitor socket with timeout
-                    device = self._udev_monitor.poll(timeout=0.1)
-                    
-                    if device is not None:
-                        # Reset error counter on successful poll
-                        consecutive_poll_errors = 0
-                        
-                        # Process udev device events
+                    # Poll for udev events with timeout
+                    device = self._udev_monitor.poll(timeout=1.0)
+                    if device:
                         await self._process_udev_device_event(device)
-                        self._stats['udev_events_processed'] += 1
-                    else:
-                        # No event, yield control briefly
-                        await asyncio.sleep(0.01)
                         
-                except Exception as poll_error:
-                    consecutive_poll_errors += 1
-                    self._logger.warning(
-                        f"Udev poll error (#{consecutive_poll_errors}): {poll_error}"
-                    )
-                    
-                    # Backoff strategy for repeated errors
-                    if consecutive_poll_errors >= max_consecutive_errors:
-                        self._logger.error(
-                            f"Too many consecutive udev poll errors ({consecutive_poll_errors}), "
-                            "disabling udev monitoring"
-                        )
-                        self._udev_available = False
-                        break
-                    
-                    # Exponential backoff: 0.1s, 0.2s, 0.4s, max 2s
-                    backoff_delay = min(0.1 * (2 ** consecutive_poll_errors), 2.0)
-                    await asyncio.sleep(backoff_delay)
+                except Exception as e:
+                    self._logger.error(f"Error in udev monitoring loop: {e}", exc_info=True)
+                    await asyncio.sleep(1.0)
                     
         except asyncio.CancelledError:
-            self._logger.debug("Udev event loop cancelled")
+            self._logger.debug("Udev monitoring loop cancelled")
         except Exception as e:
-            self._logger.error(f"Critical error in udev event loop: {e}", exc_info=True)
-    
+            self._logger.error(f"Critical error in udev monitoring loop: {e}", exc_info=True)
+
     async def _process_udev_device_event(self, device) -> None:
-        """
-        Process a single udev device event with comprehensive validation and error handling.
+        """Process individual udev device events with enhanced filtering and diagnostics."""
+        device_node = getattr(device, 'device_node', None)
+        action = getattr(device, 'action', None)
         
-        Args:
-            device: pyudev.Device object representing the event
-        """
-        device_path = None
+        structured_event = {
+            'device_node': device_node,
+            'action': action,
+            'timestamp': time.time(),
+            'component': 'hybrid_monitor',
+            'event_type': 'udev'
+        }
+        
+        # Enhanced filtering with detailed logging
+        if not device_node or not device_node.startswith('/dev/video'):
+            self._stats['udev_events_filtered'] += 1
+            self._logger.debug(
+                f"Filtered udev event - invalid device node: {device_node}",
+                extra=structured_event
+            )
+            return
+
+        # Extract device number for range validation
+        device_match = re.search(r'/dev/video(\d+)', device_node)
+        if not device_match:
+            self._stats['udev_events_filtered'] += 1
+            self._logger.debug(
+                f"Filtered udev event - malformed device path: {device_node}",
+                extra=structured_event
+            )
+            return
+
+        device_num = int(device_match.group(1))
+        if device_num not in self._device_range:
+            self._stats['udev_events_filtered'] += 1
+            self._logger.debug(
+                f"Filtered udev event - device {device_num} not in monitored range {self._device_range}",
+                extra=structured_event
+            )
+            return
+
+        self._stats['udev_events_processed'] += 1
+        self._last_udev_event_time = time.time()
+        
+        structured_event.update({
+            'device_num': device_num,
+            'processed': True
+        })
+
+        self._logger.info(
+            f"Processing udev {action} event for {device_node}",
+            extra=structured_event
+        )
+
         try:
-            # Extract device information and event type
-            device_path = device.device_node
-            action = device.action
-            
-            # Validate device path exists and is a video device
-            if not device_path:
-                self._logger.debug("Skipping udev event with no device_node")
-                self._stats['udev_events_filtered'] += 1
-                return
-                
-            if not device_path.startswith('/dev/video'):
-                self._logger.debug(f"Skipping non-video device: {device_path}")
-                self._stats['udev_events_filtered'] += 1
-                return
-                
-            # Extract device number and validate range
-            device_match = re.search(r'/dev/video(\d+)', device_path)
-            if not device_match:
-                self._logger.debug(f"Could not extract device number from: {device_path}")
-                self._stats['udev_events_filtered'] += 1
-                return
-                
-            device_num = int(device_match.group(1))
-            if device_num not in self._device_range:
-                self._logger.debug(
-                    f"Device {device_path} (num={device_num}) not in monitored range {self._device_range}"
-                )
-                self._stats['udev_events_filtered'] += 1
-                return
-            
-            self._logger.debug(f"Processing udev event: {action} for {device_path}")
-            
-            # Update last udev event time for adaptive polling
-            self._last_udev_event_time = asyncio.get_event_loop().time()
-            
-            # Process event based on action type with state protection
+            # Process based on action with race condition protection
             async with self._state_lock:
                 if action == 'add':
-                    await self._handle_udev_device_added(device_path, device_num)
+                    await self._handle_udev_device_added(device_node, device_num)
                 elif action == 'remove':
-                    await self._handle_udev_device_removed(device_path)
+                    await self._handle_udev_device_removed(device_node)
                 elif action == 'change':
-                    await self._handle_udev_device_changed(device_path, device_num)
+                    await self._handle_udev_device_changed(device_node, device_num)
                 else:
-                    self._logger.debug(f"Ignoring udev action '{action}' for {device_path}")
-                    self._stats['udev_events_filtered'] += 1
-                
+                    self._stats['udev_events_skipped'] += 1
+                    self._logger.debug(
+                        f"Skipped udev event with unknown action: {action}",
+                        extra=structured_event
+                    )
+
         except Exception as e:
-            device_context = device_path or "unknown device"
             self._logger.error(
-                f"Error processing udev event for {device_context}: {e}",
+                f"Error processing udev {action} event for {device_node}: {e}",
+                extra=structured_event,
                 exc_info=True
             )
-            # Continue processing - don't let one event break the loop
-    
+
     async def _handle_udev_device_added(self, device_path: str, device_num: int) -> None:
         """Handle udev 'add' event for device connection."""
         # Verify device is actually accessible before creating event
@@ -542,18 +460,32 @@ class HybridCameraMonitor:
                 device_path=device_path,
                 event_type=CameraEvent.CONNECTED,
                 device_info=device_info,
-                timestamp=asyncio.get_event_loop().time()
+                timestamp=time.time()
             )
             
             # Update known devices and handle event
             self._known_devices[device_path] = device_info
             self._stats['device_state_changes'] += 1
             await self._handle_camera_event(event_data)
+            
+            self._logger.info(
+                f"Device {device_path} connected via udev event",
+                extra={
+                    'device_path': device_path,
+                    'device_num': device_num,
+                    'event_source': 'udev_add'
+                }
+            )
         else:
             self._logger.warning(
-                f"Device {device_path} detected via udev 'add' but not accessible"
+                f"Device {device_path} detected via udev 'add' but not accessible",
+                extra={
+                    'device_path': device_path,
+                    'device_num': device_num,
+                    'accessibility_check': 'failed'
+                }
             )
-    
+
     async def _handle_udev_device_removed(self, device_path: str) -> None:
         """Handle udev 'remove' event for device disconnection."""
         device_info = self._known_devices.get(device_path)
@@ -561,16 +493,29 @@ class HybridCameraMonitor:
             device_path=device_path,
             event_type=CameraEvent.DISCONNECTED,
             device_info=device_info,
-            timestamp=asyncio.get_event_loop().time()
+            timestamp=time.time()
         )
         
-        # Remove from known devices and handle event
-        if device_path in self._known_devices:
+        # Remove from known devices and capability states
+        had_device = device_path in self._known_devices
+        if had_device:
             del self._known_devices[device_path]
             self._stats['device_state_changes'] += 1
         
+        if device_path in self._capability_states:
+            del self._capability_states[device_path]
+        
         await self._handle_camera_event(event_data)
-    
+        
+        self._logger.info(
+            f"Device {device_path} disconnected via udev event",
+            extra={
+                'device_path': device_path,
+                'was_known': had_device,
+                'event_source': 'udev_remove'
+            }
+        )
+
     async def _handle_udev_device_changed(self, device_path: str, device_num: int) -> None:
         """Handle udev 'change' event for device property changes."""
         device_info = await self._create_camera_device_info(device_path, device_num)
@@ -582,52 +527,94 @@ class HybridCameraMonitor:
                 device_path=device_path,
                 event_type=CameraEvent.STATUS_CHANGED,
                 device_info=device_info,
-                timestamp=asyncio.get_event_loop().time()
+                timestamp=time.time()
             )
             
             # Update known devices and handle event
             self._known_devices[device_path] = device_info
             self._stats['device_state_changes'] += 1
             await self._handle_camera_event(event_data)
-        else:
-            self._logger.debug(f"No significant status change for {device_path}")
-    
-    async def _create_camera_device_info(self, device_path: str, device_num: int) -> CameraDevice:
-        """
-        Create CameraDevice info for a detected device.
-        
-        Args:
-            device_path: Path to the video device
-            device_num: Device number extracted from path
             
-        Returns:
-            CameraDevice object with device information
-        """
-        device_name = f"Camera {device_num}"
-        device_status = await self._determine_device_status(device_path)
-        
-        return CameraDevice(
-            device=device_path,
-            name=device_name,
-            status=device_status
+            self._logger.info(
+                f"Device {device_path} status changed: {old_device_info.status} → {device_info.status}",
+                extra={
+                    'device_path': device_path,
+                    'old_status': old_device_info.status,
+                    'new_status': device_info.status,
+                    'event_source': 'udev_change'
+                }
+            )
+        else:
+            self._logger.debug(
+                f"No significant status change for {device_path}",
+                extra={
+                    'device_path': device_path,
+                    'event_source': 'udev_change',
+                    'status_check': 'no_change'
+                }
+            )
+
+    async def _create_camera_device_info(self, device_path: str, device_num: int) -> CameraDevice:
+        """Create CameraDevice info for a detected device."""
+        # Basic accessibility check
+        try:
+            path_obj = Path(device_path)
+            if not path_obj.exists():
+                return CameraDevice(
+                    device_path=device_path,
+                    name=f"Camera {device_num}",
+                    status="DISCONNECTED"
+                )
+        except Exception as e:
+            self._logger.debug(f"Path check failed for {device_path}: {e}")
+            return CameraDevice(
+                device_path=device_path,
+                name=f"Camera {device_num}",
+                status="ERROR"
+            )
+
+        # Determine status based on basic accessibility
+        try:
+            # Try to open device for basic validation
+            with open(device_path, 'rb') as f:
+                status = "CONNECTED"
+        except (OSError, PermissionError):
+            status = "DISCONNECTED"
+        except Exception:
+            status = "ERROR"
+
+        device_info = CameraDevice(
+            device_path=device_path,
+            name=f"Camera {device_num}",
+            status=status
         )
-    
-    async def _polling_loop(self) -> None:
+
+        # Trigger capability detection if enabled and device is accessible
+        if self._enable_capability_detection and status == "CONNECTED":
+            try:
+                await self._probe_device_capabilities(device_path)
+            except Exception as e:
+                self._logger.debug(f"Capability probing failed for {device_path}: {e}")
+
+        return device_info
+
+    async def _adaptive_polling_loop(self) -> None:
         """
-        Adaptive polling fallback loop for camera discovery.
+        Adaptive polling fallback loop with enhanced reliability and diagnostics.
         
         Adapts polling frequency based on udev event reliability:
         - Reduces frequency when udev events are working reliably
         - Increases frequency when events are missed or stale
-        - Exponential backoff on consecutive failures
+        - Exponential backoff on consecutive failures with jitter
         """
         self._logger.debug("Starting adaptive polling fallback loop")
         
         polling_error_count = 0
-        max_polling_errors = 5
         
         try:
             while self._running:
+                loop_start = time.time()
+                
                 try:
                     # Perform discovery
                     await self._discover_cameras()
@@ -638,30 +625,55 @@ class HybridCameraMonitor:
                     # Adaptive polling interval adjustment
                     await self._adjust_polling_interval()
                     
-                    await asyncio.sleep(self._current_poll_interval)
+                    # Sleep with consideration for loop execution time
+                    loop_duration = time.time() - loop_start
+                    sleep_time = max(0, self._current_poll_interval - loop_duration)
+                    
+                    if sleep_time > 0:
+                        await asyncio.sleep(sleep_time)
                     
                 except Exception as e:
                     polling_error_count += 1
                     self._polling_failure_count += 1
+                    
+                    structured_error = {
+                        'component': 'hybrid_monitor',
+                        'error_type': 'polling_discovery',
+                        'error_count': polling_error_count,
+                        'consecutive_failures': self._polling_failure_count
+                    }
+                    
                     self._logger.error(
                         f"Polling discovery error (#{polling_error_count}): {e}",
+                        extra=structured_error,
                         exc_info=True
                     )
                     
-                    if polling_error_count >= max_polling_errors:
+                    if polling_error_count >= self._max_consecutive_failures:
                         self._logger.critical(
                             f"Too many consecutive polling errors ({polling_error_count}), "
-                            "stopping polling loop"
+                            "stopping polling loop",
+                            extra=structured_error
                         )
                         break
                     
-                    # Exponential backoff with jitter on failures
-                    import random
-                    base_backoff = min(self._base_poll_interval * (2 ** self._polling_failure_count), 60.0)
-                    jitter = random.uniform(0.8, 1.2)  # ±20% jitter
+                    # Enhanced exponential backoff with jitter
+                    base_backoff = min(
+                        self._base_poll_interval * (2 ** self._polling_failure_count), 
+                        self._max_poll_interval
+                    )
+                    jitter = self._rng.uniform(0.8, 1.2)  # ±20% jitter
                     backoff_interval = base_backoff * jitter
                     
-                    self._logger.debug(f"Polling backoff: {backoff_interval:.1f}s")
+                    self._logger.debug(
+                        f"Polling backoff: {backoff_interval:.2f}s (base: {base_backoff:.2f}s, jitter: {jitter:.2f})",
+                        extra={
+                            'component': 'hybrid_monitor',
+                            'backoff_interval': backoff_interval,
+                            'base_backoff': base_backoff,
+                            'jitter_factor': jitter
+                        }
+                    )
                     await asyncio.sleep(backoff_interval)
                     
         except asyncio.CancelledError:
@@ -671,472 +683,230 @@ class HybridCameraMonitor:
 
     async def _adjust_polling_interval(self) -> None:
         """
-        Adjust polling interval based on udev event reliability.
+        Adjust polling interval based on udev event reliability with enhanced logic.
         
-        Policy:
-        - If udev events are fresh (recent), increase poll interval (deprioritize polling)
-        - If events are stale or missing, decrease interval (increase polling priority)
-        - Apply bounds to prevent pathological behavior
+        Factors considered:
+        - Time since last udev event
+        - Recent polling failures
+        - Overall system responsiveness
         """
-        current_time = asyncio.get_event_loop().time()
-        time_since_last_udev = current_time - self._last_udev_event_time
+        current_time = time.time()
+        time_since_udev = current_time - self._last_udev_event_time
         
         old_interval = self._current_poll_interval
         
-        if self._udev_available and time_since_last_udev < self._udev_event_freshness_threshold:
-            # Udev events are fresh - deprioritize polling
-            self._current_poll_interval = min(
-                self._current_poll_interval * 1.5,  # Gradually increase
-                self._max_poll_interval
-            )
-        else:
-            # Udev events are stale or unavailable - prioritize polling
+        # Determine new interval based on udev event freshness
+        if time_since_udev > self._udev_event_freshness_threshold:
+            # No recent udev events - increase polling frequency
             self._current_poll_interval = max(
-                self._current_poll_interval * 0.8,  # Gradually decrease
-                self._min_poll_interval
+                self._min_poll_interval,
+                self._current_poll_interval * 0.8
+            )
+        elif time_since_udev < self._udev_event_freshness_threshold / 2:
+            # Recent udev events - can reduce polling frequency
+            self._current_poll_interval = min(
+                self._max_poll_interval,
+                self._current_poll_interval * 1.2
             )
         
-        # Update statistics if interval changed significantly
-        if abs(self._current_poll_interval - old_interval) > 0.1:
+        # Factor in recent failures
+        if self._polling_failure_count > 0:
+            failure_penalty = 1.0 + (self._polling_failure_count * 0.1)
+            self._current_poll_interval = min(
+                self._max_poll_interval,
+                self._current_poll_interval * failure_penalty
+            )
+        
+        # Update stats if interval changed significantly
+        if abs(self._current_poll_interval - old_interval) > 0.01:
             self._stats['adaptive_poll_adjustments'] += 1
             self._stats['current_poll_interval'] = self._current_poll_interval
+            
             self._logger.debug(
-                f"Adjusted poll interval: {old_interval:.1f}s → {self._current_poll_interval:.1f}s "
-                f"(udev_stale: {time_since_last_udev:.1f}s)"
+                f"Adjusted polling interval: {old_interval:.2f}s → {self._current_poll_interval:.2f}s "
+                f"(udev_age: {time_since_udev:.1f}s, failures: {self._polling_failure_count})",
+                extra={
+                    'component': 'hybrid_monitor',
+                    'old_interval': old_interval,
+                    'new_interval': self._current_poll_interval,
+                    'udev_age': time_since_udev,
+                    'failure_count': self._polling_failure_count,
+                    'adjustment_reason': 'adaptive_tuning'
+                }
             )
-    
-    async def _initial_discovery(self) -> None:
-        """
-        Perform initial camera discovery on startup.
-        
-        Scans all configured device paths to establish baseline state.
-        """
-        self._logger.info("Performing initial camera discovery")
-        try:
-            await self._discover_cameras()
-            device_count = len(self._known_devices)
-            self._logger.info(f"Initial discovery completed - found {device_count} cameras")
-        except Exception as e:
-            self._logger.error(f"Initial discovery failed: {e}", exc_info=True)
-            # Don't raise - allow service to start even if initial discovery fails
-    
+
     async def _discover_cameras(self) -> None:
-        """
-        Discover cameras by scanning configured device paths.
-        
-        Checks each device path in the configured range and detects
-        changes compared to known device state.
-        """
-        current_devices: Dict[str, CameraDevice] = {}
-        discovery_errors = []
+        """Discover currently connected cameras via polling."""
+        current_devices = {}
         
         for device_num in self._device_range:
             device_path = f"/dev/video{device_num}"
             
-            # Check if device path exists
-            if Path(device_path).exists():
-                try:
-                    # Extract device number and create proper camera name
-                    device_name = f"Camera {device_num}"
-                    
-                    # Determine device status based on accessibility
-                    device_status = await self._determine_device_status(device_path)
-                    
-                    # Create CameraDevice with detected information
-                    device_info = CameraDevice(
-                        device=device_path,
-                        name=device_name,
-                        status=device_status
-                    )
-                    
-                    # STOP: MEDIUM: Capability metadata integration deferred pending test validation [IV&V:S3]
-                    # Rationale: Capability detection is implemented but integration with CameraDevice
-                    # is deferred until comprehensive testing validates all v4l2 output variations.
-                    # Current implementation uses defaults with capability probing for validation.
-                    # Owner: Solo engineer | Date: 2025-08-03
-                    
-                    current_devices[device_path] = device_info
-                    
-                except Exception as e:
-                    discovery_errors.append(f"{device_path}: {e}")
-                    self._logger.warning(f"Error probing device {device_path}: {e}")
-                    
-                    # Create device with error status for tracking
-                    device_info = CameraDevice(
-                        device=device_path,
-                        name=f"Camera {device_num}",
-                        status="ERROR"
-                    )
-                    current_devices[device_path] = device_info
-        
-        # Log discovery errors for diagnostics
-        if discovery_errors:
-            self._logger.debug(f"Discovery errors encountered: {discovery_errors}")
-        
-        # Compare with known devices and generate events (only when udev unavailable)
-        # When udev is available, it handles real-time updates and polling serves as validation
-        async with self._state_lock:
-            if not self._udev_available:
-                await self._process_device_changes(current_devices)
-            else:
-                # Update known devices for initial discovery or validation
-                if not self._known_devices:
-                    self._known_devices = current_devices.copy()
-                    self._logger.debug("Updated baseline device state from discovery")
-    
-    async def _determine_device_status(self, device_path: str) -> str:
-        """
-        Determine the status of a camera device with enhanced error context.
-        
-        Args:
-            device_path: Path to video device (e.g., /dev/video0)
-            
-        Returns:
-            Device status string ("CONNECTED", "DISCONNECTED", "ERROR", "BUSY")
-        """
-        try:
-            device_file = Path(device_path)
-            
-            if not device_file.exists():
-                return "DISCONNECTED"
-            
-            # Check if device is a character device (proper V4L2 device)
-            if not device_file.is_char_device():
-                self._logger.debug(f"Device {device_path} is not a character device")
-                return "ERROR"
-            
-            # Attempt to query device capabilities to verify accessibility
             try:
-                process = await asyncio.wait_for(
-                    asyncio.create_subprocess_exec(
-                        'v4l2-ctl', '--device', device_path, '--list-formats-ext',
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    ),
-                    timeout=self._detection_timeout
-                )
-                
-                stdout, stderr = await process.communicate()
-                
-                if process.returncode == 0:
-                    return "CONNECTED"
-                else:
-                    stderr_text = stderr.decode().lower()
-                    if any(keyword in stderr_text for keyword in ['busy', 'device or resource busy']):
-                        return "BUSY"
-                    else:
-                        self._logger.debug(f"v4l2-ctl failed for {device_path}: {stderr_text}")
-                        return "ERROR"
-                        
-            except asyncio.TimeoutError:
-                self._logger.debug(f"Timeout determining status for {device_path}")
-                return "ERROR"
-            except Exception as subprocess_error:
-                self._logger.debug(f"Subprocess error for {device_path}: {subprocess_error}")
-                # Fallback - device exists as character device but can't query
-                return "CONNECTED"
-                
-        except Exception as e:
-            self._logger.debug(f"Error determining status for {device_path}: {e}")
-            return "ERROR"
-    
-    async def _process_device_changes(self, current_devices: Dict[str, CameraDevice]) -> None:
-        """
-        Process changes between current and known device states.
+                device_info = await self._create_camera_device_info(device_path, device_num)
+                if device_info and device_info.status in ["CONNECTED", "ERROR"]:
+                    current_devices[device_path] = device_info
+            except Exception as e:
+                self._logger.debug(f"Error checking device {device_path}: {e}")
+                continue
         
-        Args:
-            current_devices: Currently discovered devices
-        """
-        # Detect new devices
-        for device_path, device_info in current_devices.items():
-            if device_path not in self._known_devices:
-                await self._handle_camera_event(CameraEventData(
-                    device_path=device_path,
-                    event_type=CameraEvent.CONNECTED,
-                    device_info=device_info,
-                    timestamp=asyncio.get_event_loop().time()
-                ))
-                self._stats['device_state_changes'] += 1
-        
-        # Detect removed devices
-        for device_path in list(self._known_devices.keys()):
-            if device_path not in current_devices:
-                await self._handle_camera_event(CameraEventData(
-                    device_path=device_path,
-                    event_type=CameraEvent.DISCONNECTED,
-                    device_info=self._known_devices[device_path],
-                    timestamp=asyncio.get_event_loop().time()
-                ))
-                self._stats['device_state_changes'] += 1
-        
-        # Detect status changes for existing devices
-        for device_path, device_info in current_devices.items():
-            if device_path in self._known_devices:
-                if self._known_devices[device_path].status != device_info.status:
+        # Compare with known devices and generate events
+        await self._process_device_state_changes(current_devices)
+
+    async def _process_device_state_changes(self, current_devices: Dict[str, CameraDevice]) -> None:
+        """Process changes in device state between polling cycles."""
+        async with self._state_lock:
+            # Detect new devices
+            for device_path, device_info in current_devices.items():
+                if device_path not in self._known_devices:
                     await self._handle_camera_event(CameraEventData(
                         device_path=device_path,
-                        event_type=CameraEvent.STATUS_CHANGED,
+                        event_type=CameraEvent.CONNECTED,
                         device_info=device_info,
-                        timestamp=asyncio.get_event_loop().time()
+                        timestamp=time.time()
                     ))
                     self._stats['device_state_changes'] += 1
-        
-        # Update known devices
-        self._known_devices = current_devices.copy()
-    
+            
+            # Detect removed devices
+            for device_path in list(self._known_devices.keys()):
+                if device_path not in current_devices:
+                    await self._handle_camera_event(CameraEventData(
+                        device_path=device_path,
+                        event_type=CameraEvent.DISCONNECTED,
+                        device_info=self._known_devices[device_path],
+                        timestamp=time.time()
+                    ))
+                    self._stats['device_state_changes'] += 1
+            
+            # Detect status changes for existing devices
+            for device_path, device_info in current_devices.items():
+                if device_path in self._known_devices:
+                    if self._known_devices[device_path].status != device_info.status:
+                        await self._handle_camera_event(CameraEventData(
+                            device_path=device_path,
+                            event_type=CameraEvent.STATUS_CHANGED,
+                            device_info=device_info,
+                            timestamp=time.time()
+                        ))
+                        self._stats['device_state_changes'] += 1
+            
+            # Update known devices
+            self._known_devices = current_devices.copy()
+
     async def _handle_camera_event(self, event_data: CameraEventData) -> None:
-        """
-        Handle camera events by notifying all registered handlers and callbacks.
-        
-        Args:
-            event_data: Camera event information
-        """
-        self._logger.info(
-            f"Camera event: {event_data.event_type.value} - {event_data.device_path}"
-        )
-        
-        # Notify event handlers with individual error handling
-        handler_errors = []
-        for handler in self._event_handlers:
-            try:
-                await handler.handle_camera_event(event_data)
-            except Exception as e:
-                handler_error = f"{handler.__class__.__name__}: {e}"
-                handler_errors.append(handler_error)
-                self._logger.error(f"Error in event handler {handler_error}", exc_info=True)
-        
-        # Notify callback functions with individual error handling
-        callback_errors = []
-        for callback in self._event_callbacks:
-            try:
-                # Call callbacks in thread pool to avoid blocking async loop
-                callback(event_data)
-            except Exception as e:
-                callback_error = f"callback: {e}"
-                callback_errors.append(callback_error)
-                self._logger.error(f"Error in event {callback_error}", exc_info=True)
-        
-        # Log summary if there were errors
-        if handler_errors or callback_errors:
-            all_errors = handler_errors + callback_errors
-            self._logger.warning(
-                f"Event notification errors for {event_data.device_path}: {all_errors}"
-            )
-    
-    async def _probe_device_capabilities(self, device_path: str) -> Optional[CapabilityDetectionResult]:
-        """
-        Probe camera device capabilities with optimistic-use, defensive-verify pattern.
-        
-        Uses capability data immediately but validates through consecutive consistent probes
-        before confirming. Maintains last-known-good fallback on probe failures.
-        
-        Args:
-            device_path: Path to video device (e.g., /dev/video0)
-            
-        Returns:
-            CapabilityDetectionResult with detection results or error information
-        """
-        if not self._enable_capability_detection:
-            return None
-        
-        self._stats['capability_probes_attempted'] += 1
-        
+        """Handle camera events by notifying all registered handlers and callbacks."""
         try:
-            # Get or create capability state for this device
-            if device_path not in self._capability_states:
-                self._capability_states[device_path] = DeviceCapabilityState(device_path)
+            # Call all event handlers
+            for handler in self._event_handlers:
+                try:
+                    await handler.handle_camera_event(event_data)
+                except Exception as e:
+                    self._logger.error(f"Error in event handler {handler.__class__.__name__}: {e}", exc_info=True)
             
-            capability_state = self._capability_states[device_path]
-            
-            self._logger.debug(f"Probing capabilities for {device_path}")
-            
-            result = CapabilityDetectionResult(
-                device_path=device_path,
-                detected=False,
-                accessible=Path(device_path).exists()
-            )
-            
-            # Probe device information and capabilities
-            device_info = await self._probe_device_info_robust(device_path)
-            if device_info:
-                result.device_name = device_info.get("device_name")
-                result.driver = device_info.get("driver")
-            
-            # Probe supported formats and resolutions
-            formats_info = await self._probe_device_formats_robust(device_path)
-            if formats_info:
-                result.formats = formats_info["formats"]
-                result.resolutions = formats_info["resolutions"]
-            
-            # Probe frame rate capabilities with hierarchical selection
-            framerates_info = await self._probe_device_framerates_robust(device_path)
-            if framerates_info:
-                result.frame_rates = framerates_info
-            
-            # Mark as successful if we got any useful data
-            if device_info or formats_info or framerates_info:
-                result.detected = True
-                self._stats['capability_probes_successful'] += 1
-                
-                # Apply optimistic-use, defensive-verify pattern
-                await self._update_capability_validation_state(capability_state, result)
-                
-                self._logger.debug(
-                    f"Capability detection completed for {device_path}: "
-                    f"{len(result.formats)} formats, {len(result.resolutions)} resolutions, "
-                    f"status: {'confirmed' if capability_state.is_confirmed() else 'provisional'}"
-                )
-            else:
-                result.error = "No capability data retrieved"
-                capability_state.consecutive_failures += 1
-                capability_state.consecutive_successes = 0
-                self._logger.debug(f"No capability data retrieved for {device_path}")
-            
-            capability_state.last_probe_time = asyncio.get_event_loop().time()
-            return capability_state.get_effective_capability() or result
-            
-        except asyncio.TimeoutError:
-            self._stats['capability_timeouts'] += 1
-            if device_path in self._capability_states:
-                self._capability_states[device_path].consecutive_failures += 1
-                self._capability_states[device_path].consecutive_successes = 0
-            
-            return CapabilityDetectionResult(
-                device_path=device_path,
-                detected=False,
-                accessible=Path(device_path).exists(),
-                error="Capability detection timeout",
-                timeout_context=f"Total timeout after {self._detection_timeout}s"
-            )
+            # Call all event callbacks
+            for callback in self._event_callbacks:
+                try:
+                    callback(event_data)
+                except Exception as e:
+                    self._logger.error(f"Error in event callback {callback.__name__}: {e}", exc_info=True)
+                    
         except Exception as e:
-            self._logger.warning(f"Failed to probe capabilities for {device_path}: {e}")
-            if device_path in self._capability_states:
-                self._capability_states[device_path].consecutive_failures += 1
-                self._capability_states[device_path].consecutive_successes = 0
-            
-            return CapabilityDetectionResult(
-                device_path=device_path,
-                detected=False,
-                accessible=Path(device_path).exists(),
-                error=str(e)
-            )
+            self._logger.error(f"Critical error handling camera event: {e}", exc_info=True)
 
-    async def _update_capability_validation_state(
-        self, 
-        capability_state: DeviceCapabilityState, 
-        new_result: CapabilityDetectionResult
-    ) -> None:
+    async def _probe_device_capabilities(self, device_path: str) -> CapabilityDetectionResult:
         """
-        Update capability validation state using optimistic-use, defensive-verify pattern.
-        
-        Args:
-            capability_state: Current capability state for the device
-            new_result: New capability detection result
-        """
-        # Check if new result is consistent with provisional data
-        is_consistent = self._is_capability_data_consistent(
-            capability_state.provisional_data, 
-            new_result
-        )
-        
-        if is_consistent:
-            capability_state.consecutive_successes += 1
-            capability_state.consecutive_failures = 0
-            
-            # Use new data immediately (optimistic use)
-            capability_state.provisional_data = new_result
-            
-            # Promote to confirmed if we have enough consistent probes
-            if (capability_state.consecutive_successes >= capability_state.confirmation_threshold 
-                and not capability_state.is_confirmed()):
-                capability_state.confirmed_data = new_result
-                self._stats['capability_probes_confirmed'] += 1
-                self._logger.info(
-                    f"Capability data confirmed for {new_result.device_path} after "
-                    f"{capability_state.consecutive_successes} consistent probes"
-                )
-        else:
-            # Inconsistent data - handle based on current state
-            capability_state.consecutive_failures += 1
-            capability_state.consecutive_successes = 0
-            
-            if capability_state.is_confirmed():
-                # Have confirmed data - be conservative, require more evidence to change
-                self._logger.warning(
-                    f"Inconsistent capability data for {new_result.device_path}, "
-                    f"keeping confirmed data (failure #{capability_state.consecutive_failures})"
-                )
-                # Don't update provisional data - keep last known good
-            else:
-                # No confirmed data yet - still use new data optimistically
-                capability_state.provisional_data = new_result
-                self._logger.debug(
-                    f"Using new provisional capability data for {new_result.device_path} "
-                    f"(inconsistent with previous, failure #{capability_state.consecutive_failures})"
-                )
-
-    def _is_capability_data_consistent(
-        self, 
-        previous: Optional[CapabilityDetectionResult], 
-        current: CapabilityDetectionResult
-    ) -> bool:
-        """
-        Check if capability detection results are consistent.
-        
-        Args:
-            previous: Previous capability result
-            current: Current capability result
-            
-        Returns:
-            True if results are consistent enough to be considered stable
-        """
-        if not previous or not previous.detected or not current.detected:
-            return True  # No previous data or detection failures - consider consistent
-        
-        # Check resolution consistency (allow subset/superset)
-        prev_resolutions = set(previous.resolutions)
-        curr_resolutions = set(current.resolutions)
-        resolution_overlap = len(prev_resolutions.intersection(curr_resolutions))
-        resolution_consistency = (
-            resolution_overlap > 0 and 
-            resolution_overlap >= min(len(prev_resolutions), len(curr_resolutions)) * 0.7
-        )
-        
-        # Check frame rate consistency (allow reasonable variance)
-        prev_rates = set(previous.frame_rates)
-        curr_rates = set(current.frame_rates)
-        rate_overlap = len(prev_rates.intersection(curr_rates))
-        rate_consistency = (
-            rate_overlap > 0 and 
-            rate_overlap >= min(len(prev_rates), len(curr_rates)) * 0.5
-        )
-        
-        # Check format consistency
-        prev_formats = {f.get("code", "") for f in previous.formats}
-        curr_formats = {f.get("code", "") for f in current.formats}
-        format_consistency = len(prev_formats.intersection(curr_formats)) > 0
-        
-        is_consistent = resolution_consistency and rate_consistency and format_consistency
-        
-        if not is_consistent:
-            self._logger.debug(
-                f"Capability inconsistency for {current.device_path}: "
-                f"resolution_ok={resolution_consistency}, rate_ok={rate_consistency}, "
-                f"format_ok={format_consistency}"
-            )
-        
-        return is_consistent
-
-    async def _probe_device_info_robust(self, device_path: str) -> Optional[Dict[str, str]]:
-        """
-        Probe device information using v4l2-ctl --info with robust parsing.
+        Probe device capabilities with enhanced error handling and structured diagnostics.
         
         Args:
             device_path: Path to video device
             
         Returns:
-            Dictionary with device info or None if failed
+            Structured capability detection result with enhanced diagnostics
         """
+        self._stats['capability_probes_attempted'] += 1
+        probe_start = time.time()
+        
+        result = CapabilityDetectionResult(
+            device_path=device_path,
+            detected=False,
+            accessible=False,
+            probe_timestamp=probe_start,
+            structured_diagnostics={
+                'probe_start': probe_start,
+                'timeout_threshold': self._detection_timeout,
+                'parsing_stages': []
+            }
+        )
+        
+        try:
+            # Basic device info probe
+            device_info = await self._probe_device_info_robust(device_path)
+            if device_info:
+                result.device_name = device_info.get('name')
+                result.driver = device_info.get('driver')
+                result.accessible = True
+                result.structured_diagnostics['device_info_success'] = True
+            else:
+                result.error = "Failed to probe basic device information"
+                result.structured_diagnostics['device_info_success'] = False
+                return result
+            
+            # Format and resolution probe
+            formats_data = await self._probe_device_formats_robust(device_path)
+            if formats_data:
+                result.formats = formats_data.get('formats', [])
+                result.resolutions = formats_data.get('resolutions', [])
+                result.structured_diagnostics['formats_found'] = len(result.formats)
+                result.structured_diagnostics['resolutions_found'] = len(result.resolutions)
+            
+            # Frame rate probe with hierarchical selection
+            frame_rates = await self._probe_device_framerates_robust(device_path)
+            if frame_rates:
+                result.frame_rates = frame_rates
+                result.structured_diagnostics['frame_rates_found'] = len(frame_rates)
+            
+            # Consider detection successful if we got basic info
+            if result.accessible and (result.formats or result.resolutions or result.frame_rates):
+                result.detected = True
+                self._stats['capability_probes_successful'] += 1
+                
+                # Update capability validation state
+                await self._update_capability_validation_state(device_path, result)
+            else:
+                result.error = "Insufficient capability data detected"
+                
+        except asyncio.TimeoutError:
+            self._stats['capability_timeouts'] += 1
+            result.error = f"Capability detection timeout after {self._detection_timeout}s"
+            result.timeout_context = "overall_probe_timeout"
+            self._logger.warning(
+                f"Capability detection timeout for {device_path}",
+                extra={
+                    'device_path': device_path,
+                    'timeout_duration': self._detection_timeout,
+                    'component': 'capability_detection'
+                }
+            )
+        except Exception as e:
+            self._stats['capability_parse_errors'] += 1
+            result.error = f"Capability detection error: {str(e)}"
+            result.structured_diagnostics['exception_type'] = type(e).__name__
+            self._logger.error(
+                f"Error probing capabilities for {device_path}: {e}",
+                extra={
+                    'device_path': device_path,
+                    'component': 'capability_detection'
+                },
+                exc_info=True
+            )
+        
+        probe_duration = time.time() - probe_start
+        result.structured_diagnostics['probe_duration'] = probe_duration
+        
+        return result
+
+    async def _probe_device_info_robust(self, device_path: str) -> Optional[Dict[str, str]]:
+        """Probe basic device information with enhanced error handling."""
         try:
             process = await asyncio.wait_for(
                 asyncio.create_subprocess_exec(
@@ -1150,37 +920,36 @@ class HybridCameraMonitor:
             stdout, stderr = await process.communicate()
             
             if process.returncode != 0:
-                self._logger.debug(f"v4l2-ctl --info failed for {device_path}: {stderr.decode()}")
                 return None
             
-            info_output = stdout.decode()
-            device_info = {}
+            output = stdout.decode()
+            info = {}
             
-            # Robust parsing with multiple patterns for each field
-            info_patterns = {
-                "device_name": [
-                    r"Device name\s*[:\s]\s*(.+)",
-                    r"Name\s*[:\s]\s*(.+)",
-                    r"Device\s*[:\s]\s*(.+)"
-                ],
-                "driver": [
-                    r"Driver name\s*[:\s]\s*(.+)",
-                    r"Driver\s*[:\s]\s*(.+)"
-                ],
-                "card_type": [
-                    r"Card type\s*[:\s]\s*(.+)",
-                    r"Card\s*[:\s]\s*(.+)"
-                ]
-            }
+            # Enhanced parsing with multiple patterns
+            name_patterns = [
+                r'Card type\s*:\s*(.+)',
+                r'Device name\s*:\s*(.+)',
+                r'Card\s*:\s*(.+)'
+            ]
             
-            for field, patterns in info_patterns.items():
-                for pattern in patterns:
-                    match = re.search(pattern, info_output, re.IGNORECASE)
-                    if match:
-                        device_info[field] = match.group(1).strip()
-                        break
+            driver_patterns = [
+                r'Driver name\s*:\s*(.+)',
+                r'Driver\s*:\s*(.+)'
+            ]
             
-            return device_info if device_info else None
+            for pattern in name_patterns:
+                match = re.search(pattern, output, re.IGNORECASE)
+                if match:
+                    info['name'] = match.group(1).strip()
+                    break
+            
+            for pattern in driver_patterns:
+                match = re.search(pattern, output, re.IGNORECASE)
+                if match:
+                    info['driver'] = match.group(1).strip()
+                    break
+            
+            return info if info else None
             
         except asyncio.TimeoutError:
             self._logger.debug(f"Timeout probing device info for {device_path}")
@@ -1189,133 +958,59 @@ class HybridCameraMonitor:
             self._logger.debug(f"Error probing device info for {device_path}: {e}")
             return None
 
-    async def _probe_device_formats_robust(self, device_path: str) -> Optional[Dict[str, Any]]:
+    def _extract_frame_rates_from_output(self, output: str) -> Set[str]:
         """
-        Probe supported formats and resolutions using v4l2-ctl --list-formats-ext with robust parsing.
+        Extract frame rates from v4l2-ctl output using enhanced parsing strategies.
         
         Args:
-            device_path: Path to video device
+            output: Raw v4l2-ctl command output
             
         Returns:
-            Dictionary with formats and resolutions or None if failed
+            Set of frame rate strings
         """
-        try:
-            process = await asyncio.wait_for(
-                asyncio.create_subprocess_exec(
-                    'v4l2-ctl', '--device', device_path, '--list-formats-ext',
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                ),
-                timeout=self._detection_timeout
-            )
-            
-            stdout, stderr = await process.communicate()
-            
-            if process.returncode != 0:
-                self._logger.debug(f"v4l2-ctl --list-formats-ext failed for {device_path}: {stderr.decode()}")
-                return None
-            
-            formats_output = stdout.decode()
-            formats = []
-            resolutions = set()
-            
-            current_format = None
-            
-            # Robust parsing with multiple format and resolution patterns
-            for line in formats_output.splitlines():
-                line = line.strip()
-                
-                # Format line patterns - handle various v4l2-ctl output formats
-                format_patterns = [
-                    r'\[\d+\]:\s*[\'"]([^\'\"]+)[\'\"]\s*\(([^)]+)\)',  # Standard: [0]: 'YUYV' (YUYV 4:2:2)
-                    r'\[\d+\]:\s*([A-Z0-9]+)\s*\(([^)]+)\)',           # Alternative: [0]: YUYV (YUYV 4:2:2)
-                    r'([A-Z0-9]{3,4})\s*[:\s]\s*([^:\n]+)'             # Fallback: YUYV : YUYV 4:2:2
-                ]
-                
-                format_matched = False
-                for pattern in format_patterns:
-                    format_match = re.search(pattern, line)
-                    if format_match:
-                        format_code = format_match.group(1).strip()
-                        format_desc = format_match.group(2).strip() if len(format_match.groups()) > 1 else format_code
-                        current_format = {
-                            "code": format_code,
-                            "description": format_desc,
-                            "resolutions": []
-                        }
-                        formats.append(current_format)
-                        format_matched = True
-                        break
-                
-                if format_matched:
-                    continue
-                
-                # Resolution line patterns - handle various output formats
-                if current_format:
-                    resolution_patterns = [
-                        r'Size:\s*Discrete\s+(\d+)x(\d+)',              # Standard: Size: Discrete 640x480
-                        r'(\d+)x(\d+)',                                  # Simple: 640x480
-                        r'Size:\s*(\d+)\s*x\s*(\d+)',                   # Alternative: Size: 640 x 480
-                        r'Resolution:\s*(\d+)x(\d+)'                     # Alternative: Resolution: 640x480
-                    ]
-                    
-                    for pattern in resolution_patterns:
-                        resolution_match = re.search(pattern, line)
-                        if resolution_match:
-                            width = int(resolution_match.group(1))
-                            height = int(resolution_match.group(2))
-                            resolution = f"{width}x{height}"
-                            current_format["resolutions"].append(resolution)
-                            resolutions.add(resolution)
-                            break
-            
-            # Fallback resolution extraction if no format-specific parsing worked
-            if not resolutions:
-                # Look for any resolution patterns in the entire output
-                fallback_resolutions = re.findall(r'(\d{3,4})x(\d{3,4})', formats_output)
-                for width_str, height_str in fallback_resolutions:
-                    width, height = int(width_str), int(height_str)
-                    # Filter reasonable camera resolutions
-                    if 160 <= width <= 4096 and 120 <= height <= 3072:
-                        resolution = f"{width}x{height}"
-                        resolutions.add(resolution)
-            
-            return {
-                "formats": formats,
-                "resolutions": sorted(list(resolutions))
-            }
-            
-        except asyncio.TimeoutError:
-            self._logger.debug(f"Timeout probing device formats for {device_path}")
-            return None
-        except Exception as e:
-            self._logger.debug(f"Error probing device formats for {device_path}: {e}")
-            return None
+        if not output or not output.strip():
+            return set()
+        
+        frame_rates = set()
+        
+        # Apply all frame rate patterns
+        for pattern in self._frame_rate_patterns:
+            try:
+                matches = re.findall(pattern, output, re.IGNORECASE)
+                for match in matches:
+                    # Convert to float and back to string to normalize
+                    try:
+                        rate_val = float(match)
+                        if 1 <= rate_val <= 240:  # Reasonable frame rate range
+                            # Store as integer if it's a whole number
+                            if rate_val == int(rate_val):
+                                frame_rates.add(str(int(rate_val)))
+                            else:
+                                frame_rates.add(f"{rate_val:.1f}")
+                    except (ValueError, TypeError):
+                        continue
+            except re.error:
+                # Skip malformed patterns
+                continue
+        
+        return frame_rates
 
     async def _probe_device_framerates_robust(self, device_path: str) -> Optional[List[str]]:
         """
         Probe supported frame rates with hierarchical selection and robust parsing.
         
-        Policy:
-        1. Highest stable frame rate preferred for given resolution
-        2. Median fallback for inconsistent data
-        3. Record all detected rates for diagnostics
-        4. Apply provisional/confirmed pattern for stability
-        
-        Args:
-            device_path: Path to video device
-            
-        Returns:
-            List of supported frame rates sorted by preference (highest stable first)
+        Enhanced frame rate detection with multiple strategies and preference ordering.
         """
         all_frame_rates = set()
         detection_sources = []
         
-        # Try multiple v4l2-ctl commands and formats to get frame rate information
+        # Enhanced command list with more comprehensive probing
         commands_to_try = [
             (['v4l2-ctl', '--device', device_path, '--list-framesizes', 'YUYV'], "YUYV framesizes"),
-            (['v4l2-ctl', '--device', device_path, '--list-framesizes', 'MJPG'], "MJPG framesizes"), 
+            (['v4l2-ctl', '--device', device_path, '--list-framesizes', 'MJPG'], "MJPG framesizes"),
+            (['v4l2-ctl', '--device', device_path, '--list-framesizes', 'RGB24'], "RGB24 framesizes"),
             (['v4l2-ctl', '--device', device_path, '--list-framerates'], "general framerates"),
+            (['v4l2-ctl', '--device', device_path, '--list-formats-ext'], "extended formats"),
             (['v4l2-ctl', '--device', device_path, '--all'], "all device info")
         ]
         
@@ -1339,7 +1034,14 @@ class HybridCameraMonitor:
                     if cmd_frame_rates:
                         all_frame_rates.update(cmd_frame_rates)
                         detection_sources.append((description, cmd_frame_rates))
-                        self._logger.debug(f"Found frame rates from {description}: {sorted(cmd_frame_rates)}")
+                        self._logger.debug(
+                            f"Found frame rates from {description}: {sorted(cmd_frame_rates)}",
+                            extra={
+                                'device_path': device_path,
+                                'detection_source': description,
+                                'frame_rates': sorted(cmd_frame_rates)
+                            }
+                        )
                         
             except asyncio.TimeoutError:
                 self._logger.debug(f"Timeout getting {description} for {device_path}")
@@ -1354,7 +1056,14 @@ class HybridCameraMonitor:
         else:
             # Return common default frame rates if detection fails
             default_rates = ["30", "25", "24", "15", "10", "5"]
-            self._logger.debug(f"No frame rates detected for {device_path}, using defaults: {default_rates}")
+            self._logger.debug(
+                f"No frame rates detected for {device_path}, using defaults: {default_rates}",
+                extra={
+                    'device_path': device_path,
+                    'fallback_used': True,
+                    'default_rates': default_rates
+                }
+            )
             return default_rates
 
     def _select_preferred_frame_rates(
@@ -1364,90 +1073,479 @@ class HybridCameraMonitor:
         device_path: str
     ) -> List[str]:
         """
-        Select preferred frame rates using hierarchical policy.
+        Select preferred frame rates using enhanced hierarchical policy.
         
-        Policy:
-        1. Prefer highest frame rate that appears in multiple sources (stable)
-        2. Include median rate as fallback for inconsistent data
-        3. Sort by numeric value (highest first) for performance preference
-        4. Log selection rationale for diagnostics
-        
-        Args:
-            all_rates: All detected frame rates
-            sources: Detection sources with their individual results
-            device_path: Device path for logging
-            
-        Returns:
-            Sorted list of frame rates (highest stable first)
+        Enhanced policy:
+        1. Highest stable frame rate preferred for given resolution
+        2. Common frame rates (30, 25, 24, 15) prioritized
+        3. Rates detected by multiple sources weighted higher
+        4. Consistent ordering for deterministic behavior
         """
-        if not all_rates:
-            return []
         
-        # Convert to numeric for analysis
-        numeric_rates = []
-        for rate_str in all_rates:
-            try:
-                numeric_rates.append((float(rate_str), rate_str))
-            except ValueError:
-                continue
+        # Define preference tiers
+        high_priority_rates = {'30', '25', '24'}
+        medium_priority_rates = {'15', '60', '10'}
         
-        if not numeric_rates:
-            return list(all_rates)
-        
-        # Count appearances across sources for stability assessment
-        rate_stability = {}
-        for _, source_rates in sources:
+        # Count detection frequency (reliability indicator)
+        rate_frequency = {}
+        for source_name, source_rates in sources:
             for rate in source_rates:
-                rate_stability[rate] = rate_stability.get(rate, 0) + 1
+                rate_frequency[rate] = rate_frequency.get(rate, 0) + 1
         
-        # Categorize rates by stability
-        stable_rates = []      # Appeared in multiple sources
-        unstable_rates = []    # Appeared in only one source
+        # Sort by multiple criteria
+        def rate_sort_key(rate: str) -> Tuple[int, int, float]:
+            try:
+                rate_val = float(rate)
+                
+                # Priority tier (lower is better)
+                if rate in high_priority_rates:
+                    priority = 0
+                elif rate in medium_priority_rates:
+                    priority = 1
+                else:
+                    priority = 2
+                
+                # Detection frequency (higher is better, so negate)
+                frequency = -rate_frequency.get(rate, 1)
+                
+                # Rate value for final ordering (higher is better, so negate)
+                rate_value = -rate_val
+                
+                return (priority, frequency, rate_value)
+            except (ValueError, TypeError):
+                # Invalid rates go to the end
+                return (999, 0, 0)
         
-        for rate_str in all_rates:
-            if rate_stability.get(rate_str, 0) > 1:
-                stable_rates.append(rate_str)
-            else:
-                unstable_rates.append(rate_str)
+        sorted_rates = sorted(all_rates, key=rate_sort_key)
         
-        # Sort each category by numeric value (descending)
-        def sort_rates_desc(rates):
-            return sorted(rates, key=lambda x: float(x), reverse=True)
-        
-        stable_sorted = sort_rates_desc(stable_rates)
-        unstable_sorted = sort_rates_desc(unstable_rates)
-        
-        # Combine: stable rates first, then unstable
-        preferred_order = stable_sorted + unstable_sorted
-        
-        # Add median as fallback if we have multiple rates
-        if len(numeric_rates) >= 3:
-            median_value = sorted([nr[0] for nr in numeric_rates])[len(numeric_rates) // 2]
-            median_str = str(int(median_value)) if median_value == int(median_value) else f"{median_value:.1f}"
-            if median_str not in preferred_order:
-                preferred_order.append(median_str)
-        
-        # Log selection rationale
         self._logger.debug(
-            f"Frame rate selection for {device_path}: "
-            f"stable={stable_sorted}, unstable={unstable_sorted}, "
-            f"selected_primary={preferred_order[0] if preferred_order else 'none'}"
+            f"Selected frame rate order for {device_path}: {sorted_rates}",
+            extra={
+                'device_path': device_path,
+                'rate_frequency': rate_frequency,
+                'final_order': sorted_rates,
+                'selection_criteria': 'hierarchical_policy'
+            }
         )
         
-        return preferred_order
+        return sorted_rates
+
+    async def _update_capability_validation_state(
+        self, 
+        device_path: str, 
+        new_result: CapabilityDetectionResult
+    ) -> None:
+        """
+        Update capability validation state with enhanced frequency-based merge logic.
+        
+        Uses weighted merge based on detection frequency with stability thresholds:
+        - Tracks frequency of each capability element across probes
+        - Promotes capabilities that meet stability threshold to stable set
+        - Filters out one-off detections that may be transient
+        - Prevents oscillation through frequency-based consistency validation
+        
+        Args:
+            device_path: Device path
+            new_result: New capability detection result
+        """
+        if device_path not in self._capability_states:
+            self._capability_states[device_path] = DeviceCapabilityState(
+                device_path=device_path
+            )
+        
+        state = self._capability_states[device_path]
+        state.last_probe_time = time.time()
+        
+        # Add to validation history
+        history_entry = {
+            'timestamp': state.last_probe_time,
+            'detected': new_result.detected,
+            'error': new_result.error,
+            'formats_count': len(new_result.formats),
+            'resolutions_count': len(new_result.resolutions),
+            'frame_rates_count': len(new_result.frame_rates)
+        }
+        state.validation_history.append(history_entry)
+        
+        # Keep history manageable
+        if len(state.validation_history) > 10:
+            state.validation_history = state.validation_history[-10:]
+        
+        if new_result.detected:
+            # Update frequency tracking for all capability elements
+            self._update_capability_frequencies(state, new_result)
+            
+            # Generate frequency-based merged capability data
+            merged_result = self._create_frequency_merged_capability(state, new_result)
+            
+            # Check stability-aware consistency with existing data
+            if state.provisional_data and self._is_frequency_based_consistent(
+                state, merged_result
+            ):
+                state.consecutive_successes += 1
+                state.consecutive_failures = 0
+                
+                # Promote to confirmed if threshold met
+                if state.consecutive_successes >= state.confirmation_threshold:
+                    if not state.confirmed_data:
+                        self._stats['provisional_confirmations'] += 1
+                        stable_formats = len([f for f, freq in state.format_frequency.items() if freq >= state.stability_threshold])
+                        stable_resolutions = len([r for r, freq in state.resolution_frequency.items() if freq >= state.stability_threshold])
+                        stable_rates = len([r for r, freq in state.frame_rate_frequency.items() if freq >= state.stability_threshold])
+                        
+                        self._logger.info(
+                            f"Capability data confirmed for {device_path} after {state.consecutive_successes} consistent probes "
+                            f"(stable: {stable_formats} formats, {stable_resolutions} resolutions, {stable_rates} rates)",
+                            extra={
+                                'device_path': device_path,
+                                'consecutive_successes': state.consecutive_successes,
+                                'stable_capabilities': {
+                                    'formats': stable_formats,
+                                    'resolutions': stable_resolutions,
+                                    'frame_rates': stable_rates
+                                },
+                                'validation_transition': 'provisional_to_confirmed',
+                                'merge_strategy': 'frequency_based'
+                            }
+                        )
+                    
+                    state.confirmed_data = merged_result
+                    self._stats['capability_probes_confirmed'] += 1
+                else:
+                    self._logger.debug(
+                        f"Capability data frequency-consistency maintained for {device_path} "
+                        f"({state.consecutive_successes}/{state.confirmation_threshold})",
+                        extra={
+                            'device_path': device_path,
+                            'progress': f"{state.consecutive_successes}/{state.confirmation_threshold}",
+                            'validation_status': 'provisional_consistent',
+                            'merge_strategy': 'frequency_based'
+                        }
+                    )
+            else:
+                # Inconsistent data - check if it's minor variance or major change
+                variance_score = self._calculate_capability_variance(state, merged_result)
+                
+                if variance_score < 0.3:  # Minor variance - continue with frequency merge
+                    state.consecutive_successes += 1
+                    state.consecutive_failures = 0
+                    self._logger.debug(
+                        f"Minor capability variance for {device_path} (score: {variance_score:.2f}), "
+                        f"continuing frequency-based merge",
+                        extra={
+                            'device_path': device_path,
+                            'variance_score': variance_score,
+                            'validation_action': 'continue_with_variance'
+                        }
+                    )
+                else:
+                    # Major variance - reset validation but preserve frequency data
+                    if state.provisional_data:
+                        self._logger.warning(
+                            f"Major capability variance detected for {device_path} (score: {variance_score:.2f}), "
+                            f"resetting validation but preserving frequency data",
+                            extra={
+                                'device_path': device_path,
+                                'variance_score': variance_score,
+                                'validation_action': 'reset_with_frequency_preservation'
+                            }
+                        )
+                    
+                    state.consecutive_successes = 1
+                    state.consecutive_failures = 0
+                    state.confirmed_data = None
+                
+            state.provisional_data = merged_result
+        else:
+            # Detection failed
+            state.consecutive_failures += 1
+            state.consecutive_successes = 0
+            
+            if state.consecutive_failures >= 3:
+                self._stats['confirmation_failures'] += 1
+                self._logger.warning(
+                    f"Capability detection failing consistently for {device_path} "
+                    f"({state.consecutive_failures} failures)",
+                    extra={
+                        'device_path': device_path,
+                        'consecutive_failures': state.consecutive_failures,
+                        'validation_status': 'persistent_failure'
+                    }
+                )
+
+    def _update_capability_frequencies(
+        self, 
+        state: DeviceCapabilityState, 
+        result: CapabilityDetectionResult
+    ) -> None:
+        """Update frequency counters for capability elements."""
+        
+        # Update format frequencies
+        for fmt in result.formats:
+            fmt_code = fmt.get('code', '') if isinstance(fmt, dict) else str(fmt)
+            if fmt_code:
+                state.format_frequency[fmt_code] = state.format_frequency.get(fmt_code, 0) + 1
+        
+        # Update resolution frequencies
+        for resolution in result.resolutions:
+            if resolution:
+                state.resolution_frequency[resolution] = state.resolution_frequency.get(resolution, 0) + 1
+        
+        # Update frame rate frequencies
+        for rate in result.frame_rates:
+            if rate:
+                state.frame_rate_frequency[rate] = state.frame_rate_frequency.get(rate, 0) + 1
+
+    def _create_frequency_merged_capability(
+        self, 
+        state: DeviceCapabilityState, 
+        latest_result: CapabilityDetectionResult
+    ) -> CapabilityDetectionResult:
+        """
+        Create merged capability result based on frequency analysis.
+        
+        Includes capabilities that meet stability threshold and weights by frequency.
+        """
+        
+        # Filter capabilities by stability threshold and sort by frequency
+        stable_formats = [
+            {"code": fmt, "description": f"Format {fmt}"}
+            for fmt, freq in sorted(state.format_frequency.items(), key=lambda x: x[1], reverse=True)
+            if freq >= state.stability_threshold
+        ]
+        
+        stable_resolutions = [
+            resolution
+            for resolution, freq in sorted(state.resolution_frequency.items(), key=lambda x: x[1], reverse=True)
+            if freq >= state.stability_threshold
+        ]
+        
+        stable_frame_rates = [
+            rate
+            for rate, freq in sorted(state.frame_rate_frequency.items(), key=lambda x: x[1], reverse=True)
+            if freq >= state.stability_threshold
+        ]
+        
+        # Include recent detections if they don't conflict with stable set
+        recent_formats = []
+        for fmt in latest_result.formats:
+            fmt_code = fmt.get('code', '') if isinstance(fmt, dict) else str(fmt)
+            if fmt_code and fmt_code not in [sf['code'] for sf in stable_formats]:
+                # Add if it's been seen at least once before or has high confidence
+                if state.format_frequency.get(fmt_code, 0) > 0:
+                    recent_formats.append(fmt)
+        
+        recent_resolutions = [
+            res for res in latest_result.resolutions
+            if res and res not in stable_resolutions and state.resolution_frequency.get(res, 0) > 0
+        ]
+        
+        recent_frame_rates = [
+            rate for rate in latest_result.frame_rates
+            if rate and rate not in stable_frame_rates and state.frame_rate_frequency.get(rate, 0) > 0
+        ]
+        
+        # Create merged result
+        merged_result = CapabilityDetectionResult(
+            device_path=latest_result.device_path,
+            detected=True,
+            accessible=latest_result.accessible,
+            device_name=latest_result.device_name,
+            driver=latest_result.driver,
+            formats=stable_formats + recent_formats,
+            resolutions=stable_resolutions + recent_resolutions,
+            frame_rates=stable_frame_rates + recent_frame_rates,
+            probe_timestamp=latest_result.probe_timestamp,
+            structured_diagnostics={
+                **latest_result.structured_diagnostics,
+                'merge_strategy': 'frequency_based',
+                'stable_elements': {
+                    'formats': len(stable_formats),
+                    'resolutions': len(stable_resolutions),
+                    'frame_rates': len(stable_frame_rates)
+                },
+                'recent_elements': {
+                    'formats': len(recent_formats),
+                    'resolutions': len(recent_resolutions),
+                    'frame_rates': len(recent_frame_rates)
+                },
+                'frequency_data': {
+                    'format_frequencies': dict(state.format_frequency),
+                    'resolution_frequencies': dict(state.resolution_frequency),
+                    'frame_rate_frequencies': dict(state.frame_rate_frequency)
+                }
+            }
+        )
+        
+        return merged_result
+
+    def _is_frequency_based_consistent(
+        self, 
+        state: DeviceCapabilityState,
+        new_result: CapabilityDetectionResult
+    ) -> bool:
+        """
+        Check consistency using frequency-based stability analysis.
+        
+        More lenient than intersection-based consistency - allows for capability
+        variance as long as core stable capabilities remain consistent.
+        """
+        if not state.provisional_data or not new_result.detected:
+            return False
+        
+        # Check that stable capabilities (high frequency) remain present
+        stable_formats = {
+            fmt for fmt, freq in state.format_frequency.items() 
+            if freq >= state.stability_threshold
+        }
+        stable_resolutions = {
+            res for res, freq in state.resolution_frequency.items() 
+            if freq >= state.stability_threshold
+        }
+        stable_frame_rates = {
+            rate for rate, freq in state.frame_rate_frequency.items() 
+            if freq >= state.stability_threshold
+        }
+        
+        # Get current result capability sets
+        current_formats = {fmt.get('code', '') for fmt in new_result.formats if isinstance(fmt, dict)}
+        current_resolutions = set(new_result.resolutions)
+        current_frame_rates = set(new_result.frame_rates)
+        
+        # Calculate consistency scores for each capability type
+        format_consistency = self._calculate_set_consistency(stable_formats, current_formats)
+        resolution_consistency = self._calculate_set_consistency(stable_resolutions, current_resolutions)
+        rate_consistency = self._calculate_set_consistency(stable_frame_rates, current_frame_rates)
+        
+        # Require high consistency for stable capabilities
+        min_consistency = 0.7  # 70% of stable capabilities should be present
+        
+        overall_consistent = (
+            format_consistency >= min_consistency and
+            resolution_consistency >= min_consistency and
+            rate_consistency >= min_consistency
+        )
+        
+        return overall_consistent
+
+    def _calculate_set_consistency(self, stable_set: Set[str], current_set: Set[str]) -> float:
+        """Calculate consistency score between stable and current capability sets."""
+        if not stable_set:
+            return 1.0  # No stable capabilities to validate against
+        
+        intersection = stable_set.intersection(current_set)
+        return len(intersection) / len(stable_set)
+
+    def _calculate_capability_variance(
+        self, 
+        state: DeviceCapabilityState, 
+        new_result: CapabilityDetectionResult
+    ) -> float:
+        """
+        Calculate variance score between frequency-merged capabilities and new result.
+        
+        Returns:
+            float: Variance score (0.0 = identical, 1.0 = completely different)
+        """
+        if not state.provisional_data:
+            return 0.0
+        
+        prev_result = state.provisional_data
+        
+        # Calculate variance for each capability type
+        format_variance = self._calculate_list_variance(
+            [f.get('code', '') for f in prev_result.formats],
+            [f.get('code', '') for f in new_result.formats]
+        )
+        
+        resolution_variance = self._calculate_list_variance(
+            prev_result.resolutions,
+            new_result.resolutions
+        )
+        
+        rate_variance = self._calculate_list_variance(
+            prev_result.frame_rates,
+            new_result.frame_rates
+        )
+        
+        # Weight variance by importance (resolutions and rates more critical than formats)
+        weighted_variance = (
+            format_variance * 0.2 +
+            resolution_variance * 0.4 +
+            rate_variance * 0.4
+        )
+        
+        return weighted_variance
+
+    def _calculate_list_variance(self, list1: List[str], list2: List[str]) -> float:
+        """Calculate variance between two lists (Jaccard distance)."""
+        set1, set2 = set(list1), set(list2)
+        
+        if not set1 and not set2:
+            return 0.0
+        
+        if not set1 or not set2:
+            return 1.0
+        
+        intersection = len(set1.intersection(set2))
+        union = len(set1.union(set2))
+        
+        # Jaccard similarity = intersection / union
+        # Jaccard distance = 1 - Jaccard similarity
+        return 1.0 - (intersection / union if union > 0 else 0.0)
+
+    def _is_capability_data_consistent(
+        self, 
+        data1: CapabilityDetectionResult, 
+        data2: CapabilityDetectionResult
+    ) -> bool:
+        """
+        Check if two capability detection results are consistent.
+        
+        Enhanced consistency checking with tolerance for minor variations.
+        """
+        if not (data1.detected and data2.detected):
+            return False
+        
+        # Check format consistency (allow subset relationships)
+        formats1 = set(f.get('code', '') for f in data1.formats)
+        formats2 = set(f.get('code', '') for f in data2.formats)
+        
+        if formats1 and formats2:
+            # Allow up to 50% difference in formats
+            intersection = formats1.intersection(formats2)
+            min_formats = min(len(formats1), len(formats2))
+            if min_formats > 0 and len(intersection) / min_formats < 0.5:
+                return False
+        
+        # Check resolution consistency (allow subset relationships)
+        resolutions1 = set(data1.resolutions)
+        resolutions2 = set(data2.resolutions)
+        
+        if resolutions1 and resolutions2:
+            intersection = resolutions1.intersection(resolutions2)
+            min_resolutions = min(len(resolutions1), len(resolutions2))
+            if min_resolutions > 0 and len(intersection) / min_resolutions < 0.5:
+                return False
+        
+        # Check frame rate consistency (more lenient)
+        frame_rates1 = set(data1.frame_rates)
+        frame_rates2 = set(data2.frame_rates)
+        
+        if frame_rates1 and frame_rates2:
+            intersection = frame_rates1.intersection(frame_rates2)
+            min_rates = min(len(frame_rates1), len(frame_rates2))
+            if min_rates > 0 and len(intersection) / min_rates < 0.3:
+                return False
+        
+        return True
 
     def get_effective_capability_metadata(self, device_path: str) -> Dict[str, Any]:
         """
-        Get effective capability metadata for a device.
+        Get effective capability metadata for a device with enhanced frequency-based diagnostics.
         
         Returns confirmed data if available, otherwise provisional data.
-        Includes stability indicators for diagnostics.
-        
-        Args:
-            device_path: Device path to query
-            
-        Returns:
-            Dictionary with capability metadata and validation status
+        Includes comprehensive stability indicators and frequency analysis for diagnostics.
         """
         if device_path not in self._capability_states:
             return {
@@ -1456,7 +1554,12 @@ class HybridCameraMonitor:
                 "validation_status": "none",
                 "formats": [],
                 "all_resolutions": [],
-                "all_frame_rates": []
+                "all_frame_rates": [],
+                "diagnostics": {
+                    "reason": "no_capability_state",
+                    "has_been_probed": False,
+                    "merge_strategy": "default"
+                }
             }
         
         capability_state = self._capability_states[device_path]
@@ -1470,10 +1573,16 @@ class HybridCameraMonitor:
                 "error": effective_data.error if effective_data else "No data",
                 "formats": [],
                 "all_resolutions": [],
-                "all_frame_rates": []
+                "all_frame_rates": [],
+                "diagnostics": {
+                    "reason": "detection_failed",
+                    "consecutive_failures": capability_state.consecutive_failures,
+                    "last_error": effective_data.error if effective_data else None,
+                    "merge_strategy": "none"
+                }
             }
         
-        # Select primary resolution and frame rate
+        # Select primary resolution and frame rate with frequency-based preference
         primary_resolution = effective_data.resolutions[0] if effective_data.resolutions else "1920x1080"
         primary_fps_str = effective_data.frame_rates[0] if effective_data.frame_rates else "30"
         
@@ -1482,76 +1591,61 @@ class HybridCameraMonitor:
         except (ValueError, TypeError):
             primary_fps = 30
         
+        # Calculate stability metrics
+        stable_formats = len([f for f, freq in capability_state.format_frequency.items() 
+                            if freq >= capability_state.stability_threshold])
+        stable_resolutions = len([r for r, freq in capability_state.resolution_frequency.items() 
+                                if freq >= capability_state.stability_threshold])
+        stable_rates = len([r for r, freq in capability_state.frame_rate_frequency.items() 
+                          if freq >= capability_state.stability_threshold])
+        
+        # Calculate frequency-based confidence scores
+        total_probes = len(capability_state.validation_history)
+        resolution_confidence = (capability_state.resolution_frequency.get(primary_resolution, 0) / 
+                                max(total_probes, 1)) if total_probes > 0 else 0.0
+        rate_confidence = (capability_state.frame_rate_frequency.get(primary_fps_str, 0) / 
+                         max(total_probes, 1)) if total_probes > 0 else 0.0
+        
         return {
             "resolution": primary_resolution,
             "fps": primary_fps,
             "validation_status": "confirmed" if capability_state.is_confirmed() else "provisional",
             "consecutive_successes": capability_state.consecutive_successes,
+            "consecutive_failures": capability_state.consecutive_failures,
             "formats": [f.get("code", "") for f in effective_data.formats],
             "all_resolutions": effective_data.resolutions,
             "all_frame_rates": effective_data.frame_rates,
             "device_name": effective_data.device_name,
-            "driver": effective_data.driver
+            "driver": effective_data.driver,
+            "diagnostics": {
+                "probe_timestamp": effective_data.probe_timestamp,
+                "probe_duration": effective_data.structured_diagnostics.get('probe_duration'),
+                "validation_history_length": len(capability_state.validation_history),
+                "confirmation_progress": f"{capability_state.consecutive_successes}/{capability_state.confirmation_threshold}",
+                "merge_strategy": "frequency_based",
+                "stability_metrics": {
+                    "stable_formats": stable_formats,
+                    "stable_resolutions": stable_resolutions,
+                    "stable_frame_rates": stable_rates,
+                    "stability_threshold": capability_state.stability_threshold
+                },
+                "frequency_analysis": {
+                    "total_probes": total_probes,
+                    "primary_resolution_confidence": round(resolution_confidence, 2),
+                    "primary_rate_confidence": round(rate_confidence, 2),
+                    "top_formats": sorted(capability_state.format_frequency.items(), 
+                                        key=lambda x: x[1], reverse=True)[:3],
+                    "top_resolutions": sorted(capability_state.resolution_frequency.items(), 
+                                            key=lambda x: x[1], reverse=True)[:3],
+                    "top_frame_rates": sorted(capability_state.frame_rate_frequency.items(), 
+                                            key=lambda x: x[1], reverse=True)[:3]
+                }
+            }
         }
-
-    def _extract_frame_rates_from_output(self, output: str) -> Set[str]:
-        """
-        Extract frame rates from v4l2-ctl output using multiple parsing strategies.
-        
-        Args:
-            output: Raw v4l2-ctl command output
-            
-        Returns:
-            Set of frame rate strings
-        """
-        frame_rates = set()
-        
-        # Multiple frame rate patterns to handle different v4l2-ctl output formats
-        fps_patterns = [
-            r'(\d+(?:\.\d+)?)\s*fps',                          # Standard: 30.000 fps
-            r'(\d+(?:\.\d+)?)\s*FPS',                          # Alternative case: 30.000 FPS
-            r'Frame\s*rate[:\s]+(\d+(?:\.\d+)?)',              # Frame rate: 30.0
-            r'(\d+(?:\.\d+)?)\s*frames?\s*per\s*second',       # frames per second
-            r'Interval:\s*\[\d+/(\d+)\]',                      # Interval format: [1/30]
-            r'(\d{1,3})\s*Hz',                                 # Frequency: 30 Hz
-            r'@\s*(\d+(?:\.\d+)?)',                            # Resolution@framerate: 1920x1080@30
-        ]
-        
-        for pattern in fps_patterns:
-            matches = re.findall(pattern, output, re.IGNORECASE)
-            for match in matches:
-                try:
-                    fps_value = float(match)
-                    # Filter reasonable frame rates (0.1 to 240 FPS)
-                    if 0.1 <= fps_value <= 240:
-                        # Convert to integer if it's a whole number
-                        if fps_value == int(fps_value):
-                            frame_rates.add(str(int(fps_value)))
-                        else:
-                            frame_rates.add(f"{fps_value:.1f}")
-                except (ValueError, TypeError):
-                    continue
-        
-        # Special handling for interval notation [numerator/denominator]
-        interval_matches = re.findall(r'\[(\d+)/(\d+)\]', output)
-        for num_str, den_str in interval_matches:
-            try:
-                numerator, denominator = int(num_str), int(den_str)
-                if denominator > 0:
-                    fps_value = denominator / numerator
-                    if 0.1 <= fps_value <= 240:
-                        if fps_value == int(fps_value):
-                            frame_rates.add(str(int(fps_value)))
-                        else:
-                            frame_rates.add(f"{fps_value:.1f}")
-            except (ValueError, ZeroDivisionError):
-                continue
-        
-        return frame_rates
 
     def get_stream_name_from_device_path(self, device_path: str) -> str:
         """
-        Extract stream name from camera device path with robust fallback handling.
+        Extract deterministic stream name from camera device path.
         
         Args:
             device_path: Camera device path (e.g., /dev/video0)
@@ -1579,27 +1673,122 @@ class HybridCameraMonitor:
             
             # Final fallback: hash-based deterministic name
             hash_val = abs(hash(device_path)) % 1000
-            self._logger.debug(f"Using hash-based stream name for {device_path}: camera_{hash_val}")
+            self._logger.debug(
+                f"Using hash-based stream name for {device_path}: camera_{hash_val}",
+                extra={
+                    'device_path': device_path,
+                    'hash_value': hash_val,
+                    'fallback_used': True
+                }
+            )
             return f"camera_{hash_val}"
             
         except Exception as e:
             self._logger.warning(f"Error extracting stream name from {device_path}: {e}")
             return "camera_unknown"
 
-    # TODO: MEDIUM: Add test injection hooks for capability detection validation [Story:E1/S3]
-    # Purpose: Enable comprehensive unit testing of v4l2 output parsing variations and validation logic
-    # Implementation: Add optional mock interfaces for subprocess execution and capability state manipulation
+    async def _probe_device_formats_robust(self, device_path: str) -> Optional[Dict[str, Any]]:
+        """Probe device formats and resolutions with enhanced parsing and error handling."""
+        try:
+            process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(
+                    'v4l2-ctl', '--device', device_path, '--list-formats-ext',
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                ),
+                timeout=self._detection_timeout
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                return None
+            
+            formats_output = stdout.decode()
+            formats = []
+            resolutions = set()
+            
+            # Enhanced format parsing with multiple patterns
+            current_format = None
+            
+            for line in formats_output.split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Format detection with enhanced patterns
+                format_patterns = [
+                    r'\[(\d+)\]:\s*\'(\w+)\'\s*\(([^)]+)\)',  # [0]: 'YUYV' (YUYV 4:2:2)
+                    r'Index\s*:\s*(\d+)\s*Type\s*:\s*Video\s*Capture\s*Pixel\s*Format\s*:\s*\'(\w+)\'',
+                    r'Pixel\s*Format\s*:\s*\'(\w+)\''
+                ]
+                
+                for pattern in format_patterns:
+                    match = re.search(pattern, line, re.IGNORECASE)
+                    if match:
+                        if len(match.groups()) >= 2:
+                            format_code = match.group(2) if len(match.groups()) >= 2 else match.group(1)
+                            format_desc = match.group(3) if len(match.groups()) >= 3 else format_code
+                        else:
+                            format_code = match.group(1)
+                            format_desc = format_code
+                        
+                        current_format = {
+                            "code": format_code,
+                            "description": format_desc,
+                            "resolutions": []
+                        }
+                        formats.append(current_format)
+                        break
+                
+                # Resolution detection with enhanced patterns
+                if current_format:
+                    resolution_patterns = [
+                        r'Size:\s*Discrete\s+(\d+)x(\d+)',                # Size: Discrete 640x480
+                        r'(\d{3,4})\s*x\s*(\d{3,4})',                     # 1920x1080
+                        r'Width\s*(\d+)\s*Height\s*(\d+)',                # Width 1920 Height 1080
+                        r'Resolution:\s*(\d+)\s*x\s*(\d+)'                # Resolution: 1920 x 1080
+                    ]
+                    
+                    for pattern in resolution_patterns:
+                        match = re.search(pattern, line, re.IGNORECASE)
+                        if match:
+                            width = int(match.group(1))
+                            height = int(match.group(2))
+                            
+                            # Validate reasonable resolution ranges
+                            if 160 <= width <= 4096 and 120 <= height <= 3072:
+                                resolution = f"{width}x{height}"
+                                current_format["resolutions"].append(resolution)
+                                resolutions.add(resolution)
+                            break
+            
+            # Fallback resolution extraction if no format-specific parsing worked
+            if not resolutions:
+                fallback_resolutions = re.findall(r'(\d{3,4})x(\d{3,4})', formats_output)
+                for width_str, height_str in fallback_resolutions:
+                    width, height = int(width_str), int(height_str)
+                    if 160 <= width <= 4096 and 120 <= height <= 3072:
+                        resolution = f"{width}x{height}"
+                        resolutions.add(resolution)
+            
+            return {
+                "formats": formats,
+                "resolutions": sorted(list(resolutions), 
+                                    key=lambda r: (int(r.split('x')[0]), int(r.split('x')[1])), 
+                                    reverse=True)  # Sort by resolution, highest first
+            }
+            
+        except asyncio.TimeoutError:
+            self._logger.debug(f"Timeout probing device formats for {device_path}")
+            return None
+        except Exception as e:
+            self._logger.debug(f"Error probing device formats for {device_path}: {e}")
+            return None
+
+    # Test interface methods (enhanced)
     def _get_capability_probe_interface(self):
-        """
-        Test hook: Return interface for capability probing and validation testing.
-        
-        This method enables test injection of mock v4l2-ctl behavior and capability
-        validation scenarios for comprehensive testing of parsing robustness and
-        provisional/confirmed data handling.
-        
-        Returns:
-            Dict with capability probing methods and state manipulation for test override
-        """
+        """Test hook: Enhanced capability probing interface for comprehensive testing."""
         return {
             'probe_device_info': self._probe_device_info_robust,
             'probe_device_formats': self._probe_device_formats_robust,
@@ -1608,7 +1797,8 @@ class HybridCameraMonitor:
             'select_preferred_rates': self._select_preferred_frame_rates,
             'update_capability_state': self._update_capability_validation_state,
             'check_consistency': self._is_capability_data_consistent,
-            'get_effective_metadata': self.get_effective_capability_metadata
+            'get_effective_metadata': self.get_effective_capability_metadata,
+            'stats': self.get_monitor_stats
         }
 
     def _get_capability_state_for_testing(self, device_path: str) -> Optional[DeviceCapabilityState]:
@@ -1619,17 +1809,8 @@ class HybridCameraMonitor:
         """Test hook: Set capability state for validation testing."""
         self._capability_states[device_path] = state
 
-    # TODO: MEDIUM: Add udev event injection interface for testing [Story:E1/S3]  
-    # Purpose: Enable testing of udev event processing without real hardware
-    # Implementation: Add method to inject synthetic udev events for testing
     async def _inject_test_udev_event(self, device_path: str, action: str) -> None:
-        """
-        Test hook: Inject synthetic udev event for testing.
-        
-        Args:
-            device_path: Device path for synthetic event
-            action: Udev action ('add', 'remove', 'change')
-        """
+        """Test hook: Inject synthetic udev event for testing."""
         if not hasattr(self, '_test_mode'):
             self._logger.warning("Test event injection called outside test mode")
             return
@@ -1655,7 +1836,10 @@ class HybridCameraMonitor:
         return {
             'current_interval': self._current_poll_interval,
             'base_interval': self._base_poll_interval,
+            'min_interval': self._min_poll_interval,
+            'max_interval': self._max_poll_interval,
             'last_udev_time': self._last_udev_event_time,
             'failure_count': self._polling_failure_count,
-            'adjustment_count': self._stats.get('adaptive_poll_adjustments', 0)
+            'adjustment_count': self._stats.get('adaptive_poll_adjustments', 0),
+            'freshness_threshold': self._udev_event_freshness_threshold
         }
