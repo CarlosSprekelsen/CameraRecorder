@@ -46,7 +46,11 @@ class MediaMTXController:
         hls_port: int,
         config_path: str,
         recordings_path: str,
-        snapshots_path: str
+        snapshots_path: str,
+        health_check_interval: int = 30,
+        health_failure_threshold: int = 10,
+        health_circuit_breaker_timeout: int = 60,
+        health_max_backoff_interval: int = 120
     ):
         """
         Initialize MediaMTX controller.
@@ -60,6 +64,10 @@ class MediaMTXController:
             config_path: Path to MediaMTX configuration file
             recordings_path: Directory for recording files
             snapshots_path: Directory for snapshot files
+            health_check_interval: Normal health check interval in seconds (default: 30)
+            health_failure_threshold: Failures before circuit breaker activates (default: 10)
+            health_circuit_breaker_timeout: Circuit breaker timeout in seconds (default: 60)
+            health_max_backoff_interval: Maximum backoff interval in seconds (default: 120)
         """
         self._host = host
         self._api_port = api_port
@@ -69,6 +77,12 @@ class MediaMTXController:
         self._config_path = config_path
         self._recordings_path = recordings_path
         self._snapshots_path = snapshots_path
+        
+        # Health monitoring configuration
+        self._health_check_interval = health_check_interval
+        self._health_failure_threshold = health_failure_threshold
+        self._health_circuit_breaker_timeout = health_circuit_breaker_timeout
+        self._health_max_backoff_interval = health_max_backoff_interval
         
         self._logger = logging.getLogger(__name__)
         self._base_url = f"http://{self._host}:{self._api_port}"
@@ -923,8 +937,8 @@ class MediaMTXController:
                          extra={'correlation_id': correlation_id})
         
         consecutive_failures = 0
-        max_failures_before_circuit_break = 10
-        circuit_breaker_timeout = 60  # seconds
+        max_failures_before_circuit_break = self._health_failure_threshold
+        circuit_breaker_timeout = self._health_circuit_breaker_timeout
         circuit_breaker_active = False
         circuit_breaker_start_time = 0
         
@@ -986,12 +1000,12 @@ class MediaMTXController:
                     
                     # Determine sleep interval based on health status with enhanced backoff
                     if current_status == "healthy":
-                        sleep_interval = 30  # Normal interval
+                        sleep_interval = self._health_check_interval
                         consecutive_failures = 0
                     else:
-                        # Enhanced exponential backoff with jitter: 5s, 10s, 20s, 40s, max 120s
+                        # Enhanced exponential backoff with jitter: 5s, 10s, 20s, 40s, max configurable
                         import random
-                        base_interval = min(5 * (2 ** consecutive_failures), 120)
+                        base_interval = min(5 * (2 ** consecutive_failures), self._health_max_backoff_interval)
                         jitter = random.uniform(0.8, 1.2)  # ±20% jitter to avoid thundering herd
                         sleep_interval = base_interval * jitter
                         consecutive_failures += 1
@@ -1024,7 +1038,7 @@ class MediaMTXController:
                         )
                     
                     import random
-                    error_sleep = min(2 * (2 ** consecutive_failures), 60) * random.uniform(0.8, 1.2)
+                    error_sleep = min(2 * (2 ** consecutive_failures), self._health_max_backoff_interval) * random.uniform(0.8, 1.2)
                     await asyncio.sleep(error_sleep)
                     
         except Exception as e:

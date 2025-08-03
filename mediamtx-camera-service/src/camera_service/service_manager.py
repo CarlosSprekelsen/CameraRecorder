@@ -531,7 +531,7 @@ class ServiceManager(CameraEventHandler):
         self._logger.debug("Starting MediaMTX controller")
         
         try:
-            # Initialize MediaMTX Controller with configuration
+            # Initialize MediaMTX Controller with configuration including health monitoring
             self._mediamtx_controller = MediaMTXController(
                 host=self._config.mediamtx.host,
                 api_port=self._config.mediamtx.api_port,
@@ -540,7 +540,11 @@ class ServiceManager(CameraEventHandler):
                 hls_port=self._config.mediamtx.hls_port,
                 config_path=self._config.mediamtx.config_path,
                 recordings_path=self._config.mediamtx.recordings_path,
-                snapshots_path=self._config.mediamtx.snapshots_path
+                snapshots_path=self._config.mediamtx.snapshots_path,
+                health_check_interval=self._config.mediamtx.health_check_interval,
+                health_failure_threshold=self._config.mediamtx.health_failure_threshold,
+                health_circuit_breaker_timeout=self._config.mediamtx.health_circuit_breaker_timeout,
+                health_max_backoff_interval=self._config.mediamtx.health_max_backoff_interval
             )
             
             # Start MediaMTX controller (initializes HTTP client and monitoring)

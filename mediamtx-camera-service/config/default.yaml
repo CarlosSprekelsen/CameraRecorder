@@ -15,6 +15,12 @@ mediamtx:
   config_path: "/opt/camera-service/config/mediamtx.yml"
   recordings_path: "/opt/camera-service/recordings"
   snapshots_path: "/opt/camera-service/snapshots"
+  
+  # Health monitoring configuration
+  health_check_interval: 30        # Normal health check interval (seconds)
+  health_failure_threshold: 10     # Failures before circuit breaker activates
+  health_circuit_breaker_timeout: 60   # Circuit breaker timeout (seconds)
+  health_max_backoff_interval: 120     # Maximum backoff interval (seconds)
 
 camera:
   poll_interval: 0.1

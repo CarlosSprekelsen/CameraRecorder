@@ -48,6 +48,12 @@ class MediaMTXConfig:
     config_path: str = "/opt/camera-service/config/mediamtx.yml"
     recordings_path: str = "/opt/camera-service/recordings"
     snapshots_path: str = "/opt/camera-service/snapshots"
+    
+    # Health monitoring configuration
+    health_check_interval: int = 30
+    health_failure_threshold: int = 10
+    health_circuit_breaker_timeout: int = 60
+    health_max_backoff_interval: int = 120
 
 
 @dataclass
@@ -342,6 +348,12 @@ class ConfigManager:
             'CAMERA_SERVICE_SNAPSHOTS_FORMAT': ('snapshots', 'format'),
             'CAMERA_SERVICE_SNAPSHOTS_QUALITY': ('snapshots', 'quality'),
             'CAMERA_SERVICE_SNAPSHOTS_CLEANUP_AFTER_DAYS': ('snapshots', 'cleanup_after_days'),
+
+            'CAMERA_SERVICE_MEDIAMTX_HEALTH_CHECK_INTERVAL': ('mediamtx', 'health_check_interval'),
+            'CAMERA_SERVICE_MEDIAMTX_HEALTH_FAILURE_THRESHOLD': ('mediamtx', 'health_failure_threshold'),
+            'CAMERA_SERVICE_MEDIAMTX_HEALTH_CIRCUIT_BREAKER_TIMEOUT': ('mediamtx', 'health_circuit_breaker_timeout'),
+            'CAMERA_SERVICE_MEDIAMTX_HEALTH_MAX_BACKOFF_INTERVAL': ('mediamtx', 'health_max_backoff_interval'),
+
         }
         
         overridden_count = 0
