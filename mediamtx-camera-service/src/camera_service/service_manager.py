@@ -34,6 +34,7 @@ class HealthMonitor:
         self._health_check_task: Optional[asyncio.Task] = None
     
     async def start(self) -> None:
+        
         """Start health monitoring."""
         if self._running:
             return
