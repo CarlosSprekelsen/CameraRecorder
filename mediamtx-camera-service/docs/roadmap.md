@@ -109,19 +109,19 @@ Before marking any task as [x] complete:
 - **S2b: Audit & Task Breakdown (INFORMATIONAL, feeds S3)**  
     - **Purpose:** Quickly validate that fast-track implementation aligns with architecture and produce the real actionable work for S3/S4. This is not a hard gating story—execution proceeds while remaining gaps are tracked and closed downstream.  
     - [x] **Audit existing implementation components against architecture & API definitions.**  
-        - Evidence: Code present in `src/websocket_server/server.py`, `src/mediamtx_wrapper/controller.py`, and `src/camera_service/service_manager.py` reflecting core responsibilities defined in `docs/architecture/overview.md`. Status: Baseline audit completed; key partials surfaced and promoted into S3/S4 for execution. :contentReference[oaicite:22]{index=22} :contentReference[oaicite:23]{index=23}  
+        - Evidence: Code present in `src/websocket_server/server.py`, `src/mediamtx_wrapper/controller.py`, and `src/camera_service/service_manager.py` reflecting core responsibilities defined in `docs/architecture/overview.md`. Status: Baseline audit completed; key partials surfaced and promoted into S3/S4 for execution.
     - [x] **Document and resolve surfaced partial implementation gaps (subset resolved).**  
         - Resolved gaps:  
-            * Snapshot implementation updated from placeholder to real FFmpeg-based capture. :contentReference[oaicite:24]{index=24}  
-            * Recording duration computation implemented in `stop_recording`. :contentReference[oaicite:25]{index=25}  
+            * Snapshot implementation updated from placeholder to real FFmpeg-based capture.
+            * Recording duration computation implemented in `stop_recording`. 
         - Remaining / tracked gaps (now owned in S3/S4):  
             * API documentation drift (JSON-RPC docs vs implementation).  
-            * Versioning/deprecation governance clarity in WebSocket server. :contentReference[oaicite:26]{index=26}  
-            * Integration of real capability detection into propagated camera metadata. :contentReference[oaicite:27]{index=27}  
+            * Versioning/deprecation governance clarity in WebSocket server.
+            * Integration of real capability detection into propagated camera metadata.
     - [ ] **Clarify deferred decisions or governance items if not yet finalized.**  
-        - Example: Deprecated-method tracking/version negotiation—decide to implement fully or formally defer with annotation. :contentReference[oaicite:28]{index=28}  
+        - Example: Deprecated-method tracking/version negotiation—decide to implement fully or formally defer with annotation. 
     - [ ] **Normalize non-compliant TODO/STOP comments to the canonical format defined in `docs/development/principles.md`.**  
-        - Task: Refactor outstanding comments and capture before/after evidence. :contentReference[oaicite:29]{index=29}  
+        - Task: Refactor outstanding comments and capture before/after evidence.
     - [ ] **Update architecture overview with fast-track deviations and decision records.**  
         - File: `docs/architecture/overview.md`.  
         - Task: Capture that snapshot/duration were known partials and are now resolved, and note remaining items feeding S3/S4.  
@@ -132,37 +132,37 @@ Before marking any task as [x] complete:
 - **Objective:** Fulfill architecture requirements for real-time camera discovery, capability probing, status tracking, and event propagation.
 
     - [x] [IMPL] Implement camera connect/disconnect handling and coordinate with MediaMTX.  
-        - Evidence: `src/camera_service/service_manager.py` event handlers (`_handle_camera_connected`, `_handle_camera_disconnected`) and orchestration paths. :contentReference[oaicite:30]{index=30}  
+        - Evidence: `src/camera_service/service_manager.py` event handlers (`_handle_camera_connected`, `_handle_camera_disconnected`) and orchestration paths. 
         - Status: Complete for baseline flow.
 
     - [x] [IMPL] Integrate camera monitoring with MediaMTX controller.  
-        - Evidence: Notification parameter preparation and stream creation/deletion logic in `ServiceManager`. :contentReference[oaicite:31]{index=31}  
+        - Evidence: Notification parameter preparation and stream creation/deletion logic in `ServiceManager`.
         - Status: Full integration path exists.
 
     - [x] [IMPL] Hybrid camera discovery framework (udev + polling) implemented.  
-        - Evidence: `src/camera_discovery/hybrid_monitor.py` implementation of udev event loop, polling fallback, and device lifecycle. :contentReference[oaicite:32]{index=32}  
+        - Evidence: `src/camera_discovery/hybrid_monitor.py` implementation of udev event loop, polling fallback, and device lifecycle. 
         - Status: Complete scaffolding and operational logic.
 
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Harden and expand capability detection validation.  
+    - [x] [IMPL] Harden and expand capability detection validation.  
         - Task: Extend tests and edge case handling for `_probe_device_capabilities`, including varied format/resolution outputs, error conditions, and timeout fallbacks.  
         - Acceptance Criteria: Tests cover success paths, parsing variations, timeouts, and failure modes; no unresolved TODOs in detection logic.  
-        - Evidence: Expanded tests under `tests/unit/test_camera_discovery/validate_capabilities.py` or similar; execution results, coverage report. :contentReference[oaicite:33]{index=33}  
+        - Evidence: Expanded tests under `tests/unit/test_camera_discovery/validate_capabilities.py` or similar; execution results, coverage report. 
 
     - [x] [IMPL] Implement udev event filtering and real-time processing.  
-        - Evidence: `_process_udev_device_event` with device node validation and range filtering. :contentReference[oaicite:34]{index=34} :contentReference[oaicite:35]{index=35}  
+        - Evidence: `_process_udev_device_event` with device node validation and range filtering. 
         - Status: Baseline implemented.
 
     - [ ] [IMPL] **MEDIUM PRIORITY**: Expand udev event processing test coverage.  
         - Task: Cover additional scenarios: `change` events affecting status, invalid nodes, race conditions, and fallback to polling.  
-        - Acceptance Criteria: Tests in `tests/unit/test_camera_discovery/validate_udev.py` (or combined) demonstrating correct filtering and event propagation. :contentReference[oaicite:36]{index=36}  
+        - Acceptance Criteria: Tests in `tests/unit/test_camera_discovery/validate_udev.py` (or combined) demonstrating correct filtering and event propagation.{index=36}  
 
     - [ ] [IMPL] **MEDIUM PRIORITY**: Integrate real capability detection results into camera metadata propagation.  
         - Task: Replace fallbacks/defaults in `_get_camera_metadata` with actual capability-derived resolution/fps when available; if delayed, annotate dependency explicitly.  
-        - Acceptance Criteria: Notifications include accurate metadata or clearly annotated interim state. :contentReference[oaicite:37]{index=37}  
+        - Acceptance Criteria: Notifications include accurate metadata or clearly annotated interim state. 
 
     - [ ] [DOCS] **LOW/MEDIUM PRIORITY**: Reconcile and update JSON-RPC API documentation for camera status notifications and capability fields.  
         - Task: Update `docs/api/json-rpc-methods.md` to reflect actual implemented fields, mark implemented methods appropriately, and add examples matching runtime behavior.  
-        - Evidence: Updated API doc with “Status: Implemented” and linked code lines for `camera_status_update`, `get_camera_status`, etc. :contentReference[oaicite:38]{index=38}  
+        - Evidence: Updated API doc with “Status: Implemented” and linked code lines for `camera_status_update`, `get_camera_status`, etc. 
 
 - **S4: MediaMTX Integration - PARTIALLY COMPLETE (FAST TRACK)**  
 - **Objective:** Provide reliable MediaMTX stream management, recording, snapshotting, health checking, and dynamic configuration per architecture.
