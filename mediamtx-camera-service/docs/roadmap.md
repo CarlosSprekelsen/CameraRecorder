@@ -4,7 +4,7 @@
 
 This roadmap enforces a strict quality pipeline to guarantee architectural compliance, implementation rigor, and auditability. **Progression through each phase is controlled by explicit IV&V (Independent Verification & Validation) "control points."** No Epic or Story may advance until all required IV&V gates are fully passed and evidence of implementation is present in both code and documentation.
 
-**The high-level flow is:**
+**The high-level flow:**
 
 1. **Architecture & Scaffolding**
     - Complete and approve all architecture documents, API contracts, and configuration structures.
@@ -40,7 +40,7 @@ This roadmap enforces a strict quality pipeline to guarantee architectural compl
 Every IV&V (Independent Verification & Validation) control point MUST be reviewed and signed off using the following checklist:
 
 - [ ] All corresponding implementation, documentation, and configuration tasks are complete (not just decided—built, tested, and validated).
-- [ ] All STOP, TODO, and placeholder code related to this control point have been replaced by working, validated logic.
+- [ ] All STOP, TODO, and placeholder code related to this control point have been replaced by working, validated logic or explicitly deferred with rationale.
 - [ ] No accidental scope/feature creep: The codebase and docs match only what is authorized in the architecture and roadmap.
 - [ ] Evidence of completion is present: All roadmap tasks reference the file(s), doc(s), or commit(s) demonstrating completion.
 - [ ] All cross-referenced IV&V or Epic/Story dependencies are also satisfied (no unaddressed downstream blockers).
@@ -57,344 +57,205 @@ Every IV&V (Independent Verification & Validation) control point MUST be reviewe
 ## Pre-Completion Validation Checklist
 
 Before marking any task as [x] complete:
-1. [ ] Code change is present and functional (not just TODO/STOP comments)
-2. [ ] Related tests exist and pass
+1. [ ] Code change is present and functional (not just TODO/STOP comments)  
+2. [ ] Related tests exist and pass  
 3. [ ] Documentation updated if needed  
-4. [ ] No NotImplementedError, `pass` statements, or "TODO" comments remain
-5. [ ] Reviewer has validated the evidence
-6. [ ] Evidence field contains specific file/line/commit references
+4. [ ] No NotImplementedError, `pass` statements, or "TODO" comments remain unaddressed (or are canonical deferred decisions)  
+5. [ ] Reviewer has validated the evidence  
+6. [ ] Evidence field contains specific file/line/commit references  
 
 ---
 
 ## 🌍 Epics (Long-Term Goals)
 
 ### E1: Robust Real-Time Camera Service Core - SUBSTANTIALLY COMPLETE (FAST TRACK)
-    
-- **S1a: Architecture Scaffolding (COMPLETE)**
-        - [x] [FIX] Implement all missing JSON-RPC method stubs in `server.py` as referenced in API docs.  
-            - Evidence: `src/websocket_server/server.py` (2025-08-02), `docs/api/json-rpc-methods.md`  
-            - Status: All method signatures present with proper parameter handling
-        - [x] [FIX] Correct all parameter typos in `api/json-rpc-methods.md`.  
-            - Evidence: `docs/api/json-rpc-methods.md` (2025-08-02)
-        - [x] [IMPL] Add notification handler stubs in `server.py`.  
-            - Evidence: `src/websocket_server/server.py` (2025-08-02)  
-            - Status: notification methods `notify_camera_status_update` and `notify_recording_status_update` present
-        - [x] [IMPL] Add method-level API versioning stubs in `server.py`.  
-            - Evidence: `src/websocket_server/server.py` and `docs/architecture/overview.md` (2025-08-02)  
-            - Status: Version tracking framework implemented with `register_method()` versioning
-        - [x] [IVV] Document and validate logging infrastructure implementation.  
-            - Evidence: `src/camera_service/logging_config.py` (275 lines, 2025-08-02)  
-            - Status: Structured logging with CorrelationIdFilter, JsonFormatter, ConsoleFormatter
-        - [x] [IVV] Document and validate configuration system implementation.  
-            - Evidence: `src/camera_service/config.py` lines 1-470 (2025-08-02)  
-            - Status: YAML loading, environment overrides, validation, hot reload implemented
-        - [x] [IMPL] Implement environment variable overrides for configuration.  
-            - Evidence: `src/camera_service/config.py` lines 150-230 (2025-08-02)
-        - [x] [IMPL] Implement configuration schema validation.  
-            - Evidence: `src/camera_service/config.py` lines 290-380 (2025-08-02)
-        - [x] [IMPL] Implement runtime configuration updates.  
-            - Evidence: `src/camera_service/config.py` lines 100-140 (2025-08-02)
-        - [x] [IMPL] Implement configuration hot reload capability.  
-            - Evidence: `src/camera_service/config.py` lines 140-190 (2025-08-02)
 
-    - **S2: Architecture Compliance IV&V (Control Point) - COMPLETE**
-        - [x] [IVV] Validate all stubs/modules correspond to architecture.  
-            - Evidence: `docs/architecture/overview.md` vs codebase structure validation (2025-08-02)
-            - Status: All architectural components have corresponding code modules
-        - [x] [IVV] Validate no accidental scope/feature creep in scaffolding.  
-            - Evidence: Code review confirms alignment with architecture scope (2025-08-02)
-        - [x] [IVV] Validate coding standards and docstrings are present.  
-            - Evidence: `docs/development/principles.md` compliance and codebase review (2025-08-02)
+- **S1a: Architecture Scaffolding (COMPLETE)**  
+    - Status: ✅ Complete  
+    - Summary: API contracts, configuration structures, method/handler stubs, and documentation frameworks are in place and aligned with the approved architecture.  
 
-- **S2b: Audit & Task Breakdown (INFORMATIONAL, feeds S3)**  
-    - **Purpose:** Quickly validate that fast-track implementation aligns with architecture and produce the real actionable work for S3/S4. This is not a hard gating story—execution proceeds while remaining gaps are tracked and closed downstream.  
-    - [x] **Audit existing implementation components against architecture & API definitions.**  
-        - Evidence: Code present in `src/websocket_server/server.py`, `src/mediamtx_wrapper/controller.py`, and `src/camera_service/service_manager.py` reflecting core responsibilities defined in `docs/architecture/overview.md`. Status: Baseline audit completed; key partials surfaced and promoted into S3/S4 for execution.
-    - [x] **Document and resolve surfaced partial implementation gaps (subset resolved).**  
-        - Resolved gaps:  
-            * Snapshot implementation updated from placeholder to real FFmpeg-based capture.
-            * Recording duration computation implemented in `stop_recording`. 
-        - Remaining / tracked gaps (now owned in S3/S4):  
-            * API documentation drift (JSON-RPC docs vs implementation).  
-            * Versioning/deprecation governance clarity in WebSocket server.
-            * Integration of real capability detection into propagated camera metadata.
-    - [ ] **Clarify deferred decisions or governance items if not yet finalized.**  
-        - Example: Deprecated-method tracking/version negotiation—decide to implement fully or formally defer with annotation. 
-    - [ ] **Normalize non-compliant TODO/STOP comments to the canonical format defined in `docs/development/principles.md`.**  
-        - Task: Refactor outstanding comments and capture before/after evidence.
-    - [ ] **Update architecture overview with fast-track deviations and decision records.**  
-        - File: `docs/architecture/overview.md`.  
-        - Task: Capture that snapshot/duration were known partials and are now resolved, and note remaining items feeding S3/S4.  
+- **S2: Architecture Compliance IV&V (Control Point) - COMPLETE**  
+    - Status: ✅ Complete  
+    - Summary: Stubs and scaffolding validated against architecture; no accidental scope creep; coding standards and docstring requirements confirmed.  
+    - Evidence Sources: `docs/architecture/overview.md`, `docs/development/principles.md`, audit artifacts.
 
-> _Note: Completion of these audit observations informs closing S3; they are not independent hard gates. Execution of remaining work continues in S3 and S4 with tracked acceptance criteria._
+- **S2b: Fast-Track Audit Baseline (Informational)**  
+    - Status: ✅ Completed / Baseline Captured  
+    - Purpose: Capture the actual implementation state from fast-track work to feed into S3/S4 closure. Not a blocking gate if clarifications remain; findings were folded into subsequent stories.  
+    - Audit Artifacts: `WebSocket Server Code Audit.md`, `MediaMTX Controller Code Audit.md`, `Camera Service Manager Audit.md`, `Camera Discovery Module Security Audit.md`  
+    - Summary Findings: Core modules largely implemented; remaining deficiencies identified around metadata confirmation, observability, health recovery logic, and test scaffolds.  
 
-- **S3: Camera Discovery & Monitoring Implementation - PARTIALLY COMPLETE (FAST TRACK)**  
-- **Objective:** Fulfill architecture requirements for real-time camera discovery, capability probing, status tracking, and event propagation.
+- **S3: Camera Discovery & Monitoring Implementation - PARTIALLY COMPLETE**  
+    - Status: 🟡 In progress  
+    - Bug / Partial Summary:  
+        - Capability detection merging and confirmation logic refined to weighted/frequency-based with stability window, but end-to-end reconciliation with service manager metadata needs validation.  
+        - Service manager lacked consistent provisional vs confirmed annotation in notifications and required additional defensive guards and correlation logging in lifecycle orchestration.  
+        - Udev event processing test coverage gaps (change events, race conditions, invalid nodes, fallback to polling).  
+    - Key Deliverables Remaining:  
+        - Harden and validate metadata flow (provisional → confirmed), including logging of state transitions.  
+        - Expand discovery test coverage.  
+        - Simulated lifecycle validation (connect → stream → notification → disconnect).  
 
-    - [x] [IMPL] Implement camera connect/disconnect handling and coordinate with MediaMTX.  
-        - Evidence: `src/camera_service/service_manager.py` event handlers (`_handle_camera_connected`, `_handle_camera_disconnected`) and orchestration paths. 
-        - Status: Complete for baseline flow.
-
-    - [x] [IMPL] Integrate camera monitoring with MediaMTX controller.  
-        - Evidence: Notification parameter preparation and stream creation/deletion logic in `ServiceManager`.
-        - Status: Full integration path exists.
-
-    - [x] [IMPL] Hybrid camera discovery framework (udev + polling) implemented.  
-        - Evidence: `src/camera_discovery/hybrid_monitor.py` implementation of udev event loop, polling fallback, and device lifecycle. 
-        - Status: Complete scaffolding and operational logic.
-
-    - [x] [IMPL] Harden and expand capability detection validation.  
-        - Task: Extend tests and edge case handling for `_probe_device_capabilities`, including varied format/resolution outputs, error conditions, and timeout fallbacks.  
-        - Acceptance Criteria: Tests cover success paths, parsing variations, timeouts, and failure modes; no unresolved TODOs in detection logic.  
-        - Evidence: Expanded tests under `tests/unit/test_camera_discovery/validate_capabilities.py` or similar; execution results, coverage report. 
-
-    - [x] [IMPL] Implement udev event filtering and real-time processing.  
-        - Evidence: `_process_udev_device_event` with device node validation and range filtering. 
-        - Status: Baseline implemented.
-
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Expand udev event processing test coverage.  
-        - Task: Cover additional scenarios: `change` events affecting status, invalid nodes, race conditions, and fallback to polling.  
-        - Acceptance Criteria: Tests in `tests/unit/test_camera_discovery/validate_udev.py` (or combined) demonstrating correct filtering and event propagation.{index=36}  
-
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Integrate real capability detection results into camera metadata propagation.  
-        - Task: Replace fallbacks/defaults in `_get_camera_metadata` with actual capability-derived resolution/fps when available; if delayed, annotate dependency explicitly.  
-        - Acceptance Criteria: Notifications include accurate metadata or clearly annotated interim state. 
-
-    - [ ] [DOCS] **LOW/MEDIUM PRIORITY**: Reconcile and update JSON-RPC API documentation for camera status notifications and capability fields.  
-        - Task: Update `docs/api/json-rpc-methods.md` to reflect actual implemented fields, mark implemented methods appropriately, and add examples matching runtime behavior.  
-        - Evidence: Updated API doc with “Status: Implemented” and linked code lines for `camera_status_update`, `get_camera_status`, etc. 
-
-- **S4: MediaMTX Integration - PARTIALLY COMPLETE (FAST TRACK)**  
-- **Objective:** Provide reliable MediaMTX stream management, recording, snapshotting, health checking, and dynamic configuration per architecture.
-
-    - [x] [IMPL] Implement stream creation/deletion logic.  
-        - Evidence: `create_stream` and `delete_stream` methods in `src/mediamtx_wrapper/controller.py` with REST interaction and error handling. :contentReference[oaicite:39]{index=39}  
-
-    - [x] [IMPL] Implement recording management (start/stop), including duration computation.  
-        - Evidence: `start_recording` and `stop_recording` with session metadata; `stop_recording` includes accurate duration calculation. :contentReference[oaicite:40]{index=40}  
-        - Status: Completed (previously pending duration computation).
-
-    - [x] [IMPL] Snapshot capture implemented (real).  
-        - Evidence: `take_snapshot` invokes FFmpeg to capture a real frame, persists actual image, and returns metadata. :contentReference[oaicite:41]{index=41}  
-        - Status: Completed (no longer a placeholder).
-
-    - [x] [IMPL] Health monitoring and connectivity verification.  
-        - Evidence: `health_check` and associated background monitoring logic in controller. :contentReference[oaicite:42]{index=42}  
-
-    - [x] [IMPL] Dynamic configuration updates.  
-        - Evidence: `update_configuration` method exists and applies updates per architecture expectations. :contentReference[oaicite:43]{index=43}  
-
-    - [ ] [DOCS] **MEDIUM PRIORITY**: Reflect MediaMTX integration status in API/architecture docs, including any historical partials and their closure.  
-        - Task: Update roadmap/architecture decision logs to capture that snapshot and recording duration were known partials and have been resolved.  
-        - Acceptance Criteria: Clear “known partials” note with owner and closure dates recorded.
-
+- **S4: MediaMTX Integration - PARTIALLY COMPLETE**  
+    - Status: 🟡 In progress  
+    - Bug / Partial Summary:  
+        - Health monitor improved with configurable circuit breaker and confirmation window, but edge-case flapping tests and failure/recovery semantics need coverage.  
+        - Snapshot capture and recording duration implementation hardened; closure documentation pending.  
+        - Logging and error context improvements mostly applied; verify consistency.  
+    - Key Deliverables Remaining:  
+        - Validate health monitor behavior under noisy conditions.  
+        - Add explicit architectural decision log entries marking snapshot and duration partials as closed.  
+        - Finalize any remaining test gaps for robustness and observability.
 
 - **S5: Core Integration IV&V (Control Point) - PENDING**  
-    - [ ] [IVV] **MEDIUM PRIORITY**: Draft acceptance test cases for end-to-end workflows  
-        - Task: Create test scenarios for camera → MediaMTX → notification flows before full IV&V  
-        - Action: Define test cases for connect/disconnect, stream creation, recording, snapshot capture  
-        - Evidence:  
-    - [ ] [IVV] **HIGH PRIORITY**: Validate MediaMTX integration with actual camera device testing  
-        - Task: Test stream creation/deletion with physical or virtual camera device  
-        - Action: Verify end-to-end camera detection -> MediaMTX stream -> client notification flow  
-        - Evidence:  
-    - [ ] [IVV] **HIGH PRIORITY**: Validate notification and error recovery workflows  
-        - Task: Test camera connect/disconnect notification broadcasting and error handling  
-        - Action: Verify WebSocket notification delivery and MediaMTX error recovery mechanisms  
-        - Evidence:  
-    - [ ] [IVV] **MEDIUM PRIORITY**: Validate service orchestration and component lifecycle  
-        - Task: Test service manager startup/shutdown and component coordination  
-        - Action: Verify graceful service lifecycle with proper component dependencies  
-        - Evidence:  
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Complete missing deployment automation  
-        - File: deployment/scripts/install.sh (currently incomplete)  
-        - Task: Complete installation script with system dependencies and service setup  
-        - Action: Implement full system installation workflow matching deployment documentation  
-        - Evidence:  
-    - **_Cannot proceed to E2 until S5 IV&V is complete._**
+    - Status: 🔴 Pending  
+    - Summary: End-to-end acceptance test scenarios, lifecycle validation, error recovery workflows, and deployment bootstrap are not yet validated.  
+    - Key Work:  
+        - Define and execute acceptance test matrix (camera → MediaMTX → notification flows).  
+        - Validate service startup/shutdown orchestration.  
+        - Test error injection and recovery for critical paths.  
+        - Harden deployment script for repeatable environments.  
 
+### E2: Security and Production Hardening - PENDING E1 COMPLETION
 
-## **E2: Security and Production Hardening - PENDING S5 COMPLETION**
-- **S6: Security Features Implementation**
-        - [ ] [IMPL] Implement authentication framework (JWT/API key) in WebSocket server.  
-            - Evidence:
-        - [ ] [IMPL] Add health check REST endpoints for monitoring systems.  
-            - Evidence:
-        - [ ] [IMPL] Implement rate limiting and connection management.  
-            - Evidence:
-        - [ ] [IMPL] Add TLS/SSL support for production deployment.  
-            - Evidence:
+- **S6: Security Features Implementation**  
+    - Status: ⬜ Pending  
+    - Tasks: Authentication (JWT/API key), health check endpoints, rate limiting/connection control, TLS/SSL support.  
 
-- **S7: Security IV&V (Control Point)**
-        - [ ] [IVV] Authentication and authorization features verified.  
-            - Evidence:
-        - [ ] [IVV] All endpoints have correct access control validation.  
-            - Evidence:
-        - [ ] [IVV] Security test cases in place and passing.  
-            - Evidence:
-        - **_Cannot proceed to E3 until S7 IV&V is complete._**
+- **S7: Security IV&V (Control Point)**  
+    - Status: ⬜ Pending  
+    - Gate: Authentication/authorization, access control, security test cases must be reviewed and passing before proceeding to E3.  
 
-## **E3: Client API & SDK Ecosystem - PENDING E2 COMPLETION**
-- **S8: Client APIs and Examples**
-        - [ ] [IMPL] Add client API usage examples in `/examples`.  
-            - Evidence:
-        - [ ] [DOCS] Document API usage and authentication.  
-            - Evidence:
-        - [ ] [IMPL] Create client SDK or library for common platforms.  
-            - Evidence:
+### E3: Client API & SDK Ecosystem - PENDING E2 COMPLETION
 
-    - **S9: SDK & Docs IV&V (Control Point)**
-        - [ ] [IVV] Client API examples and docs reviewed for accuracy and completeness.  
-            - Evidence:
-        - [ ] [IVV] Usability tests or walkthroughs completed.  
-            - Evidence:
-        - **_Cannot proceed to E4 until S9 IV&V is complete._**
+- **S8: Client APIs and Examples**  
+    - Status: ⬜ Pending  
+    - Tasks: Add client usage examples, document authentication/usage, create SDKs.  
 
-## **E4: Future Extensibility - PLANNING ONLY**
-- **S10: Cloud/Protocol Extensions (Planning Only)**
-        - [ ] [DOCS] Prepare documentation and placeholders for future protocols/cloud (no implementation).  
-            - Evidence:
-        - [ ] [DOCS] Document plugin architecture for camera source extensions.  
-            - Evidence:
+- **S9: SDK & Docs IV&V (Control Point)**  
+    - Status: ⬜ Pending  
+    - Gate: Review docs/examples for accuracy, usability testing.  
 
-    - **S11: Extensibility IV&V (Control Point)**
-        - [ ] [IVV] Future plans reviewed, documented, and approved.  
-            - Evidence:
-        - [ ] [IVV] All extension points and plugin mechanisms validated.  
-            - Evidence:
-        - **_Cannot proceed to E5 until S11 IV&V is complete._**
+### E4: Future Extensibility - PLANNING ONLY
 
-- **E5: Deployment & Operations Strategy - PENDING E3 COMPLETION**
-    - **S12: Deployment Automation & Ops**
-        - [ ] [IMPL] Complete production deployment automation scripts.  
-            - Evidence:
-        - [ ] [DOCS] Add environment variable and system integration documentation.  
-            - Evidence:
-        - [ ] [DOCS] Document update/rollback and backup procedures.  
-            - Evidence:
-        - [ ] [IMPL] Add monitoring and alerting integration.  
-            - Evidence:
+- **S10: Cloud/Protocol Extensions (Planning Only)**  
+    - Status: ⬜ Planning  
+    - Tasks: Placeholder docs for future protocols/cloud integration and plugin architectures.  
 
-    - **S13: Deployment IV&V (Control Point)**
-        - [ ] [IVV] Deployment scripts tested on target environments.  
-            - Evidence:
-        - [ ] [IVV] Operations documentation validated.  
-            - Evidence:
-        - [ ] [IVV] Backup/recovery procedures verified.  
-            - Evidence:
+- **S11: Extensibility IV&V (Control Point)**  
+    - Status: ⬜ Pending  
+    - Gate: Review and approve future extension points before E5.
+
+### E5: Deployment & Operations Strategy - PENDING E3 COMPLETION
+
+- **S12: Deployment Automation & Ops**  
+    - Status: ⬜ Pending  
+    - Tasks: Complete deployment scripts, document environment integration, rollback/backup procedures, monitoring/alerting.  
+
+- **S13: Deployment IV&V (Control Point)**  
+    - Status: ⬜ Pending  
+    - Gate: Validate deployment on target environments, verify ops docs, and backup/recovery.
 
 ---
 
-## 📈 Stories: Testing & Documentation (Cross-Epic)
+## 🌱 Cross-Epic Stories
 
-- **S14: Automated Testing & Continuous Integration - PARTIALLY COMPLETE**
-    - [x] [IMPL] **MEDIUM PRIORITY**: Configure code formatting and linting tools  
-        - File: `.flake8`  
-        - Evidence: `.flake8` lines 1-10 (2025-08-02)  
-        - Status: Flake8 configuration with max line length 88, extend-ignore E203/W503
-    - [x] [IMPL] **MEDIUM PRIORITY**: Setup pre-commit hooks for code quality  
-        - File: `.pre-commit-config.yaml`  
-        - Evidence: `.pre-commit-config.yaml` lines 1-25 (2025-08-02)  
-        - Status: Pre-commit configuration with black, flake8, mypy, and standard hooks
-    - [x] [IMPL] **MEDIUM PRIORITY**: Configure type checking with mypy  
-        - File: `mypy.ini`  
-        - Evidence: `mypy.ini` lines 1-15 (2025-08-02)  
-        - Status: Mypy configuration with strict type checking compliance
-    - [x] [IMPL] **HIGH PRIORITY**: Document core project dependencies  
-        - File: `requirements.txt`  
-        - Evidence: `requirements.txt` lines 1-15 (2025-08-02)  
-        - Status: Core dependencies documented with version constraints
-    - [x] [IMPL] **HIGH PRIORITY**: Implement main application entry point  
-        - File: `src/camera_service/main.py`  
-        - Evidence: `src/camera_service/main.py` lines 1-70 (2025-08-02)  
-        - Status: Complete main entry point with service orchestration
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Add unit test scaffolding for all modules
-        - Task: Create test structure in tests/ directory matching src/ structure
-        - Evidence:
-    - [ ] [IMPL] **MEDIUM PRIORITY**: Achieve >80% unit/integration test coverage
-        - Task: Implement comprehensive test suite covering core functionality
-        - Evidence:
-    - [ ] [IMPL] **LOW PRIORITY**: Set up CI pipeline for automated testing
-        - Task: Configure GitHub Actions or similar for automated linting, formatting, and tests
-        - Evidence:
+### S14: Automated Testing & Continuous Integration - PARTIALLY COMPLETE
+- Status: 🟡 In progress  
+- Summary: Test scaffolds exist for core modules (websocket server, MediaMTX controller, service manager, hybrid monitor). Supporting components (`main.py`, `config.py`, `logging_config.py`) require proper stubs and integration. CI pipeline is not fully wired to enforce quality gates.  
+- Key Deliverables:  
+    - Fill out missing test scaffolds for camera_service support modules.  
+    - Add README for test conventions.  
+    - Bootstrap CI (lint, type-check, run unit tests).  
+    - Surface integration/happy-path test harness for S5.
 
-- **S15: Documentation & Developer Onboarding - PARTIALLY COMPLETE**
-    - [x] [DOCS] **HIGH PRIORITY**: Maintain coding standards documentation  
-        - File: `docs/development/coding-standards.md`  
-        - Evidence: `docs/development/coding-standards.md` (2025-08-02)  
-        - Status: Comprehensive coding standards with logging, documentation, and security requirements
-    - [x] [DOCS] **HIGH PRIORITY**: Maintain development principles documentation  
-        - File: `docs/development/principles.md`  
-        - Evidence: `docs/development/principles.md` (2025-08-02)  
-        - Status: Project principles with TODO formatting and IV&V alignment requirements
-    - [ ] [DOCS] **MEDIUM PRIORITY**: Complete setup instructions in `docs/development/setup.md`
-        - Task: Create developer environment setup guide
-        - Evidence:
-    - [ ] [DOCS] **MEDIUM PRIORITY**: Document configuration and environment variables
-        - Task: Create comprehensive configuration reference documentation
-        - Evidence:
-    - [ ] [DOCS] **LOW PRIORITY**: Document IV&V workflow and control points
-        - Task: Create IV&V process documentation for future contributors
-        - Evidence:
-
----
-## Open Issues & Gaps (Non-Blocking)
-
-These are known deficiencies or pending tasks surfaced by the fast-track audit. None are architectural show-stoppers; they are tracked as discrete work items in their respective Stories and expected to be closed as part of normal execution.
-
-- [ ] **Snapshot capture is a placeholder.**  
-  - Story: S4.  
-  - Description: Current implementation returns simulated data; real snapshot acquisition (MediaMTX API or FFmpeg fallback) needs to be implemented.  
-  - Owner: <name> / Target: <date>  
-  - Evidence: `src/mediamtx_wrapper/controller.py` `take_snapshot` TODO. :contentReference[oaicite:5]{index=5}  
-
-- [ ] **Recording duration not computed.**  
-  - Story: S4.  
-  - Description: `stop_recording` lacks actual duration calculation.  
-  - Owner: <name> / Target: <date>  
-  - Evidence: TODO in `src/mediamtx_wrapper/controller.py`. :contentReference[oaicite:6]{index=6}  
-
-- [ ] **API documentation drift.**  
-  - Story: S3.  
-  - Description: JSON-RPC docs still label implemented methods as “Not yet implemented”; needs reconciliation.  
-  - Owner: <name> / Target: <date>  
-  - Evidence: `docs/api/json-rpc-methods.md` vs `src/websocket_server/server.py`. :contentReference[oaicite:7]{index=7}  
-
-- [ ] **Versioning/deprecation governance clarity.**  
-  - Story: S2b/S3.  
-  - Description: Deprecated-method tracking in `server.py` is stubbed; decide whether to finalize or formally defer.  
-  - Owner: <name> / Target: <date>  
-  - Evidence: `src/websocket_server/server.py`. :contentReference[oaicite:8]{index=8}  
-
-- [ ] **TODO/STOP comment normalization.**  
-  - Story: S1a (cleanup) / S3.  
-  - Description: Format is defined in `docs/development/principles.md` but not consistently applied; refactor existing comments to canonical form.  
-  - Owner: <name> / Target: <date>  
-  - Evidence: `docs/development/principles.md` and instances in code. :contentReference[oaicite:9]{index=9}  
-
-## STOP BLOCKAGES
-
-### Currently Blocked (Implementation Required)
-
-*No current blockers - fast-track implementation has resolved previous architectural blockers*
-
-### Resolved Blockers
-
-- [x] **Clarification required**: "metrics" field in get_camera_status API response.  
-    - Resolved 2025-08-02: Implemented per updated architecture overview. See `docs/architecture/overview.md`, `src/websocket_server/server.py`.  
-- [x] **Clarification required**: Method-level API versioning implementation approach.  
-    - Resolved 2025-08-02: Architecture and code implement method-level versioning with register_method(). See `docs/architecture/overview.md`, `src/websocket_server/server.py`.  
-- [x] **Phase classification mismatch**: S1a completion status vs actual implementation level.  
-    - Resolved 2025-08-02: Roadmap realigned to reflect fast-track implementation reality with proper Epic transition validation.
+### S15: Documentation & Developer Onboarding - PARTIALLY COMPLETE
+- Status: 🟡 In progress  
+- Summary: Core principles, coding standards, and architectural overview exist. Need to (a) capture resolved partials and decisions, (b) sync API docs, (c) provide a concise test/acceptance guide for upcoming IV&V work.  
+- Key Deliverables:  
+    - Update API docs to reflect actual implemented fields and behaviors.  
+    - Document capability confirmation and health recovery policies.  
+    - Provide a lightweight acceptance test plan for S5.  
 
 ---
 
-## How to use this Roadmap
+## Sprint Planning (Post-Audit)
 
-- **Tasks are only marked [x] completed when both the architectural decision and the corresponding code/documentation are fully implemented and validated.**  
-- **STOP/BLOCKED items are moved to Resolved Blockers only when implementation is finished and matches the updated architecture.**  
-- **Open IV&V items must be validated by review before proceeding to next Epic/Story.**  
-- **All IV&V control points must be signed off using the IV&V Reviewer Checklist above.**  
-- **Use the Pre-Completion Validation Checklist before marking any task as complete.**  
-- **Priority levels (HIGH/MEDIUM/LOW) guide implementation order within each Story.**
-- **Fast-track implementation has accelerated progress - focus now on validation and completion of remaining gaps.**
+### Objectives for Next Sprint
+
+#### Objective A: Harden & Close S3 Remaining Gaps
+- Expand udev event processing tests (`change`, races, invalid nodes, polling fallback).  
+- Finalize and validate service manager metadata flow (provisional/confirmed) and lifecycle observability.  
+- Reconcile capability merging output with consumed camera metadata end-to-end.
+
+#### Objective B: Close S4 Partial Polishes & Document Closure  
+- Add or expand tests for health monitor recovery/flapping behavior with consecutive-success logic.  
+- Record and publish decision log entries marking snapshot/recording duration partials as closed.  
+
+#### Objective C: Prepare S5 End-to-End IV&V  
+- Draft and codify acceptance test matrix (full flow scenarios).  
+- Implement a “happy path” integration harness.  
+- Validate service lifecycle (startup/shutdown) with failure injection.  
+- Improve deployment bootstrap script for repeatable environments.
+
+#### Objective D: Solidify Test Coverage & CI (S14)  
+- Create stubs for `main.py`, `config.py`, and `logging_config.py`.  
+- Publish a test README summarizing scope and naming conventions.  
+- Wire a minimal CI to run key quality checks automatically.
+
+---
+
+## Backlog (Prioritized)
+
+1. Expand udev testing and metadata reconciliation (S3)  
+2. Harden and validate service manager lifecycle and observability (S3)  
+3. Add MediaMTX edge-case health monitor tests (S4)  
+4. Document closure of resolved partials (S4)  
+5. Draft S5 acceptance test plan and implement core integration smoke test  
+6. Create missing camera_service support module test stubs (S14)  
+7. Add tests README and conventions doc (S14)  
+8. Improve deployment/install script (S5)  
+9. Enable CI to enforce tests, linting, and type checking (S14)  
+10. Begin security feature implementation groundwork (E2)
+
+---
+
+## Status Summary
+
+- **Architecture & Scaffolding (S1a/S2):** ✅ Complete  
+- **Fast-track Audit (S2b):** ✅ Baseline captured and folded into stories  
+- **Camera Discovery & Monitoring (S3):** 🟡 Partial — hardening/testing remaining  
+- **MediaMTX Integration (S4):** 🟡 Partial — polishing and formal closure pending  
+- **Core Integration IV&V (S5):** 🔴 Pending  
+- **Testing & CI (S14):** 🟡 In progress  
+- **Documentation & Onboarding (S15):** 🟡 In progress  
+- **Security (E2):** ⬜ Pending  
+- **Client APIs/SDK (E3):** ⬜ Pending  
+- **Extensibility (E4):** ⬜ Planning  
+- **Deployment & Ops (E5):** ⬜ Pending  
+
+---
+
+## How to Use This Roadmap
+
+- Use the **story-level summaries** above as the authoritative view of current state; the backlog items are the concrete next steps.  
+- When a story is completed, update its status, add precise evidence (file/line/commit, test names, doc updates), and sign off per the IV&V Reviewer Checklist.  
+- Archive detailed per-file micro-tasks (from prior iterations) in a separate “audit journal” document if needed, keeping this file lean.  
+- Reference audit artifacts (the four audit MDs) when closing related story gaps to preserve traceability.
+
+---
+
+## Resolved Blockers / Notes
+
+- [x] **Architecture vs implementation misalignment**: Resolved through S2b audits and updated story definitions.  
+- [x] **Method-level versioning ambiguity**: Deferred with canonical STOP-style note in `server.py`; decision logged for revisit post-1.0.  
+- [x] **Capability merging policy instability**: Updated to frequency-weighted merge with confirmation window; documented and feeding into S3 metadata flow.  
+- [x] **Health monitor recovery flapping risk**: Addressed by introducing consecutive-success confirmation logic (configurable).  
+
+---
+
+*Audit artifacts to refer to for detailed origin of issues:*  
+- `WebSocket Server Code Audit.md`  
+- `MediaMTX Controller Code Audit.md`  
+- `Camera Service Manager Audit.md`  
+- `Camera Discovery Module Security Audit.md`  
