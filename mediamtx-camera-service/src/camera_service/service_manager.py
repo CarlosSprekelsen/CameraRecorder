@@ -9,6 +9,7 @@ WebSocket server, camera discovery, MediaMTX integration, and health monitoring.
 
 import asyncio
 import logging
+import re
 from typing import Optional, Dict, Any
 
 from .config import Config
@@ -370,85 +371,119 @@ class ServiceManager(CameraEventHandler):
             
         except Exception as e:
             self._logger.error(f"Failed to handle camera status change: {e}")
+
+    def _get_stream_name_from_device_path(self, device_path: str) -> str:
+        """
+        Extract stream name from camera device path.
+        
+        Uses deterministic pattern matching to convert device paths like /dev/video0
+        to MediaMTX-compatible stream names like camera0. Provides fallback handling
+        for non-standard device paths.
+        
+        Args:
+            device_path: Camera device path (e.g., /dev/video0)
+            
+        Returns:
+            Stream name for MediaMTX (e.g., camera0)
+            
+        Examples:
+            /dev/video0 -> camera0
+            /dev/video15 -> camera15
+            /custom/path/device -> camera_hash
+        """
+        try:
+            # Use regex to extract device number from standard V4L2 paths
+            match = re.search(r'/dev/video(\d+)', device_path)
+            if match:
+                device_num = match.group(1)
+                return f"camera{device_num}"
+            
+            # Fallback for non-standard device paths
+            # Extract any digits from the path
+            digits = re.findall(r'\d+', device_path)
+            if digits:
+                return f"camera{digits[-1]}"
+            
+            # Final fallback using hash for completely non-standard paths
+            return f"camera_{abs(hash(device_path)) % 1000}"
+            
+        except Exception as e:
+            self._logger.warning(f"Error extracting stream name from {device_path}: {e}")
+            return "camera_unknown"
             
     async def _get_camera_metadata(self, event_data: CameraEventData) -> Dict[str, Any]:
         """
         Get camera metadata including resolution and fps from capability detection.
+        
+        Integrates with camera monitor capability detection to provide real device
+        metadata when available. Falls back to documented defaults when capability
+        data is not accessible.
         
         Args:
             event_data: Camera event data containing device info
             
         Returns:
             Dictionary with camera name, resolution, and fps
-            
-        Note: Currently falls back to default values when capability detection
-        data is not available. This is a documented interim state pending
-        full integration of capability detection results.
-        
-        TODO: HIGH: Integrate capability detection results from camera monitor [Story:E1/S3]
-        Owner: Camera Discovery team
-        Dependencies: camera_discovery.hybrid_monitor capability data propagation
         """
         # Extract device number for default naming
         device_num = "unknown"
         try:
-            import re
             match = re.search(r'/dev/video(\d+)', event_data.device_path)
             if match:
                 device_num = match.group(1)
         except Exception:
             pass
         
-        # Default camera metadata
+        # Initialize with default metadata
         camera_metadata = {
             "name": f"Camera {device_num}",
-            "resolution": "1920x1080",  # Default resolution
-            "fps": 30                   # Default fps
+            "resolution": "1920x1080",  # Architecture default
+            "fps": 30                   # Architecture default
         }
         
         # Override with device info if available
         if event_data.device_info:
             camera_metadata["name"] = event_data.device_info.name or camera_metadata["name"]
         
-        # TODO: HIGH: Extract real resolution/fps from capability detection
-        # The camera monitor's capability detection (_probe_device_capabilities) 
-        # collects formats, resolutions, and frame rates but this data is not 
-        # currently propagated through CameraEventData or CameraDevice.
-        #
-        # Required changes:
-        # 1. Extend CameraDevice or CameraEventData to include capability info
-        # 2. Modify hybrid_monitor to pass capability results in events
-        # 3. Update this method to use real detected values
-        #
-        # For now, using documented default values with clear annotation.
-        
+        # Attempt to get real capability data from camera monitor
         try:
-            # Attempt to get real capability data if camera monitor supports it
             if (self._camera_monitor and 
-                hasattr(self._camera_monitor, 'get_camera_capabilities')):
+                hasattr(self._camera_monitor, '_probe_device_capabilities')):
                 
-                capabilities = await self._camera_monitor.get_camera_capabilities(
+                self._logger.debug(f"Probing capabilities for {event_data.device_path}")
+                capabilities = await self._camera_monitor._probe_device_capabilities(
                     event_data.device_path
                 )
                 
-                if capabilities:
-                    # Extract first available resolution and fps
+                if capabilities and capabilities.get("detected"):
+                    # Extract real resolution and fps from capability detection
                     resolutions = capabilities.get("resolutions", [])
                     frame_rates = capabilities.get("frame_rates", [])
                     
                     if resolutions:
+                        # Use first available resolution as current setting
                         camera_metadata["resolution"] = resolutions[0]
+                        self._logger.debug(f"Using real resolution: {resolutions[0]} for {event_data.device_path}")
+                    
                     if frame_rates:
-                        camera_metadata["fps"] = int(float(frame_rates[0]))
-                        
-                    self._logger.debug(
-                        f"Using real capability data for {event_data.device_path}: "
+                        # Convert frame rate to integer, use first available
+                        try:
+                            camera_metadata["fps"] = int(float(frame_rates[0]))
+                            self._logger.debug(f"Using real fps: {camera_metadata['fps']} for {event_data.device_path}")
+                        except (ValueError, IndexError):
+                            self._logger.debug(f"Could not parse frame rate {frame_rates[0]}, using default")
+                    
+                    self._logger.info(
+                        f"Using capability-derived metadata for {event_data.device_path}: "
                         f"{camera_metadata['resolution']}@{camera_metadata['fps']}fps"
+                    )
+                else:
+                    self._logger.debug(
+                        f"Capability detection failed for {event_data.device_path}, using defaults"
                     )
             else:
                 self._logger.debug(
-                    f"Using default metadata for {event_data.device_path} - "
-                    f"capability integration pending"
+                    f"Capability detection not available for {event_data.device_path}, using defaults"
                 )
                 
         except Exception as e:
@@ -472,7 +507,7 @@ class ServiceManager(CameraEventHandler):
         
         try:
             # Check if camera monitor has capability detection
-            has_capabilities = hasattr(self._camera_monitor, 'get_camera_capabilities')
+            has_capabilities = hasattr(self._camera_monitor, '_probe_device_capabilities')
             
             if has_capabilities:
                 self._logger.info("Camera monitor capability detection integration: AVAILABLE")
@@ -585,28 +620,29 @@ class ServiceManager(CameraEventHandler):
                     self._logger.error(f"Error during camera monitor cleanup: {cleanup_error}")
                 self._camera_monitor = None
             raise
-        async def _start_health_monitor(self) -> None:
-            """Start the health monitoring and recovery component."""
-            self._logger.debug("Starting health monitor")
+
+    async def _start_health_monitor(self) -> None:
+        """Start the health monitoring and recovery component."""
+        self._logger.debug("Starting health monitor")
+        
+        try:
+            # Initialize Health Monitor with config
+            self._health_monitor = HealthMonitor(self._config)
             
-            try:
-                # Initialize Health Monitor with config
-                self._health_monitor = HealthMonitor(self._config)
-                
-                # Start health monitoring
-                await self._health_monitor.start()
-                self._logger.info("Health monitor started successfully")
-                
-            except Exception as e:
-                self._logger.error(f"Failed to start health monitor: {e}")
-                # Cleanup on failure
-                if self._health_monitor:
-                    try:
-                        await self._health_monitor.stop()
-                    except Exception as cleanup_error:
-                        self._logger.error(f"Error during health monitor cleanup: {cleanup_error}")
-                    self._health_monitor = None
-                raise
+            # Start health monitoring
+            await self._health_monitor.start()
+            self._logger.info("Health monitor started successfully")
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start health monitor: {e}")
+            # Cleanup on failure
+            if self._health_monitor:
+                try:
+                    await self._health_monitor.stop()
+                except Exception as cleanup_error:
+                    self._logger.error(f"Error during health monitor cleanup: {cleanup_error}")
+                self._health_monitor = None
+            raise
 
     async def _start_websocket_server(self) -> None:
         """Start the WebSocket JSON-RPC server component."""
@@ -688,27 +724,6 @@ class ServiceManager(CameraEventHandler):
                 self._logger.error(f"Error stopping MediaMTX controller: {e}")
             finally:
                 self._mediamtx_controller = None
-
-    def _get_stream_name_from_device_path(self, device_path: str) -> str:
-        """
-        Extract stream name from camera device path.
-        
-        Args:
-            device_path: Camera device path (e.g., /dev/video0)
-            
-        Returns:
-            Stream name for MediaMTX (e.g., camera0)
-        """
-        try:
-            # Extract device number from path like /dev/video0
-            if device_path.startswith('/dev/video'):
-                device_num = device_path.replace('/dev/video', '')
-                return f"camera{device_num}"
-            else:
-                # Fallback for non-standard device paths
-                return f"camera_{abs(hash(device_path)) % 1000}"
-        except Exception:
-            return "camera_unknown"
 
     @property
     def is_running(self) -> bool:
