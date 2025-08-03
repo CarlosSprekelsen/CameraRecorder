@@ -11,6 +11,7 @@ import os
 import signal
 import time
 import uuid
+import random
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import aiohttp
@@ -50,7 +51,12 @@ class MediaMTXController:
         health_check_interval: int = 30,
         health_failure_threshold: int = 10,
         health_circuit_breaker_timeout: int = 60,
-        health_max_backoff_interval: int = 120
+        health_max_backoff_interval: int = 120,
+        health_recovery_confirmation_threshold: int = 3,
+        backoff_base_multiplier: float = 2.0,
+        backoff_jitter_range: tuple = (0.8, 1.2),
+        process_termination_timeout: float = 3.0,
+        process_kill_timeout: float = 2.0
     ):
         """
         Initialize MediaMTX controller.
@@ -68,6 +74,11 @@ class MediaMTXController:
             health_failure_threshold: Failures before circuit breaker activates (default: 10)
             health_circuit_breaker_timeout: Circuit breaker timeout in seconds (default: 60)
             health_max_backoff_interval: Maximum backoff interval in seconds (default: 120)
+            health_recovery_confirmation_threshold: Consecutive successes required to reset circuit breaker (default: 3)
+            backoff_base_multiplier: Base multiplier for exponential backoff (default: 2.0)
+            backoff_jitter_range: Jitter range for backoff randomization (default: (0.8, 1.2))
+            process_termination_timeout: Timeout for graceful process termination (default: 3.0)
+            process_kill_timeout: Timeout for force kill after termination (default: 2.0)
         """
         self._host = host
         self._api_port = api_port
@@ -78,11 +89,18 @@ class MediaMTXController:
         self._recordings_path = recordings_path
         self._snapshots_path = snapshots_path
         
-        # Health monitoring configuration
+        # Configurable health monitoring parameters
         self._health_check_interval = health_check_interval
         self._health_failure_threshold = health_failure_threshold
         self._health_circuit_breaker_timeout = health_circuit_breaker_timeout
         self._health_max_backoff_interval = health_max_backoff_interval
+        self._health_recovery_confirmation_threshold = health_recovery_confirmation_threshold
+        self._backoff_base_multiplier = backoff_base_multiplier
+        self._backoff_jitter_range = backoff_jitter_range
+        
+        # Configurable process management parameters
+        self._process_termination_timeout = process_termination_timeout
+        self._process_kill_timeout = process_kill_timeout
         
         self._logger = logging.getLogger(__name__)
         self._base_url = f"http://{self._host}:{self._api_port}"
@@ -97,10 +115,12 @@ class MediaMTXController:
         # Enhanced tracking for health monitoring
         self._health_state = {
             'consecutive_failures': 0,
+            'consecutive_successes_during_recovery': 0,
             'last_success_time': 0.0,
             'last_failure_time': 0.0,
             'total_checks': 0,
-            'recovery_count': 0
+            'recovery_count': 0,
+            'circuit_breaker_activations': 0
         }
 
     async def start(self) -> None:
@@ -118,21 +138,30 @@ class MediaMTXController:
         
         self._logger.info("Starting MediaMTX controller", extra={'correlation_id': correlation_id})
         
-        # Create aiohttp ClientSession with timeout configuration
-        timeout = aiohttp.ClientTimeout(total=15, connect=5)
-        connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
-        self._session = aiohttp.ClientSession(
-            timeout=timeout,
-            connector=connector,
-            headers={"Content-Type": "application/json"}
-        )
-        
-        # Start health monitoring task
-        self._health_check_task = asyncio.create_task(self._health_monitor_loop())
-        self._running = True
-        
-        self._logger.info("MediaMTX controller started successfully", 
-                         extra={'correlation_id': correlation_id})
+        try:
+            # Validate directory permissions before starting
+            await self._validate_directory_permissions()
+            
+            # Create aiohttp ClientSession with timeout configuration
+            timeout = aiohttp.ClientTimeout(total=15, connect=5)
+            connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+            self._session = aiohttp.ClientSession(
+                timeout=timeout,
+                connector=connector,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            # Start health monitoring task
+            self._health_check_task = asyncio.create_task(self._health_monitor_loop())
+            self._running = True
+            
+            self._logger.info("MediaMTX controller started successfully", 
+                             extra={'correlation_id': correlation_id})
+        except Exception as e:
+            self._logger.error(f"Failed to start MediaMTX controller: {e}", 
+                             extra={'correlation_id': correlation_id})
+            await self._cleanup_on_start_failure()
+            raise
 
     async def stop(self) -> None:
         """
@@ -163,6 +192,47 @@ class MediaMTXController:
             self._session = None
             
         self._logger.info("MediaMTX controller stopped", extra={'correlation_id': correlation_id})
+
+    async def _validate_directory_permissions(self) -> None:
+        """Validate that required directories exist and are writable."""
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+        
+        directories = [
+            ("recordings", self._recordings_path),
+            ("snapshots", self._snapshots_path)
+        ]
+        
+        for dir_type, dir_path in directories:
+            try:
+                # Create directory if it doesn't exist
+                os.makedirs(dir_path, exist_ok=True)
+                
+                # Test write permissions
+                test_file = os.path.join(dir_path, f".write_test_{uuid.uuid4().hex[:8]}")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+                
+                self._logger.debug(f"Validated {dir_type} directory: {dir_path}", 
+                                 extra={'correlation_id': correlation_id})
+                
+            except PermissionError as e:
+                error_msg = f"Permission denied for {dir_type} directory: {dir_path}"
+                self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                raise RuntimeError(error_msg) from e
+            except OSError as e:
+                error_msg = f"Cannot access {dir_type} directory: {dir_path} - {e}"
+                self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                raise RuntimeError(error_msg) from e
+
+    async def _cleanup_on_start_failure(self) -> None:
+        """Clean up resources when startup fails."""
+        self._running = False
+        if self._health_check_task and not self._health_check_task.done():
+            self._health_check_task.cancel()
+        if self._session:
+            await self._session.close()
+            self._session = None
 
     async def health_check(self) -> Dict[str, Any]:
         """
@@ -197,7 +267,8 @@ class MediaMTXController:
                         "api_port": self._api_port,
                         "response_time_ms": response_time,
                         "correlation_id": correlation_id,
-                        "consecutive_failures": self._health_state['consecutive_failures']
+                        "consecutive_failures": self._health_state['consecutive_failures'],
+                        "circuit_breaker_activations": self._health_state['circuit_breaker_activations']
                     }
                 else:
                     error_text = await response.text()
@@ -255,15 +326,15 @@ class MediaMTXController:
         set_correlation_id(correlation_id)
         
         self._logger.info(f"Creating stream path: {stream_config.name} from {stream_config.source}",
-                         extra={'correlation_id': correlation_id})
+                         extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
         
         try:
-            # Check if stream already exists (enhanced idempotent behavior)
+            # Enhanced idempotent behavior - check if stream already exists
             try:
                 existing_stream = await self.get_stream_status(stream_config.name)
                 if existing_stream.get("name") == stream_config.name:
-                    self._logger.info(f"Stream path already exists: {stream_config.name}",
-                                    extra={'correlation_id': correlation_id})
+                    self._logger.info(f"Stream path already exists, returning existing URLs: {stream_config.name}",
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
                     return self._generate_stream_urls(stream_config.name)
             except ValueError:
                 # Stream doesn't exist, proceed with creation
@@ -286,22 +357,23 @@ class MediaMTXController:
             ) as response:
                 if response.status in [200, 201]:
                     self._logger.info(f"Successfully created stream path: {stream_config.name}",
-                                    extra={'correlation_id': correlation_id})
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
                     return self._generate_stream_urls(stream_config.name)
                 elif response.status == 409:
                     # Stream already exists, return URLs (additional idempotency)
-                    self._logger.info(f"Stream path already exists (409): {stream_config.name}",
-                                    extra={'correlation_id': correlation_id})
+                    self._logger.info(f"Stream path already exists (409 conflict): {stream_config.name}",
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
                     return self._generate_stream_urls(stream_config.name)
                 else:
                     error_text = await response.text()
-                    error_msg = f"Failed to create stream {stream_config.name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                    error_context = f"stream_name={stream_config.name}, source={stream_config.source}, record={stream_config.record}"
+                    error_msg = f"Failed to create stream {stream_config.name}: HTTP {response.status} - {error_text} (context: {error_context})"
+                    self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
                     raise ConnectionError(error_msg)
                     
         except aiohttp.ClientError as e:
             error_msg = f"MediaMTX unreachable during stream creation for {stream_config.name}: {e}"
-            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_config.name})
             raise ConnectionError(error_msg)
 
     def _generate_stream_urls(self, stream_name: str) -> Dict[str, str]:
@@ -335,29 +407,29 @@ class MediaMTXController:
         set_correlation_id(correlation_id)
         
         self._logger.info(f"Deleting stream path: {stream_name}",
-                         extra={'correlation_id': correlation_id})
+                         extra={'correlation_id': correlation_id, 'stream_name': stream_name})
         
         try:
             # Delete stream path via MediaMTX API
             async with self._session.post(f"{self._base_url}/v3/config/paths/delete/{stream_name}") as response:
                 if response.status in [200, 204]:
                     self._logger.info(f"Successfully deleted stream path: {stream_name}",
-                                    extra={'correlation_id': correlation_id})
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     return True
                 elif response.status == 404:
                     # Stream already doesn't exist (idempotent)
                     self._logger.info(f"Stream path already deleted or never existed: {stream_name}",
-                                    extra={'correlation_id': correlation_id})
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     return True
                 else:
                     error_text = await response.text()
                     error_msg = f"Failed to delete stream {stream_name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                    self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     return False
                     
         except aiohttp.ClientError as e:
             error_msg = f"MediaMTX unreachable during stream deletion for {stream_name}: {e}"
-            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             raise ConnectionError(error_msg)
 
     async def start_recording(
@@ -398,10 +470,20 @@ class MediaMTXController:
         if format not in valid_formats:
             raise ValueError(f"Invalid format: {format}. Must be one of: {valid_formats}")
         
-        # Ensure recordings directory exists
-        os.makedirs(self._recordings_path, exist_ok=True)
-        
         try:
+            # Ensure recordings directory exists and is writable
+            try:
+                os.makedirs(self._recordings_path, exist_ok=True)
+                # Test write permissions
+                test_file = os.path.join(self._recordings_path, f".write_test_{uuid.uuid4().hex[:8]}")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+            except (PermissionError, OSError) as e:
+                error_msg = f"Cannot write to recordings directory {self._recordings_path}: {e}"
+                self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                raise ValueError(error_msg) from e
+            
             # Generate recording filename with timestamp
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"{stream_name}_{timestamp}.{format}"
@@ -437,7 +519,7 @@ class MediaMTXController:
                     }
                     
                     self._logger.info(f"Started recording for stream {stream_name}: {filename}",
-                                    extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                                    extra={'correlation_id': correlation_id, 'stream_name': stream_name, 'filename': filename})
                     return {
                         "stream_name": stream_name,
                         "filename": filename,
@@ -450,12 +532,12 @@ class MediaMTXController:
                 else:
                     error_text = await response.text()
                     error_msg = f"Failed to start recording for {stream_name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                    self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     raise ValueError(error_msg)
                     
         except aiohttp.ClientError as e:
             error_msg = f"MediaMTX unreachable during recording start for {stream_name}: {e}"
-            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             raise ConnectionError(error_msg)
         
     async def stop_recording(self, stream_name: str) -> Dict[str, Any]:
@@ -502,32 +584,32 @@ class MediaMTXController:
                 json=path_config
             ) as response:
                 if response.status == 200:
-                    # Calculate file size with robust error handling
+                    # Enhanced file validation and error handling
                     file_path = session["record_path"]
                     file_size = 0
                     file_exists = False
+                    file_error = None
                     
-                    if os.path.exists(file_path):
-                        try:
+                    try:
+                        if os.path.exists(file_path):
                             file_size = os.path.getsize(file_path)
                             file_exists = True
-                        except OSError as e:
-                            self._logger.warning(f"Could not get file size for {file_path}: {e}",
-                                               extra={'correlation_id': correlation_id})
-                    else:
-                        self._logger.warning(f"Recording file not found: {file_path}",
-                                           extra={'correlation_id': correlation_id})
+                            self._logger.debug(f"Recording file validated: {file_path} ({file_size} bytes)",
+                                             extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                        else:
+                            file_error = f"Recording file not found: {file_path}"
+                            self._logger.warning(file_error, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                    except PermissionError as e:
+                        file_error = f"Permission denied accessing file: {file_path} - {e}"
+                        self._logger.warning(file_error, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                    except OSError as e:
+                        file_error = f"Error accessing file: {file_path} - {e}"
+                        self._logger.warning(file_error, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     
                     # Clean up recording session
                     del self._recording_sessions[stream_name]
                     
-                    self._logger.info(
-                        f"Stopped recording for stream {stream_name}: duration={actual_duration}s, "
-                        f"file_size={file_size}, file_exists={file_exists}",
-                        extra={'correlation_id': correlation_id, 'stream_name': stream_name}
-                    )
-                    
-                    return {
+                    result = {
                         "stream_name": stream_name,
                         "filename": session["filename"],
                         "status": "completed",
@@ -537,16 +619,27 @@ class MediaMTXController:
                         "file_size": file_size,
                         "file_exists": file_exists
                     }
+                    
+                    if file_error:
+                        result["file_warning"] = file_error
+                    
+                    self._logger.info(
+                        f"Stopped recording for stream {stream_name}: duration={actual_duration}s, "
+                        f"file_size={file_size}, file_exists={file_exists}",
+                        extra={'correlation_id': correlation_id, 'stream_name': stream_name, 'filename': session["filename"]}
+                    )
+                    
+                    return result
                 else:
                     error_text = await response.text()
                     # Keep session for retry - don't delete on API failure
                     error_msg = f"Failed to stop recording for {stream_name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                    self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     raise ValueError(error_msg)
                     
         except aiohttp.ClientError as e:
             error_msg = f"MediaMTX unreachable during recording stop for {stream_name}: {e}"
-            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             raise ConnectionError(error_msg)
 
     async def take_snapshot(
@@ -578,6 +671,7 @@ class MediaMTXController:
         set_correlation_id(correlation_id)
         
         ffmpeg_process = None
+        process_termination_attempted = False
         process_killed = False
         
         try:
@@ -586,15 +680,33 @@ class MediaMTXController:
                 timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
                 filename = f"{stream_name}_snapshot_{timestamp}.jpg"
             
-            # Ensure snapshots directory exists
-            os.makedirs(self._snapshots_path, exist_ok=True)
+            # Validate snapshots directory with enhanced error handling
+            try:
+                os.makedirs(self._snapshots_path, exist_ok=True)
+                # Test write permissions
+                test_file = os.path.join(self._snapshots_path, f".write_test_{uuid.uuid4().hex[:8]}")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+            except (PermissionError, OSError) as e:
+                error_msg = f"Cannot write to snapshots directory {self._snapshots_path}: {e}"
+                self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                return {
+                    "stream_name": stream_name,
+                    "filename": filename,
+                    "status": "failed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": 0,
+                    "error": error_msg
+                }
+                
             snapshot_path = os.path.join(self._snapshots_path, filename)
             
             # Use FFmpeg to capture snapshot from RTSP stream
             rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
             
             self._logger.info(f"Capturing snapshot from {rtsp_url} to {snapshot_path}",
-                            extra={'correlation_id': correlation_id, 'stream_name': stream_name})
+                            extra={'correlation_id': correlation_id, 'stream_name': stream_name, 'filename': filename})
             
             # FFmpeg command to capture single frame with enhanced options
             ffmpeg_cmd = [
@@ -629,7 +741,7 @@ class MediaMTXController:
                     file_size = os.path.getsize(snapshot_path)
                     self._logger.info(
                         f"Successfully captured snapshot for stream {stream_name}: {filename} ({file_size} bytes)",
-                        extra={'correlation_id': correlation_id, 'stream_name': stream_name}
+                        extra={'correlation_id': correlation_id, 'stream_name': stream_name, 'filename': filename}
                     )
                     return {
                         "stream_name": stream_name,
@@ -640,8 +752,8 @@ class MediaMTXController:
                         "file_path": snapshot_path
                     }
                 except OSError as e:
-                    self._logger.error(f"Could not get file size for snapshot {snapshot_path}: {e}",
-                                     extra={'correlation_id': correlation_id})
+                    self._logger.warning(f"Could not get file size for snapshot {snapshot_path}: {e}",
+                                       extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     return {
                         "stream_name": stream_name,
                         "filename": filename,
@@ -649,13 +761,13 @@ class MediaMTXController:
                         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                         "file_size": 0,
                         "file_path": snapshot_path,
-                        "warning": "Could not determine file size"
+                        "warning": f"Could not determine file size: {e}"
                     }
             else:
                 # FFmpeg failed - log error and return failure
                 error_msg = stderr.decode() if stderr else f"FFmpeg exit code: {ffmpeg_process.returncode}"
                 self._logger.error(f"FFmpeg snapshot failed for {stream_name}: {error_msg}",
-                                 extra={'correlation_id': correlation_id})
+                                 extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                 return {
                     "stream_name": stream_name,
                     "filename": filename,
@@ -666,57 +778,92 @@ class MediaMTXController:
                 }
                 
         except asyncio.TimeoutError:
-            # Enhanced timeout handling with process cleanup
-            if ffmpeg_process and ffmpeg_process.returncode is None:
-                try:
-                    # Try graceful termination first
-                    ffmpeg_process.terminate()
-                    await asyncio.wait_for(ffmpeg_process.wait(), timeout=3.0)
-                except asyncio.TimeoutError:
-                    # Force kill if graceful termination fails
-                    try:
-                        ffmpeg_process.kill()
-                        process_killed = True
-                        await ffmpeg_process.wait()
-                    except Exception as e:
-                        self._logger.error(f"Failed to kill FFmpeg process: {e}",
-                                         extra={'correlation_id': correlation_id})
-                        
-            timeout_context = "killed" if process_killed else "terminated"
-            self._logger.error(f"Snapshot capture timeout for {stream_name} (process {timeout_context})",
-                             extra={'correlation_id': correlation_id})
+            # Enhanced timeout handling with robust process cleanup
+            cleanup_context = await self._cleanup_ffmpeg_process(
+                ffmpeg_process, stream_name, correlation_id
+            )
+            
+            timeout_error = f"Snapshot capture timeout for {stream_name} ({cleanup_context})"
+            self._logger.error(timeout_error, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             return {
                 "stream_name": stream_name,
                 "filename": filename or f"{stream_name}_snapshot_timeout.jpg",
                 "status": "failed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
-                "error": f"Snapshot capture timeout (process {timeout_context})"
+                "error": timeout_error
             }
         except Exception as e:
             # Enhanced error handling with process cleanup
-            if ffmpeg_process and ffmpeg_process.returncode is None:
-                try:
-                    ffmpeg_process.terminate()
-                    await asyncio.wait_for(ffmpeg_process.wait(), timeout=3.0)
-                except:
-                    try:
-                        ffmpeg_process.kill()
-                        process_killed = True
-                    except:
-                        pass
-                        
-            error_context = f"process_killed={process_killed}" if process_killed else "normal_cleanup"
-            self._logger.error(f"Failed to capture snapshot for {stream_name} ({error_context}): {e}",
-                             extra={'correlation_id': correlation_id})
+            cleanup_context = await self._cleanup_ffmpeg_process(
+                ffmpeg_process, stream_name, correlation_id
+            )
+                
+            error_msg = f"Failed to capture snapshot for {stream_name} ({cleanup_context}): {e}"
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             return {
                 "stream_name": stream_name,
                 "filename": filename or f"{stream_name}_snapshot_failed.jpg",
                 "status": "failed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
-                "error": f"Snapshot capture error: {e}"
+                "error": error_msg
             }
+
+    async def _cleanup_ffmpeg_process(
+        self, 
+        process: Optional[asyncio.subprocess.Process], 
+        stream_name: str, 
+        correlation_id: str
+    ) -> str:
+        """
+        Robust FFmpeg process cleanup with escalating termination.
+        
+        Returns:
+            String describing cleanup action taken
+        """
+        if not process or process.returncode is not None:
+            return "no_cleanup_needed"
+        
+        cleanup_actions = []
+        
+        try:
+            # Step 1: Graceful termination (SIGTERM)
+            process.terminate()
+            cleanup_actions.append("terminated")
+            
+            try:
+                await asyncio.wait_for(process.wait(), timeout=self._process_termination_timeout)
+                cleanup_actions.append("graceful_exit")
+                return "_".join(cleanup_actions)
+            except asyncio.TimeoutError:
+                cleanup_actions.append("term_timeout")
+        
+        except Exception as e:
+            cleanup_actions.append(f"term_error_{type(e).__name__}")
+        
+        try:
+            # Step 2: Force kill (SIGKILL)
+            process.kill()
+            cleanup_actions.append("killed")
+            
+            try:
+                await asyncio.wait_for(process.wait(), timeout=self._process_kill_timeout)
+                cleanup_actions.append("force_exit")
+            except asyncio.TimeoutError:
+                cleanup_actions.append("kill_timeout")
+                self._logger.error(
+                    f"FFmpeg process for {stream_name} did not respond to SIGKILL within {self._process_kill_timeout}s",
+                    extra={'correlation_id': correlation_id, 'stream_name': stream_name}
+                )
+        except Exception as e:
+            cleanup_actions.append(f"kill_error_{type(e).__name__}")
+            self._logger.error(
+                f"Error killing FFmpeg process for {stream_name}: {e}",
+                extra={'correlation_id': correlation_id, 'stream_name': stream_name}
+            )
+        
+        return "_".join(cleanup_actions)
         
     async def get_stream_list(self) -> List[Dict[str, Any]]:
         """
@@ -804,12 +951,12 @@ class MediaMTXController:
                 else:
                     error_text = await response.text()
                     error_msg = f"Failed to get stream status for {stream_name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+                    self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
                     raise ConnectionError(error_msg)
                     
         except aiohttp.ClientError as e:
             error_msg = f"MediaMTX unreachable during stream status for {stream_name}: {e}"
-            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id, 'stream_name': stream_name})
             raise ConnectionError(error_msg)
 
     async def update_configuration(self, config_updates: Dict[str, Any]) -> bool:
@@ -868,9 +1015,11 @@ class MediaMTXController:
         # Validate configuration keys
         unknown_keys = set(config_updates.keys()) - set(valid_config_schema.keys())
         if unknown_keys:
-            raise ValueError(f"Unknown configuration keys: {list(unknown_keys)}")
+            error_msg = f"Unknown configuration keys: {list(unknown_keys)}"
+            self._logger.error(error_msg, extra={'correlation_id': correlation_id})
+            raise ValueError(error_msg)
             
-        # Enhanced configuration value validation
+        # Enhanced configuration value validation with error accumulation
         validation_errors = []
         for key, value in config_updates.items():
             schema = valid_config_schema[key]
@@ -926,10 +1075,17 @@ class MediaMTXController:
 
     async def _health_monitor_loop(self) -> None:
         """
-        Background task for continuous health monitoring with enhanced retry, backoff, and state tracking.
+        Background task for continuous health monitoring with configurable circuit breaker and adaptive backoff.
         
         Monitors MediaMTX health and logs status changes with automatic recovery.
-        Implements exponential backoff with jitter and detailed state transition logging.
+        Uses configurable parameters for all thresholds and backoff calculations.
+        
+        Anti-Flapping Recovery Design:
+        - Circuit breaker requires N consecutive successful health checks before fully resetting
+        - This prevents "flapping" where transient successes briefly clear the breaker
+        - Configurable confirmation threshold (default: 3) balances stability vs recovery speed
+        - Any failure during recovery resets the confirmation counter
+        - Partial recovery progress is logged for observability
         """
         correlation_id = str(uuid.uuid4())[:8]
         set_correlation_id(correlation_id)
@@ -937,8 +1093,7 @@ class MediaMTXController:
                          extra={'correlation_id': correlation_id})
         
         consecutive_failures = 0
-        max_failures_before_circuit_break = self._health_failure_threshold
-        circuit_breaker_timeout = self._health_circuit_breaker_timeout
+        consecutive_successes_during_recovery = 0
         circuit_breaker_active = False
         circuit_breaker_start_time = 0
         
@@ -949,64 +1104,109 @@ class MediaMTXController:
                     check_correlation_id = str(uuid.uuid4())[:8]
                     set_correlation_id(check_correlation_id)
                     
-                    # Check circuit breaker state
+                    # Check circuit breaker state with recovery confirmation
                     if circuit_breaker_active:
-                        if time.time() - circuit_breaker_start_time > circuit_breaker_timeout:
-                            circuit_breaker_active = False
-                            consecutive_failures = 0
-                            self._health_state['recovery_count'] += 1
-                            self._logger.info("Circuit breaker reset - attempting health check recovery",
-                                            extra={'correlation_id': check_correlation_id})
+                        if time.time() - circuit_breaker_start_time > self._health_circuit_breaker_timeout:
+                            # Circuit breaker timeout expired - attempt recovery probe
+                            consecutive_successes_during_recovery = 0
+                            self._health_state['consecutive_successes_during_recovery'] = 0
+                            self._logger.info("Circuit breaker timeout expired - attempting recovery probe",
+                                            extra={'correlation_id': check_correlation_id, 'circuit_breaker_transition': True})
+                            # Continue to health check - don't reset circuit_breaker_active yet
                         else:
-                            # Skip health check during circuit breaker
-                            await asyncio.sleep(10)
+                            # Skip health check during circuit breaker with configurable wait
+                            cb_wait_interval = min(10, self._health_check_interval)
+                            await asyncio.sleep(cb_wait_interval)
                             continue
                     
                     health_status = await self.health_check()
                     current_status = health_status.get("status")
                     
-                    # Enhanced status change logging with state transitions
+                    # Enhanced status change logging with recovery confirmation logic
+                    # Anti-flapping design: Circuit breaker requires N consecutive successes before full reset
                     if current_status != self._last_health_status:
                         if current_status == "healthy":
                             if self._last_health_status in ["unhealthy", "error"]:
-                                self._health_state['recovery_count'] += 1
-                                self._logger.info(
-                                    f"MediaMTX health RECOVERED: {self._last_health_status} -> {current_status} "
-                                    f"(failures reset from {consecutive_failures}, recovery #{self._health_state['recovery_count']})",
-                                    extra={'correlation_id': check_correlation_id, 'health_transition': True}
-                                )
-                            consecutive_failures = 0
-                            self._health_state['consecutive_failures'] = 0
-                            circuit_breaker_active = False
+                                if circuit_breaker_active:
+                                    # During circuit breaker recovery - count consecutive successes
+                                    consecutive_successes_during_recovery += 1
+                                    self._health_state['consecutive_successes_during_recovery'] = consecutive_successes_during_recovery
+                                    
+                                    if consecutive_successes_during_recovery >= self._health_recovery_confirmation_threshold:
+                                        # Confirmed recovery - fully reset circuit breaker
+                                        circuit_breaker_active = False
+                                        consecutive_failures = 0
+                                        consecutive_successes_during_recovery = 0
+                                        self._health_state['recovery_count'] += 1
+                                        self._health_state['consecutive_failures'] = 0
+                                        self._health_state['consecutive_successes_during_recovery'] = 0
+                                        
+                                        self._logger.info(
+                                            f"MediaMTX health FULLY RECOVERED: {self._last_health_status} -> {current_status} "
+                                            f"after {self._health_recovery_confirmation_threshold} consecutive successes "
+                                            f"(recovery #{self._health_state['recovery_count']})",
+                                            extra={'correlation_id': check_correlation_id, 'health_transition': True, 'circuit_breaker_reset': True}
+                                        )
+                                    else:
+                                        # Partial recovery - still in confirmation phase
+                                        self._logger.info(
+                                            f"MediaMTX health IMPROVING: {self._last_health_status} -> {current_status} "
+                                            f"(confirmation: {consecutive_successes_during_recovery}/{self._health_recovery_confirmation_threshold})",
+                                            extra={'correlation_id': check_correlation_id, 'health_transition': True, 'recovery_partial': True}
+                                        )
+                                else:
+                                    # Not in circuit breaker state - normal recovery
+                                    consecutive_failures = 0
+                                    self._health_state['consecutive_failures'] = 0
+                                    self._logger.info(
+                                        f"MediaMTX health RECOVERED: {self._last_health_status} -> {current_status}",
+                                        extra={'correlation_id': check_correlation_id, 'health_transition': True}
+                                    )
+                            else:
+                                # First time healthy or continuing healthy state
+                                consecutive_failures = 0
+                                consecutive_successes_during_recovery = 0
+                                self._health_state['consecutive_failures'] = 0
+                                self._health_state['consecutive_successes_during_recovery'] = 0
                         else:
+                            # Health degraded - reset recovery progress
                             consecutive_failures += 1
+                            consecutive_successes_during_recovery = 0
                             self._health_state['consecutive_failures'] = consecutive_failures
+                            self._health_state['consecutive_successes_during_recovery'] = 0
+                            
                             self._logger.warning(
                                 f"MediaMTX health DEGRADED: {self._last_health_status or 'unknown'} -> {current_status} "
-                                f"(consecutive_failures: {consecutive_failures}/{max_failures_before_circuit_break})",
+                                f"(consecutive_failures: {consecutive_failures}/{self._health_failure_threshold})",
                                 extra={'correlation_id': check_correlation_id, 'health_transition': True}
                             )
                             
                             # Activate circuit breaker if too many failures
-                            if consecutive_failures >= max_failures_before_circuit_break:
+                            if consecutive_failures >= self._health_failure_threshold and not circuit_breaker_active:
                                 circuit_breaker_active = True
                                 circuit_breaker_start_time = time.time()
+                                consecutive_successes_during_recovery = 0
+                                self._health_state['circuit_breaker_activations'] += 1
+                                self._health_state['consecutive_successes_during_recovery'] = 0
                                 self._logger.error(
-                                    f"MediaMTX health circuit breaker ACTIVATED after {consecutive_failures} consecutive failures",
+                                    f"MediaMTX health circuit breaker ACTIVATED after {consecutive_failures} consecutive failures "
+                                    f"(activation #{self._health_state['circuit_breaker_activations']})",
                                     extra={'correlation_id': check_correlation_id, 'circuit_breaker': True}
                                 )
                         
                         self._last_health_status = current_status
                     
-                    # Determine sleep interval based on health status with enhanced backoff
+                    # Determine sleep interval based on health status with configurable backoff
                     if current_status == "healthy":
                         sleep_interval = self._health_check_interval
                         consecutive_failures = 0
                     else:
-                        # Enhanced exponential backoff with jitter: 5s, 10s, 20s, 40s, max configurable
-                        import random
-                        base_interval = min(5 * (2 ** consecutive_failures), self._health_max_backoff_interval)
-                        jitter = random.uniform(0.8, 1.2)  # ±20% jitter to avoid thundering herd
+                        # Configurable exponential backoff with jitter
+                        base_interval = min(
+                            self._health_check_interval * (self._backoff_base_multiplier ** consecutive_failures), 
+                            self._health_max_backoff_interval
+                        )
+                        jitter = random.uniform(*self._backoff_jitter_range)
                         sleep_interval = base_interval * jitter
                         consecutive_failures += 1
                         
@@ -1021,24 +1221,35 @@ class MediaMTXController:
                     break
                 except Exception as e:
                     consecutive_failures += 1
+                    consecutive_successes_during_recovery = 0  # Reset recovery progress on error
                     self._health_state['consecutive_failures'] = consecutive_failures
+                    self._health_state['consecutive_successes_during_recovery'] = 0
                     self._logger.error(
                         f"Health monitoring error (failure #{consecutive_failures}): {e}",
                         extra={'correlation_id': check_correlation_id},
                         exc_info=True
                     )
                     
-                    # Enhanced exponential backoff on errors with circuit breaker
-                    if consecutive_failures >= max_failures_before_circuit_break and not circuit_breaker_active:
+                    # Configurable exponential backoff on errors with circuit breaker
+                    if consecutive_failures >= self._health_failure_threshold and not circuit_breaker_active:
                         circuit_breaker_active = True
                         circuit_breaker_start_time = time.time()
+                        consecutive_successes_during_recovery = 0
+                        self._health_state['circuit_breaker_activations'] += 1
+                        self._health_state['consecutive_successes_during_recovery'] = 0
                         self._logger.error(
-                            f"Health monitoring circuit breaker ACTIVATED due to repeated errors",
+                            f"Health monitoring circuit breaker ACTIVATED due to repeated errors "
+                            f"(activation #{self._health_state['circuit_breaker_activations']})",
                             extra={'correlation_id': check_correlation_id, 'circuit_breaker': True}
                         )
                     
-                    import random
-                    error_sleep = min(2 * (2 ** consecutive_failures), self._health_max_backoff_interval) * random.uniform(0.8, 1.2)
+                    # Configurable error backoff with jitter
+                    base_error_sleep = min(
+                        self._health_check_interval * (self._backoff_base_multiplier ** consecutive_failures), 
+                        self._health_max_backoff_interval
+                    )
+                    jitter = random.uniform(*self._backoff_jitter_range)
+                    error_sleep = base_error_sleep * jitter
                     await asyncio.sleep(error_sleep)
                     
         except Exception as e:
@@ -1048,6 +1259,8 @@ class MediaMTXController:
         finally:
             self._logger.info(
                 f"Health monitoring loop ended - Final stats: checks={self._health_state['total_checks']}, "
-                f"recoveries={self._health_state['recovery_count']}, failures={self._health_state['consecutive_failures']}",
+                f"recoveries={self._health_state['recovery_count']}, failures={self._health_state['consecutive_failures']}, "
+                f"circuit_breaker_activations={self._health_state['circuit_breaker_activations']}, "
+                f"recovery_confirmation_threshold={self._health_recovery_confirmation_threshold}",
                 extra={'correlation_id': correlation_id}
             )
