@@ -142,13 +142,18 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 1: Expand udev testing and metadata reconciliation (S3)
 
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/api/json-rpc-methods.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Condensed roadmap/backlog (priority focused on S3 hardening).
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: ONLY use the above documents as the source of truth. Do not invent new features or make architectural assumptions beyond what is specified. If anything is ambiguous or missing for a required behavior, stop and ask one precise clarifying question before proceeding.
 
@@ -185,13 +190,26 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 2: Harden and validate service manager lifecycle and observability (S3)
 
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/api/json-rpc-methods.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Condensed roadmap/backlog emphasizing S3 lifecycle/observability.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
 
 Directive: Only rely on those documents. Do not add new features or speculative behavior. If a required decision (e.g., fallback priority or metadata merging ambiguity) is unclear, stop and ask exactly one focused question.
 
@@ -227,14 +245,18 @@ Output:
 
 ---------------------------------------------------------------------------
 Prompt 3: Add MediaMTX edge-case health monitor tests (S4)
-
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/api/json-rpc-methods.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Backlog prioritizing closure of S4 edge-case behavior.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Base everything strictly on the existing implementation and documentation; do not extrapolate new recovery policies unless grounded. If the exact expected behavior under combinations (e.g., flapping) is unclear, ask one precise question.
 
@@ -268,12 +290,18 @@ Output:
 
 ---------------------------------------------------------------------------
 Prompt 4: Document closure of resolved partials (S4)
-
-Context:
-Authoritative source: previously run code audits (`WebSocket Server Code Audit.md`, `MediaMTX Controller Code Audit.md`, `Camera Service Manager Audit.md`, `Camera Discovery Module Security Audit.md`), plus:
-- docs/architecture/overview.md 
-- docs/development/principles.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
 - docs/development/documentation-guidelines.md
+
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Only document what was actually resolved per the audit artifacts. No embellishment. If the linkage (evidence) for any purported closure is missing, note it explicitly.
 
@@ -301,12 +329,18 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 5: Draft S5 acceptance test plan and implement core integration smoke test
 
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/api/json-rpc-methods.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 - Condensed roadmap/backlog focusing on S5 validation.
 
 Directive: Do not add functionality beyond what's needed to exercise the existing implementation. If any end-to-end dependency is ambiguous (e.g., exact notification schema), refer to API doc; if still unclear, ask one precise question.
@@ -334,12 +368,18 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 6: Create missing camera_service support module test stubs (S14)
 
-Context:
-Authoritative sources: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Current backlog emphasizes test readiness for support modules.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Only create structured stubs; do not implement full business logic in tests. Use canonical TODO/STOP formatting for placeholders.
 
@@ -365,13 +405,18 @@ Output:
 
 ---------------------------------------------------------------------------
 Prompt 7: Add tests README and conventions doc (S14)
-
-Context:
-Authoritative sources: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Existing test scaffolds and backlog identifying proliferation of test areas.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Do not introduce new test paradigms outside current structure. Clarify, don’t speculate.
 
@@ -397,11 +442,18 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 8: Improve deployment/install script (S5)
 
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Existing backlog wants repeatable environment for S5 validation.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Only enhance the existing `deployment/scripts/install.sh` (or equivalent) to bootstrap the current code. Do not redesign deployment architecture.
 
@@ -432,10 +484,18 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 9: Enable CI to enforce tests, linting, and type checking (S14)
 
-Context:
-Authoritative ground truth: 
-- docs/development/principles.md (style/quality expectations)  
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Backlog prioritizing automated quality gates for S14.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 Directive: Build a minimal pipeline; do not over-engineer (start with essential checks). All behavior must be explicit; if tool versions or defaults are ambiguous, state assumptions.
 
@@ -464,12 +524,19 @@ Output:
 ---------------------------------------------------------------------------
 Prompt 10: Begin security feature implementation groundwork (E2)
 
-Context:
-Authoritative ground truth: 
-- docs/architecture/overview.md 
-- docs/development/principles.md 
-- docs/development/documentation-guidelines.md 
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 - Backlog beginning E2 groundwork.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
 
 Directive: Do not implement full security features prematurely. Focus on design, risk modeling, and scaffolding interfaces only. Stop and ask one focused question if an intended boundary or integration point is unclear.
 
@@ -497,9 +564,4 @@ Output:
 - Config schema sketch.  
 - List of prioritized follow-up tasks.
 
-
 ---------------------------------------------------------------------------
-
----------------------------------------------------------------------------
-
-
