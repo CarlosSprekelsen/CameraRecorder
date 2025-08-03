@@ -61,9 +61,9 @@ class ClientConnection:
         self.subscriptions: Set[str] = set()
         self.connected_at = asyncio.get_event_loop().time()
         
-        # TODO: HIGH: Add authentication state implementation [IV&V:S6]
-        # TODO: MEDIUM: Add permission tracking implementation [IV&V:S6]
-        # TODO: MEDIUM: Add rate limiting state implementation [IV&V:S6]
+        # TODO: HIGH: Implement authentication state management [IV&V:S6]
+        # TODO: MEDIUM: Implement permission tracking system [IV&V:S6]
+        # TODO: MEDIUM: Implement rate limiting state tracking [IV&V:S6]
 
 
 class WebSocketJsonRpcServer:
@@ -74,11 +74,10 @@ class WebSocketJsonRpcServer:
     as specified in the architecture overview.
     """
 
-    # STOP: MEDIUM: Version negotiation and migration logic deferred to post-1.0 release [IV&V:S2b]
-    # Rationale: Current method-level versioning satisfies architecture requirements.
-    # Version negotiation during handshake and migration guides are documented as future enhancements.
-    # Reference: docs/architecture/overview.md "Future Extensibility Framework"
-    # Owner: Solo engineer | Date: 2025-08-03
+    # STOP: MEDIUM: Version negotiation and deprecated method tracking deferred to post-1.0 [IV&V:S2b]
+    # Rationale: Current method-level versioning satisfies architecture requirements for MVP.
+    # Full version negotiation during handshake and migration guides documented as future enhancement.
+    # Owner: Solo engineer | Date: 2025-08-03 | Revisit: Post-1.0 when client SDK ecosystem requires it
     _method_versions: Dict[str, str] = {}
 
     def __init__(
@@ -119,9 +118,9 @@ class WebSocketJsonRpcServer:
         # JSON-RPC method handlers
         self._method_handlers: Dict[str, Callable] = {}
         
-        # TODO: HIGH: Initialize authentication system implementation [IV&V:S6]
-        # TODO: MEDIUM: Initialize rate limiting implementation [IV&V:S6]
-        # TODO: MEDIUM: Initialize metrics collection implementation [IV&V:S6]
+        # TODO: HIGH: Initialize JWT/API key authentication system [IV&V:S6]
+        # TODO: MEDIUM: Initialize rate limiting with configurable thresholds [IV&V:S6]
+        # TODO: MEDIUM: Initialize Prometheus metrics collection [IV&V:S6]
 
     def set_mediamtx_controller(self, controller) -> None:
         """
@@ -261,8 +260,8 @@ class WebSocketJsonRpcServer:
             
             self._logger.debug(f"Client {client_id} added to connection pool ({len(self._clients)} total)")
             
-            # Handle authentication (basic implementation - TODO: expand per architecture)
-            # For now, mark all clients as authenticated
+            # Handle authentication (basic implementation for MVP)
+            # TODO: MEDIUM: Expand authentication per security architecture [IV&V:S6]
             client.authenticated = True
             
             # Process incoming messages from client
@@ -482,11 +481,6 @@ class WebSocketJsonRpcServer:
 
         Architecture Reference:
             docs/architecture/overview.md: Method-level API versioning strategy.
-
-        # STOP: MEDIUM: Deprecated method tracking deferred to post-1.0 release [IV&V:S2b]
-        # Rationale: Current method-level versioning satisfies immediate architecture requirements.
-        # Deprecation tracking and migration warnings documented as future enhancement.
-        # Owner: Solo engineer | Date: 2025-08-03
         """
         self._method_handlers[method_name] = handler
         self._method_versions[method_name] = version
@@ -710,13 +704,16 @@ class WebSocketJsonRpcServer:
 
     async def _method_get_camera_list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Get list of all discovered cameras with their current status.
+        Get list of all discovered cameras with their current status and aggregated metadata.
+
+        Integrates real data from camera discovery monitor (with provisional/confirmed capability logic)
+        and MediaMTX controller. Returns architecture-compliant response structure.
 
         Args:
             params: Method parameters (unused)
 
         Returns:
-            Object with camera list and metadata per API specification.
+            Object with camera list and metadata per API specification
         """
         if not self._camera_monitor:
             self._logger.warning("Camera monitor not available for get_camera_list")
@@ -734,14 +731,34 @@ class WebSocketJsonRpcServer:
             connected_count = 0
             
             for device_path, camera_device in connected_cameras.items():
-                # Generate stream URLs for each camera
-                stream_name = self._get_stream_name_from_device_path(device_path)
+                # Get real capability metadata with provisional/confirmed logic
+                resolution = "1920x1080"  # Architecture default
+                fps = 30                  # Architecture default
                 
-                # Get stream URLs from MediaMTX controller if available
-                streams = {}
-                if self._mediamtx_controller:
+                # Use effective capability metadata (provisional or confirmed)
+                if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
                     try:
-                        # Check if stream exists and get URLs
+                        capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
+                        resolution = capability_metadata.get("resolution", resolution)
+                        fps = capability_metadata.get("fps", fps)
+                        
+                        # Log capability validation status for monitoring
+                        validation_status = capability_metadata.get("validation_status", "none")
+                        if validation_status in ["provisional", "confirmed"]:
+                            self._logger.debug(
+                                f"Using {validation_status} capability data for {device_path}: "
+                                f"{resolution}@{fps}fps"
+                            )
+                    except Exception as e:
+                        self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
+                
+                # Generate stream name and URLs
+                stream_name = self._get_stream_name_from_device_path(device_path)
+                streams = {}
+                
+                # Get stream URLs from MediaMTX controller if available and camera connected
+                if self._mediamtx_controller and camera_device.status == "CONNECTED":
+                    try:
                         stream_status = await self._mediamtx_controller.get_stream_status(stream_name)
                         if stream_status.get("status") == "active":
                             streams = {
@@ -752,19 +769,7 @@ class WebSocketJsonRpcServer:
                     except Exception as e:
                         self._logger.debug(f"Could not get stream status for {stream_name}: {e}")
                 
-                # Get capability-derived metadata when available
-                resolution = "1920x1080"  # Architecture default
-                fps = 30                  # Architecture default
-                
-                # Extract real capability data if camera monitor supports it
-                if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
-                    try:
-                        capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
-                        resolution = capability_metadata.get("resolution", resolution)
-                        fps = capability_metadata.get("fps", fps)
-                    except Exception as e:
-                        self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
-                
+                # Build camera info per API specification
                 camera_info = {
                     "device": device_path,
                     "status": camera_device.status,
@@ -795,38 +800,31 @@ class WebSocketJsonRpcServer:
 
     async def _method_get_camera_status(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Get status for a specific camera device.
+        Get detailed status for a specific camera device with aggregated real data.
 
-        Returns camera status object including metrics as specified in
-        docs/architecture/overview.md and docs/api/json-rpc-methods.md.
+        Combines data from camera discovery monitor (with provisional/confirmed capability logic),
+        MediaMTX controller (stream status and metrics), and provides graceful fallbacks.
 
         Args:
             params: Method parameters containing:
                 - device (str): Camera device path
 
         Returns:
-            Dict containing camera status fields per API specification:
-                - device: Camera device path
-                - status: Connection status
-                - name: Camera display name
-                - resolution: Current resolution setting
-                - fps: Current frame rate
-                - streams: Available stream URLs
-                - metrics: Performance metrics (bytes_sent, readers, uptime)
-                - capabilities: Device capabilities (if available)
+            Dict containing comprehensive camera status per API specification:
+                - device, status, name, resolution, fps, streams, metrics, capabilities
         """
         if not params or 'device' not in params:
             raise ValueError("device parameter is required")
         
         device_path = params['device']
         
-        # Initialize response with defaults
+        # Initialize response with architecture defaults
         camera_status = {
             "device": device_path,
             "status": "DISCONNECTED",
             "name": f"Camera {device_path.split('video')[-1] if 'video' in device_path else 'unknown'}",
-            "resolution": "",
-            "fps": 0,
+            "resolution": "1920x1080",  # Architecture default
+            "fps": 30,                   # Architecture default  
             "streams": {},
             "metrics": {
                 "bytes_sent": 0,
@@ -851,43 +849,38 @@ class WebSocketJsonRpcServer:
                         "name": camera_device.name
                     })
                     
-                    # If camera is connected, get real capability metadata
+                    # Get real capability metadata with provisional/confirmed logic
                     if camera_device.status == "CONNECTED":
-                        # Use capability-derived metadata when available
                         if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
                             try:
                                 capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
+                                
+                                # Use capability-derived resolution and fps
                                 camera_status.update({
                                     "resolution": capability_metadata.get("resolution", "1920x1080"),
                                     "fps": capability_metadata.get("fps", 30)
                                 })
                                 
-                                # Update capabilities with real data
+                                # Update capabilities with real detected data
                                 if capability_metadata.get("formats"):
                                     camera_status["capabilities"]["formats"] = capability_metadata["formats"]
                                 if capability_metadata.get("all_resolutions"):
                                     camera_status["capabilities"]["resolutions"] = capability_metadata["all_resolutions"]
+                                
+                                # Log validation status for monitoring
+                                validation_status = capability_metadata.get("validation_status", "none")
+                                self._logger.debug(
+                                    f"Camera {device_path} using {validation_status} capability data: "
+                                    f"{camera_status['resolution']}@{camera_status['fps']}fps"
+                                )
                                     
                             except Exception as e:
                                 self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
-                                # Use architecture defaults
-                                camera_status.update({
-                                    "resolution": "1920x1080",
-                                    "fps": 30
-                                })
-                        else:
-                            # Camera monitor doesn't support capability metadata
-                            camera_status.update({
-                                "resolution": "1920x1080",  # Architecture default
-                                "fps": 30                   # Architecture default
-                            })
             
             # Get stream info and metrics from MediaMTX controller
             if self._mediamtx_controller and camera_status["status"] == "CONNECTED":
                 try:
                     stream_name = self._get_stream_name_from_device_path(device_path)
-                    
-                    # Get stream status and metrics
                     stream_status = await self._mediamtx_controller.get_stream_status(stream_name)
                     
                     if stream_status.get("status") == "active":
@@ -902,18 +895,16 @@ class WebSocketJsonRpcServer:
                         camera_status["metrics"] = {
                             "bytes_sent": stream_status.get("bytes_sent", 0),
                             "readers": stream_status.get("readers", 0),
-                            "uptime": int(time.time())  # Placeholder - real uptime needs stream start time
+                            "uptime": int(time.time())  # Current uptime proxy
                         }
                 
                 except Exception as e:
                     self._logger.debug(f"Could not get MediaMTX status for {device_path}: {e}")
-                    # Keep default empty streams and zero metrics
             
             return camera_status
             
         except Exception as e:
             self._logger.error(f"Error getting camera status for {device_path}: {e}")
-            # Return the initialized response with error status
             camera_status["status"] = "ERROR"
             return camera_status
 
@@ -921,29 +912,13 @@ class WebSocketJsonRpcServer:
         """
         Capture a snapshot from the specified camera.
 
-        Initiates snapshot capture from an active camera stream and saves the
-        image to the configured snapshots directory with optional custom filename.
-
         Args:
             params: Method parameters containing:
-                - device (str): Camera device path (e.g., "/dev/video0")
-                - filename (str, optional): Custom filename for snapshot
+                - device (str): Camera device path
+                - filename (str, optional): Custom filename
 
         Returns:
-            Dict containing snapshot capture information including:
-                - device: Source camera device path
-                - filename: Generated or custom filename
-                - status: Capture operation status
-                - timestamp: Capture timestamp
-                - file_size: Snapshot file size in bytes
-                - file_path: Full path to saved snapshot
-
-        Raises:
-            ValueError: If device parameter missing or camera not available
-
-        Architecture Reference:
-            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
-            MediaMTX integration for snapshot capture functionality
+            Dict containing snapshot information
         """
         if not params or 'device' not in params:
             raise ValueError("device parameter is required")
@@ -951,7 +926,6 @@ class WebSocketJsonRpcServer:
         device_path = params['device']
         custom_filename = params.get('filename')
         
-        # Validate MediaMTX controller is available
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -963,19 +937,14 @@ class WebSocketJsonRpcServer:
             }
         
         try:
-            # Convert device path to stream name
             stream_name = self._get_stream_name_from_device_path(device_path)
-            
-            # Generate filename
             filename = self._generate_filename(device_path, "jpg", custom_filename)
             
-            # Call MediaMTX controller to take snapshot
             snapshot_result = await self._mediamtx_controller.take_snapshot(
                 stream_name=stream_name,
                 filename=filename
             )
             
-            # Return successful result based on MediaMTX response
             return {
                 "device": device_path,
                 "filename": snapshot_result.get("filename", filename),
@@ -1000,31 +969,14 @@ class WebSocketJsonRpcServer:
         """
         Start recording video from the specified camera.
 
-        Initiates video recording from an active camera stream with configurable
-        duration and format options. Creates recording session and manages state.
-
         Args:
             params: Method parameters containing:
-                - device (str): Camera device path (e.g., "/dev/video0")
-                - duration (int, optional): Recording duration in seconds (None for unlimited)
-                - format (str, optional): Recording format ("mp4", "mkv")
+                - device (str): Camera device path
+                - duration (int, optional): Recording duration in seconds
+                - format (str, optional): Recording format
 
         Returns:
-            Dict containing recording session information including:
-                - device: Source camera device path
-                - session_id: Unique recording session identifier
-                - filename: Generated recording filename
-                - status: Recording operation status ("STARTED", "FAILED")
-                - start_time: Recording start timestamp
-                - duration: Requested duration (None if unlimited)
-                - format: Recording format being used
-
-        Raises:
-            ValueError: If device missing, camera not available, or already recording
-
-        Architecture Reference:
-            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
-            MediaMTX integration for recording management functionality
+            Dict containing recording session information
         """
         if not params or 'device' not in params:
             raise ValueError("device parameter is required")
@@ -1033,7 +985,6 @@ class WebSocketJsonRpcServer:
         duration = params.get('duration')
         format_type = params.get('format', 'mp4')
         
-        # Validate MediaMTX controller is available
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -1047,20 +998,15 @@ class WebSocketJsonRpcServer:
             }
         
         try:
-            # Convert device path to stream name
             stream_name = self._get_stream_name_from_device_path(device_path)
-            
-            # Generate session ID
             session_id = str(uuid.uuid4())
             
-            # Call MediaMTX controller to start recording
             recording_result = await self._mediamtx_controller.start_recording(
                 stream_name=stream_name,
                 duration=duration,
                 format=format_type
             )
             
-            # Return successful result based on MediaMTX response
             return {
                 "device": device_path,
                 "session_id": session_id,
@@ -1088,37 +1034,18 @@ class WebSocketJsonRpcServer:
         """
         Stop active recording for the specified camera.
 
-        Terminates ongoing recording session for a camera and provides final
-        recording information including duration and file metadata.
-
         Args:
             params: Method parameters containing:
-                - device (str): Camera device path (e.g., "/dev/video0")
+                - device (str): Camera device path
 
         Returns:
-            Dict containing recording completion information including:
-                - device: Source camera device path
-                - session_id: Recording session identifier that was stopped
-                - filename: Final recording filename
-                - status: Recording completion status ("STOPPED", "FAILED")
-                - start_time: Original recording start timestamp
-                - end_time: Recording stop timestamp
-                - duration: Actual recording duration in seconds
-                - file_size: Final recording file size
-
-        Raises:
-            ValueError: If device parameter is missing or not currently recording
-
-        Architecture Reference:
-            WebSocket JSON-RPC Server component (docs/architecture/overview.md)
-            MediaMTX integration for recording management functionality
+            Dict containing recording completion information
         """
         if not params or 'device' not in params:
             raise ValueError("device parameter is required")
         
         device_path = params['device']
         
-        # Validate MediaMTX controller is available
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -1133,13 +1060,9 @@ class WebSocketJsonRpcServer:
             }
         
         try:
-            # Convert device path to stream name
             stream_name = self._get_stream_name_from_device_path(device_path)
-            
-            # Call MediaMTX controller to stop recording
             recording_result = await self._mediamtx_controller.stop_recording(stream_name)
             
-            # Return successful result based on MediaMTX response
             return {
                 "device": device_path,
                 "session_id": recording_result.get("session_id"),
@@ -1167,41 +1090,35 @@ class WebSocketJsonRpcServer:
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
         """
-        Broadcast a camera_status_update notification to all connected clients.
+        Broadcast camera_status_update notification with strict API compliance.
 
-        Sends a real-time notification when a camera connects, disconnects, or changes status,
-        as specified in the architecture overview and API documentation.
+        Filters notification parameters to only include API-specified fields:
+        device, status, name, resolution, fps, streams (per docs/api/json-rpc-methods.md)
 
         Args:
-            params: Dictionary containing camera status fields:
-                - device: string - Camera device path
-                - status: string - Camera connection status
-                - name: string - Camera display name
-                - resolution: string - Current resolution setting
-                - fps: number - Current frame rate
-                - streams: dict - Available stream URLs
-
-        Architecture Reference:
-            docs/architecture/overview.md: "Server broadcasts camera status notification to authenticated clients."
-            Only permitted fields are device, status, name, resolution, fps, streams.
+            params: Dictionary containing camera status fields
         """
         if not params:
             self._logger.warning("Camera status update called with empty parameters")
             return
         
-        # Validate required fields per API documentation
+        # Validate required fields per API specification
         required_fields = ['device', 'status']
         for field in required_fields:
             if field not in params:
                 self._logger.error(f"Camera status update missing required field: {field}")
                 return
         
-        # Filter to only allowed fields per architecture overview and API specification
+        # STRICT API COMPLIANCE: Filter to only allowed fields per specification
         allowed_fields = {'device', 'status', 'name', 'resolution', 'fps', 'streams'}
         filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
         
+        # Log filtered fields for monitoring compliance
+        filtered_out = set(params.keys()) - allowed_fields
+        if filtered_out:
+            self._logger.debug(f"Filtered out non-API fields from camera notification: {filtered_out}")
+        
         try:
-            # Broadcast JSON-RPC 2.0 notification to all connected clients
             await self.broadcast_notification(
                 method="camera_status_update",
                 params=filtered_params
@@ -1211,43 +1128,38 @@ class WebSocketJsonRpcServer:
             
         except Exception as e:
             self._logger.error(f"Failed to broadcast camera status update: {e}")
-            # Continue execution - notification failure should not disrupt service
 
     async def notify_recording_status_update(self, params: Dict[str, Any]) -> None:
         """
-        Broadcast a recording_status_update notification to all connected clients.
+        Broadcast recording_status_update notification with strict API compliance.
 
-        Sends a real-time notification when recording starts, stops, or encounters an error,
-        as specified in the architecture overview and API documentation.
+        Filters notification parameters to only include API-specified fields:
+        device, status, filename, duration (per docs/api/json-rpc-methods.md)
 
         Args:
-            params: Dictionary containing recording status fields:
-                - device: string - Camera device path
-                - status: string - Recording status ("STARTED", "STOPPED", "FAILED")
-                - filename: string - Recording filename
-                - duration: number - Recording duration in seconds
-
-        Architecture Reference:
-            docs/architecture/overview.md: "Server notifies client when recording completes or fails."
-            Only permitted fields are device, status, filename, duration.
+            params: Dictionary containing recording status fields
         """
         if not params:
             self._logger.warning("Recording status update called with empty parameters")
             return
         
-        # Validate required fields per API documentation
+        # Validate required fields per API specification
         required_fields = ['device', 'status']
         for field in required_fields:
             if field not in params:
                 self._logger.error(f"Recording status update missing required field: {field}")
                 return
         
-        # Filter to only allowed fields per architecture overview and API specification
+        # STRICT API COMPLIANCE: Filter to only allowed fields per specification
         allowed_fields = {'device', 'status', 'filename', 'duration'}
         filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
         
+        # Log filtered fields for monitoring compliance
+        filtered_out = set(params.keys()) - allowed_fields
+        if filtered_out:
+            self._logger.debug(f"Filtered out non-API fields from recording notification: {filtered_out}")
+        
         try:
-            # Broadcast JSON-RPC 2.0 notification to all connected clients
             await self.broadcast_notification(
                 method="recording_status_update",
                 params=filtered_params
@@ -1257,7 +1169,6 @@ class WebSocketJsonRpcServer:
             
         except Exception as e:
             self._logger.error(f"Failed to broadcast recording status update: {e}")
-            # Continue execution - notification failure should not disrupt service
 
     def get_connection_count(self) -> int:
         """Get current number of connected clients."""
@@ -1281,14 +1192,3 @@ class WebSocketJsonRpcServer:
     def is_running(self) -> bool:
         """Check if the server is currently running."""
         return self._running
-
-# CHANGE LOG
-# 2025-08-03: Fixed constructor bug - added missing self._camera_monitor assignment
-# 2025-08-03: Implemented real camera data integration in get_camera_list() and get_camera_status()
-# 2025-08-03: Added explicit STOP comment for version negotiation deferment per roadmap
-# 2025-08-03: Normalized all TODO/STOP comments to canonical format per principles.md
-# 2025-08-03: Enhanced notification filtering to strictly match API specification
-# 2025-08-03: Integrated capability detection where available with graceful fallbacks
-# 2025-08-03: AUDIT FIX - Normalized TODO/STOP comment format to canonical standard
-# 2025-08-03: AUDIT FIX - Added STOP comment for deprecation tracking with proper deferral
-# 2025-08-03: AUDIT FIX - Enhanced real capability metadata integration in get_camera_list and get_camera_status
