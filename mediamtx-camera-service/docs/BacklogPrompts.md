@@ -1,0 +1,505 @@
+---------------------------------------------------------------------------
+Prompt 5: src/camera_service/main.py
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Audit and improve `src/camera_service/main.py` so that:
+- Startup sequence correctly wires configuration, logging, service manager, and handles dependency failures with clear errors.
+- Shutdown (signal handling) is graceful on typical termination signals; all running components are torn down cleanly.
+- Errors during initialization bubble with sufficient context and don’t leave partially-initialized state.
+- TODO/STOP comments are canonical or explicitly deferred.
+
+Additional Goal: Verify that a test scaffold exists under `tests/unit/test_camera_service/` (e.g., `test_main_startup.py`). If missing, emit a minimal pytest stub covering:
+  * Successful startup and teardown,
+  * Signal-triggered shutdown,
+  * Initialization failure paths (e.g., config load failure) and their observable behavior.
+
+Scope: Only modify `src/camera_service/main.py` and create the test stub if needed.
+
+Instructions:
+1. Audit startup/shutdown logic for robustness and clarity of failure modes.
+2. Normalize any TODO/STOP comments.
+3. Ensure signal handling works and is documented/observable.
+4. Check or emit test stub with clear expected assertions.
+
+Output:
+- Summary of findings and changes.
+- Updated `main.py`.
+- Starter test file if missing.
+- Evidence (line references).
+- Suggested further tests.
+- Any open questions.
+
+---------------------------------------------------------------------------
+Prompt 6: src/camera_service/config.py
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Audit and harden `src/camera_service/config.py` so that:
+- Configuration loading handles missing, malformed, or partially invalid YAML gracefully with fallbacks.
+- Environment variable overrides are validated; invalid overrides do not crash the service but log appropriate errors.
+- Hot reload mechanism triggers updates safely and does not leave inconsistent state.
+- Schema validation is comprehensive (types, ranges, required fields) and error accumulation is clear.
+- TODO/STOP comments follow canonical format.
+
+Additional Goal: Verify presence of test scaffold `tests/unit/test_camera_service/test_config_manager.py`. If missing, generate a stub covering:
+  * Loading default config when none exists,
+  * Env var overrides (valid and invalid),
+  * Malformed config detection,
+  * Hot reload simulation.
+
+Scope: Only modify `src/camera_service/config.py` and create the test stub if needed.
+
+Instructions:
+1. Audit fallback behavior, override handling, and hot reload safety.
+2. Normalize TODO/STOP comments.
+3. Ensure errors are logged without crashing.
+4. Check for or emit test stub with fixtures.
+
+Output:
+- Audit summary and fixes.
+- Updated `config.py`.
+- Test scaffold stub if missing.
+- Evidence of behaviors/cases covered.
+- Suggested additional tests.
+- Any open clarifications.
+
+---------------------------------------------------------------------------
+Prompt 7: src/camera_service/logging_config.py
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Audit and complete `src/camera_service/logging_config.py` so that:
+- Log rotation is either implemented per configuration (`max_file_size`, `backup_count`) or explicitly deferred with a canonical STOP-style decision note including rationale and plan.
+- Correlation ID propagation is reliable and present in all relevant log emitters.
+- Formatter selection (console vs structured/JSON) behaves per config and degrades gracefully on misconfiguration.
+- TODO/STOP comments are canonical.
+
+Additional Goal: Verify test scaffold `tests/unit/test_camera_service/test_logging_config.py` exists. If missing, emit a stub covering:
+  * Formatter behavior,
+  * Correlation ID presence,
+  * Deferred rotation logic (if not implemented) vs active rotation.
+
+Scope: Only modify `logging_config.py` and possibly create the test stub.
+
+Instructions:
+1. Audit current implementation for rotation, formatting, and correlation usage.
+2. Implement rotation or add clear deferment note.
+3. Normalize comments.
+4. Check/create test stub.
+
+Output:
+- Summary of audit findings and corrections.
+- Updated `logging_config.py`.
+- Starter test stub if absent.
+- Evidence (line numbers).
+- Suggested test expansions.
+- Any open questions.
+
+---------------------------------------------------------------------------
+Prompt 8: src/common/ (seed shared utilities)
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Populate `src/common/` with at least one practical shared utility and refactor an existing consumer to use it, to give the package immediate value and reduce duplication. Candidate modules:
+  * `retry.py`: exponential backoff with jitter helper.
+  * `types.py`: shared enums/constants (e.g., camera status).
+  * `logging_helpers.py`: correlation ID injection/retrieval helper.
+
+Additional Goal: Verify tests or usage exist that exercise the new common utility (e.g., health monitor, hybrid_monitor, or controller uses `common/retry.py`).
+
+Scope: Create new module(s) under `src/common/` and modify one existing consumer to leverage it (small refactor). Do not add unrelated features.
+
+Instructions:
+1. Create at least one utility (e.g., backoff helper) with minimal interface and defaults.
+2. Refactor a consumer (pick one: health monitor in controller, retry logic in hybrid_monitor, etc.) to use it.
+3. Write or update a minimal docstring/instruction in `src/common/__init__.py` or the module.
+4. If no existing test covers this yet, emit a stub test under `tests/unit/test_common/` for the utility.
+
+Output:
+- New `src/common/` module (e.g., `retry.py`) and refactored consumer.
+- Test stub if needed.
+- Summary of what was added/refactored.
+- Evidence (file/line references).
+- Any open clarifications.
+
+---------------------------------------------------------------------------
+Prompt 1: Expand udev testing and metadata reconciliation (S3)
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/api/json-rpc-methods.md 
+- docs/development/documentation-guidelines.md 
+- Condensed roadmap/backlog (priority focused on S3 hardening).
+
+Directive: ONLY use the above documents as the source of truth. Do not invent new features or make architectural assumptions beyond what is specified. If anything is ambiguous or missing for a required behavior, stop and ask one precise clarifying question before proceeding.
+
+Goal:
+1. Expand and tighten test coverage for `src/camera_discovery/hybrid_monitor.py` to cover:
+   - udev add/remove/change events including race conditions and invalid device nodes.
+   - Polling fallback when udev events are missed or stale.
+   - Capability parsing variations (multiple frame rates, malformed output).
+2. Validate reconciliation between the effective capability output from hybrid_monitor (frequency-weighted provisional/confirmed merge) and the metadata consumed by `src/camera_service/service_manager.py`. Ensure provisional vs confirmed semantics propagate without drift or silent mismatch.
+
+Scope:
+- Create/extend pytest files under `tests/unit/test_camera_discovery/`.
+- Write a lightweight integration test or verification helper that feeds hybrid_monitor’s merged capability result to service_manager’s metadata path and asserts consistency.
+- Do not add new architectural components or unrelated features.
+
+Acceptance Criteria:
+- Tests exist for udev event variants: add/remove/change, invalid node, racing sequences.  
+- Tests simulate missing udev events and verify polling fallback triggers and recovers.  
+- Capability parsing tests cover multiple fps formats and gracefully handle malformed outputs.  
+- Reconciliation check/assertion shows the effective capability (after confirmation logic) used by service_manager matches expected provisional/confirmed state; any divergence is surfaced clearly.  
+- No undefined behavior silently swallowed; mismatches are enumerated in the summary.
+
+Test Requirements:
+- Files like `test_hybrid_monitor_udev_fallback.py` and `test_hybrid_monitor_capability_parsing.py` with concrete fixture-driven scenarios.
+- A reconciliation test (could be in same or separate file) that mocks or drives hybrid_monitor output into service_manager and verifies metadata alignment.
+
+Output:
+- Bullet summary of findings and enhancements (with file/line references where applicable).  
+- New or updated test code.  
+- Reconciliation validation code/results and any adjustments needed.  
+- Suggested additional edge-case tests.  
+- Any open clarifying question (only if absolutely required).
+
+---------------------------------------------------------------------------
+Prompt 2: Harden and validate service manager lifecycle and observability (S3)
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/api/json-rpc-methods.md 
+- docs/development/documentation-guidelines.md 
+- Condensed roadmap/backlog emphasizing S3 lifecycle/observability.
+
+Directive: Only rely on those documents. Do not add new features or speculative behavior. If a required decision (e.g., fallback priority or metadata merging ambiguity) is unclear, stop and ask exactly one focused question.
+
+Goal:
+- Audit and improve `src/camera_service/service_manager.py` so that:
+  * Camera lifecycle (connect → MediaMTX stream actions → notification → disconnect) sequencing is deterministic and resistant to partial failures.
+  * Capability metadata is annotated with provisional vs confirmed state and propagated in notifications.
+  * Correlation IDs are consistently included in lifecycle logs and notifications for traceability.
+  * Failures in dependent subsystems (MediaMTX/controller, capability retrieval) are handled defensively with clear fallback or error signaling; no silent inconsistency.
+  * All TODO/STOP comments follow canonical format or are explicit deferred decisions with rationale and date.
+
+Scope:
+- Modify `service_manager.py`.
+- Create or extend test stub under `tests/unit/test_camera_service/test_service_manager_lifecycle.py`.
+
+Acceptance Criteria:
+- Lifecycle flow is covered by at least one test that injects success and failure modes and asserts order and side effects.  
+- Notifications include explicit flags/fields for provisional vs confirmed metadata.  
+- Logs include correlation IDs at key transition points, including error paths.  
+- Errors from MediaMTX or missing capabilities do not crash silently; fallback logic is observable.  
+- All comment placeholders are canonicalized.
+
+Test Requirements:
+- `test_service_manager_lifecycle.py` simulating connect/disconnect with injected MediaMTX failure and verifying proper recovery or fallback.
+- Assertions about metadata stability (e.g., provisional stays until confirmed).
+
+Output:
+- Summary of audit findings and applied changes with line references.  
+- Updated `service_manager.py`.  
+- Lifecycle test(s) stub or implementation.  
+- Any remaining ambiguity documented (only one question if needed).
+
+
+---------------------------------------------------------------------------
+Prompt 3: Add MediaMTX edge-case health monitor tests (S4)
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/api/json-rpc-methods.md 
+- docs/development/documentation-guidelines.md 
+- Backlog prioritizing closure of S4 edge-case behavior.
+
+Directive: Base everything strictly on the existing implementation and documentation; do not extrapolate new recovery policies unless grounded. If the exact expected behavior under combinations (e.g., flapping) is unclear, ask one precise question.
+
+Goal:
+- Build tests for the health monitoring logic in `src/mediamtx_wrapper/controller.py` covering:
+  * Circuit breaker opening after the configured failure threshold.  
+  * Recovery requiring N consecutive successful checks before closing (confirmation logic).  
+  * Stability under flapping (alternating success/failure) to avoid oscillation.  
+  * Backoff/jitter behavior deterministically validated (or controlled for test reliability).
+
+Scope:
+- Add tests under `tests/unit/test_mediamtx_wrapper/` (new files if necessary).
+
+Acceptance Criteria:
+- Tests exist for:
+  * Failure sequence triggering open state.  
+  * Recovery only after the necessary consecutive successes.  
+  * Flapping scenario does not prematurely reset or reopen unexpectedly.  
+  * Controlled simulation of backoff behavior (e.g., mocking time or overriding jitter) to assert bounds.  
+- Any deviation between implementation and expected circuit breaker state machine is documented.
+
+Test Requirements:
+- Files like `test_health_monitor_circuit_breaker_flapping.py` and `test_health_monitor_recovery_confirmation.py`.  
+- Mocks to simulate health check results and control timing.
+
+Output:
+- Test implementations.  
+- Summary of any behavioral gaps found and recommendations/fixes.  
+- Suggested follow-up stress or integration tests.
+
+
+---------------------------------------------------------------------------
+Prompt 4: Document closure of resolved partials (S4)
+
+Context:
+Authoritative source: previously run code audits (`WebSocket Server Code Audit.md`, `MediaMTX Controller Code Audit.md`, `Camera Service Manager Audit.md`, `Camera Discovery Module Security Audit.md`), plus:
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/development/documentation-guidelines.md
+
+Directive: Only document what was actually resolved per the audit artifacts. No embellishment. If the linkage (evidence) for any purported closure is missing, note it explicitly.
+
+Goal:
+- Create and insert concise closure log entries for the following resolved partials:
+  * Snapshot capture implementation completeness.  
+  * Recording duration accuracy and error handling.  
+  * Versioning/deprecation deferral (canonical STOP decision).  
+  * Capability merging policy stabilization (weighted merge + confirmation).  
+  * Health monitor recovery refinement (consecutive-success confirmation).  
+
+Scope:
+- Documentation update (e.g., extend `docs/architecture/overview.md` or a dedicated decision log file).
+
+Acceptance Criteria:
+- Each closure entry includes: original deficiency, change applied, date (YYYY-MM-DD), and direct evidence references (file name + line or test).  
+- Format matches existing documentation style (title/metadata/related story).  
+- Summary snippet suitable for copying into `roadmap.md` under S4 to reflect “closed” partials.
+
+Output:
+- Markdown entries for closure (complete snippet).  
+- Suggested update text for roadmap to mark those partials resolved.
+
+
+---------------------------------------------------------------------------
+Prompt 5: Draft S5 acceptance test plan and implement core integration smoke test
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/api/json-rpc-methods.md 
+- docs/development/documentation-guidelines.md 
+- Condensed roadmap/backlog focusing on S5 validation.
+
+Directive: Do not add functionality beyond what's needed to exercise the existing implementation. If any end-to-end dependency is ambiguous (e.g., exact notification schema), refer to API doc; if still unclear, ask one precise question.
+
+Goal:
+- Draft a detailed acceptance test plan for S5 end-to-end flows (camera discovery → MediaMTX stream/record/snapshot → WebSocket notification → shutdown/error recovery).  
+- Implement a core “happy path” integration smoke test that exercises the full flow and validates key state transitions.
+
+Scope:
+- New acceptance test plan document (e.g., `tests/ivv/acceptance-plan.md`).  
+- One integration test/harness under `tests/integration/` or `tests/ivv/` implementing the smoke path.
+
+Acceptance Criteria:
+- Plan enumerates scenarios with clear success criteria, including recovery/error injection paths.  
+- Smoke test performs: camera connect, capability detection, stream creation, start/stop recording, snapshot capture, and notification receipt with expected metadata.  
+- Smoke test verifies end-to-end orchestration and surface failure if a critical step fails.
+
+Output:
+- Acceptance test plan file.  
+- Working smoke test code.  
+- Instructions for running it.  
+- Any discovered gaps that block full flow (with evidence).
+
+
+---------------------------------------------------------------------------
+Prompt 6: Create missing camera_service support module test stubs (S14)
+
+Context:
+Authoritative sources: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/development/documentation-guidelines.md 
+- Current backlog emphasizes test readiness for support modules.
+
+Directive: Only create structured stubs; do not implement full business logic in tests. Use canonical TODO/STOP formatting for placeholders.
+
+Goal:
+- Provide minimal pytest test stubs for:
+  * `tests/unit/test_camera_service/test_main_startup.py`  
+  * `tests/unit/test_camera_service/test_config_manager.py`  
+  * `tests/unit/test_camera_service/test_logging_config.py`
+
+Scope:
+- Create the three test stub files.
+
+Acceptance Criteria:
+- Each stub contains:  
+  * At least one placeholder test with a descriptive docstring.  
+  * Canonical TODO comments detailing expected behavior (startup/shutdown, config fallback, formatter/correlation ID).  
+  * Import of target module and setup scaffolding.  
+- No attempt to assume future changes—tests describe acceptance without hard implementation.
+
+Output:
+- Three test stub files with skeleton test functions and TODOs.
+
+
+---------------------------------------------------------------------------
+Prompt 7: Add tests README and conventions doc (S14)
+
+Context:
+Authoritative sources: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/development/documentation-guidelines.md 
+- Existing test scaffolds and backlog identifying proliferation of test areas.
+
+Directive: Do not introduce new test paradigms outside current structure. Clarify, don’t speculate.
+
+Goal:
+- Create `tests/unit/README.md` that explains:  
+  * Purpose of each subdirectory (websocket_server, mediamtx_wrapper, camera_service, camera_discovery, common).  
+  * Naming conventions (snake_case, `test_<behavior>.py`).  
+  * Story-to-test mapping (S3/S4/S5/S14) with minimal checklist.  
+  * How to add new tests and mark completion.  
+  * How to run tests and interpret results.
+
+Scope:
+- Documentation only (single file).
+
+Acceptance Criteria:
+- README includes sections: Overview, Directory mapping, Naming conventions, Story/test mapping, Adding tests, Running tests, Contribution guidelines.  
+- References the roadmap stories and expected acceptance criteria.  
+
+Output:
+- `tests/unit/README.md` content.
+
+
+---------------------------------------------------------------------------
+Prompt 8: Improve deployment/install script (S5)
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- Existing backlog wants repeatable environment for S5 validation.
+
+Directive: Only enhance the existing `deployment/scripts/install.sh` (or equivalent) to bootstrap the current code. Do not redesign deployment architecture.
+
+Goal:
+- Complete the install script so that on a clean target it:  
+  * Installs system dependencies required by the project.  
+  * Sets up configuration (templates or example).  
+  * Installs Python dependencies.  
+  * Enables/starts the service (systemd or documented fallback).  
+  * Is idempotent and safe to re-run.  
+  * Provides a verification/smoke check at end.
+
+Scope:
+- Modify the install script and add minimal inline usage documentation.
+
+Acceptance Criteria:
+- Script can be run on a fresh environment (note assumed OS) and results in a running service.  
+- Includes failure-safe re-execution logic.  
+- Ends with a self-check (e.g., ping local API or check service health).  
+- Comments document assumptions and usage.
+
+Output:
+- Updated `install.sh`.  
+- Verification snippet/instructions.  
+- Any remaining manual prerequisites clearly listed.
+
+
+---------------------------------------------------------------------------
+Prompt 9: Enable CI to enforce tests, linting, and type checking (S14)
+
+Context:
+Authoritative ground truth: 
+- docs/development/principles.md (style/quality expectations)  
+- Backlog prioritizing automated quality gates for S14.
+
+Directive: Build a minimal pipeline; do not over-engineer (start with essential checks). All behavior must be explicit; if tool versions or defaults are ambiguous, state assumptions.
+
+Goal:
+- Create a CI workflow (e.g., GitHub Actions) that on push/PR:  
+  * Installs dependencies.  
+  * Runs formatting check (black in check mode).  
+  * Runs linter/type-checker (flake8, mypy).  
+  * Executes unit tests.  
+  * Fails on any violation.
+
+Scope:
+- CI config file (e.g., `.github/workflows/ci.yml`) and any small helpers.
+
+Acceptance Criteria:
+- Workflow YAML exists and is functional.  
+- Output shows clear separation of steps and fails visibly on errors.  
+- README snippet included explaining how new tests or directories are picked up.  
+- Badges/status suggestion included (optional).
+
+Output:
+- CI workflow config.  
+- Documentation for extending it.
+
+
+---------------------------------------------------------------------------
+Prompt 10: Begin security feature implementation groundwork (E2)
+
+Context:
+Authoritative ground truth: 
+- docs/architecture/overview.md 
+- docs/development/principles.md 
+- docs/development/documentation-guidelines.md 
+- Backlog beginning E2 groundwork.
+
+Directive: Do not implement full security features prematurely. Focus on design, risk modeling, and scaffolding interfaces only. Stop and ask one focused question if an intended boundary or integration point is unclear.
+
+Goal:
+- Produce a lightweight security design and scaffold for:  
+  * Authentication (JWT/API key) interface for WebSocket server.  
+  * Health-check endpoint specification (contract only).  
+  * Rate limiting / connection management sketch.  
+  * TLS/SSL support checklist.  
+  * Configuration schema for secrets, keys, certificates.
+
+Scope:
+- Security plan document.  
+- Placeholder code stubs/interfaces (e.g., auth hook in WebSocket server, health-check handler skeleton).  
+- Configuration definition (YAML/ENV) for security parameters.
+
+Acceptance Criteria:
+- Document includes threat model bullets, feature breakdown, configuration schema, and IV&V verification points.  
+- Code stubs exist with canonical TODOs linking to plan items.  
+- Clear next-step actionable list for the first security sprint.
+
+Output:
+- Security plan Markdown.  
+- Code stub files or snippets.  
+- Config schema sketch.  
+- List of prioritized follow-up tasks.
+
+
+---------------------------------------------------------------------------
+
+---------------------------------------------------------------------------
+
+
