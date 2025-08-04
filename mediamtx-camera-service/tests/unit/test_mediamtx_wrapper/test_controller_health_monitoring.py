@@ -8,7 +8,6 @@ with jitter, state transitions, and recovery logging.
 
 import pytest
 import asyncio
-import time
 from unittest.mock import Mock, AsyncMock, patch
 import aiohttp
 
@@ -233,7 +232,7 @@ class TestHealthMonitoring:
 
         # Should see health degradation and recovery messages
         degraded_logs = [msg for msg in log_messages if "DEGRADED" in msg]
-        recovered_logs = [msg for msg in log_messages if "RECOVERED" in msg]
+        [msg for msg in log_messages if "RECOVERED" in msg]
 
         assert len(degraded_logs) > 0, "Should log health degradation"
         # Recovery may not occur in short test time, but degradation should be logged

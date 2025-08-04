@@ -13,19 +13,13 @@ Test coverage areas:
 import asyncio
 import pytest
 import time
-import tempfile
-import json
-from unittest.mock import Mock, AsyncMock, patch, call, MagicMock
-from pathlib import Path
-from typing import Dict, List, Any
+from unittest.mock import Mock, AsyncMock, patch
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (
     HybridCameraMonitor,
     CameraEvent,
-    CameraEventData,
     CapabilityDetectionResult,
-    DeviceCapabilityState,
 )
 from src.common.types import CameraDevice
 

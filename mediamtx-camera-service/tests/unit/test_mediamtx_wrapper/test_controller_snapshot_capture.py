@@ -10,8 +10,7 @@ import pytest
 import asyncio
 import os
 import tempfile
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import Mock, AsyncMock, patch
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 

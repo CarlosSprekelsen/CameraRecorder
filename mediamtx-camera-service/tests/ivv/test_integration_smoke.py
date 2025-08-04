@@ -19,22 +19,18 @@ Usage:
 
 import asyncio
 import json
-import logging
 import os
 import pytest
 import tempfile
 import time
 import websockets
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from unittest.mock import AsyncMock, Mock, patch
+from typing import Dict, Optional
+from unittest.mock import AsyncMock, Mock
 
 # Import project modules
 from src.camera_service.service_manager import CameraServiceManager
 from src.camera_service.config import CameraServiceConfig
 from src.websocket_server.server import WebSocketJsonRpcServer
-from src.mediamtx_wrapper.controller import MediaMTXController
-from src.camera_discovery.hybrid_monitor import HybridCameraMonitor
 from src.common.types import CameraDevice, CameraEvent, CameraEventData
 
 
@@ -515,7 +511,7 @@ class TestEndToEndIntegration:
                     assert notification["method"] == "camera_status_update"
                     assert notification["params"]["device"] == "/dev/video0"
                 except TimeoutError:
-                    pytest.fail(f"Client did not receive broadcast notification")
+                    pytest.fail("Client did not receive broadcast notification")
 
         finally:
             # Cleanup

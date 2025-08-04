@@ -8,8 +8,7 @@ capability detection, and graceful degradation.
 
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-import json
+from unittest.mock import Mock, AsyncMock
 
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.common.types import CameraDevice

@@ -8,9 +8,7 @@ patterns to prevent oscillation and ensure proper recovery confirmation logic.
 
 import pytest
 import asyncio
-import time
-from unittest.mock import Mock, AsyncMock, patch
-import aiohttp
+from unittest.mock import Mock, AsyncMock
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 

@@ -15,11 +15,7 @@ Evidence: src/camera_discovery/hybrid_monitor.py lines 500-700 (capability detec
 
 import asyncio
 import pytest
-import subprocess
-import json
-import time
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from typing import Dict, List, Any
+from unittest.mock import Mock, patch
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (
@@ -137,8 +133,8 @@ class TestCapabilityParsingVariations:
 
         # Should handle timeout gracefully
         assert isinstance(result, CapabilityDetectionResult)
-        assert result.detected == False
-        assert result.accessible == False
+        assert result.detected is False
+        assert result.accessible is False
         assert "timeout" in result.error.lower()
         assert result.timeout_context is not None
 
@@ -161,8 +157,8 @@ class TestCapabilityParsingVariations:
 
         # Should handle subprocess failure gracefully
         assert isinstance(result, CapabilityDetectionResult)
-        assert result.detected == False
-        assert result.accessible == False
+        assert result.detected is False
+        assert result.accessible is False
         assert "busy" in result.error.lower()
 
     def test_resolution_extraction_patterns(self, monitor):

@@ -7,12 +7,10 @@ missing files, permission errors, and proper session management.
 """
 
 import pytest
-import asyncio
 import os
 import time
 import tempfile
 from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 

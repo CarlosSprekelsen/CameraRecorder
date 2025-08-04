@@ -232,7 +232,7 @@ def setup_logging(config: LoggingConfig, development_mode: bool = None) -> None:
             file_handler = logging.handlers.RotatingFileHandler(
                 config.file_path, maxBytes=max_bytes, backupCount=config.backup_count
             )
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             # Fallback to basic file handler if rotation config is invalid
             # TODO: LOW: Log rotation configuration validation warning [Story:S14]
             file_handler = logging.FileHandler(config.file_path)

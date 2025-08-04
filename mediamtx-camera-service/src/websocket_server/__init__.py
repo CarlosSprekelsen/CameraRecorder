@@ -1,1 +1,1 @@
-﻿
+"""Python package initialization."""

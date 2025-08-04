@@ -8,10 +8,7 @@ and maximum backoff limits are properly enforced during error conditions.
 
 import pytest
 import asyncio
-import time
-import random
 from unittest.mock import Mock, AsyncMock, patch
-import aiohttp
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 

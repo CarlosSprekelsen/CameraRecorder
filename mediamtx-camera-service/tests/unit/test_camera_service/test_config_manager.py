@@ -6,9 +6,7 @@ hot reload, and error handling as specified in the architecture.
 """
 
 import os
-import tempfile
 import pytest
-from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 
 from camera_service.config import (
@@ -17,11 +15,7 @@ from camera_service.config import (
     get_config_manager,
     Config,
     ServerConfig,
-    MediaMTXConfig,
     CameraConfig,
-    LoggingConfig,
-    RecordingConfig,
-    SnapshotConfig,
 )
 
 
@@ -200,7 +194,7 @@ logging:
             patch("os.path.exists", return_value=True),
         ):
 
-            config = config_manager.load_config("test_config.yaml")
+            config_manager.load_config("test_config.yaml")
 
             updates = {"server": {"port": 8005}, "camera": {"poll_interval": 0.3}}
 

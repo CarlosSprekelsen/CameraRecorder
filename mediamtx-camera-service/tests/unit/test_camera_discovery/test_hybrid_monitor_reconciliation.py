@@ -14,15 +14,12 @@ Evidence: src/camera_service/service_manager.py lines 270-380 (_get_enhanced_cam
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
-from typing import Dict, Any
+from unittest.mock import Mock
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (
     HybridCameraMonitor,
     CapabilityDetectionResult,
-    DeviceCapabilityState,
     CameraEventData,
     CameraEvent,
 )
@@ -118,7 +115,7 @@ class TestCapabilityReconciliation:
         assert metadata["resolution"] == hybrid_metadata["resolution"]
         assert metadata["fps"] == hybrid_metadata["fps"]
 
-        print(f"✅ Confirmed capability reconciliation verified:")
+        print("✅ Confirmed capability reconciliation verified:")
         print(f"   - Validation status: {metadata['validation_status']}")
         print(f"   - Resolution: {metadata['resolution']}")
         print(f"   - FPS: {metadata['fps']}")
@@ -181,7 +178,7 @@ class TestCapabilityReconciliation:
         assert metadata["resolution"] == hybrid_metadata["resolution"]
         assert metadata["fps"] == hybrid_metadata["fps"]
 
-        print(f"✅ Provisional capability reconciliation verified:")
+        print("✅ Provisional capability reconciliation verified:")
         print(f"   - Validation status: {metadata['validation_status']}")
         print(f"   - Resolution: {metadata['resolution']}")
         print(f"   - FPS: {metadata['fps']}")
@@ -228,7 +225,7 @@ class TestCapabilityReconciliation:
         hybrid_metadata = hybrid_monitor.get_effective_capability_metadata(device_path)
         assert hybrid_metadata is None
 
-        print(f"✅ No capability data reconciliation verified:")
+        print("✅ No capability data reconciliation verified:")
         print(f"   - Validation status: {metadata['validation_status']}")
         print(f"   - Capability source: {metadata['capability_source']}")
         print(f"   - Fallback resolution: {metadata['resolution']}")
@@ -288,7 +285,7 @@ class TestCapabilityReconciliation:
         assert confirmed_metadata["resolution"] == initial_metadata["resolution"]
         assert confirmed_metadata["fps"] == initial_metadata["fps"]
 
-        print(f"✅ State transition reconciliation verified:")
+        print("✅ State transition reconciliation verified:")
         print(
             f"   - Initial: {initial_metadata['validation_status']} → Final: {confirmed_metadata['validation_status']}"
         )
@@ -462,7 +459,7 @@ class TestCapabilityReconciliation:
         assert metadata["fps"] == hybrid_metadata["fps"]
         assert metadata["resolution"] == hybrid_metadata["resolution"]
 
-        print(f"✅ Frequency-weighted reconciliation verified:")
+        print("✅ Frequency-weighted reconciliation verified:")
         print(
             f"   - Selected FPS: {metadata['fps']} (most frequent from {frame_rate_detections})"
         )
@@ -520,7 +517,7 @@ class TestReconciliationErrorCases:
         assert metadata["resolution"] == "1920x1080"  # Architecture default
         assert metadata["fps"] == 30  # Architecture default
 
-        print(f"✅ Error reconciliation verified:")
+        print("✅ Error reconciliation verified:")
         print(f"   - Validation status: {metadata['validation_status']}")
         print(
             f"   - Fallback to defaults: {metadata['resolution']}@{metadata['fps']}fps"
@@ -555,7 +552,7 @@ class TestReconciliationErrorCases:
         assert metadata["capability_source"] == "device_info"
         assert metadata["name"] == "No Monitor Camera"  # From device info
 
-        print(f"✅ Missing monitor reconciliation verified:")
+        print("✅ Missing monitor reconciliation verified:")
         print(f"   - Validation status: {metadata['validation_status']}")
         print(f"   - Capability source: {metadata['capability_source']}")
         print(f"   - Name from device info: {metadata['name']}")

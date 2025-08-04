@@ -175,7 +175,7 @@ class ConfigManager:
             # Validate configuration with comprehensive error reporting
             validation_errors = self._validate_config_comprehensive(config_data)
             if validation_errors:
-                error_msg = f"Configuration validation failed:\n" + "\n".join(
+                error_msg = "Configuration validation failed:\n" + "\n".join(
                     validation_errors
                 )
                 self._logger.error(error_msg)
@@ -219,7 +219,7 @@ class ConfigManager:
                 validation_errors = self._validate_config_comprehensive(updated_data)
                 if validation_errors:
                     error_msg = (
-                        f"Configuration update validation failed:\n"
+                        "Configuration update validation failed:\n"
                         + "\n".join(validation_errors)
                     )
                     raise ValueError(error_msg)

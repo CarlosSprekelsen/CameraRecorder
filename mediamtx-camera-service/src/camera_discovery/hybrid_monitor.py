@@ -593,7 +593,7 @@ class HybridCameraMonitor:
         # Determine status based on basic accessibility
         try:
             # Try to open device for basic validation
-            with open(device_path, "rb") as f:
+            with open(device_path, "rb"):
                 status = "CONNECTED"
         except (OSError, PermissionError):
             status = "DISCONNECTED"

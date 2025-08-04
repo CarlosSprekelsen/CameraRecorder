@@ -488,4 +488,3 @@ class TestLoggingIntegration:
         # 5. Verify structured/console format as appropriate
 
         # Implementation deferred until integration test phase
-        pass

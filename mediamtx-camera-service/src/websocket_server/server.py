@@ -9,13 +9,12 @@ import time
 import uuid
 from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
-from pathlib import Path
 
 import websockets
 from websockets.server import WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
-from camera_service.logging_config import set_correlation_id, get_correlation_id
+from camera_service.logging_config import set_correlation_id
 
 
 @dataclass
@@ -344,7 +343,7 @@ class WebSocketJsonRpcServer:
             # Parse JSON-RPC request
             try:
                 request_data = json.loads(message)
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 return json.dumps(
                     {
                         "jsonrpc": "2.0",

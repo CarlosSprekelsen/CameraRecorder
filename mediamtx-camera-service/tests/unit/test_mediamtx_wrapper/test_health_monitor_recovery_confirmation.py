@@ -9,8 +9,7 @@ successful health checks and that any failure during recovery resets the confirm
 import pytest
 import asyncio
 import time
-from unittest.mock import Mock, AsyncMock, patch
-import aiohttp
+from unittest.mock import Mock, AsyncMock
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 

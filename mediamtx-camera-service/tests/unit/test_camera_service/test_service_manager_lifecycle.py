@@ -7,8 +7,6 @@ validation logic, and failure recovery scenarios.
 """
 
 import pytest
-import asyncio
-import uuid
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.camera_service.service_manager import ServiceManager

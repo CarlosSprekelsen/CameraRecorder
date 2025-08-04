@@ -16,17 +16,13 @@ Evidence: src/camera_discovery/hybrid_monitor.py lines 200-400 (udev event proce
 import asyncio
 import pytest
 import time
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
-from pathlib import Path
-from typing import Dict, List, Any
+from unittest.mock import Mock, patch
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (
     HybridCameraMonitor,
     CameraEvent,
     CameraEventData,
-    CapabilityDetectionResult,
-    DeviceCapabilityState,
 )
 from src.common.types import CameraDevice
 

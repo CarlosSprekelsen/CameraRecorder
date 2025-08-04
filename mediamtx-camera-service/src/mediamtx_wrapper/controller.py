@@ -8,14 +8,12 @@ and operational robustness per architecture requirements.
 import asyncio
 import logging
 import os
-import signal
 import time
 import uuid
 import random
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import aiohttp
-import json
 
 from camera_service.logging_config import set_correlation_id, get_correlation_id
 
@@ -811,8 +809,6 @@ class MediaMTXController:
         set_correlation_id(correlation_id)
 
         ffmpeg_process = None
-        process_termination_attempted = False
-        process_killed = False
 
         try:
             # Generate filename if not provided

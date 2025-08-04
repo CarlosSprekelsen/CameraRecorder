@@ -4,7 +4,6 @@ Mock implementations for common types used in testing.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass

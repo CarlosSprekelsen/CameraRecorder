@@ -7,8 +7,7 @@ reliability under transient failures.
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 import aiohttp
 
 from src.mediamtx_wrapper.controller import MediaMTXController, StreamConfig

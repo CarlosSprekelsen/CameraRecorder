@@ -8,7 +8,6 @@ and integration with backend services.
 
 import pytest
 import asyncio
-import json
 from unittest.mock import Mock, AsyncMock
 
 from src.websocket_server.server import WebSocketJsonRpcServer
