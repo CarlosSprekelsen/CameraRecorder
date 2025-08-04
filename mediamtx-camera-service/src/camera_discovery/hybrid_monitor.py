@@ -580,14 +580,14 @@ class HybridCameraMonitor:
             path_obj = Path(device_path)
             if not path_obj.exists():
                 return CameraDevice(
-                    device_path=device_path,
+                    device=device_path,
                     name=f"Camera {device_num}",
                     status="DISCONNECTED",
                 )
         except Exception as e:
             self._logger.debug(f"Path check failed for {device_path}: {e}")
             return CameraDevice(
-                device_path=device_path, name=f"Camera {device_num}", status="ERROR"
+                device=device_path, name=f"Camera {device_num}", status="ERROR"
             )
 
         # Determine status based on basic accessibility
@@ -600,9 +600,19 @@ class HybridCameraMonitor:
         except Exception:
             status = "ERROR"
 
-        device_info = CameraDevice(
-            device_path=device_path, name=f"Camera {device_num}", status=status
-        )
+        try:
+            device_info = CameraDevice(
+                device=device_path, name=f"Camera {device_num}", status=status
+            )
+            return device_info
+        except Exception as e:
+            self._logger.error(
+                f"Error creating camera device info for {device_path}: {e}",
+                extra={"device_path": device_path, "device_num": device_num},
+            )
+            return CameraDevice(
+                device=device_path, name=f"Camera {device_num}", status="ERROR"
+            )
 
         # Trigger capability detection if enabled and device is accessible
         if self._enable_capability_detection and status == "CONNECTED":
@@ -880,6 +890,7 @@ class HybridCameraMonitor:
                 result.structured_diagnostics["device_info_success"] = True
             else:
                 result.error = "Failed to probe basic device information (timeout or device unavailable)"
+                result.timeout_context = "device_info_probe_timeout"
                 result.structured_diagnostics["device_info_success"] = False
                 return result
 
@@ -1045,17 +1056,27 @@ class HybridCameraMonitor:
         if not output or not output.strip():
             return []
 
-        resolutions = []
-        # Pattern to match "Size: Discrete 1920x1080" format
-        pattern = r"Size:\s*Discrete\s+(\d+x\d+)"
-        matches = re.findall(pattern, output, re.IGNORECASE)
+        resolutions = set()
+        # Pattern to match "Size: Discrete 1920x1080" format and variations
+        patterns = [
+            r"Size:\s*Discrete\s+(\d+x\d+)",  # Standard format
+            r"Resolution:\s*(\d+[×x]\d+)",  # Resolution format with Unicode × or x
+            r"(\d+\s*[×x]\s*\d+)",  # General format with spaces
+            r"(\d+\*\d+)",  # Asterisk separator
+            r"(\d+\s*x\s*\d+)",  # Space-separated format
+        ]
         
-        for match in matches:
-            # Validate resolution format
-            if re.match(r"\d+x\d+", match):
-                resolutions.append(match)
+        for pattern in patterns:
+            matches = re.findall(pattern, output, re.IGNORECASE)
+            for match in matches:
+                # Normalize to standard format (replace × and * with x, remove spaces around x)
+                normalized = re.sub(r'[×*]', 'x', match.strip())
+                normalized = re.sub(r'\s*x\s*', 'x', normalized)
+                # Validate resolution format
+                if re.match(r"\d+x\d+", normalized):
+                    resolutions.add(normalized)
 
-        return resolutions
+        return list(resolutions)
 
     def _extract_formats_from_output(self, output: str) -> List[Dict[str, str]]:
         """
@@ -1075,9 +1096,21 @@ class HybridCameraMonitor:
         pattern = r"Pixel Format:\s*'([^']+)'\s*(?:\(([^)]+)\))?"
         matches = re.findall(pattern, output, re.IGNORECASE)
         
+        # Format descriptions mapping
+        format_descriptions = {
+            "YUYV": "YUYV 4:2:2",
+            "MJPG": "Motion-JPEG",
+            "RGB24": "RGB 24-bit",
+            "BGR24": "BGR 24-bit",
+            "NV12": "NV12 YUV",
+            "NV21": "NV21 YUV",
+            "YV12": "YV12 YUV",
+            "YU12": "YU12 YUV",
+        }
+        
         for match in matches:
             format_code = match[0]
-            description = match[1] if match[1] else f"{format_code} format"
+            description = match[1] if match[1] else format_descriptions.get(format_code, f"{format_code} format")
             formats.append({"format": format_code, "description": description})
 
         return formats
@@ -1374,7 +1407,7 @@ class HybridCameraMonitor:
                 )
 
                 if (
-                    variance_score < 0.3
+                    variance_score < 0.2
                 ):  # Minor variance - continue with frequency merge
                     state.consecutive_successes += 1
                     state.consecutive_failures = 0
@@ -1404,7 +1437,11 @@ class HybridCameraMonitor:
                     state.consecutive_failures = 0
                     state.confirmed_data = None
 
-            state.provisional_data = merged_result
+            # For the first detection, preserve the original data
+            if not state.provisional_data:
+                state.provisional_data = new_result
+            else:
+                state.provisional_data = merged_result
         else:
             # Detection failed
             state.consecutive_failures += 1
@@ -1706,152 +1743,60 @@ class HybridCameraMonitor:
 
         return True
 
-    def get_effective_capability_metadata(self, device_path: str) -> Dict[str, Any]:
+    def get_effective_capability_metadata(self, device_path: str) -> Optional[Dict[str, Any]]:
         """
-        Get effective capability metadata for a device with enhanced frequency-based diagnostics.
+        Get effective capability metadata for a device.
 
-        Returns confirmed data if available, otherwise provisional data.
-        Includes comprehensive stability indicators and frequency analysis for diagnostics.
+        Args:
+            device_path: Device path
+
+        Returns:
+            Capability metadata or None if no data available
         """
         if device_path not in self._capability_states:
-            return {
-                "resolution": "1920x1080",  # Architecture default
-                "fps": 30,  # Architecture default
-                "validation_status": "none",
-                "formats": [],
-                "all_resolutions": [],
-                "all_frame_rates": [],
-                "diagnostics": {
-                    "reason": "no_capability_state",
-                    "has_been_probed": False,
-                    "merge_strategy": "default",
-                },
-            }
+            return None
 
         capability_state = self._capability_states[device_path]
-        effective_data = capability_state.get_effective_capability()
+        effective_capability = capability_state.get_effective_capability()
 
-        if not effective_data or not effective_data.detected:
-            return {
-                "resolution": "1920x1080",
-                "fps": 30,
-                "validation_status": "failed",
-                "error": effective_data.error if effective_data else "No data",
-                "formats": [],
-                "all_resolutions": [],
-                "all_frame_rates": [],
-                "diagnostics": {
-                    "reason": "detection_failed",
-                    "consecutive_failures": capability_state.consecutive_failures,
-                    "last_error": effective_data.error if effective_data else None,
-                    "merge_strategy": "none",
-                },
-            }
+        if effective_capability is None:
+            return None
 
-        # Select primary resolution and frame rate with frequency-based preference
-        primary_resolution = (
-            effective_data.resolutions[0] if effective_data.resolutions else "1920x1080"
-        )
-        primary_fps_str = (
-            effective_data.frame_rates[0] if effective_data.frame_rates else "30"
-        )
-
-        try:
-            primary_fps = int(float(primary_fps_str))
-        except (ValueError, TypeError):
-            primary_fps = 30
-
-        # Calculate stability metrics
-        stable_formats = len(
-            [
-                f
-                for f, freq in capability_state.format_frequency.items()
-                if freq >= capability_state.stability_threshold
-            ]
-        )
-        stable_resolutions = len(
-            [
-                r
-                for r, freq in capability_state.resolution_frequency.items()
-                if freq >= capability_state.stability_threshold
-            ]
-        )
-        stable_rates = len(
-            [
-                r
-                for r, freq in capability_state.frame_rate_frequency.items()
-                if freq >= capability_state.stability_threshold
-            ]
-        )
-
-        # Calculate frequency-based confidence scores
-        total_probes = len(capability_state.validation_history)
-        resolution_confidence = (
-            (
-                capability_state.resolution_frequency.get(primary_resolution, 0)
-                / max(total_probes, 1)
-            )
-            if total_probes > 0
-            else 0.0
-        )
-        rate_confidence = (
-            (
-                capability_state.frame_rate_frequency.get(primary_fps_str, 0)
-                / max(total_probes, 1)
-            )
-            if total_probes > 0
-            else 0.0
-        )
-
-        return {
-            "resolution": primary_resolution,
-            "fps": primary_fps,
-            "validation_status": (
-                "confirmed" if capability_state.is_confirmed() else "provisional"
-            ),
+        # Build metadata from effective capability
+        metadata = {
+            "device_path": device_path,
+            "detected": effective_capability.detected,
+            "accessible": effective_capability.accessible,
+            "device_name": effective_capability.device_name,
+            "driver": effective_capability.driver,
+            "formats": effective_capability.formats,
+            "resolutions": effective_capability.resolutions,
+            "frame_rates": effective_capability.frame_rates,
+            "is_confirmed": capability_state.is_confirmed(),
+            "validation_status": "confirmed" if capability_state.is_confirmed() else "provisional",
             "consecutive_successes": capability_state.consecutive_successes,
             "consecutive_failures": capability_state.consecutive_failures,
-            "formats": [f.get("code", "") for f in effective_data.formats],
-            "all_resolutions": effective_data.resolutions,
-            "all_frame_rates": effective_data.frame_rates,
-            "device_name": effective_data.device_name,
-            "driver": effective_data.driver,
+            "last_probe_time": capability_state.last_probe_time,
             "diagnostics": {
-                "probe_timestamp": effective_data.probe_timestamp,
-                "probe_duration": effective_data.structured_diagnostics.get(
-                    "probe_duration"
-                ),
-                "validation_history_length": len(capability_state.validation_history),
-                "confirmation_progress": f"{capability_state.consecutive_successes}/{capability_state.confirmation_threshold}",
-                "merge_strategy": "frequency_based",
-                "stability_metrics": {
-                    "stable_formats": stable_formats,
-                    "stable_resolutions": stable_resolutions,
-                    "stable_frame_rates": stable_rates,
-                    "stability_threshold": capability_state.stability_threshold,
-                },
-                "frequency_analysis": {
-                    "total_probes": total_probes,
-                    "primary_resolution_confidence": round(resolution_confidence, 2),
-                    "primary_rate_confidence": round(rate_confidence, 2),
-                    "top_formats": sorted(
-                        capability_state.format_frequency.items(),
-                        key=lambda x: x[1],
-                        reverse=True,
-                    )[:3],
-                    "top_resolutions": sorted(
-                        capability_state.resolution_frequency.items(),
-                        key=lambda x: x[1],
-                        reverse=True,
-                    )[:3],
-                    "top_frame_rates": sorted(
-                        capability_state.frame_rate_frequency.items(),
-                        key=lambda x: x[1],
-                        reverse=True,
-                    )[:3],
-                },
+                "has_been_probed": True,
+                "merge_strategy": "frequency_weighted",
+                "reason": "capability_state_exists",
             },
         }
+
+        # Add frequency data if available
+        if capability_state.format_frequency:
+            metadata["format_frequency"] = capability_state.format_frequency
+        if capability_state.resolution_frequency:
+            metadata["resolution_frequency"] = capability_state.resolution_frequency
+            metadata["all_resolutions"] = list(capability_state.resolution_frequency.keys())
+        else:
+            # If no frequency data, use the resolutions from the capability
+            metadata["all_resolutions"] = effective_capability.resolutions
+        if capability_state.frame_rate_frequency:
+            metadata["frame_rate_frequency"] = capability_state.frame_rate_frequency
+
+        return metadata
 
     def get_stream_name_from_device_path(self, device_path: str) -> str:
         """
@@ -2076,3 +2021,14 @@ class HybridCameraMonitor:
             "adjustment_count": self._stats.get("adaptive_poll_adjustments", 0),
             "freshness_threshold": self._udev_event_freshness_threshold,
         }
+
+    def _update_frequency_tracking(self, device_path: str, result: CapabilityDetectionResult) -> None:
+        """
+        Update frequency tracking for capability data.
+
+        Args:
+            device_path: Device path
+            result: Capability detection result
+        """
+        state = self._get_or_create_capability_state(device_path)
+        self._update_capability_frequencies(state, result)

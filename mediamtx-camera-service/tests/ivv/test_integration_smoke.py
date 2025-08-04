@@ -28,10 +28,11 @@ from typing import Dict, Optional
 from unittest.mock import AsyncMock, Mock
 
 # Import project modules
-from src.camera_service.service_manager import CameraServiceManager
-from src.camera_service.config import CameraServiceConfig
+from src.camera_service.service_manager import ServiceManager
+from src.camera_service.config import Config
 from src.websocket_server.server import WebSocketJsonRpcServer
-from src.common.types import CameraDevice, CameraEvent, CameraEventData
+from src.common.types import CameraDevice
+from src.camera_discovery.hybrid_monitor import CameraEvent, CameraEventData
 
 
 class WebSocketTestClient:
@@ -106,7 +107,7 @@ class WebSocketTestClient:
 
 
 @pytest.fixture
-async def test_config():
+def test_config():
     """Create test configuration."""
     with tempfile.TemporaryDirectory() as temp_dir:
         config_data = {
@@ -143,7 +144,7 @@ async def test_config():
             },
         }
 
-        config = CameraServiceConfig()
+        config = Config()
         config.update_from_dict(config_data)
         yield config
 
@@ -251,7 +252,7 @@ class TestEndToEndIntegration:
         )
 
         # Initialize service manager with mocked dependencies
-        service_manager = CameraServiceManager(test_config)
+        service_manager = ServiceManager(test_config)
         service_manager._mediamtx_controller = mock_mediamtx
         service_manager._camera_monitor = mock_camera_monitor
 
