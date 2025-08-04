@@ -5,7 +5,7 @@
 ### 1. Run Core Logic Tests (No Dependencies)
 ```bash
 # Run immediately - tests core parsing logic without async/mocking
-python tests/test_hybrid_monitor_core.py
+python3 tests/test_hybrid_monitor_core.py
 ```
 
 This validates:
@@ -20,7 +20,7 @@ This validates:
 pip install pytest pytest-asyncio pytest-cov
 
 # Create test directory structure
-python run_tests.py --create-files
+python3 run_tests.py --create-files
 
 # Run quick smoke tests
 make test-quick
@@ -85,9 +85,9 @@ pytest --cov=src/camera_discovery --cov-report=html tests/
 ### Method 3: Custom Test Runner
 ```bash
 # Using provided test runner
-python run_tests.py --coverage --verbose
-python run_tests.py --specific "frame_rate"
-python run_tests.py --test-file tests/test_hybrid_monitor_core.py
+python3 run_tests.py --coverage --verbose
+python3 run_tests.py --specific "frame_rate"
+python3 run_tests.py --test-file tests/test_hybrid_monitor_core.py
 ```
 
 ## Continuous Testing During Development
@@ -183,7 +183,7 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 # Or run from project root
 cd /path/to/mediamtx-camera-service
-python tests/test_hybrid_monitor_core.py
+python3 tests/test_hybrid_monitor_core.py
 ```
 
 ### Missing Dependencies

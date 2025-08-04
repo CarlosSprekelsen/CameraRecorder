@@ -9,12 +9,12 @@ description = "WebSocket JSON-RPC 2.0 service for USB camera monitoring with Med
 authors = [{name = "Carlos Sprekelsen", email = "carlos.sprekelsen@gmail.com"}]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python3 = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: python3 :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

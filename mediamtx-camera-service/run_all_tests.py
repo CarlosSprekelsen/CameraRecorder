@@ -6,11 +6,11 @@ Runs all quality gates in sequence: formatting, linting, type checking,
 unit tests, and integration tests with coverage measurement and reporting.
 
 Usage:
-    python run_all_tests.py                    # Run all stages
-    python run_all_tests.py --no-lint          # Skip linting
-    python run_all_tests.py --only-unit        # Unit tests only
-    python run_all_tests.py --threshold=85     # Custom coverage threshold
-    python run_all_tests.py --help             # Show all options
+    python3 run_all_tests.py                    # Run all stages
+    python3 run_all_tests.py --no-lint          # Skip linting
+    python3 run_all_tests.py --only-unit        # Unit tests only
+    python3 run_all_tests.py --threshold=85     # Custom coverage threshold
+    python3 run_all_tests.py --help             # Show all options
 
 Exit codes:
     0 - All stages passed

@@ -3,11 +3,11 @@
 Test runner for MediaMTX Camera Service tests.
 
 Usage:
-    python run_tests.py                    # Run all tests
-    python run_tests.py --unit             # Run only unit tests
-    python run_tests.py --integration      # Run only integration tests
-    python run_tests.py --coverage         # Run with coverage report
-    python run_tests.py --specific <name>  # Run specific test
+    python3 run_tests.py                    # Run all tests
+    python3 run_tests.py --unit             # Run only unit tests
+    python3 run_tests.py --integration      # Run only integration tests
+    python3 run_tests.py --coverage         # Run with coverage report
+    python3 run_tests.py --specific <name>  # Run specific test
 """
 
 import sys

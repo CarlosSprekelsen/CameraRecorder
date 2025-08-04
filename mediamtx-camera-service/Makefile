@@ -22,19 +22,19 @@ dev-install:
 	pip install -e .
 
 test:
-	python run_tests.py --coverage
+	python3 run_tests.py --coverage
 
 test-unit:
-	python run_tests.py --unit
+	python3 run_tests.py --unit
 
 test-integration:
-	python run_tests.py --integration
+	python3 run_tests.py --integration
 
 test-coverage:
-	python run_tests.py --coverage --verbose
+	python3 run_tests.py --coverage --verbose
 
 test-quick:
-	python run_tests.py --specific "test_placeholder or test_frame_rate_extraction"
+	python3 run_tests.py --specific "test_placeholder or test_frame_rate_extraction"
 
 lint:
 	flake8 src/ tests/
@@ -53,7 +53,7 @@ run:
 
 # New test setup targets
 test-setup:
-	python run_tests.py --create-files
+	python3 run_tests.py --create-files
 	pip install pytest pytest-asyncio pytest-cov
 
 test-hybrid-monitor:

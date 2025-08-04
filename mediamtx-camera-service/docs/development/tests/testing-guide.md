@@ -45,7 +45,7 @@ pip install -r requirements-dev.txt
 pip install -e .
 
 # 4. Verify setup
-python run_all_tests.py --help
+python3 run_all_tests.py --help
 ```
 
 ### Manual Setup (Alternative)
@@ -68,16 +68,16 @@ pip install -e .
 
 ```bash
 # Run complete quality gate pipeline
-python run_all_tests.py
+python3 run_all_tests.py
 
 # With custom coverage threshold
-python run_all_tests.py --threshold=85
+python3 run_all_tests.py --threshold=85
 
 # Skip specific stages
-python run_all_tests.py --no-lint --no-type-check
+python3 run_all_tests.py --no-lint --no-type-check
 
 # Unit tests only
-python run_all_tests.py --only-unit
+python3 run_all_tests.py --only-unit
 ```
 
 ### Using Makefile (Alternative)
@@ -340,7 +340,7 @@ pip install -r requirements-dev.txt
 
 Before advancing any IV&V control point, verify:
 
-- [ ] All quality gates pass with `python run_all_tests.py`
+- [ ] All quality gates pass with `python3 run_all_tests.py`
 - [ ] Coverage meets or exceeds 80% threshold
 - [ ] All TODO/STOP comments resolved or properly annotated
 - [ ] Documentation updated for any API or behavioral changes
@@ -351,7 +351,7 @@ Before advancing any IV&V control point, verify:
 
 ```bash
 # Generate comprehensive test evidence
-python run_all_tests.py --verbose > test_evidence_$(date +%Y%m%d_%H%M%S).log
+python3 run_all_tests.py --verbose > test_evidence_$(date +%Y%m%d_%H%M%S).log
 
 # Archive results
 mkdir -p evidence/$(date +%Y%m%d)
@@ -375,7 +375,7 @@ For roadmap stories (S3, S4, S5), ensure:
 
 ```bash
 # CI pipeline command
-python run_all_tests.py --no-interactive --junit-xml=results.xml
+python3 run_all_tests.py --no-interactive --junit-xml=results.xml
 ```
 
 ### Development Workflow
@@ -385,10 +385,10 @@ python run_all_tests.py --no-interactive --junit-xml=results.xml
 ptw tests/ -- --tb=short
 
 # Quick pre-commit validation
-python run_all_tests.py --only-unit --no-coverage
+python3 run_all_tests.py --only-unit --no-coverage
 
 # Full pre-push validation  
-python run_all_tests.py --threshold=80
+python3 run_all_tests.py --threshold=80
 ```
 
 ### Custom Test Configurations
