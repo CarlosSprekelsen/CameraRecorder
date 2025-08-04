@@ -1,6 +1,0 @@
-tests/unit/test_websocket_server/test_server_notifications.py:39:89: E501 line too long (90 > 88 characters)
-tests/unit/test_websocket_server/test_server_notifications.py:94:89: E501 line too long (93 > 88 characters)
-tests/unit/test_websocket_server/test_server_notifications.py:146:89: E501 line too long (91 > 88 characters)
-tests/unit/test_websocket_server/test_server_notifications.py:151:89: E501 line too long (91 > 88 characters)
-tests/unit/test_websocket_server/test_server_notifications.py:156:89: E501 line too long (91 > 88 characters)
-tests/unit/test_websocket_server/test_server_status_aggregation.py:61:89: E501 line too long (90 > 88 characters)
