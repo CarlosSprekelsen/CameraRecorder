@@ -259,7 +259,7 @@ class TestRunner:
         """Run unit tests with coverage."""
         stage = TestStage("Unit Tests", "Unit tests with coverage measurement")
         
-        cmd = ["python", "-m", "pytest", "tests/unit/", "-v"]
+        cmd = [sys.executable, "-m", "pytest", "tests/unit/", "-v"]
         
         # Add coverage options if not disabled
         if not self.args.no_coverage:
@@ -273,7 +273,7 @@ class TestRunner:
             ])
             
         # Add unit test marker
-        cmd.extend(["-m", "unit"])
+        # cmd.extend(["-m", "unit"])
         
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
@@ -290,7 +290,7 @@ class TestRunner:
         stage = TestStage("Integration Tests", "Integration and smoke tests")
         
         # Look for integration tests or smoke test patterns
-        cmd = ["python", "-m", "pytest", "-v"]
+        cmd = [sys.executable, "-m", "pytest", "-v"]
         
         # Try integration directory first, fall back to smoke marker
         integration_dir = self.project_root / "tests" / "integration"
@@ -301,7 +301,7 @@ class TestRunner:
             cmd.extend(["-k", "smoke", "tests/"])
             
         # Add integration marker if available
-        cmd.extend(["-m", "integration"])
+        # cmd.extend(["-m", "integration"])
         
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)

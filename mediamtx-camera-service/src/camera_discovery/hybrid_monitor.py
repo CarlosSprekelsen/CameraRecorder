@@ -8,8 +8,6 @@ fallback for reliability, as specified in the architecture design.
 import asyncio
 import logging
 import re
-import subprocess
-import json
 import time
 import random
 import hashlib
@@ -127,7 +125,6 @@ class CameraEventHandler(ABC):
         Args:
             event_data: Event information including device path and type
         """
-        pass
 
 
 class HybridCameraMonitor:
