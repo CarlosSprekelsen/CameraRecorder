@@ -648,3 +648,166 @@ Output:
 * Add `__getitem__` to `CapabilityDetectionResult` to support legacy subscripting or update tests.
 * Implement missing helper `get_current_config` or adjust calling tests.
 **Acceptance:** All F722/F402/F821/non-subscriptable usage issues are either resolved or have explicit deferred decisions annotated; summary produced for inclusion in the roadmap/audit log.
+
+
+
+Test Suite Execution & Failure Resolution
+
+Context
+Solo-engineered MediaMTX Camera Service project with established ground truth:
+- docs/architecture/overview.md - System design and component interfaces
+- docs/development/principles.md - Project values and TODO/STOP standards  
+- docs/development/coding-standards.md - Style guide and technical requirements
+- docs/development/documentation-guidelines.md - Documentation standards
+
+Task Scope
+Execute the COMPLETE test suite and generate minimal, targeted fixes for any failures across ALL modules. Focus ONLY on making tests pass while maintaining architectural compliance.
+
+CRITICAL: Run ALL tests to 100% completion before analyzing any failures. Do not stop at early failures.
+
+Execution Steps
+
+1. Test Execution - MUST RUN TO COMPLETION
+Run the complete test suite across all modules with these flags:
+python3 -m pytest tests/ -v --tb=short --continue-on-collection-errors --maxfail=0
+
+The --maxfail=0 flag means do not stop on any number of failures - run everything to completion.
+
+If run_all_tests.py exists, use:
+python3 run_all_tests.py --verbose --coverage --continue-on-errors
+
+This MUST cover all modules:
+- src/camera_discovery/
+- src/camera_service/
+- src/mediamtx_wrapper/
+- src/websocket_server/
+- src/common/
+
+WAIT FOR 100% COMPLETION - Do not analyze failures until all tests have run.
+
+2. Failure Analysis Protocol
+Only after seeing the complete failure report, categorize each failure:
+- Import/Missing Method: Method called in test doesn't exist in implementation
+- Mock Mismatch: Test mocks wrong API (e.g. subprocess.run vs asyncio.create_subprocess_exec)
+- Type Mismatch: Test expects dict but gets dataclass (or vice versa)
+- Bounds/Validation: Test data exceeds implementation constraints
+- Error Message: Test expects specific error text not present in implementation
+- Async/Sync: Test doesn't properly handle async methods
+- Configuration: Missing config values or environment setup
+- Network/HTTP: Incorrect request/response mocking for API calls
+- WebSocket: Improper WebSocket connection or message handling mocks
+
+3. Fix Generation Rules
+
+STRICT CONSTRAINTS:
+- Fix ONLY what's needed to make the test pass
+- NO new features or architectural changes
+- NO scope creep beyond test failures
+- Preserve all existing functionality
+- Maintain type annotations and error handling
+- Follow canonical TODO format if deferral needed:
+  # TODO: PRIORITY: description [IV&V:ControlPoint|Story:Reference]
+
+Fix Preference Order:
+1. Adjust test if it tests unintended behavior
+2. Add missing method if test assumes it exists and it should
+3. Modify implementation only if test reflects documented requirements
+4. Add compatibility layer for legacy test patterns
+
+Output Format
+
+For each fix, provide:
+
+Fix Header
+Fix #N: [Test Name] - [Issue Type]
+File: path/to/file.py
+Lines: X-Y  
+Issue: Brief description
+Justification: [Architecture doc reference]
+
+Code Patch
+# BEFORE (current code)
+def existing_method():
+    current_implementation()
+
+# AFTER (fixed code)  
+def existing_method():
+    fixed_implementation()
+    # Added: specific change made
+
+Validation
+✅ Test passes: test_specific_name
+✅ No regressions: Related functionality unchanged
+✅ Architecture compliance: [Reference to relevant doc section]
+
+Module-Specific Areas to Check
+
+Based on system architecture, pay attention to:
+
+Camera Discovery Module:
+- Missing extraction methods (_extract_resolutions_from_output, _extract_formats_from_output)
+- Subprocess mocking mismatches (subprocess.run vs asyncio.create_subprocess_exec)
+- Frame rate bounds validation (1-240 vs 1-400 range)
+- Udev event handling
+- CapabilityDetectionResult subscripting support
+
+Camera Service Module:
+- Configuration loading and validation
+- Service manager lifecycle
+- Environment variable overrides
+- Config hot-reload functionality
+- Missing get_current_config function
+
+MediaMTX Wrapper Module:
+- HTTP client mocking for MediaMTX API calls
+- Configuration validation
+- Health monitoring and circuit breaker logic
+- Stream management operations
+- Recording and snapshot operations
+
+WebSocket Server Module:
+- WebSocket connection handling
+- JSON-RPC 2.0 message formatting
+- Client authentication and subscription management
+- Notification broadcasting
+- API specification compliance
+
+Common Module:
+- Type definitions and data structures
+- Shared utilities and helpers
+
+Success Criteria
+
+- All tests across ALL modules pass
+- No new failures introduced in any module
+- Coverage maintains or improves across entire codebase
+- All fixes have architectural justification
+- No scope creep beyond test failures
+- Code follows project coding standards
+- Changes documented with rationale
+
+Constraints Summary
+
+DO:
+- Run complete test suite to 100% before making any changes
+- Fix specific test failures with minimal changes across all modules
+- Reference architecture docs for justification
+- Maintain existing API contracts throughout system
+- Add missing utility methods if tests expect them
+- Use proper async/await patterns for all async code
+- Ensure WebSocket and HTTP mocking is correct
+- Validate configuration handling across all components
+
+DON'T:
+- Stop test execution early due to failures
+- Add new features not required by tests
+- Change architectural decisions
+- Remove working functionality from any module
+- Introduce breaking changes to any API
+- Add dependencies without justification
+- Make cosmetic changes unrelated to test failures
+- Modify cross-module interfaces without considering impacts
+
+IMPORTANT: First run all tests to completion, then provide a summary of all failures, then generate fixes. Do not make any code changes until you have the complete failure picture.
+
+Deliverable: Working test suite with minimal, justified patches across ALL modules that maintain architectural integrity while ensuring complete test coverage passes.

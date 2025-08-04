@@ -109,6 +109,38 @@ class Config:
     recording: RecordingConfig = field(default_factory=RecordingConfig)
     snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
 
+    def update_from_dict(self, config_data: Dict[str, Any]) -> None:
+        """Update configuration from dictionary data."""
+        if "server" in config_data:
+            for key, value in config_data["server"].items():
+                if hasattr(self.server, key):
+                    setattr(self.server, key, value)
+        
+        if "mediamtx" in config_data:
+            for key, value in config_data["mediamtx"].items():
+                if hasattr(self.mediamtx, key):
+                    setattr(self.mediamtx, key, value)
+        
+        if "camera" in config_data:
+            for key, value in config_data["camera"].items():
+                if hasattr(self.camera, key):
+                    setattr(self.camera, key, value)
+        
+        if "logging" in config_data:
+            for key, value in config_data["logging"].items():
+                if hasattr(self.logging, key):
+                    setattr(self.logging, key, value)
+        
+        if "recording" in config_data:
+            for key, value in config_data["recording"].items():
+                if hasattr(self.recording, key):
+                    setattr(self.recording, key, value)
+        
+        if "snapshots" in config_data:
+            for key, value in config_data["snapshots"].items():
+                if hasattr(self.snapshots, key):
+                    setattr(self.snapshots, key, value)
+
 
 class ConfigManager:
     """
