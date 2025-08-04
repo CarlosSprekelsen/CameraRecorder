@@ -207,13 +207,14 @@ Before marking any task as [x] complete:
 1. [DONE] Expand udev testing and metadata reconciliation (S3)  
 2. [DONE] Harden and validate service manager lifecycle and observability (S3)  
 3. [DONE] Add MediaMTX edge-case health monitor tests (S4)  
-4. [DONE] Document closure of resolved partials (S4)  
-5. Draft S5 acceptance test plan and implement core integration smoke test  
-6. Create missing camera_service support module test stubs (S14)  
-7. Add tests README and conventions doc (S14)  
-8. Improve deployment/install script (S5)  
-9. Enable CI to enforce tests, linting, and type checking (S14)  
-10. Begin security feature implementation groundwork (E2)
+4. [DONE] Document closure of resolved partials (S4)
+5. Test Suite Execution & Failure Resolution
+6. Draft S5 acceptance test plan and implement core integration smoke test  
+7. Create missing camera_service support module test stubs (S14)  
+8. Add tests README and conventions doc (S14)  
+9. Improve deployment/install script (S5)  
+10. Enable CI to enforce tests, linting, and type checking (S14)  
+11. Begin security feature implementation groundwork (E2)
 
 ---
 
