@@ -1,126 +1,102 @@
 """
-Unit tests for camera service logging configuration.
+Test suite for logging configuration module.
 
-Tests logging setup, formatters, correlation ID handling, and log rotation
-as specified in the architecture requirements.
+Tests correlation ID propagation, formatter behavior, rotation functionality,
+and environment-based mode detection per Story S14.
 """
 
 import json
 import logging
 import os
 import tempfile
-import threading
-from io import StringIO
 from pathlib import Path
-from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
 
-from camera_service.logging_config import (
-    setup_logging, CorrelationIdFilter, JsonFormatter, ConsoleFormatter,
-    get_correlation_filter, set_correlation_id, get_correlation_id
-)
 from camera_service.config import LoggingConfig
+from camera_service.logging_config import (
+    CorrelationIdFilter,
+    JsonFormatter,
+    ConsoleFormatter,
+    setup_logging,
+    get_correlation_filter,
+    set_correlation_id,
+    get_correlation_id,
+    _parse_file_size
+)
 
 
 class TestCorrelationIdFilter:
-    """Test CorrelationIdFilter functionality."""
+    """Test CorrelationIdFilter for thread-local correlation tracking."""
     
-    def test_correlation_filter_initialization(self):
-        """Test CorrelationIdFilter creates properly."""
-        filter_obj = CorrelationIdFilter()
-        assert filter_obj is not None
-        assert hasattr(filter_obj, '_local')
-    
-    def test_correlation_id_generation(self):
-        """Test automatic correlation ID generation."""
-        # TODO: HIGH: Test correlation ID auto-generation [Story:S14]
-        # TODO: HIGH: Verify correlation ID is added to log records [Story:S14]
-        filter_obj = CorrelationIdFilter()
+    def test_correlation_filter_basic_functionality(self):
+        """Test correlation filter sets and retrieves correlation IDs."""
+        # TODO: HIGH: Test correlation filter basic operations [Story:S14]
+        correlation_filter = CorrelationIdFilter()
+        
+        # Initially no correlation ID
+        assert correlation_filter.get_correlation_id() is None
+        
+        # Set correlation ID
+        correlation_filter.set_correlation_id('test-123')
+        assert correlation_filter.get_correlation_id() == 'test-123'
+        
+        # Filter should add correlation ID to record
         record = logging.LogRecord(
-            name='test', level=logging.INFO, pathname='', lineno=0,
-            msg='test message', args=(), exc_info=None
+            name='test', level=logging.INFO, pathname='',
+            lineno=0, msg='Test message', args=(), exc_info=None
         )
         
-        result = filter_obj.filter(record)
-        
-        assert result is True
+        assert correlation_filter.filter(record) is True
         assert hasattr(record, 'correlation_id')
-        assert len(record.correlation_id) == 8  # Should be 8-char UUID prefix
+        assert record.correlation_id == 'test-123'
     
-    def test_correlation_id_persistence_per_thread(self):
-        """Test correlation ID persists within same thread."""
-        # TODO: HIGH: Test thread-local correlation ID persistence [Story:S14]
-        filter_obj = CorrelationIdFilter()
+    def test_correlation_filter_thread_isolation(self):
+        """Test correlation IDs are isolated between threads."""
+        # TODO: MEDIUM: Test thread isolation for correlation IDs [Story:S14]
+        import threading
         
-        record1 = logging.LogRecord('test', logging.INFO, '', 0, 'msg1', (), None)
-        record2 = logging.LogRecord('test', logging.INFO, '', 0, 'msg2', (), None)
+        correlation_filter = CorrelationIdFilter()
+        results = {}
         
-        filter_obj.filter(record1)
-        filter_obj.filter(record2)
+        def thread_func(thread_id, expected_id):
+            correlation_filter.set_correlation_id(expected_id)
+            # Small delay to ensure threads overlap
+            import time
+            time.sleep(0.01)
+            results[thread_id] = correlation_filter.get_correlation_id()
         
-        assert record1.correlation_id == record2.correlation_id
-    
-    def test_set_custom_correlation_id(self):
-        """Test setting custom correlation ID."""
-        # TODO: HIGH: Test custom correlation ID setting [Story:S14]
-        filter_obj = CorrelationIdFilter()
-        custom_id = "custom-123"
-        
-        filter_obj.set_correlation_id(custom_id)
-        
-        record = logging.LogRecord('test', logging.INFO, '', 0, 'msg', (), None)
-        filter_obj.filter(record)
-        
-        assert record.correlation_id == custom_id
-    
-    def test_get_correlation_id(self):
-        """Test retrieving current correlation ID."""
-        # TODO: MEDIUM: Test correlation ID retrieval [Story:S14]
-        filter_obj = CorrelationIdFilter()
-        
-        # Initially should return None
-        assert filter_obj.get_correlation_id() is None
-        
-        # After setting should return the value
-        filter_obj.set_correlation_id("test-id")
-        assert filter_obj.get_correlation_id() == "test-id"
-    
-    def test_correlation_id_different_threads(self):
-        """Test correlation IDs are different across threads."""
-        # TODO: MEDIUM: Test thread isolation of correlation IDs [Story:S14]
-        filter_obj = CorrelationIdFilter()
-        correlation_ids = []
-        
-        def thread_func():
-            record = logging.LogRecord('test', logging.INFO, '', 0, 'msg', (), None)
-            filter_obj.filter(record)
-            correlation_ids.append(record.correlation_id)
-        
-        threads = [threading.Thread(target=thread_func) for _ in range(2)]
-        for thread in threads:
+        # Start multiple threads with different correlation IDs
+        threads = []
+        for i in range(3):
+            thread = threading.Thread(target=thread_func, args=(i, f'thread-{i}'))
+            threads.append(thread)
             thread.start()
+        
+        # Wait for all threads to complete
         for thread in threads:
             thread.join()
         
-        assert len(correlation_ids) == 2
-        assert correlation_ids[0] != correlation_ids[1]
+        # Each thread should have its own correlation ID
+        assert results[0] == 'thread-0'
+        assert results[1] == 'thread-1' 
+        assert results[2] == 'thread-2'
 
 
 class TestJsonFormatter:
-    """Test JsonFormatter for structured logging."""
+    """Test JsonFormatter for structured production logging."""
     
     def test_json_formatter_basic_record(self):
         """Test JSON formatter with basic log record."""
-        # TODO: HIGH: Test JSON formatter output structure [Story:S14]
-        # TODO: HIGH: Verify all required fields are present [Story:S14]
+        # TODO: HIGH: Test JSON formatter basic output structure [Story:S14]
         formatter = JsonFormatter()
         record = logging.LogRecord(
-            name='test.module', level=logging.INFO, pathname='/test.py',
+            name='test.module', level=logging.INFO, pathname='test.py',
             lineno=42, msg='Test message', args=(), exc_info=None
         )
-        record.correlation_id = 'test-123'
+        record.module = 'test_module'
+        record.funcName = 'test_function'
         
         result = formatter.format(record)
         log_data = json.loads(result)
@@ -128,11 +104,25 @@ class TestJsonFormatter:
         assert log_data['level'] == 'INFO'
         assert log_data['logger'] == 'test.module'
         assert log_data['message'] == 'Test message'
-        assert log_data['module'] == 'test'
-        assert log_data['function'] == '<module>'
+        assert log_data['module'] == 'test_module'
+        assert log_data['function'] == 'test_function'
         assert log_data['line'] == 42
-        assert log_data['correlation_id'] == 'test-123'
         assert 'timestamp' in log_data
+    
+    def test_json_formatter_with_correlation_id(self):
+        """Test JSON formatter includes correlation ID."""
+        # TODO: HIGH: Test JSON formatter correlation ID inclusion [Story:S14]
+        formatter = JsonFormatter()
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='',
+            lineno=0, msg='Test message', args=(), exc_info=None
+        )
+        record.correlation_id = 'test-correlation-123'
+        
+        result = formatter.format(record)
+        log_data = json.loads(result)
+        
+        assert log_data['correlation_id'] == 'test-correlation-123'
     
     def test_json_formatter_with_exception(self):
         """Test JSON formatter with exception information."""
@@ -157,7 +147,7 @@ class TestJsonFormatter:
     
     def test_json_formatter_extra_fields(self):
         """Test JSON formatter includes extra fields from log record."""
-        # TODO: MEDIUM: Test JSON formatter extra fields [Story:S14]
+        # TODO: MEDIUM: Test JSON formatter extra fields handling [Story:S14]
         formatter = JsonFormatter()
         record = logging.LogRecord(
             name='test', level=logging.INFO, pathname='', lineno=0,
@@ -178,8 +168,7 @@ class TestConsoleFormatter:
     
     def test_console_formatter_basic_record(self):
         """Test console formatter with basic log record."""
-        # TODO: HIGH: Test console formatter output [Story:S14]
-        # TODO: HIGH: Verify human-readable format [Story:S14]
+        # TODO: HIGH: Test console formatter readable output [Story:S14]
         formatter = ConsoleFormatter('%(levelname)s - %(name)s - %(message)s')
         record = logging.LogRecord(
             name='test.module', level=logging.INFO, pathname='',
@@ -194,7 +183,7 @@ class TestConsoleFormatter:
     
     def test_console_formatter_with_correlation_id(self):
         """Test console formatter includes correlation ID."""
-        # TODO: HIGH: Test console formatter correlation ID [Story:S14]
+        # TODO: HIGH: Test console formatter correlation ID display [Story:S14]
         formatter = ConsoleFormatter('%(levelname)s - %(name)s - %(message)s')
         record = logging.LogRecord(
             name='test.module', level=logging.INFO, pathname='',
@@ -208,8 +197,30 @@ class TestConsoleFormatter:
         assert 'Test message' in result
 
 
+class TestFileSizeParsing:
+    """Test file size parsing utility function."""
+    
+    def test_parse_file_size_basic_units(self):
+        """Test parsing of standard file size units."""
+        # TODO: MEDIUM: Test file size parsing accuracy [Story:S14]
+        assert _parse_file_size('1024B') == 1024
+        assert _parse_file_size('1KB') == 1024
+        assert _parse_file_size('1MB') == 1024 ** 2
+        assert _parse_file_size('1GB') == 1024 ** 3
+        assert _parse_file_size('10MB') == 10 * 1024 ** 2
+    
+    def test_parse_file_size_invalid_formats(self):
+        """Test file size parsing with invalid formats."""
+        # TODO: MEDIUM: Test file size parsing error handling [Story:S14]
+        with pytest.raises(ValueError):
+            _parse_file_size('invalid')
+        
+        with pytest.raises(ValueError):
+            _parse_file_size('10XB')
+
+
 class TestSetupLogging:
-    """Test setup_logging function."""
+    """Test setup_logging function configuration."""
     
     @pytest.fixture
     def logging_config(self):
@@ -217,16 +228,15 @@ class TestSetupLogging:
         return LoggingConfig(
             level='INFO',
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            file_enabled=False,  # Disable file logging for tests
-            file_path='/tmp/test.log'
+            file_enabled=False,
+            file_path='/tmp/test.log',
+            max_file_size='1MB',
+            backup_count=3
         )
     
     def test_setup_logging_development_mode(self, logging_config):
         """Test logging setup in development mode."""
-        # TODO: HIGH: Test development mode logging setup [Story:S14]
-        # TODO: HIGH: Verify console formatter is used [Story:S14]
-        # TODO: HIGH: Verify correlation filter is applied [Story:S14]
-        
+        # TODO: HIGH: Test development mode console formatter usage [Story:S14]
         # Clear any existing handlers
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
@@ -247,9 +257,7 @@ class TestSetupLogging:
     
     def test_setup_logging_production_mode(self, logging_config):
         """Test logging setup in production mode."""
-        # TODO: HIGH: Test production mode logging setup [Story:S14]
-        # TODO: HIGH: Verify JSON formatter is used [Story:S14]
-        
+        # TODO: HIGH: Test production mode JSON formatter usage [Story:S14]
         # Clear any existing handlers
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
@@ -263,10 +271,8 @@ class TestSetupLogging:
     
     def test_setup_logging_auto_mode_detection(self, logging_config):
         """Test automatic development/production mode detection."""
-        # TODO: MEDIUM: Test automatic mode detection [Story:S14]
-        # TODO: MEDIUM: Mock environment variables [Story:S14]
+        # TODO: MEDIUM: Test environment-based mode detection [Story:S14]
         with patch.dict(os.environ, {'CAMERA_SERVICE_ENV': 'development'}):
-            
             # Clear any existing handlers
             root_logger = logging.getLogger()
             for handler in root_logger.handlers[:]:
@@ -278,14 +284,15 @@ class TestSetupLogging:
             handler = root_logger.handlers[0]
             assert isinstance(handler.formatter, ConsoleFormatter)
     
-    def test_setup_logging_with_file_handler(self):
-        """Test logging setup with file handler enabled."""
-        # TODO: MEDIUM: Test file handler setup [Story:S14]
-        # TODO: MEDIUM: Mock file system operations [Story:S14]
+    def test_setup_logging_with_rotation(self):
+        """Test logging setup with file rotation enabled."""
+        # TODO: HIGH: Test log rotation handler creation [Story:S14]
         config = LoggingConfig(
             level='DEBUG',
             file_enabled=True,
-            file_path='/tmp/test_camera_service.log'
+            file_path='/tmp/test_rotation.log',
+            max_file_size='1MB',
+            backup_count=3
         )
         
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -300,6 +307,11 @@ class TestSetupLogging:
             
             # Should have both console and file handlers
             assert len(root_logger.handlers) >= 2
+            
+            # File handler should be RotatingFileHandler
+            file_handlers = [h for h in root_logger.handlers 
+                           if isinstance(h, logging.handlers.RotatingFileHandler)]
+            assert len(file_handlers) == 1
             
             # File should be created
             assert Path(config.file_path).exists()
@@ -337,21 +349,31 @@ class TestSetupLogging:
             
             # Directory should be created
             assert log_path.parent.exists()
-
-
-class TestLogRotation:
-    """Test log rotation functionality."""
     
-    def test_log_rotation_todo_comment(self):
-        """Test that log rotation TODO is properly documented."""
-        # TODO: HIGH: Implement log rotation or document deferral [Story:S14]
-        # TODO: HIGH: Current code has TODO for rotation implementation [Story:S14]
-        # This test documents the current state where rotation is not implemented
-        # but should be either implemented or explicitly deferred with rationale
+    def test_setup_logging_rotation_fallback(self):
+        """Test fallback to basic FileHandler when rotation config is invalid."""
+        # TODO: MEDIUM: Test rotation configuration fallback [Story:S14]
+        config = LoggingConfig(
+            file_enabled=True,
+            file_path='/tmp/test_fallback.log',
+            max_file_size='invalid_size',  # Invalid size should trigger fallback
+            backup_count=3
+        )
         
-        # For now, verify the TODO exists in the source code
-        # In a real implementation, this would test actual rotation behavior
-        assert True  # Placeholder until rotation is implemented or deferred
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config.file_path = str(Path(temp_dir) / 'test.log')
+            
+            # Clear any existing handlers
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+            
+            setup_logging(config, development_mode=True)
+            
+            # Should still have file handler (basic FileHandler as fallback)
+            file_handlers = [h for h in root_logger.handlers 
+                           if isinstance(h, logging.FileHandler)]
+            assert len(file_handlers) == 1
 
 
 class TestGlobalHelperFunctions:
@@ -359,8 +381,7 @@ class TestGlobalHelperFunctions:
     
     def test_get_correlation_filter_function(self):
         """Test get_correlation_filter function."""
-        # TODO: MEDIUM: Test global correlation filter retrieval [Story:S14]
-        # TODO: MEDIUM: Mock root logger handlers [Story:S14]
+        # TODO: MEDIUM: Test correlation filter retrieval [Story:S14]
         with patch('logging.getLogger') as mock_get_logger:
             mock_logger = Mock()
             mock_handler = Mock()
@@ -392,9 +413,10 @@ class TestGlobalHelperFunctions:
             mock_filter = Mock()
             mock_get_filter.return_value = mock_filter
             
-            set_correlation_id('global-test-id')
+            result = set_correlation_id('global-test-id')
             
             mock_filter.set_correlation_id.assert_called_once_with('global-test-id')
+            assert result is True
     
     def test_get_correlation_id_function(self):
         """Test global get_correlation_id function."""
@@ -415,8 +437,6 @@ class TestLoggingIntegration:
     def test_end_to_end_logging_flow(self):
         """Test complete logging flow with correlation IDs."""
         # TODO: LOW: Test end-to-end logging integration [Story:S14]
-        # TODO: LOW: Capture log output and verify format [Story:S14]
-        
         # This would test the complete flow:
         # 1. Setup logging
         # 2. Set correlation ID

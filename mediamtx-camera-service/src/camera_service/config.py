@@ -1,21 +1,20 @@
 ﻿"""
-Configuration management for the camera service.
+Configuration management for MediaMTX Camera Service.
 
-Enhanced with environment variable overrides, schema validation,
-runtime updates, and hot reload capability per architecture overview.
+Provides configuration loading, validation, environment variable overrides,
+and hot reload functionality with comprehensive error handling and fallback behavior.
 """
 
-import json
-import logging
 import os
+import yaml
+import logging
 import threading
 import time
-import yaml
-from dataclasses import dataclass, asdict, fields
+from dataclasses import dataclass, asdict, field
+from typing import Dict, Any, Optional, List, Callable
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable, Union
 
-# Optional dependencies for full feature support
+# Optional dependencies
 try:
     import jsonschema
     HAS_JSONSCHEMA = True
@@ -32,83 +31,82 @@ except ImportError:
 
 @dataclass
 class ServerConfig:
+    """Server configuration settings."""
     host: str = "0.0.0.0"
     port: int = 8002
     websocket_path: str = "/ws"
     max_connections: int = 100
 
 
-@dataclass  
+@dataclass
 class MediaMTXConfig:
-    host: str = "127.0.0.1"
+    """MediaMTX integration configuration."""
+    host: str = "localhost"
     api_port: int = 9997
     rtsp_port: int = 8554
     webrtc_port: int = 8889
     hls_port: int = 8888
-    config_path: str = "/opt/camera-service/config/mediamtx.yml"
-    recordings_path: str = "/opt/camera-service/recordings"
-    snapshots_path: str = "/opt/camera-service/snapshots"
-    
-    # Health monitoring configuration
-    health_check_interval: int = 30
-    health_failure_threshold: int = 10
-    health_circuit_breaker_timeout: int = 60
-    health_max_backoff_interval: int = 120
+    config_path: str = "/etc/mediamtx/mediamtx.yml"
+    recordings_path: str = "/recordings"
+    snapshots_path: str = "/snapshots"
 
 
 @dataclass
 class CameraConfig:
+    """Camera detection and monitoring configuration."""
     poll_interval: float = 0.1
-    detection_timeout: float = 2.0
-    device_range: List[int] = None
+    detection_timeout: float = 1.0
+    device_range: List[int] = field(default_factory=lambda: list(range(10)))
     enable_capability_detection: bool = True
-    auto_start_streams: bool = True
-    
-    def __post_init__(self):
-        if self.device_range is None:
-            self.device_range = list(range(10))
+    auto_start_streams: bool = False
 
 
 @dataclass
 class LoggingConfig:
+    """Logging configuration settings."""
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    file_enabled: bool = True
-    file_path: str = "/opt/camera-service/logs/camera-service.log"
+    file_enabled: bool = False
+    file_path: str = "/var/log/camera-service/camera-service.log"
     max_file_size: str = "10MB"
     backup_count: int = 5
 
 
 @dataclass
 class RecordingConfig:
+    """Recording configuration settings."""
     auto_record: bool = False
     format: str = "mp4"
-    quality: str = "high"
+    quality: str = "medium"
     max_duration: int = 3600
     cleanup_after_days: int = 30
 
 
 @dataclass
 class SnapshotConfig:
+    """Snapshot configuration settings."""
     format: str = "jpg"
-    quality: int = 90
+    quality: int = 85
     cleanup_after_days: int = 7
 
 
 @dataclass
 class Config:
-    server: ServerConfig
-    mediamtx: MediaMTXConfig
-    camera: CameraConfig
-    logging: LoggingConfig
-    recording: RecordingConfig
-    snapshots: SnapshotConfig
+    """Complete service configuration."""
+    server: ServerConfig = field(default_factory=ServerConfig)
+    mediamtx: MediaMTXConfig = field(default_factory=MediaMTXConfig)
+    camera: CameraConfig = field(default_factory=CameraConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
+    recording: RecordingConfig = field(default_factory=RecordingConfig)
+    snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
 
 
 class ConfigManager:
     """
-    Advanced configuration manager with environment overrides,
-    schema validation, runtime updates, and hot reload capability.
+    Configuration manager with environment overrides, validation, and hot reload.
+    
+    Provides robust configuration loading with graceful fallback behavior,
+    comprehensive validation, and safe hot reload functionality.
     """
     
     def __init__(self):
@@ -118,10 +116,15 @@ class ConfigManager:
         self._update_callbacks: List[Callable[[Config], None]] = []
         self._observer: Optional[Observer] = None
         self._lock = threading.Lock()
+        self._default_config = Config()  # Fallback configuration
         
     def load_config(self, config_path: str = None) -> Config:
         """
         Load configuration with environment variable overrides and validation.
+        
+        Handles missing or malformed configuration files gracefully by falling back
+        to default configuration values. Invalid environment overrides are logged
+        but do not crash the service.
         
         Args:
             config_path: Path to YAML configuration file
@@ -130,34 +133,52 @@ class ConfigManager:
             Validated configuration object
             
         Raises:
-            FileNotFoundError: If no configuration file found
-            ValueError: If configuration validation fails
+            ValueError: If configuration validation fails after all fallbacks
         """
         with self._lock:
-            # Find configuration file
+            config_data = {}
+            
+            # Try to find and load configuration file
             if config_path is None:
-                config_path = self._find_config_file()
+                try:
+                    config_path = self._find_config_file()
+                    self._config_path = config_path
+                except FileNotFoundError:
+                    self._logger.warning(
+                        "No configuration file found in standard locations, using defaults"
+                    )
+                    config_path = None
+            else:
+                self._config_path = config_path
             
-            self._config_path = config_path
+            # Load YAML configuration with fallback
+            if config_path:
+                config_data = self._load_yaml_config_safe(config_path)
+            else:
+                self._logger.info("Using default configuration")
             
-            # Load YAML configuration
-            yaml_data = self._load_yaml_config(config_path)
+            # Apply environment variable overrides (with error tolerance)
+            config_data = self._apply_environment_overrides_safe(config_data)
             
-            # Apply environment variable overrides
-            config_data = self._apply_environment_overrides(yaml_data)
+            # Ensure all required sections exist with defaults
+            config_data = self._ensure_complete_config(config_data)
             
-            # Validate configuration
-            self._validate_config(config_data)
+            # Validate configuration with comprehensive error reporting
+            validation_errors = self._validate_config_comprehensive(config_data)
+            if validation_errors:
+                error_msg = f"Configuration validation failed:\n" + "\n".join(validation_errors)
+                self._logger.error(error_msg)
+                raise ValueError(error_msg)
             
             # Create configuration object
             self._config = self._create_config_object(config_data)
             
-            self._logger.info(f"Configuration loaded successfully from {config_path}")
+            self._logger.info(f"Configuration loaded successfully from {config_path or 'defaults'}")
             return self._config
     
     def update_config(self, updates: Dict[str, Any]) -> Config:
         """
-        Update configuration at runtime with validation.
+        Update configuration at runtime with validation and safe rollback.
         
         Args:
             updates: Dictionary of configuration updates
@@ -167,12 +188,13 @@ class ConfigManager:
             
         Raises:
             ValueError: If configuration validation fails
+            RuntimeError: If no configuration is currently loaded
         """
         with self._lock:
             if not self._config:
                 raise RuntimeError("Configuration not loaded")
             
-            # Create backup of current config
+            # Create backup of current config for rollback
             backup_data = asdict(self._config)
             
             try:
@@ -181,7 +203,10 @@ class ConfigManager:
                 updated_data = self._merge_config_updates(current_data, updates)
                 
                 # Validate updated configuration
-                self._validate_config(updated_data)
+                validation_errors = self._validate_config_comprehensive(updated_data)
+                if validation_errors:
+                    error_msg = f"Configuration update validation failed:\n" + "\n".join(validation_errors)
+                    raise ValueError(error_msg)
                 
                 # Create new configuration object
                 new_config = self._create_config_object(updated_data)
@@ -205,6 +230,9 @@ class ConfigManager:
     def start_hot_reload(self) -> None:
         """
         Start hot reload monitoring for configuration file changes.
+        
+        Uses file system monitoring to detect changes and reload configuration
+        with proper validation and rollback on failure.
         """
         if not HAS_WATCHDOG:
             self._logger.warning("Hot reload not available - watchdog dependency missing")
@@ -223,16 +251,49 @@ class ConfigManager:
         class ConfigFileHandler(FileSystemEventHandler):
             def __init__(self, manager: ConfigManager):
                 self.manager = manager
+                self._last_reload_time = 0
                 
             def on_modified(self, event):
                 if not event.is_directory and Path(event.src_path) == Path(self.manager._config_path):
+                    # Debounce rapid file changes
+                    current_time = time.time()
+                    if current_time - self._last_reload_time < 1.0:
+                        return
+                    self._last_reload_time = current_time
+                    
                     self.manager._logger.info("Configuration file changed, reloading...")
                     try:
-                        # Delay to ensure file write is complete
-                        time.sleep(0.1)
+                        # Wait for file write completion
+                        self._wait_for_file_stable()
                         self.manager.reload_config()
                     except Exception as e:
                         self.manager._logger.error(f"Hot reload failed: {e}")
+            
+            def _wait_for_file_stable(self):
+                """Wait for file to be stable (no size changes)."""
+                config_path = Path(self.manager._config_path)
+                if not config_path.exists():
+                    return
+                
+                last_size = -1
+                stable_checks = 0
+                max_wait = 10  # Maximum 1 second wait
+                
+                while stable_checks < 5 and max_wait > 0:
+                    try:
+                        current_size = config_path.stat().st_size
+                        if current_size == last_size:
+                            stable_checks += 1
+                        else:
+                            stable_checks = 0
+                            last_size = current_size
+                        
+                        time.sleep(0.1)
+                        max_wait -= 1
+                    except OSError:
+                        # File might be temporarily unavailable
+                        time.sleep(0.1)
+                        max_wait -= 1
         
         self._observer = Observer()
         self._observer.schedule(ConfigFileHandler(self), str(config_dir), recursive=False)
@@ -254,6 +315,9 @@ class ConfigManager:
         
         Returns:
             Reloaded configuration object
+            
+        Raises:
+            RuntimeError: If no configuration file path is available
         """
         if not self._config_path:
             raise RuntimeError("No configuration file path available for reload")
@@ -261,7 +325,8 @@ class ConfigManager:
         old_config = self._config
         try:
             new_config = self.load_config(self._config_path)
-            self._notify_config_updated(old_config, new_config)
+            if old_config:
+                self._notify_config_updated(old_config, new_config)
             return new_config
         except Exception as e:
             self._logger.error(f"Configuration reload failed: {e}")
@@ -299,20 +364,51 @@ class ConfigManager:
         
         raise FileNotFoundError("No configuration file found in standard locations")
     
-    def _load_yaml_config(self, config_path: str) -> Dict[str, Any]:
-        """Load YAML configuration file."""
+    def _load_yaml_config_safe(self, config_path: str) -> Dict[str, Any]:
+        """
+        Load YAML configuration file with error handling and fallback.
+        
+        Args:
+            config_path: Path to configuration file
+            
+        Returns:
+            Configuration dictionary (may be empty on errors)
+        """
+        if not os.path.exists(config_path):
+            self._logger.warning(f"Configuration file not found: {config_path}, using defaults")
+            return {}
+        
         try:
             with open(config_path, 'r') as f:
-                return yaml.safe_load(f) or {}
+                content = f.read().strip()
+                if not content:
+                    self._logger.warning(f"Configuration file is empty: {config_path}, using defaults")
+                    return {}
+                
+                data = yaml.safe_load(content)
+                if data is None:
+                    self._logger.warning(f"Configuration file contains no data: {config_path}, using defaults")
+                    return {}
+                
+                return data if isinstance(data, dict) else {}
+        except yaml.YAMLError as e:
+            self._logger.error(f"Malformed YAML in {config_path}: {e}, using defaults")
+            return {}
         except Exception as e:
-            raise ValueError(f"Failed to load YAML configuration from {config_path}: {e}")
+            self._logger.error(f"Failed to load configuration from {config_path}: {e}, using defaults")
+            return {}
     
-    def _apply_environment_overrides(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _apply_environment_overrides_safe(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Apply environment variable overrides to configuration.
+        Apply environment variable overrides with error tolerance.
         
-        Environment variables use format: CAMERA_SERVICE_<SECTION>_<SETTING>
-        Example: CAMERA_SERVICE_SERVER_PORT=8003 overrides server.port
+        Invalid environment variables are logged but do not crash the service.
+        
+        Args:
+            config_data: Base configuration data
+            
+        Returns:
+            Configuration data with valid environment overrides applied
         """
         # Map of environment variable patterns to config paths
         env_mappings = {
@@ -336,8 +432,11 @@ class ConfigManager:
             'CAMERA_SERVICE_CAMERA_AUTO_START_STREAMS': ('camera', 'auto_start_streams'),
             
             'CAMERA_SERVICE_LOGGING_LEVEL': ('logging', 'level'),
+            'CAMERA_SERVICE_LOGGING_FORMAT': ('logging', 'format'),
             'CAMERA_SERVICE_LOGGING_FILE_ENABLED': ('logging', 'file_enabled'),
             'CAMERA_SERVICE_LOGGING_FILE_PATH': ('logging', 'file_path'),
+            'CAMERA_SERVICE_LOGGING_MAX_FILE_SIZE': ('logging', 'max_file_size'),
+            'CAMERA_SERVICE_LOGGING_BACKUP_COUNT': ('logging', 'backup_count'),
             
             'CAMERA_SERVICE_RECORDING_AUTO_RECORD': ('recording', 'auto_record'),
             'CAMERA_SERVICE_RECORDING_FORMAT': ('recording', 'format'),
@@ -348,74 +447,138 @@ class ConfigManager:
             'CAMERA_SERVICE_SNAPSHOTS_FORMAT': ('snapshots', 'format'),
             'CAMERA_SERVICE_SNAPSHOTS_QUALITY': ('snapshots', 'quality'),
             'CAMERA_SERVICE_SNAPSHOTS_CLEANUP_AFTER_DAYS': ('snapshots', 'cleanup_after_days'),
-
-            'CAMERA_SERVICE_MEDIAMTX_HEALTH_CHECK_INTERVAL': ('mediamtx', 'health_check_interval'),
-            'CAMERA_SERVICE_MEDIAMTX_HEALTH_FAILURE_THRESHOLD': ('mediamtx', 'health_failure_threshold'),
-            'CAMERA_SERVICE_MEDIAMTX_HEALTH_CIRCUIT_BREAKER_TIMEOUT': ('mediamtx', 'health_circuit_breaker_timeout'),
-            'CAMERA_SERVICE_MEDIAMTX_HEALTH_MAX_BACKOFF_INTERVAL': ('mediamtx', 'health_max_backoff_interval'),
-
         }
         
         overridden_count = 0
+        failed_overrides = []
         
         for env_var, (section, setting) in env_mappings.items():
             if env_var in os.environ:
-                value = os.environ[env_var]
-                
-                # Ensure section exists in config
-                if section not in config_data:
-                    config_data[section] = {}
-                
-                # Convert value to appropriate type
-                converted_value = self._convert_env_value(value, section, setting)
-                config_data[section][setting] = converted_value
-                
-                overridden_count += 1
-                self._logger.debug(f"Environment override: {env_var} -> {section}.{setting} = {converted_value}")
+                env_value = os.environ[env_var]
+                try:
+                    converted_value = self._convert_env_value_safe(env_value, section, setting)
+                    
+                    # Ensure section exists
+                    if section not in config_data:
+                        config_data[section] = {}
+                    
+                    config_data[section][setting] = converted_value
+                    overridden_count += 1
+                    
+                    self._logger.debug(f"Applied environment override: {section}.{setting} = {converted_value}")
+                    
+                except ValueError as e:
+                    failed_overrides.append(f"{env_var}: {e}")
+                    self._logger.error(f"Invalid environment variable {env_var}: {e}, using default")
         
         if overridden_count > 0:
             self._logger.info(f"Applied {overridden_count} environment variable overrides")
         
+        if failed_overrides:
+            self._logger.warning(f"Ignored {len(failed_overrides)} invalid environment overrides")
+        
         return config_data
     
-    def _convert_env_value(self, value: str, section: str, setting: str) -> Any:
-        """Convert environment variable string to appropriate type."""
+    def _convert_env_value_safe(self, value: str, section: str, setting: str) -> Any:
+        """
+        Convert environment variable string to appropriate type with error handling.
+        
+        Args:
+            value: Environment variable value
+            section: Configuration section name
+            setting: Configuration setting name
+            
+        Returns:
+            Converted value
+            
+        Raises:
+            ValueError: If conversion fails
+        """
         # Boolean values
         if setting in ['file_enabled', 'enable_capability_detection', 'auto_start_streams', 'auto_record']:
             return value.lower() in ('true', '1', 'yes', 'on')
         
-        # Integer values
+        # Integer values with validation
         if setting in ['port', 'max_connections', 'api_port', 'rtsp_port', 'webrtc_port', 'hls_port', 
                       'max_duration', 'cleanup_after_days', 'quality', 'backup_count']:
             try:
-                return int(value)
-            except ValueError:
-                raise ValueError(f"Invalid integer value for {section}.{setting}: {value}")
+                int_value = int(value)
+                # Additional validation for specific fields
+                if setting.endswith('_port') and (int_value < 1 or int_value > 65535):
+                    raise ValueError(f"Port must be between 1 and 65535, got {int_value}")
+                if setting in ['max_connections', 'max_duration', 'cleanup_after_days', 'backup_count'] and int_value < 0:
+                    raise ValueError(f"Value must be non-negative, got {int_value}")
+                if setting == 'quality' and (int_value < 1 or int_value > 100):
+                    raise ValueError(f"Quality must be between 1 and 100, got {int_value}")
+                return int_value
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid integer value for {section}.{setting}: {value} ({e})")
         
-        # Float values
+        # Float values with validation
         if setting in ['poll_interval', 'detection_timeout']:
             try:
-                return float(value)
-            except ValueError:
-                raise ValueError(f"Invalid float value for {section}.{setting}: {value}")
+                float_value = float(value)
+                if setting == 'poll_interval' and float_value < 0.01:
+                    raise ValueError(f"Poll interval must be at least 0.01 seconds, got {float_value}")
+                if setting == 'detection_timeout' and float_value < 0.1:
+                    raise ValueError(f"Detection timeout must be at least 0.1 seconds, got {float_value}")
+                return float_value
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid float value for {section}.{setting}: {value} ({e})")
         
-        # String values (default)
+        # String values with validation
+        if setting == 'level':
+            valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+            if value not in valid_levels:
+                raise ValueError(f"Invalid logging level: {value}, must be one of {valid_levels}")
+        
         return value
     
-    def _validate_config(self, config_data: Dict[str, Any]) -> None:
+    def _ensure_complete_config(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate configuration data against schema.
+        Ensure all required configuration sections exist with default values.
+        
+        Args:
+            config_data: Partial configuration data
+            
+        Returns:
+            Complete configuration data with defaults filled in
+        """
+        default_data = asdict(self._default_config)
+        
+        # Merge with defaults, preserving existing values
+        for section_name, section_defaults in default_data.items():
+            if section_name not in config_data:
+                config_data[section_name] = section_defaults.copy()
+            else:
+                # Fill in missing keys within sections
+                for key, default_value in section_defaults.items():
+                    if key not in config_data[section_name]:
+                        config_data[section_name][key] = default_value
+        
+        return config_data
+    
+    def _validate_config_comprehensive(self, config_data: Dict[str, Any]) -> List[str]:
+        """
+        Comprehensive configuration validation with error accumulation.
         
         Args:
             config_data: Configuration dictionary to validate
             
-        Raises:
-            ValueError: If configuration is invalid
+        Returns:
+            List of validation error messages (empty if valid)
         """
+        validation_errors = []
+        
         if HAS_JSONSCHEMA:
-            self._validate_with_jsonschema(config_data)
+            try:
+                self._validate_with_jsonschema(config_data)
+            except ValueError as e:
+                validation_errors.append(str(e))
         else:
-            self._validate_basic_schema(config_data)
+            validation_errors.extend(self._validate_basic_schema_comprehensive(config_data))
+        
+        return validation_errors
     
     def _validate_with_jsonschema(self, config_data: Dict[str, Any]) -> None:
         """Validate configuration using JSON Schema."""
@@ -425,9 +588,9 @@ class ConfigManager:
                 "server": {
                     "type": "object",
                     "properties": {
-                        "host": {"type": "string"},
+                        "host": {"type": "string", "minLength": 1},
                         "port": {"type": "integer", "minimum": 1, "maximum": 65535},
-                        "websocket_path": {"type": "string"},
+                        "websocket_path": {"type": "string", "minLength": 1},
                         "max_connections": {"type": "integer", "minimum": 1}
                     },
                     "required": ["host", "port"]
@@ -435,14 +598,14 @@ class ConfigManager:
                 "mediamtx": {
                     "type": "object",
                     "properties": {
-                        "host": {"type": "string"},
+                        "host": {"type": "string", "minLength": 1},
                         "api_port": {"type": "integer", "minimum": 1, "maximum": 65535},
                         "rtsp_port": {"type": "integer", "minimum": 1, "maximum": 65535},
                         "webrtc_port": {"type": "integer", "minimum": 1, "maximum": 65535},
                         "hls_port": {"type": "integer", "minimum": 1, "maximum": 65535},
-                        "config_path": {"type": "string"},
-                        "recordings_path": {"type": "string"},
-                        "snapshots_path": {"type": "string"}
+                        "config_path": {"type": "string", "minLength": 1},
+                        "recordings_path": {"type": "string", "minLength": 1},
+                        "snapshots_path": {"type": "string", "minLength": 1}
                     }
                 },
                 "camera": {
@@ -452,7 +615,8 @@ class ConfigManager:
                         "detection_timeout": {"type": "number", "minimum": 0.1},
                         "device_range": {
                             "type": "array",
-                            "items": {"type": "integer", "minimum": 0}
+                            "items": {"type": "integer", "minimum": 0},
+                            "maxItems": 100
                         },
                         "enable_capability_detection": {"type": "boolean"},
                         "auto_start_streams": {"type": "boolean"}
@@ -462,10 +626,10 @@ class ConfigManager:
                     "type": "object",
                     "properties": {
                         "level": {"type": "string", "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]},
-                        "format": {"type": "string"},
+                        "format": {"type": "string", "minLength": 1},
                         "file_enabled": {"type": "boolean"},
-                        "file_path": {"type": "string"},
-                        "max_file_size": {"type": "string"},
+                        "file_path": {"type": "string", "minLength": 1},
+                        "max_file_size": {"type": "string", "minLength": 1},
                         "backup_count": {"type": "integer", "minimum": 0}
                     }
                 },
@@ -495,20 +659,29 @@ class ConfigManager:
         except jsonschema.ValidationError as e:
             raise ValueError(f"Configuration validation failed: {e.message}")
     
-    def _validate_basic_schema(self, config_data: Dict[str, Any]) -> None:
-        """Basic configuration validation without jsonschema dependency."""
-        # Validate required sections
-        required_sections = ['server', 'mediamtx', 'camera', 'logging', 'recording', 'snapshots']
-        for section in required_sections:
-            if section not in config_data:
-                config_data[section] = {}
+    def _validate_basic_schema_comprehensive(self, config_data: Dict[str, Any]) -> List[str]:
+        """
+        Basic configuration validation without jsonschema dependency.
+        
+        Args:
+            config_data: Configuration dictionary to validate
+            
+        Returns:
+            List of validation error messages
+        """
+        errors = []
         
         # Validate server section
         server = config_data.get('server', {})
         if 'port' in server:
             port = server['port']
             if not isinstance(port, int) or port < 1 or port > 65535:
-                raise ValueError(f"Invalid server port: {port}")
+                errors.append(f"Invalid server port: {port} (must be integer 1-65535)")
+        
+        if 'max_connections' in server:
+            max_conn = server['max_connections']
+            if not isinstance(max_conn, int) or max_conn < 1:
+                errors.append(f"Invalid max_connections: {max_conn} (must be positive integer)")
         
         # Validate MediaMTX ports
         mediamtx = config_data.get('mediamtx', {})
@@ -517,14 +690,19 @@ class ConfigManager:
             if field in mediamtx:
                 port = mediamtx[field]
                 if not isinstance(port, int) or port < 1 or port > 65535:
-                    raise ValueError(f"Invalid MediaMTX {field}: {port}")
+                    errors.append(f"Invalid MediaMTX {field}: {port} (must be integer 1-65535)")
         
         # Validate camera settings
         camera = config_data.get('camera', {})
         if 'poll_interval' in camera:
             interval = camera['poll_interval']
             if not isinstance(interval, (int, float)) or interval < 0.01:
-                raise ValueError(f"Invalid camera poll_interval: {interval}")
+                errors.append(f"Invalid camera poll_interval: {interval} (must be >= 0.01)")
+        
+        if 'detection_timeout' in camera:
+            timeout = camera['detection_timeout']
+            if not isinstance(timeout, (int, float)) or timeout < 0.1:
+                errors.append(f"Invalid camera detection_timeout: {timeout} (must be >= 0.1)")
         
         # Validate logging level
         logging_config = config_data.get('logging', {})
@@ -532,7 +710,36 @@ class ConfigManager:
             level = logging_config['level']
             valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
             if level not in valid_levels:
-                raise ValueError(f"Invalid logging level: {level}")
+                errors.append(f"Invalid logging level: {level} (must be one of {valid_levels})")
+        
+        # Validate recording settings
+        recording = config_data.get('recording', {})
+        if 'format' in recording:
+            format_val = recording['format']
+            valid_formats = ['mp4', 'mkv', 'avi']
+            if format_val not in valid_formats:
+                errors.append(f"Invalid recording format: {format_val} (must be one of {valid_formats})")
+        
+        if 'quality' in recording:
+            quality = recording['quality']
+            valid_qualities = ['low', 'medium', 'high']
+            if quality not in valid_qualities:
+                errors.append(f"Invalid recording quality: {quality} (must be one of {valid_qualities})")
+        
+        # Validate snapshot settings
+        snapshots = config_data.get('snapshots', {})
+        if 'format' in snapshots:
+            format_val = snapshots['format']
+            valid_formats = ['jpg', 'png', 'bmp']
+            if format_val not in valid_formats:
+                errors.append(f"Invalid snapshot format: {format_val} (must be one of {valid_formats})")
+        
+        if 'quality' in snapshots:
+            quality = snapshots['quality']
+            if not isinstance(quality, int) or quality < 1 or quality > 100:
+                errors.append(f"Invalid snapshot quality: {quality} (must be integer 1-100)")
+        
+        return errors
     
     def _create_config_object(self, config_data: Dict[str, Any]) -> Config:
         """Create Config object from validated configuration data."""

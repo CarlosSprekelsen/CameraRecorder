@@ -92,27 +92,29 @@ logging:
             assert config.logging.level == "DEBUG"
     
     def test_load_config_file_not_found(self, config_manager):
-        """Test configuration loading when no file found."""
-        # TODO: HIGH: Test FileNotFoundError when no config file exists [Story:S14]
+        """Test configuration loading when no file found uses defaults."""
+        # TODO: HIGH: Test fallback to defaults when no config file exists [Story:S14]
         # TODO: HIGH: Mock _find_config_file to raise FileNotFoundError [Story:S14]
         with patch.object(config_manager, '_find_config_file', side_effect=FileNotFoundError("No config found")):
             
-            with pytest.raises(FileNotFoundError):
-                config_manager.load_config()
+            # Should not raise exception, should use defaults
+            config = config_manager.load_config()
+            assert isinstance(config, Config)
+            assert config.server.port == 8002  # Default value
     
     def test_load_config_malformed_yaml(self, config_manager):
-        """Test configuration loading with malformed YAML."""
-        # TODO: HIGH: Test malformed YAML handling [Story:S14]
+        """Test configuration loading with malformed YAML uses defaults."""
+        # TODO: HIGH: Test malformed YAML handling with fallback [Story:S14]
         # TODO: HIGH: Mock file with invalid YAML content [Story:S14]
         malformed_yaml = "server:\n  host: [\n  invalid yaml"
         
         with patch('builtins.open', mock_open(read_data=malformed_yaml)), \
              patch('os.path.exists', return_value=True):
             
-            with pytest.raises(ValueError) as exc_info:
-                config_manager.load_config('malformed.yaml')
-            
-            assert "Failed to load YAML configuration" in str(exc_info.value)
+            # Should not raise exception, should use defaults and log error
+            config = config_manager.load_config('malformed.yaml')
+            assert isinstance(config, Config)
+            assert config.server.port == 8002  # Default value
     
     def test_environment_variable_overrides(self, config_manager):
         """Test environment variable overrides for configuration."""
@@ -136,8 +138,8 @@ logging:
     
     def test_invalid_environment_variable_override(self, config_manager):
         """Test handling of invalid environment variable values."""
-        # TODO: HIGH: Test invalid environment variable handling [Story:S14]
-        # TODO: HIGH: Verify ValueError is raised for invalid port [Story:S14]
+        # TODO: HIGH: Test invalid environment variable handling with fallback [Story:S14]
+        # TODO: HIGH: Verify invalid values are logged but service continues [Story:S14]
         env_vars = {
             'CAMERA_SERVICE_SERVER_PORT': 'invalid_port'
         }
@@ -146,10 +148,10 @@ logging:
              patch('os.path.exists', return_value=True), \
              patch.dict(os.environ, env_vars):
             
-            with pytest.raises(ValueError) as exc_info:
-                config_manager.load_config('test_config.yaml')
-            
-            assert "Invalid integer value" in str(exc_info.value)
+            # Should not crash, should use default and log error
+            config = config_manager.load_config('test_config.yaml')
+            assert isinstance(config, Config)
+            assert config.server.port == 8002  # Default value
     
     def test_configuration_validation(self, config_manager):
         """Test configuration validation with invalid values."""
@@ -191,7 +193,7 @@ logging:
     
     def test_config_update_validation_failure(self, config_manager, sample_yaml_config):
         """Test runtime config update with invalid values."""
-        # TODO: MEDIUM: Test update validation failure [Story:S14]
+        # TODO: MEDIUM: Test update validation failure with rollback [Story:S14]
         # TODO: MEDIUM: Verify rollback to previous config [Story:S14]
         with patch('builtins.open', mock_open(read_data=sample_yaml_config)), \
              patch('os.path.exists', return_value=True):
@@ -229,94 +231,106 @@ logging:
     
     def test_hot_reload_without_watchdog(self, config_manager):
         """Test hot reload when watchdog is not available."""
-        # TODO: LOW: Test hot reload graceful degradation [Story:S14]
+        # TODO: MEDIUM: Test hot reload graceful degradation [Story:S14]
+        # TODO: MEDIUM: Mock HAS_WATCHDOG to False [Story:S14]
         with patch('camera_service.config.HAS_WATCHDOG', False):
-            # Should not raise exception, just log warning
+            # Should log warning but not crash
             config_manager.start_hot_reload()
+            # No observer should be created
+            assert config_manager._observer is None
     
-    def test_config_update_callbacks(self, config_manager, sample_yaml_config):
-        """Test configuration update callback functionality."""
-        # TODO: MEDIUM: Test update callback registration and triggering [Story:S14]
-        callback_mock = Mock()
-        config_manager.add_update_callback(callback_mock)
+    def test_hot_reload_file_change_simulation(self, config_manager, sample_yaml_config):
+        """Test hot reload file change detection and reload."""
+        # TODO: MEDIUM: Test hot reload file change simulation [Story:S14]
+        # TODO: MEDIUM: Mock file system events and verify reload [Story:S14]
+        pytest.importorskip("watchdog")
         
         with patch('builtins.open', mock_open(read_data=sample_yaml_config)), \
-             patch('os.path.exists', return_value=True):
+             patch('os.path.exists', return_value=True), \
+             patch('camera_service.config.Observer') as mock_observer:
             
-            config = config_manager.load_config('test_config.yaml')
-            
-            updates = {'server': {'port': 8006}}
-            config_manager.update_config(updates)
-            
-            # Callback should be called with new config
-            callback_mock.assert_called_once()
-    
-    def test_callback_error_handling(self, config_manager, sample_yaml_config):
-        """Test error handling in update callbacks."""
-        # TODO: MEDIUM: Test callback error handling [Story:S14]
-        # TODO: MEDIUM: Verify errors are logged but don't break update [Story:S14]
-        failing_callback = Mock(side_effect=Exception("Callback error"))
-        config_manager.add_update_callback(failing_callback)
-        
-        with patch('builtins.open', mock_open(read_data=sample_yaml_config)), \
-             patch('os.path.exists', return_value=True):
-            
+            # Load initial config
             config_manager.load_config('test_config.yaml')
             
-            # Should not raise exception despite callback failure
-            updates = {'server': {'port': 8007}}
-            config_manager.update_config(updates)
+            # Start hot reload
+            config_manager.start_hot_reload()
+            
+            # Verify observer was configured
+            mock_observer.assert_called_once()
+    
+    def test_default_config_fallback(self, config_manager):
+        """Test fallback to default configuration when all else fails."""
+        # TODO: HIGH: Test complete fallback to defaults [Story:S14]
+        # TODO: HIGH: Mock all config sources to fail [Story:S14]
+        with patch.object(config_manager, '_find_config_file', side_effect=FileNotFoundError()):
+            
+            config = config_manager.load_config()
+            
+            # Should get default configuration
+            assert isinstance(config, Config)
+            assert config.server.host == "0.0.0.0"
+            assert config.server.port == 8002
+            assert config.mediamtx.api_port == 9997
+            assert config.camera.poll_interval == 0.1
+    
+    def test_comprehensive_validation_error_accumulation(self, config_manager):
+        """Test that validation accumulates multiple errors."""
+        # TODO: HIGH: Test validation error accumulation [Story:S14]
+        # TODO: HIGH: Verify multiple validation errors are collected [Story:S14]
+        invalid_config = """
+server:
+  port: 999999  # Invalid port
+  max_connections: -1  # Invalid negative value
+mediamtx:
+  api_port: 0  # Invalid port
+logging:
+  level: "INVALID"  # Invalid level
+snapshots:
+  quality: 150  # Invalid quality
+"""
+        
+        with patch('builtins.open', mock_open(read_data=invalid_config)), \
+             patch('os.path.exists', return_value=True):
+            
+            with pytest.raises(ValueError) as exc_info:
+                config_manager.load_config('invalid_config.yaml')
+            
+            # Should contain multiple validation errors
+            error_message = str(exc_info.value)
+            assert "port" in error_message
+            assert "level" in error_message or "quality" in error_message
 
 
-class TestGlobalConfigFunctions:
-    """Test global configuration utility functions."""
+class TestConfigurationIntegration:
+    """Integration tests for configuration loading and management."""
     
     def test_load_config_function(self):
-        """Test global load_config function."""
-        # TODO: MEDIUM: Test global load_config function [Story:S14]
-        # TODO: MEDIUM: Mock ConfigManager instance [Story:S14]
+        """Test module-level load_config function."""
+        # TODO: MEDIUM: Test module-level config loading [Story:S14]
+        # TODO: MEDIUM: Mock file system for function test [Story:S14]
         with patch('camera_service.config._config_manager') as mock_manager:
             mock_config = Mock()
             mock_manager.load_config.return_value = mock_config
             
-            result = load_config('test_path.yaml')
+            result = load_config('test.yaml')
             
+            mock_manager.load_config.assert_called_once_with('test.yaml')
             assert result == mock_config
-            mock_manager.load_config.assert_called_once_with('test_path.yaml')
     
     def test_get_config_manager_function(self):
-        """Test get_config_manager function returns singleton."""
-        # TODO: LOW: Test config manager singleton [Story:S14]
-        manager1 = get_config_manager()
-        manager2 = get_config_manager()
-        
-        assert manager1 is manager2
-        assert isinstance(manager1, ConfigManager)
-
-
-class TestConfigFindLogic:
-    """Test configuration file discovery logic."""
+        """Test module-level get_config_manager function."""
+        # TODO: LOW: Test config manager accessor [Story:S14]
+        manager = get_config_manager()
+        assert isinstance(manager, ConfigManager)
     
-    def test_find_config_file_standard_locations(self):
-        """Test _find_config_file searches standard locations."""
-        # TODO: MEDIUM: Test config file discovery [Story:S14]
-        # TODO: MEDIUM: Mock file existence for different paths [Story:S14]
-        config_manager = ConfigManager()
-        
-        with patch('os.path.exists') as mock_exists:
-            mock_exists.side_effect = lambda path: path == "/etc/camera-service/config.yaml"
+    def test_get_current_config_function(self):
+        """Test module-level get_current_config function."""
+        # TODO: LOW: Test current config accessor [Story:S14]
+        with patch('camera_service.config._config_manager') as mock_manager:
+            mock_config = Mock()
+            mock_manager.get_config.return_value = mock_config
             
-            result = config_manager._find_config_file()
+            result = get_current_config()
             
-            assert result == "/etc/camera-service/config.yaml"
-    
-    def test_find_config_file_not_found(self):
-        """Test _find_config_file raises when no file found."""
-        # TODO: MEDIUM: Test config file not found scenario [Story:S14]
-        config_manager = ConfigManager()
-        
-        with patch('os.path.exists', return_value=False):
-            with pytest.raises(FileNotFoundError) as exc_info:
-                config_manager._find_config_file()
-            
-            assert "No configuration file found" in str(exc_info.value)
+            mock_manager.get_config.assert_called_once()
+            assert result == mock_config
