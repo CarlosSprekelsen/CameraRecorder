@@ -37,40 +37,40 @@ mkdir -p tests/integration
 ### Running All Integration Tests
 ```bash
 # Run complete integration test suite
-python -m pytest tests/ivv/test_integration_smoke.py -v
+python3 -m pytest tests/ivv/test_integration_smoke.py -v
 
 # Run with coverage reporting
-python -m pytest tests/ivv/test_integration_smoke.py -v --cov=src --cov-report=term-missing
+python3 -m pytest tests/ivv/test_integration_smoke.py -v --cov=src --cov-report=term-missing
 ```
 
 ### Running Specific Test Scenarios
 ```bash
 # Core end-to-end flow test (most critical)
-python -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_end_to_end_camera_flow -v
+python3 -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_end_to_end_camera_flow -v
 
 # Basic connectivity test
-python -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_ping_basic_connectivity -v
+python3 -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_ping_basic_connectivity -v
 
 # Error recovery test
-python -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_mediamtx_error_recovery -v
+python3 -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_mediamtx_error_recovery -v
 
 # Multiple client test
-python -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_multiple_websocket_clients -v
+python3 -m pytest tests/ivv/test_integration_smoke.py::TestEndToEndIntegration::test_multiple_websocket_clients -v
 
 # Performance validation (longer running)
-python -m pytest tests/ivv/test_integration_smoke.py::TestPerformanceAndResources::test_resource_usage_limits -v -m slow
+python3 -m pytest tests/ivv/test_integration_smoke.py::TestPerformanceAndResources::test_resource_usage_limits -v -m slow
 ```
 
 ### Running with Different Test Markers
 ```bash
 # Run only integration tests
-python -m pytest tests/ivv/ -m integration -v
+python3 -m pytest tests/ivv/ -m integration -v
 
 # Run only slow/performance tests
-python -m pytest tests/ivv/ -m slow -v
+python3 -m pytest tests/ivv/ -m slow -v
 
 # Skip slow tests
-python -m pytest tests/ivv/ -m "not slow" -v
+python3 -m pytest tests/ivv/ -m "not slow" -v
 ```
 
 ## Test Configuration
@@ -176,10 +176,10 @@ Test logs are output to console. For debugging:
 
 ```bash
 # Run with debug logging
-python -m pytest tests/ivv/test_integration_smoke.py -v -s --log-cli-level=DEBUG
+python3 -m pytest tests/ivv/test_integration_smoke.py -v -s --log-cli-level=DEBUG
 
 # Capture logs to file
-python -m pytest tests/ivv/test_integration_smoke.py -v --log-file=test_logs.txt
+python3 -m pytest tests/ivv/test_integration_smoke.py -v --log-file=test_logs.txt
 ```
 
 ## Integration with CI/CD
@@ -190,7 +190,7 @@ python -m pytest tests/ivv/test_integration_smoke.py -v --log-file=test_logs.txt
 - name: Run S5 Integration Tests
   run: |
     export PYTHONPATH=$PWD/src:$PYTHONPATH
-    python -m pytest tests/ivv/test_integration_smoke.py -v \
+    python3 -m pytest tests/ivv/test_integration_smoke.py -v \
       --cov=src --cov-report=xml \
       -m "not slow"  # Skip performance tests in CI
 ```

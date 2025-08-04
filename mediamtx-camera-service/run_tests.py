@@ -90,7 +90,7 @@ def create_test_files():
     # Copy our comprehensive test to the tests directory
     test_content = '''"""
 Comprehensive tests for hybrid camera monitor - moved from artifacts.
-Run with: python -m pytest tests/test_hybrid_monitor_comprehensive.py -v
+Run with: python3 -m pytest tests/test_hybrid_monitor_comprehensive.py -v
 """
 
 # Import the test content here - for now just a placeholder

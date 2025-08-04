@@ -32,7 +32,7 @@ git clone <repository-url>
 cd mediamtx-camera-service
 
 # 2. Create and activate virtual environment
-python -m venv venv
+python3 -m venv venv
 
 # Linux/macOS:
 source venv/bin/activate
@@ -300,7 +300,7 @@ pytest --cov=src.camera_discovery.hybrid_monitor tests/unit/test_camera_discover
 pytest --collect-only tests/
 
 # Check for syntax errors
-python -m py_compile tests/unit/test_*.py
+python3 -m py_compile tests/unit/test_*.py
 ```
 
 **Virtual Environment Issues:**
@@ -308,7 +308,7 @@ python -m py_compile tests/unit/test_*.py
 # Recreate virtual environment
 deactivate
 rm -rf venv
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements-dev.txt
 ```

@@ -13,8 +13,8 @@ Prerequisites:
 - Test camera device available (USB or virtual V4L2)
 
 Usage:
-    python -m pytest tests/ivv/test_integration_smoke.py -v
-    python -m pytest tests/ivv/test_integration_smoke.py::test_end_to_end_camera_flow -v
+    python3 -m pytest tests/ivv/test_integration_smoke.py -v
+    python3 -m pytest tests/ivv/test_integration_smoke.py::test_end_to_end_camera_flow -v
 """
 
 import asyncio

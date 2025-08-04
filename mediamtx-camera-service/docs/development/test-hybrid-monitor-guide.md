@@ -36,7 +36,7 @@ make test-unit          # Unit tests only
 make test-integration   # Integration tests only
 
 # Run specific test file
-python -m pytest tests/test_hybrid_monitor_comprehensive.py -v
+python3 -m pytest tests/test_hybrid_monitor_comprehensive.py -v
 ```
 
 ## Test Categories

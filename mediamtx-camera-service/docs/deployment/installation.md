@@ -206,7 +206,7 @@ Group=camera-service
 WorkingDirectory=/opt/camera-service
 
 # Python executable and script
-ExecStart=/opt/camera-service/bin/python -m camera_service.main
+ExecStart=/opt/camera-service/bin/python3 -m camera_service.main
 
 # Environment
 EnvironmentFile=/etc/systemd/system/camera-service.env

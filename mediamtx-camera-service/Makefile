@@ -49,7 +49,7 @@ clean:
 	rm -rf build/ dist/ *.egg-info/ .coverage htmlcov/
 
 run:
-	python -m camera_service.main
+	python3 -m camera_service.main
 
 # New test setup targets
 test-setup:
@@ -57,8 +57,8 @@ test-setup:
 	pip install pytest pytest-asyncio pytest-cov
 
 test-hybrid-monitor:
-	python -m pytest tests/test_hybrid_monitor_comprehensive.py -v
+	python3 -m pytest tests/test_hybrid_monitor_comprehensive.py -v
 
 # Continuous testing during development
 test-watch:
-	python -m pytest tests/ --tb=short -q --disable-warnings --looponfail
+	python3 -m pytest tests/ --tb=short -q --disable-warnings --looponfail
