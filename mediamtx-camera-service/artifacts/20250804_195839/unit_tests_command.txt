@@ -1,0 +1,1 @@
+python -m pytest tests/unit/ -v --cov=src/camera_discovery --cov=src/camera_service --cov-report=term-missing --cov-report=html:/home/carlossprekelsen/Documentos/CameraRecorder/mediamtx-camera-service/artifacts/20250804_195839/htmlcov --cov-fail-under=80 -m unit

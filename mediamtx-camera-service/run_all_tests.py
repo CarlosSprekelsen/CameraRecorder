@@ -94,8 +94,9 @@ class TestRunner:
         
     def _setup_test_environment(self) -> bool:
         """Setup test environment and validate dependencies."""
-        # Add project root to Python path
+        # Add project root and src to Python path  
         sys.path.insert(0, str(self.project_root))
+        sys.path.insert(0, str(self.project_root / "src"))
         
         # Create test directory structure if needed
         test_dirs = [

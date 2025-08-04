@@ -1,0 +1,6 @@
+ImportError while loading conftest '/home/carlossprekelsen/Documentos/CameraRecorder/mediamtx-camera-service/tests/unit/conftest.py'.
+tests/unit/conftest.py:2: in <module>
+    from camera_discovery.hybrid_monitor import HybridCameraMonitor
+src/camera_discovery/hybrid_monitor.py:22: in <module>
+    from src.common.types import CameraDevice
+E   ModuleNotFoundError: No module named 'src.common.types'
