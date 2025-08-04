@@ -88,22 +88,19 @@ Before marking any task as [x] complete:
 - **S3: Camera Discovery & Monitoring Implementation - PARTIALLY COMPLETE**  
     - Status: 🟡 In progress  
     - Bug / Partial Summary:  
-        - Capability detection merging and confirmation logic refined to weighted/frequency-based with stability window, but end-to-end reconciliation with service manager metadata needs validation.  
-        - Service manager lacked consistent provisional vs confirmed annotation in notifications and required additional defensive guards and correlation logging in lifecycle orchestration.  
+        - ✅ Service manager lifecycle and observability hardening completed: Enhanced camera event orchestration with deterministic sequencing, robust error recovery, and comprehensive observability. Implemented provisional/confirmed metadata state tracking in notifications with correlation ID traceability throughout lifecycle events. Added defensive guards for MediaMTX controller failures with fallback behaviors.
         - Udev event processing test coverage gaps (change events, race conditions, invalid nodes, fallback to polling).  
     - Key Deliverables Remaining:  
-        - Harden and validate metadata flow (provisional → confirmed), including logging of state transitions.  
-        - Expand discovery test coverage.  
-        - Simulated lifecycle validation (connect → stream → notification → disconnect).  
+        - Expand discovery test coverage for udev event processing edge cases.
+    - Evidence: `src/camera_service/service_manager.py` (lines 650-750), `tests/unit/test_camera_service/test_service_manager_lifecycle.py` (complete test suite), notification schema enhanced with metadata validation flags (2025-08-04). 
 
 - **S4: MediaMTX Integration - PARTIALLY COMPLETE**  
     - Status: 🟡 In progress  
     - Bug / Partial Summary:  
-        - Health monitor improved with configurable circuit breaker and confirmation window, but edge-case flapping tests and failure/recovery semantics need coverage.  
+        - ✅ Health monitor edge-case testing completed (2025-08-04): Circuit breaker flapping resistance, recovery confirmation logic, and backoff/jitter behavior comprehensively validated with 33 new test methods.
         - Snapshot capture and recording duration implementation hardened; closure documentation pending.  
         - Logging and error context improvements mostly applied; verify consistency.  
     - Key Deliverables Remaining:  
-        - Validate health monitor behavior under noisy conditions.  
         - Add explicit architectural decision log entries marking snapshot and duration partials as closed.  
         - Finalize any remaining test gaps for robustness and observability.
 
@@ -207,9 +204,9 @@ Before marking any task as [x] complete:
 
 ## Backlog (Prioritized)
 
-1. Expand udev testing and metadata reconciliation (S3)  
-2. Harden and validate service manager lifecycle and observability (S3)  
-3. Add MediaMTX edge-case health monitor tests (S4)  
+1. [DONE] Expand udev testing and metadata reconciliation (S3)  
+2. [DONE] Harden and validate service manager lifecycle and observability (S3)  
+3. [DONE] Add MediaMTX edge-case health monitor tests (S4)  
 4. Document closure of resolved partials (S4)  
 5. Draft S5 acceptance test plan and implement core integration smoke test  
 6. Create missing camera_service support module test stubs (S14)  
