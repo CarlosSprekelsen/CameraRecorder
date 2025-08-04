@@ -794,12 +794,12 @@ class ConfigManager:
         # Validate MediaMTX ports
         mediamtx = config_data.get("mediamtx", {})
         port_fields = ["api_port", "rtsp_port", "webrtc_port", "hls_port"]
-        for field in port_fields:
-            if field in mediamtx:
-                port = mediamtx[field]
+        for port_field in port_fields:  # <-- FIXED: renamed to avoid shadowing
+            if port_field in mediamtx:
+                port = mediamtx[port_field]
                 if not isinstance(port, int) or port < 1 or port > 65535:
                     errors.append(
-                        f"Invalid MediaMTX {field}: {port} (must be integer 1-65535)"
+                        f"Invalid MediaMTX {port_field}: {port} (must be integer 1-65535)"
                     )
 
         # Validate camera settings

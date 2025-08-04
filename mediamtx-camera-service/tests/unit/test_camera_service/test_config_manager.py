@@ -13,6 +13,7 @@ from camera_service.config import (
     ConfigManager,
     load_config,
     get_config_manager,
+    get_current_config,
     Config,
     ServerConfig,
     CameraConfig,

@@ -564,4 +564,87 @@ Output:
 - Config schema sketch.  
 - List of prioritized follow-up tasks.
 
----------------------------------------------------------------------------
+----------------------------------------------------------------
+Audit & Align: Test vs Implementation Sweep
+
+Context: Solo-engineered camera service project. Ground truth is in:
+
+    docs/architecture/overview.md
+
+    docs/development/principles.md
+
+    docs/development/documentation-guidelines.md
+
+Scope: Focus on the camera_discovery module and its tests. Later reuse for other modules.
+
+Goals:
+
+    Identify mismatches between tests and code (e.g., tests mocking the wrong function, expecting missing helpers, wrong assumptions about return types).
+
+    Detect and classify failing test patterns:
+
+        TypeErrors from using objects like dicts (e.g., subscripting non-dict results).
+
+        Assertion mismatches due to bounds/policy drift (e.g., frame rate thresholds).
+
+        Missing utility methods the tests rely on.
+
+        Error message content expectations not matching implementation (e.g., test expects “timeout” substring).
+
+    Propose minimal, ground-truth-compliant fixes: change tests to align with implementation or adjust implementation when test expectations reflect intended behavior documented in architecture/principles.
+
+Instructions:
+
+    For each failing test, output: file/name, failure reason, current code snippet, proposed patch (diff-style), and which document justifies the intended behavior.
+
+    Normalize any TODO/STOP comments encountered in both tests and source to canonical format if a decision is deferred.
+
+    Do not invent new features; if test intent is unclear (e.g., what constitutes a “valid” frame rate), ask exactly one clarification question specifying the ambiguity.
+
+    Group findings into: Fixed, Deferred (with canonical TODO), and Needs Clarification.
+
+Example targets for this run:
+
+    Add __getitem__ to CapabilityDetectionResult or adjust tests.
+
+    Adjust frame rate parsing bounds so that 300 fps passes but 500 fps fails per test expectations.
+
+    Ensure timeout handling includes “timeout” in error messages.
+
+    Align failure simulation in tests with the asynchronous subprocess API (patch asyncio.create_subprocess_exec, not subprocess.run).
+
+    Implement missing _extract_resolutions_from_output helper to satisfy test calls.
+
+Output:
+
+    Concrete patch snippets for each fix.
+
+    Summary table of all current mismatches and their resolution state.
+
+    Suggested next three tests to validate the regression surface after these changes.
+-----------
+**Audit Task – Static/Runtime Issue Sweep**
+**Context:** Solo-engineered Python project with ground truth in:
+* `docs/architecture/overview.md`
+* `docs/development/principles.md`
+* `docs/development/documentation-guidelines.md`
+**Goal:** Perform a focused audit across the repository for the following classes of issues beyond long-line formatting:
+1. Bare `except:` usage (flake8 E722) – replace with `except Exception:` or a more specific exception; add canonical TODO if the exact type is deferred.
+2. Shadowed imports or names (F402) – identify where imported symbols (e.g., `field`) are reused as loop variables or overwritten; rename locals or remove unused imports.
+3. Undefined names (F821) – locate uses of names that aren’t defined or imported (e.g., `get_current_config`) and either implement thin helpers in their intended modules or adjust callers to use existing APIs.
+4. Non-dict objects being subscripted – detect usages like `obj["x"]` where `obj` is a custom object without `__getitem__`; either update the test/consumer to use attribute access or add a safe `__getitem__` adapter in the class with fallback to KeyError.
+5. Any other non-formatting lint errors that imply potential logic bugs or omissions (e.g., unused imports, missing exception handling context).
+**Instructions:**
+* Only modify the minimal needed code to fix each issue; do not invent new features.
+* For each finding, produce a table: file, line number(s), issue type, existing code snippet, proposed fix (diff-style), and rationale referencing the relevant story/standard (e.g., `[IV&V:S14]`).
+* If a fix requires a decision (e.g., what exception to catch), insert a canonical TODO with rationale and stop further automated changes for that case.
+* Do not aggregate multiple responsibilities into one vague change; keep one fix per issue item.
+**Output:**
+* Patch suggestions (diffs or updated snippets).
+* Summary table of all issues found and their statuses (fixed / deferred with TODO / ambiguous needing clarification).
+* A short list of top 3 blockers remaining after this sweep (if any), with precise questions if clarification is needed.
+**Example fixes to include:**
+* Replace bare `except:` with `except Exception:` and log.
+* Add `__getitem__` to `CapabilityDetectionResult` to support legacy subscripting or update tests.
+* Implement missing helper `get_current_config` or adjust calling tests.
+**Acceptance:** All F722/F402/F821/non-subscriptable usage issues are either resolved or have explicit deferred decisions annotated; summary produced for inclusion in the roadmap/audit log.
