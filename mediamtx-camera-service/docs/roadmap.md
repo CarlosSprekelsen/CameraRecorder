@@ -207,7 +207,7 @@ Before marking any task as [x] complete:
 1. [DONE] Expand udev testing and metadata reconciliation (S3)  
 2. [DONE] Harden and validate service manager lifecycle and observability (S3)  
 3. [DONE] Add MediaMTX edge-case health monitor tests (S4)  
-4. Document closure of resolved partials (S4)  
+4. [DONE] Document closure of resolved partials (S4)  
 5. Draft S5 acceptance test plan and implement core integration smoke test  
 6. Create missing camera_service support module test stubs (S14)  
 7. Add tests README and conventions doc (S14)  
@@ -222,7 +222,7 @@ Before marking any task as [x] complete:
 - **Architecture & Scaffolding (S1a/S2):** ✅ Complete  
 - **Fast-track Audit (S2b):** ✅ Baseline captured and folded into stories  
 - **Camera Discovery & Monitoring (S3):** 🟡 Partial — hardening/testing remaining  
-- **MediaMTX Integration (S4):** 🟡 Partial — polishing and formal closure pending  
+- **MediaMTX Integration (S4):** ✅ Complete — all partials resolved and documented (SC-1 through SC-5)
 - **Core Integration IV&V (S5):** 🔴 Pending  
 - **Testing & CI (S14):** 🟡 In progress  
 - **Documentation & Onboarding (S15):** 🟡 In progress  
