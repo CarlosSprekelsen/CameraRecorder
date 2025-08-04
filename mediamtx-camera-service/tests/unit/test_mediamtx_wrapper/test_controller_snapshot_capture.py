@@ -33,7 +33,7 @@ class TestSnapshotCapture:
                 recordings_path=os.path.join(temp_dir, "recordings"),
                 snapshots_path=os.path.join(temp_dir, "snapshots"),
                 process_termination_timeout=1.0,  # Short timeout for testing
-                process_kill_timeout=0.5
+                process_kill_timeout=0.5,
             )
             # Mock session to avoid HTTP calls
             controller._session = Mock()
@@ -48,35 +48,39 @@ class TestSnapshotCapture:
         mock_process.communicate = AsyncMock(side_effect=asyncio.TimeoutError())
         mock_process.terminate = Mock()
         mock_process.kill = Mock()
-        mock_process.wait = AsyncMock(side_effect=asyncio.TimeoutError())  # Doesn't respond to signals
-        
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        mock_process.wait = AsyncMock(
+            side_effect=asyncio.TimeoutError()
+        )  # Doesn't respond to signals
+
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify graceful termination then force kill was attempted
             mock_process.terminate.assert_called_once()
             mock_process.kill.assert_called_once()
-            
+
             # Verify error context includes process cleanup information
             assert result["status"] == "failed"
             assert "timeout" in result["error"].lower()
             assert "killed" in result["error"] or "terminated" in result["error"]
 
-    @pytest.mark.asyncio  
+    @pytest.mark.asyncio
     async def test_snapshot_file_size_error_handling(self, controller):
         """Test handling when file exists but size cannot be determined."""
         # Mock successful FFmpeg execution
         mock_process = Mock()
         mock_process.returncode = 0
         mock_process.communicate = AsyncMock(return_value=(b"success", b""))
-        
+
         # Mock file that exists but raises OSError on getsize
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process), \
-             patch('os.path.exists', return_value=True), \
-             patch('os.path.getsize', side_effect=OSError("Permission denied")):
-            
+        with (
+            patch("asyncio.create_subprocess_exec", return_value=mock_process),
+            patch("os.path.exists", return_value=True),
+            patch("os.path.getsize", side_effect=OSError("Permission denied")),
+        ):
+
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify successful completion with warning about file size
             assert result["status"] == "completed"
             assert result["file_size"] == 0
@@ -87,13 +91,16 @@ class TestSnapshotCapture:
     async def test_snapshot_directory_permission_error(self, controller):
         """Test handling when snapshots directory cannot be created or written to."""
         # Mock permission error when creating directory
-        with patch('os.makedirs', side_effect=PermissionError("Access denied")):
+        with patch("os.makedirs", side_effect=PermissionError("Access denied")):
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify graceful error handling
             assert result["status"] == "failed"
             assert "Cannot write to snapshots directory" in result["error"]
-            assert "Permission denied" in result["error"] or "Access denied" in result["error"]
+            assert (
+                "Permission denied" in result["error"]
+                or "Access denied" in result["error"]
+            )
 
     @pytest.mark.asyncio
     async def test_snapshot_ffmpeg_nonzero_exit_code(self, controller):
@@ -102,12 +109,14 @@ class TestSnapshotCapture:
         mock_process = Mock()
         mock_process.returncode = 1  # Error exit code
         mock_process.communicate = AsyncMock(return_value=(b"", b"Input/output error"))
-        
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process), \
-             patch('os.path.exists', return_value=False):  # No output file created
-            
+
+        with (
+            patch("asyncio.create_subprocess_exec", return_value=mock_process),
+            patch("os.path.exists", return_value=False),
+        ):  # No output file created
+
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify error is properly captured and reported
             assert result["status"] == "failed"
             assert "FFmpeg capture failed" in result["error"]
@@ -120,17 +129,19 @@ class TestSnapshotCapture:
         mock_process = Mock()
         mock_process.returncode = 0
         mock_process.communicate = AsyncMock(return_value=(b"success", b""))
-        
+
         test_file_size = 12345
         test_file_path = os.path.join(controller._snapshots_path, "test_snapshot.jpg")
-        
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process), \
-             patch('os.path.exists', return_value=True), \
-             patch('os.path.getsize', return_value=test_file_size), \
-             patch('os.makedirs'):
-            
+
+        with (
+            patch("asyncio.create_subprocess_exec", return_value=mock_process),
+            patch("os.path.exists", return_value=True),
+            patch("os.path.getsize", return_value=test_file_size),
+            patch("os.makedirs"),
+        ):
+
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify accurate metadata
             assert result["status"] == "completed"
             assert result["filename"] == "test_snapshot.jpg"
@@ -142,9 +153,11 @@ class TestSnapshotCapture:
     async def test_snapshot_process_creation_timeout(self, controller):
         """Test timeout during FFmpeg process creation."""
         # Mock process creation that times out
-        with patch('asyncio.create_subprocess_exec', side_effect=asyncio.TimeoutError()):
+        with patch(
+            "asyncio.create_subprocess_exec", side_effect=asyncio.TimeoutError()
+        ):
             result = await controller.take_snapshot("test_stream", "test_snapshot.jpg")
-            
+
             # Verify timeout is handled gracefully
             assert result["status"] == "failed"
             assert "timeout" in result["error"].lower()
@@ -153,21 +166,23 @@ class TestSnapshotCapture:
         """Test FFmpeg process cleanup escalation: SIGTERM → SIGKILL."""
         # This would be a unit test of the _cleanup_ffmpeg_process method
         # Testing the escalation logic without actual process creation
-        
+
         # Mock process that doesn't respond to SIGTERM but does to SIGKILL
         mock_process = Mock()
         mock_process.returncode = None
         mock_process.terminate = Mock()
         mock_process.kill = Mock()
-        
+
         # First wait (after SIGTERM) times out, second wait (after SIGKILL) succeeds
         mock_process.wait = AsyncMock(side_effect=[asyncio.TimeoutError(), None])
-        
+
         # Test the cleanup method directly
         cleanup_result = asyncio.run(
-            controller._cleanup_ffmpeg_process(mock_process, "test_stream", "test_correlation")
+            controller._cleanup_ffmpeg_process(
+                mock_process, "test_stream", "test_correlation"
+            )
         )
-        
+
         # Verify escalation path was followed
         mock_process.terminate.assert_called_once()
         mock_process.kill.assert_called_once()

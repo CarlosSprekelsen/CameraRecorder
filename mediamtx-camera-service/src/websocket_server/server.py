@@ -21,6 +21,7 @@ from ..camera_service.logging_config import set_correlation_id, get_correlation_
 @dataclass
 class JsonRpcRequest:
     """JSON-RPC 2.0 request structure."""
+
     jsonrpc: str
     method: str
     id: Optional[Any] = None
@@ -30,6 +31,7 @@ class JsonRpcRequest:
 @dataclass
 class JsonRpcResponse:
     """JSON-RPC 2.0 response structure."""
+
     jsonrpc: str
     id: Optional[Any]
     result: Optional[Any] = None
@@ -39,6 +41,7 @@ class JsonRpcResponse:
 @dataclass
 class JsonRpcNotification:
     """JSON-RPC 2.0 notification structure."""
+
     jsonrpc: str
     method: str
     params: Optional[Dict[str, Any]] = None
@@ -46,11 +49,11 @@ class JsonRpcNotification:
 
 class ClientConnection:
     """Represents a connected WebSocket client."""
-    
+
     def __init__(self, websocket: WebSocketServerProtocol, client_id: str):
         """
         Initialize client connection.
-        
+
         Args:
             websocket: WebSocket connection object
             client_id: Unique identifier for this client
@@ -60,7 +63,7 @@ class ClientConnection:
         self.authenticated = False
         self.subscriptions: Set[str] = set()
         self.connected_at = asyncio.get_event_loop().time()
-        
+
         # TODO: HIGH: Implement authentication state management [IV&V:S6]
         # TODO: MEDIUM: Implement permission tracking system [IV&V:S6]
         # TODO: MEDIUM: Implement rate limiting state tracking [IV&V:S6]
@@ -87,11 +90,11 @@ class WebSocketJsonRpcServer:
         websocket_path: str,
         max_connections: int,
         mediamtx_controller=None,
-        camera_monitor=None
+        camera_monitor=None,
     ):
         """
         Initialize WebSocket JSON-RPC server.
-        
+
         Args:
             host: Server bind address
             port: Server port
@@ -106,18 +109,18 @@ class WebSocketJsonRpcServer:
         self._max_connections = max_connections
         self._mediamtx_controller = mediamtx_controller
         self._camera_monitor = camera_monitor
-        
+
         self._logger = logging.getLogger(__name__)
         self._server = None
         self._running = False
-        
+
         # Client connection management
         self._clients: Dict[str, ClientConnection] = {}
         self._connection_lock = asyncio.Lock()
-        
+
         # JSON-RPC method handlers
         self._method_handlers: Dict[str, Callable] = {}
-        
+
         # TODO: HIGH: Initialize JWT/API key authentication system [IV&V:S6]
         # TODO: MEDIUM: Initialize rate limiting with configurable thresholds [IV&V:S6]
         # TODO: MEDIUM: Initialize Prometheus metrics collection [IV&V:S6]
@@ -125,7 +128,7 @@ class WebSocketJsonRpcServer:
     def set_mediamtx_controller(self, controller) -> None:
         """
         Set the MediaMTX controller for stream operations.
-        
+
         Args:
             controller: MediaMTX controller instance
         """
@@ -134,7 +137,7 @@ class WebSocketJsonRpcServer:
     def set_camera_monitor(self, monitor) -> None:
         """
         Set the camera monitor for device information.
-        
+
         Args:
             monitor: Camera monitor instance
         """
@@ -143,19 +146,21 @@ class WebSocketJsonRpcServer:
     async def start(self) -> None:
         """
         Start the WebSocket JSON-RPC server.
-        
+
         Initializes the WebSocket server and begins accepting client connections.
         """
         if self._running:
             self._logger.warning("WebSocket server is already running")
             return
-        
-        self._logger.info(f"Starting WebSocket JSON-RPC server on {self._host}:{self._port}{self._websocket_path}")
-        
+
+        self._logger.info(
+            f"Starting WebSocket JSON-RPC server on {self._host}:{self._port}{self._websocket_path}"
+        )
+
         try:
             # Register built-in methods
             self._register_builtin_methods()
-            
+
             # Start WebSocket server with proper error handling
             self._server = await websockets.serve(
                 self._handle_client_connection,
@@ -169,12 +174,14 @@ class WebSocketJsonRpcServer:
                 ping_timeout=10,  # Ping timeout
                 close_timeout=5,  # Close timeout
                 # Path handling - only accept connections to our WebSocket path
-                process_request=self._process_request
+                process_request=self._process_request,
             )
-            
+
             self._running = True
-            self._logger.info(f"WebSocket JSON-RPC server started successfully on {self._host}:{self._port}{self._websocket_path}")
-            
+            self._logger.info(
+                f"WebSocket JSON-RPC server started successfully on {self._host}:{self._port}{self._websocket_path}"
+            )
+
         except Exception as e:
             self._logger.error(f"Failed to start WebSocket server: {e}")
             await self._cleanup_server()
@@ -183,31 +190,31 @@ class WebSocketJsonRpcServer:
     async def stop(self) -> None:
         """
         Stop the WebSocket JSON-RPC server.
-        
+
         Gracefully closes all client connections and stops the server.
         """
         if not self._running:
             return
-        
+
         self._logger.info("Stopping WebSocket JSON-RPC server")
-        
+
         try:
             self._running = False
-            
+
             # Close all client connections
             await self._close_all_connections()
-            
+
             # Stop WebSocket server
             if self._server:
                 self._server.close()
                 await self._server.wait_closed()
                 self._server = None
-            
+
             # Cleanup resources and tasks
             await self._cleanup_server()
-            
+
             self._logger.info("WebSocket JSON-RPC server stopped")
-            
+
         except Exception as e:
             self._logger.error(f"Error during WebSocket server shutdown: {e}")
             raise
@@ -215,11 +222,11 @@ class WebSocketJsonRpcServer:
     async def _process_request(self, path: str, request_headers) -> Optional[tuple]:
         """
         Process incoming WebSocket request to validate path and enforce limits.
-        
+
         Args:
             path: Request path
             request_headers: HTTP request headers
-            
+
         Returns:
             None to accept connection, or (status, headers, body) to reject
         """
@@ -227,43 +234,51 @@ class WebSocketJsonRpcServer:
         if path != self._websocket_path:
             self._logger.warning(f"Invalid WebSocket path requested: {path}")
             return (404, {}, b"Not Found")
-        
+
         # Check connection limits
         async with self._connection_lock:
             if len(self._clients) >= self._max_connections:
-                self._logger.warning(f"Connection limit reached: {len(self._clients)}/{self._max_connections}")
+                self._logger.warning(
+                    f"Connection limit reached: {len(self._clients)}/{self._max_connections}"
+                )
                 return (503, {}, b"Service Unavailable - Connection limit reached")
-        
+
         # Accept connection
         return None
 
-    async def _handle_client_connection(self, websocket: WebSocketServerProtocol, path: str) -> None:
+    async def _handle_client_connection(
+        self, websocket: WebSocketServerProtocol, path: str
+    ) -> None:
         """
         Handle new client WebSocket connection.
-        
+
         Args:
             websocket: WebSocket connection object
             path: Request path
         """
         client_id = str(uuid.uuid4())
-        client_ip = websocket.remote_address[0] if websocket.remote_address else "unknown"
-        
+        client_ip = (
+            websocket.remote_address[0] if websocket.remote_address else "unknown"
+        )
+
         self._logger.info(f"New client connection: {client_id} from {client_ip}")
-        
+
         # Create client connection object
         client = ClientConnection(websocket, client_id)
-        
+
         try:
             # Add client to tracking
             async with self._connection_lock:
                 self._clients[client_id] = client
-            
-            self._logger.debug(f"Client {client_id} added to connection pool ({len(self._clients)} total)")
-            
+
+            self._logger.debug(
+                f"Client {client_id} added to connection pool ({len(self._clients)} total)"
+            )
+
             # Handle authentication (basic implementation for MVP)
             # TODO: MEDIUM: Expand authentication per security architecture [IV&V:S6]
             client.authenticated = True
-            
+
             # Process incoming messages from client
             async for message in websocket:
                 try:
@@ -272,25 +287,28 @@ class WebSocketJsonRpcServer:
                         if response:
                             await websocket.send(response)
                     else:
-                        self._logger.warning(f"Received non-text message from client {client_id}")
-                        
+                        self._logger.warning(
+                            f"Received non-text message from client {client_id}"
+                        )
+
                 except Exception as e:
-                    self._logger.error(f"Error processing message from client {client_id}: {e}")
+                    self._logger.error(
+                        f"Error processing message from client {client_id}: {e}"
+                    )
                     # Send JSON-RPC error response if possible
                     try:
-                        error_response = json.dumps({
-                            "jsonrpc": "2.0",
-                            "error": {
-                                "code": -32603,
-                                "message": "Internal error"
-                            },
-                            "id": None
-                        })
+                        error_response = json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "error": {"code": -32603, "message": "Internal error"},
+                                "id": None,
+                            }
+                        )
                         await websocket.send(error_response)
                     except Exception:
                         # Connection might be broken, will be cleaned up below
                         break
-                        
+
         except ConnectionClosed:
             self._logger.info(f"Client {client_id} disconnected normally")
         except WebSocketException as e:
@@ -302,12 +320,12 @@ class WebSocketJsonRpcServer:
             async with self._connection_lock:
                 if client_id in self._clients:
                     del self._clients[client_id]
-                    self._logger.info(f"Removed client {client_id} from connection pool ({len(self._clients)} remaining)")
+                    self._logger.info(
+                        f"Removed client {client_id} from connection pool ({len(self._clients)} remaining)"
+                    )
 
     async def _handle_json_rpc_message(
-        self, 
-        client: ClientConnection, 
-        message: str
+        self, client: ClientConnection, message: str
     ) -> Optional[str]:
         """
         Process incoming JSON-RPC message from client.
@@ -321,65 +339,71 @@ class WebSocketJsonRpcServer:
         """
         correlation_id = None
         request_id = None
-        
+
         try:
             # Parse JSON-RPC request
             try:
                 request_data = json.loads(message)
             except json.JSONDecodeError as e:
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32700,
-                        "message": "Parse error"
-                    },
-                    "id": None
-                })
-            
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32700, "message": "Parse error"},
+                        "id": None,
+                    }
+                )
+
             # Extract correlation ID from request ID field
             request_id = request_data.get("id")
-            correlation_id = str(request_id) if request_id is not None else str(uuid.uuid4())[:8]
-            
+            correlation_id = (
+                str(request_id) if request_id is not None else str(uuid.uuid4())[:8]
+            )
+
             # Set correlation ID for structured logging
             set_correlation_id(correlation_id)
-            
+
             # Validate JSON-RPC structure
-            if not isinstance(request_data, dict) or request_data.get("jsonrpc") != "2.0":
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32600,
-                        "message": "Invalid Request"
-                    },
-                    "id": request_id
-                })
-            
+            if (
+                not isinstance(request_data, dict)
+                or request_data.get("jsonrpc") != "2.0"
+            ):
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32600, "message": "Invalid Request"},
+                        "id": request_id,
+                    }
+                )
+
             method_name = request_data.get("method")
             if not method_name or not isinstance(method_name, str):
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32600,
-                        "message": "Invalid Request - missing method"
-                    },
-                    "id": request_id
-                })
-            
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32600,
+                            "message": "Invalid Request - missing method",
+                        },
+                        "id": request_id,
+                    }
+                )
+
             params = request_data.get("params")
-            
-            self._logger.debug(f"Processing JSON-RPC method '{method_name}' from client {client.client_id}")
-            
+
+            self._logger.debug(
+                f"Processing JSON-RPC method '{method_name}' from client {client.client_id}"
+            )
+
             # Check if method exists
             if method_name not in self._method_handlers:
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "error": {
-                        "code": -32601,
-                        "message": "Method not found"
-                    },
-                    "id": request_id
-                })
-            
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32601, "message": "Method not found"},
+                        "id": request_id,
+                    }
+                )
+
             # Call method handler
             try:
                 handler = self._method_handlers[method_name]
@@ -387,58 +411,56 @@ class WebSocketJsonRpcServer:
                     result = await handler(params)
                 else:
                     result = await handler()
-                
+
                 # Return response for requests with ID (notifications have no ID)
                 if request_id is not None:
-                    return json.dumps({
-                        "jsonrpc": "2.0",
-                        "result": result,
-                        "id": request_id
-                    })
+                    return json.dumps(
+                        {"jsonrpc": "2.0", "result": result, "id": request_id}
+                    )
                 else:
                     # Notification - no response
                     return None
-                    
+
             except Exception as e:
                 self._logger.error(f"Error in method handler '{method_name}': {e}")
                 if request_id is not None:
-                    return json.dumps({
-                        "jsonrpc": "2.0",
-                        "error": {
-                            "code": -32603,
-                            "message": "Internal error"
-                        },
-                        "id": request_id
-                    })
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {"code": -32603, "message": "Internal error"},
+                            "id": request_id,
+                        }
+                    )
                 else:
                     return None
 
         except Exception as e:
-            self._logger.error(f"Error processing JSON-RPC message from client {client.client_id}: {e}")
-            return json.dumps({
-                "jsonrpc": "2.0",
-                "error": {
-                    "code": -32603,
-                    "message": "Internal error"
-                },
-                "id": request_id
-            })
+            self._logger.error(
+                f"Error processing JSON-RPC message from client {client.client_id}: {e}"
+            )
+            return json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32603, "message": "Internal error"},
+                    "id": request_id,
+                }
+            )
 
     async def _close_all_connections(self) -> None:
         """Close all active client connections gracefully."""
         async with self._connection_lock:
             if not self._clients:
                 return
-            
+
             # Send shutdown notification to clients
-            shutdown_notification = json.dumps({
-                "jsonrpc": "2.0",
-                "method": "server_shutdown",
-                "params": {
-                    "message": "Server is shutting down"
+            shutdown_notification = json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "server_shutdown",
+                    "params": {"message": "Server is shutting down"},
                 }
-            })
-            
+            )
+
             # Close all WebSocket connections
             close_tasks = []
             for client in self._clients.values():
@@ -448,14 +470,14 @@ class WebSocketJsonRpcServer:
                         close_tasks.append(client.websocket.send(shutdown_notification))
                     except Exception:
                         pass  # Ignore errors when sending shutdown notification
-                    
+
                     # Close connection
                     close_tasks.append(client.websocket.close())
-            
+
             # Wait for all connections to close
             if close_tasks:
                 await asyncio.gather(*close_tasks, return_exceptions=True)
-            
+
             # Clear client tracking
             client_count = len(self._clients)
             self._clients.clear()
@@ -465,12 +487,14 @@ class WebSocketJsonRpcServer:
         """Clean up server resources and reset state."""
         self._server = None
         self._running = False
-        
+
         # Clear any remaining client references
         async with self._connection_lock:
             self._clients.clear()
 
-    def register_method(self, method_name: str, handler: Callable, version: str = "1.0") -> None:
+    def register_method(
+        self, method_name: str, handler: Callable, version: str = "1.0"
+    ) -> None:
         """
         Register a JSON-RPC method handler with version information.
 
@@ -489,7 +513,7 @@ class WebSocketJsonRpcServer:
     def unregister_method(self, method_name: str) -> None:
         """
         Unregister a JSON-RPC method handler.
-        
+
         Args:
             method_name: Name of the JSON-RPC method to remove
         """
@@ -510,10 +534,10 @@ class WebSocketJsonRpcServer:
         return self._method_versions.get(method_name)
 
     async def broadcast_notification(
-        self, 
-        method: str, 
+        self,
+        method: str,
         params: Optional[Dict[str, Any]] = None,
-        target_clients: Optional[List[str]] = None
+        target_clients: Optional[List[str]] = None,
     ) -> None:
         """
         Broadcast a JSON-RPC notification to connected clients.
@@ -526,41 +550,41 @@ class WebSocketJsonRpcServer:
         if not self._clients:
             self._logger.debug(f"No clients connected, skipping notification: {method}")
             return
-        
+
         # Extract or generate correlation ID for notification tracing
         correlation_id = params.get("correlation_id") if params else None
         if not correlation_id:
             correlation_id = str(uuid.uuid4())[:8]
-        
+
         # Set correlation ID for structured logging
         set_correlation_id(correlation_id)
-        
+
         # Create JSON-RPC 2.0 notification structure
-        notification = JsonRpcNotification(
-            jsonrpc="2.0",
-            method=method,
-            params=params
-        )
-        
+        notification = JsonRpcNotification(jsonrpc="2.0", method=method, params=params)
+
         # Serialize notification to JSON
         try:
-            notification_json = json.dumps({
-                "jsonrpc": notification.jsonrpc,
-                "method": notification.method,
-                "params": notification.params
-            })
+            notification_json = json.dumps(
+                {
+                    "jsonrpc": notification.jsonrpc,
+                    "method": notification.method,
+                    "params": notification.params,
+                }
+            )
         except Exception as e:
             self._logger.error(f"Failed to serialize notification {method}: {e}")
             return
-            
+
         self._logger.debug(f"Broadcasting notification: {method}")
-        
+
         # Determine target clients
         if target_clients:
-            clients_to_notify = [self._clients[cid] for cid in target_clients if cid in self._clients]
+            clients_to_notify = [
+                self._clients[cid] for cid in target_clients if cid in self._clients
+            ]
         else:
             clients_to_notify = list(self._clients.values())
-        
+
         # Send notification to each target client
         failed_clients = []
         for client in clients_to_notify:
@@ -570,9 +594,11 @@ class WebSocketJsonRpcServer:
                 else:
                     failed_clients.append(client.client_id)
             except Exception as e:
-                self._logger.warning(f"Failed to send notification to client {client.client_id}: {e}")
+                self._logger.warning(
+                    f"Failed to send notification to client {client.client_id}: {e}"
+                )
                 failed_clients.append(client.client_id)
-        
+
         # Clean up failed connections
         if failed_clients:
             async with self._connection_lock:
@@ -580,24 +606,23 @@ class WebSocketJsonRpcServer:
                     if client_id in self._clients:
                         del self._clients[client_id]
                         self._logger.info(f"Removed disconnected client: {client_id}")
-        
+
         success_count = len(clients_to_notify) - len(failed_clients)
-        self._logger.debug(f"Notification {method} sent to {success_count}/{len(clients_to_notify)} clients")
+        self._logger.debug(
+            f"Notification {method} sent to {success_count}/{len(clients_to_notify)} clients"
+        )
 
     async def send_notification_to_client(
-        self, 
-        client_id: str, 
-        method: str, 
-        params: Optional[Dict[str, Any]] = None
+        self, client_id: str, method: str, params: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
         Send a JSON-RPC notification to a specific client.
-        
+
         Args:
             client_id: Target client identifier
             method: Notification method name
             params: Notification parameters
-            
+
         Returns:
             True if notification was sent successfully
         """
@@ -606,29 +631,31 @@ class WebSocketJsonRpcServer:
             if client_id not in self._clients:
                 self._logger.warning(f"Client {client_id} not found for notification")
                 return False
-            
+
             client = self._clients[client_id]
-            
+
             if not client.websocket.open:
                 # Remove disconnected client
                 del self._clients[client_id]
-                self._logger.info(f"Removed disconnected client during notification: {client_id}")
+                self._logger.info(
+                    f"Removed disconnected client during notification: {client_id}"
+                )
                 return False
-        
+
         # Send notification to specific client
         try:
-            notification_json = json.dumps({
-                "jsonrpc": "2.0",
-                "method": method,
-                "params": params
-            })
-            
+            notification_json = json.dumps(
+                {"jsonrpc": "2.0", "method": method, "params": params}
+            )
+
             await client.websocket.send(notification_json)
             self._logger.debug(f"Sent notification '{method}' to client {client_id}")
             return True
-            
+
         except Exception as e:
-            self._logger.warning(f"Failed to send notification to client {client_id}: {e}")
+            self._logger.warning(
+                f"Failed to send notification to client {client_id}: {e}"
+            )
             # Handle send failure and connection cleanup
             async with self._connection_lock:
                 if client_id in self._clients:
@@ -639,27 +666,35 @@ class WebSocketJsonRpcServer:
     def _register_builtin_methods(self) -> None:
         """Register built-in JSON-RPC methods."""
         self.register_method("ping", self._method_ping, version="1.0")
-        self.register_method("get_camera_list", self._method_get_camera_list, version="1.0")
-        self.register_method("get_camera_status", self._method_get_camera_status, version="1.0")
+        self.register_method(
+            "get_camera_list", self._method_get_camera_list, version="1.0"
+        )
+        self.register_method(
+            "get_camera_status", self._method_get_camera_status, version="1.0"
+        )
         self.register_method("take_snapshot", self._method_take_snapshot, version="1.0")
-        self.register_method("start_recording", self._method_start_recording, version="1.0")
-        self.register_method("stop_recording", self._method_stop_recording, version="1.0")
+        self.register_method(
+            "start_recording", self._method_start_recording, version="1.0"
+        )
+        self.register_method(
+            "stop_recording", self._method_stop_recording, version="1.0"
+        )
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
         """
         Extract stream name from camera device path.
-        
+
         Args:
             device_path: Camera device path (e.g., /dev/video0)
-            
+
         Returns:
             Stream name for MediaMTX (e.g., camera0)
         """
         try:
             # Extract device number from path like /dev/video0
-            if device_path.startswith('/dev/video'):
-                device_num = device_path.replace('/dev/video', '')
+            if device_path.startswith("/dev/video"):
+                device_num = device_path.replace("/dev/video", "")
                 return f"camera{device_num}"
             else:
                 # Fallback for non-standard device paths
@@ -667,24 +702,26 @@ class WebSocketJsonRpcServer:
         except Exception:
             return "camera_unknown"
 
-    def _generate_filename(self, device_path: str, extension: str, custom_filename: Optional[str] = None) -> str:
+    def _generate_filename(
+        self, device_path: str, extension: str, custom_filename: Optional[str] = None
+    ) -> str:
         """
         Generate filename for snapshots and recordings.
-        
+
         Args:
             device_path: Camera device path
             extension: File extension (jpg, mp4, etc.)
             custom_filename: Custom filename if provided
-            
+
         Returns:
             Generated filename with timestamp
         """
         if custom_filename:
             # Ensure custom filename has correct extension
-            if not custom_filename.endswith(f'.{extension}'):
+            if not custom_filename.endswith(f".{extension}"):
                 return f"{custom_filename}.{extension}"
             return custom_filename
-        
+
         # Generate timestamp-based filename
         timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         stream_name = self._get_stream_name_from_device_path(device_path)
@@ -702,7 +739,9 @@ class WebSocketJsonRpcServer:
         """
         return "pong"
 
-    async def _method_get_camera_list(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _method_get_camera_list(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Get list of all discovered cameras with their current status and aggregated metadata.
 
@@ -717,58 +756,68 @@ class WebSocketJsonRpcServer:
         """
         if not self._camera_monitor:
             self._logger.warning("Camera monitor not available for get_camera_list")
-            return {
-                "cameras": [],
-                "total": 0,
-                "connected": 0
-            }
-        
+            return {"cameras": [], "total": 0, "connected": 0}
+
         try:
             # Get connected cameras from camera monitor
             connected_cameras = await self._camera_monitor.get_connected_cameras()
-            
+
             cameras = []
             connected_count = 0
-            
+
             for device_path, camera_device in connected_cameras.items():
                 # Get real capability metadata with provisional/confirmed logic
                 resolution = "1920x1080"  # Architecture default
-                fps = 30                  # Architecture default
-                
+                fps = 30  # Architecture default
+
                 # Use effective capability metadata (provisional or confirmed)
-                if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
+                if hasattr(self._camera_monitor, "get_effective_capability_metadata"):
                     try:
-                        capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
+                        capability_metadata = (
+                            self._camera_monitor.get_effective_capability_metadata(
+                                device_path
+                            )
+                        )
                         resolution = capability_metadata.get("resolution", resolution)
                         fps = capability_metadata.get("fps", fps)
-                        
+
                         # Log capability validation status for monitoring
-                        validation_status = capability_metadata.get("validation_status", "none")
+                        validation_status = capability_metadata.get(
+                            "validation_status", "none"
+                        )
                         if validation_status in ["provisional", "confirmed"]:
                             self._logger.debug(
                                 f"Using {validation_status} capability data for {device_path}: "
                                 f"{resolution}@{fps}fps"
                             )
                     except Exception as e:
-                        self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
-                
+                        self._logger.debug(
+                            f"Could not get capability metadata for {device_path}: {e}"
+                        )
+
                 # Generate stream name and URLs
                 stream_name = self._get_stream_name_from_device_path(device_path)
                 streams = {}
-                
+
                 # Get stream URLs from MediaMTX controller if available and camera connected
                 if self._mediamtx_controller and camera_device.status == "CONNECTED":
                     try:
-                        stream_status = await self._mediamtx_controller.get_stream_status(stream_name)
+                        stream_status = (
+                            await self._mediamtx_controller.get_stream_status(
+                                stream_name
+                            )
+                        )
                         if stream_status.get("status") == "active":
                             streams = {
                                 "rtsp": f"rtsp://localhost:8554/{stream_name}",
                                 "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
-                                "hls": f"http://localhost:8888/{stream_name}"
+                                "hls": f"http://localhost:8888/{stream_name}",
                             }
                     except Exception as e:
-                        self._logger.debug(f"Could not get stream status for {stream_name}: {e}")
-                
+                        self._logger.debug(
+                            f"Could not get stream status for {stream_name}: {e}"
+                        )
+
                 # Build camera info per API specification
                 camera_info = {
                     "device": device_path,
@@ -776,29 +825,27 @@ class WebSocketJsonRpcServer:
                     "name": camera_device.name,
                     "resolution": resolution,
                     "fps": fps,
-                    "streams": streams
+                    "streams": streams,
                 }
-                
+
                 cameras.append(camera_info)
-                
+
                 if camera_device.status == "CONNECTED":
                     connected_count += 1
-            
+
             return {
                 "cameras": cameras,
                 "total": len(cameras),
-                "connected": connected_count
-            }
-            
-        except Exception as e:
-            self._logger.error(f"Error getting camera list: {e}")
-            return {
-                "cameras": [],
-                "total": 0,
-                "connected": 0
+                "connected": connected_count,
             }
 
-    async def _method_get_camera_status(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        except Exception as e:
+            self._logger.error(f"Error getting camera list: {e}")
+            return {"cameras": [], "total": 0, "connected": 0}
+
+    async def _method_get_camera_status(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Get detailed status for a specific camera device with aggregated real data.
 
@@ -813,102 +860,116 @@ class WebSocketJsonRpcServer:
             Dict containing comprehensive camera status per API specification:
                 - device, status, name, resolution, fps, streams, metrics, capabilities
         """
-        if not params or 'device' not in params:
+        if not params or "device" not in params:
             raise ValueError("device parameter is required")
-        
-        device_path = params['device']
-        
+
+        device_path = params["device"]
+
         # Initialize response with architecture defaults
         camera_status = {
             "device": device_path,
             "status": "DISCONNECTED",
             "name": f"Camera {device_path.split('video')[-1] if 'video' in device_path else 'unknown'}",
             "resolution": "1920x1080",  # Architecture default
-            "fps": 30,                   # Architecture default  
+            "fps": 30,  # Architecture default
             "streams": {},
-            "metrics": {
-                "bytes_sent": 0,
-                "readers": 0,
-                "uptime": 0
-            },
-            "capabilities": {
-                "formats": [],
-                "resolutions": []
-            }
+            "metrics": {"bytes_sent": 0, "readers": 0, "uptime": 0},
+            "capabilities": {"formats": [], "resolutions": []},
         }
-        
+
         try:
             # Get camera info from camera monitor
             if self._camera_monitor:
                 connected_cameras = await self._camera_monitor.get_connected_cameras()
                 camera_device = connected_cameras.get(device_path)
-                
+
                 if camera_device:
-                    camera_status.update({
-                        "status": camera_device.status,
-                        "name": camera_device.name
-                    })
-                    
+                    camera_status.update(
+                        {"status": camera_device.status, "name": camera_device.name}
+                    )
+
                     # Get real capability metadata with provisional/confirmed logic
                     if camera_device.status == "CONNECTED":
-                        if hasattr(self._camera_monitor, 'get_effective_capability_metadata'):
+                        if hasattr(
+                            self._camera_monitor, "get_effective_capability_metadata"
+                        ):
                             try:
-                                capability_metadata = self._camera_monitor.get_effective_capability_metadata(device_path)
-                                
+                                capability_metadata = self._camera_monitor.get_effective_capability_metadata(
+                                    device_path
+                                )
+
                                 # Use capability-derived resolution and fps
-                                camera_status.update({
-                                    "resolution": capability_metadata.get("resolution", "1920x1080"),
-                                    "fps": capability_metadata.get("fps", 30)
-                                })
-                                
+                                camera_status.update(
+                                    {
+                                        "resolution": capability_metadata.get(
+                                            "resolution", "1920x1080"
+                                        ),
+                                        "fps": capability_metadata.get("fps", 30),
+                                    }
+                                )
+
                                 # Update capabilities with real detected data
                                 if capability_metadata.get("formats"):
-                                    camera_status["capabilities"]["formats"] = capability_metadata["formats"]
+                                    camera_status["capabilities"]["formats"] = (
+                                        capability_metadata["formats"]
+                                    )
                                 if capability_metadata.get("all_resolutions"):
-                                    camera_status["capabilities"]["resolutions"] = capability_metadata["all_resolutions"]
-                                
+                                    camera_status["capabilities"]["resolutions"] = (
+                                        capability_metadata["all_resolutions"]
+                                    )
+
                                 # Log validation status for monitoring
-                                validation_status = capability_metadata.get("validation_status", "none")
+                                validation_status = capability_metadata.get(
+                                    "validation_status", "none"
+                                )
                                 self._logger.debug(
                                     f"Camera {device_path} using {validation_status} capability data: "
                                     f"{camera_status['resolution']}@{camera_status['fps']}fps"
                                 )
-                                    
+
                             except Exception as e:
-                                self._logger.debug(f"Could not get capability metadata for {device_path}: {e}")
-            
+                                self._logger.debug(
+                                    f"Could not get capability metadata for {device_path}: {e}"
+                                )
+
             # Get stream info and metrics from MediaMTX controller
             if self._mediamtx_controller and camera_status["status"] == "CONNECTED":
                 try:
                     stream_name = self._get_stream_name_from_device_path(device_path)
-                    stream_status = await self._mediamtx_controller.get_stream_status(stream_name)
-                    
+                    stream_status = await self._mediamtx_controller.get_stream_status(
+                        stream_name
+                    )
+
                     if stream_status.get("status") == "active":
                         # Update stream URLs
                         camera_status["streams"] = {
                             "rtsp": f"rtsp://localhost:8554/{stream_name}",
                             "webrtc": f"webrtc://localhost:8002/{stream_name}",
-                            "hls": f"http://localhost:8002/hls/{stream_name}.m3u8"
+                            "hls": f"http://localhost:8002/hls/{stream_name}.m3u8",
                         }
-                        
+
                         # Update metrics from MediaMTX
                         camera_status["metrics"] = {
                             "bytes_sent": stream_status.get("bytes_sent", 0),
                             "readers": stream_status.get("readers", 0),
-                            "uptime": int(time.time())  # Current uptime proxy
+                            "uptime": int(time.time()),  # Current uptime proxy
                         }
-                
+
                 except Exception as e:
-                    self._logger.debug(f"Could not get MediaMTX status for {device_path}: {e}")
-            
+                    self._logger.debug(
+                        f"Could not get MediaMTX status for {device_path}: {e}"
+                    )
+
             return camera_status
-            
+
         except Exception as e:
             self._logger.error(f"Error getting camera status for {device_path}: {e}")
             camera_status["status"] = "ERROR"
             return camera_status
 
-    async def _method_take_snapshot(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _method_take_snapshot(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Capture a snapshot from the specified camera.
 
@@ -920,12 +981,12 @@ class WebSocketJsonRpcServer:
         Returns:
             Dict containing snapshot information
         """
-        if not params or 'device' not in params:
+        if not params or "device" not in params:
             raise ValueError("device parameter is required")
-        
-        device_path = params['device']
-        custom_filename = params.get('filename')
-        
+
+        device_path = params["device"]
+        custom_filename = params.get("filename")
+
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -933,39 +994,43 @@ class WebSocketJsonRpcServer:
                 "status": "FAILED",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
-                "error": "MediaMTX controller not available"
+                "error": "MediaMTX controller not available",
             }
-        
+
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
             filename = self._generate_filename(device_path, "jpg", custom_filename)
-            
+
             snapshot_result = await self._mediamtx_controller.take_snapshot(
-                stream_name=stream_name,
-                filename=filename
+                stream_name=stream_name, filename=filename
             )
-            
+
             return {
                 "device": device_path,
                 "filename": snapshot_result.get("filename", filename),
                 "status": "completed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": snapshot_result.get("file_size", 0),
-                "file_path": snapshot_result.get("file_path", f"/opt/camera-service/snapshots/{filename}")
+                "file_path": snapshot_result.get(
+                    "file_path", f"/opt/camera-service/snapshots/{filename}"
+                ),
             }
-            
+
         except Exception as e:
             self._logger.error(f"Error taking snapshot for {device_path}: {e}")
             return {
                 "device": device_path,
-                "filename": custom_filename or self._generate_filename(device_path, "jpg"),
+                "filename": custom_filename
+                or self._generate_filename(device_path, "jpg"),
                 "status": "FAILED",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
-    async def _method_start_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _method_start_recording(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Start recording video from the specified camera.
 
@@ -978,13 +1043,13 @@ class WebSocketJsonRpcServer:
         Returns:
             Dict containing recording session information
         """
-        if not params or 'device' not in params:
+        if not params or "device" not in params:
             raise ValueError("device parameter is required")
-        
-        device_path = params['device']
-        duration = params.get('duration')
-        format_type = params.get('format', 'mp4')
-        
+
+        device_path = params["device"]
+        duration = params.get("duration")
+        format_type = params.get("format", "mp4")
+
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -994,29 +1059,29 @@ class WebSocketJsonRpcServer:
                 "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": duration,
                 "format": format_type,
-                "error": "MediaMTX controller not available"
+                "error": "MediaMTX controller not available",
             }
-        
+
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
             session_id = str(uuid.uuid4())
-            
+
             recording_result = await self._mediamtx_controller.start_recording(
-                stream_name=stream_name,
-                duration=duration,
-                format=format_type
+                stream_name=stream_name, duration=duration, format=format_type
             )
-            
+
             return {
                 "device": device_path,
                 "session_id": session_id,
                 "filename": recording_result.get("filename"),
                 "status": "STARTED",
-                "start_time": recording_result.get("start_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")),
+                "start_time": recording_result.get(
+                    "start_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                ),
                 "duration": duration,
-                "format": format_type
+                "format": format_type,
             }
-            
+
         except Exception as e:
             self._logger.error(f"Error starting recording for {device_path}: {e}")
             return {
@@ -1027,10 +1092,12 @@ class WebSocketJsonRpcServer:
                 "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": duration,
                 "format": format_type,
-                "error": str(e)
+                "error": str(e),
             }
 
-    async def _method_stop_recording(self, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _method_stop_recording(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Stop active recording for the specified camera.
 
@@ -1041,11 +1108,11 @@ class WebSocketJsonRpcServer:
         Returns:
             Dict containing recording completion information
         """
-        if not params or 'device' not in params:
+        if not params or "device" not in params:
             raise ValueError("device parameter is required")
-        
-        device_path = params['device']
-        
+
+        device_path = params["device"]
+
         if not self._mediamtx_controller:
             return {
                 "device": device_path,
@@ -1056,13 +1123,15 @@ class WebSocketJsonRpcServer:
                 "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": 0,
                 "file_size": 0,
-                "error": "MediaMTX controller not available"
+                "error": "MediaMTX controller not available",
             }
-        
+
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
-            recording_result = await self._mediamtx_controller.stop_recording(stream_name)
-            
+            recording_result = await self._mediamtx_controller.stop_recording(
+                stream_name
+            )
+
             return {
                 "device": device_path,
                 "session_id": recording_result.get("session_id"),
@@ -1071,9 +1140,9 @@ class WebSocketJsonRpcServer:
                 "start_time": recording_result.get("start_time"),
                 "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": recording_result.get("duration", 0),
-                "file_size": recording_result.get("file_size", 0)
+                "file_size": recording_result.get("file_size", 0),
             }
-            
+
         except Exception as e:
             self._logger.error(f"Error stopping recording for {device_path}: {e}")
             return {
@@ -1085,7 +1154,7 @@ class WebSocketJsonRpcServer:
                 "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": 0,
                 "file_size": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
@@ -1101,31 +1170,36 @@ class WebSocketJsonRpcServer:
         if not params:
             self._logger.warning("Camera status update called with empty parameters")
             return
-        
+
         # Validate required fields per API specification
-        required_fields = ['device', 'status']
+        required_fields = ["device", "status"]
         for field in required_fields:
             if field not in params:
-                self._logger.error(f"Camera status update missing required field: {field}")
+                self._logger.error(
+                    f"Camera status update missing required field: {field}"
+                )
                 return
-        
+
         # STRICT API COMPLIANCE: Filter to only allowed fields per specification
-        allowed_fields = {'device', 'status', 'name', 'resolution', 'fps', 'streams'}
+        allowed_fields = {"device", "status", "name", "resolution", "fps", "streams"}
         filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
-        
+
         # Log filtered fields for monitoring compliance
         filtered_out = set(params.keys()) - allowed_fields
         if filtered_out:
-            self._logger.debug(f"Filtered out non-API fields from camera notification: {filtered_out}")
-        
+            self._logger.debug(
+                f"Filtered out non-API fields from camera notification: {filtered_out}"
+            )
+
         try:
             await self.broadcast_notification(
-                method="camera_status_update",
-                params=filtered_params
+                method="camera_status_update", params=filtered_params
             )
-            
-            self._logger.info(f"Broadcasted camera status update for device: {params.get('device')}")
-            
+
+            self._logger.info(
+                f"Broadcasted camera status update for device: {params.get('device')}"
+            )
+
         except Exception as e:
             self._logger.error(f"Failed to broadcast camera status update: {e}")
 
@@ -1142,31 +1216,36 @@ class WebSocketJsonRpcServer:
         if not params:
             self._logger.warning("Recording status update called with empty parameters")
             return
-        
+
         # Validate required fields per API specification
-        required_fields = ['device', 'status']
+        required_fields = ["device", "status"]
         for field in required_fields:
             if field not in params:
-                self._logger.error(f"Recording status update missing required field: {field}")
+                self._logger.error(
+                    f"Recording status update missing required field: {field}"
+                )
                 return
-        
+
         # STRICT API COMPLIANCE: Filter to only allowed fields per specification
-        allowed_fields = {'device', 'status', 'filename', 'duration'}
+        allowed_fields = {"device", "status", "filename", "duration"}
         filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
-        
+
         # Log filtered fields for monitoring compliance
         filtered_out = set(params.keys()) - allowed_fields
         if filtered_out:
-            self._logger.debug(f"Filtered out non-API fields from recording notification: {filtered_out}")
-        
+            self._logger.debug(
+                f"Filtered out non-API fields from recording notification: {filtered_out}"
+            )
+
         try:
             await self.broadcast_notification(
-                method="recording_status_update",
-                params=filtered_params
+                method="recording_status_update", params=filtered_params
             )
-            
-            self._logger.info(f"Broadcasted recording status update for device: {params.get('device')}, status: {params.get('status')}")
-            
+
+            self._logger.info(
+                f"Broadcasted recording status update for device: {params.get('device')}, status: {params.get('status')}"
+            )
+
         except Exception as e:
             self._logger.error(f"Failed to broadcast recording status update: {e}")
 
@@ -1177,7 +1256,7 @@ class WebSocketJsonRpcServer:
     def get_server_stats(self) -> Dict[str, Any]:
         """
         Get server statistics and status.
-        
+
         Returns:
             Dictionary containing server metrics
         """
@@ -1185,7 +1264,7 @@ class WebSocketJsonRpcServer:
             "running": self._running,
             "connected_clients": len(self._clients),
             "max_connections": self._max_connections,
-            "registered_methods": len(self._method_handlers)
+            "registered_methods": len(self._method_handlers),
         }
 
     @property

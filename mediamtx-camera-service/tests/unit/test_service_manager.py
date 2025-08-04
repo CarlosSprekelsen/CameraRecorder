@@ -7,7 +7,15 @@ import pytest
 import asyncio
 from unittest.mock import Mock, patch
 
-from camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
+from camera_service.config import (
+    Config,
+    ServerConfig,
+    MediaMTXConfig,
+    CameraConfig,
+    LoggingConfig,
+    RecordingConfig,
+    SnapshotConfig,
+)
 from camera_service.service_manager import ServiceManager
 
 
@@ -20,10 +28,10 @@ class TestServiceManager:
         return Config(
             server=ServerConfig(),
             mediamtx=MediaMTXConfig(),
-            camera=CameraConfig(),  
+            camera=CameraConfig(),
             logging=LoggingConfig(),
             recording=RecordingConfig(),
-            snapshots=SnapshotConfig()
+            snapshots=SnapshotConfig(),
         )
 
     def test_instantiation(self, mock_config):
@@ -50,7 +58,7 @@ class TestServiceManager:
         # Test implementation needed when start() is implemented
         pass
 
-    @pytest.mark.asyncio  
+    @pytest.mark.asyncio
     async def test_stop(self, mock_config):
         """Test ServiceManager stop method."""
         # TODO: Implement test for stop() method
@@ -73,7 +81,7 @@ class TestServiceManager:
         """Test ServiceManager get_status method."""
         service_manager = ServiceManager(mock_config)
         status = service_manager.get_status()
-        
+
         assert isinstance(status, dict)
         assert "running" in status
         assert status["running"] is False

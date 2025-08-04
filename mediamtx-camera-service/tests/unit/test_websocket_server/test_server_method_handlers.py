@@ -21,21 +21,24 @@ class TestServerMethodHandlers:
     def server(self):
         """Create WebSocket server instance for testing."""
         return WebSocketJsonRpcServer(
-            host="localhost",
-            port=8002,
-            websocket_path="/ws",
-            max_connections=100
+            host="localhost", port=8002, websocket_path="/ws", max_connections=100
         )
 
     def test_method_registration_and_versioning(self, server):
         """Test method registration with version tracking."""
         # Test built-in method registration
         server._register_builtin_methods()
-        
+
         # Verify core methods are registered
-        expected_methods = ["ping", "get_camera_list", "get_camera_status", 
-                          "take_snapshot", "start_recording", "stop_recording"]
-        
+        expected_methods = [
+            "ping",
+            "get_camera_list",
+            "get_camera_status",
+            "take_snapshot",
+            "start_recording",
+            "stop_recording",
+        ]
+
         for method in expected_methods:
             assert method in server._method_handlers
             assert method in server._method_versions
@@ -43,16 +46,17 @@ class TestServerMethodHandlers:
 
     def test_custom_method_registration(self, server):
         """Test registration of custom methods with versions."""
+
         async def custom_handler(params=None):
             return {"result": "custom"}
-        
+
         # Register custom method with version
         server.register_method("custom_method", custom_handler, version="2.1")
-        
+
         # Verify method is registered
         assert "custom_method" in server._method_handlers
         assert server.get_method_version("custom_method") == "2.1"
-        
+
         # Test method unregistration
         server.unregister_method("custom_method")
         assert "custom_method" not in server._method_handlers
@@ -62,7 +66,7 @@ class TestServerMethodHandlers:
         """Test ping method for health checks."""
         result = await server._method_ping()
         assert result == "pong"
-        
+
         # Test with parameters (should be ignored)
         result = await server._method_ping({"test": "value"})
         assert result == "pong"
@@ -72,13 +76,13 @@ class TestServerMethodHandlers:
         # Test methods requiring device parameter
         with pytest.raises(ValueError, match="device parameter is required"):
             asyncio.run(server._method_get_camera_status({}))
-        
+
         with pytest.raises(ValueError, match="device parameter is required"):
             asyncio.run(server._method_take_snapshot(None))
-        
+
         with pytest.raises(ValueError, match="device parameter is required"):
             asyncio.run(server._method_start_recording({}))
-        
+
         with pytest.raises(ValueError, match="device parameter is required"):
             asyncio.run(server._method_stop_recording({}))
 
@@ -87,24 +91,25 @@ class TestServerMethodHandlers:
         """Test snapshot method parameter processing."""
         # Mock MediaMTX controller
         mock_controller = Mock()
-        mock_controller.take_snapshot = AsyncMock(return_value={
-            "filename": "test_snapshot.jpg",
-            "file_size": 12345,
-            "file_path": "/opt/snapshots/test_snapshot.jpg"
-        })
+        mock_controller.take_snapshot = AsyncMock(
+            return_value={
+                "filename": "test_snapshot.jpg",
+                "file_size": 12345,
+                "file_path": "/opt/snapshots/test_snapshot.jpg",
+            }
+        )
         server._mediamtx_controller = mock_controller
-        
+
         # Test with device parameter only
         result = await server._method_take_snapshot({"device": "/dev/video0"})
         assert result["device"] == "/dev/video0"
         assert result["status"] == "completed"
         assert "filename" in result
-        
+
         # Test with custom filename
-        result = await server._method_take_snapshot({
-            "device": "/dev/video0",
-            "filename": "custom_snapshot.jpg"
-        })
+        result = await server._method_take_snapshot(
+            {"device": "/dev/video0", "filename": "custom_snapshot.jpg"}
+        )
         assert result["filename"] == "test_snapshot.jpg"  # From mock controller
 
     @pytest.mark.asyncio
@@ -112,29 +117,31 @@ class TestServerMethodHandlers:
         """Test recording method parameter processing."""
         # Mock MediaMTX controller
         mock_controller = Mock()
-        mock_controller.start_recording = AsyncMock(return_value={
-            "filename": "test_recording.mp4",
-            "start_time": "2025-08-03T12:00:00Z"
-        })
-        mock_controller.stop_recording = AsyncMock(return_value={
-            "filename": "test_recording.mp4",
-            "start_time": "2025-08-03T12:00:00Z",
-            "duration": 3600,
-            "file_size": 1073741824
-        })
+        mock_controller.start_recording = AsyncMock(
+            return_value={
+                "filename": "test_recording.mp4",
+                "start_time": "2025-08-03T12:00:00Z",
+            }
+        )
+        mock_controller.stop_recording = AsyncMock(
+            return_value={
+                "filename": "test_recording.mp4",
+                "start_time": "2025-08-03T12:00:00Z",
+                "duration": 3600,
+                "file_size": 1073741824,
+            }
+        )
         server._mediamtx_controller = mock_controller
-        
+
         # Test start_recording with parameters
-        result = await server._method_start_recording({
-            "device": "/dev/video0",
-            "duration": 3600,
-            "format": "mp4"
-        })
+        result = await server._method_start_recording(
+            {"device": "/dev/video0", "duration": 3600, "format": "mp4"}
+        )
         assert result["device"] == "/dev/video0"
         assert result["status"] == "STARTED"
         assert result["duration"] == 3600
         assert result["format"] == "mp4"
-        
+
         # Test stop_recording
         result = await server._method_stop_recording({"device": "/dev/video0"})
         assert result["device"] == "/dev/video0"
@@ -146,17 +153,17 @@ class TestServerMethodHandlers:
         """Test method error handling when MediaMTX controller unavailable."""
         # Ensure no MediaMTX controller
         server._mediamtx_controller = None
-        
+
         # Test snapshot without MediaMTX
         result = await server._method_take_snapshot({"device": "/dev/video0"})
         assert result["status"] == "FAILED"
         assert "MediaMTX controller not available" in result["error"]
-        
+
         # Test start_recording without MediaMTX
         result = await server._method_start_recording({"device": "/dev/video0"})
         assert result["status"] == "FAILED"
         assert "MediaMTX controller not available" in result["error"]
-        
+
         # Test stop_recording without MediaMTX
         result = await server._method_stop_recording({"device": "/dev/video0"})
         assert result["status"] == "FAILED"
@@ -168,13 +175,15 @@ class TestServerMethodHandlers:
         filename = server._generate_filename("/dev/video0", "jpg")
         assert filename.startswith("camera0_")
         assert filename.endswith(".jpg")
-        
+
         # Test custom filename without extension
         filename = server._generate_filename("/dev/video0", "mp4", "custom_recording")
         assert filename == "custom_recording.mp4"
-        
+
         # Test custom filename with extension
-        filename = server._generate_filename("/dev/video0", "jpg", "custom_snapshot.jpg")
+        filename = server._generate_filename(
+            "/dev/video0", "jpg", "custom_snapshot.jpg"
+        )
         assert filename == "custom_snapshot.jpg"
 
     def test_stream_name_extraction(self, server):
@@ -182,12 +191,12 @@ class TestServerMethodHandlers:
         # Test standard video device paths
         assert server._get_stream_name_from_device_path("/dev/video0") == "camera0"
         assert server._get_stream_name_from_device_path("/dev/video15") == "camera15"
-        
+
         # Test non-standard device paths
         stream_name = server._get_stream_name_from_device_path("/custom/device")
         assert stream_name.startswith("camera_")
         assert stream_name != "camera_unknown"  # Should generate deterministic hash
-        
+
         # Test empty/invalid paths
         assert server._get_stream_name_from_device_path("") == "camera_unknown"
 
@@ -196,9 +205,11 @@ class TestServerMethodHandlers:
         """Test exception handling in method execution."""
         # Mock MediaMTX controller that raises exceptions
         mock_controller = Mock()
-        mock_controller.take_snapshot = AsyncMock(side_effect=Exception("MediaMTX error"))
+        mock_controller.take_snapshot = AsyncMock(
+            side_effect=Exception("MediaMTX error")
+        )
         server._mediamtx_controller = mock_controller
-        
+
         # Test that exceptions are caught and return error responses
         result = await server._method_take_snapshot({"device": "/dev/video0"})
         assert result["status"] == "FAILED"
@@ -206,20 +217,21 @@ class TestServerMethodHandlers:
 
     def test_method_version_tracking(self, server):
         """Test method version tracking functionality."""
+
         # Register methods with different versions
         async def handler_v1():
             return {"version": "1.0"}
-        
+
         async def handler_v2():
             return {"version": "2.0"}
-        
+
         server.register_method("test_method", handler_v1, "1.0")
         assert server.get_method_version("test_method") == "1.0"
-        
+
         # Update to new version
         server.register_method("test_method", handler_v2, "2.0")
         assert server.get_method_version("test_method") == "2.0"
-        
+
         # Test non-existent method
         assert server.get_method_version("nonexistent_method") is None
 
@@ -230,15 +242,15 @@ class TestServerMethodHandlers:
         assert stats["running"] is False
         assert stats["connected_clients"] == 0
         assert stats["max_connections"] == 100
-        
+
         # Test after method registration
         server._register_builtin_methods()
         stats = server.get_server_stats()
         assert stats["registered_methods"] >= 6  # At least the built-in methods
-        
+
         # Test connection count
         assert server.get_connection_count() == 0
-        
+
         # Test is_running property
         assert server.is_running is False
 
@@ -249,17 +261,17 @@ class TestServerMethodHandlers:
         mock_camera_monitor = Mock()
         mock_camera_monitor.get_connected_cameras = AsyncMock(return_value={})
         server._camera_monitor = mock_camera_monitor
-        
-        # Setup mock MediaMTX controller  
+
+        # Setup mock MediaMTX controller
         mock_mediamtx = Mock()
         mock_mediamtx.get_stream_status = AsyncMock(return_value={"status": "inactive"})
         server._mediamtx_controller = mock_mediamtx
-        
+
         # Test get_camera_list with mocked dependencies
         result = await server._method_get_camera_list()
         assert result["cameras"] == []
         assert result["total"] == 0
         assert result["connected"] == 0
-        
+
         # Verify dependencies were called
         mock_camera_monitor.get_connected_cameras.assert_called_once()

@@ -2,6 +2,7 @@ import asyncio
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
+
 @pytest.mark.asyncio
 async def test_probe_device_capabilities_with_mock(monitor):
     # prepare mocked v4l2 outputs

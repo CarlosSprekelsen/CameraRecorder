@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 
+
 @pytest.mark.asyncio
 async def test_udev_event_filtering(monitor):
     class MockUdevDevice:
@@ -9,8 +10,10 @@ async def test_udev_event_filtering(monitor):
             self.action = action
 
     processed = []
+
     async def fake_handle(event_data):
         processed.append(event_data.device_path)
+
     monitor._handle_camera_event = fake_handle
     monitor._create_camera_device_info = AsyncMock()
 

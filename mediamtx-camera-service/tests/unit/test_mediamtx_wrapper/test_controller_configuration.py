@@ -28,7 +28,7 @@ class TestConfigurationValidation:
             hls_port=8888,
             config_path="/tmp/test_config.yml",
             recordings_path="/tmp/recordings",
-            snapshots_path="/tmp/snapshots"
+            snapshots_path="/tmp/snapshots",
         )
         # Mock session
         controller._session = Mock()
@@ -48,12 +48,12 @@ class TestConfigurationValidation:
         invalid_config = {
             "logLevel": "info",  # Valid
             "unknownKey": "value",  # Invalid
-            "anotherUnknown": 123  # Invalid
+            "anotherUnknown": 123,  # Invalid
         }
-        
+
         with pytest.raises(ValueError) as exc_info:
             await controller.update_configuration(invalid_config)
-        
+
         # Verify error message lists unknown keys
         error_msg = str(exc_info.value)
         assert "Unknown configuration keys" in error_msg
@@ -65,11 +65,11 @@ class TestConfigurationValidation:
         """Test validation catches type mismatches."""
         invalid_configs = [
             {"logLevel": 123},  # Should be string
-            {"api": "true"},   # Should be boolean
+            {"api": "true"},  # Should be boolean
             {"readTimeout": "not_a_number"},  # Should be int/str number
-            {"readBufferCount": "invalid"}  # Should be int
+            {"readBufferCount": "invalid"},  # Should be int
         ]
-        
+
         for invalid_config in invalid_configs:
             with pytest.raises(ValueError, match="Invalid type"):
                 await controller.update_configuration(invalid_config)
@@ -80,20 +80,27 @@ class TestConfigurationValidation:
         invalid_configs = [
             {"logLevel": "invalid_level"},  # Not in allowed values
             {"readTimeout": 0},  # Below minimum
-            {"readTimeout": 500},  # Above maximum  
+            {"readTimeout": 500},  # Above maximum
             {"readBufferCount": 0},  # Below minimum
             {"readBufferCount": 10000},  # Above maximum
-            {"udpMaxPayloadSize": 500}  # Below minimum
+            {"udpMaxPayloadSize": 500},  # Below minimum
         ]
-        
+
         for invalid_config in invalid_configs:
             with pytest.raises(ValueError) as exc_info:
                 await controller.update_configuration(invalid_config)
-            
+
             # Verify specific constraint violation is mentioned
             error_msg = str(exc_info.value)
-            assert any(keyword in error_msg for keyword in 
-                      ["Invalid value", "too small", "too large", "allowed values"])
+            assert any(
+                keyword in error_msg
+                for keyword in [
+                    "Invalid value",
+                    "too small",
+                    "too large",
+                    "allowed values",
+                ]
+            )
 
     @pytest.mark.asyncio
     async def test_configuration_validation_pattern_matching(self, controller):
@@ -102,9 +109,9 @@ class TestConfigurationValidation:
             {"apiAddress": "invalid_ip"},
             {"metricsAddress": "not.an.ip.address"},
             {"rtspAddress": "999.999.999.999"},  # Invalid IP
-            {"webrtcAddress": "localhost:abc"}  # Invalid port format
+            {"webrtcAddress": "localhost:abc"},  # Invalid port format
         ]
-        
+
         for invalid_config in invalid_patterns:
             with pytest.raises(ValueError, match="Invalid format"):
                 await controller.update_configuration(invalid_config)
@@ -117,27 +124,27 @@ class TestConfigurationValidation:
             "logLevel": "invalid_level",  # Bad value
             "api": "not_boolean",  # Bad type
             "readTimeout": -1,  # Below minimum
-            "unknownKey": "value"  # Unknown key
+            "unknownKey": "value",  # Unknown key
         }
-        
+
         with pytest.raises(ValueError) as exc_info:
             await controller.update_configuration(invalid_config)
-        
+
         # Verify multiple errors are reported
         error_msg = str(exc_info.value)
         # Should mention unknown keys error
         assert "Unknown configuration keys" in error_msg
-        
+
         # Try validation-only errors (excluding unknown keys)
         validation_only_config = {
             "logLevel": "invalid_level",
-            "api": "not_boolean", 
-            "readTimeout": -1
+            "api": "not_boolean",
+            "readTimeout": -1,
         }
-        
+
         with pytest.raises(ValueError) as exc_info:
             await controller.update_configuration(validation_only_config)
-        
+
         error_msg = str(exc_info.value)
         # Should accumulate multiple validation errors
         error_count = error_msg.count(";")  # Errors separated by semicolons
@@ -147,19 +154,16 @@ class TestConfigurationValidation:
     async def test_configuration_update_api_failure_safe_fallback(self, controller):
         """Test safe fallback behavior when MediaMTX API fails during update."""
         # Valid configuration
-        valid_config = {
-            "logLevel": "debug",
-            "api": True
-        }
-        
+        valid_config = {"logLevel": "debug", "api": True}
+
         # Mock API failure
         error_response = self._mock_response(500, text_data="Internal Server Error")
         controller._session.post = AsyncMock(return_value=error_response)
-        
+
         # Should raise ValueError (not crash system)
         with pytest.raises(ValueError, match="Failed to update configuration"):
             await controller.update_configuration(valid_config)
-        
+
         # Controller should remain in usable state
         assert controller._session is not None
 
@@ -167,10 +171,12 @@ class TestConfigurationValidation:
     async def test_configuration_update_network_error_handling(self, controller):
         """Test network error handling during configuration update."""
         valid_config = {"logLevel": "info"}
-        
+
         # Mock network error
-        controller._session.post = AsyncMock(side_effect=aiohttp.ClientError("Connection refused"))
-        
+        controller._session.post = AsyncMock(
+            side_effect=aiohttp.ClientError("Connection refused")
+        )
+
         with pytest.raises(ConnectionError, match="MediaMTX unreachable"):
             await controller.update_configuration(valid_config)
 
@@ -180,8 +186,8 @@ class TestConfigurationValidation:
         # Empty config
         with pytest.raises(ValueError, match="Configuration updates are required"):
             await controller.update_configuration({})
-        
-        # None config  
+
+        # None config
         with pytest.raises(ValueError, match="Configuration updates are required"):
             await controller.update_configuration(None)
 
@@ -193,26 +199,26 @@ class TestConfigurationValidation:
             "api": True,
             "readTimeout": 30,
             "readBufferCount": 512,
-            "apiAddress": "127.0.0.1:9997"
+            "apiAddress": "127.0.0.1:9997",
         }
-        
+
         # Mock successful API response
         success_response = self._mock_response(200)
         controller._session.post = AsyncMock(return_value=success_response)
-        
+
         result = await controller.update_configuration(valid_config)
-        
+
         assert result is True
         # Verify API was called with correct config
         controller._session.post.assert_called_once()
         call_args = controller._session.post.call_args
-        assert call_args.kwargs['json'] == valid_config
+        assert call_args.kwargs["json"] == valid_config
 
     @pytest.mark.asyncio
     async def test_configuration_update_without_session(self, controller):
         """Test configuration update fails gracefully when controller not started."""
         controller._session = None
-        
+
         with pytest.raises(ConnectionError, match="MediaMTX controller not started"):
             await controller.update_configuration({"logLevel": "info"})
 
@@ -220,18 +226,40 @@ class TestConfigurationValidation:
         """Test validation schema covers all expected MediaMTX configuration options."""
         # Test that validation schema includes key MediaMTX settings
         valid_config_keys = [
-            "logLevel", "logDestinations", "readTimeout", "writeTimeout",
-            "readBufferCount", "udpMaxPayloadSize", "runOnConnect", 
-            "runOnConnectRestart", "api", "apiAddress", "metrics",
-            "metricsAddress", "pprof", "pprofAddress", "rtsp", "rtspAddress",
-            "rtspsAddress", "rtmp", "rtmpAddress", "rtmps", "rtmpsAddress",
-            "hls", "hlsAddress", "hlsAllowOrigin", "webrtc", "webrtcAddress"
+            "logLevel",
+            "logDestinations",
+            "readTimeout",
+            "writeTimeout",
+            "readBufferCount",
+            "udpMaxPayloadSize",
+            "runOnConnect",
+            "runOnConnectRestart",
+            "api",
+            "apiAddress",
+            "metrics",
+            "metricsAddress",
+            "pprof",
+            "pprofAddress",
+            "rtsp",
+            "rtspAddress",
+            "rtspsAddress",
+            "rtmp",
+            "rtmpAddress",
+            "rtmps",
+            "rtmpsAddress",
+            "hls",
+            "hlsAddress",
+            "hlsAllowOrigin",
+            "webrtc",
+            "webrtcAddress",
         ]
-        
+
         # Each should be either accepted or rejected with specific error
         for key in valid_config_keys:
-            test_config = {key: "test_value"}  # May be wrong type, but key should be recognized
-            
+            test_config = {
+                key: "test_value"
+            }  # May be wrong type, but key should be recognized
+
             try:
                 # This will likely fail due to wrong type/value, but should not fail due to unknown key
                 asyncio.run(controller.update_configuration(test_config))
@@ -246,17 +274,20 @@ class TestConfigurationValidation:
     async def test_configuration_validation_correlation_id_logging(self, controller):
         """Test configuration validation includes correlation IDs in logging."""
         correlation_ids = []
-        
+
         def mock_set_correlation_id(cid):
             correlation_ids.append(cid)
-        
-        with patch('src.mediamtx_wrapper.controller.set_correlation_id', side_effect=mock_set_correlation_id):
+
+        with patch(
+            "src.mediamtx_wrapper.controller.set_correlation_id",
+            side_effect=mock_set_correlation_id,
+        ):
             # Mock successful response
             success_response = self._mock_response(200)
             controller._session.post = AsyncMock(return_value=success_response)
-            
+
             await controller.update_configuration({"logLevel": "info"})
-        
+
         # Verify correlation ID was set
         assert len(correlation_ids) > 0
         assert all(isinstance(cid, str) and len(cid) > 0 for cid in correlation_ids)
