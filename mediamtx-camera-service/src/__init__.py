@@ -8,7 +8,6 @@ Contains the core subpackages:
 - websocket_server
 """
 
-__version__ = "0.1.0"  # TODO: MEDIUM: Promote to centralized versioning scheme / sync with release metadata [IV&V:S15]
+__version__ = "0.1.0"  # TODO: MEDIUM: Centralize versioning decision [IV&V:S15]
 
 __all__ = []
-﻿
