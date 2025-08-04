@@ -1,868 +1,567 @@
-# src/camera_service/service_manager.py
-"""
-Service Manager for coordinating all camera service components.
+---------------------------------------------------------------------------
+Prompt 5 [Complete]: src/camera_service/main.py
 
-This module provides the main ServiceManager class that orchestrates
-the lifecycle and coordination of all service components including
-WebSocket server, camera discovery, MediaMTX integration, and health monitoring.
-"""
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
 
-import asyncio
-import logging
-import re
-import uuid
-from typing import Optional, Dict, Any
+Goal: Audit and improve `src/camera_service/main.py` so that:
+- Startup sequence correctly wires configuration, logging, service manager, and handles dependency failures with clear errors.
+- Shutdown (signal handling) is graceful on typical termination signals; all running components are torn down cleanly.
+- Errors during initialization bubble with sufficient context and don’t leave partially-initialized state.
+- TODO/STOP comments are canonical or explicitly deferred.
 
-from .config import Config
-from ..mediamtx_wrapper.controller import MediaMTXController, StreamConfig
-from ..camera_discovery.hybrid_monitor import CameraEventData, CameraEvent, CameraEventHandler
-from ..websocket_server.server import WebSocketJsonRpcServer
-from .logging_config import set_correlation_id, get_correlation_id
+Additional Goal: Verify that a test scaffold exists under `tests/unit/test_camera_service/` (e.g., `test_main_startup.py`). If missing, emit a minimal pytest stub covering:
+  * Successful startup and teardown,
+  * Signal-triggered shutdown,
+  * Initialization failure paths (e.g., config load failure) and their observable behavior.
+
+Scope: Only modify `src/camera_service/main.py` and create the test stub if needed.
+
+Instructions:
+1. Audit startup/shutdown logic for robustness and clarity of failure modes.
+2. Normalize any TODO/STOP comments.
+3. Ensure signal handling works and is documented/observable.
+4. Check or emit test stub with clear expected assertions.
+
+Output:
+- Summary of findings and changes.
+- Updated `main.py`.
+- Starter test file if missing.
+- Evidence (line references).
+- Suggested further tests.
+- Any open questions.
+
+---------------------------------------------------------------------------
+Prompt 6 [Complete]: src/camera_service/config.py
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Audit and harden `src/camera_service/config.py` so that:
+- Configuration loading handles missing, malformed, or partially invalid YAML gracefully with fallbacks.
+- Environment variable overrides are validated; invalid overrides do not crash the service but log appropriate errors.
+- Hot reload mechanism triggers updates safely and does not leave inconsistent state.
+- Schema validation is comprehensive (types, ranges, required fields) and error accumulation is clear.
+- TODO/STOP comments follow canonical format.
+
+Additional Goal: Verify presence of test scaffold `tests/unit/test_camera_service/test_config_manager.py`. If missing, generate a stub covering:
+  * Loading default config when none exists,
+  * Env var overrides (valid and invalid),
+  * Malformed config detection,
+  * Hot reload simulation.
+
+Scope: Only modify `src/camera_service/config.py` and create the test stub if needed.
+
+Instructions:
+1. Audit fallback behavior, override handling, and hot reload safety.
+2. Normalize TODO/STOP comments.
+3. Ensure errors are logged without crashing.
+4. Check for or emit test stub with fixtures.
+
+Output:
+- Audit summary and fixes.
+- Updated `config.py`.
+- Test scaffold stub if missing.
+- Evidence of behaviors/cases covered.
+- Suggested additional tests.
+- Any open clarifications.
+
+---------------------------------------------------------------------------
+Prompt 7 [Complete]: src/camera_service/logging_config.py
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Audit and complete `src/camera_service/logging_config.py` so that:
+- Log rotation is either implemented per configuration (`max_file_size`, `backup_count`) or explicitly deferred with a canonical STOP-style decision note including rationale and plan.
+- Correlation ID propagation is reliable and present in all relevant log emitters.
+- Formatter selection (console vs structured/JSON) behaves per config and degrades gracefully on misconfiguration.
+- TODO/STOP comments are canonical.
+
+Additional Goal: Verify test scaffold `tests/unit/test_camera_service/test_logging_config.py` exists. If missing, emit a stub covering:
+  * Formatter behavior,
+  * Correlation ID presence,
+  * Deferred rotation logic (if not implemented) vs active rotation.
+
+Scope: Only modify `logging_config.py` and possibly create the test stub.
+
+Instructions:
+1. Audit current implementation for rotation, formatting, and correlation usage.
+2. Implement rotation or add clear deferment note.
+3. Normalize comments.
+4. Check/create test stub.
+
+Output:
+- Summary of audit findings and corrections.
+- Updated `logging_config.py`.
+- Starter test stub if absent.
+- Evidence (line numbers).
+- Suggested test expansions.
+- Any open questions.
+
+---------------------------------------------------------------------------
+Prompt 8: src/common/ (seed shared utilities)
+
+Context:
+I am a solo engineer. Ground truth is in:
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/development/documentation-guidelines.md
+
+Goal: Populate `src/common/` with at least one practical shared utility and refactor an existing consumer to use it, to give the package immediate value and reduce duplication. Candidate modules:
+  * `retry.py`: exponential backoff with jitter helper.
+  * `types.py`: shared enums/constants (e.g., camera status).
+  * `logging_helpers.py`: correlation ID injection/retrieval helper.
+
+Additional Goal: Verify tests or usage exist that exercise the new common utility (e.g., health monitor, hybrid_monitor, or controller uses `common/retry.py`).
+
+Scope: Create new module(s) under `src/common/` and modify one existing consumer to leverage it (small refactor). Do not add unrelated features.
+
+Instructions:
+1. Create at least one utility (e.g., backoff helper) with minimal interface and defaults.
+2. Refactor a consumer (pick one: health monitor in controller, retry logic in hybrid_monitor, etc.) to use it.
+3. Write or update a minimal docstring/instruction in `src/common/__init__.py` or the module.
+4. If no existing test covers this yet, emit a stub test under `tests/unit/test_common/` for the utility.
+
+Output:
+- New `src/common/` module (e.g., `retry.py`) and refactored consumer.
+- Test stub if needed.
+- Summary of what was added/refactored.
+- Evidence (file/line references).
+- Any open clarifications.
+
+---------------------------------------------------------------------------
+Prompt 1 [Complete]: Expand udev testing and metadata reconciliation (S3)
+
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Condensed roadmap/backlog (priority focused on S3 hardening).
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Directive: ONLY use the above documents as the source of truth. Do not invent new features or make architectural assumptions beyond what is specified. If anything is ambiguous or missing for a required behavior, stop and ask one precise clarifying question before proceeding.
+
+Goal:
+1. Expand and tighten test coverage for `src/camera_discovery/hybrid_monitor.py` to cover:
+   - udev add/remove/change events including race conditions and invalid device nodes.
+   - Polling fallback when udev events are missed or stale.
+   - Capability parsing variations (multiple frame rates, malformed output).
+2. Validate reconciliation between the effective capability output from hybrid_monitor (frequency-weighted provisional/confirmed merge) and the metadata consumed by `src/camera_service/service_manager.py`. Ensure provisional vs confirmed semantics propagate without drift or silent mismatch.
+
+Scope:
+- Create/extend pytest files under `tests/unit/test_camera_discovery/`.
+- Write a lightweight integration test or verification helper that feeds hybrid_monitor’s merged capability result to service_manager’s metadata path and asserts consistency.
+- Do not add new architectural components or unrelated features.
+
+Acceptance Criteria:
+- Tests exist for udev event variants: add/remove/change, invalid node, racing sequences.  
+- Tests simulate missing udev events and verify polling fallback triggers and recovers.  
+- Capability parsing tests cover multiple fps formats and gracefully handle malformed outputs.  
+- Reconciliation check/assertion shows the effective capability (after confirmation logic) used by service_manager matches expected provisional/confirmed state; any divergence is surfaced clearly.  
+- No undefined behavior silently swallowed; mismatches are enumerated in the summary.
+
+Test Requirements:
+- Files like `test_hybrid_monitor_udev_fallback.py` and `test_hybrid_monitor_capability_parsing.py` with concrete fixture-driven scenarios.
+- A reconciliation test (could be in same or separate file) that mocks or drives hybrid_monitor output into service_manager and verifies metadata alignment.
+
+Output:
+- Bullet summary of findings and enhancements (with file/line references where applicable).  
+- New or updated test code.  
+- Reconciliation validation code/results and any adjustments needed.  
+- Suggested additional edge-case tests.  
+- Any open clarifying question (only if absolutely required).
+
+---------------------------------------------------------------------------
+Prompt 2 [Complete] : Harden and validate service manager lifecycle and observability (S3)
+
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Condensed roadmap/backlog emphasizing S3 lifecycle/observability.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
 
-class HealthMonitor:
-    """
-    Basic health monitoring component for service health checks.
-    
-    Provides service health verification and resource monitoring
-    as specified in the architecture overview.
-    """
-    
-    def __init__(self, config: Config):
-        """Initialize health monitor with configuration."""
-        self._config = config
-        self._logger = logging.getLogger(__name__)
-        self._running = False
-        self._health_check_task: Optional[asyncio.Task] = None
-    
-    async def start(self) -> None:
-        """Start health monitoring."""
-        if self._running:
-            return
-            
-        correlation_id = get_correlation_id() or "health-monitor-start"
-        set_correlation_id(correlation_id)
-        
-        self._logger.info("Starting health monitor", 
-                         extra={'correlation_id': correlation_id})
-        self._running = True
-        
-        # Start background health check task
-        self._health_check_task = asyncio.create_task(self._health_check_loop())
-        self._logger.debug("Health monitor started successfully",
-                          extra={'correlation_id': correlation_id})
-    
-    async def stop(self) -> None:
-        """Stop health monitoring."""
-        if not self._running:
-            return
-            
-        correlation_id = get_correlation_id() or "health-monitor-stop"
-        set_correlation_id(correlation_id)
-        
-        self._logger.info("Stopping health monitor",
-                         extra={'correlation_id': correlation_id})
-        self._running = False
-        
-        # Stop background health check task
-        if self._health_check_task and not self._health_check_task.done():
-            self._health_check_task.cancel()
-            try:
-                await self._health_check_task
-            except asyncio.CancelledError:
-                pass
-        
-        self._logger.debug("Health monitor stopped",
-                          extra={'correlation_id': correlation_id})
-    
-    async def _health_check_loop(self) -> None:
-        """Background health monitoring loop."""
-        while self._running:
-            try:
-                # Perform basic health checks
-                await asyncio.sleep(30)  # Health check interval
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                correlation_id = get_correlation_id() or "health-check-error"
-                self._logger.error(f"Health check error: {e}",
-                                  extra={'correlation_id': correlation_id})
-                await asyncio.sleep(10)  # Shorter wait on error
+Directive: Only rely on those documents. Do not add new features or speculative behavior. If a required decision (e.g., fallback priority or metadata merging ambiguity) is unclear, stop and ask exactly one focused question.
+
+Goal:
+- Audit and improve `src/camera_service/service_manager.py` so that:
+  * Camera lifecycle (connect → MediaMTX stream actions → notification → disconnect) sequencing is deterministic and resistant to partial failures.
+  * Capability metadata is annotated with provisional vs confirmed state and propagated in notifications.
+  * Correlation IDs are consistently included in lifecycle logs and notifications for traceability.
+  * Failures in dependent subsystems (MediaMTX/controller, capability retrieval) are handled defensively with clear fallback or error signaling; no silent inconsistency.
+  * All TODO/STOP comments follow canonical format or are explicit deferred decisions with rationale and date.
+
+Scope:
+- Modify `service_manager.py`.
+- Create or extend test stub under `tests/unit/test_camera_service/test_service_manager_lifecycle.py`.
+
+Acceptance Criteria:
+- Lifecycle flow is covered by at least one test that injects success and failure modes and asserts order and side effects.  
+- Notifications include explicit flags/fields for provisional vs confirmed metadata.  
+- Logs include correlation IDs at key transition points, including error paths.  
+- Errors from MediaMTX or missing capabilities do not crash silently; fallback logic is observable.  
+- All comment placeholders are canonicalized.
+
+Test Requirements:
+- `test_service_manager_lifecycle.py` simulating connect/disconnect with injected MediaMTX failure and verifying proper recovery or fallback.
+- Assertions about metadata stability (e.g., provisional stays until confirmed).
+
+Output:
+- Summary of audit findings and applied changes with line references.  
+- Updated `service_manager.py`.  
+- Lifecycle test(s) stub or implementation.  
+- Any remaining ambiguity documented (only one question if needed).
 
 
-class ServiceManager(CameraEventHandler):
-    """
-    Main service orchestrator that manages the lifecycle of all camera service components.
-    
-    The ServiceManager coordinates between the WebSocket JSON-RPC Server, Camera Discovery
-    Monitor, MediaMTX Controller, and Health & Monitoring subsystems as defined in the
-    architecture overview.
-    
-    Implements CameraEventHandler to receive camera connect/disconnect events and
-    coordinate with MediaMTX stream management.
-    """
+---------------------------------------------------------------------------
+Prompt 3 [Complete]: Add MediaMTX edge-case health monitor tests (S4)
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Backlog prioritizing closure of S4 edge-case behavior.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
-    def __init__(self, config: Config) -> None:
-        """
-        Initialize the service manager with configuration.
-        
-        Args:
-            config: Configuration object containing all service settings
-        """
-        self._config = config
-        self._logger = logging.getLogger(__name__)
-        self._shutdown_event: Optional[asyncio.Event] = None
-        self._running = False
-        
-        # Component references
-        self._websocket_server: Optional[WebSocketJsonRpcServer] = None
-        self._camera_monitor = None
-        self._mediamtx_controller: Optional[MediaMTXController] = None
-        self._health_monitor: Optional[HealthMonitor] = None
+Directive: Base everything strictly on the existing implementation and documentation; do not extrapolate new recovery policies unless grounded. If the exact expected behavior under combinations (e.g., flapping) is unclear, ask one precise question.
 
-    @property
-    def is_running(self) -> bool:
-        """Check if the service manager is currently running."""
-        return self._running
+Goal:
+- Build tests for the health monitoring logic in `src/mediamtx_wrapper/controller.py` covering:
+  * Circuit breaker opening after the configured failure threshold.  
+  * Recovery requiring N consecutive successful checks before closing (confirmation logic).  
+  * Stability under flapping (alternating success/failure) to avoid oscillation.  
+  * Backoff/jitter behavior deterministically validated (or controlled for test reliability).
 
-    async def start(self) -> None:
-        """
-        Start all service components in the correct order.
-        
-        Initializes and starts:
-        1. MediaMTX Controller
-        2. Camera Discovery Monitor  
-        3. Health & Monitoring
-        4. WebSocket JSON-RPC Server
-        """
-        if self._running:
-            return
-            
-        correlation_id = get_correlation_id() or f"service-startup-{uuid.uuid4().hex[:8]}"
-        set_correlation_id(correlation_id)
-        
-        self._logger.info("Starting camera service components",
-                         extra={'correlation_id': correlation_id})
-        
-        try:
-            self._shutdown_event = asyncio.Event()
-            
-            # Start MediaMTX Controller
-            await self._start_mediamtx_controller()
-            
-            # Start Camera Discovery Monitor
-            await self._start_camera_monitor()
-            
-            # Start Health & Monitoring
-            await self._start_health_monitor()
-            
-            # Start WebSocket JSON-RPC Server
-            await self._start_websocket_server()
-            
-            self._running = True
-            
-            self._logger.info("All camera service components started successfully",
-                             extra={'correlation_id': correlation_id})
-            
-        except Exception as e:
-            self._logger.error(f"Failed to start service components: {e}",
-                             extra={'correlation_id': correlation_id})
-            # Cleanup any partially started components
-            await self._cleanup_partial_startup()
-            raise
+Scope:
+- Add tests under `tests/unit/test_mediamtx_wrapper/` (new files if necessary).
 
-    async def stop(self) -> None:
-        """
-        Stop all service components gracefully.
-        
-        Gracefully stops components in reverse startup order:
-        1. WebSocket JSON-RPC Server
-        2. Health & Monitoring
-        3. Camera Discovery Monitor
-        4. MediaMTX Controller
-        """
-        if not self._running:
-            return
-            
-        correlation_id = get_correlation_id() or f"service-shutdown-{uuid.uuid4().hex[:8]}"
-        set_correlation_id(correlation_id)
-        
-        self._logger.info("Stopping camera service components",
-                         extra={'correlation_id': correlation_id})
-        
-        try:
-            # Stop components in reverse order
-            await self._stop_websocket_server()
-            await self._stop_health_monitor()
-            await self._stop_camera_monitor()
-            await self._stop_mediamtx_controller()
-            
-            self._running = False
-            
-            if self._shutdown_event:
-                self._shutdown_event.set()
-                
-            self._logger.info("All camera service components stopped",
-                             extra={'correlation_id': correlation_id})
-            
-        except Exception as e:
-            self._logger.error(f"Error during service shutdown: {e}",
-                             extra={'correlation_id': correlation_id})
-            raise
+Acceptance Criteria:
+- Tests exist for:
+  * Failure sequence triggering open state.  
+  * Recovery only after the necessary consecutive successes.  
+  * Flapping scenario does not prematurely reset or reopen unexpectedly.  
+  * Controlled simulation of backoff behavior (e.g., mocking time or overriding jitter) to assert bounds.  
+- Any deviation between implementation and expected circuit breaker state machine is documented.
 
-    async def wait_for_shutdown(self) -> None:
-        """
-        Wait for shutdown signal.
-        
-        Blocks until the service receives a shutdown signal or stop() is called.
-        """
-        if not self._shutdown_event:
-            raise RuntimeError("Service not started")
-            
-        await self._shutdown_event.wait()
+Test Requirements:
+- Files like `test_health_monitor_circuit_breaker_flapping.py` and `test_health_monitor_recovery_confirmation.py`.  
+- Mocks to simulate health check results and control timing.
 
-    async def handle_camera_event(self, event_data: CameraEventData) -> None:
-        """
-        Handle camera connect/disconnect events from the camera monitor.
-        
-        Coordinates MediaMTX stream configuration updates based on camera events
-        with robust error handling and defensive sequencing.
-        
-        Args:
-            event_data: Camera event information including device path and type
-        """
-        correlation_id = get_correlation_id() or f"camera-event-{event_data.device_path.split('/')[-1]}-{uuid.uuid4().hex[:8]}"
-        set_correlation_id(correlation_id)
-        
-        self._logger.info(
-            f"Handling camera event: {event_data.event_type.value} - {event_data.device_path}",
-            extra={
-                'correlation_id': correlation_id, 
-                'device_path': event_data.device_path,
-                'event_type': event_data.event_type.value
-            }
-        )
-        
-        try:
-            if event_data.event_type == CameraEvent.CONNECTED:
-                await self._handle_camera_connected(event_data)
-            elif event_data.event_type == CameraEvent.DISCONNECTED:
-                await self._handle_camera_disconnected(event_data)
-            elif event_data.event_type == CameraEvent.STATUS_CHANGED:
-                await self._handle_camera_status_changed(event_data)
-            else:
-                self._logger.warning(f"Unknown camera event type: {event_data.event_type}",
-                                   extra={'correlation_id': correlation_id, 'device_path': event_data.device_path})
-                
-        except Exception as e:
-            self._logger.error(f"Error handling camera event: {e}", 
-                             extra={'correlation_id': correlation_id, 'device_path': event_data.device_path},
-                             exc_info=True)
+Output:
+- Test implementations.  
+- Summary of any behavioral gaps found and recommendations/fixes.  
+- Suggested follow-up stress or integration tests.
 
-    async def _handle_camera_connected(self, event_data: CameraEventData) -> None:
-        """
-        Handle camera connection event with robust MediaMTX stream creation and defensive error handling.
 
-        Creates MediaMTX stream configuration for the newly connected camera and
-        triggers camera_status_update notification as specified in the architecture overview.
+---------------------------------------------------------------------------
+Prompt 4: Document closure of resolved partials (S4)
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 
-        Args:
-            event_data: Camera connection event data
-        """
-        correlation_id = get_correlation_id()
-        device_path = event_data.device_path
-        
-        self._logger.debug(f"Creating stream for connected camera: {device_path}",
-                          extra={'correlation_id': correlation_id, 'device_path': device_path})
-        
-        # Extract stream name from device path
-        stream_name = self._get_stream_name_from_device_path(device_path)
-        
-        # Get enhanced camera metadata with capability validation
-        camera_metadata = await self._get_enhanced_camera_metadata(event_data)
-        
-        # Defensive guard: Check MediaMTX controller availability
-        stream_created = False
-        streams_dict = {}
-        mediamtx_error = None
-        
-        if not self._mediamtx_controller:
-            self._logger.warning("MediaMTX controller not available for stream creation",
-                               extra={'correlation_id': correlation_id, 'device_path': device_path})
-        else:
-            try:
-                # Create stream configuration
-                stream_config = StreamConfig(
-                    name=stream_name,
-                    source=device_path,
-                    settings={"videoCodec": "h264"}
-                )
-                
-                # Create stream in MediaMTX
-                await self._mediamtx_controller.create_stream(stream_config)
-                stream_created = True
-                
-                # Generate stream URLs for notification
-                streams_dict = {
-                    "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/{stream_name}",
-                    "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/{stream_name}",
-                    "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/{stream_name}"
-                }
-                
-                self._logger.debug(f"Successfully created stream: {stream_name}",
-                                 extra={'correlation_id': correlation_id, 'device_path': device_path})
-                
-            except Exception as e:
-                mediamtx_error = str(e)
-                self._logger.error(f"Failed to create MediaMTX stream for {device_path}: {e}",
-                                 extra={'correlation_id': correlation_id, 'device_path': device_path})
-                # Continue with notification despite MediaMTX error
-        
-        # Prepare notification parameters with capability validation context
-        notification_params = {
-            "device": device_path,
-            "status": "CONNECTED",
-            "name": camera_metadata["name"],
-            "resolution": camera_metadata["resolution"],
-            "fps": camera_metadata["fps"],
-            "streams": streams_dict,
-            # Enhanced metadata with provisional/confirmed state annotations
-            "metadata_validation": camera_metadata["validation_status"],
-            "metadata_source": camera_metadata["capability_source"],
-            "metadata_provisional": camera_metadata["validation_status"] in ["provisional", "none"],
-            "metadata_confirmed": camera_metadata["validation_status"] == "confirmed"
-        }
-        
-        # Add capability validation context to logging
-        validation_status = camera_metadata.get("validation_status", "none")
-        capability_source = camera_metadata.get("capability_source", "default")
-        consecutive_successes = camera_metadata.get("consecutive_successes", 0)
-        
-        try:
-            self._logger.info(
-                f"Camera connected with {capability_source} metadata: {device_path} "
-                f"({camera_metadata['resolution']}@{camera_metadata['fps']}fps, "
-                f"validation: {validation_status}, confirmations: {consecutive_successes})",
-                extra={
-                    'correlation_id': correlation_id,
-                    'device_path': device_path,
-                    'capability_validation': validation_status,
-                    'capability_source': capability_source,
-                    'capability_confirmations': consecutive_successes,
-                    'stream_created': stream_created,
-                    'mediamtx_error': mediamtx_error
-                }
-            )
-            
-            # Send notification to all connected clients
-            if self._websocket_server:
-                await self._websocket_server.notify_camera_status_update(notification_params)
-            
-            self._logger.info(f"Stream orchestration completed for camera: {device_path}",
-                            extra={'correlation_id': correlation_id, 'device_path': device_path})
-            
-        except Exception as e:
-            self._logger.error(f"Failed to complete camera connection orchestration: {e}",
-                             extra={'correlation_id': correlation_id, 'device_path': device_path})
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
-    async def _handle_camera_disconnected(self, event_data: CameraEventData) -> None:
-        """
-        Handle camera disconnection event with robust MediaMTX stream cleanup.
+Directive: Only document what was actually resolved per the audit artifacts. No embellishment. If the linkage (evidence) for any purported closure is missing, note it explicitly.
 
-        Removes MediaMTX stream configuration for the disconnected camera and
-        triggers camera_status_update notification as specified in the architecture overview.
+Goal:
+- Create and insert concise closure log entries for the following resolved partials:
+  * Snapshot capture implementation completeness.  
+  * Recording duration accuracy and error handling.  
+  * Versioning/deprecation deferral (canonical STOP decision).  
+  * Capability merging policy stabilization (weighted merge + confirmation).  
+  * Health monitor recovery refinement (consecutive-success confirmation).  
 
-        Args:
-            event_data: Camera disconnection event data
-        """
-        correlation_id = get_correlation_id()
-        device_path = event_data.device_path
-        
-        self._logger.debug(f"Removing stream for disconnected camera: {device_path}",
-                          extra={'correlation_id': correlation_id, 'device_path': device_path})
-        
-        # Defensive guard: Check MediaMTX controller availability
-        stream_removed = False
-        mediamtx_error = None
-        
-        if not self._mediamtx_controller:
-            self._logger.warning("MediaMTX controller not available for stream removal",
-                               extra={'correlation_id': correlation_id, 'device_path': device_path})
-        else:
-            try:
-                # Extract stream name from device path
-                stream_name = self._get_stream_name_from_device_path(device_path)
-                
-                # Delete stream from MediaMTX with error handling
-                await self._mediamtx_controller.delete_stream(stream_name)
-                stream_removed = True
-                
-                self._logger.debug(f"Successfully removed stream: {stream_name}",
-                                 extra={'correlation_id': correlation_id, 'device_path': device_path})
-                
-            except Exception as e:
-                mediamtx_error = str(e)
-                self._logger.error(f"Failed to delete MediaMTX stream for {device_path}: {e}",
-                                 extra={'correlation_id': correlation_id, 'device_path': device_path})
-                # Continue with notification despite MediaMTX error
-        
-        # Get camera metadata for notification (uses cached/default for disconnected)
-        camera_metadata = await self._get_enhanced_camera_metadata(event_data)
-        
-        # Prepare camera status notification for disconnection
-        notification_params = {
-            "device": device_path,
-            "status": "DISCONNECTED",
-            "name": camera_metadata["name"],
-            "resolution": "",  # Empty for disconnected cameras
-            "fps": 0,          # Zero for disconnected cameras
-            "streams": {},     # Empty streams for disconnected cameras
-            # Metadata context for disconnected state
-            "metadata_validation": "none",
-            "metadata_source": "cached",
-            "metadata_provisional": False,
-            "metadata_confirmed": False
-        }
-        
-        try:
-            # Send notification to all connected clients
-            if self._websocket_server:
-                await self._websocket_server.notify_camera_status_update(notification_params)
-            
-            self._logger.info(f"Stream removal completed for camera: {device_path}",
-                            extra={
-                                'correlation_id': correlation_id, 
-                                'device_path': device_path,
-                                'stream_removed': stream_removed,
-                                'mediamtx_error': mediamtx_error
-                            })
-            
-        except Exception as e:
-            self._logger.error(f"Failed to complete camera disconnection orchestration: {e}",
-                             extra={'correlation_id': correlation_id, 'device_path': device_path})
+Scope:
+- Documentation update (e.g., extend `docs/architecture/overview.md` or a dedicated decision log file).
 
-    async def _handle_camera_status_changed(self, event_data: CameraEventData) -> None:
-        """
-        Handle camera status change event with enhanced state transition logging.
+Acceptance Criteria:
+- Each closure entry includes: original deficiency, change applied, date (YYYY-MM-DD), and direct evidence references (file name + line or test).  
+- Format matches existing documentation style (title/metadata/related story).  
+- Summary snippet suitable for copying into `roadmap.md` under S4 to reflect “closed” partials.
 
-        Updates MediaMTX stream configuration based on camera status changes and
-        triggers camera_status_update notification as specified in the architecture overview.
+Output:
+- Markdown entries for closure (complete snippet).  
+- Suggested update text for roadmap to mark those partials resolved.
 
-        Args:
-            event_data: Camera status change event data
-        """
-        correlation_id = get_correlation_id()
-        device_path = event_data.device_path
-        
-        old_status = "unknown"
-        new_status = event_data.device_info.status if event_data.device_info else "unknown"
-        
-        self._logger.debug(f"Handling status change for camera: {device_path} ({old_status} -> {new_status})",
-                          extra={'correlation_id': correlation_id, 'device_path': device_path})
-        
-        try:
-            # Extract stream name from device path
-            stream_name = self._get_stream_name_from_device_path(device_path)
-            
-            # Get enhanced camera metadata for notification
-            camera_metadata = await self._get_enhanced_camera_metadata(event_data)
-            
-            # Determine notification parameters based on new status
-            if event_data.device_info and event_data.device_info.status == "CONNECTED":
-                # Camera is now available - generate stream URLs
-                notification_params = {
-                    "device": device_path,
-                    "status": "CONNECTED",
-                    "name": camera_metadata["name"],
-                    "resolution": camera_metadata["resolution"],
-                    "fps": camera_metadata["fps"],
-                    "streams": {
-                        "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/{stream_name}",
-                        "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/{stream_name}",
-                        "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/{stream_name}"
-                    },
-                    "metadata_validation": camera_metadata["validation_status"],
-                    "metadata_source": camera_metadata["capability_source"],
-                    "metadata_provisional": camera_metadata["validation_status"] in ["provisional", "none"],
-                    "metadata_confirmed": camera_metadata["validation_status"] == "confirmed"
-                }
-                
-                # Log capability validation context for status change
-                validation_status = camera_metadata.get("validation_status", "none")
-                self._logger.info(
-                    f"Camera status changed to CONNECTED: {device_path} (validation: {validation_status})",
-                    extra={
-                        'correlation_id': correlation_id,
-                        'device_path': device_path,
-                        'capability_validation': validation_status,
-                        'status_transition': f"{old_status}_to_CONNECTED"
-                    }
-                )
-            else:
-                # Camera has error or other status
-                error_status = "ERROR" if event_data.device_info and event_data.device_info.status == "ERROR" else "DISCONNECTED"
-                notification_params = {
-                    "device": device_path,
-                    "status": error_status,
-                    "name": camera_metadata["name"],
-                    "resolution": "",
-                    "fps": 0,
-                    "streams": {},
-                    "metadata_validation": "none",
-                    "metadata_source": "cached",
-                    "metadata_provisional": False,
-                    "metadata_confirmed": False
-                }
-                
-                self._logger.info(
-                    f"Camera status changed to {error_status}: {device_path}",
-                    extra={
-                        'correlation_id': correlation_id,
-                        'device_path': device_path,
-                        'status_transition': f"{old_status}_to_{error_status}"
-                    }
-                )
-            
-            # Send notification to all connected clients
-            if self._websocket_server:
-                await self._websocket_server.notify_camera_status_update(notification_params)
-            
-            self._logger.info(f"Status change notification sent for camera: {device_path}",
-                            extra={'correlation_id': correlation_id, 'device_path': device_path})
-            
-        except Exception as e:
-            self._logger.error(f"Error handling status change for {device_path}: {e}",
-                             extra={'correlation_id': correlation_id, 'device_path': device_path})
 
-    def _get_stream_name_from_device_path(self, device_path: str) -> str:
-        """
-        Generate a deterministic stream name from camera device path.
-        
-        Extracts device number from standard paths (e.g., /dev/video0 -> camera0)
-        or generates a hash-based name for non-standard paths.
-        
-        Args:
-            device_path: Camera device path (e.g., /dev/video0)
-            
-        Returns:
-            Stream name (e.g., camera0)
-        """
-        if not device_path:
-            return "camera_unknown"
-            
-        # Try to extract video device number from standard paths
-        match = re.search(r'/(?:dev/)?video(\d+)', device_path)
-        if match:
-            return f"camera{match.group(1)}"
-        
-        # For non-standard paths, generate deterministic hash-based name
-        import hashlib
-        path_hash = hashlib.md5(device_path.encode()).hexdigest()[:8]
-        return f"camera_{path_hash}"
+---------------------------------------------------------------------------
+Prompt 5: Draft S5 acceptance test plan and implement core integration smoke test
 
-    async def _get_enhanced_camera_metadata(self, event_data: CameraEventData) -> Dict[str, Any]:
-        """
-        Get enhanced camera metadata with capability validation status.
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
 
-        Integrates with camera monitor capability detection using the robust
-        get_effective_capability_metadata method that handles provisional/confirmed logic.
-        Provides clear annotation of capability validation status and data source.
-        
-        Args:
-            event_data: Camera event data containing device info
-            
-        Returns:
-            Dictionary with camera metadata and validation context:
-                - name, resolution, fps (data fields)
-                - validation_status: "confirmed", "provisional", "none", "error"
-                - capability_source: "confirmed_capability", "provisional_capability", "device_info", "default"
-                - consecutive_successes: number of consecutive capability confirmations (if available)
-        """
-        correlation_id = get_correlation_id()
-        device_path = event_data.device_path
-        
-        # Extract device number for default naming
-        device_num = "unknown"
-        try:
-            match = re.search(r'/dev/video(\d+)', device_path)
-            if match:
-                device_num = match.group(1)
-        except Exception:
-            pass
-        
-        # Initialize with default metadata
-        camera_metadata = {
-            "name": f"Camera {device_num}",
-            "resolution": "1920x1080",  # Architecture default
-            "fps": 30,                   # Architecture default
-            "validation_status": "none",
-            "capability_source": "default",
-            "consecutive_successes": 0
-        }
-        
-        # Override with device info if available
-        if event_data.device_info:
-            camera_metadata["name"] = event_data.device_info.name or camera_metadata["name"]
-            camera_metadata["capability_source"] = "device_info"
-        
-        # Attempt to get enhanced capability data from camera monitor using robust method
-        try:
-            if (self._camera_monitor and 
-                hasattr(self._camera_monitor, 'get_effective_capability_metadata')):
-                
-                capability_data = self._camera_monitor.get_effective_capability_metadata(device_path)
-                
-                if capability_data:
-                    # Extract validation status and consecutive successes
-                    validation_status = capability_data.get("validation_status", "none")
-                    consecutive_successes = capability_data.get("consecutive_successes", 0)
-                    
-                    # Update metadata with capability data
-                    camera_metadata.update({
-                        "resolution": capability_data.get("resolution", camera_metadata["resolution"]),
-                        "fps": capability_data.get("fps", camera_metadata["fps"]),
-                        "validation_status": validation_status,
-                        "consecutive_successes": consecutive_successes
-                    })
-                    
-                    # Determine capability source based on validation status
-                    if validation_status == "confirmed":
-                        camera_metadata["capability_source"] = "confirmed_capability"
-                        self._logger.debug(
-                            f"Using confirmed capability data for {device_path}: "
-                            f"{camera_metadata['resolution']}@{camera_metadata['fps']}fps "
-                            f"(confirmations: {consecutive_successes})",
-                            extra={
-                                'correlation_id': correlation_id, 
-                                'device_path': device_path,
-                                'capability_validation': 'confirmed'
-                            }
-                        )
-                    elif validation_status == "provisional":
-                        camera_metadata["capability_source"] = "provisional_capability"
-                        self._logger.debug(
-                            f"Using provisional capability data for {device_path}: "
-                            f"{camera_metadata['resolution']}@{camera_metadata['fps']}fps "
-                            f"(pending confirmation)",
-                            extra={
-                                'correlation_id': correlation_id,
-                                'device_path': device_path,
-                                'capability_validation': 'provisional'
-                            }
-                        )
-                    elif validation_status == "failed":
-                        camera_metadata["validation_status"] = "error"
-                        camera_metadata["capability_source"] = "default"
-                        self._logger.debug(
-                            f"Capability detection failed for {device_path}, using defaults",
-                            extra={
-                                'correlation_id': correlation_id,
-                                'device_path': device_path,
-                                'capability_validation': 'error'
-                            }
-                        )
-                    else:
-                        # validation_status == "none" or unknown
-                        camera_metadata["capability_source"] = "default"
-                        self._logger.debug(
-                            f"No capability data available for {device_path}, using defaults",
-                            extra={
-                                'correlation_id': correlation_id,
-                                'device_path': device_path,
-                                'capability_validation': 'none'
-                            }
-                        )
-                        
-        except Exception as e:
-            # Capability detection error - use defaults with error annotation
-            camera_metadata["validation_status"] = "error"
-            camera_metadata["capability_source"] = "default"
-            self._logger.warning(
-                f"Error retrieving capability metadata for {device_path}: {e}, using defaults",
-                extra={
-                    'correlation_id': correlation_id,
-                    'device_path': device_path,
-                    'capability_validation': 'error'
-                }
-            )
-        
-        return camera_metadata
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+- Condensed roadmap/backlog focusing on S5 validation.
 
-    async def _start_mediamtx_controller(self) -> None:
-        """Start the MediaMTX controller component."""
-        correlation_id = get_correlation_id()
-        self._logger.debug("Starting MediaMTX controller",
-                          extra={'correlation_id': correlation_id})
-        
-        try:
-            from ..mediamtx_wrapper.controller import MediaMTXController
-            self._mediamtx_controller = MediaMTXController(self._config.mediamtx)
-            await self._mediamtx_controller.start()
-            
-            # Verify MediaMTX health after startup
-            health_status = await self._mediamtx_controller.health_check()
-            self._logger.info(f"MediaMTX controller started: {health_status.get('status', 'unknown')}",
-                            extra={'correlation_id': correlation_id})
-                            
-        except Exception as e:
-            self._logger.error(f"Failed to start MediaMTX controller: {e}",
-                             extra={'correlation_id': correlation_id})
-            raise
+Directive: Do not add functionality beyond what's needed to exercise the existing implementation. If any end-to-end dependency is ambiguous (e.g., exact notification schema), refer to API doc; if still unclear, ask one precise question.
 
-    async def _start_camera_monitor(self) -> None:
-        """Start the camera discovery and monitoring component."""
-        correlation_id = get_correlation_id()
-        self._logger.debug("Starting camera discovery monitor",
-                          extra={'correlation_id': correlation_id})
-        
-        try:
-            from ..camera_discovery.hybrid_monitor import HybridCameraMonitor
-            self._camera_monitor = HybridCameraMonitor(self._config.camera)
-            
-            # Register ourselves as an event handler
-            self._camera_monitor.add_event_handler(self)
-            
-            # Start camera monitoring
-            await self._camera_monitor.start()
-            self._logger.info("Camera discovery monitor started",
-                            extra={'correlation_id': correlation_id})
-                            
-        except Exception as e:
-            self._logger.error(f"Failed to start camera monitor: {e}",
-                             extra={'correlation_id': correlation_id})
-            raise
+Goal:
+- Draft a detailed acceptance test plan for S5 end-to-end flows (camera discovery → MediaMTX stream/record/snapshot → WebSocket notification → shutdown/error recovery).  
+- Implement a core “happy path” integration smoke test that exercises the full flow and validates key state transitions.
 
-    async def _start_health_monitor(self) -> None:
-        """Start the health monitoring component."""
-        correlation_id = get_correlation_id()
-        self._logger.debug("Starting health monitor",
-                          extra={'correlation_id': correlation_id})
-        
-        try:
-            self._health_monitor = HealthMonitor(self._config)
-            await self._health_monitor.start()
-            self._logger.info("Health monitor started",
-                            extra={'correlation_id': correlation_id})
-                            
-        except Exception as e:
-            self._logger.error(f"Failed to start health monitor: {e}",
-                             extra={'correlation_id': correlation_id})
-            raise
+Scope:
+- New acceptance test plan document (e.g., `tests/ivv/acceptance-plan.md`).  
+- One integration test/harness under `tests/integration/` or `tests/ivv/` implementing the smoke path.
 
-    async def _start_websocket_server(self) -> None:
-        """Start the WebSocket JSON-RPC server component."""
-        correlation_id = get_correlation_id()
-        self._logger.debug("Starting WebSocket JSON-RPC server",
-                          extra={'correlation_id': correlation_id})
-        
-        try:
-            from ..websocket_server.server import WebSocketJsonRpcServer
-            self._websocket_server = WebSocketJsonRpcServer(
-                self._config, 
-                self._camera_monitor, 
-                self._mediamtx_controller
-            )
-            await self._websocket_server.start()
-            self._logger.info("WebSocket JSON-RPC server started",
-                            extra={'correlation_id': correlation_id})
-                            
-        except Exception as e:
-            self._logger.error(f"Failed to start WebSocket server: {e}",
-                             extra={'correlation_id': correlation_id})
-            raise
+Acceptance Criteria:
+- Plan enumerates scenarios with clear success criteria, including recovery/error injection paths.  
+- Smoke test performs: camera connect, capability detection, stream creation, start/stop recording, snapshot capture, and notification receipt with expected metadata.  
+- Smoke test verifies end-to-end orchestration and surface failure if a critical step fails.
 
-    async def _stop_websocket_server(self) -> None:
-        """Stop the WebSocket JSON-RPC server component."""
-        if self._websocket_server:
-            correlation_id = get_correlation_id()
-            self._logger.debug("Stopping WebSocket JSON-RPC server",
-                             extra={'correlation_id': correlation_id})
-            try:
-                await self._websocket_server.stop()
-                self._logger.info("WebSocket JSON-RPC server stopped",
-                                extra={'correlation_id': correlation_id})
-            except Exception as e:
-                self._logger.error(f"Error stopping WebSocket server: {e}",
-                                 extra={'correlation_id': correlation_id})
-            finally:
-                self._websocket_server = None
+Output:
+- Acceptance test plan file.  
+- Working smoke test code.  
+- Instructions for running it.  
+- Any discovered gaps that block full flow (with evidence).
 
-    async def _stop_health_monitor(self) -> None:
-        """Stop the health monitoring component."""
-        if self._health_monitor:
-            correlation_id = get_correlation_id()
-            self._logger.debug("Stopping health monitor",
-                             extra={'correlation_id': correlation_id})
-            try:
-                await self._health_monitor.stop()
-                self._logger.info("Health monitor stopped",
-                                extra={'correlation_id': correlation_id})
-            except Exception as e:
-                self._logger.error(f"Error stopping health monitor: {e}",
-                                 extra={'correlation_id': correlation_id})
-            finally:
-                self._health_monitor = None
 
-    async def _stop_camera_monitor(self) -> None:
-        """Stop the camera discovery and monitoring component."""
-        if self._camera_monitor:
-            correlation_id = get_correlation_id()
-            self._logger.debug("Stopping camera discovery monitor",
-                             extra={'correlation_id': correlation_id})
-            try:
-                # Unregister event handler
-                self._camera_monitor.remove_event_handler(self)
-                # Stop camera monitoring
-                await self._camera_monitor.stop()
-                self._logger.info("Camera discovery monitor stopped",
-                                extra={'correlation_id': correlation_id})
-            except Exception as e:
-                self._logger.error(f"Error stopping camera monitor: {e}",
-                                 extra={'correlation_id': correlation_id})
-            finally:
-                self._camera_monitor = None
+---------------------------------------------------------------------------
+Prompt 6: Create missing camera_service support module test stubs (S14)
 
-    async def _stop_mediamtx_controller(self) -> None:
-        """Stop the MediaMTX controller component."""
-        if self._mediamtx_controller:
-            correlation_id = get_correlation_id()
-            self._logger.debug("Stopping MediaMTX controller",
-                             extra={'correlation_id': correlation_id})
-            try:
-                await self._mediamtx_controller.stop()
-                self._logger.info("MediaMTX controller stopped",
-                                extra={'correlation_id': correlation_id})
-            except Exception as e:
-                self._logger.error(f"Error stopping MediaMTX controller: {e}",
-                                 extra={'correlation_id': correlation_id})
-            finally:
-                self._mediamtx_controller = None
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Current backlog emphasizes test readiness for support modules.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
 
-    async def _cleanup_partial_startup(self) -> None:
-        """Clean up any partially started components after startup failure."""
-        correlation_id = get_correlation_id()
-        self._logger.warning("Cleaning up partially started components",
-                           extra={'correlation_id': correlation_id})
-        
-        try:
-            if self._websocket_server:
-                await self._websocket_server.stop()
-                self._websocket_server = None
-                
-            if self._health_monitor:
-                await self._health_monitor.stop()
-                self._health_monitor = None
-                
-            if self._camera_monitor:
-                if hasattr(self._camera_monitor, 'remove_event_handler'):
-                    self._camera_monitor.remove_event_handler(self)
-                await self._camera_monitor.stop()
-                self._camera_monitor = None
-                
-            if self._mediamtx_controller:
-                await self._mediamtx_controller.stop()
-                self._mediamtx_controller = None
-                
-        except Exception as e:
-            self._logger.error(f"Error during partial state cleanup: {e}",
-                             extra={'correlation_id': correlation_id})
+Directive: Only create structured stubs; do not implement full business logic in tests. Use canonical TODO/STOP formatting for placeholders.
+
+Goal:
+- Provide minimal pytest test stubs for:
+  * `tests/unit/test_camera_service/test_main_startup.py`  
+  * `tests/unit/test_camera_service/test_config_manager.py`  
+  * `tests/unit/test_camera_service/test_logging_config.py`
+
+Scope:
+- Create the three test stub files.
+
+Acceptance Criteria:
+- Each stub contains:  
+  * At least one placeholder test with a descriptive docstring.  
+  * Canonical TODO comments detailing expected behavior (startup/shutdown, config fallback, formatter/correlation ID).  
+  * Import of target module and setup scaffolding.  
+- No attempt to assume future changes—tests describe acceptance without hard implementation.
+
+Output:
+- Three test stub files with skeleton test functions and TODOs.
+
+
+---------------------------------------------------------------------------
+Prompt 7: Add tests README and conventions doc (S14)
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Existing test scaffolds and backlog identifying proliferation of test areas.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Directive: Do not introduce new test paradigms outside current structure. Clarify, don’t speculate.
+
+Goal:
+- Create `tests/unit/README.md` that explains:  
+  * Purpose of each subdirectory (websocket_server, mediamtx_wrapper, camera_service, camera_discovery, common).  
+  * Naming conventions (snake_case, `test_<behavior>.py`).  
+  * Story-to-test mapping (S3/S4/S5/S14) with minimal checklist.  
+  * How to add new tests and mark completion.  
+  * How to run tests and interpret results.
+
+Scope:
+- Documentation only (single file).
+
+Acceptance Criteria:
+- README includes sections: Overview, Directory mapping, Naming conventions, Story/test mapping, Adding tests, Running tests, Contribution guidelines.  
+- References the roadmap stories and expected acceptance criteria.  
+
+Output:
+- `tests/unit/README.md` content.
+
+
+---------------------------------------------------------------------------
+Prompt 8: Improve deployment/install script (S5)
+
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Existing backlog wants repeatable environment for S5 validation.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Directive: Only enhance the existing `deployment/scripts/install.sh` (or equivalent) to bootstrap the current code. Do not redesign deployment architecture.
+
+Goal:
+- Complete the install script so that on a clean target it:  
+  * Installs system dependencies required by the project.  
+  * Sets up configuration (templates or example).  
+  * Installs Python dependencies.  
+  * Enables/starts the service (systemd or documented fallback).  
+  * Is idempotent and safe to re-run.  
+  * Provides a verification/smoke check at end.
+
+Scope:
+- Modify the install script and add minimal inline usage documentation.
+
+Acceptance Criteria:
+- Script can be run on a fresh environment (note assumed OS) and results in a running service.  
+- Includes failure-safe re-execution logic.  
+- Ends with a self-check (e.g., ping local API or check service health).  
+- Comments document assumptions and usage.
+
+Output:
+- Updated `install.sh`.  
+- Verification snippet/instructions.  
+- Any remaining manual prerequisites clearly listed.
+
+
+---------------------------------------------------------------------------
+Prompt 9: Enable CI to enforce tests, linting, and type checking (S14)
+
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Backlog prioritizing automated quality gates for S14.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+Directive: Build a minimal pipeline; do not over-engineer (start with essential checks). All behavior must be explicit; if tool versions or defaults are ambiguous, state assumptions.
+
+Goal:
+- Create a CI workflow (e.g., GitHub Actions) that on push/PR:  
+  * Installs dependencies.  
+  * Runs formatting check (black in check mode).  
+  * Runs linter/type-checker (flake8, mypy).  
+  * Executes unit tests.  
+  * Fails on any violation.
+
+Scope:
+- CI config file (e.g., `.github/workflows/ci.yml`) and any small helpers.
+
+Acceptance Criteria:
+- Workflow YAML exists and is functional.  
+- Output shows clear separation of steps and fails visibly on errors.  
+- README snippet included explaining how new tests or directories are picked up.  
+- Badges/status suggestion included (optional).
+
+Output:
+- CI workflow config.  
+- Documentation for extending it.
+
+
+---------------------------------------------------------------------------
+Prompt 10: Begin security feature implementation groundwork (E2)
+
+Ground truth sources (authoritative): 
+- docs/architecture/overview.md
+- docs/development/principles.md
+- docs/api/json-rpc-methods.md
+- docs/development/documentation-guidelines.md
+- Backlog beginning E2 groundwork.
+Hard constraints:
+- Only implement what is required by those ground truth documents and the current roadmap/backlog. Do not add, change, or invent any feature not present there.
+- For any TODO/STOP or placeholder encountered, either replace it with real working code (if the behavior is defined) or normalize it to the canonical deferred format with rationale, date, and related story. 
+- Update ONLY the file(s) explicitly named in the prompt; do not touch unrelated modules.
+- For every change, include evidence: filename, specific section or line range, date (use current date), and ideally a commit reference if applicable.
+- If any requirement is ambiguous or a needed detail is missing, STOP and list the ambiguity as one precise clarifying question instead of guessing.
+
+
+Directive: Do not implement full security features prematurely. Focus on design, risk modeling, and scaffolding interfaces only. Stop and ask one focused question if an intended boundary or integration point is unclear.
+
+Goal:
+- Produce a lightweight security design and scaffold for:  
+  * Authentication (JWT/API key) interface for WebSocket server.  
+  * Health-check endpoint specification (contract only).  
+  * Rate limiting / connection management sketch.  
+  * TLS/SSL support checklist.  
+  * Configuration schema for secrets, keys, certificates.
+
+Scope:
+- Security plan document.  
+- Placeholder code stubs/interfaces (e.g., auth hook in WebSocket server, health-check handler skeleton).  
+- Configuration definition (YAML/ENV) for security parameters.
+
+Acceptance Criteria:
+- Document includes threat model bullets, feature breakdown, configuration schema, and IV&V verification points.  
+- Code stubs exist with canonical TODOs linking to plan items.  
+- Clear next-step actionable list for the first security sprint.
+
+Output:
+- Security plan Markdown.  
+- Code stub files or snippets.  
+- Config schema sketch.  
+- List of prioritized follow-up tasks.
+
+---------------------------------------------------------------------------
