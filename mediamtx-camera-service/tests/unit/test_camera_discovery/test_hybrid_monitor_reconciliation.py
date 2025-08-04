@@ -1,16 +1,11 @@
 """
-Reconciliation tests between hybrid_monitor capability output and service_manager consumption.
-
-Test coverage:
-- End-to-end capability flow validation
-- Provisional vs confirmed state propagation
-- Metadata consistency and drift detection
-- Integration validation between components
-
-Created: 2025-08-04
-Related: S3 Camera Discovery hardening, docs/roadmap.md
-Evidence: src/camera_discovery/hybrid_monitor.py lines 750-800 (get_effective_capability_metadata)
-Evidence: src/camera_service/service_manager.py lines 270-380 (_get_enhanced_camera_metadata)
+Reconciliation tests between hybrid_monitor capability output and service_manager
+consumption.  Test coverage: - End-to-end capability flow validation - Provisional vs
+confirmed state propagation - Metadata consistency and drift detection - Integration
+validation between components  Created: 2025-08-04 Related: S3 Camera Discovery
+hardening, docs/roadmap.md Evidence: src/camera_discovery/hybrid_monitor.py lines
+750-800 (get_effective_capability_metadata) Evidence:
+src/camera_service/service_manager.py lines 270-380 (_get_enhanced_camera_metadata)
 """
 
 import pytest
@@ -400,7 +395,8 @@ class TestCapabilityReconciliation:
 
         device_path = "/dev/video0"
 
-        # Simulate multiple detections with different frame rates to build frequency data
+        # Simulate multiple detections with different frame rates to build frequency
+        # data
         frame_rate_detections = [
             "30",
             "30",

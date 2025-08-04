@@ -96,7 +96,8 @@ class TestHealthMonitorFlapping:
         failure_response = self._mock_response(500, text_data="Error")
         success_response = self._mock_response(200, {"serverVersion": "1.0.0"})
 
-        # Pattern: failures → CB → timeout → alternating success/failure (should not fully recover)
+        # Pattern: failures → CB → timeout → alternating success/failure (should not
+        # fully recover)
         responses = [
             failure_response,
             failure_response,
@@ -252,7 +253,8 @@ class TestHealthMonitorFlapping:
         failure_response = self._mock_response(500, text_data="Error")
         success_response = self._mock_response(200, {"serverVersion": "1.0.0"})
 
-        # Pattern: failures → CB → single success → more failures (should not reset CB state)
+        # Pattern: failures → CB → single success → more failures (should not reset CB
+        # state)
         responses = [
             failure_response,
             failure_response,

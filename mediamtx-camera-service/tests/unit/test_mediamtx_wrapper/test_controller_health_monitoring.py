@@ -110,7 +110,8 @@ class TestHealthMonitoring:
         # Configure for 2 consecutive successes required for recovery
         controller._health_recovery_confirmation_threshold = 2
 
-        # Mock sequence: failures (trigger CB) → timeout → success → failure → success → success (full recovery)
+        # Mock sequence: failures (trigger CB) → timeout → success → failure → success →
+        # success (full recovery)
         failure_response = self._mock_response(500, text_data="Service Unavailable")
         success_response = self._mock_response(
             200, {"serverVersion": "1.0.0", "serverUptime": 1200}
@@ -147,7 +148,8 @@ class TestHealthMonitoring:
         failure_response = self._mock_response(500, text_data="Error")
         success_response = self._mock_response(200, {"serverVersion": "1.0.0"})
 
-        # Pattern: failures → CB timeout → success → success → failure → success (restart confirmation)
+        # Pattern: failures → CB timeout → success → success → failure → success
+        # (restart confirmation)
         responses = [failure_response] * 4 + [
             success_response,
             success_response,

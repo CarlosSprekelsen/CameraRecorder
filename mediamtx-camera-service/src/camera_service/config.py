@@ -218,9 +218,8 @@ class ConfigManager:
                 # Validate updated configuration
                 validation_errors = self._validate_config_comprehensive(updated_data)
                 if validation_errors:
-                    error_msg = (
-                        "Configuration update validation failed:\n"
-                        + "\n".join(validation_errors)
+                    error_msg = "Configuration update validation failed:\n" + "\n".join(
+                        validation_errors
                     )
                     raise ValueError(error_msg)
 

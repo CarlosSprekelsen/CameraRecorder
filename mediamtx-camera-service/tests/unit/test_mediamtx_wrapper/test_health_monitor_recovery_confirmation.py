@@ -106,7 +106,8 @@ class TestHealthMonitorRecoveryConfirmation:
         failure_response = self._mock_response(500, text_data="Error")
         success_response = self._mock_response(200, {"serverVersion": "1.0.0"})
 
-        # Pattern: failures → CB timeout → only 2 successes (insufficient for threshold of 3)
+        # Pattern: failures → CB timeout → only 2 successes (insufficient for threshold
+        # of 3)
         responses = [
             failure_response,
             failure_response,

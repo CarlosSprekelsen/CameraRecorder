@@ -261,7 +261,8 @@ class TestConfigurationValidation:
             }  # May be wrong type, but key should be recognized
 
             try:
-                # This will likely fail due to wrong type/value, but should not fail due to unknown key
+                # This will likely fail due to wrong type/value, but should not fail due
+                # to unknown key
                 asyncio.run(controller.update_configuration(test_config))
             except ValueError as e:
                 # Should be type/value error, not unknown key error

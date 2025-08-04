@@ -79,9 +79,9 @@ class TestHealthMonitorBackoffJitter:
             await asyncio.sleep(0.3)  # Let several failures occur
             await controller.stop()
 
-        # Verify exponential backoff pattern
-        # Expected intervals: 0.1, 0.2, 0.4, 0.8, 1.6, 2.0 (capped), 2.0, ...
-        # Note: The sleep intervals include both health check intervals and error backoffs
+        # Verify exponential backoff pattern Expected intervals: 0.1, 0.2, 0.4, 0.8,
+        # 1.6, 2.0 (capped), 2.0, ... Note: The sleep intervals include both health
+        # check intervals and error backoffs
         error_backoffs = [interval for interval in sleep_intervals if interval > 0.1]
 
         assert len(error_backoffs) >= 3, "Should have multiple error backoff intervals"
@@ -210,8 +210,8 @@ class TestHealthMonitorBackoffJitter:
             await asyncio.sleep(0.4)
             await controller.stop()
 
-        # Verify backoff was reset after success
-        # Should see: increasing intervals → success (normal interval) → increasing again
+        # Verify backoff was reset after success Should see: increasing intervals →
+        # success (normal interval) → increasing again
         error_backoffs = [interval for interval in sleep_intervals if interval > 0.15]
         normal_intervals = [
             interval for interval in sleep_intervals if 0.08 <= interval <= 0.12
@@ -356,7 +356,8 @@ class TestHealthMonitorBackoffJitter:
             await asyncio.sleep(0.25)
             await controller.stop()
 
-        # With no jitter, consecutive error backoffs at same failure count should be identical
+        # With no jitter, consecutive error backoffs at same failure count should be
+        # identical
         error_backoffs = [interval for interval in sleep_intervals if interval > 0.1]
 
         # Verify predictable exponential progression
