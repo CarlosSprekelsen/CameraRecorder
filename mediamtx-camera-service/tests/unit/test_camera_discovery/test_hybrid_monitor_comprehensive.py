@@ -454,7 +454,9 @@ class TestPollingFallbackBehavior:
             for i in range(3):
                 try:
                     await monitor_no_udev._discover_cameras()
-                except Exception:  # TODO: MEDIUM: refine exception type if known [IV&V:S3]
+                except (
+                    Exception
+                ):  # TODO: MEDIUM: refine exception type if known [IV&V:S3]
                     monitor_no_udev._polling_failure_count += 1
 
             # Verify failure count increased
