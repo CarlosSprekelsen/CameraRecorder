@@ -283,7 +283,7 @@ class TestUdevEventProcessingAndRaceConditions:
         # Mock device creation to succeed
         with patch.object(monitor, "_create_camera_device_info") as mock_create:
             mock_device = CameraDevice(
-                device_path=device_path, name="Test Camera", status="CONNECTED"
+                device=device_path, name="Test Camera", status="CONNECTED"
             )
             mock_create.return_value = mock_device
 
@@ -334,7 +334,7 @@ class TestUdevEventProcessingAndRaceConditions:
 
         for i, status in enumerate(status_sequence):
             mock_device = CameraDevice(
-                device_path=device_path, name="Test Camera", status=status
+                device=device_path, name="Test Camera", status=status
             )
 
             with patch.object(

@@ -184,20 +184,20 @@ class HybridCameraMonitor:
 
         # Enhanced frame rate patterns for robust parsing
         self._frame_rate_patterns = [
-            # Standard patterns
-            r"(\d+(?:\.\d+)?)\s*fps\b",  # 30.000 fps
-            r"(\d+(?:\.\d+)?)\s*FPS\b",  # 30.000 FPS
-            r"Frame\s*rate[:\s]+(\d+(?:\.\d+)?)",  # Frame rate: 30.0
-            r"(\d+(?:\.\d+)?)\s*Hz\b",  # 30 Hz
-            r"@(\d+(?:\.\d+)?)\b",  # 1920x1080@60
+            # Standard patterns (exclude negative numbers)
+            r"(?<!-)(\d+(?:\.\d+)?)\s*fps\b",  # 30.000 fps (not -30 fps)
+            r"(?<!-)(\d+(?:\.\d+)?)\s*FPS\b",  # 30.000 FPS (not -30 FPS)
+            r"Frame\s*rate[:\s]+(?<!-)(\d+(?:\.\d+)?)",  # Frame rate: 30.0 (not -30.0)
+            r"(?<!-)(\d+(?:\.\d+)?)\s*Hz\b",  # 30 Hz (not -30 Hz)
+            r"@(?<!-)(\d+(?:\.\d+)?)\b",  # 1920x1080@60 (not @-60)
             # Interval patterns
-            r"Interval:\s*\[1/(\d+(?:\.\d+)?)\]",  # Interval: [1/30]
-            r"\[1/(\d+(?:\.\d+)?)\]",  # [1/30]
-            r"1/(\d+(?:\.\d+)?)\s*s",  # 1/30 s
+            r"Interval:\s*\[1/(?<!-)(\d+(?:\.\d+)?)\]",  # Interval: [1/30] (not [1/-30])
+            r"\[1/(?<!-)(\d+(?:\.\d+)?)\]",  # [1/30] (not [1/-30])
+            r"1/(?<!-)(\d+(?:\.\d+)?)\s*s",  # 1/30 s (not 1/-30 s)
             # More complex patterns
-            r"(\d+(?:\.\d+)?)\s*frame[s]?\s*per\s*second",  # 30 frames per second
-            r"rate:\s*(\d+(?:\.\d+)?)",  # rate: 30
-            r"fps:\s*(\d+(?:\.\d+)?)",  # fps: 30
+            r"(?<!-)(\d+(?:\.\d+)?)\s*frame[s]?\s*per\s*second",  # 30 frames per second
+            r"rate:\s*(?<!-)(\d+(?:\.\d+)?)",  # rate: 30 (not rate: -30)
+            r"fps:\s*(?<!-)(\d+(?:\.\d+)?)",  # fps: 30 (not fps: -30)
         ]
 
         # Udev monitoring objects
@@ -879,7 +879,7 @@ class HybridCameraMonitor:
                 result.accessible = True
                 result.structured_diagnostics["device_info_success"] = True
             else:
-                result.error = "Failed to probe basic device information"
+                result.error = "Failed to probe basic device information (timeout or device unavailable)"
                 result.structured_diagnostics["device_info_success"] = False
                 return result
 
@@ -1018,7 +1018,7 @@ class HybridCameraMonitor:
                     # Convert to float and back to string to normalize
                     try:
                         rate_val = float(match)
-                        if 1 <= rate_val <= 240:  # Reasonable frame rate range
+                        if 1 <= rate_val <= 300:  # Extended frame rate range for high-end cameras
                             # Store as integer if it's a whole number
                             if rate_val == int(rate_val):
                                 frame_rates.add(str(int(rate_val)))
@@ -1031,6 +1031,80 @@ class HybridCameraMonitor:
                 continue
 
         return frame_rates
+
+    def _extract_resolutions_from_output(self, output: str) -> List[str]:
+        """
+        Extract resolutions from v4l2-ctl output.
+
+        Args:
+            output: Raw v4l2-ctl command output
+
+        Returns:
+            List of resolution strings
+        """
+        if not output or not output.strip():
+            return []
+
+        resolutions = []
+        # Pattern to match "Size: Discrete 1920x1080" format
+        pattern = r"Size:\s*Discrete\s+(\d+x\d+)"
+        matches = re.findall(pattern, output, re.IGNORECASE)
+        
+        for match in matches:
+            # Validate resolution format
+            if re.match(r"\d+x\d+", match):
+                resolutions.append(match)
+
+        return resolutions
+
+    def _extract_formats_from_output(self, output: str) -> List[Dict[str, str]]:
+        """
+        Extract pixel formats from v4l2-ctl output.
+
+        Args:
+            output: Raw v4l2-ctl command output
+
+        Returns:
+            List of format dictionaries
+        """
+        if not output or not output.strip():
+            return []
+
+        formats = []
+        # Pattern to match "Pixel Format: 'YUYV' (YUYV 4:2:2)" format
+        pattern = r"Pixel Format:\s*'([^']+)'\s*(?:\(([^)]+)\))?"
+        matches = re.findall(pattern, output, re.IGNORECASE)
+        
+        for match in matches:
+            format_code = match[0]
+            description = match[1] if match[1] else f"{format_code} format"
+            formats.append({"format": format_code, "description": description})
+
+        return formats
+
+    def _get_or_create_capability_state(self, device_path: str) -> DeviceCapabilityState:
+        """
+        Get or create capability state for a device.
+
+        Args:
+            device_path: Device path
+
+        Returns:
+            DeviceCapabilityState instance
+        """
+        if device_path not in self._capability_states:
+            self._capability_states[device_path] = DeviceCapabilityState(device_path=device_path)
+        return self._capability_states[device_path]
+
+    async def _update_capability_state(self, device_path: str, result: CapabilityDetectionResult) -> None:
+        """
+        Update capability state for a device.
+
+        Args:
+            device_path: Device path
+            result: Capability detection result
+        """
+        await self._update_capability_validation_state(device_path, result)
 
     async def _probe_device_framerates_robust(
         self, device_path: str

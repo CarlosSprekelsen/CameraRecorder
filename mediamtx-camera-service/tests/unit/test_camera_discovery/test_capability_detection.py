@@ -26,5 +26,5 @@ async def test_probe_device_capabilities_with_mock(monitor):
     with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
         caps = await monitor._probe_device_capabilities("/dev/video0")
         assert caps is not None
-        assert caps["detected"] is True
-        assert "YUYV" in [f["code"] for f in caps["formats"]]
+        assert caps.detected is True
+        assert "YUYV" in [f["code"] for f in caps.formats]
