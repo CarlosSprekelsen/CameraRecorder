@@ -3,4 +3,4 @@ tests/unit/conftest.py:2: in <module>
     from camera_discovery.hybrid_monitor import HybridCameraMonitor
 src/camera_discovery/hybrid_monitor.py:22: in <module>
     from common.types import CameraDevice
-E   ImportError: attempted relative import beyond top-level package
+E   ModuleNotFoundError: No module named 'common.types'
