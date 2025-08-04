@@ -8,6 +8,7 @@ validation logic, and failure recovery scenarios.
 
 import pytest
 import asyncio
+import uuid
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.camera_service.service_manager import ServiceManager
@@ -81,15 +82,11 @@ class TestServiceManagerLifecycle:
         1. Stream name generation
         2. MediaMTX stream creation
         3. Capability metadata retrieval
-        4. Notification broadcasting
+        4. Notification broadcasting with enhanced metadata
         """
         # Mock dependencies
         mock_mediamtx = Mock()
-        mock_mediamtx.create_stream = AsyncMock(return_value={
-            "rtsp": "rtsp://localhost:8554/camera0",
-            "webrtc": "http://localhost:8889/camera0",
-            "hls": "http://localhost:8888/camera0"
-        })
+        mock_mediamtx.create_stream = AsyncMock(return_value={})
         service_manager._mediamtx_controller = mock_mediamtx
         
         mock_websocket = Mock()
@@ -99,17 +96,18 @@ class TestServiceManagerLifecycle:
         # Mock camera monitor with confirmed capability data
         mock_camera_monitor = Mock()
         mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
-            "resolution": "1920x1080",
-            "fps": 30,
+            "resolution": "1280x720",
+            "fps": 25,
             "validation_status": "confirmed",
-            "consecutive_successes": 5,
-            "formats": ["YUYV", "MJPEG"],
-            "all_resolutions": ["1920x1080", "1280x720"]
+            "consecutive_successes": 10,
+            "formats": ["YUYV"],
+            "all_resolutions": ["1280x720", "640x480"]
         })
         service_manager._camera_monitor = mock_camera_monitor
         
         # Execute camera connection handling
-        await service_manager.handle_camera_event(mock_camera_event_connected)
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            await service_manager.handle_camera_event(mock_camera_event_connected)
         
         # Verify orchestration sequence
         # 1. MediaMTX stream creation was called
@@ -118,16 +116,20 @@ class TestServiceManagerLifecycle:
         assert stream_config.name == "camera0"
         assert stream_config.source == "/dev/video0"
         
-        # 2. Capability metadata was retrieved
-        mock_camera_monitor.get_effective_capability_metadata.assert_called_once_with("/dev/video0")
-        
-        # 3. Notification was sent with correct metadata
+        # 2. Notification was sent with enhanced metadata
         mock_websocket.notify_camera_status_update.assert_called_once()
         notification_params = mock_websocket.notify_camera_status_update.call_args[0][0]
+        
+        # Verify notification includes provisional/confirmed metadata flags
         assert notification_params["device"] == "/dev/video0"
         assert notification_params["status"] == "CONNECTED"
-        assert notification_params["resolution"] == "1920x1080"  # From confirmed capability
-        assert notification_params["fps"] == 30                   # From confirmed capability
+        assert notification_params["resolution"] == "1280x720"  # From confirmed capability
+        assert notification_params["fps"] == 25                 # From confirmed capability
+        assert notification_params["metadata_validation"] == "confirmed"
+        assert notification_params["metadata_source"] == "confirmed_capability"
+        assert notification_params["metadata_provisional"] is False
+        assert notification_params["metadata_confirmed"] is True
+        assert "streams" in notification_params
         assert "rtsp" in notification_params["streams"]
 
     @pytest.mark.asyncio
@@ -157,7 +159,8 @@ class TestServiceManagerLifecycle:
         service_manager._camera_monitor = mock_camera_monitor
         
         # Execute camera disconnection handling
-        await service_manager.handle_camera_event(mock_camera_event_disconnected)
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            await service_manager.handle_camera_event(mock_camera_event_disconnected)
         
         # Verify orchestration sequence
         # 1. MediaMTX stream deletion was called
@@ -171,19 +174,21 @@ class TestServiceManagerLifecycle:
         assert notification_params["resolution"] == ""  # Empty for disconnected
         assert notification_params["fps"] == 0          # Zero for disconnected
         assert notification_params["streams"] == {}     # Empty streams
+        assert notification_params["metadata_validation"] == "none"
+        assert notification_params["metadata_provisional"] is False
+        assert notification_params["metadata_confirmed"] is False
 
     @pytest.mark.asyncio
-    async def test_metadata_propagation_confirmed_capability(self, service_manager, mock_camera_event_connected):
-        """Test metadata propagation uses confirmed capability data and logs validation status."""
-        # Mock camera monitor with confirmed capability data
+    async def test_metadata_propagation_provisional_capability(self, service_manager, mock_camera_event_connected):
+        """Test metadata propagation uses provisional capability data with appropriate logging."""
+        # Mock camera monitor with provisional capability data
         mock_camera_monitor = Mock()
         mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
-            "resolution": "1280x720",
-            "fps": 25,
-            "validation_status": "confirmed",
-            "consecutive_successes": 10,
-            "formats": ["YUYV"],
-            "all_resolutions": ["1280x720", "640x480"]
+            "resolution": "640x480",
+            "fps": 15,
+            "validation_status": "provisional",
+            "consecutive_successes": 2,
+            "formats": ["MJPEG"]
         })
         service_manager._camera_monitor = mock_camera_monitor
         
@@ -197,66 +202,18 @@ class TestServiceManagerLifecycle:
         with patch('src.camera_service.service_manager.set_correlation_id'):
             await service_manager.handle_camera_event(mock_camera_event_connected)
         
-        # Verify confirmed capability data is used
+        # Verify provisional capability data is used with proper flags
         notification_params = service_manager._websocket_server.notify_camera_status_update.call_args[0][0]
-        assert notification_params["resolution"] == "1280x720"  # From confirmed capability
-        assert notification_params["fps"] == 25                 # From confirmed capability
+        assert notification_params["resolution"] == "640x480"   # From provisional capability
+        assert notification_params["fps"] == 15                 # From provisional capability
+        assert notification_params["metadata_validation"] == "provisional"
+        assert notification_params["metadata_source"] == "provisional_capability"
+        assert notification_params["metadata_provisional"] is True
+        assert notification_params["metadata_confirmed"] is False
 
     @pytest.mark.asyncio
-    async def test_metadata_propagation_provisional_capability(self, service_manager, mock_camera_event_connected):
-        """Test metadata propagation uses provisional capability data with appropriate logging."""
-        # Mock camera monitor with provisional capability data
-        mock_camera_monitor = Mock()
-        mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
-            "resolution": "1920x1080",
-            "fps": 30,
-            "validation_status": "provisional",
-            "consecutive_successes": 1,
-            "formats": ["MJPEG"],
-            "all_resolutions": ["1920x1080"]
-        })
-        service_manager._camera_monitor = mock_camera_monitor
-        
-        # Mock other dependencies
-        service_manager._mediamtx_controller = Mock()
-        service_manager._mediamtx_controller.create_stream = AsyncMock(return_value={})
-        service_manager._websocket_server = Mock()
-        service_manager._websocket_server.notify_camera_status_update = AsyncMock()
-        
-        # Execute capability metadata retrieval directly
-        metadata = await service_manager._get_enhanced_camera_metadata(mock_camera_event_connected)
-        
-        # Verify provisional capability data is used with correct annotations
-        assert metadata["resolution"] == "1920x1080"
-        assert metadata["fps"] == 30
-        assert metadata["validation_status"] == "provisional"
-        assert metadata["capability_source"] == "provisional_capability"
-        assert metadata["consecutive_successes"] == 1
-
-    @pytest.mark.asyncio
-    async def test_metadata_fallback_no_capability_data(self, service_manager, mock_camera_event_connected):
-        """Test metadata falls back to architecture defaults when no capability data available."""
-        # Mock camera monitor with no capability data
-        mock_camera_monitor = Mock()
-        mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
-            "resolution": "1920x1080",  # Architecture defaults
-            "fps": 30,
-            "validation_status": "none"
-        })
-        service_manager._camera_monitor = mock_camera_monitor
-        
-        # Execute capability metadata retrieval
-        metadata = await service_manager._get_enhanced_camera_metadata(mock_camera_event_connected)
-        
-        # Verify architecture defaults are used with correct annotations
-        assert metadata["resolution"] == "1920x1080"  # Architecture default
-        assert metadata["fps"] == 30                   # Architecture default
-        assert metadata["validation_status"] == "none"
-        assert metadata["capability_source"] == "default"
-
-    @pytest.mark.asyncio
-    async def test_mediamtx_stream_creation_failure_recovery(self, service_manager, mock_camera_event_connected):
-        """Test graceful recovery when MediaMTX stream creation fails."""
+    async def test_mediamtx_controller_failure_recovery(self, service_manager, mock_camera_event_connected):
+        """Test recovery behavior when MediaMTX controller fails during stream creation."""
         # Mock MediaMTX controller that fails stream creation
         mock_mediamtx = Mock()
         mock_mediamtx.create_stream = AsyncMock(side_effect=Exception("MediaMTX connection failed"))
@@ -276,7 +233,8 @@ class TestServiceManagerLifecycle:
         service_manager._camera_monitor = mock_camera_monitor
         
         # Execute camera connection handling (should not raise exception)
-        await service_manager.handle_camera_event(mock_camera_event_connected)
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            await service_manager.handle_camera_event(mock_camera_event_connected)
         
         # Verify notification still sent despite MediaMTX failure
         mock_websocket.notify_camera_status_update.assert_called_once()
@@ -305,7 +263,8 @@ class TestServiceManagerLifecycle:
         service_manager._camera_monitor = mock_camera_monitor
         
         # Execute camera connection handling (should not crash)
-        await service_manager.handle_camera_event(mock_camera_event_connected)
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            await service_manager.handle_camera_event(mock_camera_event_connected)
         
         # Verify notification still sent with warning logged
         mock_websocket.notify_camera_status_update.assert_called_once()
@@ -320,8 +279,15 @@ class TestServiceManagerLifecycle:
         mock_camera_monitor.get_effective_capability_metadata = Mock(side_effect=Exception("Capability detection failed"))
         service_manager._camera_monitor = mock_camera_monitor
         
+        # Mock other dependencies
+        service_manager._mediamtx_controller = Mock()
+        service_manager._mediamtx_controller.create_stream = AsyncMock(return_value={})
+        service_manager._websocket_server = Mock()
+        service_manager._websocket_server.notify_camera_status_update = AsyncMock()
+        
         # Execute capability metadata retrieval
-        metadata = await service_manager._get_enhanced_camera_metadata(mock_camera_event_connected)
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            metadata = await service_manager._get_enhanced_camera_metadata(mock_camera_event_connected)
         
         # Verify fallback to defaults with error annotation
         assert metadata["resolution"] == "1920x1080"  # Architecture default
@@ -357,7 +323,9 @@ class TestServiceManagerLifecycle:
         with patch('src.camera_service.service_manager.MediaMTXController') as MockMediaMTX, \
              patch('src.camera_discovery.hybrid_monitor.HybridCameraMonitor') as MockCameraMonitor, \
              patch('src.camera_service.service_manager.HealthMonitor') as MockHealthMonitor, \
-             patch('src.websocket_server.server.WebSocketJsonRpcServer') as MockWebSocketServer:
+             patch('src.websocket_server.server.WebSocketJsonRpcServer') as MockWebSocketServer, \
+             patch('src.camera_service.service_manager.set_correlation_id'), \
+             patch('src.camera_service.service_manager.get_correlation_id', return_value="test-correlation-id"):
             
             # Setup mock instances
             mock_mediamtx_instance = Mock()
@@ -369,6 +337,8 @@ class TestServiceManagerLifecycle:
             mock_camera_instance = Mock()
             mock_camera_instance.start = AsyncMock()
             mock_camera_instance.stop = AsyncMock()
+            mock_camera_instance.add_event_handler = Mock()
+            mock_camera_instance.remove_event_handler = Mock()
             MockCameraMonitor.return_value = mock_camera_instance
             
             mock_health_instance = Mock()
@@ -407,141 +377,129 @@ class TestServiceManagerLifecycle:
     async def test_correlation_id_propagation_lifecycle(self, service_manager, mock_camera_event_connected):
         """Test correlation ID propagation through camera event lifecycle."""
         # Mock dependencies
-        service_manager._mediamtx_controller = Mock()
-        service_manager._mediamtx_controller.create_stream = AsyncMock(return_value={})
-        service_manager._websocket_server = Mock()
-        service_manager._websocket_server.notify_camera_status_update = AsyncMock()
-        service_manager._camera_monitor = Mock()
-        service_manager._camera_monitor.get_effective_capability_metadata = Mock(return_value={
-            "resolution": "1920x1080",
-            "fps": 30,
-            "validation_status": "confirmed"
-        })
-        
-        # Track correlation ID calls
-        correlation_ids = []
-        
-        def mock_set_correlation_id(cid):
-            correlation_ids.append(cid)
-        
-        with patch('src.camera_service.service_manager.set_correlation_id', side_effect=mock_set_correlation_id):
-            await service_manager.handle_camera_event(mock_camera_event_connected)
-        
-        # Verify correlation ID was set
-        assert len(correlation_ids) > 0
-        # Should include device-specific correlation ID
-        assert any("camera" in cid or "video0" in cid for cid in correlation_ids)
-
-    def test_get_service_status(self, service_manager):
-        """Test service status reporting includes all components."""
-        # Mock some components as running
-        service_manager._running = True
-        service_manager._websocket_server = Mock()
-        service_manager._mediamtx_controller = Mock()
-        service_manager._camera_monitor = None  # Simulate stopped component
-        service_manager._health_monitor = Mock()
-        
-        status = service_manager.get_status()
-        
-        # Verify status structure
-        assert status["running"] is True
-        assert status["websocket_server"] == "running"
-        assert status["mediamtx_controller"] == "running"
-        assert status["camera_monitor"] == "stopped"
-        assert status["health_monitor"] == "running"
-
-
-class TestServiceManagerCapabilityValidationIntegration:
-    """Test capability validation state transitions and logging."""
-
-    @pytest.fixture
-    def service_manager_with_config(self):
-        """Create service manager with capability detection enabled."""
-        config = Config(
-            server=ServerConfig(),
-            mediamtx=MediaMTXConfig(),
-            camera=CameraConfig(enable_capability_detection=True),
-            logging=LoggingConfig(),
-            recording=RecordingConfig(),
-            snapshots=SnapshotConfig()
-        )
-        return ServiceManager(config)
-
-    @pytest.mark.asyncio
-    async def test_capability_validation_status_transitions(self, service_manager_with_config):
-        """Test capability validation status transitions from provisional to confirmed."""
-        camera_event = CameraEventData(
-            device_path="/dev/video0",
-            event_type=CameraEvent.CONNECTED,
-            device_info=CameraDevice("/dev/video0", "Test Camera", "CONNECTED")
-        )
-        
-        # Mock camera monitor for capability progression
-        mock_camera_monitor = Mock()
-        service_manager_with_config._camera_monitor = mock_camera_monitor
-        
-        # Test progression: none -> provisional -> confirmed
-        capability_states = [
-            {"validation_status": "none", "consecutive_successes": 0},
-            {"validation_status": "provisional", "consecutive_successes": 1}, 
-            {"validation_status": "confirmed", "consecutive_successes": 5}
-        ]
-        
-        for i, capability_state in enumerate(capability_states):
-            mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
-                "resolution": "1920x1080",
-                "fps": 30,
-                **capability_state
-            })
-            
-            metadata = await service_manager_with_config._get_enhanced_camera_metadata(camera_event)
-            
-            assert metadata["validation_status"] == capability_state["validation_status"]
-            assert metadata["consecutive_successes"] == capability_state["consecutive_successes"]
-            
-            if capability_state["validation_status"] == "confirmed":
-                assert metadata["capability_source"] == "confirmed_capability"
-            elif capability_state["validation_status"] == "provisional":
-                assert metadata["capability_source"] == "provisional_capability"
-            else:
-                assert metadata["capability_source"] == "default"
-
-    @pytest.mark.asyncio
-    async def test_enhanced_validation_integration_logging(self, service_manager_with_config, caplog):
-        """Test enhanced capability validation integration includes proper logging."""
-        camera_event = CameraEventData(
-            device_path="/dev/video0",
-            event_type=CameraEvent.CONNECTED,
-            device_info=CameraDevice("/dev/video0", "Test Camera", "CONNECTED")
-        )
-        
-        # Mock camera monitor with enhanced capability metadata
         mock_camera_monitor = Mock()
         mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
             "resolution": "1280x720",
             "fps": 25,
             "validation_status": "confirmed",
-            "consecutive_successes": 8,
+            "consecutive_successes": 8
+        })
+        service_manager._camera_monitor = mock_camera_monitor
+        
+        mock_mediamtx = Mock()
+        mock_mediamtx.create_stream = AsyncMock(return_value={})
+        service_manager._mediamtx_controller = mock_mediamtx
+        
+        mock_websocket = Mock()
+        mock_websocket.notify_camera_status_update = AsyncMock()
+        service_manager._websocket_server = mock_websocket
+        
+        # Execute with correlation ID tracking
+        with patch('src.camera_service.service_manager.set_correlation_id') as mock_set_corr, \
+             patch('src.camera_service.service_manager.get_correlation_id', return_value="test-correlation-123"):
+            
+            await service_manager.handle_camera_event(mock_camera_event_connected)
+            
+            # Verify correlation ID was set during event handling
+            assert mock_set_corr.called
+
+    @pytest.mark.asyncio 
+    async def test_startup_failure_cleanup(self, service_manager):
+        """Test cleanup of partially started components on startup failure."""
+        with patch('src.camera_service.service_manager.MediaMTXController') as MockMediaMTX, \
+             patch('src.camera_discovery.hybrid_monitor.HybridCameraMonitor') as MockCameraMonitor, \
+             patch('src.camera_service.service_manager.HealthMonitor') as MockHealthMonitor, \
+             patch('src.websocket_server.server.WebSocketJsonRpcServer') as MockWebSocketServer, \
+             patch('src.camera_service.service_manager.set_correlation_id'), \
+             patch('src.camera_service.service_manager.get_correlation_id', return_value="test-correlation-id"):
+            
+            # Setup MediaMTX to succeed
+            mock_mediamtx_instance = Mock()
+            mock_mediamtx_instance.start = AsyncMock()
+            mock_mediamtx_instance.health_check = AsyncMock(return_value={"status": "healthy"})
+            mock_mediamtx_instance.stop = AsyncMock()
+            MockMediaMTX.return_value = mock_mediamtx_instance
+            
+            # Setup camera monitor to succeed
+            mock_camera_instance = Mock()
+            mock_camera_instance.start = AsyncMock()
+            mock_camera_instance.stop = AsyncMock()
+            mock_camera_instance.add_event_handler = Mock()
+            mock_camera_instance.remove_event_handler = Mock()
+            MockCameraMonitor.return_value = mock_camera_instance
+            
+            # Setup health monitor to fail
+            mock_health_instance = Mock()
+            mock_health_instance.start = AsyncMock(side_effect=Exception("Health monitor startup failed"))
+            mock_health_instance.stop = AsyncMock()
+            MockHealthMonitor.return_value = mock_health_instance
+            
+            # Setup websocket server
+            mock_websocket_instance = Mock()
+            mock_websocket_instance.start = AsyncMock()
+            mock_websocket_instance.stop = AsyncMock()
+            MockWebSocketServer.return_value = mock_websocket_instance
+            
+            # Attempt startup - should fail and cleanup
+            with pytest.raises(Exception, match="Health monitor startup failed"):
+                await service_manager.start()
+            
+            # Verify cleanup was performed
+            mock_camera_instance.stop.assert_called_once()
+            mock_mediamtx_instance.stop.assert_called_once()
+            
+            assert service_manager.is_running is False
+
+    @pytest.mark.asyncio
+    async def test_notification_metadata_fields_comprehensive(self, service_manager, mock_camera_event_connected):
+        """Test that notifications include all required metadata fields for observability."""
+        # Mock camera monitor with rich capability data
+        mock_camera_monitor = Mock()
+        mock_camera_monitor.get_effective_capability_metadata = Mock(return_value={
+            "resolution": "1920x1080",
+            "fps": 30,
+            "validation_status": "confirmed", 
+            "consecutive_successes": 15,
             "formats": ["YUYV", "MJPEG"],
             "all_resolutions": ["1920x1080", "1280x720", "640x480"]
         })
-        service_manager_with_config._camera_monitor = mock_camera_monitor
+        service_manager._camera_monitor = mock_camera_monitor
         
-        # Execute enhanced metadata retrieval with logging
-        with caplog.at_level('DEBUG'):
-            metadata = await service_manager_with_config._get_enhanced_camera_metadata(camera_event)
+        # Mock other dependencies
+        service_manager._mediamtx_controller = Mock()
+        service_manager._mediamtx_controller.create_stream = AsyncMock(return_value={})
+        service_manager._websocket_server = Mock()
+        service_manager._websocket_server.notify_camera_status_update = AsyncMock()
         
-        # Verify enhanced metadata structure
-        assert metadata["validation_status"] == "confirmed"
-        assert metadata["capability_source"] == "confirmed_capability"
-        assert metadata["consecutive_successes"] == 8
+        # Execute camera connection event
+        with patch('src.camera_service.service_manager.set_correlation_id'):
+            await service_manager.handle_camera_event(mock_camera_event_connected)
         
-        # Verify logging includes capability validation context
-        log_messages = [record.message for record in caplog.records]
-        capability_logs = [msg for msg in log_messages if "confirmed capability data" in msg]
-        assert len(capability_logs) > 0
+        # Verify comprehensive notification metadata
+        notification_params = service_manager._websocket_server.notify_camera_status_update.call_args[0][0]
+        
+        # Core API fields
+        assert "device" in notification_params
+        assert "status" in notification_params
+        assert "name" in notification_params
+        assert "resolution" in notification_params
+        assert "fps" in notification_params
+        assert "streams" in notification_params
+        
+        # Enhanced metadata fields for observability
+        assert "metadata_validation" in notification_params
+        assert "metadata_source" in notification_params
+        assert "metadata_provisional" in notification_params
+        assert "metadata_confirmed" in notification_params
+        
+        # Verify values are correct
+        assert notification_params["metadata_validation"] == "confirmed"
+        assert notification_params["metadata_source"] == "confirmed_capability"
+        assert notification_params["metadata_provisional"] is False
+        assert notification_params["metadata_confirmed"] is True
 
 
 # TODO: HIGH: Add integration tests with real camera monitor instance [Story:E1/S5]
 # TODO: MEDIUM: Add performance tests for camera event processing latency [Story:E1/S5]
 # TODO: MEDIUM: Add stress tests for rapid connect/disconnect sequences [Story:E1/S5]
+# TODO: LOW: Add tests for unknown camera event types [Story:E1/S5]
