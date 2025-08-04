@@ -57,6 +57,7 @@ snapshots/
 .coverage
 .pytest_cache/
 htmlcov/
+artifacts/
 
 # MediaMTX
 mediamtx

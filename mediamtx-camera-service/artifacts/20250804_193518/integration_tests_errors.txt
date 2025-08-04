@@ -1,2 +1,0 @@
-ERROR: /home/carlossprekelsen/Documentos/CameraRecorder/mediamtx-camera-service/pytest.ini:17: duplicate name 'addopts'
-
