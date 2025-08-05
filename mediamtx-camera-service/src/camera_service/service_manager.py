@@ -112,22 +112,31 @@ class ServiceManager(CameraEventHandler):
     coordinate with MediaMTX stream management.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(
+        self, 
+        config: Config, 
+        mediamtx_controller: Optional[MediaMTXController] = None,
+        websocket_server: Optional[WebSocketJsonRpcServer] = None,
+        camera_monitor = None
+    ) -> None:
         """
         Initialize the service manager with configuration.
 
         Args:
             config: Configuration object containing all service settings
+            mediamtx_controller: Optional MediaMTX controller instance for testing
+            websocket_server: Optional WebSocket server instance for testing
+            camera_monitor: Optional camera monitor instance for testing
         """
         self._config = config
         self._logger = logging.getLogger(__name__)
         self._shutdown_event: Optional[asyncio.Event] = None
         self._running = False
 
-        # Component references
-        self._websocket_server: Optional[WebSocketJsonRpcServer] = None
-        self._camera_monitor = None
-        self._mediamtx_controller: Optional[MediaMTXController] = None
+        # Component references - allow injection for testing
+        self._websocket_server = websocket_server
+        self._camera_monitor = camera_monitor
+        self._mediamtx_controller = mediamtx_controller
         self._health_monitor: Optional[HealthMonitor] = None
 
     @property

@@ -10,4 +10,4 @@ Contains the core subpackages:
 
 __version__ = "0.1.0"  # TODO: MEDIUM: Centralize versioning decision [IV&V:S15]
 
-__all__ = []
+__all__: list[str] = []

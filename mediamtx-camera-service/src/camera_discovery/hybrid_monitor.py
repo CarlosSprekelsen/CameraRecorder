@@ -55,13 +55,13 @@ class CapabilityDetectionResult:
     accessible: bool
     device_name: Optional[str] = None
     driver: Optional[str] = None
-    formats: List[Dict[str, Any]] = None
-    resolutions: List[str] = None
-    frame_rates: List[str] = None
+    formats: Optional[List[Dict[str, Any]]] = None
+    resolutions: Optional[List[str]] = None
+    frame_rates: Optional[List[str]] = None
     error: Optional[str] = None
     timeout_context: Optional[str] = None
     probe_timestamp: float = 0.0
-    structured_diagnostics: Dict[str, Any] = None
+    structured_diagnostics: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.formats is None:
@@ -87,12 +87,12 @@ class DeviceCapabilityState:
     consecutive_failures: int = 0
     last_probe_time: float = 0.0
     confirmation_threshold: int = 2  # Require N consistent probes for confirmation
-    validation_history: List[Dict[str, Any]] = None
+    validation_history: Optional[List[Dict[str, Any]]] = None
 
     # Enhanced frequency-based merge tracking
-    format_frequency: Dict[str, int] = None
-    resolution_frequency: Dict[str, int] = None
-    frame_rate_frequency: Dict[str, int] = None
+    format_frequency: Optional[Dict[str, int]] = None
+    resolution_frequency: Optional[Dict[str, int]] = None
+    frame_rate_frequency: Optional[Dict[str, int]] = None
     stability_threshold: int = 3  # Require N detections for stable capability
 
     def __post_init__(self):
@@ -142,7 +142,7 @@ class HybridCameraMonitor:
 
     def __init__(
         self,
-        device_range: List[int] = None,
+        device_range: Optional[List[int]] = None,
         poll_interval: float = 0.1,
         detection_timeout: float = 2.0,
         enable_capability_detection: bool = True,
@@ -1249,7 +1249,7 @@ class HybridCameraMonitor:
         medium_priority_rates = {"15", "60", "10"}
 
         # Count detection frequency (reliability indicator)
-        rate_frequency = {}
+        rate_frequency: Dict[str, int] = {}
         for source_name, source_rates in sources:
             for rate in source_rates:
                 rate_frequency[rate] = rate_frequency.get(rate, 0) + 1
@@ -1867,8 +1867,8 @@ class HybridCameraMonitor:
                 return None
 
             formats_output = stdout.decode()
-            formats = []
-            resolutions = set()
+            formats: List[Dict[str, Any]] = []
+            resolutions: Set[str] = set()
 
             # Enhanced format parsing with multiple patterns
             current_format = None

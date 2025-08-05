@@ -153,8 +153,7 @@ def test_config():
 async def websocket_client():
     """Create WebSocket test client."""
     client = WebSocketTestClient("ws://localhost:8002/ws")
-    yield client
-    await client.disconnect()
+    return client
 
 
 @pytest.fixture

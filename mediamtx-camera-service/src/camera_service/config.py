@@ -159,7 +159,7 @@ class ConfigManager:
         self._lock = threading.Lock()
         self._default_config = Config()  # Fallback configuration
 
-    def load_config(self, config_path: str = None) -> Config:
+    def load_config(self, config_path: Optional[str] = None) -> Config:
         """
         Load configuration with environment variable overrides and validation.
 
@@ -940,7 +940,7 @@ class ConfigManager:
 _config_manager = ConfigManager()
 
 
-def load_config(config_path: str = None) -> Config:
+def load_config(config_path: Optional[str] = None) -> Config:
     """
     Load configuration from YAML file with environment overrides.
 

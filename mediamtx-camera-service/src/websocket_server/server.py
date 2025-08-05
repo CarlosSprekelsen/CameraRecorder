@@ -61,7 +61,13 @@ class ClientConnection:
         self.client_id = client_id
         self.authenticated = False
         self.subscriptions: Set[str] = set()
-        self.connected_at = asyncio.get_event_loop().time()
+        # Use try/except to handle cases where no event loop is available (e.g., in tests)
+        try:
+            self.connected_at = asyncio.get_event_loop().time()
+        except RuntimeError:
+            # Fallback for test environments without event loop
+            import time
+            self.connected_at = time.time()
 
         # TODO: HIGH: Implement authentication state management [IV&V:S6]
         # TODO: MEDIUM: Implement permission tracking system [IV&V:S6]

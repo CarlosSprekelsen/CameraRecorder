@@ -26,16 +26,6 @@ class TestCapabilityReconciliation:
     """Test reconciliation between hybrid_monitor output and service_manager consumption."""
 
     @pytest.fixture
-    def mock_dependencies(self):
-        """Create mock dependencies for service manager."""
-        return {
-            "config": Mock(),
-            "mediamtx_controller": Mock(),
-            "websocket_server": Mock(),
-            "camera_monitor": None,  # Will be set per test
-        }
-
-    @pytest.fixture
     def hybrid_monitor(self):
         """Create hybrid monitor for reconciliation testing."""
         return HybridCameraMonitor(
