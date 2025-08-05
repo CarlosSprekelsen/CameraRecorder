@@ -210,6 +210,12 @@ class HybridCameraMonitor:
         # Add missing attributes for test compatibility
         self._max_consecutive_failures = 5
 
+        # Enhanced frequency tracking for robust capability merging
+        self._capability_frequencies: Dict[str, int] = {}
+        self._format_frequencies: Dict[str, int] = {}
+        self._resolution_frequencies: Dict[str, int] = {}
+        self._frame_rate_frequencies: Dict[str, int] = {}
+
         # Enhanced frame rate patterns for robust parsing
         self._frame_rate_patterns = [
             # Standard patterns (exclude negative numbers)
@@ -253,6 +259,8 @@ class HybridCameraMonitor:
                 "udev_available": self._udev_available,
             },
         )
+
+
 
     def add_event_handler(self, handler: CameraEventHandler) -> None:
         """Add a camera event handler."""
@@ -898,11 +906,13 @@ class HybridCameraMonitor:
                 result.device_name = device_info.get("name")
                 result.driver = device_info.get("driver")
                 result.accessible = True
-                result.structured_diagnostics["device_info_success"] = True
+                if result.structured_diagnostics:
+                    result.structured_diagnostics["device_info_success"] = True
             else:
                 result.error = "Failed to probe basic device information (timeout or device unavailable)"
                 result.timeout_context = "device_info_probe_timeout"
-                result.structured_diagnostics["device_info_success"] = False
+                if result.structured_diagnostics:
+                    result.structured_diagnostics["device_info_success"] = False
                 return result
 
             # Format and resolution probe
@@ -910,16 +920,18 @@ class HybridCameraMonitor:
             if formats_data:
                 result.formats = formats_data.get("formats", [])
                 result.resolutions = formats_data.get("resolutions", [])
-                result.structured_diagnostics["formats_found"] = len(result.formats)
-                result.structured_diagnostics["resolutions_found"] = len(
-                    result.resolutions
-                )
+                if result.structured_diagnostics:
+                    result.structured_diagnostics["formats_found"] = len(result.formats)
+                    result.structured_diagnostics["resolutions_found"] = len(
+                        result.resolutions
+                    )
 
             # Frame rate probe with hierarchical selection
             frame_rates = await self._probe_device_framerates_robust(device_path)
             if frame_rates:
                 result.frame_rates = frame_rates
-                result.structured_diagnostics["frame_rates_found"] = len(frame_rates)
+                if result.structured_diagnostics:
+                    result.structured_diagnostics["frame_rates_found"] = len(frame_rates)
 
             # Consider detection successful if we got basic info
             if result.accessible and (
@@ -950,7 +962,8 @@ class HybridCameraMonitor:
         except Exception as e:
             self._stats["capability_parse_errors"] += 1
             result.error = f"Capability detection error: {str(e)}"
-            result.structured_diagnostics["exception_type"] = type(e).__name__
+            if result.structured_diagnostics:
+                result.structured_diagnostics["exception_type"] = type(e).__name__
             self._logger.error(
                 f"Error probing capabilities for {device_path}: {e}",
                 extra={"device_path": device_path, "component": "capability_detection"},
@@ -958,7 +971,8 @@ class HybridCameraMonitor:
             )
 
         probe_duration = time.time() - probe_start
-        result.structured_diagnostics["probe_duration"] = probe_duration
+        if result.structured_diagnostics:
+            result.structured_diagnostics["probe_duration"] = probe_duration
 
         return result
 
@@ -1344,9 +1358,9 @@ class HybridCameraMonitor:
             "timestamp": state.last_probe_time,
             "detected": new_result.detected,
             "error": new_result.error,
-            "formats_count": len(new_result.formats),
-            "resolutions_count": len(new_result.resolutions),
-            "frame_rates_count": len(new_result.frame_rates),
+            "formats_count": len(new_result.formats) if new_result.formats else 0,
+            "resolutions_count": len(new_result.resolutions) if new_result.resolutions else 0,
+            "frame_rates_count": len(new_result.frame_rates) if new_result.frame_rates else 0,
         }
         state.validation_history.append(history_entry)
 
@@ -1488,26 +1502,29 @@ class HybridCameraMonitor:
         """Update frequency counters for capability elements."""
 
         # Update format frequencies
-        for fmt in result.formats:
-            fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
-            if fmt_code:
-                state.format_frequency[fmt_code] = (
-                    state.format_frequency.get(fmt_code, 0) + 1
-                )
+        if result.formats:
+            for fmt in result.formats:
+                fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
+                if fmt_code:
+                    state.format_frequency[fmt_code] = (
+                        state.format_frequency.get(fmt_code, 0) + 1
+                    )
 
         # Update resolution frequencies
-        for resolution in result.resolutions:
-            if resolution:
-                state.resolution_frequency[resolution] = (
-                    state.resolution_frequency.get(resolution, 0) + 1
-                )
+        if result.resolutions:
+            for resolution in result.resolutions:
+                if resolution:
+                    state.resolution_frequency[resolution] = (
+                        state.resolution_frequency.get(resolution, 0) + 1
+                    )
 
         # Update frame rate frequencies
-        for rate in result.frame_rates:
-            if rate:
-                state.frame_rate_frequency[rate] = (
-                    state.frame_rate_frequency.get(rate, 0) + 1
-                )
+        if result.frame_rates:
+            for rate in result.frame_rates:
+                if rate:
+                    state.frame_rate_frequency[rate] = (
+                        state.frame_rate_frequency.get(rate, 0) + 1
+                    )
 
     def _create_frequency_merged_capability(
         self, state: DeviceCapabilityState, latest_result: CapabilityDetectionResult
@@ -1545,28 +1562,33 @@ class HybridCameraMonitor:
 
         # Include recent detections if they don't conflict with stable set
         recent_formats = []
-        for fmt in latest_result.formats:
-            fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
-            if fmt_code and fmt_code not in [sf["code"] for sf in stable_formats]:
-                # Add if it's been seen at least once before or has high confidence
-                if state.format_frequency.get(fmt_code, 0) > 0:
-                    recent_formats.append(fmt)
+        if latest_result.formats:
+            for fmt in latest_result.formats:
+                fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
+                if fmt_code and fmt_code not in [sf["code"] for sf in stable_formats]:
+                    # Add if it's been seen at least once before or has high confidence
+                    if state.format_frequency.get(fmt_code, 0) > 0:
+                        recent_formats.append(fmt)
 
-        recent_resolutions = [
-            res
-            for res in latest_result.resolutions
-            if res
-            and res not in stable_resolutions
-            and state.resolution_frequency.get(res, 0) > 0
-        ]
+        recent_resolutions = []
+        if latest_result.resolutions:
+            recent_resolutions = [
+                res
+                for res in latest_result.resolutions
+                if res
+                and res not in stable_resolutions
+                and state.resolution_frequency.get(res, 0) > 0
+            ]
 
-        recent_frame_rates = [
-            rate
-            for rate in latest_result.frame_rates
-            if rate
-            and rate not in stable_frame_rates
-            and state.frame_rate_frequency.get(rate, 0) > 0
-        ]
+        recent_frame_rates = []
+        if latest_result.frame_rates:
+            recent_frame_rates = [
+                rate
+                for rate in latest_result.frame_rates
+                if rate
+                and rate not in stable_frame_rates
+                and state.frame_rate_frequency.get(rate, 0) > 0
+            ]
 
         # Create merged result
         merged_result = CapabilityDetectionResult(
@@ -1633,10 +1655,10 @@ class HybridCameraMonitor:
 
         # Get current result capability sets
         current_formats = {
-            fmt.get("code", "") for fmt in new_result.formats if isinstance(fmt, dict)
+            fmt.get("code", "") for fmt in (new_result.formats or []) if isinstance(fmt, dict)
         }
-        current_resolutions = set(new_result.resolutions)
-        current_frame_rates = set(new_result.frame_rates)
+        current_resolutions = set(new_result.resolutions or [])
+        current_frame_rates = set(new_result.frame_rates or [])
 
         # Calculate consistency scores for each capability type
         format_consistency = self._calculate_set_consistency(
@@ -1686,16 +1708,16 @@ class HybridCameraMonitor:
 
         # Calculate variance for each capability type
         format_variance = self._calculate_list_variance(
-            [f.get("code", "") for f in prev_result.formats],
-            [f.get("code", "") for f in new_result.formats],
+            [f.get("code", "") for f in (prev_result.formats or [])],
+            [f.get("code", "") for f in (new_result.formats or [])],
         )
 
         resolution_variance = self._calculate_list_variance(
-            prev_result.resolutions, new_result.resolutions
+            prev_result.resolutions or [], new_result.resolutions or []
         )
 
         rate_variance = self._calculate_list_variance(
-            prev_result.frame_rates, new_result.frame_rates
+            prev_result.frame_rates or [], new_result.frame_rates or []
         )
 
         # Weight variance by importance (resolutions and rates more critical than formats)
@@ -1734,8 +1756,8 @@ class HybridCameraMonitor:
             return False
 
         # Check format consistency (allow subset relationships)
-        formats1 = set(f.get("code", "") for f in data1.formats)
-        formats2 = set(f.get("code", "") for f in data2.formats)
+        formats1 = set(f.get("code", "") for f in (data1.formats or []))
+        formats2 = set(f.get("code", "") for f in (data2.formats or []))
 
         if formats1 and formats2:
             # Allow up to 50% difference in formats
@@ -1745,8 +1767,8 @@ class HybridCameraMonitor:
                 return False
 
         # Check resolution consistency (allow subset relationships)
-        resolutions1 = set(data1.resolutions)
-        resolutions2 = set(data2.resolutions)
+        resolutions1 = set(data1.resolutions or [])
+        resolutions2 = set(data2.resolutions or [])
 
         if resolutions1 and resolutions2:
             intersection = resolutions1.intersection(resolutions2)
@@ -1755,8 +1777,8 @@ class HybridCameraMonitor:
                 return False
 
         # Check frame rate consistency (more lenient)
-        frame_rates1 = set(data1.frame_rates)
-        frame_rates2 = set(data2.frame_rates)
+        frame_rates1 = set(data1.frame_rates or [])
+        frame_rates2 = set(data2.frame_rates or [])
 
         if frame_rates1 and frame_rates2:
             intersection = frame_rates1.intersection(frame_rates2)

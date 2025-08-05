@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
 
 import websockets
-from websockets.server import WebSocketServerProtocol
+from websockets.server import ServerProtocol as WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
 from camera_service.logging_config import set_correlation_id
@@ -117,7 +117,7 @@ class WebSocketJsonRpcServer:
         self._camera_monitor = camera_monitor
 
         self._logger = logging.getLogger(__name__)
-        self._server = None
+        self._server: Optional[Any] = None  # WebSocket server instance
         self._running = False
 
         # Client connection management
@@ -179,8 +179,6 @@ class WebSocketJsonRpcServer:
                 ping_interval=30,  # Ping every 30 seconds
                 ping_timeout=10,  # Ping timeout
                 close_timeout=5,  # Close timeout
-                # Path handling - only accept connections to our WebSocket path
-                process_request=self._process_request,
             )
 
             self._running = True

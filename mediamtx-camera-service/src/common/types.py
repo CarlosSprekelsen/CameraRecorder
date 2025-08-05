@@ -16,7 +16,7 @@ class CameraDevice:
     driver: Optional[str] = None
     capabilities: Optional[dict] = None
 
-    def __init__(self, device: str = None, device_path: str = None, **kwargs):
+    def __init__(self, device: Optional[str] = None, device_path: Optional[str] = None, **kwargs):
         """Initialize CameraDevice with support for device_path alias."""
         if device_path is not None and device is None:
             device = device_path
@@ -32,6 +32,4 @@ class CameraDevice:
         # Validate status values
         valid_statuses = ["CONNECTED", "DISCONNECTED", "ERROR", "BUSY"]
         if self.status not in valid_statuses:
-            raise ValueError(
-                f"Invalid status: {self.status}, must be one of {valid_statuses}"
-            )
+            raise ValueError(f"Invalid status '{self.status}'. Must be one of: {valid_statuses}")

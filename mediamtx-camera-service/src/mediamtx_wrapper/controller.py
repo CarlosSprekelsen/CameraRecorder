@@ -1491,7 +1491,7 @@ class MediaMTXController:
                             self._health_max_backoff_interval,
                         )
                         jitter = random.uniform(*self._backoff_jitter_range)
-                        sleep_interval = base_interval * jitter
+                        sleep_interval = int(base_interval * jitter)
                         consecutive_failures += 1
 
                         self._logger.debug(
@@ -1546,7 +1546,7 @@ class MediaMTXController:
                         self._health_max_backoff_interval,
                     )
                     jitter = random.uniform(*self._backoff_jitter_range)
-                    error_sleep = base_error_sleep * jitter
+                    error_sleep = int(base_error_sleep * jitter)
                     await asyncio.sleep(error_sleep)
 
         except Exception as e:
