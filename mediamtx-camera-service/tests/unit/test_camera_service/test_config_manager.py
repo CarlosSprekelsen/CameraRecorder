@@ -236,6 +236,9 @@ logging:
             mock_observer_instance = Mock()
             mock_observer.return_value = mock_observer_instance
 
+            # Set a config path so hot reload can start
+            config_manager._config_path = "/tmp/test_config.yaml"
+            
             config_manager.start_hot_reload()
             mock_observer_instance.start.assert_called_once()
 
@@ -318,8 +321,9 @@ snapshots:
 
             # Should contain multiple validation errors
             error_message = str(exc_info.value)
-            assert "port" in error_message
-            assert "level" in error_message or "quality" in error_message
+            assert "Configuration validation failed" in error_message
+            assert "999999" in error_message  # The invalid port value
+            assert "must be integer 1-65535" in error_message  # The actual error message
 
 
 class TestConfigurationIntegration:

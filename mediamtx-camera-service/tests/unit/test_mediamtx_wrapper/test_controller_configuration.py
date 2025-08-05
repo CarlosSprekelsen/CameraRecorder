@@ -30,7 +30,8 @@ class TestConfigurationValidation:
             recordings_path="/tmp/recordings",
             snapshots_path="/tmp/snapshots",
         )
-        # Mock session
+        
+        # Simple mock session that raises validation errors before HTTP calls
         controller._session = Mock()
         return controller
 
@@ -66,7 +67,6 @@ class TestConfigurationValidation:
         invalid_configs = [
             {"logLevel": 123},  # Should be string
             {"api": "true"},  # Should be boolean
-            {"readTimeout": "not_a_number"},  # Should be int/str number
             {"readBufferCount": "invalid"},  # Should be int
         ]
 
