@@ -289,7 +289,7 @@ Output:
 
 
 ---------------------------------------------------------------------------
-Prompt 4: Document closure of resolved partials (S4)
+Prompt 4[Completed]: Document closure of resolved partials (S4)
 Ground truth sources (authoritative): 
 - docs/architecture/overview.md
 - docs/development/principles.md
