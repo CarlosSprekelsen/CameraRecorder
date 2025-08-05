@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Authors:** Solo Engineer  
-**Date:** 2025-08-04  
+**Date:** 2025-08-05  
 **Status:** Approved  
 **Related Epic/Story:** E1 / S5  
 
@@ -70,54 +70,55 @@ This document defines acceptance criteria and test scenarios for validating the 
 7. Verify recording_status_update notification (status=STOPPED)
 8. Validate recording file exists and has expected duration
 9. Take snapshot via take_snapshot method
-10. Verify snapshot file creation and image validity
+10. Verify snapshot file creation with proper metadata
 
 **Success Criteria:**
-- RTSP stream provides valid video data
-- Recording start/stop notifications received within 2 seconds
-- Recording file duration matches expected timeframe (±2 seconds)
-- Snapshot file is valid image format
+- Recording starts and stops cleanly
+- Recording duration matches expected timeframe (±2 seconds)
+- Snapshot capture succeeds with valid image file
+- All operations return proper API response format
+- Notifications contain accurate status and metadata
 
-### Scenario HP-3: WebSocket Client Integration
-**Objective:** Validate real-time notification delivery
+### Scenario HP-3: WebSocket Notification Delivery
+**Objective:** Validate real-time notification system
+**Prerequisites:** Service running, WebSocket client connected
+**Steps:**
+1. Simulate camera connection event
+2. Verify camera_status_update notification received
+3. Start recording operation
+4. Verify recording_status_update notification (STARTED)
+5. Stop recording operation
+6. Verify recording_status_update notification (STOPPED)
+7. Test notification delivery to multiple clients
+
+**Success Criteria:**
+- All notifications received within 2 seconds of event
+- Notification payloads match API specification exactly
+- Multiple clients receive identical notifications
+- No notification loss or duplication
+
+## 4. Error Recovery Scenarios
+
+### Scenario ER-1: MediaMTX Service Recovery
+**Objective:** Test service behavior when MediaMTX is unavailable
 **Prerequisites:** Camera Service running
 **Steps:**
-1. Establish WebSocket connection to ws://localhost:8002/ws
-2. Send ping method and verify pong response
-3. Connect camera while WebSocket client is listening
-4. Verify camera_status_update notification received
-5. Start recording and verify recording_status_update received
-6. Test multiple concurrent WebSocket connections
-7. Verify all clients receive notifications
+1. Stop MediaMTX server
+2. Attempt camera operations (get_camera_status, start_recording)
+3. Verify proper error responses (-1003: MediaMTX error)
+4. Restart MediaMTX server
+5. Verify service automatically reconnects
+6. Test normal operations resume
 
 **Success Criteria:**
-- WebSocket connection established successfully
-- All notifications received by connected clients
-- JSON-RPC 2.0 format compliance in all messages
-- No message loss during normal operations
+- API calls return proper error codes during MediaMTX outage
+- Service logs appropriate error messages
+- Automatic recovery when MediaMTX becomes available
+- No service crashes or hangs
 
-## 4. Error Handling and Recovery Scenarios
-
-### Scenario ER-1: MediaMTX Service Disruption
-**Objective:** Validate recovery from MediaMTX downtime
-**Prerequisites:** Camera connected, MediaMTX running
-**Steps:**
-1. Verify camera streaming normally
-2. Stop MediaMTX service
-3. Attempt camera operations (get_status, start_recording)
-4. Verify appropriate error responses
-5. Restart MediaMTX service
-6. Verify automatic recovery and stream restoration
-7. Test camera operations resume normally
-
-**Success Criteria:**
-- Error responses include meaningful error codes (-1003: MediaMTX error)
-- Service recovers automatically within 30 seconds of MediaMTX restart
-- No camera state corruption during outage
-
-### Scenario ER-2: Camera Disconnection During Recording
-**Objective:** Validate graceful handling of unexpected camera removal
-**Prerequisites:** Camera connected and recording
+### Scenario ER-2: Camera Disconnect During Recording
+**Objective:** Validate handling of camera disconnection during active recording
+**Prerequisites:** Camera connected, recording in progress
 **Steps:**
 1. Start recording on connected camera
 2. Physically disconnect camera during recording
@@ -235,7 +236,13 @@ Each test execution must produce:
 ---
 
 **Next Steps:**
-1. Implement core integration smoke test
-2. Execute initial test run and document results
+1. Execute core integration smoke test
+2. Document test execution results and any issues found
 3. Address any discovered gaps or failures
 4. Prepare test automation for CI/CD integration
+
+**Evidence References:**
+- Architecture specification: `docs/architecture/overview.md` (sections: Component Architecture, Data Flow)
+- API contract: `docs/api/json-rpc-methods.md` (all core methods and notifications)
+- Testing standards: `docs/development/principles.md` (IV&V control points)
+- Implementation: `tests/ivv/test_integration_smoke.py`
