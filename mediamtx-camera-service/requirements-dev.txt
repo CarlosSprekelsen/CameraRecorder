@@ -7,6 +7,15 @@ flake8>=6.0.0
 mypy>=1.5.0
 pre-commit>=3.3.0
 tox>=4.6.0
+types-PyYAML>=1.7.0
+types-jsonschema>=4.17.0
+
+# For pyudev (no official stubs available):
+#types-requests  # Often provides similar patterns
+
+# For importlib_metadata (should be in stdlib for Python 3.10+):
+# Usually resolves itself, but if needed:
+types-setuptools>=68.0.0
 
 # Documentation
 mkdocs>=1.5.0

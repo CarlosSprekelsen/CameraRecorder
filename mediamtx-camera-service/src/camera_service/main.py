@@ -9,16 +9,18 @@ import asyncio
 import logging
 import signal
 import sys
+from pathlib import Path
 from typing import Optional
 
 from .config import load_config
 from .logging_config import setup_logging
 from .service_manager import ServiceManager
 
+# Version detection with fallback
 try:
     from importlib.metadata import version, PackageNotFoundError
 except ImportError:
-    # For Python <3.8 compatibility
+    # Fallback for older Python versions
     from importlib_metadata import version, PackageNotFoundError
 
 

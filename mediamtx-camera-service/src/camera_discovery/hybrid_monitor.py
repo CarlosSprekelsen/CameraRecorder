@@ -1506,9 +1506,8 @@ class HybridCameraMonitor:
             for fmt in result.formats:
                 fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
                 if fmt_code:
-                    state.format_frequency[fmt_code] = (
-                        state.format_frequency.get(fmt_code, 0) + 1
-                    )
+                    if state.format_frequency is not None:
+                        state.format_frequency[fmt_code] = state.format_frequency.get(fmt_code, 0) + 1
 
         # Update resolution frequencies
         if result.resolutions:
