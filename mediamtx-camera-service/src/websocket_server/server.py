@@ -484,45 +484,38 @@ class WebSocketJsonRpcServer:
             )
 
     async def _close_all_connections(self) -> None:
-        """Close all active client connections gracefully."""
-        async with self._connection_lock:
-            if not self._clients:
-                return
+        """Close all client connections gracefully."""
+        if not self._clients:
+            return
 
-            # Send shutdown notification to clients
-            shutdown_notification = json.dumps(
-                {
-                    "jsonrpc": "2.0",
-                    "method": "server_shutdown",
-                    "params": {"message": "Server is shutting down"},
-                }
-            )
+        self._logger.info(f"Closing {len(self._clients)} client connections")
 
-            # Close all WebSocket connections
-            close_tasks = []
-            for client in self._clients.values():
-                if client.websocket.open:  # type: ignore[attr-defined]
+        failed_clients = []
+        for client in list(self._clients.values()):
+            try:
+                # Check if websocket is still available and open
+                if hasattr(client.websocket, 'open'):
+                    if client.websocket.open:  # type: ignore[attr-defined]
+                        await client.websocket.close()
+                else:
+                    # Fallback for websockets library versions without 'open' attribute
                     try:
-                        shutdown_notification = json.dumps(
-                            {
-                                "jsonrpc": "2.0",
-                                "method": "server.shutdown",
-                                "params": {"message": "Server shutting down"},
-                            }
-                        )
-                        close_tasks.append(client.websocket.send(shutdown_notification))  # type: ignore[attr-defined]
+                        await client.websocket.close()
                     except Exception:
-                        pass  # Connection might be broken
-                close_tasks.append(client.websocket.close())  # type: ignore[attr-defined]
+                        pass  # Connection may already be closed
+                        
+            except Exception as e:
+                self._logger.warning(f"Failed to close client {client.client_id}: {e}")
+                failed_clients.append(client.client_id)
 
-            # Wait for all connections to close
-            if close_tasks:
-                await asyncio.gather(*close_tasks, return_exceptions=True)
+        # Remove failed clients from tracking
+        for client_id in failed_clients:
+            self._clients.pop(client_id, None)
 
-            # Clear client tracking
-            client_count = len(self._clients)
-            self._clients.clear()
-            self._logger.info(f"Closed {client_count} client connections")
+        if failed_clients:
+            self._logger.warning(f"Failed to close {len(failed_clients)} client connections")
+        else:
+            self._logger.info("All client connections closed successfully")
 
     async def _cleanup_server(self) -> None:
         """Clean up server resources and reset state."""

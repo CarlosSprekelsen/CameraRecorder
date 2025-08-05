@@ -141,6 +141,17 @@ class Config:
                 if hasattr(self.snapshots, key):
                     setattr(self.snapshots, key, value)
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary for serialization."""
+        return {
+            "server": asdict(self.server),
+            "mediamtx": asdict(self.mediamtx),
+            "camera": asdict(self.camera),
+            "logging": asdict(self.logging),
+            "recording": asdict(self.recording),
+            "snapshots": asdict(self.snapshots),
+        }
+
 
 class ConfigManager:
     """
