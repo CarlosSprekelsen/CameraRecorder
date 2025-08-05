@@ -691,6 +691,11 @@ class TestIntegrationAndLifecycle:
             assert connect_event.event_type == CameraEvent.CONNECTED
             assert connect_event.device_path == device_path
 
+            # Set up capability state for metadata check
+            state = monitor._get_or_create_capability_state(device_path)
+            state.provisional_data = mock_capability
+            state.consecutive_successes = 1
+
             # Verify capability metadata is available
             metadata = monitor.get_effective_capability_metadata(device_path)
             assert metadata["resolution"] == "1920x1080"
