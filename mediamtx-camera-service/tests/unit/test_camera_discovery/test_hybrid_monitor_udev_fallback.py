@@ -62,6 +62,14 @@ class TestUdevEventProcessing:
             patch.object(
                 monitor_with_udev, "_should_monitor_device", return_value=True
             ),
+            patch.object(
+                monitor_with_udev, "_create_camera_device_info", 
+                return_value=CameraDevice(
+                    device="/dev/video0", 
+                    name="Test Camera", 
+                    status="CONNECTED"
+                )
+            ),
         ):
 
             # Setup event handler to capture events

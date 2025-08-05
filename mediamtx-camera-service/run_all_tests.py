@@ -2,11 +2,21 @@
 """
 Comprehensive test automation script for MediaMTX Camera Service.
 
-Runs all quality gates in sequence: formatting, linting, type checking, 
-unit tests, and integration tests with coverage measurement and reporting.
+Runs all quality gates in priority order:
+1. CRITICAL TESTS (run first to see real issues)
+   - Type checking (mypy)
+   - Unit tests with coverage
+   - Integration tests (if enabled)
+
+2. CODE QUALITY CHECKS (run last to avoid masking critical failures)
+   - Code formatting (black)
+   - Code linting (flake8)
+
+This order ensures critical test failures are visible immediately,
+while cosmetic/style issues don't mask real problems.
 
 Usage:
-    python3 run_all_tests.py                    # Run all stages
+    python3 run_all_tests.py                    # Run all stages in priority order
     python3 run_all_tests.py --no-lint          # Skip linting
     python3 run_all_tests.py --only-unit        # Unit tests only
     python3 run_all_tests.py --threshold=85     # Custom coverage threshold
@@ -406,17 +416,26 @@ class TestRunner:
         if not self.venv_active:
             print("WARNING: Not running in virtual environment")
             
-        # Run all stages
+        # Run stages in priority order: critical tests first, formatting/linting last
         stages_to_run = [
-            self.run_formatting_check,
-            self.run_linting, 
-            self.run_type_checking,
-            self.run_unit_tests
+            # 1. CRITICAL TESTS (run first to see real issues)
+            # Type checking catches fundamental type errors that could cause runtime issues
+            self.run_type_checking,    # Type errors are critical
+            
+            # Unit tests validate core functionality and are the most important for CI/CD
+            self.run_unit_tests,       # Unit tests are most important
         ]
         
         # Add integration tests unless unit-only mode
         if not self.args.only_unit:
             stages_to_run.append(self.run_integration_tests)
+            
+        # 2. CODE QUALITY CHECKS (run last to avoid masking critical failures)
+        # These are cosmetic/style issues that shouldn't block critical test results
+        stages_to_run.extend([
+            self.run_formatting_check,  # Formatting is cosmetic
+            self.run_linting,          # Linting is style-related
+        ])
             
         success = True
         for stage_func in stages_to_run:

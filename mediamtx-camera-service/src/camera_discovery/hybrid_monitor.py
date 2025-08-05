@@ -849,7 +849,10 @@ class HybridCameraMonitor:
             # Call all event callbacks
             for callback in self._event_callbacks:
                 try:
-                    callback(event_data)
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(event_data)
+                    else:
+                        callback(event_data)
                 except Exception as e:
                     self._logger.error(
                         f"Error in event callback {callback.__name__}: {e}",
