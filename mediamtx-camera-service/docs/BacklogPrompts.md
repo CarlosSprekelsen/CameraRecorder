@@ -404,7 +404,7 @@ Output:
 
 
 ---------------------------------------------------------------------------
-Prompt 7: Add tests README and conventions doc (S14)
+Prompt 7[Complete]: Add tests README and conventions doc (S14)
 Ground truth sources (authoritative): 
 - docs/architecture/overview.md
 - docs/development/principles.md
@@ -440,7 +440,7 @@ Output:
 
 
 ---------------------------------------------------------------------------
-Prompt 8: Improve deployment/install script (S5)
+Prompt 8[Complete]: Improve deployment/install script (S5)
 
 Ground truth sources (authoritative): 
 - docs/architecture/overview.md
