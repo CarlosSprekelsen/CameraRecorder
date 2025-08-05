@@ -327,7 +327,7 @@ Output:
 
 
 ---------------------------------------------------------------------------
-Prompt 5: Draft S5 acceptance test plan and implement core integration smoke test
+Prompt 5[Complete]: Draft S5 acceptance test plan and implement core integration smoke test
 
 Ground truth sources (authoritative): 
 - docs/architecture/overview.md
