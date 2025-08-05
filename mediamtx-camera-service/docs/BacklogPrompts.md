@@ -725,3 +725,217 @@ DON'T:
 IMPORTANT: First run all tests to completion, then provide a summary of all failures, then generate fixes. Do not make any code changes until you have the complete failure picture.
 
 Deliverable: Working test suite with minimal, justified patches across ALL modules that maintain architectural integrity while ensuring complete test coverage passes.
+
+
+
+---------------------------
+
+# S5 Integration Gap Resolution & Test Execution
+
+## Context
+Solo-engineered MediaMTX Camera Service project with established ground truth:
+- docs/architecture/overview.md - System design and component interfaces
+- docs/development/principles.md - Project values and TODO/STOP standards  
+- docs/development/coding-standards.md - Style guide and technical requirements
+- docs/api/json-rpc-methods.md - API contracts and method specifications
+
+## Task Scope
+Resolve the three specific integration gaps blocking S5 completion, then execute the complete S5 integration test suite to validate end-to-end functionality. Focus ONLY on making S5 tests pass while maintaining architectural compliance.
+
+CRITICAL: First resolve integration gaps, then run ALL S5 tests to 100% completion before analyzing any remaining failures.
+
+## Execution Steps
+
+### 1. Gap Resolution - MUST COMPLETE FIRST
+Investigate and resolve these three specific integration gaps:
+
+**Gap 1: Service Manager Integration**
+- **Issue**: Test assumes `server.set_service_manager(service_manager)` method exists
+- **Investigation**: Check `src/websocket_server/server.py` for actual service manager integration pattern
+- **Resolution**: Either confirm method exists or update test to use correct integration API
+
+**Gap 2: Configuration Schema Validation**  
+- **Issue**: Test assumes `Config.update_from_dict()` method exists
+- **Investigation**: Check `src/camera_service/config.py` for actual configuration loading API
+- **Resolution**: Either confirm method exists or update test to use correct config initialization
+
+**Gap 3: Camera Event Simulation**
+- **Issue**: Test imports `CameraEvent`, `CameraEventData` but actual interfaces unknown
+- **Investigation**: Check `src/camera_discovery/hybrid_monitor.py` for actual event types and simulation APIs
+- **Resolution**: Update imports and event creation to match actual implementation
+
+### 2. S5 Test Execution - MUST RUN TO COMPLETION
+After gap resolution, run the complete S5 integration test suite:
+
+```bash
+# Run S5 integration tests with complete execution
+python3 -m pytest tests/ivv/test_integration_smoke.py -v --tb=short --maxfail=0
+
+# Alternative: Use project test runner if available
+python3 run_all_tests.py --only-integration --verbose --continue-on-errors
+```
+
+This MUST cover all S5 test scenarios:
+- test_ping_basic_connectivity (MUST PASS)
+- test_end_to_end_camera_flow (MUST PASS) 
+- test_notification_delivery_flow (MUST PASS)
+- test_invalid_api_requests (MUST PASS)
+- test_mediamtx_error_recovery (SHOULD PASS)
+- test_multiple_websocket_clients (SHOULD PASS)
+- test_resource_usage_limits (SHOULD PASS)
+
+WAIT FOR 100% COMPLETION - Do not analyze failures until all S5 tests have run.
+
+### 3. Failure Analysis Protocol
+Only after seeing the complete S5 test report, categorize each failure:
+- Integration API: Method/interface mismatch between test and implementation
+- Mock Configuration: Incorrect mocking of MediaMTX, camera monitor, or WebSocket behavior
+- Service Lifecycle: Improper service startup/shutdown or component initialization
+- Notification Schema: WebSocket notification format doesn't match API specification
+- Configuration Loading: Config class API mismatch or missing configuration sections
+- Import/Module: Missing imports or incorrect module paths
+- Async/Await: Incorrect async handling in integration test flow
+- WebSocket Protocol: JSON-RPC 2.0 protocol handling issues
+
+## Fix Generation Rules
+
+### STRICT CONSTRAINTS:
+- Fix ONLY what's needed to make S5 integration tests pass
+- NO new features or architectural changes beyond S5 requirements
+- NO scope creep beyond S5 test failures
+- Preserve all existing functionality across all modules
+- Maintain type annotations and error handling
+- Follow canonical TODO format if deferral needed:
+  `# TODO: PRIORITY: description [IV&V:S5|Story:E1/S5]`
+
+### Fix Preference Order:
+1. **Update test** if it makes incorrect assumptions about implementation
+2. **Add missing integration method** if test assumes it exists and architecture supports it
+3. **Modify implementation** only if test reflects documented S5 requirements
+4. **Add compatibility shim** for test framework integration patterns
+
+## Output Format
+
+For each gap resolution and test fix, provide:
+
+### Gap Resolution Header
+```
+Gap Resolution #N: [Gap Name] - [Resolution Type]
+File: path/to/implementation.py
+Lines: X-Y (if code change needed)
+Investigation: What was found in actual implementation
+Resolution: Specific change made to resolve gap
+```
+
+### Test Fix Header  
+```
+Fix #N: [Test Name] - [Issue Type]
+File: tests/ivv/test_integration_smoke.py
+Lines: X-Y
+Issue: Specific test failure description
+Justification: [Architecture doc reference or API spec reference]
+```
+
+### Code Patch
+```python
+# BEFORE (current code)
+def existing_method():
+    current_implementation()
+
+# AFTER (fixed code)  
+def existing_method():
+    fixed_implementation()
+    # Added: specific change made for S5 integration
+```
+
+### Validation
+```
+✅ Gap resolved: [Specific integration verified]
+✅ Test passes: test_specific_name  
+✅ No regressions: Related functionality unchanged
+✅ Architecture compliance: [Reference to relevant doc section]
+```
+
+## S5-Specific Areas to Focus
+
+Based on S5 acceptance criteria, pay attention to:
+
+**WebSocket Server Integration:**
+- Service manager binding and lifecycle coordination
+- JSON-RPC method registration and routing
+- Real-time notification broadcasting
+- Client connection management
+
+**Service Manager Coordination:**
+- Component initialization order
+- Configuration propagation
+- Event subscription and notification flow
+- Error handling and recovery coordination
+
+**Camera Discovery Integration:**
+- Camera event generation and subscription
+- Capability detection integration
+- Status change notification flow
+- Mock device simulation for testing
+
+**MediaMTX Controller Integration:**
+- Stream management API calls
+- Recording session coordination
+- Snapshot capture operations
+- Error handling and recovery
+
+**Configuration Management:**
+- Config loading and validation
+- Environment variable overrides
+- Runtime configuration updates
+- Test fixture configuration
+
+## Success Criteria
+
+### S5 Completion Requirements:
+- All MUST PASS tests pass (4 critical tests)
+- All SHOULD PASS tests documented with pass/fail status
+- Integration gaps resolved with evidence
+- End-to-end flow validated: camera discovery → MediaMTX → notifications
+- Error recovery scenarios validated
+- Performance within acceptable limits (<200MB memory, <5min execution)
+
+### Quality Gates:
+- No new failures introduced in any existing tests
+- All fixes have architectural justification from ground truth docs
+- Integration pattern follows approved architecture
+- WebSocket notifications match API specification exactly
+- Error codes comply with JSON-RPC 2.0 and custom error specifications
+
+## Constraints Summary
+
+### DO:
+- Investigate actual implementation APIs before making changes
+- Run complete S5 test suite to 100% before making any changes
+- Fix specific S5 integration failures with minimal changes
+- Reference API docs (`docs/api/json-rpc-methods.md`) for notification schemas
+- Reference architecture docs for component integration patterns
+- Maintain existing service startup/shutdown procedures
+- Ensure WebSocket and MediaMTX mocking is correct for S5 scenarios
+- Validate all critical API flows work end-to-end
+
+### DON'T:
+- Stop test execution early due to failures
+- Add new features beyond S5 integration requirements
+- Change architectural decisions or component interfaces
+- Remove working functionality from any module
+- Introduce breaking changes to any existing API
+- Add dependencies beyond what's needed for S5
+- Make cosmetic changes unrelated to S5 test failures
+- Modify security or authentication (deferred to S6)
+
+## Expected Deliverable
+Complete S5 integration test suite passing with documented evidence:
+1. **Gap resolution documentation** for all three identified gaps
+2. **Working S5 test suite** with all critical tests passing
+3. **Test execution report** showing pass/fail status for all S5 scenarios
+4. **Minimal code patches** addressing only S5 integration failures
+5. **Architecture compliance verification** for all changes made
+6. **S5 completion evidence** ready for IV&V control point sign-off
+
+**S5 Closure Criteria**: All MUST PASS tests successful + gaps documented + end-to-end flow validated + ready for E2 (Security) initiation.

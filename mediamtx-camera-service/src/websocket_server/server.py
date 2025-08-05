@@ -149,6 +149,15 @@ class WebSocketJsonRpcServer:
         """
         self._camera_monitor = monitor
 
+    def set_service_manager(self, service_manager) -> None:
+        """
+        Set the service manager for lifecycle coordination.
+
+        Args:
+            service_manager: Service manager instance
+        """
+        self._service_manager = service_manager
+
     async def start(self) -> None:
         """
         Start the WebSocket JSON-RPC server.
@@ -179,7 +188,6 @@ class WebSocketJsonRpcServer:
                 ping_interval=30,  # Ping every 30 seconds
                 ping_timeout=10,  # Ping timeout
                 close_timeout=5,  # Close timeout
-                process_request=self._process_request,  # Add request processing
             )
 
             self._running = True
@@ -252,14 +260,13 @@ class WebSocketJsonRpcServer:
         return None
 
     async def _handle_client_connection(
-        self, websocket: WebSocketServerProtocol, path: str
+        self, websocket: WebSocketServerProtocol
     ) -> None:
         """
         Handle new client WebSocket connection.
 
         Args:
             websocket: WebSocket connection object
-            path: Request path
         """
         client_id = str(uuid.uuid4())
         client_ip = (
@@ -598,8 +605,8 @@ class WebSocketJsonRpcServer:
         failed_clients = []
         for client in clients_to_notify:
             try:
-                if client.websocket.open:
-                    await client.websocket.send(notification_json)
+                if client.websocket.open:  # type: ignore[attr-defined]
+                    await client.websocket.send(notification_json)  # type: ignore[attr-defined]
                 else:
                     failed_clients.append(client.client_id)
             except Exception as e:

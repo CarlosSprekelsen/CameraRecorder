@@ -23,6 +23,7 @@ import asyncio
 import json
 import os
 import pytest
+import pytest_asyncio
 import tempfile
 import time
 import uuid
@@ -32,7 +33,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 # Import project modules
 from src.camera_service.service_manager import ServiceManager
-from src.camera_service.config import Config
+from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, RecordingConfig
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.common.types import CameraDevice
 from src.camera_discovery.hybrid_monitor import CameraEvent, CameraEventData
@@ -111,55 +112,57 @@ class WebSocketTestClient:
 
 @pytest.fixture
 def test_config():
-    """Create test configuration."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        config_data = {
-            "server": {
-                "host": "localhost",
-                "port": 8002,
-                "websocket_path": "/ws",
-                "max_connections": 100,
-            },
-            "mediamtx": {
-                "host": "localhost",
-                "api_port": 9997,
-                "rtsp_port": 8554,
-                "webrtc_port": 8889,
-                "hls_port": 8888,
-                "timeout": 10.0,
-            },
-            "camera_discovery": {
-                "device_range": [0, 1, 2],
-                "poll_interval": 2.0,
-                "enable_capability_detection": True,
-                "detection_timeout": 5.0,
-            },
-            "logging": {
-                "level": "INFO",
-                "format": "human",
-                "correlation_enabled": True,
-            },
-            "recording": {
-                "output_dir": os.path.join(temp_dir, "recordings"),
-                "snapshot_dir": os.path.join(temp_dir, "snapshots"),
-                "max_duration": 3600,
-                "cleanup_interval": 300,
-            },
-        }
+    """Create test configuration with dynamic port allocation."""
+    import socket
+    
+    def find_free_port():
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+        return port
+    
+    # Use dynamic port allocation to avoid conflicts
+    server_port = find_free_port()
+    
+    return Config(
+        server=ServerConfig(
+            host="localhost",
+            port=server_port,  # Dynamic port
+            websocket_path="/ws",
+            max_connections=100,
+        ),
+        mediamtx=MediaMTXConfig(
+            host="localhost",
+            api_port=9997,
+            rtsp_port=8554,
+            webrtc_port=8889,
+            hls_port=8888,
+        ),
+        camera=CameraConfig(
+            device_range=[0, 1, 2],
+            poll_interval=2.0,
+            enable_capability_detection=True,
+            detection_timeout=5.0,
+        ),
+        recording=RecordingConfig(
+            auto_record=False,
+            format="mp4",
+            quality="medium",
+            max_duration=3600,
+            cleanup_after_days=30,
+        ),
+    )
 
-        config = Config()
-        config.update_from_dict(config_data)
-        yield config
 
-
-@pytest.fixture
-async def websocket_client():
+@pytest_asyncio.fixture
+async def websocket_client(test_config):
     """Create WebSocket test client."""
-    client = WebSocketTestClient("ws://localhost:8002/ws")
-    return client
+    client = WebSocketTestClient(f"ws://localhost:{test_config.server.port}/ws")
+    yield client
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def mock_camera_device():
     """Create mock camera device for testing."""
     device = CameraDevice(
@@ -172,7 +175,7 @@ async def mock_camera_device():
             "framerates": ["30", "15"],
         },
     )
-    return device
+    yield device
 
 
 class TestEndToEndIntegration:
@@ -845,11 +848,15 @@ def test_config_validation():
         # Test configuration creation
         config = Config()
         config.update_from_dict(config_data)
+        
+        # Override MediaMTX paths to use temp directory for testing
+        config.mediamtx.recordings_path = os.path.join(temp_dir, "recordings")
+        config.mediamtx.snapshots_path = os.path.join(temp_dir, "snapshots")
 
         # Verify required sections
         assert hasattr(config, 'server')
         assert hasattr(config, 'mediamtx')
-        assert hasattr(config, 'camera_discovery')
+        assert hasattr(config, 'camera')  # Changed from camera_discovery
         assert hasattr(config, 'recording')
 
         # Verify port assignments
@@ -857,11 +864,12 @@ def test_config_validation():
         assert config.mediamtx.api_port == 9997
 
         # Verify directories can be created
-        os.makedirs(config.recording.output_dir, exist_ok=True)
-        os.makedirs(config.recording.snapshot_dir, exist_ok=True)
+        # Note: RecordingConfig doesn't have output_dir/snapshot_dir, using MediaMTX paths
+        os.makedirs(config.mediamtx.recordings_path, exist_ok=True)
+        os.makedirs(config.mediamtx.snapshots_path, exist_ok=True)
         
-        assert os.path.exists(config.recording.output_dir)
-        assert os.path.exists(config.recording.snapshot_dir)
+        assert os.path.exists(config.mediamtx.recordings_path)
+        assert os.path.exists(config.mediamtx.snapshots_path)
 
 
 if __name__ == "__main__":
