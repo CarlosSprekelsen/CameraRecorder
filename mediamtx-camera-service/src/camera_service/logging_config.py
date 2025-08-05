@@ -168,7 +168,9 @@ def _parse_file_size(size_str: str) -> int:
     return int(number * multipliers.get(unit, 1))
 
 
-def setup_logging(config: LoggingConfig, development_mode: Optional[bool] = None) -> None:
+def setup_logging(
+    config: LoggingConfig, development_mode: Optional[bool] = None
+) -> None:
     """
     Initialize logging configuration for the camera service.
 

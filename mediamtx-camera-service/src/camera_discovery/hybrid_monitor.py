@@ -1029,7 +1029,9 @@ class HybridCameraMonitor:
                     # Convert to float and back to string to normalize
                     try:
                         rate_val = float(match)
-                        if 1 <= rate_val <= 300:  # Extended frame rate range for high-end cameras
+                        if (
+                            1 <= rate_val <= 300
+                        ):  # Extended frame rate range for high-end cameras
                             # Store as integer if it's a whole number
                             if rate_val == int(rate_val):
                                 frame_rates.add(str(int(rate_val)))
@@ -1065,13 +1067,13 @@ class HybridCameraMonitor:
             r"(\d+\*\d+)",  # Asterisk separator
             r"(\d+\s*x\s*\d+)",  # Space-separated format
         ]
-        
+
         for pattern in patterns:
             matches = re.findall(pattern, output, re.IGNORECASE)
             for match in matches:
                 # Normalize to standard format (replace × and * with x, remove spaces around x)
-                normalized = re.sub(r'[×*]', 'x', match.strip())
-                normalized = re.sub(r'\s*x\s*', 'x', normalized)
+                normalized = re.sub(r"[×*]", "x", match.strip())
+                normalized = re.sub(r"\s*x\s*", "x", normalized)
                 # Validate resolution format
                 if re.match(r"\d+x\d+", normalized):
                     resolutions.add(normalized)
@@ -1095,7 +1097,7 @@ class HybridCameraMonitor:
         # Pattern to match "Pixel Format: 'YUYV' (YUYV 4:2:2)" format
         pattern = r"Pixel Format:\s*'([^']+)'\s*(?:\(([^)]+)\))?"
         matches = re.findall(pattern, output, re.IGNORECASE)
-        
+
         # Format descriptions mapping
         format_descriptions = {
             "YUYV": "YUYV 4:2:2",
@@ -1107,15 +1109,21 @@ class HybridCameraMonitor:
             "YV12": "YV12 YUV",
             "YU12": "YU12 YUV",
         }
-        
+
         for match in matches:
             format_code = match[0]
-            description = match[1] if match[1] else format_descriptions.get(format_code, f"{format_code} format")
+            description = (
+                match[1]
+                if match[1]
+                else format_descriptions.get(format_code, f"{format_code} format")
+            )
             formats.append({"format": format_code, "description": description})
 
         return formats
 
-    def _get_or_create_capability_state(self, device_path: str) -> DeviceCapabilityState:
+    def _get_or_create_capability_state(
+        self, device_path: str
+    ) -> DeviceCapabilityState:
         """
         Get or create capability state for a device.
 
@@ -1126,10 +1134,14 @@ class HybridCameraMonitor:
             DeviceCapabilityState instance
         """
         if device_path not in self._capability_states:
-            self._capability_states[device_path] = DeviceCapabilityState(device_path=device_path)
+            self._capability_states[device_path] = DeviceCapabilityState(
+                device_path=device_path
+            )
         return self._capability_states[device_path]
 
-    async def _update_capability_state(self, device_path: str, result: CapabilityDetectionResult) -> None:
+    async def _update_capability_state(
+        self, device_path: str, result: CapabilityDetectionResult
+    ) -> None:
         """
         Update capability state for a device.
 
@@ -1743,7 +1755,9 @@ class HybridCameraMonitor:
 
         return True
 
-    def get_effective_capability_metadata(self, device_path: str) -> Optional[Dict[str, Any]]:
+    def get_effective_capability_metadata(
+        self, device_path: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Get effective capability metadata for a device.
 
@@ -1773,7 +1787,9 @@ class HybridCameraMonitor:
             "resolutions": effective_capability.resolutions,
             "frame_rates": effective_capability.frame_rates,
             "is_confirmed": capability_state.is_confirmed(),
-            "validation_status": "confirmed" if capability_state.is_confirmed() else "provisional",
+            "validation_status": (
+                "confirmed" if capability_state.is_confirmed() else "provisional"
+            ),
             "consecutive_successes": capability_state.consecutive_successes,
             "consecutive_failures": capability_state.consecutive_failures,
             "last_probe_time": capability_state.last_probe_time,
@@ -1789,7 +1805,9 @@ class HybridCameraMonitor:
             metadata["format_frequency"] = capability_state.format_frequency
         if capability_state.resolution_frequency:
             metadata["resolution_frequency"] = capability_state.resolution_frequency
-            metadata["all_resolutions"] = list(capability_state.resolution_frequency.keys())
+            metadata["all_resolutions"] = list(
+                capability_state.resolution_frequency.keys()
+            )
         else:
             # If no frequency data, use the resolutions from the capability
             metadata["all_resolutions"] = effective_capability.resolutions
@@ -2022,7 +2040,9 @@ class HybridCameraMonitor:
             "freshness_threshold": self._udev_event_freshness_threshold,
         }
 
-    def _update_frequency_tracking(self, device_path: str, result: CapabilityDetectionResult) -> None:
+    def _update_frequency_tracking(
+        self, device_path: str, result: CapabilityDetectionResult
+    ) -> None:
         """
         Update frequency tracking for capability data.
 

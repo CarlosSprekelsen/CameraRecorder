@@ -113,11 +113,11 @@ class ServiceManager(CameraEventHandler):
     """
 
     def __init__(
-        self, 
-        config: Config, 
+        self,
+        config: Config,
         mediamtx_controller: Optional[MediaMTXController] = None,
         websocket_server: Optional[WebSocketJsonRpcServer] = None,
-        camera_monitor = None
+        camera_monitor=None,
     ) -> None:
         """
         Initialize the service manager with configuration.

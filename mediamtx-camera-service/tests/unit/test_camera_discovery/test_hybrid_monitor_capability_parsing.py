@@ -147,11 +147,18 @@ class TestCapabilityParsingVariations:
         # Mock subprocess that fails with non-zero exit code
         async def mock_failed_subprocess(*args, **kwargs):
             mock_process = Mock()
-            mock_process.communicate = AsyncMock(return_value=(b"", b"v4l2-ctl: failed to open /dev/video0: Device or resource busy"))
+            mock_process.communicate = AsyncMock(
+                return_value=(
+                    b"",
+                    b"v4l2-ctl: failed to open /dev/video0: Device or resource busy",
+                )
+            )
             mock_process.returncode = 1
             return mock_process
 
-        with patch("asyncio.create_subprocess_exec", side_effect=mock_failed_subprocess):
+        with patch(
+            "asyncio.create_subprocess_exec", side_effect=mock_failed_subprocess
+        ):
             result = await monitor._probe_device_capabilities(device_path)
 
         # Should handle subprocess failure gracefully
@@ -430,7 +437,9 @@ class TestCapabilityConfirmationLogic:
             error="Device not accessible",
         )
 
-        await monitor_with_confirmation._update_capability_state(device_path, failure_result)
+        await monitor_with_confirmation._update_capability_state(
+            device_path, failure_result
+        )
 
         state = monitor_with_confirmation._capability_states[device_path]
         assert state.consecutive_failures == 1
@@ -446,7 +455,9 @@ class TestCapabilityConfirmationLogic:
             frame_rates=["30"],
         )
 
-        await monitor_with_confirmation._update_capability_state(device_path, success_result)
+        await monitor_with_confirmation._update_capability_state(
+            device_path, success_result
+        )
 
         # Should reset failure count and start building success
         assert state.consecutive_failures == 0

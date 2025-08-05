@@ -141,7 +141,9 @@ class TestCapabilityParsingVariations:
                 try:
                     result = await monitor._probe_device_capabilities("/dev/video0")
                     # If we get here, the timeout was handled properly
-                    assert not result.detected, f"Should fail on {scenario_name} timeout"
+                    assert (
+                        not result.detected
+                    ), f"Should fail on {scenario_name} timeout"
                     assert (
                         "timeout" in result.error.lower()
                     ), f"Error should mention timeout for {scenario_name}"
@@ -278,11 +280,17 @@ class TestUdevEventProcessingAndRaceConditions:
         # The filtering logic should have incremented the filtered count
         # Note: Some events might be processed differently than expected
         # but the key is that filtering should have occurred
-        filtered_increment = final_stats["udev_events_filtered"] - initial_stats["udev_events_filtered"]
-        assert filtered_increment >= 0, f"Filtered count should not decrease: {filtered_increment}"
-        
+        filtered_increment = (
+            final_stats["udev_events_filtered"] - initial_stats["udev_events_filtered"]
+        )
+        assert (
+            filtered_increment >= 0
+        ), f"Filtered count should not decrease: {filtered_increment}"
+
         # At least some events should have been filtered
-        assert filtered_increment > 0, f"Expected some events to be filtered, got {filtered_increment}"
+        assert (
+            filtered_increment > 0
+        ), f"Expected some events to be filtered, got {filtered_increment}"
 
         monitor._set_test_mode(False)
 
@@ -410,7 +418,7 @@ class TestPollingFallbackBehavior:
 
             # Run discovery cycle
             await monitor_no_udev._discover_cameras()
-            
+
             # Manually increment polling cycles since we're calling _discover_cameras directly
             monitor_no_udev._stats["polling_cycles"] += 1
 
@@ -438,7 +446,9 @@ class TestPollingFallbackBehavior:
 
         # Should have reduced interval (increased frequency) or stayed the same
         # The adjustment might be small and not detectable in the test
-        assert state_after_stale["current_interval"] <= initial_state["current_interval"]
+        assert (
+            state_after_stale["current_interval"] <= initial_state["current_interval"]
+        )
 
         # Simulate scenario: recent udev events (should decrease polling frequency)
         monitor_no_udev._last_udev_event_time = current_time - 2.0  # 2 seconds ago

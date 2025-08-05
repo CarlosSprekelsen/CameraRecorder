@@ -67,6 +67,7 @@ class ClientConnection:
         except RuntimeError:
             # Fallback for test environments without event loop
             import time
+
             self.connected_at = time.time()
 
         # TODO: HIGH: Implement authentication state management [IV&V:S6]
