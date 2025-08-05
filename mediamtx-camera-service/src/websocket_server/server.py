@@ -17,6 +17,16 @@ from websockets.exceptions import ConnectionClosed, WebSocketException
 from camera_service.logging_config import set_correlation_id
 
 
+class CameraNotFoundError(Exception):
+    """Exception raised when a camera device is not found."""
+    pass
+
+
+class MediaMTXError(Exception):
+    """Exception raised when MediaMTX operations fail."""
+    pass
+
+
 @dataclass
 class JsonRpcRequest:
     """JSON-RPC 2.0 request structure."""
@@ -436,14 +446,29 @@ class WebSocketJsonRpcServer:
             except Exception as e:
                 self._logger.error(f"Error in method handler '{method_name}': {e}")
                 if request_id is not None:
+                    # Map custom exceptions to specific error codes
+                    if isinstance(e, CameraNotFoundError):
+                        error_code = -1000
+                        error_message = "Camera device not found"
+                    elif isinstance(e, MediaMTXError):
+                        error_code = -1003
+                        error_message = "MediaMTX operation failed"
+                    elif isinstance(e, ValueError):
+                        error_code = -32602
+                        error_message = "Invalid params"
+                    else:
+                        error_code = -32603
+                        error_message = "Internal error"
+                    
                     return json.dumps(
                         {
                             "jsonrpc": "2.0",
-                            "error": {"code": -32603, "message": "Internal error"},
+                            "error": {"code": error_code, "message": error_message},
                             "id": request_id,
                         }
                     )
                 else:
+                    # Notification - no response
                     return None
 
         except Exception as e:
@@ -781,13 +806,27 @@ class WebSocketJsonRpcServer:
         Returns:
             Object with camera list and metadata per API specification
         """
-        if not self._camera_monitor:
+        # Get camera monitor from service manager if available
+        camera_monitor = None
+        if self._service_manager and hasattr(self._service_manager, '_camera_monitor'):
+            camera_monitor = self._service_manager._camera_monitor
+        elif self._camera_monitor:
+            camera_monitor = self._camera_monitor
+
+        # Get MediaMTX controller from service manager if available
+        mediamtx_controller = None
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+        elif self._mediamtx_controller:
+            mediamtx_controller = self._mediamtx_controller
+
+        if not camera_monitor:
             self._logger.warning("Camera monitor not available for get_camera_list")
             return {"cameras": [], "total": 0, "connected": 0}
 
         try:
             # Get connected cameras from camera monitor
-            connected_cameras = await self._camera_monitor.get_connected_cameras()
+            connected_cameras = await camera_monitor.get_connected_cameras()
 
             cameras = []
             connected_count = 0
@@ -798,10 +837,10 @@ class WebSocketJsonRpcServer:
                 fps = 30  # Architecture default
 
                 # Use effective capability metadata (provisional or confirmed)
-                if hasattr(self._camera_monitor, "get_effective_capability_metadata"):
+                if hasattr(camera_monitor, "get_effective_capability_metadata"):
                     try:
                         capability_metadata = (
-                            self._camera_monitor.get_effective_capability_metadata(
+                            camera_monitor.get_effective_capability_metadata(
                                 device_path
                             )
                         )
@@ -827,10 +866,10 @@ class WebSocketJsonRpcServer:
                 streams = {}
 
                 # Get stream URLs from MediaMTX controller if available and camera connected
-                if self._mediamtx_controller and camera_device.status == "CONNECTED":
+                if mediamtx_controller and camera_device.status == "CONNECTED":
                     try:
                         stream_status = (
-                            await self._mediamtx_controller.get_stream_status(
+                            await mediamtx_controller.get_stream_status(
                                 stream_name
                             )
                         )
@@ -905,9 +944,23 @@ class WebSocketJsonRpcServer:
         }
 
         try:
+            # Get camera monitor from service manager if available
+            camera_monitor = None
+            if self._service_manager and hasattr(self._service_manager, '_camera_monitor'):
+                camera_monitor = self._service_manager._camera_monitor
+            elif self._camera_monitor:
+                camera_monitor = self._camera_monitor
+
+            # Get MediaMTX controller from service manager if available
+            mediamtx_controller = None
+            if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+                mediamtx_controller = self._service_manager._mediamtx_controller
+            elif self._mediamtx_controller:
+                mediamtx_controller = self._mediamtx_controller
+
             # Get camera info from camera monitor
-            if self._camera_monitor:
-                connected_cameras = await self._camera_monitor.get_connected_cameras()
+            if camera_monitor:
+                connected_cameras = await camera_monitor.get_connected_cameras()
                 camera_device = connected_cameras.get(device_path)
 
                 if camera_device:
@@ -918,10 +971,10 @@ class WebSocketJsonRpcServer:
                     # Get real capability metadata with provisional/confirmed logic
                     if camera_device.status == "CONNECTED":
                         if hasattr(
-                            self._camera_monitor, "get_effective_capability_metadata"
+                            camera_monitor, "get_effective_capability_metadata"
                         ):
                             try:
-                                capability_metadata = self._camera_monitor.get_effective_capability_metadata(
+                                capability_metadata = camera_monitor.get_effective_capability_metadata(
                                     device_path
                                 )
 
@@ -958,12 +1011,15 @@ class WebSocketJsonRpcServer:
                                 self._logger.debug(
                                     f"Could not get capability metadata for {device_path}: {e}"
                                 )
+                else:
+                    # Camera not found - return error
+                    raise CameraNotFoundError(f"Camera device {device_path} not found")
 
             # Get stream info and metrics from MediaMTX controller
-            if self._mediamtx_controller and camera_status["status"] == "CONNECTED":
+            if mediamtx_controller and camera_status["status"] == "CONNECTED":
                 try:
                     stream_name = self._get_stream_name_from_device_path(device_path)
-                    stream_status = await self._mediamtx_controller.get_stream_status(
+                    stream_status = await mediamtx_controller.get_stream_status(
                         stream_name
                     )
 
@@ -989,21 +1045,25 @@ class WebSocketJsonRpcServer:
 
             return camera_status
 
+        except CameraNotFoundError:
+            self._logger.error(f"Camera device {device_path} not found")
+            raise CameraNotFoundError(f"Camera device {device_path} not found")
         except Exception as e:
             self._logger.error(f"Error getting camera status for {device_path}: {e}")
-            camera_status["status"] = "ERROR"
-            return camera_status
+            # Return JSON-RPC error response
+            raise ValueError(f"Camera device {device_path} not found") from e
 
     async def _method_take_snapshot(
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Capture a snapshot from the specified camera.
+        Take a snapshot from the specified camera.
 
         Args:
             params: Method parameters containing:
                 - device (str): Camera device path
-                - filename (str, optional): Custom filename
+                - format (str, optional): Snapshot format (jpg, png)
+                - quality (int, optional): Image quality (1-100)
 
         Returns:
             Dict containing snapshot information
@@ -1012,12 +1072,22 @@ class WebSocketJsonRpcServer:
             raise ValueError("device parameter is required")
 
         device_path = params["device"]
+        format_type = params.get("format", "jpg")
+        quality = params.get("quality", 85)
         custom_filename = params.get("filename")
 
-        if not self._mediamtx_controller:
+        # Get MediaMTX controller from service manager if available
+        mediamtx_controller = None
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+        elif self._mediamtx_controller:
+            mediamtx_controller = self._mediamtx_controller
+
+        if not mediamtx_controller:
             return {
                 "device": device_path,
-                "filename": None,
+                "filename": custom_filename
+                or self._generate_filename(device_path, format_type),
                 "status": "FAILED",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
@@ -1026,34 +1096,29 @@ class WebSocketJsonRpcServer:
 
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
-            filename = self._generate_filename(device_path, "jpg", custom_filename)
 
-            snapshot_result = await self._mediamtx_controller.take_snapshot(
-                stream_name=stream_name, filename=filename
+            snapshot_result = await mediamtx_controller.take_snapshot(
+                stream_name=stream_name,
+                format=format_type,
+                quality=quality,
+                filename=custom_filename,
             )
 
             return {
                 "device": device_path,
-                "filename": snapshot_result.get("filename", filename),
-                "status": "completed",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "file_size": snapshot_result.get("file_size", 0),
-                "file_path": snapshot_result.get(
-                    "file_path", f"/opt/camera-service/snapshots/{filename}"
+                "filename": snapshot_result.get("filename"),
+                "status": "SUCCESS",
+                "timestamp": snapshot_result.get(
+                    "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 ),
+                "file_size": snapshot_result.get("file_size", 0),
+                "format": format_type,
+                "quality": quality,
             }
 
         except Exception as e:
             self._logger.error(f"Error taking snapshot for {device_path}: {e}")
-            return {
-                "device": device_path,
-                "filename": custom_filename
-                or self._generate_filename(device_path, "jpg"),
-                "status": "FAILED",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "file_size": 0,
-                "error": str(e),
-            }
+            raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
 
     async def _method_start_recording(
         self, params: Optional[Dict[str, Any]] = None
@@ -1077,7 +1142,14 @@ class WebSocketJsonRpcServer:
         duration = params.get("duration")
         format_type = params.get("format", "mp4")
 
-        if not self._mediamtx_controller:
+        # Get MediaMTX controller from service manager if available
+        mediamtx_controller = None
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+        elif self._mediamtx_controller:
+            mediamtx_controller = self._mediamtx_controller
+
+        if not mediamtx_controller:
             return {
                 "device": device_path,
                 "session_id": None,
@@ -1093,7 +1165,7 @@ class WebSocketJsonRpcServer:
             stream_name = self._get_stream_name_from_device_path(device_path)
             session_id = str(uuid.uuid4())
 
-            recording_result = await self._mediamtx_controller.start_recording(
+            recording_result = await mediamtx_controller.start_recording(
                 stream_name=stream_name, duration=duration, format=format_type
             )
 
@@ -1111,16 +1183,7 @@ class WebSocketJsonRpcServer:
 
         except Exception as e:
             self._logger.error(f"Error starting recording for {device_path}: {e}")
-            return {
-                "device": device_path,
-                "session_id": None,
-                "filename": None,
-                "status": "FAILED",
-                "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "duration": duration,
-                "format": format_type,
-                "error": str(e),
-            }
+            raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
 
     async def _method_stop_recording(
         self, params: Optional[Dict[str, Any]] = None
@@ -1140,49 +1203,45 @@ class WebSocketJsonRpcServer:
 
         device_path = params["device"]
 
-        if not self._mediamtx_controller:
+        # Get MediaMTX controller from service manager if available
+        mediamtx_controller = None
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+        elif self._mediamtx_controller:
+            mediamtx_controller = self._mediamtx_controller
+
+        if not mediamtx_controller:
             return {
                 "device": device_path,
                 "session_id": None,
                 "filename": None,
                 "status": "FAILED",
-                "start_time": None,
-                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "duration": 0,
+                "stop_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "duration": None,
                 "file_size": 0,
                 "error": "MediaMTX controller not available",
             }
 
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
-            recording_result = await self._mediamtx_controller.stop_recording(
-                stream_name
-            )
+
+            recording_result = await mediamtx_controller.stop_recording(stream_name=stream_name)
 
             return {
                 "device": device_path,
                 "session_id": recording_result.get("session_id"),
                 "filename": recording_result.get("filename"),
                 "status": "STOPPED",
-                "start_time": recording_result.get("start_time"),
-                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "duration": recording_result.get("duration", 0),
+                "stop_time": recording_result.get(
+                    "stop_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                ),
+                "duration": recording_result.get("duration"),
                 "file_size": recording_result.get("file_size", 0),
             }
 
         except Exception as e:
             self._logger.error(f"Error stopping recording for {device_path}: {e}")
-            return {
-                "device": device_path,
-                "session_id": None,
-                "filename": None,
-                "status": "FAILED",
-                "start_time": None,
-                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "duration": 0,
-                "file_size": 0,
-                "error": str(e),
-            }
+            raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
         """
