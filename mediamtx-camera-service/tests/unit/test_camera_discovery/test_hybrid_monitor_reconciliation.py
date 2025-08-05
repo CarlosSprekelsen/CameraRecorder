@@ -81,7 +81,7 @@ class TestCapabilityReconciliation:
         )
 
         # Get metadata from service_manager (this calls hybrid_monitor internally)
-        metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Verify reconciliation - confirmed data should propagate
         assert metadata["validation_status"] == "confirmed"
@@ -144,7 +144,7 @@ class TestCapabilityReconciliation:
         )
 
         # Get metadata from service_manager
-        metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Verify reconciliation - provisional data should propagate
         assert metadata["validation_status"] == "provisional"
@@ -193,7 +193,7 @@ class TestCapabilityReconciliation:
         )
 
         # Get metadata from service_manager
-        metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Verify fallback behavior
         assert metadata["validation_status"] == "none"
@@ -251,15 +251,15 @@ class TestCapabilityReconciliation:
         )
 
         # Get initial metadata (should be provisional)
-        initial_metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        initial_metadata = await service_manager._get_enhanced_camera_metadata(event_data)
         assert initial_metadata["validation_status"] == "provisional"
 
         # Simulate additional consistent detections to trigger confirmation
         for _ in range(3):  # Reach confirmation threshold
-            hybrid_monitor._update_capability_state(device_path, provisional_capability)
+            await hybrid_monitor._update_capability_state(device_path, provisional_capability)
 
         # Get metadata after confirmation
-        confirmed_metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        confirmed_metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Verify transition to confirmed state
         assert confirmed_metadata["validation_status"] == "confirmed"
@@ -313,7 +313,7 @@ class TestCapabilityReconciliation:
 
         # Get metadata from both sources
         hybrid_metadata = hybrid_monitor.get_effective_capability_metadata(device_path)
-        service_metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        service_metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Comprehensive consistency check
         inconsistencies = []
@@ -417,7 +417,7 @@ class TestCapabilityReconciliation:
 
             # Update frequency tracking
             hybrid_monitor._update_frequency_tracking(state, capability)
-            hybrid_monitor._update_capability_state(device_path, capability)
+            await hybrid_monitor._update_capability_state(device_path, capability)
 
         # Inject hybrid_monitor into service_manager
         service_manager._camera_monitor = hybrid_monitor
@@ -432,7 +432,7 @@ class TestCapabilityReconciliation:
         )
 
         # Get metadata from service_manager
-        metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Verify frequency-weighted selections are consistent
         hybrid_metadata = hybrid_monitor.get_effective_capability_metadata(device_path)
@@ -493,7 +493,7 @@ class TestReconciliationErrorCases:
         )
 
         # Should handle monitor error gracefully
-        metadata = service_manager_with_broken_monitor._get_enhanced_camera_metadata(
+        metadata = await service_manager_with_broken_monitor._get_enhanced_camera_metadata(
             event_data
         )
 
@@ -531,7 +531,7 @@ class TestReconciliationErrorCases:
         )
 
         # Should handle missing monitor gracefully
-        metadata = service_manager._get_enhanced_camera_metadata(event_data)
+        metadata = await service_manager._get_enhanced_camera_metadata(event_data)
 
         # Should fall back to device info
         assert metadata["validation_status"] == "none"

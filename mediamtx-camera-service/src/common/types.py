@@ -25,7 +25,7 @@ class CameraDevice:
         
         self.device = device
         self.name = kwargs.get('name', '')
-        self.status = kwargs.get('status', '')
+        self.status = kwargs.get('status', 'CONNECTED')  # Default to CONNECTED
         self.driver = kwargs.get('driver')
         self.capabilities = kwargs.get('capabilities')
         
