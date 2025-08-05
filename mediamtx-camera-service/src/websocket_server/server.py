@@ -179,6 +179,7 @@ class WebSocketJsonRpcServer:
                 ping_interval=30,  # Ping every 30 seconds
                 ping_timeout=10,  # Ping timeout
                 close_timeout=5,  # Close timeout
+                process_request=self._process_request,  # Add request processing
             )
 
             self._running = True
@@ -262,7 +263,7 @@ class WebSocketJsonRpcServer:
         """
         client_id = str(uuid.uuid4())
         client_ip = (
-            websocket.remote_address[0] if websocket.remote_address else "unknown"
+            websocket.remote_address[0] if websocket.remote_address else "unknown"  # type: ignore[attr-defined]
         )
 
         self._logger.info(f"New client connection: {client_id} from {client_ip}")
@@ -289,7 +290,7 @@ class WebSocketJsonRpcServer:
                     if isinstance(message, str):
                         response = await self._handle_json_rpc_message(client, message)
                         if response:
-                            await websocket.send(response)
+                            await websocket.send(response)  # type: ignore[attr-defined]
                     else:
                         self._logger.warning(
                             f"Received non-text message from client {client_id}"
@@ -308,7 +309,7 @@ class WebSocketJsonRpcServer:
                                 "id": None,
                             }
                         )
-                        await websocket.send(error_response)
+                        await websocket.send(error_response)  # type: ignore[attr-defined]
                     except Exception:
                         # Connection might be broken, will be cleaned up below
                         break
@@ -468,15 +469,19 @@ class WebSocketJsonRpcServer:
             # Close all WebSocket connections
             close_tasks = []
             for client in self._clients.values():
-                if client.websocket.open:
+                if client.websocket.open:  # type: ignore[attr-defined]
                     try:
-                        # Send shutdown notification
-                        close_tasks.append(client.websocket.send(shutdown_notification))
+                        shutdown_notification = json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "method": "server.shutdown",
+                                "params": {"message": "Server shutting down"},
+                            }
+                        )
+                        close_tasks.append(client.websocket.send(shutdown_notification))  # type: ignore[attr-defined]
                     except Exception:
-                        pass  # Ignore errors when sending shutdown notification
-
-                    # Close connection
-                    close_tasks.append(client.websocket.close())
+                        pass  # Connection might be broken
+                close_tasks.append(client.websocket.close())  # type: ignore[attr-defined]
 
             # Wait for all connections to close
             if close_tasks:
@@ -638,7 +643,7 @@ class WebSocketJsonRpcServer:
 
             client = self._clients[client_id]
 
-            if not client.websocket.open:
+            if not client.websocket.open:  # type: ignore[attr-defined]
                 # Remove disconnected client
                 del self._clients[client_id]
                 self._logger.info(
@@ -652,9 +657,20 @@ class WebSocketJsonRpcServer:
                 {"jsonrpc": "2.0", "method": method, "params": params}
             )
 
-            await client.websocket.send(notification_json)
-            self._logger.debug(f"Sent notification '{method}' to client {client_id}")
-            return True
+            if client.websocket.open:  # type: ignore[attr-defined]
+                try:
+                    await client.websocket.send(notification_json)  # type: ignore[attr-defined]
+                    return True
+                except Exception as e:
+                    self._logger.warning(
+                        f"Failed to send notification to client {client_id}: {e}"
+                    )
+                    # Handle send failure and connection cleanup
+                    async with self._connection_lock:
+                        if client_id in self._clients:
+                            del self._clients[client_id]
+                            self._logger.info(f"Removed client after send failure: {client_id}")
+            return False
 
         except Exception as e:
             self._logger.warning(
