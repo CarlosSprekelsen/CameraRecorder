@@ -21,7 +21,7 @@ from src.common.types import CameraDevice
 
 # Optional dependency for udev monitoring
 try:
-    import pyudev
+    import pyudev  # type: ignore[import-untyped]
 
     HAS_PYUDEV = True
 except ImportError:
@@ -1501,13 +1501,20 @@ class HybridCameraMonitor:
     ) -> None:
         """Update frequency counters for capability elements."""
 
+        # Ensure frequency dictionaries are initialized
+        if state.format_frequency is None:
+            state.format_frequency = {}
+        if state.resolution_frequency is None:
+            state.resolution_frequency = {}
+        if state.frame_rate_frequency is None:
+            state.frame_rate_frequency = {}
+
         # Update format frequencies
         if result.formats:
             for fmt in result.formats:
                 fmt_code = fmt.get("code", "") if isinstance(fmt, dict) else str(fmt)
                 if fmt_code:
-                    if state.format_frequency is not None:
-                        state.format_frequency[fmt_code] = state.format_frequency.get(fmt_code, 0) + 1
+                    state.format_frequency[fmt_code] = state.format_frequency.get(fmt_code, 0) + 1
 
         # Update resolution frequencies
         if result.resolutions:
@@ -1533,6 +1540,14 @@ class HybridCameraMonitor:
 
         Includes capabilities that meet stability threshold and weights by frequency.
         """
+
+        # Ensure frequency dictionaries are initialized
+        if state.format_frequency is None:
+            state.format_frequency = {}
+        if state.resolution_frequency is None:
+            state.resolution_frequency = {}
+        if state.frame_rate_frequency is None:
+            state.frame_rate_frequency = {}
 
         # Filter capabilities by stability threshold and sort by frequency
         stable_formats = [
@@ -1634,6 +1649,14 @@ class HybridCameraMonitor:
         """
         if not state.provisional_data or not new_result.detected:
             return False
+
+        # Ensure frequency dictionaries are initialized
+        if state.format_frequency is None:
+            state.format_frequency = {}
+        if state.resolution_frequency is None:
+            state.resolution_frequency = {}
+        if state.frame_rate_frequency is None:
+            state.frame_rate_frequency = {}
 
         # Check that stable capabilities (high frequency) remain present
         stable_formats = {

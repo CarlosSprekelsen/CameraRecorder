@@ -1236,8 +1236,13 @@ class MediaMTXController:
         for key, value in config_updates.items():
             schema = valid_config_schema[key]
 
+            # Ensure schema is a dictionary
+            if not isinstance(schema, dict):
+                validation_errors.append(f"Invalid schema for {key}: expected dict, got {type(schema)}")
+                continue
+
             # Type validation
-            if not isinstance(value, schema["type"]):
+            if "type" in schema and not isinstance(value, schema["type"]):
                 validation_errors.append(
                     f"Invalid type for {key}: expected {schema['type']}, got {type(value)}"
                 )
