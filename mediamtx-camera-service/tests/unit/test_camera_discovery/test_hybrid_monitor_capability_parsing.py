@@ -15,7 +15,7 @@ Evidence: src/camera_discovery/hybrid_monitor.py lines 500-700 (capability detec
 
 import asyncio
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (

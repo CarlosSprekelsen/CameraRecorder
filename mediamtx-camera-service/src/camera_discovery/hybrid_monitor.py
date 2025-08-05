@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set, Tuple, Any
+from typing import Callable, Dict, List, Optional, Set, Tuple, Any, Union
 
 from src.common.types import CameraDevice
 
@@ -175,12 +175,23 @@ class HybridCameraMonitor:
         # Enhanced adaptive polling configuration
         self._base_poll_interval = poll_interval
         self._current_poll_interval = poll_interval
-        self._min_poll_interval = max(0.05, poll_interval * 0.1)
-        self._max_poll_interval = min(60.0, poll_interval * 50)
-        self._last_udev_event_time = 0.0
-        self._udev_event_freshness_threshold = 15.0  # seconds
+        self._min_poll_interval = 0.05  # Minimum 50ms between polls
+        self._max_poll_interval = 1.0   # Maximum 1s between polls
         self._polling_failure_count = 0
-        self._max_consecutive_failures = 5
+        self._last_udev_event_time = 0.0
+        self._udev_event_freshness_threshold = 5.0  # 5s freshness window
+
+        # Statistics and monitoring
+        self._stats = {
+            "devices_discovered": 0,
+            "events_processed": 0,
+            "capability_probes": 0,
+            "polling_cycles": 0,
+            "adaptive_poll_adjustments": 0,
+        }
+
+        # Test mode support
+        self._test_mode = False
 
         # Enhanced frame rate patterns for robust parsing
         self._frame_rate_patterns = [
@@ -204,26 +215,6 @@ class HybridCameraMonitor:
         self._udev_context: Optional[pyudev.Context] = None
         self._udev_monitor: Optional[pyudev.Monitor] = None
         self._udev_available = HAS_PYUDEV
-
-        # Enhanced diagnostic counters for observability
-        self._stats = {
-            "udev_events_processed": 0,
-            "udev_events_filtered": 0,
-            "udev_events_skipped": 0,
-            "polling_cycles": 0,
-            "capability_probes_attempted": 0,
-            "capability_probes_successful": 0,
-            "capability_probes_confirmed": 0,
-            "capability_timeouts": 0,
-            "capability_parse_errors": 0,
-            "device_state_changes": 0,
-            "adaptive_poll_adjustments": 0,
-            "provisional_confirmations": 0,
-            "confirmation_failures": 0,
-            "current_poll_interval": poll_interval,
-            "running": False,
-            "active_tasks": 0,
-        }
 
         # Initialize deterministic random for jitter
         self._rng = random.Random()
@@ -1765,16 +1756,58 @@ class HybridCameraMonitor:
             device_path: Device path
 
         Returns:
-            Capability metadata or None if no data available
+            Capability metadata or default structure if no data available
         """
         if device_path not in self._capability_states:
-            return None
+            # Return default metadata structure when no capability state exists
+            return {
+                "device_path": device_path,
+                "detected": False,
+                "accessible": False,
+                "device_name": None,
+                "driver": None,
+                "formats": [],
+                "resolutions": [],
+                "frame_rates": [],
+                "is_confirmed": False,
+                "validation_status": "unknown",
+                "consecutive_successes": 0,
+                "consecutive_failures": 0,
+                "last_probe_time": 0.0,
+                "diagnostics": {
+                    "has_been_probed": False,
+                    "merge_strategy": "none",
+                    "reason": "no_capability_state",
+                },
+                "all_resolutions": [],
+            }
 
         capability_state = self._capability_states[device_path]
         effective_capability = capability_state.get_effective_capability()
 
         if effective_capability is None:
-            return None
+            # Return default metadata when capability state exists but no effective capability
+            return {
+                "device_path": device_path,
+                "detected": False,
+                "accessible": False,
+                "device_name": None,
+                "driver": None,
+                "formats": [],
+                "resolutions": [],
+                "frame_rates": [],
+                "is_confirmed": False,
+                "validation_status": "unknown",
+                "consecutive_successes": capability_state.consecutive_successes,
+                "consecutive_failures": capability_state.consecutive_failures,
+                "last_probe_time": capability_state.last_probe_time,
+                "diagnostics": {
+                    "has_been_probed": True,
+                    "merge_strategy": "none",
+                    "reason": "no_effective_capability",
+                },
+                "all_resolutions": [],
+            }
 
         # Build metadata from effective capability
         metadata = {
@@ -2041,14 +2074,18 @@ class HybridCameraMonitor:
         }
 
     def _update_frequency_tracking(
-        self, device_path: str, result: CapabilityDetectionResult
+        self, device_path_or_state: Union[str, DeviceCapabilityState], result: CapabilityDetectionResult
     ) -> None:
         """
         Update frequency tracking for capability data.
 
         Args:
-            device_path: Device path
+            device_path_or_state: Device path string or DeviceCapabilityState object
             result: Capability detection result
         """
-        state = self._get_or_create_capability_state(device_path)
+        if isinstance(device_path_or_state, str):
+            state = self._get_or_create_capability_state(device_path_or_state)
+        else:
+            state = device_path_or_state
+            
         self._update_capability_frequencies(state, result)
