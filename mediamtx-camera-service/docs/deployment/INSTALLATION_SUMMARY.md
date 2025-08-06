@@ -87,7 +87,7 @@ User=camera-service
 Group=camera-service
 WorkingDirectory=/opt/camera-service
 Environment=PATH=/opt/camera-service/venv/bin
-ExecStart=/opt/camera-service/venv/bin/python -m src.camera_service.main
+ExecStart=/opt/camera-service/venv/bin/python3 -m camera_service.main
 Restart=always
 RestartSec=10
 

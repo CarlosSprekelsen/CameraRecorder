@@ -45,7 +45,7 @@ def run_tests(args):
     setup_test_environment()
     
     # Base pytest command
-    cmd = ["python", "-m", "pytest"]
+    cmd = ["python3", "-m", "pytest"]
     
     if args.verbose:
         cmd.append("-v")

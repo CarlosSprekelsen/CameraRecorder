@@ -53,6 +53,17 @@ class MediaMTXConfig:
     config_path: str = "/etc/mediamtx/mediamtx.yml"
     recordings_path: str = "/recordings"
     snapshots_path: str = "/snapshots"
+    
+    # Health monitoring configuration
+    health_check_interval: int = 30
+    health_failure_threshold: int = 10
+    health_circuit_breaker_timeout: int = 60
+    health_max_backoff_interval: int = 120
+    health_recovery_confirmation_threshold: int = 3
+    backoff_base_multiplier: float = 2.0
+    backoff_jitter_range: tuple = (0.8, 1.2)
+    process_termination_timeout: float = 3.0
+    process_kill_timeout: float = 2.0
 
 
 @dataclass

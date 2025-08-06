@@ -818,7 +818,27 @@ class ServiceManager(CameraEventHandler):
         try:
             from mediamtx_wrapper.controller import MediaMTXController
 
-            self._mediamtx_controller = MediaMTXController(self._config.mediamtx)
+            # Unpack MediaMTXConfig into individual parameters
+            mediamtx_config = self._config.mediamtx
+            self._mediamtx_controller = MediaMTXController(
+                host=mediamtx_config.host,
+                api_port=mediamtx_config.api_port,
+                rtsp_port=mediamtx_config.rtsp_port,
+                webrtc_port=mediamtx_config.webrtc_port,
+                hls_port=mediamtx_config.hls_port,
+                config_path=mediamtx_config.config_path,
+                recordings_path=mediamtx_config.recordings_path,
+                snapshots_path=mediamtx_config.snapshots_path,
+                health_check_interval=mediamtx_config.health_check_interval,
+                health_failure_threshold=mediamtx_config.health_failure_threshold,
+                health_circuit_breaker_timeout=mediamtx_config.health_circuit_breaker_timeout,
+                health_max_backoff_interval=mediamtx_config.health_max_backoff_interval,
+                health_recovery_confirmation_threshold=mediamtx_config.health_recovery_confirmation_threshold,
+                backoff_base_multiplier=mediamtx_config.backoff_base_multiplier,
+                backoff_jitter_range=mediamtx_config.backoff_jitter_range,
+                process_termination_timeout=mediamtx_config.process_termination_timeout,
+                process_kill_timeout=mediamtx_config.process_kill_timeout,
+            )
             await self._mediamtx_controller.start()
 
             # Verify MediaMTX health after startup

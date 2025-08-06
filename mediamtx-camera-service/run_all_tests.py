@@ -126,7 +126,7 @@ class TestRunner:
                 init_file.write_text("# Test package\n")
         
         # Validate required tools
-        required_tools = ["python", "black", "flake8", "mypy", "pytest"]
+        required_tools = ["python3", "black", "flake8", "mypy", "pytest"]
         missing_tools = []
         
         for tool in required_tools:
