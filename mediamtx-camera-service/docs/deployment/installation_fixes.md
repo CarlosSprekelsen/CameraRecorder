@@ -61,7 +61,25 @@ This document summarizes all the fixes applied to prevent installation and confi
 
 **Impact**: MediaMTXController instantiation works correctly
 
-### 5. Default Configuration Issues ✅ FIXED
+### 5. WebSocket Server Parameter Mismatch ✅ FIXED
+
+**Problem**: WebSocketJsonRpcServer constructor expects individual parameters but was receiving config object
+
+**Files Fixed**:
+- `src/camera_service/service_manager.py`: Updated `_start_websocket_server()` method to pass individual parameters instead of config object
+
+**Impact**: WebSocket server starts correctly without missing `max_connections` parameter error
+
+### 6. Camera Monitor Parameter Mismatch ✅ FIXED
+
+**Problem**: HybridCameraMonitor was receiving CameraConfig object instead of individual parameters, causing "object is not iterable" error
+
+**Files Fixed**:
+- `src/camera_service/service_manager.py`: Updated `_start_camera_monitor()` method to pass individual parameters instead of config object
+
+**Impact**: Camera monitor starts correctly without iteration errors
+
+### 7. Default Configuration Issues ✅ FIXED
 
 **Problem**: Default configuration files were missing health monitoring parameters
 
@@ -165,7 +183,7 @@ sudo ./deployment/scripts/install.sh
    - `config/default.yaml` - Added health monitoring parameters
 
 2. **Service Management**:
-   - `src/camera_service/service_manager.py` - Fixed parameter unpacking
+   - `src/camera_service/service_manager.py` - Fixed parameter unpacking for MediaMTXController, WebSocketJsonRpcServer, and HybridCameraMonitor
 
 3. **Installation Scripts**:
    - `deployment/scripts/install.sh` - Added validation and fixed Python paths
@@ -189,6 +207,8 @@ A fresh installation on Ubuntu 22.04 should now work smoothly without any of the
 - ✅ Python compatibility issues resolved
 - ✅ Configuration schema mismatches fixed
 - ✅ API interface mismatches resolved
+- ✅ WebSocket server parameter mismatches fixed
+- ✅ Camera monitor parameter mismatches fixed
 - ✅ Default configuration complete
 - ✅ Comprehensive validation included
 - ✅ Integration tests added

@@ -66,6 +66,24 @@ def test_component_instantiation():
         # Test service manager instantiation
         service_manager = ServiceManager(config)
         
+        # Test camera monitor instantiation
+        from camera_discovery.hybrid_monitor import HybridCameraMonitor
+        camera_monitor = HybridCameraMonitor(
+            device_range=config.camera.device_range,
+            poll_interval=config.camera.poll_interval,
+            detection_timeout=config.camera.detection_timeout,
+            enable_capability_detection=config.camera.enable_capability_detection,
+        )
+        
+        # Test WebSocket server instantiation
+        from websocket_server.server import WebSocketJsonRpcServer
+        websocket_server = WebSocketJsonRpcServer(
+            host=config.server.host,
+            port=config.server.port,
+            websocket_path=config.server.websocket_path,
+            max_connections=config.server.max_connections,
+        )
+        
         print("✅ Component instantiation successful")
         return True
     except Exception as e:

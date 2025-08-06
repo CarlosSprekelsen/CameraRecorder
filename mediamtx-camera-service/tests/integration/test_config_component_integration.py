@@ -60,6 +60,43 @@ class TestConfigurationComponentIntegration:
         assert service_manager is not None
         assert service_manager._config == config
     
+    def test_camera_monitor_instantiation(self):
+        """Test that HybridCameraMonitor can be instantiated with config."""
+        config_manager = ConfigManager()
+        config = config_manager.load_config()
+        
+        from camera_discovery.hybrid_monitor import HybridCameraMonitor
+        
+        # This should not raise any parameter mismatch errors
+        camera_monitor = HybridCameraMonitor(
+            device_range=config.camera.device_range,
+            poll_interval=config.camera.poll_interval,
+            detection_timeout=config.camera.detection_timeout,
+            enable_capability_detection=config.camera.enable_capability_detection,
+        )
+        
+        assert camera_monitor is not None
+        assert camera_monitor._device_range == config.camera.device_range
+    
+    def test_websocket_server_instantiation(self):
+        """Test that WebSocketJsonRpcServer can be instantiated with config."""
+        config_manager = ConfigManager()
+        config = config_manager.load_config()
+        
+        from websocket_server.server import WebSocketJsonRpcServer
+        
+        # This should not raise any parameter mismatch errors
+        websocket_server = WebSocketJsonRpcServer(
+            host=config.server.host,
+            port=config.server.port,
+            websocket_path=config.server.websocket_path,
+            max_connections=config.server.max_connections,
+        )
+        
+        assert websocket_server is not None
+        assert websocket_server._host == config.server.host
+        assert websocket_server._port == config.server.port
+    
     def test_configuration_schema_completeness(self):
         """Test that all required configuration fields are present."""
         config_manager = ConfigManager()

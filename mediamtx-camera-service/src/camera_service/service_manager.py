@@ -866,7 +866,12 @@ class ServiceManager(CameraEventHandler):
         try:
             from camera_discovery.hybrid_monitor import HybridCameraMonitor
 
-            self._camera_monitor = HybridCameraMonitor(self._config.camera)
+            self._camera_monitor = HybridCameraMonitor(
+                device_range=self._config.camera.device_range,
+                poll_interval=self._config.camera.poll_interval,
+                detection_timeout=self._config.camera.detection_timeout,
+                enable_capability_detection=self._config.camera.enable_capability_detection,
+            )
 
             # Register ourselves as an event handler
             self._camera_monitor.add_event_handler(self)
@@ -918,7 +923,12 @@ class ServiceManager(CameraEventHandler):
             from websocket_server.server import WebSocketJsonRpcServer
 
             self._websocket_server = WebSocketJsonRpcServer(
-                self._config, self._camera_monitor, self._mediamtx_controller
+                host=self._config.server.host,
+                port=self._config.server.port,
+                websocket_path=self._config.server.websocket_path,
+                max_connections=self._config.server.max_connections,
+                mediamtx_controller=self._mediamtx_controller,
+                camera_monitor=self._camera_monitor,
             )
             await self._websocket_server.start()
             self._logger.info(
