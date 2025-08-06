@@ -18,7 +18,7 @@
 6. [Camera Service Installation](#camera-service-installation)
 7. [Post-Installation Configuration](#post-installation-configuration)
 8. [Verification and Testing](#verification-and-testing)
-9. [LXD Container Setup](#lxd-container-setup)
+9. [LXD Container Setup](CONTAINER_SETUP.md)
 10. [Troubleshooting](#troubleshooting)
 11. [Uninstallation](#uninstallation)
 
@@ -218,13 +218,6 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=mediamtx
-
-# Minimal security settings to avoid namespace issues
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/mediamtx /opt/camera-service/recordings /opt/camera-service/snapshots
 
 [Install]
 WantedBy=multi-user.target
@@ -581,90 +574,15 @@ sudo tail -f /opt/camera-service/logs/camera-service.log
 
 ## LXD Container Setup
 
-### Step 1: Install LXD
+Container deployment provides excellent isolation and management capabilities for the MediaMTX Camera Service. For detailed container setup instructions, please refer to the separate [Container Setup Guide](CONTAINER_SETUP.md).
 
-Install LXD container runtime:
-
-```bash
-# Install LXD
-sudo apt install -y lxd
-
-# Initialize LXD (use default settings)
-sudo lxd init --auto
-
-# Add current user to lxd group
-sudo usermod -a -G lxd $USER
-
-# Log out and back in for group changes to take effect
-echo "Please log out and log back in, then continue with the next step"
-```
-
-### Step 2: Create Ubuntu 22.04 Container
-
-Create a container for the camera service:
-
-```bash
-# Launch Ubuntu 22.04 container
-lxc launch ubuntu:22.04 camera-service-container
-
-# Wait for container to start
-lxc exec camera-service-container -- wait-for-system
-
-# Access the container
-lxc exec camera-service-container -- bash
-```
-
-### Step 3: Install Services in Container
-
-Inside the container, follow the installation steps:
-
-```bash
-# Update system
-apt update && apt upgrade -y
-
-# Install prerequisites
-apt install -y curl wget git software-properties-common python3 python3-pip python3-venv python3-dev v4l-utils ffmpeg systemd systemd-sysv logrotate net-tools
-
-# Install MediaMTX (follow MediaMTX installation steps above)
-# Install Camera Service (follow Camera Service installation steps above)
-```
-
-### Step 4: Configure Container for Camera Access
-
-Configure the container to access USB cameras:
-
-```bash
-# Exit container
-exit
-
-# Configure container for USB device access
-lxc config device add camera-service-container video0 unix-char path=/dev/video0
-
-# Configure container for additional devices if needed
-lxc config device add camera-service-container video1 unix-char path=/dev/video1
-
-# Start container
-lxc start camera-service-container
-
-# Access container
-lxc exec camera-service-container -- bash
-```
-
-### Step 5: Verify Container Installation
-
-Inside the container, verify the installation:
-
-```bash
-# Check services
-systemctl status mediamtx camera-service
-
-# Test camera access
-ls /dev/video*
-v4l2-ctl --list-devices
-
-# Test WebSocket connection
-curl -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Key: test" -H "Sec-WebSocket-Version: 13" http://localhost:8002/ws
-```
+The container setup includes:
+- LXD container runtime installation
+- Ubuntu 22.04 container creation
+- Service installation within container
+- USB camera device mapping
+- Container management and troubleshooting
+- Security considerations and performance optimization
 
 ---
 
@@ -835,6 +753,71 @@ sudo cat /opt/mediamtx/config/mediamtx.yml
 # Restart MediaMTX
 sudo systemctl restart mediamtx
 ```
+
+#### Issue 7: MediaMTX Service Security Settings Conflict
+
+**Symptoms:**
+- MediaMTX service fails to start with NAMESPACE error
+- Service shows "activating (auto-restart)" status
+- Journal logs show "Failed to set up namespace"
+
+**Root Cause:**
+- Overly restrictive security settings in systemd service
+- `NoNewPrivileges=true`, `PrivateTmp=true`, `ProtectSystem=strict`, `ProtectHome=true` cause namespace conflicts
+
+**Solution:**
+```bash
+# Edit the MediaMTX service file
+sudo nano /etc/systemd/system/mediamtx.service
+
+# Remove these problematic lines:
+# NoNewPrivileges=true
+# PrivateTmp=true
+# ProtectSystem=strict
+# ProtectHome=true
+
+# Reload and restart
+sudo systemctl daemon-reload
+sudo systemctl restart mediamtx
+```
+
+**Prevention:**
+- Use minimal security settings for MediaMTX service
+- Test service startup after configuration changes
+
+#### Issue 8: WebSocket Server Binding Issues
+
+**Symptoms:**
+- Camera service starts but WebSocket port 8002 not listening
+- Logs show "Starting WebSocket JSON-RPC server" but no confirmation
+- No error messages in logs
+
+**Diagnosis:**
+```bash
+# Check if port is blocked
+sudo lsof -i :8002
+
+# Test port availability
+sudo -u camera-service /opt/camera-service/venv/bin/python3 -c "
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    s.bind(('0.0.0.0', 8002))
+    print('Port 8002 is available')
+    s.close()
+except Exception as e:
+    print(f'Port 8002 blocked: {e}')
+"
+
+# Check firewall
+sudo ufw status
+```
+
+**Potential Solutions:**
+- Restart camera service: `sudo systemctl restart camera-service`
+- Check for port conflicts with other services
+- Verify firewall settings
+- Check system resource limits
 
 ### Log Files and Debugging
 

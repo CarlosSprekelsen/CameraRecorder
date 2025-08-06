@@ -277,13 +277,6 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=$SERVICE_NAME
 
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=$INSTALL_DIR
-
 [Install]
 WantedBy=multi-user.target
 EOF
