@@ -97,9 +97,28 @@ Every substantive `.md` file (architecture decision, test validation, feature sp
 
 ---
 
-## 5. Roadmap and IV&V Integration
+## 5. Progress Monitoring and Task Centralization
 
-### Linking to Roadmap
+### Single Source of Truth for Progress
+- **ALL active TODOs, task lists, and implementation checklists** must be consolidated in `docs/roadmap.md`
+- **Do NOT** append new TODOs or checklists to other documentation files (e.g., `overview.md`, `decisions.md`, architecture docs)
+- **Do NOT** create separate sprint reports, progress files, or task tracking documents
+
+### Preventing Documentation Creep
+- **No standalone progress documents:** All task tracking happens in the centralized roadmap only
+- **No outdated task lists:** If a task is moved or completed, update only the roadmap - do not leave copies elsewhere
+- **No non-validated reports:** Progress claims must have evidence (code/tests/documentation) before being marked complete
+
+### Task Management Rules
+- New action items or decisions must be added to `docs/roadmap.md` only
+- Architecture documents remain stable and do not contain evolving TODOs
+- Any document claiming completion must reference the roadmap story and provide evidence
+
+---
+
+## 6. Professional Standards
+
+## 6. Roadmap and IV&V Integration
 - Every document that describes implementation work **must** reference the corresponding roadmap story (e.g., "Story: E1/S3")
 - Documents describing completed work must include evidence section with specific file/line references
 
@@ -120,7 +139,22 @@ For any document claiming implementation completion:
 
 ---
 
-## 6. API Documentation Standards
+### Linking to Roadmap
+
+### JSON-RPC Methods
+- All public API methods **must** be documented in `docs/api/json_rpc_methods.md`
+- Include request/response schemas with examples
+- Document error conditions and response codes
+- Provide at least one complete usage example per method
+
+### Configuration Documentation
+- All configuration options must be documented with:
+  - Purpose and default value
+  - Valid ranges or options
+  - Environment variable override (if applicable)
+  - Example usage
+
+## 7. API Documentation Standards
 
 ### JSON-RPC Methods
 - All public API methods **must** be documented in `docs/api/json_rpc_methods.md`
@@ -137,7 +171,55 @@ For any document claiming implementation completion:
 
 ---
 
-## 7. Architecture Documentation
+## 8. Architecture Documentation
+
+### Stability Requirements
+- `docs/architecture/overview.md` must reflect **only approved, stable architecture**
+- Do **not** include process checklists, evolving TODOs, or implementation steps in architecture docs
+- Changes to architecture require explicit approval and entry in `docs/decisions.md`
+
+### Decision Logging
+- Architectural and technical decisions belong in `docs/decisions.md`
+- Record **what was decided, when, and briefly why**
+- Do not include ongoing tasks or implementation details in decisions
+
+---
+
+## 9. Test Documentation
+
+### Unit Test Documentation
+- Each test module should include a brief header comment explaining its scope
+- Complex test scenarios should include setup/teardown documentation
+- Test README files should explain the testing strategy for that component
+
+### Integration Test Documentation
+- Document test scenarios with clear success criteria
+- Include setup instructions and prerequisites
+- Specify expected outputs and failure modes
+- Provide troubleshooting guidance for common issues
+
+---
+
+## 10. Maintenance and Updates
+
+### Version Control
+- Increment version number for significant changes to document structure or requirements
+- Update date stamp when making substantial content changes
+- Maintain change history for critical architecture or API documentation
+
+### Review Process
+- All documentation changes follow the same review process as code
+- Architecture documentation requires explicit approval from project maintainer
+- API documentation must be validated against actual implementation
+
+### Consistency Checks
+- Regularly audit documentation for compliance with these guidelines
+- Ensure all TODO/STOP items are tracked in roadmap
+- Verify all implementation claims have supporting evidence
+
+---
+
+## 11. Common Patterns and Examples
 
 ### Stability Requirements
 - `docs/architecture/overview.md` must reflect **only approved, stable architecture**
@@ -211,7 +293,7 @@ Configuration schema in `config/camera_service.yaml` section `discovery.monitors
 
 ---
 
-## 11. Quality Checklist
+## 12. Quality Checklist
 
 Before finalizing any documentation:
 
