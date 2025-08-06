@@ -170,8 +170,8 @@ api: yes
 apiAddress: :9997
 
 # RTSP settings
-protocols: [tcp, udp]
 rtspAddress: :8554
+rtspTransports: [tcp, udp]
 
 # WebRTC settings
 webrtcAddress: :8889
@@ -180,10 +180,6 @@ webrtcAddress: :8889
 hlsAddress: :8888
 hlsVariant: lowLatency
 
-# Recording settings
-record: yes
-recordPath: /opt/camera-service/recordings
-
 # Logging
 logLevel: info
 logDestinations: [stdout]
@@ -191,16 +187,10 @@ logDestinations: [stdout]
 # Paths configuration
 paths:
   all:
-    # Allow all sources
-    sourceOnDemand: yes
-    # Enable recording
-    record: yes
-    # Record format
-    recordFormat: mp4
-    # Record segment duration
-    recordSegmentDuration: 3600
-    # Record segment max size
-    recordSegmentMaxSize: 500MB
+    # Record format (use fmp4 for fragmented MP4)
+    recordFormat: fmp4
+    # Record segment duration (must be string with time unit)
+    recordSegmentDuration: "3600s"
 EOF
 ```
 
@@ -229,12 +219,12 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=mediamtx
 
-# Security settings
+# Minimal security settings to avoid namespace issues
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/mediamtx /opt/camera-service/recordings
+ReadWritePaths=/opt/mediamtx /opt/camera-service/recordings /opt/camera-service/snapshots
 
 [Install]
 WantedBy=multi-user.target
@@ -298,6 +288,32 @@ curl http://localhost:9997/v3/config/global/get
 # Check MediaMTX logs
 sudo journalctl -u mediamtx -n 20
 ```
+
+### Step 8: Understanding the MediaMTX Configuration
+
+The MediaMTX configuration uses a minimal setup that avoids common configuration errors:
+
+**Key Configuration Decisions:**
+
+1. **No Global Recording Settings**: Recording is not enabled globally to avoid `recordPath` configuration issues
+2. **API-Controlled Recording**: Recording is enabled per-stream through the MediaMTX REST API
+3. **Updated RTSP Settings**: Uses `rtspTransports` instead of deprecated `protocols`
+4. **Removed Problematic Settings**: Eliminated `sourceOnDemand` and global recording paths
+
+**Recording Behavior:**
+- Recording is disabled by default in the configuration
+- The camera service will enable recording per camera stream via API calls
+- Recording paths are set dynamically when recording starts
+- This approach provides better control and avoids configuration conflicts
+
+**Ports in Use:**
+- **8554**: RTSP streaming
+- **8888**: HLS streaming  
+- **8889**: WebRTC streaming
+- **9997**: REST API for control
+- **1935**: RTMP (default, not used by camera service)
+- **8890**: SRT (default, not used by camera service)
+- **8189**: WebRTC ICE (default, not used by camera service)
 
 ---
 
@@ -689,7 +705,51 @@ sudo -u camera-service /opt/camera-service/venv/bin/pip install -r /opt/camera-s
 sudo systemctl restart camera-service
 ```
 
-#### Issue 5: MediaMTX API Connection Issues
+#### Issue 5: MediaMTX Configuration Errors
+
+**Symptoms:**
+- MediaMTX service fails to start with configuration errors
+- Errors like "invalid record format", "unknown field", or "recordPath must contain %path"
+
+**Solution:**
+```bash
+# Check MediaMTX configuration syntax
+sudo -u mediamtx /opt/mediamtx/mediamtx /opt/mediamtx/config/mediamtx.yml
+
+# Common fixes:
+# 1. Use 'fmp4' instead of 'mp4' for recordFormat
+# 2. Use string values for durations: "3600s" instead of 3600
+# 3. Use 'rtspTransports' instead of deprecated 'protocols'
+# 4. Remove global recording settings to avoid recordPath issues
+# 5. Remove 'sourceOnDemand' which can cause conflicts
+
+# Edit configuration if needed
+sudo nano /opt/mediamtx/config/mediamtx.yml
+
+# Restart MediaMTX after fixes
+sudo systemctl restart mediamtx
+```
+
+**Recommended Minimal Configuration:**
+```yaml
+# MediaMTX Configuration for Camera Service
+api: yes
+apiAddress: :9997
+rtspAddress: :8554
+rtspTransports: [tcp, udp]
+webrtcAddress: :8889
+hlsAddress: :8888
+hlsVariant: lowLatency
+logLevel: info
+logDestinations: [stdout]
+
+paths:
+  all:
+    recordFormat: fmp4
+    recordSegmentDuration: "3600s"
+```
+
+#### Issue 6: MediaMTX API Connection Issues
 
 **Symptoms:**
 - Camera service cannot connect to MediaMTX API
