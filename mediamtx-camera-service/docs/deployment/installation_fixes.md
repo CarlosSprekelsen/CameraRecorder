@@ -89,6 +89,15 @@ This document summarizes all the fixes applied to prevent installation and confi
 
 **Impact**: Fresh installations get complete configuration by default
 
+### 8. Missing pyudev Dependency ✅ FIXED
+
+**Problem**: Camera discovery system showed warning about missing pyudev dependency
+
+**Files Fixed**:
+- `requirements.txt`: Added `pyudev>=0.24.0` dependency
+
+**Impact**: Camera discovery works optimally with udev monitoring, falls back gracefully if not available
+
 ## Validation Improvements
 
 ### 1. Deployment Validation Script ✅ ADDED
@@ -182,6 +191,9 @@ sudo ./deployment/scripts/install.sh
    - `src/camera_service/config.py` - Added health monitoring parameters
    - `config/default.yaml` - Added health monitoring parameters
 
+2. **Dependencies**:
+   - `requirements.txt` - Added pyudev dependency for camera discovery
+
 2. **Service Management**:
    - `src/camera_service/service_manager.py` - Fixed parameter unpacking for MediaMTXController, WebSocketJsonRpcServer, and HybridCameraMonitor
 
@@ -210,6 +222,7 @@ A fresh installation on Ubuntu 22.04 should now work smoothly without any of the
 - ✅ WebSocket server parameter mismatches fixed
 - ✅ Camera monitor parameter mismatches fixed
 - ✅ Default configuration complete
+- ✅ pyudev dependency added for optimal camera discovery
 - ✅ Comprehensive validation included
 - ✅ Integration tests added
 
