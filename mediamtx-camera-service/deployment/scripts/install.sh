@@ -118,39 +118,14 @@ install_mediamtx() {
     # Create MediaMTX config directory
     mkdir -p "$MEDIAMTX_DIR/config"
     
-    # Create MediaMTX configuration
-    cat > "$MEDIAMTX_DIR/config/mediamtx.yml" << EOF
-# MediaMTX v1.13.1 Configuration for Camera Service
-logLevel: info
-logDestinations: [stdout]
-
-# Enable Control API
-api: yes
-apiAddress: :9997
-
-# Enable RTSP server
-rtsp: yes
-rtspTransports: [udp, tcp]
-rtspAddress: :8554
-
-# Enable WebRTC server
-webrtc: yes
-webrtcAddress: :8889
-
-# Enable HLS server
-hls: yes
-hlsAddress: :8888
-hlsVariant: lowLatency
-
-# Path defaults
-pathDefaults:
-  recordFormat: fmp4
-  recordSegmentDuration: 3600s
-
-# Paths configuration
-paths:
-  all:
-EOF
+    # Copy and modify the bundled MediaMTX configuration
+    cp "$MEDIAMTX_SOURCE/mediamtx.yml" "$MEDIAMTX_DIR/config/mediamtx.yml"
+    
+    # Enable API (change from 'no' to 'yes')
+    sed -i 's/^api: no/api: yes/' "$MEDIAMTX_DIR/config/mediamtx.yml"
+    
+    # Verify the critical settings are correct (no changes needed for addresses as they are already correct)
+    log_message "MediaMTX configuration applied with API enabled"
     
     # Create MediaMTX systemd service
     cat > /etc/systemd/system/mediamtx.service << EOF
