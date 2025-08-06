@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from camera_service.config import LoggingConfig
+from .config import LoggingConfig
 
 
 class CorrelationIdFilter(logging.Filter):

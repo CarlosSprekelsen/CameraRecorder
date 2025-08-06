@@ -14,13 +14,13 @@ import uuid
 from typing import Optional, Dict, Any
 
 from .config import Config
-from mediamtx_wrapper.controller import MediaMTXController, StreamConfig
-from camera_discovery.hybrid_monitor import (
+from ..mediamtx_wrapper.controller import MediaMTXController, StreamConfig
+from ..camera_discovery.hybrid_monitor import (
     CameraEventData,
     CameraEvent,
     CameraEventHandler,
 )
-from websocket_server.server import WebSocketJsonRpcServer
+from ..websocket_server.server import WebSocketJsonRpcServer
 from .logging_config import set_correlation_id, get_correlation_id
 
 
@@ -816,7 +816,7 @@ class ServiceManager(CameraEventHandler):
         )
 
         try:
-            from mediamtx_wrapper.controller import MediaMTXController
+            from ..mediamtx_wrapper.controller import MediaMTXController
 
             # Unpack MediaMTXConfig into individual parameters
             mediamtx_config = self._config.mediamtx
@@ -864,7 +864,7 @@ class ServiceManager(CameraEventHandler):
         )
 
         try:
-            from camera_discovery.hybrid_monitor import HybridCameraMonitor
+            from ..camera_discovery.hybrid_monitor import HybridCameraMonitor
 
             self._camera_monitor = HybridCameraMonitor(
                 device_range=self._config.camera.device_range,

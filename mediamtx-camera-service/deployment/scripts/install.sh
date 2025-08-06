@@ -88,17 +88,24 @@ create_service_user() {
 install_mediamtx() {
     log_message "Installing MediaMTX server..."
     
+    # Save original directory
+    ORIGINAL_DIR="$(pwd)"
+    
     # Create MediaMTX directory
     mkdir -p "$MEDIAMTX_DIR"
     
-    # Download MediaMTX
-    MEDIAMTX_VERSION="v1.6.0"
-    MEDIAMTX_URL="https://github.com/bluenviron/mediamtx/releases/download/${MEDIAMTX_VERSION}/mediamtx_${MEDIAMTX_VERSION}_linux_amd64.tar.gz"
+    # Copy bundled MediaMTX v1.13.1
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+    MEDIAMTX_SOURCE="$PROJECT_ROOT/dependencies/mediamtx"
     
-    cd "$MEDIAMTX_DIR"
-    wget -O mediamtx.tar.gz "$MEDIAMTX_URL"
-    tar -xzf mediamtx.tar.gz
-    rm mediamtx.tar.gz
+    if [ ! -f "$MEDIAMTX_SOURCE/mediamtx" ]; then
+        log_error "Bundled MediaMTX not found at $MEDIAMTX_SOURCE/mediamtx"
+        exit 1
+    fi
+    
+    cp "$MEDIAMTX_SOURCE/mediamtx" "$MEDIAMTX_DIR/"
+    chmod +x "$MEDIAMTX_DIR/mediamtx"
     
     # Create MediaMTX user
     if ! id "mediamtx" &>/dev/null; then
@@ -108,22 +115,41 @@ install_mediamtx() {
     # Set ownership
     chown -R mediamtx:mediamtx "$MEDIAMTX_DIR"
     
+    # Create MediaMTX config directory
+    mkdir -p "$MEDIAMTX_DIR/config"
+    
     # Create MediaMTX configuration
     cat > "$MEDIAMTX_DIR/config/mediamtx.yml" << EOF
-# MediaMTX Configuration for Camera Service
-api: yes
-apiAddress: :9997
-rtspAddress: :8554
-rtspTransports: [tcp, udp]
-webrtcAddress: :8889
-hlsAddress: :8888
-hlsVariant: lowLatency
+# MediaMTX v1.13.1 Configuration for Camera Service
 logLevel: info
 logDestinations: [stdout]
+
+# Enable Control API
+api: yes
+apiAddress: :9997
+
+# Enable RTSP server
+rtsp: yes
+rtspTransports: [udp, tcp]
+rtspAddress: :8554
+
+# Enable WebRTC server
+webrtc: yes
+webrtcAddress: :8889
+
+# Enable HLS server
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+
+# Path defaults
+pathDefaults:
+  recordFormat: fmp4
+  recordSegmentDuration: 3600s
+
+# Paths configuration
 paths:
   all:
-    recordFormat: fmp4
-    recordSegmentDuration: "3600s"
 EOF
     
     # Create MediaMTX systemd service
@@ -154,6 +180,9 @@ EOF
     systemctl daemon-reload
     systemctl enable mediamtx
     systemctl start mediamtx
+    
+    # Return to original directory
+    cd "$ORIGINAL_DIR"
     
     log_success "MediaMTX server installed and started"
 }
@@ -202,6 +231,13 @@ install_camera_service() {
     # Create configuration directory
     mkdir -p "$INSTALL_DIR/config"
     
+    # Create required directories with proper permissions
+    log_message "Creating required directories..."
+    mkdir -p /var/recordings /var/snapshots
+    chown "$SERVICE_USER:$SERVICE_GROUP" /var/recordings /var/snapshots
+    chmod 755 /var/recordings /var/snapshots
+    log_success "Required directories created with proper permissions"
+    
     # Create camera service configuration
     cat > "$INSTALL_DIR/config/camera-service.yaml" << EOF
 # Camera Service Configuration
@@ -234,8 +270,14 @@ security:
     bind_address: "0.0.0.0"
 
 mediamtx:
-  api_url: "http://localhost:9997"
-  api_timeout: 30
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/etc/mediamtx/mediamtx.yml"
+  recordings_path: "/var/recordings"
+  snapshots_path: "/var/snapshots"
 
 cameras:
   discovery_enabled: true
@@ -244,19 +286,22 @@ cameras:
 logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "/var/log/camera-service/camera-service.log"
-  max_size: "10MB"
+  file_enabled: true
+  file_path: "/var/log/camera-service/camera-service.log"
+  max_file_size: "10MB"
   backup_count: 5
 
 recording:
-  enabled: true
-  output_dir: "/var/recordings"
+  auto_record: false
+  format: "mp4"
+  quality: "medium"
   max_duration: 3600
+  cleanup_after_days: 30
 
 snapshots:
-  enabled: true
-  output_dir: "/var/snapshots"
+  format: "jpg"
   quality: 85
+  cleanup_after_days: 7
 EOF
     
     # Create security directories
@@ -285,6 +330,8 @@ EOF
     mkdir -p /var/log/camera-service
     chown "$SERVICE_USER:$SERVICE_GROUP" /var/log/camera-service
     
+
+    
     # Install Python dependencies
     cd "$INSTALL_DIR"
     python3 -m venv venv
@@ -305,7 +352,7 @@ User=$SERVICE_USER
 Group=$SERVICE_GROUP
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/.env
-ExecStart=$INSTALL_DIR/venv/bin/python -m src.camera_service
+ExecStart=$INSTALL_DIR/venv/bin/python -m src.camera_service.main
 Restart=always
 RestartSec=10
 StandardOutput=journal

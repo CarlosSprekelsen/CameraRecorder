@@ -1,0 +1,23 @@
+MediaMTX Camera Service Uninstall Report
+========================================
+Date: jue 07 ago 2025 03:01:05 +04
+System: Linux vaio 6.14.0-27-generic #27-Ubuntu SMP PREEMPT_DYNAMIC Tue Jul 22 17:01:58 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+Uninstallation Summary:
+----------------------
+Service stopped and disabled: camera-service
+Service file removed: /etc/systemd/system/camera-service.service
+Installation directory removed: /opt/camera-service
+MediaMTX directory removed: /opt/mediamtx
+Data directories removed: /var/recordings, /var/snapshots
+
+Validation Results:
+------------------
+✅ No service residue
+✅ No service file residue
+✅ No installation directory residue
+✅ No recordings directory residue
+✅ No snapshots directory residue
+
+Residues found: 0
+Status: ✅ UNINSTALLATION COMPLETE

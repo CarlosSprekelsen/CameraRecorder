@@ -14,7 +14,7 @@ import websockets
 from websockets.server import ServerProtocol as WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
-from camera_service.logging_config import set_correlation_id
+from ..camera_service.logging_config import set_correlation_id
 
 
 class CameraNotFoundError(Exception):
