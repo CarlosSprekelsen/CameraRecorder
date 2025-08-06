@@ -100,13 +100,17 @@ class TestJWTHandler:
     
     def test_validate_token_expired(self, jwt_handler):
         """Test validation of expired token."""
-        # Create token with very short expiry
-        token = jwt_handler.generate_token("test_user", "viewer", 0.001)  # 3.6 seconds
+        # Create an expired token by manually setting expiry in the past
+        now = int(time.time())
+        expired_payload = {
+            "user_id": "test_user",
+            "role": "viewer",
+            "iat": now - 3600,  # 1 hour ago
+            "exp": now - 1800    # 30 minutes ago (expired)
+        }
+        expired_token = jwt.encode(expired_payload, jwt_handler.secret_key, algorithm=jwt_handler.algorithm)
         
-        # Wait for token to expire
-        time.sleep(0.005)
-        
-        claims = jwt_handler.validate_token(token)
+        claims = jwt_handler.validate_token(expired_token)
         assert claims is None
     
     def test_validate_token_missing_fields(self, jwt_handler):
@@ -268,20 +272,27 @@ class TestJWTHandlerIntegration:
     
     def test_token_expiry_handling(self, jwt_handler):
         """Test token expiry handling."""
-        # Create token with very short expiry
-        token = jwt_handler.generate_token("expiry_user", "viewer", 0.001)
+        # Create a valid token first
+        token = jwt_handler.generate_token("expiry_user", "viewer", 1)
         
         # Token should be valid initially
         claims = jwt_handler.validate_token(token)
         assert claims is not None
         
-        # Wait for expiry
-        time.sleep(0.005)
+        # Create an expired token manually
+        now = int(time.time())
+        expired_payload = {
+            "user_id": "expiry_user",
+            "role": "viewer",
+            "iat": now - 3600,  # 1 hour ago
+            "exp": now - 1800    # 30 minutes ago (expired)
+        }
+        expired_token = jwt.encode(expired_payload, jwt_handler.secret_key, algorithm=jwt_handler.algorithm)
         
         # Token should be expired
-        claims = jwt_handler.validate_token(token)
+        claims = jwt_handler.validate_token(expired_token)
         assert claims is None
         
         # Token info should show expired
-        info = jwt_handler.get_token_info(token)
+        info = jwt_handler.get_token_info(expired_token)
         assert info["expired"] is True 

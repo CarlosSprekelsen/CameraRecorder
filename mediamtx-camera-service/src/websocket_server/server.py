@@ -80,9 +80,11 @@ class ClientConnection:
 
             self.connected_at = time.time()
 
-        # TODO: HIGH: Implement authentication state management [IV&V:S6]
-        # TODO: MEDIUM: Implement permission tracking system [IV&V:S6]
-        # TODO: MEDIUM: Implement rate limiting state tracking [IV&V:S6]
+        # Authentication and security state
+        self.auth_result = None
+        self.user_id = None
+        self.role = None
+        self.auth_method = None
 
 
 class WebSocketJsonRpcServer:
@@ -137,9 +139,8 @@ class WebSocketJsonRpcServer:
         # JSON-RPC method handlers
         self._method_handlers: Dict[str, Callable] = {}
 
-        # TODO: HIGH: Initialize JWT/API key authentication system [IV&V:S6]
-        # TODO: MEDIUM: Initialize rate limiting with configurable thresholds [IV&V:S6]
-        # TODO: MEDIUM: Initialize Prometheus metrics collection [IV&V:S6]
+        # Security middleware (set by service manager)
+        self._security_middleware = None
 
     def set_mediamtx_controller(self, controller) -> None:
         """
@@ -167,6 +168,15 @@ class WebSocketJsonRpcServer:
             service_manager: Service manager instance
         """
         self._service_manager = service_manager
+    
+    def set_security_middleware(self, security_middleware) -> None:
+        """
+        Set the security middleware for authentication and rate limiting.
+
+        Args:
+            security_middleware: Security middleware instance
+        """
+        self._security_middleware = security_middleware
 
     async def start(self) -> None:
         """
@@ -289,6 +299,13 @@ class WebSocketJsonRpcServer:
         client = ClientConnection(websocket, client_id)
 
         try:
+            # Security middleware connection check
+            if self._security_middleware:
+                if not self._security_middleware.can_accept_connection(client_id):
+                    self._logger.warning(f"Connection rejected for client {client_id} - limit reached")
+                    return
+                self._security_middleware.register_connection(client_id)
+
             # Add client to tracking
             async with self._connection_lock:
                 self._clients[client_id] = client
@@ -296,10 +313,6 @@ class WebSocketJsonRpcServer:
             self._logger.debug(
                 f"Client {client_id} added to connection pool ({len(self._clients)} total)"
             )
-
-            # Handle authentication (basic implementation for MVP)
-            # TODO: MEDIUM: Expand authentication per security architecture [IV&V:S6]
-            client.authenticated = True
 
             # Process incoming messages from client
             async for message in websocket:
@@ -338,6 +351,10 @@ class WebSocketJsonRpcServer:
         except Exception as e:
             self._logger.error(f"Unexpected error handling client {client_id}: {e}")
         finally:
+            # Security middleware cleanup
+            if self._security_middleware:
+                self._security_middleware.unregister_connection(client_id)
+            
             # Cleanup on disconnect
             async with self._connection_lock:
                 if client_id in self._clients:
@@ -425,6 +442,76 @@ class WebSocketJsonRpcServer:
                         "id": request_id,
                     }
                 )
+
+            # Security middleware authentication check
+            if self._security_middleware:
+                # Check if client is authenticated
+                if not self._security_middleware.is_authenticated(client.client_id):
+                    # Try to authenticate with token from params
+                    auth_token = None
+                    if params and isinstance(params, dict):
+                        auth_token = params.get("auth_token")
+                    
+                    if auth_token:
+                        auth_result = await self._security_middleware.authenticate_connection(
+                            client.client_id, auth_token
+                        )
+                        if auth_result.authenticated:
+                            # Update client authentication state
+                            client.authenticated = True
+                            client.auth_result = auth_result
+                            client.user_id = auth_result.user_id
+                            client.role = auth_result.role
+                            client.auth_method = auth_result.auth_method
+                        else:
+                            return json.dumps(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "error": {
+                                        "code": -32001,
+                                        "message": f"Authentication failed: {auth_result.error_message}"
+                                    },
+                                    "id": request_id,
+                                }
+                            )
+                    else:
+                        return json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "error": {
+                                    "code": -32001,
+                                    "message": "Authentication required - provide auth_token"
+                                },
+                                "id": request_id,
+                            }
+                        )
+                
+                # Check rate limiting
+                if not self._security_middleware.check_rate_limit(client.client_id):
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -32002,
+                                "message": "Rate limit exceeded"
+                            },
+                            "id": request_id,
+                        }
+                    )
+                
+                # Check permissions for sensitive methods
+                if method_name in ["take_snapshot", "start_recording", "stop_recording"]:
+                    if not self._security_middleware.has_permission(client.client_id, "operator"):
+                        return json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "error": {
+                                    "code": -32003,
+                                    "message": "Insufficient permissions - operator role required"
+                                },
+                                "id": request_id,
+                            }
+                        )
 
             # Call method handler
             try:

@@ -219,4 +219,8 @@ class JWTHandler:
         user_level = role_hierarchy.get(claims.role, 0)
         required_level = role_hierarchy.get(required_role, 0)
         
+        # If required_role is not in valid roles, return False
+        if required_role not in self.VALID_ROLES:
+            return False
+        
         return user_level >= required_level 
