@@ -247,7 +247,8 @@ User=$SERVICE_USER
 Group=$SERVICE_GROUP
 WorkingDirectory=$INSTALL_DIR
 Environment=PATH=$VENV_DIR/bin
-ExecStart=$VENV_DIR/bin/python -m src.camera_service.main
+Environment=PYTHONPATH=$INSTALL_DIR/src
+ExecStart=$VENV_DIR/bin/python -m camera_service.main
 Restart=always
 RestartSec=10
 StandardOutput=journal
