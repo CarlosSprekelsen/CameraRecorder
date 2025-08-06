@@ -60,6 +60,9 @@ class AuthManager:
         if not auth_token:
             return AuthResult(
                 authenticated=False,
+                user_id=None,
+                role=None,
+                auth_method=auth_type if auth_type != "auto" else "jwt",
                 error_message="No authentication token provided"
             )
         
@@ -71,6 +74,17 @@ class AuthManager:
         
         if auth_type == "api_key" or auth_type == "auto":
             # Try API key authentication
+            api_key_result = self._authenticate_api_key(auth_token)
+            if api_key_result.authenticated:
+                return api_key_result
+        
+        # For invalid auth types, try auto authentication
+        if auth_type not in ["jwt", "api_key", "auto"]:
+            # Try both JWT and API key
+            jwt_result = self._authenticate_jwt(auth_token)
+            if jwt_result.authenticated:
+                return jwt_result
+            
             api_key_result = self._authenticate_api_key(auth_token)
             if api_key_result.authenticated:
                 return api_key_result

@@ -1,0 +1,72 @@
+/usr/lib/python3/dist-packages/pytest_asyncio/plugin.py:207: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform linux -- Python 3.13.3, pytest-8.3.5, pluggy-1.6.0
+rootdir: /home/carlossprekelsen/CameraRecorder/mediamtx-camera-service
+configfile: pytest.ini
+plugins: cov-6.2.1, asyncio-0.25.1, typeguard-4.4.2
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None
+collected 22 items
+
+tests/security/test_attack_vectors.py F....F........EEEEEEEE             [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestRoleElevationAttacks.test_jwt_role_elevation_attempts __
+tests/security/test_attack_vectors.py:399: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+_ ERROR at setup of TestRoleElevationAttacks.test_api_key_role_elevation_attempts _
+tests/security/test_attack_vectors.py:399: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+____ ERROR at setup of TestRoleElevationAttacks.test_invalid_role_handling _____
+tests/security/test_attack_vectors.py:399: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+__ ERROR at setup of TestRoleElevationAttacks.test_role_hierarchy_enforcement __
+tests/security/test_attack_vectors.py:399: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+____ ERROR at setup of TestInputValidationAttacks.test_malformed_jwt_tokens ____
+tests/security/test_attack_vectors.py:490: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+_ ERROR at setup of TestInputValidationAttacks.test_oversized_request_payloads _
+tests/security/test_attack_vectors.py:490: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+_ ERROR at setup of TestInputValidationAttacks.test_special_character_handling _
+tests/security/test_attack_vectors.py:490: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+______ ERROR at setup of TestInputValidationAttacks.test_edge_case_inputs ______
+tests/security/test_attack_vectors.py:490: in auth_manager
+    api_key_handler = APIKeyHandler(temp_file)
+E   NameError: name 'temp_file' is not defined
+=================================== FAILURES ===================================
+___________ TestJWTSecurityAttacks.test_jwt_token_tampering_attempts ___________
+tests/security/test_attack_vectors.py:73: in test_jwt_token_tampering_attempts
+    assert claims is None, f"Tampered token should be rejected: {tampered_token}"
+E   AssertionError: Tampered token should be rejected: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF91c2VyIiwicm9sZSI6InZpZXdlciIsImlhdCI6MTc1NDUwMjQyOSwiZXhwIjoxNzU0NTg4ODI5fQ.JQtaE7jn9KZ73E9t16Ghla3q18TEI2BBUbVe_o5AF3A
+E   assert JWTClaims(user_id='test_user', role='viewer', exp=1754588829, iat=1754502429) is None
+------------------------------ Captured log call -------------------------------
+WARNING  src.security.jwt_handler.JWTHandler:jwt_handler.py:153 Invalid JWT token: Invalid crypto padding
+WARNING  src.security.jwt_handler.JWTHandler:jwt_handler.py:153 Invalid JWT token: Invalid crypto padding
+___________ TestJWTSecurityAttacks.test_jwt_token_expiry_enforcement ___________
+tests/security/test_attack_vectors.py:159: in test_jwt_token_expiry_enforcement
+    expired_token = jwt_handler.jwt.encode(expired_payload, jwt_handler.secret_key, algorithm=jwt_handler.algorithm)
+E   AttributeError: 'JWTHandler' object has no attribute 'jwt'
+=========================== short test summary info ============================
+ERROR tests/security/test_attack_vectors.py::TestRoleElevationAttacks::test_jwt_role_elevation_attempts
+ERROR tests/security/test_attack_vectors.py::TestRoleElevationAttacks::test_api_key_role_elevation_attempts
+ERROR tests/security/test_attack_vectors.py::TestRoleElevationAttacks::test_invalid_role_handling
+ERROR tests/security/test_attack_vectors.py::TestRoleElevationAttacks::test_role_hierarchy_enforcement
+ERROR tests/security/test_attack_vectors.py::TestInputValidationAttacks::test_malformed_jwt_tokens
+ERROR tests/security/test_attack_vectors.py::TestInputValidationAttacks::test_oversized_request_payloads
+ERROR tests/security/test_attack_vectors.py::TestInputValidationAttacks::test_special_character_handling
+ERROR tests/security/test_attack_vectors.py::TestInputValidationAttacks::test_edge_case_inputs
+FAILED tests/security/test_attack_vectors.py::TestJWTSecurityAttacks::test_jwt_token_tampering_attempts
+FAILED tests/security/test_attack_vectors.py::TestJWTSecurityAttacks::test_jwt_token_expiry_enforcement
+==================== 2 failed, 12 passed, 8 errors in 0.29s ====================
