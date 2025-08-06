@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # MediaMTX Camera Service Installation Script
 # 
 # This script installs the MediaMTX Camera Service on a clean Ubuntu 22.04+ system.
