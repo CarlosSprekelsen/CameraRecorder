@@ -269,14 +269,15 @@ class TestRunner:
         """Run unit tests with coverage."""
         stage = TestStage("Unit Tests", "Unit tests with coverage measurement")
         
-        cmd = [sys.executable, "-m", "pytest", "tests/unit/", "-v"]
+        cmd = [sys.executable, "-m", "pytest", "tests/unit/", "tests/unit/test_security/", "-v"]
         
         # Add coverage options if not disabled
         if not self.args.no_coverage:
             coverage_threshold = self.args.threshold
             cmd.extend([
                 f"--cov=src/camera_discovery",
-                f"--cov=src/camera_service", 
+                f"--cov=src/camera_service",
+                f"--cov=src/security",
                 f"--cov-report=term-missing",
                 f"--cov-report=html:{self.artifacts_dir}/htmlcov",
                 f"--cov-fail-under={coverage_threshold}"

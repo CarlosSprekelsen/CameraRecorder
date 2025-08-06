@@ -75,8 +75,17 @@ class AuthManager:
             if api_key_result.authenticated:
                 return api_key_result
         
+        # Determine which auth method was attempted last
+        if auth_type == "jwt":
+            auth_method = "jwt"
+        elif auth_type == "api_key":
+            auth_method = "api_key"
+        else:  # auto
+            auth_method = "jwt"  # JWT was tried first
+        
         return AuthResult(
             authenticated=False,
+            auth_method=auth_method,
             error_message="Invalid authentication token"
         )
     

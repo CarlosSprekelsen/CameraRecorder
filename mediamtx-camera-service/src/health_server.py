@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -137,7 +137,7 @@ class HealthServer:
             
             response = HealthResponse(
                 status=status,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 components=components
             )
             
@@ -147,7 +147,7 @@ class HealthServer:
             self.logger.error("Error in system health check: %s", e)
             return web.json_response({
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error": str(e)
             }, status=500)
     
@@ -158,7 +158,7 @@ class HealthServer:
             
             return web.json_response({
                 "status": health.status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "details": health.details
             }, status=200)
             
@@ -166,7 +166,7 @@ class HealthServer:
             self.logger.error("Error in cameras health check: %s", e)
             return web.json_response({
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error": str(e)
             }, status=500)
     
@@ -177,7 +177,7 @@ class HealthServer:
             
             return web.json_response({
                 "status": health.status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "details": health.details
             }, status=200)
             
@@ -185,7 +185,7 @@ class HealthServer:
             self.logger.error("Error in MediaMTX health check: %s", e)
             return web.json_response({
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error": str(e)
             }, status=500)
     
@@ -204,12 +204,12 @@ class HealthServer:
             if is_ready:
                 return web.json_response({
                     "status": "ready",
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }, status=200)
             else:
                 return web.json_response({
                     "status": "not_ready",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "details": {
                         "mediamtx": mediamtx_health.status,
                         "service_manager": service_health.status
@@ -220,7 +220,7 @@ class HealthServer:
             self.logger.error("Error in readiness check: %s", e)
             return web.json_response({
                 "status": "not_ready",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error": str(e)
             }, status=503)
     
@@ -230,7 +230,7 @@ class HealthServer:
             return HealthComponent(
                 status="unhealthy",
                 details="MediaMTX controller not available",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
         
         try:
@@ -245,20 +245,20 @@ class HealthServer:
                 return HealthComponent(
                     status="healthy",
                     details="MediaMTX controller is healthy",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
             else:
                 return HealthComponent(
                     status="unhealthy",
                     details="MediaMTX controller is unhealthy",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
                 
         except Exception as e:
             return HealthComponent(
                 status="unhealthy",
                 details=f"MediaMTX health check failed: {str(e)}",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
     
     async def _check_camera_health(self) -> HealthComponent:
@@ -267,7 +267,7 @@ class HealthServer:
             return HealthComponent(
                 status="unhealthy",
                 details="Camera monitor not available",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
         
         try:
@@ -287,20 +287,20 @@ class HealthServer:
                 return HealthComponent(
                     status="healthy",
                     details=f"Camera monitor is running with {camera_count} cameras",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
             else:
                 return HealthComponent(
                     status="unhealthy",
                     details="Camera monitor is not running",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
                 
         except Exception as e:
             return HealthComponent(
                 status="unhealthy",
                 details=f"Camera health check failed: {str(e)}",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
     
     async def _check_service_health(self) -> HealthComponent:
@@ -309,7 +309,7 @@ class HealthServer:
             return HealthComponent(
                 status="unhealthy",
                 details="Service manager not available",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
         
         try:
@@ -324,20 +324,20 @@ class HealthServer:
                 return HealthComponent(
                     status="healthy",
                     details="Service manager is running",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
             else:
                 return HealthComponent(
                     status="unhealthy",
                     details="Service manager is not running",
-                    timestamp=datetime.utcnow().isoformat()
+                    timestamp=datetime.now(timezone.utc).isoformat()
                 )
                 
         except Exception as e:
             return HealthComponent(
                 status="unhealthy",
                 details=f"Service health check failed: {str(e)}",
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat()
             )
     
     def _determine_overall_status(self, components: Dict[str, HealthComponent]) -> str:

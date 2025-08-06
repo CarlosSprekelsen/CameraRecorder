@@ -249,6 +249,34 @@ EOF
     # Set ownership
     chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR"
     
+    # Setup security configuration
+    print_status "Setting up security configuration..."
+    
+    # Create security directories
+    mkdir -p "$INSTALL_DIR/security"
+    mkdir -p "$INSTALL_DIR/security/api-keys"
+    
+    # Generate JWT secret key
+    JWT_SECRET=$(openssl rand -hex 32)
+    echo "JWT_SECRET_KEY=$JWT_SECRET" > "$INSTALL_DIR/.env"
+    
+    # Create API keys storage file
+    cat > "$INSTALL_DIR/security/api-keys.json" << EOF
+{
+  "version": "1.0",
+  "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "keys": []
+}
+EOF
+    
+    # Set secure permissions
+    chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/security"
+    chmod 700 "$INSTALL_DIR/security"
+    chmod 600 "$INSTALL_DIR/security/api-keys.json"
+    chmod 600 "$INSTALL_DIR/.env"
+    
+    print_success "Security configuration setup complete"
+    
     print_success "Application files copied"
 }
 
@@ -270,6 +298,7 @@ Group=$SERVICE_GROUP
 WorkingDirectory=$INSTALL_DIR
 Environment=PATH=$VENV_DIR/bin
 Environment=PYTHONPATH=$INSTALL_DIR/src
+EnvironmentFile=/etc/systemd/system/$SERVICE_NAME.env
 ExecStart=$VENV_DIR/bin/python3 -m camera_service.main
 Restart=always
 RestartSec=10
@@ -292,6 +321,11 @@ MEDIAMTX_API_PORT=9997
 MEDIAMTX_RTSP_PORT=8554
 MEDIAMTX_WEBRTC_PORT=8889
 MEDIAMTX_HLS_PORT=8888
+
+# Security Configuration
+JWT_SECRET_KEY=$JWT_SECRET
+API_KEYS_FILE=$INSTALL_DIR/security/api-keys.json
+SSL_ENABLED=false
 EOF
     
     # Reload systemd
