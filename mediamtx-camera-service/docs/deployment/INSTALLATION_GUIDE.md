@@ -321,11 +321,26 @@ The MediaMTX configuration uses a minimal setup that avoids common configuration
 
 ### Method 1: Automated Installation (Recommended)
 
-#### Step 1: Download and Run Installation Script
+#### Step 1: Clone Repository and Run Installation Script
 
+**For Public Repositories:**
 ```bash
-# Download and run the installation script
-curl -sSL https://raw.githubusercontent.com/your-org/mediamtx-camera-service/main/deployment/scripts/install.sh | sudo bash
+# Clone the repository
+git clone https://github.com/your-org/mediamtx-camera-service
+cd mediamtx-camera-service
+
+# Run the installation script
+sudo ./deployment/scripts/install.sh
+```
+
+**For Private Repositories:**
+```bash
+# Clone your private repository
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME
+
+# Run the installation script
+sudo ./deployment/scripts/install.sh
 ```
 
 #### Step 2: Verify Installation
@@ -335,14 +350,21 @@ curl -sSL https://raw.githubusercontent.com/your-org/mediamtx-camera-service/mai
 sudo ./deployment/scripts/verify_installation.sh
 ```
 
-### Method 2: Manual Installation
+### Method 2: Manual Installation (Alternative)
 
-#### Step 1: Clone Repository
+#### Step 1: Download Required Files
+
+Since the installation script requires the complete project files (requirements.txt, source code, etc.), you must have the full repository:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/mediamtx-camera-service
-cd mediamtx-camera-service
+# Clone the repository (replace with your actual repository URL)
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME
+
+# Or download as ZIP and extract
+wget https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/archive/main.zip
+unzip main.zip
+cd YOUR_REPO_NAME-main
 ```
 
 #### Step 2: Run Installation Script
@@ -357,6 +379,37 @@ sudo ./deployment/scripts/install.sh
 ```bash
 # Run verification script
 sudo ./deployment/scripts/verify_installation.sh
+```
+
+### Method 3: Remote Installation (Advanced)
+
+If you need to install on a remote server without cloning the repository:
+
+#### Step 1: Copy Required Files to Server
+
+From your local machine, copy the entire project to the server:
+
+```bash
+# Copy the project directory to the server
+scp -r /path/to/your/mediamtx-camera-service dts@your-server:/tmp/
+
+# Or create a tarball and copy
+tar -czf camera-service.tar.gz mediamtx-camera-service/
+scp camera-service.tar.gz dts@your-server:/tmp/
+```
+
+#### Step 2: Install on Server
+
+On the remote server:
+
+```bash
+# Extract if using tarball
+cd /tmp
+tar -xzf camera-service.tar.gz
+cd mediamtx-camera-service
+
+# Run installation
+sudo ./deployment/scripts/install.sh
 ```
 
 ---
@@ -693,10 +746,20 @@ sudo systemctl restart camera-service mediamtx
 **Symptoms:**
 - Import errors
 - Module not found errors
+- "requirements.txt not found in current directory" error
 
 **Solution:**
 ```bash
-# Recreate virtual environment
+# Check if requirements.txt exists
+ls -la requirements.txt
+
+# If requirements.txt is missing, the installation script was run without the full project
+# You need to clone the repository first:
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME
+sudo ./deployment/scripts/install.sh
+
+# Or recreate virtual environment with proper requirements
 sudo rm -rf /opt/camera-service/venv
 sudo -u camera-service python3 -m venv /opt/camera-service/venv
 sudo -u camera-service /opt/camera-service/venv/bin/pip install -r /opt/camera-service/requirements.txt
