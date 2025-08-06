@@ -88,7 +88,7 @@ const ws = new WebSocket('ws://localhost:8002/ws');
 ## Documentation
 
 - [API Reference](docs/api/json-rpc-methods.md)
-- [Installation Guide](docs/deployment/installation.md)
+- [Installation Guide](docs/deployment/installation_guide.md)
 - [Architecture Overview](docs/architecture/overview.md)
 - [Development Setup](docs/development/setup.md)
 
