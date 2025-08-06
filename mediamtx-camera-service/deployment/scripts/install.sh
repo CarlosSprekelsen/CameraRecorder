@@ -194,6 +194,17 @@ mediamtx:
   config_path: "/opt/camera-service/config/mediamtx.yml"
   recordings_path: "/opt/camera-service/recordings"
   snapshots_path: "/opt/camera-service/snapshots"
+  
+  # Health monitoring configuration
+  health_check_interval: 30
+  health_failure_threshold: 10
+  health_circuit_breaker_timeout: 60
+  health_max_backoff_interval: 120
+  health_recovery_confirmation_threshold: 3
+  backoff_base_multiplier: 2.0
+  backoff_jitter_range: [0.8, 1.2]
+  process_termination_timeout: 3.0
+  process_kill_timeout: 2.0
 
 camera:
   poll_interval: 0.1
@@ -222,6 +233,17 @@ snapshots:
   quality: 90
   cleanup_after_days: 7
 EOF
+    fi
+    
+    # Copy validation script if it exists
+    print_status "Copying validation scripts..."
+    mkdir -p "$INSTALL_DIR/scripts"
+    if [[ -f "scripts/validate_deployment.py" ]]; then
+        cp scripts/validate_deployment.py "$INSTALL_DIR/scripts/"
+        chmod +x "$INSTALL_DIR/scripts/validate_deployment.py"
+        print_success "Validation script copied"
+    else
+        print_warning "Validation script not found"
     fi
     
     # Set ownership
@@ -386,6 +408,46 @@ verify_installation() {
     print_success "Installation verification complete"
 }
 
+# Function to validate installation
+validate_installation() {
+    print_title "Validating Installation"
+    
+    print_status "Running deployment validation..."
+    
+    # Change to installation directory
+    cd "$INSTALL_DIR"
+    
+    # Run validation script if it exists
+    if [[ -f "scripts/validate_deployment.py" ]]; then
+        print_status "Running deployment validation script..."
+        if sudo -u "$SERVICE_USER" "$VENV_DIR/bin/python3" scripts/validate_deployment.py; then
+            print_success "Deployment validation passed"
+        else
+            print_error "Deployment validation failed"
+            print_status "Continuing with installation but service may not work correctly"
+        fi
+    else
+        print_warning "Validation script not found, skipping validation"
+    fi
+    
+    # Test configuration loading manually
+    print_status "Testing configuration loading..."
+    if sudo -u "$SERVICE_USER" "$VENV_DIR/bin/python3" -c "
+import sys
+sys.path.insert(0, '$INSTALL_DIR/src')
+from camera_service.config import ConfigManager
+config_manager = ConfigManager()
+config = config_manager.load_config()
+print('✓ Configuration loaded successfully')
+print('✓ MediaMTX health monitoring parameters accepted')
+"; then
+        print_success "Configuration validation passed"
+    else
+        print_error "Configuration validation failed"
+        print_status "Continuing with installation but service may not work correctly"
+    fi
+}
+
 # Function to display post-installation information
 display_post_install_info() {
     print_title "Installation Complete"
@@ -439,6 +501,10 @@ main() {
     create_systemd_service
     create_logrotate_config
     enable_service
+    
+    # Validate installation
+    validate_installation
+    
     verify_installation
     
     # Display post-installation information

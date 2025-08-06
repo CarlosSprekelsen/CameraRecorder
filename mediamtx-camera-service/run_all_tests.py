@@ -316,6 +316,28 @@ class TestRunner:
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
         return success
+    
+    def run_validation_tests(self) -> bool:
+        """Run deployment validation tests."""
+        if self.args.only_unit:
+            stage = TestStage("Validation Tests", "Deployment validation tests")
+            stage.skipped = True
+            self.stages.append(stage)
+            return True
+            
+        stage = TestStage("Validation Tests", "Deployment validation tests")
+        
+        # Run validation script
+        validation_script = self.project_root / "scripts" / "validate_deployment.py"
+        if validation_script.exists():
+            cmd = [sys.executable, str(validation_script)]
+        else:
+            # Fallback to pytest for validation tests
+            cmd = [sys.executable, "-m", "pytest", "-v", "tests/unit/test_configuration_validation.py"]
+            
+        success = self._run_stage(stage, cmd)
+        self.stages.append(stage)
+        return success
         
     def generate_summary_report(self) -> None:
         """Generate comprehensive summary report."""
@@ -426,9 +448,12 @@ class TestRunner:
             self.run_unit_tests,       # Unit tests are most important
         ]
         
-        # Add integration tests unless unit-only mode
+        # Add integration and validation tests unless unit-only mode
         if not self.args.only_unit:
-            stages_to_run.append(self.run_integration_tests)
+            stages_to_run.extend([
+                self.run_integration_tests,
+                self.run_validation_tests,  # Validate deployment configuration
+            ])
             
         # 2. CODE QUALITY CHECKS (run last to avoid masking critical failures)
         # These are cosmetic/style issues that shouldn't block critical test results

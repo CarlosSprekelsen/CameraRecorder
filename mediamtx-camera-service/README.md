@@ -28,6 +28,22 @@ cd mediamtx-camera-service
 sudo ./deployment/scripts/install.sh
 ```
 
+### Validation
+
+The installation process includes comprehensive validation to catch configuration and component mismatches early:
+
+- **Configuration Schema Validation**: Ensures all required parameters are present and correctly typed
+- **Component Instantiation Validation**: Tests that configuration can instantiate all components
+- **API Interface Validation**: Verifies parameter compatibility between dataclasses and constructors
+- **Python Compatibility Validation**: Checks for python3 availability and dependency installation
+
+Run validation manually:
+```bash
+python3 scripts/validate_deployment.py
+```
+
+For detailed information about installation fixes and validation, see [Installation Fixes](docs/deployment/installation_fixes.md).
+
 ### Usage
 ```bash
 # Start services
