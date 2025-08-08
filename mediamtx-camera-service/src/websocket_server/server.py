@@ -706,12 +706,14 @@ class WebSocketJsonRpcServer:
         else:
             clients_to_notify = list(self._clients.values())
 
-        # Send notification to each target client
+        # Send notification to each target client (robust open/closed checks)
         failed_clients = []
         for client in clients_to_notify:
             try:
-                if client.websocket.open:  # type: ignore[attr-defined]
-                    await client.websocket.send(notification_json)  # type: ignore[attr-defined]
+                is_open = getattr(client.websocket, "open", None)
+                is_closed = getattr(client.websocket, "closed", None)
+                if (is_open is True) or (is_closed is False) or (is_open is None and is_closed is None):
+                    await client.websocket.send(notification_json)
                 else:
                     failed_clients.append(client.client_id)
             except Exception as e:
@@ -755,7 +757,8 @@ class WebSocketJsonRpcServer:
 
             client = self._clients[client_id]
 
-            if not client.websocket.open:  # type: ignore[attr-defined]
+            # websockets protocol exposes 'closed' / 'open' differently across versions
+            if getattr(client.websocket, "closed", False) or not getattr(client.websocket, "open", True):
                 # Remove disconnected client
                 del self._clients[client_id]
                 self._logger.info(
@@ -769,9 +772,11 @@ class WebSocketJsonRpcServer:
                 {"jsonrpc": "2.0", "method": method, "params": params}
             )
 
-            if client.websocket.open:  # type: ignore[attr-defined]
+            is_open = getattr(client.websocket, "open", None)
+            is_closed = getattr(client.websocket, "closed", None)
+            if (is_open is True) or (is_closed is False):
                 try:
-                    await client.websocket.send(notification_json)  # type: ignore[attr-defined]
+                    await client.websocket.send(notification_json)
                     return True
                 except Exception as e:
                     self._logger.warning(

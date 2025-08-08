@@ -929,6 +929,9 @@ class ServiceManager(CameraEventHandler):
                 mediamtx_controller=self._mediamtx_controller,
                 camera_monitor=self._camera_monitor,
             )
+            # Provide service manager reference for API methods that require it
+            if hasattr(self._websocket_server, "set_service_manager"):
+                self._websocket_server.set_service_manager(self)
             await self._websocket_server.start()
             self._logger.info(
                 "WebSocket JSON-RPC server started",
@@ -993,8 +996,13 @@ class ServiceManager(CameraEventHandler):
                 extra={"correlation_id": correlation_id},
             )
             try:
-                # Unregister event handler
-                self._camera_monitor.remove_event_handler(self)
+                # Unregister event handler if supported
+                if hasattr(self._camera_monitor, "remove_event_handler"):
+                    try:
+                        self._camera_monitor.remove_event_handler(self)
+                    except Exception:
+                        # Proceed with shutdown even if handler removal fails
+                        pass
                 # Stop camera monitoring
                 await self._camera_monitor.stop()
                 self._logger.info(

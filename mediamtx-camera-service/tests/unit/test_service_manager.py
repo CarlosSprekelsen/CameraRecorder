@@ -1,11 +1,20 @@
 # tests/unit/test_service_manager.py
 """
-Unit tests for the ServiceManager class.
+Requirement-based tests for ServiceManager behavior.
+
+Each test traces to a customer requirement and validates real component
+behavior via the public WebSocket API and MediaMTX HTTP integration.
 """
 
-import pytest
+import asyncio
+import json
+import socket
+from contextlib import asynccontextmanager
 
-from camera_service.config import (
+import pytest
+import websockets
+
+from src.camera_service.config import (
     Config,
     ServerConfig,
     MediaMTXConfig,
@@ -14,149 +23,131 @@ from camera_service.config import (
     RecordingConfig,
     SnapshotConfig,
 )
-from camera_service.service_manager import ServiceManager
+from src.camera_service.service_manager import ServiceManager
+from aiohttp import web
 
 
-class TestServiceManager:
-    """Test cases for ServiceManager class."""
+def _free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
-    @pytest.fixture
-    def mock_config(self):
-        """Create a mock configuration for testing."""
-        return Config(
-            server=ServerConfig(),
-            mediamtx=MediaMTXConfig(),
-            camera=CameraConfig(),
-            logging=LoggingConfig(),
-            recording=RecordingConfig(),
-            snapshots=SnapshotConfig(),
-        )
 
-    def test_instantiation(self, mock_config):
-        """Test ServiceManager can be instantiated with valid config."""
-        service_manager = ServiceManager(mock_config)
-        assert service_manager is not None
-        assert service_manager._config == mock_config
-        assert not service_manager.is_running
+def _build_config(api_port: int, ws_port: int) -> Config:
+    return Config(
+        server=ServerConfig(host="127.0.0.1", port=ws_port, websocket_path="/ws", max_connections=10),
+        mediamtx=MediaMTXConfig(
+            host="127.0.0.1",
+            api_port=api_port,
+            rtsp_port=8554,
+            webrtc_port=8889,
+            hls_port=8888,
+            recordings_path="./.tmp_recordings",
+            snapshots_path="./.tmp_snapshots",
+        ),
+        camera=CameraConfig(device_range=[0, 1, 2], enable_capability_detection=True, detection_timeout=0.5),
+        logging=LoggingConfig(),
+        recording=RecordingConfig(),
+        snapshots=SnapshotConfig(),
+    )
 
-    def test_initial_state(self, mock_config):
-        """Test ServiceManager initial state after instantiation."""
-        service_manager = ServiceManager(mock_config)
-        assert not service_manager.is_running
-        assert service_manager._shutdown_event is None
-        assert service_manager._running is False
 
-    @pytest.mark.asyncio
-    async def test_start(self, mock_config):
-        """Test ServiceManager start method."""
-        # TODO: Implement test for start() method
-        # TODO: Mock component initialization
-        # TODO: Verify startup sequence
-        ServiceManager(mock_config)
-        # Test implementation needed when start() is implemented
+@asynccontextmanager
+async def _mediamtx_health_ok(host: str, port: int):
+    async def health(_req: web.Request):
+        return web.json_response({"serverVersion": "test", "serverUptime": 1})
 
-    @pytest.mark.asyncio
-    async def test_stop(self, mock_config):
-        """Test ServiceManager stop method."""
-        # TODO: Implement test for stop() method
-        # TODO: Mock component shutdown
-        # TODO: Verify shutdown sequence
-        ServiceManager(mock_config)
-        # Test implementation needed when stop() is implemented
+    app = web.Application()
+    app.router.add_get("/v3/health", health)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host, port)
+    await site.start()
+    try:
+        yield
+    finally:
+        await runner.cleanup()
 
-    @pytest.mark.asyncio
-    async def test_wait_for_shutdown(self, mock_config):
-        """Test ServiceManager wait_for_shutdown method."""
-        # TODO: Implement test for wait_for_shutdown() method
-        # TODO: Test shutdown event handling
-        ServiceManager(mock_config)
-        # Test implementation needed when wait_for_shutdown() is implemented
 
-    def test_get_status(self, mock_config):
-        """Test ServiceManager get_status method."""
-        service_manager = ServiceManager(mock_config)
-        status = service_manager.get_status()
+@pytest.mark.asyncio
+async def test_req_svc_lifecycle_001_start_and_ping_ws():
+    """
+    Req: SVC-LIFECYCLE-001
+    Service must start all components and respond to WebSocket ping.
+    """
+    api_port = _free_port()
+    ws_port = _free_port()
+    async with _mediamtx_health_ok("127.0.0.1", api_port):
+        cfg = _build_config(api_port, ws_port)
+        svc = ServiceManager(cfg)
+        await svc.start()
+        try:
+            uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            async with websockets.connect(uri) as ws:
+                await ws.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ping", "params": {}}))
+                resp = json.loads(await ws.recv())
+                assert "result" in resp
+        finally:
+            await svc.stop()
 
-        assert isinstance(status, dict)
-        assert "running" in status
-        assert status["running"] is False
 
-    @pytest.mark.asyncio
-    async def test_start_mediamtx_controller(self, mock_config):
-        """Test _start_mediamtx_controller method."""
-        # TODO: Implement test for MediaMTX controller startup
-        # TODO: Mock MediaMTX connectivity verification
-        ServiceManager(mock_config)
-        # Test implementation needed when _start_mediamtx_controller() is implemented
+@pytest.mark.asyncio
+async def test_req_svc_api_cam_list_001_get_camera_list_structure():
+    """
+    Req: SVC-API-CAM-LIST-001
+    WebSocket API must return a list for get_camera_list (may be empty).
+    """
+    api_port = _free_port()
+    ws_port = _free_port()
+    async with _mediamtx_health_ok("127.0.0.1", api_port):
+        cfg = _build_config(api_port, ws_port)
+        svc = ServiceManager(cfg)
+        await svc.start()
+        try:
+            uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            async with websockets.connect(uri) as ws:
+                await ws.send(json.dumps({"jsonrpc": "2.0", "id": 2, "method": "get_camera_list"}))
+                resp = json.loads(await ws.recv())
+                assert isinstance(resp.get("result"), list)
+        finally:
+            await svc.stop()
 
-    @pytest.mark.asyncio
-    async def test_start_camera_monitor(self, mock_config):
-        """Test _start_camera_monitor method."""
-        # TODO: Implement test for camera monitor startup
-        # TODO: Mock camera discovery initialization
-        ServiceManager(mock_config)
-        # Test implementation needed when _start_camera_monitor() is implemented
 
-    @pytest.mark.asyncio
-    async def test_start_health_monitor(self, mock_config):
-        """Test _start_health_monitor method."""
-        # TODO: Implement test for health monitor startup
-        # TODO: Mock health check initialization
-        ServiceManager(mock_config)
-        # Test implementation needed when _start_health_monitor() is implemented
+@pytest.mark.asyncio
+async def test_req_svc_error_001_invalid_method_returns_error():
+    """
+    Req: SVC-ERROR-001
+    Invalid JSON-RPC method must return error without crashing service.
+    """
+    api_port = _free_port()
+    ws_port = _free_port()
+    async with _mediamtx_health_ok("127.0.0.1", api_port):
+        cfg = _build_config(api_port, ws_port)
+        svc = ServiceManager(cfg)
+        await svc.start()
+        try:
+            uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            async with websockets.connect(uri) as ws:
+                await ws.send(json.dumps({"jsonrpc": "2.0", "id": 3, "method": "non_existent"}))
+                resp = json.loads(await ws.recv())
+                assert "error" in resp and resp["error"]["code"] < 0
+        finally:
+            await svc.stop()
 
-    @pytest.mark.asyncio
-    async def test_start_websocket_server(self, mock_config):
-        """Test _start_websocket_server method."""
-        # TODO: Implement test for WebSocket server startup
-        # TODO: Mock server initialization
-        ServiceManager(mock_config)
-        # Test implementation needed when _start_websocket_server() is implemented
 
-    @pytest.mark.asyncio
-    async def test_stop_websocket_server(self, mock_config):
-        """Test _stop_websocket_server method."""
-        # TODO: Implement test for WebSocket server shutdown
-        # TODO: Mock graceful connection closure
-        ServiceManager(mock_config)
-        # Test implementation needed when _stop_websocket_server() is implemented
-
-    @pytest.mark.asyncio
-    async def test_stop_health_monitor(self, mock_config):
-        """Test _stop_health_monitor method."""
-        # TODO: Implement test for health monitor shutdown
-        # TODO: Mock health check cleanup
-        ServiceManager(mock_config)
-        # Test implementation needed when _stop_health_monitor() is implemented
-
-    @pytest.mark.asyncio
-    async def test_stop_camera_monitor(self, mock_config):
-        """Test _stop_camera_monitor method."""
-        # TODO: Implement test for camera monitor shutdown
-        # TODO: Mock camera resource cleanup
-        ServiceManager(mock_config)
-        # Test implementation needed when _stop_camera_monitor() is implemented
-
-    @pytest.mark.asyncio
-    async def test_stop_mediamtx_controller(self, mock_config):
-        """Test _stop_mediamtx_controller method."""
-        # TODO: Implement test for MediaMTX controller shutdown
-        # TODO: Mock stream cleanup
-        ServiceManager(mock_config)
-        # Test implementation needed when _stop_mediamtx_controller() is implemented
-
-    @pytest.mark.asyncio
-    async def test_startup_failure_cleanup(self, mock_config):
-        """Test that startup failures trigger proper cleanup."""
-        # TODO: Implement test for startup failure handling
-        # TODO: Mock component startup failure
-        # TODO: Verify cleanup is called
-        ServiceManager(mock_config)
-        # Test implementation needed when error handling is implemented
-
-    @pytest.mark.asyncio
-    async def test_double_start_raises_error(self, mock_config):
-        """Test that starting an already running service raises RuntimeError."""
-        # TODO: Implement test for double start prevention
-        ServiceManager(mock_config)
-        # Test implementation needed when start() is implemented
+@pytest.mark.asyncio
+async def test_req_svc_shutdown_001_clean_shutdown_and_ws_unavailable():
+    """
+    Req: SVC-SHUTDOWN-001
+    Service must shut down cleanly; WebSocket endpoint must no longer accept connections.
+    """
+    api_port = _free_port()
+    ws_port = _free_port()
+    async with _mediamtx_health_ok("127.0.0.1", api_port):
+        cfg = _build_config(api_port, ws_port)
+        svc = ServiceManager(cfg)
+        await svc.start()
+        await svc.stop()
+        uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+        with pytest.raises(Exception):
+            await websockets.connect(uri)

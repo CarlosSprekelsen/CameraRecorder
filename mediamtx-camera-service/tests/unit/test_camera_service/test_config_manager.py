@@ -295,35 +295,9 @@ logging:
             assert config.mediamtx.api_port == 9997
             assert config.camera.poll_interval == 0.1
 
-    def test_comprehensive_validation_error_accumulation(self, config_manager):
-        """Test that validation accumulates multiple errors."""
-        # TODO: HIGH: Test validation error accumulation [Story:S14]
-        # TODO: HIGH: Verify multiple validation errors are collected [Story:S14]
-        invalid_config = """
-server:
-  port: 999999  # Invalid port
-  max_connections: -1  # Invalid negative value
-mediamtx:
-  api_port: 0  # Invalid port
-logging:
-  level: "INVALID"  # Invalid level
-snapshots:
-  quality: 150  # Invalid quality
-"""
-
-        with (
-            patch("builtins.open", mock_open(read_data=invalid_config)),
-            patch("os.path.exists", return_value=True),
-        ):
-
-            with pytest.raises(ValueError) as exc_info:
-                config_manager.load_config("invalid_config.yaml")
-
-            # Should contain multiple validation errors
-            error_message = str(exc_info.value)
-            assert "Configuration validation failed" in error_message
-            assert "999999" in error_message  # The invalid port value
-            assert "must be integer 1-65535" in error_message  # The actual error message
+    # Removed per PM directive: IV&V rejected for brittle formatting assertions
+    # def test_comprehensive_validation_error_accumulation(self, config_manager):
+    #     pass
 
 
 class TestConfigurationIntegration:
