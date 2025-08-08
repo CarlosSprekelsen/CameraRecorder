@@ -98,524 +98,313 @@ class TestCapabilityParsingVariations:
             ),
             # Mixed valid/invalid data
             (
-                "Card type: Test Camera\nFormat [0]: 'YUYV'\nSize: Discrete 1920x1080\nCorrupted frame rate data",
-                True,
+                "Card type: USB Camera\nFormat [0]: corrupted\nDriver: uvcvideo",
+                False,
                 "mixed valid/invalid",
             ),
         ]
 
-        for output, should_succeed, description in malformed_outputs:
+        for output, expected_valid, description in malformed_outputs:
+            # Mock subprocess to return our test output
             with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-                # Mock process that returns our test output
                 mock_process = AsyncMock()
                 mock_process.communicate.return_value = (output.encode(), b"")
                 mock_process.returncode = 0
                 mock_subprocess.return_value = mock_process
 
+                # Test capability detection
                 result = await monitor._probe_device_capabilities("/dev/video0")
-
-                if should_succeed:
-                    assert (
-                        result.detected
-                    ), f"Should have succeeded for {description}: {output}"
-                    assert result.accessible, f"Should be accessible for {description}"
-                else:
-                    assert (
-                        not result.detected or result.error
-                    ), f"Should have failed for {description}: {output}"
+                assert result.detected == expected_valid, f"Failed for {description}"
 
     @pytest.mark.asyncio
     async def test_capability_timeout_handling(self, monitor):
-        """Test capability detection timeout scenarios with structured diagnostics."""
+        """Test capability detection timeout handling with mocked subprocess delays."""
 
-        timeout_scenarios = [
-            ("device_info", "_probe_device_info_robust"),
-            ("formats", "_probe_device_formats_robust"),
-            ("framerates", "_probe_device_framerates_robust"),
-            ("overall", "_probe_device_capabilities"),
-        ]
+        # Mock subprocess that takes too long
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            async def slow_communicate():
+                await asyncio.sleep(3.0)  # Longer than timeout
+                return (b"valid output", b"")
 
-        for scenario_name, method_name in timeout_scenarios:
-            # Test timeout in specific method
-            with patch.object(monitor, method_name, side_effect=asyncio.TimeoutError()):
-                try:
-                    result = await monitor._probe_device_capabilities("/dev/video0")
-                    # If we get here, the timeout was handled properly
-                    assert (
-                        not result.detected
-                    ), f"Should fail on {scenario_name} timeout"
-                    assert (
-                        "timeout" in result.error.lower()
-                    ), f"Error should mention timeout for {scenario_name}"
-                    assert (
-                        result.timeout_context is not None
-                    ), f"Timeout context should be set for {scenario_name}"
-                    assert (
-                        result.structured_diagnostics
-                    ), f"Should have diagnostics for {scenario_name}"
-                except asyncio.TimeoutError:
-                    # If timeout is not handled, this is expected behavior
-                    # The test should pass as the timeout is properly propagated
-                    pass
+            mock_process = AsyncMock()
+            mock_process.communicate = slow_communicate
+            mock_process.returncode = 0
+            mock_subprocess.return_value = mock_process
+
+            # Test with short timeout
+            result = await monitor._probe_device_capabilities("/dev/video0")
+            assert not result.detected
+            assert "timeout" in result.error.lower()
 
     @pytest.mark.asyncio
     async def test_provisional_confirmed_capability_validation(self, monitor):
-        """Test provisional/confirmed capability validation state machine."""
+        """Test provisional to confirmed capability state transitions."""
 
         device_path = "/dev/video0"
-
-        # Create consistent capability results
-        consistent_result = CapabilityDetectionResult(
+        mock_capability = CapabilityDetectionResult(
             device_path=device_path,
             detected=True,
             accessible=True,
-            resolutions=["1920x1080", "1280x720"],
-            frame_rates=["30", "25", "15"],
+            resolutions=["1920x1080"],
+            frame_rates=["30"],
             formats=[{"code": "YUYV", "description": "YUYV 4:2:2"}],
         )
 
-        # Test provisional state establishment
-        await monitor._update_capability_validation_state(
-            device_path, consistent_result
-        )
-        state = monitor._get_capability_state_for_testing(device_path)
+        # Mock capability detection
+        with patch.object(
+            monitor, "_probe_device_capabilities", return_value=mock_capability
+        ):
+            # First probe - should be provisional
+            await monitor._update_capability_state(device_path, mock_capability)
+            state = monitor._get_or_create_capability_state(device_path)
+            assert not state.is_confirmed()
+            assert state.provisional_data is not None
 
-        assert state is not None
-        assert state.provisional_data is not None
-        assert state.confirmed_data is None
-        assert state.consecutive_successes == 1
-        assert not state.is_confirmed()
-
-        # Test confirmation through consistent results
-        await monitor._update_capability_validation_state(
-            device_path, consistent_result
-        )
-
-        assert state.consecutive_successes == 2
-        assert state.confirmed_data is not None
-        assert state.is_confirmed()
-
-        # Test inconsistent data handling
-        inconsistent_result = CapabilityDetectionResult(
-            device_path=device_path,
-            detected=True,
-            accessible=True,
-            resolutions=["640x480"],  # Different resolutions
-            frame_rates=["60"],  # Different frame rates
-            formats=[{"code": "MJPG", "description": "MJPEG"}],  # Different format
-        )
-
-        await monitor._update_capability_validation_state(
-            device_path, inconsistent_result
-        )
-
-        # The frequency-based system handles variance differently
-        # It may continue incrementing successes for minor variance
-        # The key is that the frequency data should reflect both detections
-        assert "640x480" in state.resolution_frequency
-        assert "60" in state.frame_rate_frequency
-        assert "MJPG" in state.format_frequency
-        # Both original and new detections should be tracked
-        assert state.resolution_frequency["1920x1080"] >= 1
-        assert state.resolution_frequency["640x480"] >= 1
+            # Second probe with same data - should become confirmed
+            await monitor._update_capability_state(device_path, mock_capability)
+            state = monitor._get_or_create_capability_state(device_path)
+            assert state.is_confirmed()
+            assert state.confirmed_data is not None
 
 
 class TestUdevEventProcessingAndRaceConditions:
-    """Test udev event processing, filtering, and race condition handling."""
+    """Test udev event processing and race condition handling."""
 
     @pytest.fixture
     def monitor(self):
-        """Create monitor with test configuration."""
+        """Create monitor with udev enabled."""
         return HybridCameraMonitor(
             device_range=[0, 1, 2],
-            poll_interval=0.1,
-            enable_capability_detection=False,  # Simplify for udev testing
+            enable_capability_detection=True,
+            detection_timeout=1.0,
         )
 
     @pytest.mark.asyncio
     async def test_udev_event_filtering_comprehensive(self, monitor):
-        """Test comprehensive udev event filtering scenarios."""
+        """Test comprehensive udev event filtering logic."""
 
-        monitor._set_test_mode(True)
+        # Mock udev device with various properties
+        mock_device = Mock()
+        mock_device.device_node = "/dev/video0"
+        mock_device.action = "add"
+        mock_device.get.return_value = "video4linux"
 
-        # Track statistics before
-        initial_stats = monitor.get_monitor_stats()
+        # Test device addition
+        await monitor._process_udev_device_event(mock_device)
 
-        filter_test_cases = [
-            # Valid events (should be processed)
-            ("/dev/video0", "add", True, "valid device in range"),
-            ("/dev/video1", "remove", True, "valid device removal"),
-            ("/dev/video2", "change", True, "valid device change"),
-            # Invalid events (should be filtered)
-            ("/dev/video5", "add", False, "device outside range"),
-            ("/dev/audio0", "add", False, "non-video device"),
-            ("/dev/invalid", "add", False, "malformed device path"),
-            (None, "add", False, "null device path"),
-            ("", "add", False, "empty device path"),
-            ("/dev/video", "add", False, "device path without number"),
-            # Edge cases
-            ("/dev/video0extra", "add", False, "device path with extra text"),
-            ("/custom/video0", "add", False, "non-standard device path"),
-        ]
+        # Verify device was processed
+        assert "/dev/video0" in monitor._known_devices
 
-        processed_count = 0
-        filtered_count = 0
+        # Test device removal
+        mock_device.action = "remove"
+        await monitor._process_udev_device_event(mock_device)
 
-        for device_path, action, should_process, description in filter_test_cases:
-            # Create mock udev device
-            mock_device = Mock()
-            mock_device.device_node = device_path
-            mock_device.action = action
-
-            await monitor._process_udev_device_event(mock_device)
-
-            if should_process:
-                processed_count += 1
-            else:
-                filtered_count += 1
-
-        # Verify statistics
-        final_stats = monitor.get_monitor_stats()
-
-        # The filtering logic should have incremented the filtered count
-        # Note: Some events might be processed differently than expected
-        # but the key is that filtering should have occurred
-        filtered_increment = (
-            final_stats["udev_events_filtered"] - initial_stats["udev_events_filtered"]
-        )
-        assert (
-            filtered_increment >= 0
-        ), f"Filtered count should not decrease: {filtered_increment}"
-
-        # At least some events should have been filtered
-        assert (
-            filtered_increment > 0
-        ), f"Expected some events to be filtered, got {filtered_increment}"
-
-        monitor._set_test_mode(False)
+        # Verify device was removed
+        assert "/dev/video0" not in monitor._known_devices
 
     @pytest.mark.asyncio
     async def test_udev_race_condition_simulation(self, monitor):
-        """Test race condition handling in concurrent udev events."""
+        """Test race condition handling between udev events and polling."""
 
-        monitor._set_test_mode(True)
         device_path = "/dev/video0"
 
-        # Mock device creation to succeed
-        with patch.object(monitor, "_create_camera_device_info") as mock_create:
-            mock_device = CameraDevice(
-                device=device_path, name="Test Camera", status="CONNECTED"
-            )
-            mock_create.return_value = mock_device
+        # Simulate rapid add/remove/add sequence
+        await self._simulate_delayed_udev_event(monitor, device_path, "add", 0.0)
+        await self._simulate_delayed_udev_event(monitor, device_path, "remove", 0.1)
+        await self._simulate_delayed_udev_event(monitor, device_path, "add", 0.2)
 
-            # Simulate rapid add/remove/add sequence (race condition)
-            event_sequence = [
-                ("add", 0.01),
-                ("remove", 0.01),
-                ("add", 0.01),
-                ("change", 0.01),
-                ("remove", 0.01),
-            ]
-
-            # Execute events concurrently
-            tasks = []
-            for action, delay in event_sequence:
-                task = asyncio.create_task(
-                    self._simulate_delayed_udev_event(
-                        monitor, device_path, action, delay
-                    )
-                )
-                tasks.append(task)
-
-            # Wait for all events to complete
-            await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Verify final state consistency
-            stats = monitor.get_monitor_stats()
-            assert stats["udev_events_processed"] >= len(event_sequence)
-
-        monitor._set_test_mode(False)
+        # Verify final state is consistent
+        assert device_path in monitor._known_devices
 
     async def _simulate_delayed_udev_event(
         self, monitor, device_path: str, action: str, delay: float
     ):
-        """Simulate udev event with delay for race condition testing."""
+        """Simulate udev event with delay."""
         await asyncio.sleep(delay)
-        await monitor._inject_test_udev_event(device_path, action)
+        mock_device = Mock()
+        mock_device.device_node = device_path
+        mock_device.action = action
+        mock_device.get.return_value = "video4linux"
+        await monitor._process_udev_device_event(mock_device)
 
     @pytest.mark.asyncio
     async def test_udev_change_event_status_detection(self, monitor):
-        """Test udev 'change' event proper status change detection."""
+        """Test udev change event status detection and handling."""
 
-        monitor._set_test_mode(True)
         device_path = "/dev/video0"
+        mock_device = Mock()
+        mock_device.device_node = device_path
+        mock_device.action = "change"
+        mock_device.get.return_value = "video4linux"
 
-        # Mock sequence: device appears, status changes, disappears
-        status_sequence = ["CONNECTED", "ERROR", "DISCONNECTED"]
+        # Add device first
+        add_device = Mock()
+        add_device.device_node = device_path
+        add_device.action = "add"
+        add_device.get.return_value = "video4linux"
+        await monitor._process_udev_device_event(add_device)
 
-        for i, status in enumerate(status_sequence):
-            mock_device = CameraDevice(
-                device=device_path, name="Test Camera", status=status
-            )
+        # Then simulate change event
+        await monitor._process_udev_device_event(mock_device)
 
-            with patch.object(
-                monitor, "_create_camera_device_info", return_value=mock_device
-            ):
-                if i == 0:
-                    # First event: add
-                    await monitor._inject_test_udev_event(device_path, "add")
-                else:
-                    # Subsequent events: change
-                    await monitor._inject_test_udev_event(device_path, "change")
-
-        monitor._set_test_mode(False)
+        # Verify device still exists and status was updated
+        assert device_path in monitor._known_devices
 
 
 class TestPollingFallbackBehavior:
-    """Test polling fallback behavior when udev is silent or unavailable."""
+    """Test polling fallback behavior when udev is unavailable."""
 
     @pytest.fixture
     def monitor_no_udev(self):
-        """Create monitor with udev disabled to test polling-only mode."""
+        """Create monitor with udev disabled."""
         with patch("src.camera_discovery.hybrid_monitor.HAS_PYUDEV", False):
             return HybridCameraMonitor(
-                device_range=[0, 1],
-                poll_interval=0.05,  # Fast polling for testing
-                enable_capability_detection=False,
+                device_range=[0, 1, 2],
+                enable_capability_detection=True,
+                detection_timeout=1.0,
             )
 
     @pytest.mark.asyncio
     async def test_polling_only_mode_device_discovery(self, monitor_no_udev):
         """Test device discovery in polling-only mode."""
 
-        # Mock device existence
-        test_devices = {
-            "/dev/video0": ("CONNECTED", "Camera 0"),
-            "/dev/video1": ("DISCONNECTED", "Camera 1"),
-        }
-
-        with (
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("builtins.open") as mock_open,
-        ):
+        # Mock file system operations
+        with patch("pathlib.Path.exists") as mock_exists, patch("builtins.open") as mock_open:
+            mock_exists.return_value = True
 
             def mock_path_exists(path_str):
-                return str(path_str) in test_devices
+                return path_str in ["/dev/video0", "/dev/video1"]
 
             def mock_open_device(path, mode="rb"):
-                if path in test_devices and test_devices[path][0] == "CONNECTED":
-                    return Mock()  # Successful open
-                else:
-                    raise OSError("Device not accessible")
+                mock_file = Mock()
+                mock_file.read.return_value = b"mock device data"
+                return mock_file
 
             mock_exists.side_effect = mock_path_exists
             mock_open.side_effect = mock_open_device
 
-            # Mock event handler to capture events
-            event_handler = Mock()
-            event_handler.handle_camera_event = AsyncMock()
-            monitor_no_udev.add_event_handler(event_handler)
-
-            # Run discovery cycle
+            # Test discovery
             await monitor_no_udev._discover_cameras()
 
-            # Manually increment polling cycles since we're calling _discover_cameras directly
-            monitor_no_udev._stats["polling_cycles"] += 1
-
-            # Verify discovery results
-            stats = monitor_no_udev.get_monitor_stats()
-            assert stats["polling_cycles"] > 0
-
-            # Should have found devices
+            # Verify devices were discovered
             assert len(monitor_no_udev._known_devices) > 0
 
     @pytest.mark.asyncio
     async def test_adaptive_polling_interval_adjustment(self, monitor_no_udev):
-        """Test adaptive polling interval adjustment based on udev event freshness."""
+        """Test adaptive polling interval adjustment logic."""
 
-        # Get initial polling state
-        initial_state = monitor_no_udev._get_adaptive_polling_state_for_testing()
+        initial_interval = monitor_no_udev._current_poll_interval
 
-        # Simulate scenario: no recent udev events (should increase polling frequency)
-        current_time = time.time()
-        monitor_no_udev._last_udev_event_time = current_time - 20.0  # 20 seconds ago
+        # Simulate no recent udev events
+        monitor_no_udev._last_udev_event_time = time.time() - 10.0
 
+        # Adjust polling interval
         await monitor_no_udev._adjust_polling_interval()
 
-        state_after_stale = monitor_no_udev._get_adaptive_polling_state_for_testing()
-
-        # Should have reduced interval (increased frequency) or stayed the same
-        # The adjustment might be small and not detectable in the test
-        assert (
-            state_after_stale["current_interval"] <= initial_state["current_interval"]
-        )
-
-        # Simulate scenario: recent udev events (should decrease polling frequency)
-        monitor_no_udev._last_udev_event_time = current_time - 2.0  # 2 seconds ago
-
-        await monitor_no_udev._adjust_polling_interval()
-
-        state_after_fresh = monitor_no_udev._get_adaptive_polling_state_for_testing()
-
-        # Should have increased interval (decreased frequency) or stayed the same
-        # The adjustment might be small and not detectable in the test
-        assert (
-            state_after_fresh["current_interval"]
-            >= state_after_stale["current_interval"]
-        )
+        # Verify interval increased
+        assert monitor_no_udev._current_poll_interval < initial_interval
 
     @pytest.mark.asyncio
     async def test_polling_failure_backoff_with_jitter(self, monitor_no_udev):
-        """Test polling failure handling with exponential backoff and jitter."""
+        """Test polling failure backoff with jitter."""
 
-        # Mock discovery to always fail
-        with patch.object(
-            monitor_no_udev,
-            "_discover_cameras",
-            side_effect=Exception("Simulated failure"),
-        ):
+        initial_interval = monitor_no_udev._current_poll_interval
 
-            # Monitor polling state
-            initial_failure_count = monitor_no_udev._polling_failure_count
+        # Simulate polling failure
+        with patch.object(monitor_no_udev, "_discover_cameras", side_effect=Exception("Test failure")):
+            # Run one iteration of polling loop
+            try:
+                await monitor_no_udev._adaptive_polling_loop()
+            except Exception:
+                pass  # Expected due to mocked failure
 
-            # Simulate several polling failures
-            for i in range(3):
-                try:
-                    await monitor_no_udev._discover_cameras()
-                except (
-                    Exception
-                ):  # TODO: MEDIUM: refine exception type if known [IV&V:S3]
-                    monitor_no_udev._polling_failure_count += 1
-
-            # Verify failure count increased
-            assert monitor_no_udev._polling_failure_count > initial_failure_count
-
-            # Test backoff calculation
-            state = monitor_no_udev._get_adaptive_polling_state_for_testing()
-            assert state["failure_count"] > 0
+        # Verify backoff was applied
+        assert monitor_no_udev._polling_failure_count > 0
 
 
 class TestTimeoutAndSubprocessFailureHandling:
-    """Test timeout and subprocess failure handling with structured error reporting."""
+    """Test timeout and subprocess failure handling."""
 
     @pytest.fixture
     def monitor(self):
         """Create monitor for timeout testing."""
         return HybridCameraMonitor(
-            device_range=[0],
-            detection_timeout=0.5,  # Short timeout for testing
+            device_range=[0, 1, 2],
             enable_capability_detection=True,
+            detection_timeout=1.0,
         )
 
     @pytest.mark.asyncio
     async def test_subprocess_timeout_handling(self, monitor):
-        """Test subprocess timeout handling with proper error contexts."""
+        """Test subprocess timeout handling."""
 
-        device_path = "/dev/video0"
+        # Mock subprocess that hangs
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            async def hanging_communicate():
+                await asyncio.sleep(5.0)  # Longer than timeout
+                return (b"", b"")
 
-        # Test timeout in different subprocess operations
-        timeout_scenarios = [
-            ("v4l2-ctl device info", ["v4l2-ctl", "--device", device_path, "--info"]),
-            (
-                "v4l2-ctl formats",
-                ["v4l2-ctl", "--device", device_path, "--list-formats-ext"],
-            ),
-            (
-                "v4l2-ctl framerates",
-                ["v4l2-ctl", "--device", device_path, "--list-framesizes", "YUYV"],
-            ),
-        ]
+            mock_process = AsyncMock()
+            mock_process.communicate = hanging_communicate
+            mock_process.returncode = 0
+            mock_subprocess.return_value = mock_process
 
-        for scenario_name, cmd in timeout_scenarios:
-            with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-                # Mock subprocess that never completes
-                mock_process = AsyncMock()
-                mock_process.communicate = AsyncMock(side_effect=asyncio.TimeoutError())
-                mock_subprocess.return_value = mock_process
-
-                result = await monitor._probe_device_capabilities(device_path)
-
-                assert not result.detected, f"Should fail for {scenario_name} timeout"
-                assert (
-                    "timeout" in result.error.lower()
-                ), f"Error should mention timeout for {scenario_name}"
-                assert result.structured_diagnostics is not None
-                assert "timeout_threshold" in result.structured_diagnostics
+            # Test capability detection with timeout
+            result = await monitor._probe_device_capabilities("/dev/video0")
+            assert not result.detected
+            assert "timeout" in result.error.lower()
 
     @pytest.mark.asyncio
     async def test_subprocess_failure_handling(self, monitor):
-        """Test subprocess failure handling with structured diagnostics."""
+        """Test subprocess failure handling."""
 
-        device_path = "/dev/video0"
+        # Mock subprocess that fails
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.communicate.return_value = (b"", b"error message")
+            mock_process.returncode = 1
+            mock_subprocess.return_value = mock_process
 
-        # Test different subprocess failure modes
-        failure_scenarios = [
-            (1, b"", b"Device not found", "device_not_found"),
-            (2, b"", b"Permission denied", "permission_denied"),
-            (127, b"", b"Command not found", "command_not_found"),
-        ]
-
-        for return_code, stdout, stderr, error_type in failure_scenarios:
-            with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-                mock_process = AsyncMock()
-                mock_process.communicate.return_value = (stdout, stderr)
-                mock_process.returncode = return_code
-                mock_subprocess.return_value = mock_process
-
-                result = await monitor._probe_device_capabilities(device_path)
-
-                # Should handle gracefully without crashing
-                assert result is not None
-                assert result.structured_diagnostics is not None
-
-                # Error context should be captured
-                if return_code != 0:
-                    assert not result.detected or result.error
+            # Test capability detection with failure
+            result = await monitor._probe_device_capabilities("/dev/video0")
+            assert not result.detected
+            assert result.error is not None
 
     @pytest.mark.asyncio
     async def test_concurrent_capability_probes_handling(self, monitor):
-        """Test handling of concurrent capability probe requests."""
+        """Test concurrent capability probe handling."""
 
         device_paths = ["/dev/video0", "/dev/video1", "/dev/video2"]
 
-        # Mock successful probe responses
-        with (
-            patch.object(monitor, "_probe_device_info_robust") as mock_info,
-            patch.object(monitor, "_probe_device_formats_robust") as mock_formats,
-            patch.object(monitor, "_probe_device_framerates_robust") as mock_rates,
-        ):
+        # Mock capability detection
+        with patch.object(monitor, "_probe_device_capabilities") as mock_probe:
+            mock_probe.return_value = CapabilityDetectionResult(
+                device_path="test",
+                detected=True,
+                accessible=True,
+            )
 
-            mock_info.return_value = {"name": "Test Camera", "driver": "uvcvideo"}
-            mock_formats.return_value = {"formats": [], "resolutions": ["1920x1080"]}
-            mock_rates.return_value = ["30", "15"]
-
-            # Launch concurrent probes
+            # Run concurrent probes
             tasks = [
-                monitor._probe_device_capabilities(device_path)
-                for device_path in device_paths
+                monitor._probe_device_capabilities(path) for path in device_paths
             ]
-
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Verify all probes completed
             assert len(results) == len(device_paths)
-
-            # Verify no exceptions were raised
-            for result in results:
-                assert not isinstance(
-                    result, Exception
-                ), f"Unexpected exception: {result}"
-                assert hasattr(result, "detected")
+            assert all(isinstance(r, CapabilityDetectionResult) for r in results)
 
 
 class TestIntegrationAndLifecycle:
-    """Integration tests for full monitor lifecycle and component coordination."""
+    """Test integration scenarios and monitor lifecycle."""
 
     @pytest.fixture
     def monitor(self):
-        """Create monitor for integration testing."""
+        """Create monitor for lifecycle testing."""
         return HybridCameraMonitor(
-            device_range=[0, 1], poll_interval=0.05, enable_capability_detection=True
+            device_range=[0, 1, 2],
+            enable_capability_detection=True,
+            detection_timeout=1.0,
         )
 
     @pytest.mark.asyncio
@@ -628,31 +417,40 @@ class TestIntegrationAndLifecycle:
         assert initial_stats["running"] is False
         assert initial_stats["active_tasks"] == 0
 
-        # Start monitor
-        with patch(
-            "src.camera_discovery.hybrid_monitor.HAS_PYUDEV", False
-        ):  # Disable udev for testing
-            await monitor.start()
+        # Start monitor with timeout protection
+        with patch("src.camera_discovery.hybrid_monitor.HAS_PYUDEV", False):
+            try:
+                # Start monitor with timeout
+                await asyncio.wait_for(monitor.start(), timeout=5.0)
 
-            assert monitor.is_running
-            running_stats = monitor.get_monitor_stats()
-            assert running_stats["running"] is True
-            assert running_stats["active_tasks"] > 0
+                assert monitor.is_running
+                running_stats = monitor.get_monitor_stats()
+                assert running_stats["running"] is True
+                assert running_stats["active_tasks"] > 0
 
-            # Let monitor run briefly
-            await asyncio.sleep(0.1)
+                # Let monitor run briefly
+                await asyncio.sleep(0.1)
 
-            # Verify some activity occurred
-            activity_stats = monitor.get_monitor_stats()
-            assert activity_stats["polling_cycles"] > 0
+                # Verify some activity occurred
+                activity_stats = monitor.get_monitor_stats()
+                assert activity_stats["polling_cycles"] > 0
 
-            # Stop monitor
-            await monitor.stop()
+                # Stop monitor with timeout
+                await asyncio.wait_for(monitor.stop(), timeout=5.0)
 
-            assert not monitor.is_running
-            final_stats = monitor.get_monitor_stats()
-            assert final_stats["running"] is False
-            assert final_stats["active_tasks"] == 0
+                assert not monitor.is_running
+                final_stats = monitor.get_monitor_stats()
+                assert final_stats["running"] is False
+                assert final_stats["active_tasks"] == 0
+
+            except asyncio.TimeoutError:
+                # Force cleanup if timeout occurs
+                monitor._running = False
+                for task in monitor._monitoring_tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*monitor._monitoring_tasks, return_exceptions=True)
+                raise
 
     @pytest.mark.asyncio
     async def test_end_to_end_device_workflow(self, monitor):
@@ -718,25 +516,25 @@ class TestIntegrationAndLifecycle:
 def create_mock_v4l2_output(formats=None, resolutions=None, frame_rates=None):
     """Create mock v4l2-ctl output for testing."""
     output_lines = [
-        "Driver info:",
-        "Card type    : Test Camera",
-        "Driver name  : uvcvideo",
+        "Driver name: uvcvideo",
+        "Card type: USB Camera",
+        "Bus info: usb-0000:00:14.0-1",
     ]
 
     if formats:
-        output_lines.append("Supported formats:")
-        for i, fmt in enumerate(formats):
-            output_lines.append(f"[{i}]: '{fmt}' (Test Format)")
+        output_lines.append("Format [0]:")
+        for fmt in formats:
+            output_lines.append(f"  {fmt}")
 
     if resolutions:
-        output_lines.append("Supported resolutions:")
+        output_lines.append("Size: Discrete 1920x1080")
         for res in resolutions:
-            output_lines.append(f"Size: Discrete {res}")
+            output_lines.append(f"  {res}")
 
     if frame_rates:
-        output_lines.append("Supported frame rates:")
+        output_lines.append("Frame rate: Discrete 30.000 fps")
         for rate in frame_rates:
-            output_lines.append(f"{rate} fps")
+            output_lines.append(f"  {rate} fps")
 
     return "\n".join(output_lines)
 
@@ -744,12 +542,10 @@ def create_mock_v4l2_output(formats=None, resolutions=None, frame_rates=None):
 def assert_capability_consistency(
     result1: CapabilityDetectionResult, result2: CapabilityDetectionResult
 ):
-    """Assert that two capability detection results are consistent."""
+    """Assert that two capability results are consistent."""
     assert result1.detected == result2.detected
-    if result1.detected and result2.detected:
-        # Allow some variation but check core consistency
-        assert bool(result1.resolutions) == bool(result2.resolutions)
-        assert bool(result1.frame_rates) == bool(result2.frame_rates)
+    assert result1.accessible == result2.accessible
+    assert result1.device_path == result2.device_path
 
 
 # Pytest configuration

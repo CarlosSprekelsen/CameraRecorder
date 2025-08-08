@@ -387,8 +387,11 @@ class HybridCameraMonitor:
                     # Poll for udev events with timeout
                     device = self._udev_monitor.poll(timeout=1.0)
                     if device:
-                        await self._process_udev_device_event(device)
+                        await asyncio.wait_for(self._process_udev_device_event(device), timeout=5.0)
 
+                except asyncio.TimeoutError:
+                    self._logger.warning("Udev event processing timed out, continuing...")
+                    continue
                 except Exception as e:
                     self._logger.error(
                         f"Error in udev monitoring loop: {e}", exc_info=True
@@ -657,14 +660,14 @@ class HybridCameraMonitor:
                 loop_start = time.time()
 
                 try:
-                    # Perform discovery
-                    await self._discover_cameras()
+                    # Perform discovery with timeout protection
+                    await asyncio.wait_for(self._discover_cameras(), timeout=5.0)
                     self._stats["polling_cycles"] += 1
                     polling_error_count = 0  # Reset on success
                     self._polling_failure_count = 0
 
                     # Adaptive polling interval adjustment
-                    await self._adjust_polling_interval()
+                    await asyncio.wait_for(self._adjust_polling_interval(), timeout=1.0)
 
                     # Sleep with consideration for loop execution time
                     loop_duration = time.time() - loop_start
@@ -672,6 +675,30 @@ class HybridCameraMonitor:
 
                     if sleep_time > 0:
                         await asyncio.sleep(sleep_time)
+
+                except asyncio.TimeoutError:
+                    polling_error_count += 1
+                    self._polling_failure_count += 1
+                    self._logger.warning(
+                        f"Polling operation timed out (attempt #{polling_error_count})",
+                        extra={
+                            "component": "hybrid_monitor",
+                            "error_type": "polling_timeout",
+                            "error_count": polling_error_count,
+                        },
+                    )
+                    
+                    if polling_error_count >= self._max_consecutive_failures:
+                        self._logger.critical(
+                            f"Too many consecutive polling timeouts ({polling_error_count}), "
+                            "stopping polling loop",
+                            extra={
+                                "component": "hybrid_monitor",
+                                "error_type": "polling_timeout",
+                                "error_count": polling_error_count,
+                            },
+                        )
+                        break
 
                 except Exception as e:
                     polling_error_count += 1
