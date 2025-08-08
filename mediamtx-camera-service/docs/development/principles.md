@@ -1,6 +1,6 @@
 # Development Principles
 
-These principles must be followed by all contributors and maintainers of the MediaMTX Camera Service project. They exist to enforce quality, traceability, and professional consistency from architecture through implementation, testing, and operations.
+These principles must be followed by all contributors and maintainers of the project. They exist to enforce quality, traceability, and professional consistency from architecture through implementation, testing, and operations.
 
 ## Core Principles
 
@@ -44,7 +44,7 @@ All in-code TODO and STOP comments **must follow the exact format below**. This 
 
 Examples (copy-paste these lines as-is into code):
 ```python
-# TODO: CRITICAL: Replace placeholder return with actual MediaMTX API call [IV&V:S1b]
+# TODO: CRITICAL: Replace placeholder return with actual API call [IV&V:S1b]
 # TODO: MEDIUM: Add schema validation to configuration loader [Story:E1/S1b]
 ```
 
