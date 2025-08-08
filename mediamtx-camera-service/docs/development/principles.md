@@ -90,4 +90,4 @@ Example:
 - **Professionalism:** Clear communication and structured work reflect reliability to users and contributors.
 - **Clarity:** Explicit linking between intent, design, implementation, and verification prevents drift and hidden debt.
 
-For more details, see the [project README](../../README.md) and [architecture overview](../architecture/overview.md).
+For more details, see your project's README and architecture documentation.
