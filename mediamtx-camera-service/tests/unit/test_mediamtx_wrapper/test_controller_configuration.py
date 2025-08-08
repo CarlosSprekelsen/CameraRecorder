@@ -31,8 +31,37 @@ class TestConfigurationValidation:
             snapshots_path="/tmp/snapshots",
         )
         
-        # Simple mock session that raises validation errors before HTTP calls
-        controller._session = Mock()
+        # Create a proper async context manager mock
+        class MockResponse:
+            def __init__(self):
+                self.status = 200
+                self._json_data = {"status": "ok"}
+                self._text_data = ""
+            
+            async def json(self):
+                return self._json_data
+            
+            async def text(self):
+                return self._text_data
+        
+        class MockPostContextManager:
+            def __init__(self, response):
+                self.response = response
+            
+            async def __aenter__(self):
+                return self.response
+            
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+        
+        # Create mock session with proper async context manager
+        mock_session = AsyncMock()
+        mock_response = MockResponse()
+        
+        # Make post() return an async context manager directly (not awaited)
+        mock_session.post = Mock(return_value=MockPostContextManager(mock_response))
+        
+        controller._session = mock_session
         return controller
 
     def _mock_response(self, status, json_data=None, text_data=""):

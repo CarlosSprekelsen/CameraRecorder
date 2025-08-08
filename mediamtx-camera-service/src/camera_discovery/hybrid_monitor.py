@@ -278,13 +278,19 @@ class HybridCameraMonitor:
         return self._running
 
     def get_monitor_stats(self) -> Dict[str, Any]:
-        """Get monitoring statistics and diagnostic information."""
-        stats = self._stats.copy()
-        stats["known_devices_count"] = len(self._known_devices)
-        stats["capability_states_count"] = len(self._capability_states)
-        stats["active_tasks"] = len([t for t in self._monitoring_tasks if not t.done()])
-        stats["running"] = self._running
-        return stats
+        """Get monitoring statistics."""
+        return {
+            "running": self._running,
+            "active_tasks": len(self._monitoring_tasks),
+            "polling_cycles": self._stats.get("polling_cycles", 0),
+            "device_state_changes": self._stats.get("device_state_changes", 0),
+            "capability_probes_attempted": self._stats.get("capability_probes_attempted", 0),
+            "capability_probes_successful": self._stats.get("capability_probes_successful", 0),
+            "capability_timeouts": self._stats.get("capability_timeouts", 0),
+            "polling_failure_count": self._polling_failure_count,
+            "current_poll_interval": self._current_poll_interval,
+            "known_devices_count": len(self._known_devices),
+        }
 
     async def start(self) -> None:
         """Start the camera monitoring system."""
@@ -609,20 +615,49 @@ class HybridCameraMonitor:
                 device=device_path, name=f"Camera {device_num}", status="ERROR"
             )
 
-        # Determine status based on basic accessibility
+        # Determine status based on basic accessibility with timeout
         try:
-            # Try to open device for basic validation
-            with open(device_path, "rb"):
-                status = "CONNECTED"
-        except (OSError, PermissionError):
+            # Use asyncio to make the file operation non-blocking with timeout
+            def check_device_access():
+                try:
+                    with open(device_path, "rb"):
+                        return "CONNECTED"
+                except (OSError, PermissionError):
+                    return "DISCONNECTED"
+                except Exception:
+                    return "ERROR"
+            
+            # Run the blocking operation in a thread pool with timeout
+            loop = asyncio.get_event_loop()
+            status = await asyncio.wait_for(
+                loop.run_in_executor(None, check_device_access),
+                timeout=1.0  # 1 second timeout for device access check
+            )
+        except asyncio.TimeoutError:
+            self._logger.debug(f"Device access check timed out for {device_path}")
             status = "DISCONNECTED"
-        except Exception:
+        except Exception as e:
+            self._logger.debug(f"Device access check failed for {device_path}: {e}")
             status = "ERROR"
 
         try:
             device_info = CameraDevice(
                 device=device_path, name=f"Camera {device_num}", status=status
             )
+            
+            # Trigger capability detection if enabled and device is accessible
+            if self._enable_capability_detection and status == "CONNECTED":
+                try:
+                    # Run capability detection with timeout
+                    await asyncio.wait_for(
+                        self._probe_device_capabilities(device_path),
+                        timeout=2.0  # 2 second timeout for capability detection
+                    )
+                except asyncio.TimeoutError:
+                    self._logger.debug(f"Capability detection timed out for {device_path}")
+                except Exception as e:
+                    self._logger.debug(f"Capability probing failed for {device_path}: {e}")
+            
             return device_info
         except Exception as e:
             self._logger.error(
@@ -632,15 +667,6 @@ class HybridCameraMonitor:
             return CameraDevice(
                 device=device_path, name=f"Camera {device_num}", status="ERROR"
             )
-
-        # Trigger capability detection if enabled and device is accessible
-        if self._enable_capability_detection and status == "CONNECTED":
-            try:
-                await self._probe_device_capabilities(device_path)
-            except Exception as e:
-                self._logger.debug(f"Capability probing failed for {device_path}: {e}")
-
-        return device_info
 
     async def _adaptive_polling_loop(self) -> None:
         """
@@ -2182,3 +2208,13 @@ class HybridCameraMonitor:
         Polling monitor for device discovery.
         """
         await self._adaptive_polling_loop()
+
+    async def get_connected_cameras(self) -> Dict[str, CameraDevice]:
+        """
+        Get currently connected cameras.
+        
+        Returns:
+            Dictionary mapping device paths to CameraDevice objects
+        """
+        # Return a copy of known devices to avoid modification during iteration
+        return self._known_devices.copy()
