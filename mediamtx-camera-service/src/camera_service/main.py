@@ -1,4 +1,4 @@
-﻿"""
+"""
 Main entry point for the camera service application.
 
 Provides robust startup/shutdown with proper error handling, graceful signal

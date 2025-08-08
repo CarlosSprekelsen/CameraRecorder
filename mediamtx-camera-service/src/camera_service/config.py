@@ -1,4 +1,4 @@
-﻿"""
+"""
 Configuration management for MediaMTX Camera Service.
 
 Provides configuration loading, validation, environment variable overrides,

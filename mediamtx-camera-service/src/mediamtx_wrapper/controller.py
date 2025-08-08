@@ -124,6 +124,27 @@ class MediaMTXController:
             "circuit_breaker_activations": 0,
         }
 
+    # Public read-only properties for integration tests and API consumers
+    @property
+    def host(self) -> str:
+        return self._host
+
+    @property
+    def api_port(self) -> int:
+        return self._api_port
+
+    @property
+    def rtsp_port(self) -> int:
+        return self._rtsp_port
+
+    @property
+    def webrtc_port(self) -> int:
+        return self._webrtc_port
+
+    @property
+    def hls_port(self) -> int:
+        return self._hls_port
+
     async def start(self) -> None:
         """
         Start the MediaMTX controller.

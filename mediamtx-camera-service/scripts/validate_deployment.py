@@ -15,10 +15,10 @@ def test_python_compatibility():
     try:
         result = subprocess.run(['python3', '--version'], 
                               capture_output=True, text=True)
-        print(f"✅ Python3 available: {result.stdout.strip()}")
+        print(f"OK Python3 available: {result.stdout.strip()}")
         return True
     except FileNotFoundError:
-        print("❌ Python3 not found")
+        print("ERROR Python3 not found")
         return False
 
 def test_configuration_loading():
@@ -44,10 +44,10 @@ def test_configuration_loading():
         assert hasattr(config.mediamtx, 'process_termination_timeout')
         assert hasattr(config.mediamtx, 'process_kill_timeout')
         
-        print("✅ Configuration loading successful")
+        print("OK Configuration loading successful")
         return True
     except Exception as e:
-        print(f"❌ Configuration loading failed: {e}")
+        print(f"ERROR Configuration loading failed: {e}")
         return False
 
 def test_component_instantiation():
@@ -84,10 +84,10 @@ def test_component_instantiation():
             max_connections=config.server.max_connections,
         )
         
-        print("✅ Component instantiation successful")
+        print("OK Component instantiation successful")
         return True
     except Exception as e:
-        print(f"❌ Component instantiation failed: {e}")
+        print(f"ERROR Component instantiation failed: {e}")
         return False
 
 def test_mediamtx_controller_compatibility():
@@ -131,10 +131,10 @@ def test_mediamtx_controller_compatibility():
         assert hasattr(controller, 'host')
         assert controller.host == mediamtx_config.host
         
-        print("✅ MediaMTXController instantiation successful")
+        print("OK MediaMTXController instantiation successful")
         return True
     except Exception as e:
-        print(f"❌ MediaMTXController instantiation failed: {e}")
+        print(f"ERROR MediaMTXController instantiation failed: {e}")
         return False
 
 def test_required_dependencies():
@@ -160,15 +160,15 @@ def test_required_dependencies():
             missing_modules.append(module)
     
     if missing_modules:
-        print(f"❌ Missing required modules: {missing_modules}")
+        print(f"ERROR Missing required modules: {missing_modules}")
         return False
     
-    print("✅ All required dependencies available")
+    print("OK All required dependencies available")
     return True
 
 def main():
     """Run all deployment validation tests."""
-    print("🔍 Running deployment validation...")
+    print("Running deployment validation...")
     print("=" * 50)
     
     tests = [
@@ -191,13 +191,13 @@ def main():
         print()
     
     print("=" * 50)
-    print(f"📊 Results: {passed}/{total} tests passed")
+    print(f"Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("✅ Deployment validation passed!")
+        print("OK Deployment validation passed!")
         return 0
     else:
-        print("❌ Deployment validation failed!")
+        print("ERROR Deployment validation failed!")
         return 1
 
 if __name__ == "__main__":

@@ -347,7 +347,6 @@ class ServiceManager(CameraEventHandler):
                 stream_config = StreamConfig(
                     name=stream_name,
                     source=device_path,
-                    settings={"videoCodec": "h264"},
                 )
 
                 # Create stream in MediaMTX

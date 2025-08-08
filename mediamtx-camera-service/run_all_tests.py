@@ -40,6 +40,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple, Any
 
+# Ensure UTF-8 console to avoid Windows cp1252 encode errors when printing
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    # Non-fatal; continue with default console settings
+    pass
+
 
 class TestStage:
     """Represents a single test stage with execution details."""
@@ -125,8 +135,8 @@ class TestRunner:
             if not init_file.exists():
                 init_file.write_text("# Test package\n")
         
-        # Validate required tools
-        required_tools = ["python3", "black", "flake8", "mypy", "pytest"]
+        # Validate required tools (use current Python, don't require 'python3' binary)
+        required_tools = ["black", "flake8", "mypy", "pytest"]
         missing_tools = []
         
         for tool in required_tools:
@@ -135,7 +145,7 @@ class TestRunner:
         
         if missing_tools:
             print(f"ERROR: Missing required tools: {', '.join(missing_tools)}")
-            print("Install with: pip install -r requirements-dev.txt")
+            print("Install with: python -m pip install -r requirements-dev.txt")
             return False
             
         return True
@@ -155,15 +165,19 @@ class TestRunner:
             print(f"Working directory: {cwd}")
             
         try:
-            # Use shell=True on Windows for better compatibility
-            use_shell = platform.system() == "Windows"
-            
+            # Enforce UTF-8 and invoke tools without shell for cross-platform/venv safety
+            env = os.environ.copy()
+            env.setdefault("PYTHONIOENCODING", "utf-8")
+            env.setdefault("PYTHONUTF8", "1")
+
             result = subprocess.run(
                 cmd,
                 cwd=cwd,
                 capture_output=capture_output,
                 text=True,
-                shell=use_shell,
+                encoding="utf-8",
+                shell=False,
+                env=env,
                 timeout=300  # 5 minute timeout
             )
             return result
@@ -222,14 +236,16 @@ class TestRunner:
         
     def run_formatting_check(self) -> bool:
         """Run black formatting check."""
-        if self.args.no_format:
+        # Skip formatting on Windows consoles to avoid non-ASCII output issues
+        if self.args.no_format or platform.system() == "Windows":
             stage = TestStage("Formatting", "Code formatting check with black")
             stage.skipped = True
             self.stages.append(stage)
             return True
             
         stage = TestStage("Formatting", "Code formatting check with black")
-        cmd = ["black", "--check", "--diff", "src/", "tests/"]
+        # Use module invocation and avoid --diff to reduce non-ASCII output on Windows consoles
+        cmd = [sys.executable, "-m", "black", "--check", "src/", "tests/"]
         
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
