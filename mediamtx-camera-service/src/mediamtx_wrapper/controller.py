@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import aiohttp
 
-from ..camera_service.logging_config import set_correlation_id, get_correlation_id
+from camera_service.logging_config import set_correlation_id, get_correlation_id
 
 
 @dataclass
