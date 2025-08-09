@@ -206,6 +206,7 @@ class WebSocketJsonRpcServer:
                 self._handle_client_connection,
                 self._host,
                 self._port,
+                process_request=self._process_request,
                 # Server configuration
                 max_size=1024 * 1024,  # 1MB max message size
                 max_queue=100,  # Max queued messages per connection
@@ -216,8 +217,15 @@ class WebSocketJsonRpcServer:
             )
 
             self._running = True
+            # Log bound sockets for diagnostics
+            try:
+                sockets = getattr(self._server, "sockets", []) or []
+                bound = [s.getsockname() for s in sockets]
+            except Exception:
+                bound = []
             self._logger.info(
-                f"WebSocket JSON-RPC server started successfully on {self._host}:{self._port}{self._websocket_path}"
+                f"WebSocket JSON-RPC server started successfully on {self._host}:{self._port}{self._websocket_path}",
+                extra={"bound_sockets": bound},
             )
 
         except Exception as e:
