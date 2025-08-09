@@ -815,7 +815,8 @@ class ServiceManager(CameraEventHandler):
         )
 
         try:
-            from ..mediamtx_wrapper.controller import MediaMTXController
+            # Prefer absolute imports to avoid package-relative issues
+            from mediamtx_wrapper.controller import MediaMTXController
 
             # Unpack MediaMTXConfig into individual parameters
             mediamtx_config = self._config.mediamtx
@@ -863,7 +864,8 @@ class ServiceManager(CameraEventHandler):
         )
 
         try:
-            from ..camera_discovery.hybrid_monitor import HybridCameraMonitor
+            # Prefer absolute imports to avoid package-relative issues
+            from camera_discovery.hybrid_monitor import HybridCameraMonitor
 
             self._camera_monitor = HybridCameraMonitor(
                 device_range=self._config.camera.device_range,

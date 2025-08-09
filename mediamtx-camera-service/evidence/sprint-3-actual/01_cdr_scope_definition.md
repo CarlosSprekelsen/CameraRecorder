@@ -5,67 +5,142 @@
 **PRIMARY OBJECTIVE:** Prove the MediaMTX Camera Service works through actual execution, testing, and demonstration. Documentation captures execution results as evidence, but **WORKING SOFTWARE IS THE PRIORITY**.
 
 **Execution-First Approach:**
-- ACTUALLY START and test the system
-- ACTUALLY RUN all test suites and analyze real results  
-- ACTUALLY EXECUTE functional scenarios and measure performance
-- ACTUALLY PERFORM security testing and deployment validation
-- Documentation records REAL EXECUTION RESULTS, not theoretical assessments
+
+* ESTABLISH verifiable baseline before any validation begins
+* ACTUALLY START and test the system
+* ACTUALLY RUN all test suites and analyze real results
+* ACTUALLY EXECUTE functional scenarios and measure performance
+* ACTUALLY PERFORM security testing and deployment validation
+* Documentation records REAL EXECUTION RESULTS, not theoretical assessments
 
 ## CDR Scope Definition
 
 **Critical Design Review Objective:** Comprehensive validation of MediaMTX Camera Service production readiness across ALL dimensions:
-- Complete requirements coverage (all F1.x, F2.x, F3.x requirements)
-- Architecture implementation validation (all components and architecture decisions)
-- System integration and functionality verification
-- All test layer validation (unit, integration, system, security)
-- Production deployment readiness assessment
-- Performance, security, and operational readiness
-- Complete documentation and maintainability validation
+
+* Verifiable baseline establishment and reproducible build validation
+* Complete requirements coverage (all F1.x, F2.x, F3.x requirements)
+* Architecture implementation validation (all components and architecture decisions)
+* System integration and functionality verification
+* All test layer validation (unit, integration, system, security)
+* Production deployment readiness assessment
+* Performance, security, and operational readiness
+* Complete documentation and maintainability validation
+
+## Global CDR Acceptance Thresholds (Applies Across Steps)
+
+```
+Coverage: ≥ 70% overall; ≥ 80% for critical paths
+Security Gate (Step 2a / Step 8): 0 Critical/High vulnerabilities; no committed secrets
+Performance (single camera): JSON-RPC p95 latency ≤ 200 ms; start-record ≤ 2 s
+Resilience (Step 9a): Recovery < 30 s; memory RSS drift < 5% over 4 h; error rate < 0.5%
+Upgrade/Rollback (Step 10a): Downtime ≤ 2 min; zero data loss; config intact after both operations
+Evidence Integrity: Each evidence file includes command outputs and hashes where relevant
+```
+
+---
+
+## Phase 0: Baseline Establishment (Entry Gate)
+
+### 0. CDR Baseline and Build Verification (Developer)
+
+```
+Your role: Developer
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Establish verifiable CDR baseline and build artifacts. Execute: 1) Tag current codebase with annotated tag vX.Y.Z-cdr (determine appropriate version number), 2) Produce build artifacts using standard project method (container/Dockerfile or pinned Python requirements), 3) Record complete environment matrix: OS/kernel version, Python version, MediaMTX version, camera hardware models used for testing, 4) Generate checksums (SHA256) for all produced artifacts, 5) Document exact build commands and environment setup for reproducibility.
+
+Input: Current codebase state
+
+Execution Requirements:
+- Create annotated git tag: git tag -a vX.Y.Z-cdr -m "CDR baseline for production validation"
+- Build using standard method: docker build or pip freeze > requirements-cdr.txt
+- Record environment: uname -a, python --version, mediamtx version, lsusb output for cameras
+- Generate checksums: sha256sum for all artifacts
+- Test build reproducibility: clean environment build verification
+
+Output Requirements:
+- Create markdown document following docs/development/documentation-guidelines.md
+- File: evidence/sprint-3-actual/00_cdr_baseline_and_build.md
+- Include: Commit SHA, tag details, build commands, complete environment matrix, artifact checksums, reproducibility validation
+- Use sections: Baseline Definition, Build Artifacts, Environment Matrix, Checksums, Reproducibility Verification
+- Include actual command outputs, version strings, and checksum values
+
+Handoff: Provide evidence/sprint-3-actual/00_cdr_baseline_and_build.md to Project Manager for CDR baseline approval.
+```
+
+---
 
 ## Phase 1: Clean Slate Establishment
 
 ### 1. Evidence Cleanup and CDR Scope Definition (Project Manager)
+
 ```
 Your role: Project Manager
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Execute zero-trust cleanup of ALL previous CDR artifacts in evidence/sprint-3/ directory. Create fresh evidence/sprint-3-actual/ directory. Define complete CDR scope covering: ALL requirements validation, ALL architecture components verification, ALL test layers assessment, complete system functionality validation, production deployment readiness, security compliance, performance validation, documentation completeness. Document comprehensive CDR scope and success criteria that covers entire system, not just gap requirements.
+Task: Execute zero-trust cleanup of ALL previous CDR artifacts in evidence/sprint-3/ directory. Create fresh evidence/sprint-3-actual/ directory. Define complete CDR scope covering: ALL requirements validation, ALL architecture components verification, ALL test layers assessment, complete system functionality validation, production deployment readiness, security compliance, performance validation, documentation completeness. Document comprehensive CDR scope and success criteria that covers entire system, not just gap requirements. Approve CDR baseline established in Phase 0.
+
+Input: evidence/sprint-3-actual/00_cdr_baseline_and_build.md
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
 - File: evidence/sprint-3-actual/01_cdr_scope_definition.md
-- Include: CDR objectives, complete scope definition, success criteria, timeline, evidence structure
-- Professional format with Purpose, Scope, Success Criteria, Process Overview sections
-- Reference cleanup completion and directory structure creation
+- Include: CDR objectives, complete scope definition, success criteria, timeline, evidence structure, baseline approval
+- Professional format with Purpose, Scope, Success Criteria, Process Overview, Baseline Approval sections
+- Reference cleanup completion, directory structure creation, and approved baseline tag/artifacts
 
 Handoff: Provide evidence/sprint-3-actual/01_cdr_scope_definition.md to IV&V for requirements inventory task.
 ```
 
-### 2. Complete Requirements Inventory and Analysis (IV&V)
+### 2. Complete Requirements Inventory and Analysis (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Conduct comprehensive inventory of ALL requirements from docs/requirements/client-requirements.md and any other requirement sources. Catalog every functional requirement (F1.1.x through F3.x.x), non-functional requirements, integration requirements, and implied system requirements. Identify requirement categories: customer-critical, system-critical, security-critical, performance-critical. Create complete requirements register with priority classification and testability assessment.
+Task: Conduct comprehensive inventory of ALL requirements from docs/requirements/client-requirements.md and any other requirement sources. Catalog every functional requirement (F1.1.x through F3.x.x), non-functional requirements, integration requirements, and implied system requirements. Identify requirement categories: customer-critical, system-critical, security-critical, performance-critical. Create complete requirements register with priority classification and testability assessment. Reference approved CDR baseline for validation context.
 
-Input: evidence/sprint-3-actual/01_cdr_scope_definition.md
+Input: evidence/sprint-3-actual/01_cdr_scope_definition.md and evidence/sprint-3-actual/00_cdr_baseline_and_build.md
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
 - File: evidence/sprint-3-actual/02_requirements_inventory.md
-- Include: Complete requirements catalog, priority matrix, testability assessment, requirement categorization
+- Include: Complete requirements catalog, priority matrix, testability assessment, requirement categorization, baseline reference
 - Use tables for requirement listing with columns: ID, Description, Category, Priority, Testability Status
 - Professional format with Executive Summary, Requirements Catalog, Priority Analysis, Testability Assessment sections
 
 Handoff: Provide evidence/sprint-3-actual/02_requirements_inventory.md to IV&V for architecture component inventory task.
 ```
 
-### 3. Architecture Component Inventory and Requirements Verification Traceability Matrix (IV&V)
+### 2a. Code Quality & Supply Chain Gate (Project Manager)
+
+```
+Your role: Project Manager
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Enforce a lightweight pre-test gate to catch cheap defects early. Direct Developer to run: (a) lint/type checks (ruff/flake8 + mypy), (b) SAST (bandit or semgrep default rules), (c) dependency audit (pip-audit or equivalent), (d) SBOM generation (CycloneDX). Apply global thresholds.
+
+Input: evidence/sprint-3-actual/02_requirements_inventory.md
+
+Execution Requirements:
+- One command or script to run all checks; capture outputs
+- Thresholds (pass/fail): 0 Critical/High vulnerabilities; no committed secrets; type/lint blockers fixed
+
+Output Requirements:
+- File: evidence/sprint-3-actual/02a_code_quality_and_supply_chain.md
+- Attach: sbom.json and tool outputs (summaries acceptable)
+- Include: Tools invoked, versions, results summary, failures (if any) with disposition
+
+Handoff: Provide evidence/sprint-3-actual/02a_code_quality_and_supply_chain.md to IV&V before full test execution.
+```
+
+### 3. Architecture Component Inventory and Requirements Verification Traceability Matrix (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Conduct comprehensive inventory of ALL architecture components from docs/architecture/overview.md and create REQUIREMENTS VERIFICATION TRACEABILITY MATRIX (RVTM). Map EVERY requirement from Phase 2 to specific architecture component(s) that fulfill it. Verify architecture is capable of satisfying all requirements. Identify: 1) Requirements with no architecture allocation (critical gaps), 2) Architecture components with no requirement justification (potential over-engineering), 3) Architecture adequacy for requirement fulfillment. This traceability is KEY to detecting gaps and proving architecture completeness.
+Task: Conduct comprehensive inventory of ALL architecture components from docs/architecture/overview.md and create REQUIREMENTS VERIFICATION TRACEABILITY MATRIX (RVTM). Map EVERY requirement from Phase 2 to specific architecture component(s) that fulfill it. Verify architecture is capable of satisfying all requirements. Identify: 1) Requirements with no architecture allocation (critical gaps), 2) Architecture components with no requirement justification (potential over-engineering), 3) Architecture adequacy for requirement fulfillment.
 
 Input: evidence/sprint-3-actual/02_requirements_inventory.md
 
@@ -81,40 +156,47 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/03_architecture_rvtm.md to IV&V for system execution validation.
 ```
 
+---
+
 ## Phase 2: System-Wide Functionality Validation
 
-### 4. System Startup and Basic Functionality Execution (IV&V)
+### 4. System Startup and Basic Functionality Execution (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY START AND TEST the MediaMTX Camera Service system. Execute: 1) Start the service and verify startup success, 2) Test camera discovery functionality with real hardware/simulation, 3) Establish WebSocket connection and test JSON-RPC API calls, 4) Execute basic photo capture and video recording operations, 5) Verify configuration loading and management, 6) Test error scenarios and recovery. DEMONSTRATE working software, don't just document what should work.
+Task: ACTUALLY START AND TEST the MediaMTX Camera Service system using the approved CDR baseline tag. Execute: 1) Deploy using exact baseline tag vX.Y.Z-cdr and build artifacts from Phase 0, 2) Start the service and verify startup success, 3) Test camera discovery functionality with real hardware/simulation, 4) Establish WebSocket connection and test JSON-RPC API calls, 5) Execute basic photo capture and video recording operations, 6) Verify configuration loading and management, 7) Test error scenarios and recovery.
 
-Input: evidence/sprint-3-actual/03_architecture_rvtm.md
+Input: evidence/sprint-3-actual/03_architecture_rvtm.md and evidence/sprint-3-actual/00_cdr_baseline_and_build.md
 
 Execution Requirements:
+- Use exact CDR baseline: git checkout vX.Y.Z-cdr
+- Deploy using baseline artifacts and documented environment
 - Start service: python3 -m camera_service or equivalent startup command
-- Test WebSocket connection: Connect to ws://localhost:8002/ws 
+- Test WebSocket connection: Connect to ws://localhost:8002/ws
 - Execute API calls: get_camera_list, take_snapshot, start_recording, stop_recording
 - Verify file outputs: Check that photos/videos are actually created
 - Test error handling: Try invalid operations and verify graceful handling
+- Validate environment matches baseline specifications
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
 - File: evidence/sprint-3-actual/04_system_execution_validation.md
-- Include: Actual command outputs, API responses, file listings, error logs, screenshots
-- Use sections: System Startup Results, API Execution Tests, File Output Validation, Error Handling Tests
-- Include real terminal outputs, JSON responses, and file system evidence
+- Include: Baseline verification, actual command outputs, API responses, file listings, error logs, screenshots
+- Use sections: Baseline Verification, System Startup Results, API Execution Tests, File Output Validation, Error Handling Tests
+- Include real terminal outputs, JSON responses, file system evidence, and baseline compliance confirmation
 
 Handoff: Provide evidence/sprint-3-actual/04_system_execution_validation.md to IV&V for comprehensive test execution.
 ```
 
-### 5. Complete Test Suite Execution and Analysis (IV&V)
+### 5. Complete Test Suite Execution and Analysis (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY RUN ALL TEST SUITES and analyze results. Execute: 1) Run complete unit test suite: python3 -m pytest tests/unit/ -v --cov, 2) Run integration tests: python3 -m pytest tests/integration/ -v, 3) Run system tests: python3 -m pytest tests/ivv/ -v, 4) Run security tests: python3 -m pytest tests/security/ -v, 5) Execute test automation script: python3 run_all_tests.py, 6) Analyze actual test failures, coverage gaps, and quality issues. EXECUTE the tests, don't just review test code.
+Task: ACTUALLY RUN ALL TEST SUITES and analyze results. Execute: 1) Run complete unit test suite: python3 -m pytest tests/unit/ -v --cov, 2) Run integration tests: python3 -m pytest tests/integration/ -v, 3) Run system tests: python3 -m pytest tests/ivv/ -v, 4) Run security tests: python3 -m pytest tests/security/ -v, 5) Execute test automation script: python3 run_all_tests.py, 6) Analyze actual test failures, coverage gaps, and quality issues.
 
 Input: evidence/sprint-3-actual/04_system_execution_validation.md
 
@@ -135,14 +217,15 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/05_test_execution_results.md to IV&V for requirements coverage validation.
 ```
 
-### 6. Complete Requirements Coverage Validation (IV&V)
+### 6. Complete Requirements Coverage Validation (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Task: Validate test coverage for ALL requirements identified in Phase 1 requirements inventory. Create comprehensive requirement-to-test traceability matrix covering every F1.x, F2.x, F3.x requirement plus non-functional and system requirements. Identify any requirements without test coverage, any tests without requirement traceability, and assess test quality for each requirement. Validate that tests use public APIs and validate business outcomes, not internal implementations.
 
-Input: evidence/sprint-3-actual/05_test_ecosystem_audit.md and evidence/sprint-3-actual/02_requirements_inventory.md
+Input: evidence/sprint-3-actual/05_test_execution_results.md and evidence/sprint-3-actual/02_requirements_inventory.md
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
@@ -155,14 +238,17 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/06_requirements_coverage_matrix.md to IV&V for security assessment.
 ```
 
+---
+
 ## Phase 3: Production Readiness Assessment
 
-### 7. End-to-End Functional Validation Execution (IV&V)
+### 7. End-to-End Functional Validation Execution (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY EXECUTE end-to-end functional scenarios as a real user would. Execute: 1) Complete camera setup and discovery workflow, 2) Photo capture workflow with metadata validation, 3) Video recording workflow with duration controls (unlimited, timed), 4) Multi-camera switching scenarios, 5) Authentication and authorization workflows, 6) Error recovery scenarios (camera disconnect, service restart), 7) Real-time notification delivery testing. PERFORM actual operations, not simulated tests.
+Task: ACTUALLY EXECUTE end-to-end functional scenarios as a real user would. Execute: 1) Complete camera setup and discovery workflow, 2) Photo capture workflow with metadata validation, 3) Video recording workflow with duration controls (unlimited, timed), 4) Multi-camera switching scenarios, 5) Authentication and authorization workflows, 6) Error recovery scenarios (camera disconnect, service restart), 7) Real-time notification delivery testing.
 
 Input: evidence/sprint-3-actual/06_requirements_coverage_matrix.md
 
@@ -184,12 +270,13 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/07_end_to_end_validation.md to IV&V for security testing execution.
 ```
 
-### 8. Security Testing Execution and Validation (IV&V)
+### 8. Security Testing Execution and Validation (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY EXECUTE security testing scenarios. Execute: 1) Authentication bypass attempts, 2) Authorization escalation testing, 3) Input injection and validation testing, 4) SSL/TLS configuration validation, 5) Rate limiting and DoS protection testing, 6) Session management and token validation, 7) Configuration security assessment, 8) Network security scanning. PERFORM actual security tests, not just code review.
+Task: ACTUALLY EXECUTE security testing scenarios. Execute: 1) Authentication bypass attempts, 2) Authorization escalation testing, 3) Input injection and validation testing, 4) SSL/TLS configuration validation, 5) Rate limiting and DoS protection testing, 6) Session management and token validation, 7) Configuration security assessment, 8) Network security scanning.
 
 Input: evidence/sprint-3-actual/07_end_to_end_validation.md
 
@@ -212,12 +299,13 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/08_security_testing_execution.md to IV&V for performance testing execution.
 ```
 
-### 9. Performance and Load Testing Execution (IV&V)
+### 9. Performance and Load Testing Execution (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY EXECUTE performance and load testing scenarios. Execute: 1) Baseline performance measurement under normal load, 2) Concurrent user load testing with multiple WebSocket connections, 3) Camera operation load testing (multiple simultaneous recordings), 4) Memory and CPU usage monitoring under sustained load, 5) Response time measurement under various load conditions, 6) Resource leak detection during extended operation, 7) Recovery testing after resource exhaustion. PERFORM actual load testing, not theoretical analysis.
+Task: ACTUALLY EXECUTE performance and load testing scenarios. Execute: 1) Baseline performance measurement under normal load, 2) Concurrent user load testing with multiple WebSocket connections, 3) Camera operation load testing (multiple simultaneous recordings), 4) Memory and CPU usage monitoring under sustained load, 5) Response time measurement under various load conditions, 6) Resource leak detection during extended operation, 7) Recovery testing after resource exhaustion.
 
 Input: evidence/sprint-3-actual/08_security_testing_execution.md
 
@@ -240,14 +328,37 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/09_performance_testing_execution.md to IV&V for deployment testing execution.
 ```
 
-### 10. Deployment and Operational Testing Execution (IV&V)
+### 9a. Soak & Resilience Microtests (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY EXECUTE deployment and operational scenarios. Execute: 1) Fresh installation on clean system, 2) Configuration management testing (YAML, environment variables), 3) Service lifecycle testing (start, stop, restart, upgrade), 4) Backup and restore testing, 5) Log management and rotation testing, 6) Monitoring and alerting validation, 7) Disaster recovery scenario testing. PERFORM actual deployment operations, not documentation review.
+Task: Validate real-world stability and recovery with a short soak and basic fault injections.
 
 Input: evidence/sprint-3-actual/09_performance_testing_execution.md
+
+Execution Requirements:
+- 4-hour soak: one camera recording; capture CPU/RAM and RPC error rates
+- Induce camera disconnect/reconnect; verify recovery < 30 s
+- Kill service mid-recording; verify clean restart; no config corruption
+
+Output Requirements:
+- File: evidence/sprint-3-actual/09a_soak_and_resilience.md
+- Include: Metrics snapshots/plots, recovery timings, error-rate calculations, observations
+
+Handoff: Provide evidence/sprint-3-actual/09a_soak_and_resilience.md to IV&V for deployment & upgrade validation.
+```
+
+### 10. Deployment and Operational Testing Execution (IV\&V)
+
+```
+Your role: IV&V
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: ACTUALLY EXECUTE deployment and operational scenarios. Execute: 1) Fresh installation on clean system, 2) Configuration management testing (YAML, environment variables), 3) Service lifecycle testing (start, stop, restart, upgrade), 4) Backup and restore testing, 5) Log management and rotation testing, 6) Monitoring and alerting validation, 7) Disaster recovery scenario testing.
+
+Input: evidence/sprint-3-actual/09a_soak_and_resilience.md
 
 Execution Requirements:
 - Deploy to clean test environment (VM, container, or separate directory)
@@ -264,18 +375,66 @@ Output Requirements:
 - Include: Installation results, configuration test results, service lifecycle validation, operational procedure verification
 - Use sections: Installation Validation, Configuration Testing, Service Lifecycle Testing, Operational Procedures Validation, Disaster Recovery Testing
 - Include actual installation logs, configuration outputs, and operational test results
+- Attach Ops Readiness “Lite” docs as references:
+  - ops/runbook.md (start/stop, health checks, logs, common errors, recovery steps)
+  - ops/slo.md (API p95 latency, recording success rate, alert suggestions)
 
-Handoff: Provide evidence/sprint-3-actual/10_deployment_testing_execution.md to IV&V for issue compilation.
+Handoff: Provide evidence/sprint-3-actual/10_deployment_testing_execution.md to IV&V for upgrade/rollback validation.
 ```
 
-## Phase 4: Quality and Remediation
+### 10a. Upgrade and Rollback Smoke (IV\&V)
 
-### 12. Issue Identification and Remediation Planning (IV&V)
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Compile comprehensive issue register from all ACTUAL EXECUTION results (system startup, test execution, API documentation validation, functional validation, security testing, performance testing, deployment testing). Categorize issues by severity: critical (blocks production), major (reduces capability), minor (improvement opportunity). Create detailed remediation plan with effort estimates and priority rankings. Focus on REAL ISSUES found during execution, not theoretical concerns.
+Task: Prove lifecycle operations with minimal ceremony: upgrade and rollback around the CDR baseline.
+
+Input: evidence/sprint-3-actual/10_deployment_testing_execution.md and evidence/sprint-3-actual/00_cdr_baseline_and_build.md
+
+Execution Requirements:
+- Upgrade from vX.Y.Z-cdr → vX.Y.Z+1; keep config/media intact; verify service/API/recordings
+- Roll back to vX.Y.Z-cdr; re-verify service/API/recordings/config
+
+Output Requirements:
+- File: evidence/sprint-3-actual/10a_upgrade_and_rollback.md
+- Include: Steps, timing, any downtime, verification evidence, data/config integrity confirmation
+
+Handoff: Provide evidence/sprint-3-actual/10a_upgrade_and_rollback.md to IV&V for API/ICD contract validation.
+```
+
+### 11. API/ICD Contract Validation & Freeze (Project Manager)
+
+```
+Your role: Project Manager
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Lock externally visible behavior and prevent client breakage via schema-driven validation. Direct Developer to publish JSON Schemas for each JSON-RPC method (request/response and error codes) and provide a minimal contract test suite (golden + negative cases). Document versioning (e.g., API 1.0) and compatibility/deprecation policy.
+
+Input: evidence/sprint-3-actual/10a_upgrade_and_rollback.md
+
+Execution Requirements:
+- Developer produces schemas and runs contract tests against the service
+- Apply global acceptance thresholds; ensure all required methods and error codes are covered
+
+Output Requirements:
+- File: evidence/sprint-3-actual/11_api_contract_validation.md
+- Include: Schema list/links, contract test outputs (pass/fail), API versioning statement, deprecation policy
+
+Handoff: Provide evidence/sprint-3-actual/11_api_contract_validation.md to IV&V for issue compilation (Step 12).
+```
+
+---
+
+## Phase 4: Quality and Remediation
+
+### 12. Issue Identification and Remediation Planning (IV\&V)
+
+```
+Your role: IV&V
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Compile comprehensive issue register from all ACTUAL EXECUTION results (system startup, test execution, API documentation validation, functional validation, security testing, performance testing, deployment testing, upgrade/rollback, contract validation). Categorize issues by severity: critical (blocks production), major (reduces capability), minor (improvement opportunity). Create detailed remediation plan with effort estimates and priority rankings.
 
 Input: All execution result files from evidence/sprint-3-actual/ (04 through 11)
 
@@ -285,17 +444,17 @@ Output Requirements:
 - Include: Complete issue catalog from actual execution, severity classification, remediation plan, effort estimates
 - Use tables with columns: Issue ID, Description, Severity, Source Execution, Evidence Reference, Remediation Plan, Effort Estimate
 - Professional format with Issue Summary, Severity Analysis, Remediation Strategy, Production Blocker Identification sections
-- Reference specific execution outputs and actual failure evidence for each issue
 
 Handoff: Provide evidence/sprint-3-actual/12_execution_issues_remediation_plan.md to Developer for critical issue remediation.
 ```
 
 ### 13. Critical Issue Remediation Implementation (Developer)
+
 ```
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY FIX all critical and major issues identified during execution testing. Address: test failures, functional bugs, security vulnerabilities, performance bottlenecks, deployment problems, API documentation gaps as prioritized. Focus on production blocker resolution first. For each fix, EXECUTE validation tests to prove the issue is resolved. Don't just implement fixes - VERIFY they work through actual testing.
+Task: ACTUALLY FIX all critical and major issues identified during execution testing. Address: test failures, functional bugs, security vulnerabilities, performance bottlenecks, deployment problems, API documentation gaps as prioritized. For each fix, execute validation tests to prove the issue is resolved.
 
 Input: evidence/sprint-3-actual/12_execution_issues_remediation_plan.md
 
@@ -313,17 +472,17 @@ Output Requirements:
 - Include: Remediation actions taken, re-execution validation results, requirement compliance verification, documentation updates
 - Use sections: Remediation Summary, Implementation Details, Re-execution Validation, Documentation Updates, Regression Testing
 - Include actual code changes, configuration updates, documentation updates, and re-test execution results
-- Professional format with remediation status tracking and validation proof
 
 Handoff: Provide evidence/sprint-3-actual/13_remediation_implementation.md to IV&V for remediation validation.
 ```
 
-### 14. Remediation Validation Through Re-execution (IV&V)
+### 14. Remediation Validation Through Re-execution (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: ACTUALLY RE-EXECUTE all affected tests and scenarios to validate Developer remediation work. Execute: 1) Re-run failed tests to confirm fixes work, 2) Re-execute functional scenarios that had issues, 3) Re-validate API documentation changes, 4) Re-run security tests for security fixes, 5) Re-run performance tests for performance fixes, 6) Execute regression testing to ensure no new issues introduced. VERIFY fixes work through actual execution, not code review.
+Task: ACTUALLY RE-EXECUTE all affected tests and scenarios to validate Developer remediation work. Execute: 1) Re-run failed tests to confirm fixes work, 2) Re-execute functional scenarios that had issues, 3) Re-validate API documentation changes, 4) Re-run security tests for security fixes, 5) Re-run performance tests for performance fixes, 6) Execute regression testing to ensure no new issues introduced.
 
 Input: evidence/sprint-3-actual/13_remediation_implementation.md and evidence/sprint-3-actual/12_execution_issues_remediation_plan.md
 
@@ -342,56 +501,60 @@ Output Requirements:
 - Include: Re-execution results, fix validation confirmation, production readiness assessment
 - Use sections: Re-execution Summary, Fix Validation Results, API Documentation Re-validation, Regression Testing, Production Readiness Confirmation
 - Include actual re-test outputs and validation evidence for each remediated issue
-- Professional format with production blocker resolution confirmation and comprehensive validation
 
 Handoff: Provide evidence/sprint-3-actual/14_remediation_re_execution_validation.md to IV&V for CDR technical report compilation.
 ```
 
+---
+
 ## Phase 5: CDR Compilation and Decision
 
-### 15. Complete CDR Technical Report Compilation (IV&V)
+### 15. Complete CDR Technical Report Compilation (IV\&V)
+
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Compile comprehensive CDR technical report based on ALL ACTUAL EXECUTION RESULTS: system startup validation, complete test execution, API documentation validation, end-to-end functional validation, security testing execution, performance testing execution, deployment testing execution, issue remediation and re-execution validation. Include executive summary with key findings from actual testing, risk assessment based on real execution results, and production readiness recommendation supported by execution evidence.
+Task: Compile comprehensive CDR technical report based on ALL ACTUAL EXECUTION RESULTS: system startup validation, complete test execution, API documentation validation, end-to-end functional validation, security testing execution, performance testing execution, deployment testing execution, upgrade/rollback results, contract validation, issue remediation and re-execution validation.
 
 Input: All execution and validation files from evidence/sprint-3-actual/ (01 through 14)
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
 - File: evidence/sprint-3-actual/15_cdr_technical_report.md
-- Include: Executive summary of execution results, comprehensive test execution summary, API documentation validation summary, functional validation summary, security testing results, performance testing results, deployment validation results, remediation validation summary
-- Use sections: Executive Summary, System Execution Overview, Test Execution Results, API Documentation Validation Results, Functional Validation Results, Security Testing Results, Performance Testing Results, Deployment Validation Results, Issue Resolution Summary, Production Readiness Recommendation
+- Include: Executive summary of execution results, comprehensive test execution summary, API documentation validation summary, functional validation summary, security testing results, performance testing results, deployment validation results, upgrade/rollback results, remediation validation summary
+- Use sections: Executive Summary, System Execution Overview, Test Execution Results, API Documentation Validation Results, Functional Validation Results, Security Testing Results, Performance Testing Results, Deployment Validation Results, Upgrade/Rollback Results, Issue Resolution Summary, Production Readiness Recommendation
 - Reference all execution evidence files and include actual test results, performance data, and execution statistics
-- Professional format with clear production readiness recommendation based on actual system execution
 
 Handoff: Provide evidence/sprint-3-actual/15_cdr_technical_report.md to Project Manager for final CDR decision.
 ```
 
 ### 16. CDR Final Decision and Authorization (Project Manager)
+
 ```
 Your role: Project Manager
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Review complete CDR technical report based on actual execution results and make final production authorization decision. Evaluate system against comprehensive production readiness criteria based on REAL EXECUTION EVIDENCE: functional completeness demonstrated through actual testing, quality standards verified through test execution, API documentation validated and ready for client integration, security validated through actual security testing, performance confirmed through load testing, operational readiness proven through deployment testing. Make explicit AUTHORIZE/CONDITIONAL/DENY decision with detailed justification based on execution results.
+Task: Review complete CDR technical report based on actual execution results and make final production authorization decision. Evaluate system against comprehensive production readiness criteria based on REAL EXECUTION EVIDENCE from approved baseline vX.Y.Z-cdr: functional completeness demonstrated through actual testing, quality standards verified through test execution, API documentation validated and ready for client integration, security validated through actual security testing, performance confirmed through load testing, operational readiness proven through deployment testing. Make explicit AUTHORIZE/CONDITIONAL/DENY decision with detailed justification based on execution results from verifiable baseline.
 
-Input: evidence/sprint-3-actual/15_cdr_technical_report.md
+Input: evidence/sprint-3-actual/15_cdr_technical_report.md and evidence/sprint-3-actual/00_cdr_baseline_and_build.md
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
 - File: evidence/sprint-3-actual/16_cdr_final_decision.md
-- Include: Production authorization decision based on execution evidence, detailed justification referencing actual test results, conditions (if any) based on real issues found, process completion summary
-- Use sections: Authorization Decision, Decision Rationale (based on execution results), API Documentation Readiness Assessment, Conditions and Requirements, Execution Summary, Next Steps
-- Include final decision matrix referencing actual execution evidence and test results
-- Professional format with clear authorization status and implementation guidance based on proven system capability
+- Include: Production authorization decision based on baseline execution evidence, detailed justification referencing actual test results, baseline traceability confirmation, conditions (if any) based on real issues found, process completion summary
+- Use sections: Authorization Decision, Decision Rationale (based on execution results), Baseline Traceability, API Documentation Readiness Assessment, Conditions and Requirements, Execution Summary, Next Steps
+- Include final decision matrix referencing actual execution evidence and baseline compliance
 
-Final Deliverable: Complete CDR evidence package in evidence/sprint-3-actual/ with all 16 execution-based assessment and decision documents.
+Final Deliverable: Complete CDR evidence package in evidence/sprint-3-actual/ with all 17 execution-based assessment and decision documents (00-16), traceable to approved baseline vX.Y.Z-cdr.
 ```
+
+---
 
 ## Documentation Standards for All Outputs
 
 ### Required Document Structure (per docs/development/documentation-guidelines.md)
+
 ```markdown
 # Document Title
 
@@ -418,14 +581,16 @@ Final Deliverable: Complete CDR evidence package in evidence/sprint-3-actual/ wi
 ```
 
 ### Evidence Management Rules
-- All documents in evidence/sprint-3-actual/ directory structure
-- Professional tone (no emojis, clear structure per guidelines)
-- Evidence references for all claims
-- Complete traceability between documents
-- File naming convention: ##_descriptive_name.md
+
+* All documents in evidence/sprint-3-actual/ directory structure
+* Professional tone (no emojis, clear structure per guidelines)
+* Evidence references for all claims
+* Complete traceability between documents
+* File naming convention: ##\_descriptive\_name.md
 
 ### Handoff Protocol
-- Each role must reference input file(s) from previous role
-- Output file name specified for next role handoff
-- Clear evidence trail maintained throughout process
-- No assumptions about previous work - validate input files
+
+* Each role must reference input file(s) from previous role
+* Output file name specified for next role handoff
+* Clear evidence trail maintained throughout process
+* No assumptions about previous work - validate input files
