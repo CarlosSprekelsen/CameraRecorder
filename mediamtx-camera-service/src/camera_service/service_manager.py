@@ -920,6 +920,10 @@ class ServiceManager(CameraEventHandler):
 
         try:
             from websocket_server.server import WebSocketJsonRpcServer
+            from security.jwt_handler import JWTHandler
+            from security.api_key_handler import APIKeyHandler
+            from security.auth_manager import AuthManager
+            from security.middleware import SecurityMiddleware
 
             self._websocket_server = WebSocketJsonRpcServer(
                 host=self._config.server.host,
@@ -932,6 +936,24 @@ class ServiceManager(CameraEventHandler):
             # Provide service manager reference for API methods that require it
             if hasattr(self._websocket_server, "set_service_manager"):
                 self._websocket_server.set_service_manager(self)
+            # Configure security middleware (env-configurable)
+            try:
+                import os
+                jwt_secret = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "dev-secret-change-me")
+                api_keys_path = os.environ.get("CAMERA_SERVICE_API_KEYS_PATH", "/opt/camera-service/keys/api_keys.json")
+                rpm = int(os.environ.get("CAMERA_SERVICE_RATE_RPM", "120"))
+                jwt_handler = JWTHandler(secret_key=jwt_secret)
+                api_key_handler = APIKeyHandler(storage_file=api_keys_path)
+                auth_manager = AuthManager(jwt_handler=jwt_handler, api_key_handler=api_key_handler)
+                security = SecurityMiddleware(
+                    auth_manager=auth_manager,
+                    max_connections=self._config.server.max_connections,
+                    requests_per_minute=rpm,
+                )
+                if hasattr(self._websocket_server, "set_security_middleware"):
+                    self._websocket_server.set_security_middleware(security)
+            except Exception as e:
+                self._logger.warning(f"Security middleware initialization failed: {e}")
             await self._websocket_server.start()
             self._logger.info(
                 "WebSocket JSON-RPC server started",

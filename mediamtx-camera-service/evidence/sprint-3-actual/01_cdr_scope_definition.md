@@ -60,23 +60,25 @@ Output Requirements:
 Handoff: Provide evidence/sprint-3-actual/02_requirements_inventory.md to IV&V for architecture component inventory task.
 ```
 
-### 3. Architecture Component Inventory and Status Assessment (IV&V)
+### 3. Architecture Component Inventory and Requirements Verification Traceability Matrix (IV&V)
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Conduct comprehensive inventory of ALL architecture components from docs/architecture/overview.md and related architecture documentation. Map each component to implementation status, requirement coverage, and validation evidence. Assess: Camera Discovery Monitor, MediaMTX Controller, WebSocket JSON-RPC Server, Service Manager, Configuration Management, Health & Monitoring, Security Model. Document architecture decisions (AD-1 through AD-N) implementation status.
+Task: Conduct comprehensive inventory of ALL architecture components from docs/architecture/overview.md and create REQUIREMENTS VERIFICATION TRACEABILITY MATRIX (RVTM). Map EVERY requirement from Phase 2 to specific architecture component(s) that fulfill it. Verify architecture is capable of satisfying all requirements. Identify: 1) Requirements with no architecture allocation (critical gaps), 2) Architecture components with no requirement justification (potential over-engineering), 3) Architecture adequacy for requirement fulfillment. This traceability is KEY to detecting gaps and proving architecture completeness.
 
 Input: evidence/sprint-3-actual/02_requirements_inventory.md
 
 Output Requirements:
 - Create markdown document following docs/development/documentation-guidelines.md
-- File: evidence/sprint-3-actual/03_architecture_inventory.md
-- Include: Component inventory table, implementation status matrix, architecture decisions tracking
-- Use tables with columns: Component, Implementation Status, Requirements Covered, Evidence References
-- Professional format with Architecture Overview, Component Status, Architecture Decisions sections
+- File: evidence/sprint-3-actual/03_architecture_rvtm.md
+- Include: Complete RVTM table mapping every requirement to architecture component(s), gap analysis, architecture adequacy assessment
+- Use tables with columns: Requirement ID, Description, Allocated Architecture Component(s), Traceability Status, Adequacy Assessment
+- Include INVERSE traceability: Architecture Component → Requirements Fulfilled
+- Professional format with RVTM Overview, Requirements→Architecture Mapping, Architecture→Requirements Mapping, Gap Analysis, Architecture Adequacy Conclusion sections
+- Identify any requirements without architecture allocation as CRITICAL GAPS
 
-Handoff: Provide evidence/sprint-3-actual/03_architecture_inventory.md to IV&V for system functionality assessment.
+Handoff: Provide evidence/sprint-3-actual/03_architecture_rvtm.md to IV&V for system execution validation.
 ```
 
 ## Phase 2: System-Wide Functionality Validation
@@ -88,7 +90,7 @@ Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Task: ACTUALLY START AND TEST the MediaMTX Camera Service system. Execute: 1) Start the service and verify startup success, 2) Test camera discovery functionality with real hardware/simulation, 3) Establish WebSocket connection and test JSON-RPC API calls, 4) Execute basic photo capture and video recording operations, 5) Verify configuration loading and management, 6) Test error scenarios and recovery. DEMONSTRATE working software, don't just document what should work.
 
-Input: evidence/sprint-3-actual/03_architecture_inventory.md
+Input: evidence/sprint-3-actual/03_architecture_rvtm.md
 
 Execution Requirements:
 - Start service: python3 -m camera_service or equivalent startup command

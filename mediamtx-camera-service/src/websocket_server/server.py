@@ -141,6 +141,8 @@ class WebSocketJsonRpcServer:
 
         # Security middleware (set by service manager)
         self._security_middleware = None
+        # Simple performance metrics per method
+        self._perf_metrics: Dict[str, Dict[str, float]] = {}
 
         # Scheduled auto-stop tasks per stream name
         self._recording_stop_tasks: Dict[str, asyncio.Task] = {}
@@ -446,71 +448,106 @@ class WebSocketJsonRpcServer:
                     }
                 )
 
-            # Security middleware authentication check
+            # Allow authenticate method without prior enforcement and handle here to bind to correct client
+            if method_name == "authenticate":
+                if not self._security_middleware:
+                    return json.dumps({
+                        "jsonrpc": "2.0",
+                        "result": {"authenticated": False, "error": "Security not configured"},
+                        "id": request_id,
+                    })
+                token = None
+                auth_type = "auto"
+                if params and isinstance(params, dict):
+                    token = params.get("token") or params.get("auth_token")
+                    auth_type = params.get("auth_type", "auto")
+                if not token:
+                    return json.dumps({
+                        "jsonrpc": "2.0",
+                        "result": {"authenticated": False, "error": "Missing token"},
+                        "id": request_id,
+                    })
+                auth_result = await self._security_middleware.authenticate_connection(
+                    client.client_id, token, auth_type
+                )
+                if auth_result.authenticated:
+                    client.authenticated = True
+                    client.auth_result = auth_result
+                    client.user_id = auth_result.user_id
+                    client.role = auth_result.role
+                    client.auth_method = auth_result.auth_method
+                    return json.dumps({
+                        "jsonrpc": "2.0",
+                        "result": {"authenticated": True, "role": auth_result.role, "auth_method": auth_result.auth_method},
+                        "id": request_id,
+                    })
+                return json.dumps({
+                    "jsonrpc": "2.0",
+                    "result": {"authenticated": False, "error": auth_result.error_message},
+                    "id": request_id,
+                })
+
+            # Security enforcement and rate limiting
             if self._security_middleware:
-                # Check if client is authenticated
-                if not self._security_middleware.is_authenticated(client.client_id):
-                    # Try to authenticate with token from params
-                    auth_token = None
-                    if params and isinstance(params, dict):
-                        auth_token = params.get("auth_token")
-                    
-                    if auth_token:
-                        auth_result = await self._security_middleware.authenticate_connection(
-                            client.client_id, auth_token
-                        )
-                        if auth_result.authenticated:
-                            # Update client authentication state
-                            client.authenticated = True
-                            client.auth_result = auth_result
-                            client.user_id = auth_result.user_id
-                            client.role = auth_result.role
-                            client.auth_method = auth_result.auth_method
+                protected_methods = {"take_snapshot", "start_recording", "stop_recording"}
+
+                # Rate limiting applies to all methods
+                if not self._security_middleware.check_rate_limit(client.client_id):
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {"code": -32002, "message": "Rate limit exceeded"},
+                            "id": request_id,
+                        }
+                    )
+
+                if method_name in protected_methods:
+                    # Require authentication for protected methods
+                    if not self._security_middleware.is_authenticated(client.client_id):
+                        auth_token = None
+                        if params and isinstance(params, dict):
+                            auth_token = params.get("auth_token") or params.get("token")
+                        if auth_token:
+                            auth_result = await self._security_middleware.authenticate_connection(
+                                client.client_id, auth_token
+                            )
+                            if auth_result.authenticated:
+                                client.authenticated = True
+                                client.auth_result = auth_result
+                                client.user_id = auth_result.user_id
+                                client.role = auth_result.role
+                                client.auth_method = auth_result.auth_method
+                            else:
+                                return json.dumps(
+                                    {
+                                        "jsonrpc": "2.0",
+                                        "error": {
+                                            "code": -32001,
+                                            "message": f"Authentication failed: {auth_result.error_message}",
+                                        },
+                                        "id": request_id,
+                                    }
+                                )
                         else:
                             return json.dumps(
                                 {
                                     "jsonrpc": "2.0",
                                     "error": {
                                         "code": -32001,
-                                        "message": f"Authentication failed: {auth_result.error_message}"
+                                        "message": "Authentication required - call authenticate or provide auth_token",
                                     },
                                     "id": request_id,
                                 }
                             )
-                    else:
-                        return json.dumps(
-                            {
-                                "jsonrpc": "2.0",
-                                "error": {
-                                    "code": -32001,
-                                    "message": "Authentication required - provide auth_token"
-                                },
-                                "id": request_id,
-                            }
-                        )
-                
-                # Check rate limiting
-                if not self._security_middleware.check_rate_limit(client.client_id):
-                    return json.dumps(
-                        {
-                            "jsonrpc": "2.0",
-                            "error": {
-                                "code": -32002,
-                                "message": "Rate limit exceeded"
-                            },
-                            "id": request_id,
-                        }
-                    )
-                
-                # Check permissions for sensitive methods
-                if method_name in ["take_snapshot", "start_recording", "stop_recording"]:
+
+                    # Authorization: operator role required
                     if not self._security_middleware.has_permission(client.client_id, "operator"):
                         return json.dumps(
                             {
                                 "jsonrpc": "2.0",
                                 "error": {
                                     "code": -32003,
-                                    "message": "Insufficient permissions - operator role required"
+                                    "message": "Insufficient permissions - operator role required",
                                 },
                                 "id": request_id,
                             }
@@ -519,10 +556,21 @@ class WebSocketJsonRpcServer:
             # Call method handler
             try:
                 handler = self._method_handlers[method_name]
+                # Performance timing
+                start_ts = time.perf_counter()
                 if params is not None:
                     result = await handler(params)
                 else:
                     result = await handler()
+                duration_ms = (time.perf_counter() - start_ts) * 1000.0
+                m = self._perf_metrics.setdefault(
+                    method_name, {"count": 0.0, "total_ms": 0.0, "max_ms": 0.0, "last_ms": 0.0}
+                )
+                m["count"] += 1
+                m["total_ms"] += duration_ms
+                m["last_ms"] = duration_ms
+                if duration_ms > m["max_ms"]:
+                    m["max_ms"] = duration_ms
 
                 # Return response for requests with ID (notifications have no ID)
                 if request_id is not None:
@@ -833,6 +881,9 @@ class WebSocketJsonRpcServer:
         self.register_method(
             "stop_recording", self._method_stop_recording, version="1.0"
         )
+        # Security and observability
+        self.register_method("authenticate", self._method_authenticate, version="1.0")
+        self.register_method("get_metrics", self._method_get_metrics, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
@@ -892,6 +943,65 @@ class WebSocketJsonRpcServer:
             "pong" response string
         """
         return "pong"
+
+    async def _method_authenticate(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Authenticate the current WebSocket connection using a JWT or API key.
+        Params: { token: string, auth_type: "jwt"|"api_key" (optional) }
+        """
+        if not self._security_middleware:
+            return {"authenticated": False, "error": "Security not configured"}
+        token = None
+        auth_type = "auto"
+        if params and isinstance(params, dict):
+            token = params.get("token") or params.get("auth_token")
+            auth_type = params.get("auth_type", "auto")
+        if not token:
+            return {"authenticated": False, "error": "Missing token"}
+
+        # Identify caller client by scanning connections for this task's websocket
+        # Fallback to first client if exact match not determinable (keeps server stable)
+        client = None
+        async with self._connection_lock:
+            if self._clients:
+                # Take the most recently added as heuristic
+                client = next(reversed(self._clients.values()))
+        if client is None:
+            return {"authenticated": False, "error": "Client context unavailable"}
+
+        auth_result = await self._security_middleware.authenticate_connection(
+            client.client_id, token, auth_type
+        )
+        if auth_result.authenticated:
+            client.authenticated = True
+            client.auth_result = auth_result
+            client.user_id = auth_result.user_id
+            client.role = auth_result.role
+            client.auth_method = auth_result.auth_method
+            return {
+                "authenticated": True,
+                "role": auth_result.role,
+                "auth_method": auth_result.auth_method,
+            }
+        return {"authenticated": False, "error": auth_result.error_message}
+
+    async def _method_get_metrics(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {}
+        for method, m in self._perf_metrics.items():
+            count = int(m.get("count", 0))
+            total = float(m.get("total_ms", 0.0))
+            avg = (total / count) if count > 0 else 0.0
+            summary[method] = {
+                "count": count,
+                "avg_ms": round(avg, 2),
+                "max_ms": round(float(m.get("max_ms", 0.0)), 2),
+                "last_ms": round(float(m.get("last_ms", 0.0)), 2),
+            }
+        return {"methods": summary}
 
     async def _method_get_camera_list(
         self, params: Optional[Dict[str, Any]] = None
