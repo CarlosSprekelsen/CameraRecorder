@@ -280,4 +280,57 @@ pytest -q -k "SMK_<(id)>" --count=10 --maxfail=1
 pytest tests/smoke -q --maxfail=1 --ff --durations=10 | tee dry_run/07_smoke_run_final.log
 ```
 
-**That’s it:** tightly scoped, prompt‑driven, and timeboxed. This dry‑run discovers and burns down the riskiest test failures without expanding scope, feeding cleanly into CDR execution steps.
+---
+
+## Agent Execution Prompts — **No Confirmation** Variants
+
+> Copy/paste one of these into your AI automation. Each prompt includes pre‑checks, commands, success criteria, and file updates. The agent is instructed to **execute immediately** without asking for permission.
+
+### DEV: DRY‑01 Verify (process\_request + bound‑socket logging)
+
+```
+ROLE: Developer
+OBJECTIVE: Execute the DRY‑01 verification NOW. Do not ask for confirmation. If any command fails, stop and print the failing command and stderr.
+PRECHECKS:
+- Repo is on tag/branch for DRY‑01 fix; working tree clean.
+- File dry_run/env.sh exists and is sourced.
+STEPS (execute sequentially):
+1) source dry_run/env.sh
+2) mkdir -p dry_run && mkdir -p dry_run/artifacts && mkdir -p dry_run/fixes/DRY-01
+3) Run targeted test and tee output:
+   pytest -q tests/unit/test_websocket_bind.py --maxfail=1 | tee dry_run/04_verify_DRY-01.log
+4) Parse result: if exit code == 0, set RESULT=PASS else RESULT=FAIL
+5) Update ledger dry_run/05_pass_ledger.md by appending a line:
+   "DRY-01 | tests/unit/test_websocket_bind.py | ${RESULT} | $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+6) If RESULT=FAIL, collect diagnostics:
+   - Save last 200 lines of application log to dry_run/fixes/DRY-01/before_after.log (if available)
+   - Print next actions suggestion: re-run with -vv and capture logs.
+OUTPUTS TO PRODUCE:
+- dry_run/04_verify_DRY-01.log
+- dry_run/05_pass_ledger.md (appended)
+- dry_run/fixes/DRY-01/before_after.log (on FAIL)
+SUCCESS CRITERIA:
+- Test exit code 0 and ledger updated with PASS.
+```
+
+### IV\&V: DRY‑01 Independent Re‑Run (targeted + smoke subset)
+
+```
+ROLE: IV&V
+OBJECTIVE: Independently re‑run DRY‑01 and a minimal smoke subset NOW. Do not ask for confirmation.
+PRECHECKS: source dry_run/env.sh
+STEPS:
+1) source dry_run/env.sh
+2) pytest -q tests/unit/test_websocket_bind.py --maxfail=1 | tee dry_run/04_verify_DRY-01_ivv.log
+3) pytest -q -k "SMK_1 or SMK_6" --maxfail=1 | tee -a dry_run/04_verify_DRY-01_ivv.log
+4) Append IV&V line to dry_run/05_pass_ledger.md:
+   "DRY-01 | IV&V | unit+smoke subset | PASS/FAIL=<derive from exit codes> | $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+SUCCESS CRITERIA: both commands exit 0.
+```
+
+### PM: One‑Line Go Command (unblocks agents that seek approval)
+
+```
+ROLE: Project Manager
+COMMAND: Proceed with DRY‑01 verification immediately. No further approval required. Execute the Developer and IV&V prompts above end‑to‑end and post results in dry_run/05_pass_ledger.md.
+```
