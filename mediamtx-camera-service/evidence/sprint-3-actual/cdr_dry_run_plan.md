@@ -33,6 +33,9 @@ Role: Project Manager
 Principles:
 - Freeze scope to MVP tests (SMK‑1..7).
 - Use a reproducible baseline tag to avoid moving targets.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Reference plan: cdr_dry_run_plan.md
 Task:
 - Announce dry‑run start, scope, gates, timebox, and comms channel.
 Prompt to team:
@@ -45,7 +48,7 @@ Stand‑ups: 09:00 + 16:00.
 Decision points: Iteration end of Day‑1 and Day‑2.
 """
 Outputs:
-- `dry_run/00_plan.md` (this plan + dates, owners)
+- `dry_run/00_plan.md` (cdr_dry_run_plan.md + dates, owners)
 - Slack/Teams post with the above prompt
 ```
 
@@ -54,6 +57,8 @@ Outputs:
 ```
 Role: Developer (PM oversight)
 Principles: Reproducible env; minimal variables.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Check out baseline tag vX.Y.Z-cdr
 - Export env matrix (OS, kernel, Python, MediaMTX, camera IDs)
@@ -75,6 +80,8 @@ Outputs:
 ```
 Role: IV&V
 Principles: Fast feedback, deterministic runs, logs preserved.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Run smoke set: `pytest tests/smoke -q --maxfail=1 --ff --durations=10 | tee dry_run/02_smoke_run_1.log`
 - Capture artifacts: logs, RPC traces, sample media files
@@ -90,6 +97,8 @@ Outputs:
 ```
 Role: PM (chair), Developer, IV&V
 Principles: Decide fast; protect scope.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Triage with R/A/G and timebox per issue (15 min each):
   - Red (Critical): blocks SMK; must fix now
@@ -118,6 +127,8 @@ Outputs:
 ```
 Role: Developer
 Principles: Small diffs; test first; logs > guesses.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Add/adjust diagnostic logs only where needed
 - Implement smallest fix; include regression test where trivial
@@ -134,6 +145,8 @@ Outputs:
 ```
 Role: IV&V
 Principles: Re‑run only affected + smoke; keep it short.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Targeted re‑run: `pytest -q -k "SMK_<id> or dependent" --maxfail=1 | tee dry_run/04_verify_DRY-<nn>.log`
 - If pass, add to pass ledger; else bounce back once
@@ -149,6 +162,8 @@ Outputs:
 ```
 Role: Developer + IV&V
 Principles: Prove flakiness; quarantine if needed.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Repeat test N=10: `pytest -q -k "SMK_<id>" --count=10 --maxfail=1`
 - If flake confirmed, add to quarantine; document cause/workaround
@@ -166,6 +181,8 @@ Outputs:
 ```
 Role: IV&V
 Principles: One truth pass; capture metrics.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Full smoke re‑run: `pytest tests/smoke -q --maxfail=1 --ff --durations=10 | tee dry_run/07_smoke_run_final.log`
 - Compute flaky %, pass rate, duration
@@ -179,6 +196,8 @@ Outputs:
 ```
 Role: Project Manager
 Principles: Decision with evidence; channel learnings into CDR.
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
 Task:
 - Confirm gates met; if not, authorize a second (final) iteration or stop
 - Publish closeout note and inputs that flow into CDR

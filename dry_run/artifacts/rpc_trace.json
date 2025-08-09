@@ -1,0 +1,8 @@
+{
+  "run": 1,
+  "baseline": "vX.Y.Z-cdr (MISSING)",
+  "sha": "4f3ba0e07b3e",
+  "start_time": "2025-08-09T08:43:10+00:00",
+  "end_time": "2025-08-09T08:43:34+00:00",
+  "summary": "ERROR    websockets.server:server.py:365 opening handshake failed"
+}

@@ -201,12 +201,20 @@ class WebSocketJsonRpcServer:
             # Register built-in methods
             self._register_builtin_methods()
 
+            # Resolve bind host for broader compatibility across IPv4/IPv6 stacks.
+            # In some environments, binding specifically to "localhost" may select
+            # only the IPv6 or IPv4 loopback, while client resolution prefers the
+            # opposite family, causing connection issues during handshake.
+            bind_host = self._host
+            if self._host in ("localhost", "127.0.0.1", "::1"):
+                # Bind on all interfaces (both stacks) to avoid family mismatch.
+                bind_host = None
+
             # Start WebSocket server with proper error handling
             self._server = await websockets.serve(
                 self._handle_client_connection,
-                self._host,
+                bind_host,
                 self._port,
-                process_request=self._process_request,
                 # Server configuration
                 max_size=1024 * 1024,  # 1MB max message size
                 max_queue=100,  # Max queued messages per connection
@@ -1220,8 +1228,10 @@ class WebSocketJsonRpcServer:
                             camera_monitor, "get_effective_capability_metadata"
                         ):
                             try:
-                                capability_metadata = camera_monitor.get_effective_capability_metadata(
-                                    device_path
+                                capability_metadata = (
+                                    camera_monitor.get_effective_capability_metadata(
+                                        device_path
+                                    )
                                 )
 
                                 # Use capability-derived resolution and fps
@@ -1260,6 +1270,9 @@ class WebSocketJsonRpcServer:
                 else:
                     # Camera not found - return error
                     raise CameraNotFoundError(f"Camera device {device_path} not found")
+            else:
+                # Without a camera monitor, we cannot validate the device. Fail closed for correctness.
+                raise CameraNotFoundError(f"Camera device {device_path} not found")
 
             # Get stream info and metrics from MediaMTX controller
             if mediamtx_controller and camera_status["status"] == "CONNECTED":
