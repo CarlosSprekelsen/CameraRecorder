@@ -487,7 +487,7 @@ class WebSocketJsonRpcServer:
                     "id": request_id,
                 })
 
-            # Security enforcement and rate limiting
+            # Security enforcement and rate limiting (F3.2.5/F3.2.6/I1.7/N3.x)
             if self._security_middleware:
                 protected_methods = {"take_snapshot", "start_recording", "stop_recording"}
 
@@ -552,6 +552,32 @@ class WebSocketJsonRpcServer:
                                 "id": request_id,
                             }
                         )
+
+                    # Session expiry enforcement on each protected call
+                    auth_state = self._security_middleware.get_auth_result(client.client_id)
+                    if auth_state is not None:
+                        try:
+                            expires_at = getattr(auth_state, "expires_at", None)
+                            if expires_at is not None:
+                                now_ts = int(time.time())
+                                if now_ts >= int(expires_at):
+                                    # Invalidate session
+                                    client.authenticated = False
+                                    client.auth_result = None
+                                    client.user_id = None
+                                    client.role = None
+                                    return json.dumps(
+                                        {
+                                            "jsonrpc": "2.0",
+                                            "error": {
+                                                "code": -32001,
+                                                "message": "Authentication failed: token expired",
+                                            },
+                                            "id": request_id,
+                                        }
+                                    )
+                        except Exception:
+                            pass
 
             # Call method handler
             try:

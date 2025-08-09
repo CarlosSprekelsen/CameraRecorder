@@ -21,6 +21,7 @@ class AuthResult:
     user_id: Optional[str] = None
     role: Optional[str] = None
     auth_method: Optional[str] = None
+    expires_at: Optional[int] = None
     error_message: Optional[str] = None
 
 
@@ -120,7 +121,8 @@ class AuthManager:
                     authenticated=True,
                     user_id=claims.user_id,
                     role=claims.role,
-                    auth_method="jwt"
+                    auth_method="jwt",
+                    expires_at=claims.exp
                 )
             else:
                 return AuthResult(
