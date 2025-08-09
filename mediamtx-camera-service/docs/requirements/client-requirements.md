@@ -1,6 +1,6 @@
 # Client Application Requirements Document
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Authors:** System Architect  
 **Date:** 2025-08-04  
 **Status:** Draft  
@@ -49,10 +49,15 @@ The client applications will provide camera control functionality by communicati
 #### F1.2: Video Recording
 - **F1.2.1:** The application SHALL allow users to record videos using available cameras
 - **F1.2.2:** The application SHALL support unlimited duration recording mode
-- **F1.2.3:** The application SHALL support timed recording with user-specified duration in:
-  - Seconds (1-3600)
-  - Minutes (1-1440) 
-  - Hours (1-24)
+  - API Contract: JSON-RPC `start_recording` without a `duration` parameter SHALL start an unlimited recording session which continues until `stop_recording` is invoked.
+  - Alternative: When `duration_mode` is "unlimited", the `duration_value` parameter MUST be omitted.
+  - Service Behavior: Service SHALL maintain the session until explicit stop; intermediate status updates MAY be emitted by service as notifications.
+- **F1.2.3:** The application SHALL support timed recording with user-specified duration in seconds, minutes, or hours
+  - API Contract: JSON-RPC `start_recording` accepts one of the following mutually exclusive parameter sets:
+    - `{ device: string, duration_seconds: integer (1-3600) }`
+    - `{ device: string, duration_minutes: integer (1-1440) }`
+    - `{ device: string, duration_hours: integer (1-24) }`
+  - Service Behavior: Service SHALL automatically stop the recording once the specified duration elapses and SHOULD emit a completion notification.
 - **F1.2.4:** The application SHALL allow users to manually stop video recording
 - **F1.2.5:** The application SHALL handle recording session management via service API
 
@@ -91,11 +96,18 @@ The client applications will provide camera control functionality by communicati
 - **F3.1.3:** The application SHALL handle camera hot-plug events via real-time notifications
 - **F3.1.4:** The application SHALL provide camera switching interface
 
-#### F3.2: Recording Controls
+#### F3.2: Recording Controls and Security Enforcement
 - **F3.2.1:** The application SHALL provide intuitive recording start/stop controls
 - **F3.2.2:** The application SHALL display recording duration selector interface
 - **F3.2.3:** The application SHALL show recording progress and elapsed time
 - **F3.2.4:** The application SHALL provide emergency stop functionality
+- **F3.2.5:** Operator permissions SHALL be required to invoke `start_recording`, `stop_recording`, and `take_snapshot`
+  - API Contract: Protected JSON-RPC methods SHALL require a valid JWT with role=operator.
+  - Token Transport: The JWT SHALL be provided via JSON-RPC `authenticate` method prior to using protected methods.
+    - `authenticate` request: `{ jsonrpc: "2.0", method: "authenticate", params: { token: string } }`
+    - On success, the server SHALL associate the client connection with the authenticated user and role for the session.
+  - Error Handling: Missing, invalid, or expired tokens SHALL result in JSON-RPC error with code -32003 (authorization) and a meaningful message.
+- **F3.2.6:** The application SHALL handle token expiration by re-authenticating before retrying protected operations.
 
 #### F3.3: Settings Management
 - **F3.3.1:** The application SHALL provide settings interface for:
@@ -160,6 +172,12 @@ The client applications will provide camera control functionality by communicati
 - **N3.2:** Application SHALL validate JWT tokens and handle expiration
 - **N3.3:** Application SHALL not store sensitive credentials in plain text
 - **N3.4:** Application SHALL implement timeout for inactive sessions
+
+---
+
+## Revision History
+
+- 1.1 (2025-08-09): Clarified F1.2.2 unlimited duration API contract; specified F1.2.3 time unit semantics for timed recording; added F3.2.5/F3.2.6 security enforcement and authentication flow for protected methods.
 
 ### N4: Usability Requirements
 - **N4.1:** Application SHALL provide clear error messages and recovery guidance
