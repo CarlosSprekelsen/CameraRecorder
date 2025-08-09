@@ -17,6 +17,9 @@ from src.security.api_key_handler import APIKeyHandler, APIKey
 
 
 class TestAuthResult:
+    """
+    Validates N3.2: Auth result structure including role and expiration
+    """
     """Test authentication result structure."""
     
     def test_create_auth_result(self):
@@ -53,6 +56,9 @@ class TestAuthResult:
 
 
 class TestAuthManager:
+    """
+    Validates N3.2: Auth manager behavior (JWT/API key) and token lifecycle
+    """
     """Test authentication manager functionality."""
     
     @pytest.fixture
@@ -283,6 +289,9 @@ class TestAuthManager:
 
 
 class TestAuthManagerIntegration:
+    """
+    Validates N3.2: End-to-end validation of authentication and role resolution
+    """
     """Integration tests for authentication manager."""
     
     @pytest.fixture

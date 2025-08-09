@@ -14,6 +14,9 @@ from src.security.jwt_handler import JWTHandler, JWTClaims
 
 
 class TestJWTClaims:
+    """
+    Validates N3.2: JWT validation and expiration handling (unit-level)
+    """
     """Test JWT claims structure."""
     
     def test_create_claims(self):
@@ -36,6 +39,9 @@ class TestJWTClaims:
 
 
 class TestJWTHandler:
+    """
+    Validates N3.2: Token generation/validation; expiration semantics
+    """
     """Test JWT handler functionality."""
     
     @pytest.fixture
@@ -240,6 +246,9 @@ class TestJWTHandler:
 
 
 class TestJWTHandlerIntegration:
+    """
+    Validates N3.2: Integration behavior with token verification
+    """
     """Integration tests for JWT handler."""
     
     @pytest.fixture

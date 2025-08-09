@@ -20,6 +20,9 @@ from src.security.api_key_handler import APIKeyHandler
 
 
 class TestRateLimitInfo:
+    """
+    Validates N3.4: Session timeout/rate limiting primitives (unit-level)
+    """
     """Test rate limit information structure."""
     
     def test_create_rate_limit_info(self):
@@ -37,6 +40,9 @@ class TestRateLimitInfo:
 
 
 class TestSecurityMiddleware:
+    """
+    Validates N3.2/N3.4: Authentication checks, rate limiting, and permission evaluation
+    """
     """Test security middleware functionality."""
     
     @pytest.fixture
@@ -330,6 +336,9 @@ class TestSecurityMiddleware:
 
 
 class TestSecurityMiddlewareIntegration:
+    """
+    Validates N3.2/N3.4: Integration behavior including auth gating and rate limiting
+    """
     """Integration tests for security middleware."""
     
     @pytest.fixture

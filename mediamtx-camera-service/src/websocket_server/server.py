@@ -142,6 +142,9 @@ class WebSocketJsonRpcServer:
         # Security middleware (set by service manager)
         self._security_middleware = None
 
+        # Scheduled auto-stop tasks per stream name
+        self._recording_stop_tasks: Dict[str, asyncio.Task] = {}
+
     def set_mediamtx_controller(self, controller) -> None:
         """
         Set the MediaMTX controller for stream operations.
@@ -735,6 +738,20 @@ class WebSocketJsonRpcServer:
             f"Notification {method} sent to {success_count}/{len(clients_to_notify)} clients"
         )
 
+    async def _emit_recording_complete(self, device_path: str, stream_name: str) -> None:
+        """Emit recording completion notification to clients."""
+        try:
+            await self.broadcast_notification(
+                method="recording_status_update",
+                params={
+                    "device": device_path,
+                    "status": "COMPLETED",
+                    "filename": f"{stream_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.mp4",
+                },
+            )
+        except Exception as e:
+            self._logger.debug(f"Failed to emit recording completion: {e}")
+
     async def send_notification_to_client(
         self, client_id: str, method: str, params: Optional[Dict[str, Any]] = None
     ) -> bool:
@@ -1157,8 +1174,13 @@ class WebSocketJsonRpcServer:
             raise ValueError("device parameter is required")
 
         device_path = params["device"]
+        # Parameter validation and normalization
         format_type = params.get("format", "jpg")
         quality = params.get("quality", 85)
+        if not isinstance(quality, int) or not (1 <= quality <= 100):
+            raise ValueError("Invalid params")
+        if format_type not in ("jpg", "png"):
+            format_type = "jpg"
         custom_filename = params.get("filename")
 
         # Get MediaMTX controller from service manager if available
@@ -1224,8 +1246,39 @@ class WebSocketJsonRpcServer:
             raise ValueError("device parameter is required")
 
         device_path = params["device"]
+        # Parameter normalization and validation
         duration = params.get("duration")
+        duration_seconds = params.get("duration_seconds")
+        duration_minutes = params.get("duration_minutes")
+        duration_hours = params.get("duration_hours")
         format_type = params.get("format", "mp4")
+
+        # Normalize format (only mp4 supported at this stage)
+        if format_type not in ("mp4",):
+            format_type = "mp4"
+
+        # Determine effective duration (seconds)
+        effective_duration = None
+        if duration is not None:
+            # legacy seconds param
+            if not isinstance(duration, int) or duration < 1:
+                raise ValueError("Invalid params")
+            effective_duration = duration
+        elif duration_seconds is not None:
+            if not isinstance(duration_seconds, int) or not (1 <= duration_seconds <= 3600):
+                raise ValueError("Invalid params")
+            effective_duration = duration_seconds
+        elif duration_minutes is not None:
+            if not isinstance(duration_minutes, int) or not (1 <= duration_minutes <= 1440):
+                raise ValueError("Invalid params")
+            effective_duration = duration_minutes * 60
+        elif duration_hours is not None:
+            if not isinstance(duration_hours, int) or not (1 <= duration_hours <= 24):
+                raise ValueError("Invalid params")
+            effective_duration = duration_hours * 3600
+        else:
+            # Unlimited mode when no duration provided
+            effective_duration = None
 
         # Get MediaMTX controller from service manager if available
         mediamtx_controller = None
@@ -1251,10 +1304,10 @@ class WebSocketJsonRpcServer:
             session_id = str(uuid.uuid4())
 
             recording_result = await mediamtx_controller.start_recording(
-                stream_name=stream_name, duration=duration, format=format_type
+                stream_name=stream_name, duration=effective_duration, format=format_type
             )
 
-            return {
+            response = {
                 "device": device_path,
                 "session_id": session_id,
                 "filename": recording_result.get("filename"),
@@ -1262,9 +1315,28 @@ class WebSocketJsonRpcServer:
                 "start_time": recording_result.get(
                     "start_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 ),
-                "duration": duration,
+                "duration": effective_duration,
                 "format": format_type,
             }
+
+            # Schedule auto-stop if timed recording requested
+            if effective_duration and effective_duration > 0:
+                async def _auto_stop():
+                    try:
+                        await asyncio.sleep(effective_duration)
+                        # Stop via controller; ignore errors
+                        try:
+                            await mediamtx_controller.stop_recording(stream_name=stream_name)
+                        except Exception:
+                            pass
+                        await self._emit_recording_complete(device_path, stream_name)
+                    finally:
+                        self._recording_stop_tasks.pop(stream_name, None)
+
+                task = asyncio.create_task(_auto_stop())
+                self._recording_stop_tasks[stream_name] = task
+
+            return response
 
         except Exception as e:
             self._logger.error(f"Error starting recording for {device_path}: {e}")

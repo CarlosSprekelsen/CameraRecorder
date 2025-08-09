@@ -17,6 +17,9 @@ from src.security.api_key_handler import APIKeyHandler, APIKey
 
 
 class TestAPIKey:
+    """
+    Validates N3.2: API key representation and validation helpers
+    """
     """Test API key structure."""
     
     def test_create_api_key(self):
@@ -65,6 +68,9 @@ class TestAPIKey:
 
 
 class TestAPIKeyHandler:
+    """
+    Validates N3.2: API key handler behavior (generation, validation)
+    """
     """Test API key handler functionality."""
     
     @pytest.fixture
@@ -292,6 +298,9 @@ class TestAPIKeyHandler:
 
 
 class TestAPIKeyHandlerIntegration:
+    """
+    Validates N3.2: Integration flow for API key authentication
+    """
     """Integration tests for API key handler."""
     
     @pytest.fixture
