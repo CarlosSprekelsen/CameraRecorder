@@ -1,15 +1,12 @@
-.....................ss.                                                 [100%]
+........................                                                 [100%]
 ============================= slowest 10 durations =============================
 2.01s call     tests/ivv/test_real_system_validation.py::TestRealSystemValidation::test_websocket_server_real_validation
 1.01s call     tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_websocket_server_integration
-1.01s call     tests/ivv/test_real_integration.py::TestRealIntegration::test_real_error_handling_integration
 1.01s call     tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_error_handling_integration
 1.01s call     tests/ivv/test_real_integration.py::TestRealIntegration::test_real_websocket_server_integration
 1.01s call     tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_notification_system
-0.14s call     tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug::test_device_access_debug
+1.01s call     tests/ivv/test_real_integration.py::TestRealIntegration::test_real_error_handling_integration
+0.13s call     tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug::test_device_access_debug
+0.08s teardown tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_performance_validation
 0.08s teardown tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug::test_monitor_startup_debug
-0.08s teardown tests/ivv/test_real_integration.py::TestRealIntegration::test_real_camera_discovery_flow
-0.03s call     tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_performance_validation
-=========================== short test summary info ============================
-SKIPPED [1] mediamtx-camera-service/tests/ivv/test_real_system_validation.py:416: Service Manager Integration has real issues: Service manager error: No module named 'jwt'
-SKIPPED [1] mediamtx-camera-service/tests/ivv/test_real_system_validation.py:433: End-to-End Workflow has real issues: End-to-end workflow error: No module named 'jwt'
+0.03s call     tests/ivv/test_integration_smoke.py::TestRealIntegration::test_real_service_manager_integration

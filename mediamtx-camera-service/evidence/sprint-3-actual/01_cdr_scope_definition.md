@@ -47,9 +47,28 @@ Evidence Integrity: Each evidence file includes command outputs and hashes where
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Establish verifiable CDR baseline and build artifacts. Execute: 1) Tag current codebase with annotated tag vX.Y.Z-cdr (determine appropriate version number), 2) Produce build artifacts using standard project method (container/Dockerfile or pinned Python requirements), 3) Record complete environment matrix: OS/kernel version, Python version, MediaMTX version, camera hardware models used for testing, 4) Generate checksums (SHA256) for all produced artifacts, 5) Document exact build commands and environment setup for reproducibility.
 
-Input: Current codebase state
+EXECUTION CONSTRAINTS:
+- Execute EXACT commands listed in "Execution Requirements" - no interpretation or substitution
+- Complete FULL deliverable as specified in "Output Requirements" - no partial delivery
+- NO scope additions, alternatives, or "improvements" - stick to defined task only
+- NO offers for additional work ("if you want me to...") - complete assigned scope only
+- Create and deliver the specified evidence file completely before ending response
+- End response with: "Task complete. Evidence file created: evidence/sprint-3-actual/00_cdr_baseline_and_build.md"
+
+PROHIBITED BEHAVIORS:
+- Offering alternatives or additions not explicitly requested
+- Partial completion with offers to finish later
+- Interpretation of requirements instead of direct execution
+- Ending with proposals or suggestions for extra work
+
+ROLE BOUNDARY REMINDER:
+- Your role: Developer - Implementation only, cannot claim completion beyond evidence creation
+- Your authority: Execute assigned tasks exactly as specified
+- Your constraints: No scope modification, no alternative suggestions, no partial delivery
+- Success criteria: Complete assigned deliverable with evidence as specified
+
+Task: Establish verifiable CDR baseline and build artifacts.
 
 Execution Requirements:
 - Create annotated git tag: git tag -a vX.Y.Z-cdr -m "CDR baseline for production validation"
@@ -65,7 +84,9 @@ Output Requirements:
 - Use sections: Baseline Definition, Build Artifacts, Environment Matrix, Checksums, Reproducibility Verification
 - Include actual command outputs, version strings, and checksum values
 
-Handoff: Provide evidence/sprint-3-actual/00_cdr_baseline_and_build.md to Project Manager for CDR baseline approval.
+Deliverable: Complete evidence/sprint-3-actual/00_cdr_baseline_and_build.md file with all sections populated and actual command outputs included. Task is NOT complete until this file exists and contains all required evidence.
+
+Handoff: Evidence file evidence/sprint-3-actual/00_cdr_baseline_and_build.md must be created and completed before this task ends.
 ```
 
 ---
@@ -78,6 +99,18 @@ Handoff: Provide evidence/sprint-3-actual/00_cdr_baseline_and_build.md to Projec
 Your role: Project Manager
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
+
+DELIVERABLE VALIDATION (Execute Before Starting Main Task):
+1. Verify input file exists: evidence/sprint-3-actual/00_cdr_baseline_and_build.md
+2. Validate required sections present: Baseline Definition, Build Artifacts, Environment Matrix, Checksums, Reproducibility Verification
+3. Confirm actual outputs included: real command outputs, version strings, checksum values (not summaries)
+4. Check handoff requirements met: Complete baseline establishment with reproducible build evidence
+
+VALIDATION DECISION:
+- PASS: Developer deliverable complete → Proceed with CDR scope definition
+- FAIL: Developer deliverable incomplete → REJECT and return to Developer
+
+If FAIL: Create evidence/sprint-3-actual/00_deliverable_rejection.md and instruct Developer to complete missing elements before proceeding. Do NOT proceed until PASS achieved.
 Task: Execute zero-trust cleanup of ALL previous CDR artifacts in evidence/sprint-3/ directory. Create fresh evidence/sprint-3-actual/ directory. Define complete CDR scope covering: ALL requirements validation, ALL architecture components verification, ALL test layers assessment, complete system functionality validation, production deployment readiness, security compliance, performance validation, documentation completeness. Document comprehensive CDR scope and success criteria that covers entire system, not just gap requirements. Approve CDR baseline established in Phase 0.
 
 Input: evidence/sprint-3-actual/00_cdr_baseline_and_build.md
@@ -90,6 +123,7 @@ Output Requirements:
 - Reference cleanup completion, directory structure creation, and approved baseline tag/artifacts
 
 Handoff: Provide evidence/sprint-3-actual/01_cdr_scope_definition.md to IV&V for requirements inventory task.
+Validation criteria (for next role): File must include Purpose, Scope, Success Criteria, Process Overview, Baseline Approval; next role will validate completeness before proceeding. Proceed.
 ```
 
 ### 2. Complete Requirements Inventory and Analysis (IV\&V)
@@ -98,6 +132,18 @@ Handoff: Provide evidence/sprint-3-actual/01_cdr_scope_definition.md to IV&V for
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
+
+DELIVERABLE VALIDATION (Execute Before Starting Main Task):
+1. Verify input file exists: evidence/sprint-3-actual/01_cdr_scope_definition.md
+2. Validate required sections present: Purpose, Scope, Success Criteria, Process Overview, Baseline Approval
+3. Confirm actual baseline tag and evidence references included (not placeholders)
+4. Check handoff requirements met: Approved CDR baseline and scope are present
+
+VALIDATION DECISION:
+- PASS: PM deliverable complete → Proceed with requirements inventory
+- FAIL: PM deliverable incomplete → REJECT and return to PM
+
+If FAIL: Create evidence/sprint-3-actual/01_deliverable_rejection.md with failures/corrections and halt until PASS.
 Task: Conduct comprehensive inventory of ALL requirements from docs/requirements/client-requirements.md and any other requirement sources. Catalog every functional requirement (F1.1.x through F3.x.x), non-functional requirements, integration requirements, and implied system requirements. Identify requirement categories: customer-critical, system-critical, security-critical, performance-critical. Create complete requirements register with priority classification and testability assessment. Reference approved CDR baseline for validation context.
 
 Input: evidence/sprint-3-actual/01_cdr_scope_definition.md and evidence/sprint-3-actual/00_cdr_baseline_and_build.md
@@ -110,6 +156,7 @@ Output Requirements:
 - Professional format with Executive Summary, Requirements Catalog, Priority Analysis, Testability Assessment sections
 
 Handoff: Provide evidence/sprint-3-actual/02_requirements_inventory.md to IV&V for architecture component inventory task.
+Validation criteria (for next role): File must contain complete catalog, priority matrix, testability assessment, baseline reference; next role will validate before proceeding. Proceed.
 ```
 
 ### 2a. Code Quality & Supply Chain Gate (Project Manager)
@@ -132,6 +179,7 @@ Output Requirements:
 - Include: Tools invoked, versions, results summary, failures (if any) with disposition
 
 Handoff: Provide evidence/sprint-3-actual/02a_code_quality_and_supply_chain.md to IV&V before full test execution.
+Proceed.
 ```
 
 ### 3. Architecture Component Inventory and Requirements Verification Traceability Matrix (IV\&V)
@@ -140,6 +188,18 @@ Handoff: Provide evidence/sprint-3-actual/02a_code_quality_and_supply_chain.md t
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
+
+DELIVERABLE VALIDATION (Execute Before Starting Main Task):
+1. Verify input file exists: evidence/sprint-3-actual/02_requirements_inventory.md
+2. Validate required sections present: Executive Summary, Requirements Catalog, Priority Analysis, Testability Assessment
+3. Confirm actual requirement IDs and descriptions populated (not placeholders)
+4. Check handoff requirements met: Complete requirements catalog present
+
+VALIDATION DECISION:
+- PASS: Requirements inventory complete → Proceed with RVTM
+- FAIL: Requirements inventory incomplete → REJECT and return to IV&V author
+
+If FAIL: Create evidence/sprint-3-actual/02_deliverable_rejection.md and halt until PASS.
 Task: Conduct comprehensive inventory of ALL architecture components from docs/architecture/overview.md and create REQUIREMENTS VERIFICATION TRACEABILITY MATRIX (RVTM). Map EVERY requirement from Phase 2 to specific architecture component(s) that fulfill it. Verify architecture is capable of satisfying all requirements. Identify: 1) Requirements with no architecture allocation (critical gaps), 2) Architecture components with no requirement justification (potential over-engineering), 3) Architecture adequacy for requirement fulfillment.
 
 Input: evidence/sprint-3-actual/02_requirements_inventory.md
@@ -154,6 +214,7 @@ Output Requirements:
 - Identify any requirements without architecture allocation as CRITICAL GAPS
 
 Handoff: Provide evidence/sprint-3-actual/03_architecture_rvtm.md to IV&V for system execution validation.
+Validation criteria (for next role): RVTM must include complete mappings and gap analysis; next role will validate before proceeding. Proceed.
 ```
 
 ---
@@ -188,6 +249,7 @@ Output Requirements:
 - Include real terminal outputs, JSON responses, file system evidence, and baseline compliance confirmation
 
 Handoff: Provide evidence/sprint-3-actual/04_system_execution_validation.md to IV&V for comprehensive test execution.
+Proceed.
 ```
 
 ### 5. Complete Test Suite Execution and Analysis (IV\&V)
@@ -215,6 +277,7 @@ Output Requirements:
 - Include complete terminal outputs, coverage reports, and actual test result data
 
 Handoff: Provide evidence/sprint-3-actual/05_test_execution_results.md to IV&V for requirements coverage validation.
+Proceed.
 ```
 
 ### 6. Complete Requirements Coverage Validation (IV\&V)
@@ -236,6 +299,7 @@ Output Requirements:
 - Include both DIRECT mapping (requirement → test) and INVERSE mapping (test → requirement)
 
 Handoff: Provide evidence/sprint-3-actual/06_requirements_coverage_matrix.md to IV&V for security assessment.
+Proceed.
 ```
 
 ---
@@ -268,6 +332,7 @@ Output Requirements:
 - Include actual JSON-RPC messages, file listings, timing data, and error logs
 
 Handoff: Provide evidence/sprint-3-actual/07_end_to_end_validation.md to IV&V for security testing execution.
+Proceed.
 ```
 
 ### 8. Security Testing Execution and Validation (IV\&V)
@@ -297,6 +362,7 @@ Output Requirements:
 - Include actual attack attempt logs, scan results, and security tool outputs
 
 Handoff: Provide evidence/sprint-3-actual/08_security_testing_execution.md to IV&V for performance testing execution.
+Proceed.
 ```
 
 ### 9. Performance and Load Testing Execution (IV\&V)
@@ -326,6 +392,7 @@ Output Requirements:
 - Include actual performance data, resource graphs, and bottleneck identification
 
 Handoff: Provide evidence/sprint-3-actual/09_performance_testing_execution.md to IV&V for deployment testing execution.
+Proceed.
 ```
 
 ### 9a. Soak & Resilience Microtests (IV\&V)
@@ -348,6 +415,7 @@ Output Requirements:
 - Include: Metrics snapshots/plots, recovery timings, error-rate calculations, observations
 
 Handoff: Provide evidence/sprint-3-actual/09a_soak_and_resilience.md to IV&V for deployment & upgrade validation.
+Proceed.
 ```
 
 ### 10. Deployment and Operational Testing Execution (IV\&V)
@@ -380,6 +448,7 @@ Output Requirements:
   - ops/slo.md (API p95 latency, recording success rate, alert suggestions)
 
 Handoff: Provide evidence/sprint-3-actual/10_deployment_testing_execution.md to IV&V for upgrade/rollback validation.
+Proceed.
 ```
 
 ### 10a. Upgrade and Rollback Smoke (IV\&V)
@@ -401,6 +470,7 @@ Output Requirements:
 - Include: Steps, timing, any downtime, verification evidence, data/config integrity confirmation
 
 Handoff: Provide evidence/sprint-3-actual/10a_upgrade_and_rollback.md to IV&V for API/ICD contract validation.
+Proceed.
 ```
 
 ### 11. API/ICD Contract Validation & Freeze (Project Manager)
@@ -422,6 +492,7 @@ Output Requirements:
 - Include: Schema list/links, contract test outputs (pass/fail), API versioning statement, deprecation policy
 
 Handoff: Provide evidence/sprint-3-actual/11_api_contract_validation.md to IV&V for issue compilation (Step 12).
+Proceed.
 ```
 
 ---
@@ -446,6 +517,7 @@ Output Requirements:
 - Professional format with Issue Summary, Severity Analysis, Remediation Strategy, Production Blocker Identification sections
 
 Handoff: Provide evidence/sprint-3-actual/12_execution_issues_remediation_plan.md to Developer for critical issue remediation.
+Proceed.
 ```
 
 ### 13. Critical Issue Remediation Implementation (Developer)
@@ -454,6 +526,26 @@ Handoff: Provide evidence/sprint-3-actual/12_execution_issues_remediation_plan.m
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
+
+EXECUTION CONSTRAINTS:
+- Execute EXACT commands listed below - no interpretation or substitution
+- Complete FULL evidence document - no partial delivery
+- NO scope additions or alternatives - stick to defined task only
+- Create specified evidence file completely before ending response
+- End response with: "Task complete. Evidence file created: evidence/sprint-3-actual/13_remediation_implementation.md"
+
+PROHIBITED BEHAVIORS:
+- Offering alternatives or additions not explicitly requested
+- Partial completion with offers to finish later
+- Interpretation of requirements instead of direct execution
+- Ending with proposals or suggestions for extra work
+
+ROLE BOUNDARY REMINDER:
+- Your role: Developer - Implementation only, cannot claim completion beyond evidence creation
+- Your authority: Execute assigned tasks exactly as specified
+- Your constraints: No scope modification, no alternative suggestions, no partial delivery
+- Success criteria: Complete assigned deliverable with evidence as specified
+
 Task: ACTUALLY FIX all critical and major issues identified during execution testing. Address: test failures, functional bugs, security vulnerabilities, performance bottlenecks, deployment problems, API documentation gaps as prioritized. For each fix, execute validation tests to prove the issue is resolved.
 
 Input: evidence/sprint-3-actual/12_execution_issues_remediation_plan.md
@@ -473,7 +565,9 @@ Output Requirements:
 - Use sections: Remediation Summary, Implementation Details, Re-execution Validation, Documentation Updates, Regression Testing
 - Include actual code changes, configuration updates, documentation updates, and re-test execution results
 
-Handoff: Provide evidence/sprint-3-actual/13_remediation_implementation.md to IV&V for remediation validation.
+Deliverable: Complete evidence/sprint-3-actual/13_remediation_implementation.md file with all sections populated and actual outputs included. Task is NOT complete until this file exists and contains all required evidence.
+
+Handoff: Evidence file evidence/sprint-3-actual/13_remediation_implementation.md must be created and completed before this task ends.
 ```
 
 ### 14. Remediation Validation Through Re-execution (IV\&V)
@@ -503,6 +597,7 @@ Output Requirements:
 - Include actual re-test outputs and validation evidence for each remediated issue
 
 Handoff: Provide evidence/sprint-3-actual/14_remediation_re_execution_validation.md to IV&V for CDR technical report compilation.
+Proceed.
 ```
 
 ---
@@ -527,6 +622,7 @@ Output Requirements:
 - Reference all execution evidence files and include actual test results, performance data, and execution statistics
 
 Handoff: Provide evidence/sprint-3-actual/15_cdr_technical_report.md to Project Manager for final CDR decision.
+Proceed.
 ```
 
 ### 16. CDR Final Decision and Authorization (Project Manager)
@@ -547,6 +643,7 @@ Output Requirements:
 - Include final decision matrix referencing actual execution evidence and baseline compliance
 
 Final Deliverable: Complete CDR evidence package in evidence/sprint-3-actual/ with all 17 execution-based assessment and decision documents (00-16), traceable to approved baseline vX.Y.Z-cdr.
+Proceed.
 ```
 
 ---
@@ -579,6 +676,11 @@ Final Deliverable: Complete CDR evidence package in evidence/sprint-3-actual/ wi
 ## Next Steps
 [Handoff instructions and follow-up actions]
 ```
+### Promp instructions
+
+- Instructions are clear, do not wait for clarifications if they are under your roles and responsibilities definitions.
+- Proceed inmediately with the asigned tasks.
+- Time out because many scripts will hang. 
 
 ### Evidence Management Rules
 
