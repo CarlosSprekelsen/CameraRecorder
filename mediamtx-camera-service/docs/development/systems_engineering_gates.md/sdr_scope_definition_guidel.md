@@ -1,419 +1,276 @@
-# SDR (System Design Review) Scope Definition Guide
+SDR (System Design Review) – Scope Definition and Execution Guide
 
-## SDR Objective
-Validate system requirements are complete, testable, and architecturally feasible through proof-of-concept execution before detailed design begins.
+Purpose: Establish a disciplined, evidence-based process to resolve foundational issues prior to PDR/CDR while avoiding scope expansion and focusing on MVP deliverables.
 
-## Global SDR Acceptance Thresholds
-```
+SDR Objective
+
+Validate that requirements are complete/testable and that the proposed architecture/technology stack is feasible through lightweight, working proofs before detailed design begins.
+
+Non‑Goals and Scope Guardrails
+
+No new features or scope expansion
+
+No refactors beyond what is necessary for prototype validation
+
+No additional hardware models beyond the MVP target list
+
+Global SDR Acceptance Thresholds
+
 Requirements: 100% traceable, testable, and validated
-Architecture: Feasible through working proof-of-concept
-Interfaces: Defined and validated through prototyping
-Technology: Selected and proven through spike implementations
-Risk: All high risks have mitigation plans with evidence
-Evidence: All claims backed by working demonstrations
-```
+Architecture: Feasible via working proof‑of‑concept (PoC)
+Interfaces: Defined and exercised via runnable prototypes
+Technology: Critical selections proven via focused spikes
+Risk: All High risks have concrete mitigation plans with evidence
+Evidence: All claims backed by working demos and captured outputs
+Timebox: 5–10 working days; 2 iterations max
 
----
+Phase 0: Requirements Baseline
 
-## Phase 0: Requirements Baseline
+0. Requirements Validation and Baseline (IV&V)
 
-### 0. Requirements Validation and Baseline (IV&V)
-```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 
-Task: Validate ALL requirements are complete, testable, and unambiguous
+Task: Validate ALL requirements are complete, testable, unambiguous.
 
 Execute exactly:
-1. Inventory all requirements from specifications
-2. Validate each requirement has acceptance criteria
-3. Check requirements for testability and measurability
-4. Identify requirement dependencies and conflicts
-5. Verify requirement priorities and categories
+1) Inventory all requirements from source specs
+2) Ensure each requirement has measurable acceptance criteria
+3) Assess testability, measurability, and priority (criticality)
+4) Identify dependencies and conflicts
+5) Cross‑check requirements vs architecture vs API docs for consistency
+6) Record explicit discrepancies with source references
 
 VALIDATION LOOP:
-- If requirements lack acceptance criteria, return to stakeholders for clarification
-- If requirements are untestable, iterate until testable criteria defined
-- If conflicts found, resolve through stakeholder review
-- Verify each requirement can be validated through testing
+- Do not stop on first issue; enumerate all gaps/conflicts
+- Mark untestable items and missing criteria precisely
 
 Create: evidence/sdr-actual/00_requirements_validation.md
 
 DELIVERABLE CRITERIA:
-- Requirements inventory: Complete catalog with IDs and descriptions
-- Testability assessment: Each requirement has measurable acceptance criteria
-- Conflict analysis: All requirement conflicts identified and resolved
-- Priority matrix: Requirements categorized by criticality
-- Task incomplete until ALL criteria met
+- Complete catalog with IDs/descriptions
+- Testability assessment per requirement
+- Conflict and dependency analysis
+- Cross‑document consistency audit
+- Priority matrix (customer‑critical, system‑critical, etc.)
+- Issue register with exact citations
 
-Success confirmation: "All requirements validated as complete, testable, and conflict-free"
-```
+Success Criteria: All requirements validated and discrepancies documented.
 
+0a. Ground Truth Document Remediation (Project Manager)
 
-### 0a. Requirements Baseline Gate Review (Project Manager)
-```
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
 Input: evidence/sdr-actual/00_requirements_validation.md
 
-GATE REVIEW: Assess requirements baseline adequacy for system design
-- Verify requirements completeness and testability
-- Assess requirement quality and clarity
-- Evaluate requirement conflicts and resolutions
-- Decide if requirements foundation sufficient for architecture work
+Task: Edit ground‑truth docs to fix ONLY the discrepancies identified by IV&V.
 
-DECISION: PROCEED/REMEDIATE/HALT
-
-Create: evidence/sdr-actual/00a_requirements_gate_review.md
-Include: Requirements assessment, gaps identified, gate decision
-
-If REMEDIATE: Generate copy-paste ready stakeholder prompts for requirement clarification/completion
-If PROCEED: Authorize architecture development
-```
-
----
-
-## Phase 1: Architecture Feasibility
-
-### 1. High-Level Architecture Design (Developer)
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Design high-level system architecture and validate feasibility through proof-of-concept
+Scope control constraints:
+- No new features or architectural scope
+- Only clarify, add acceptance criteria, and align cross‑docs
 
 Execute exactly:
-1. Design component architecture mapping to requirements
-2. Define system interfaces and data flows
-3. Select core technologies and frameworks
-4. Create architectural proof-of-concept (working skeleton)
-5. Validate key architectural decisions through spike implementations
+1) Apply minimal edits to docs/requirements to add missing criteria
+2) Align docs/architecture to requirements (consistency only)
+3) Align docs/api to architecture interfaces
+4) Validate each edit traces to an IV&V finding
 
-VALIDATION LOOP:
-- If architecture cannot satisfy requirements, iterate design until feasible
-- If technology selections fail proof-of-concept, select alternatives
-- If interfaces are unclear, prototype until well-defined
-- Verify proof-of-concept demonstrates architectural viability
+Create: evidence/sdr-actual/00a_ground_truth_remediation.md
+
+DELIVERABLE CRITERIA:
+- Mapping table: finding → edit (with links/diffs)
+- Before/after snippets for each change
+- Cross‑doc consistency check report
+- Scope‑creep check (no new scope)
+
+Success Criteria: All IV&V findings resolved via targeted document edits; no scope creep.
+
+0b. Requirements Baseline Gate Review (Project Manager)
+
+Your role: Project Manager
+Inputs: 00_requirements_validation.md, 00a_ground_truth_remediation.md
+
+Gate review:
+- Verify all findings are resolved
+- Confirm cross‑doc consistency and clarity
+- Decide readiness to proceed
+
+Decision options: PROCEED | REMEDIATE | HALT
+
+Create: evidence/sdr-actual/00b_requirements_baseline_gate_review.md
+
+DELIVERABLE CRITERIA:
+- Decision with rationale and evidence references
+- Scope control confirmation
+- Next steps authorization
+
+Success Criteria: Requirements baseline gate review complete with authorized next steps.
+
+0c. Assumptions & Non‑Goals Baseline (Project Manager)
+
+Your role: Project Manager
+Task: Freeze assumptions and non‑goals to prevent scope creep during SDR.
+
+Create: evidence/sdr-actual/00c_assumptions_and_non_goals.md
+Contents: explicit assumptions (with expiry/owner), non‑goals list, constraints (e.g., OS/camera list), and change‑control rule: PM waiver required for any deviation.
+
+Phase 1: Architecture Feasibility
+
+1. High‑Level Architecture Design (Developer)
+
+Your role: Developer
+Task: Design component architecture and prove feasibility via PoC.
+
+Execute exactly:
+1) Map components to validated requirements (ID‑level)
+2) Define key interfaces and data flows
+3) Select core technologies (justify briefly)
+4) Implement a runnable PoC skeleton (service starts; minimal happy path works)
+5) Capture outputs (logs, sample media) as evidence
 
 Create: evidence/sdr-actual/01_architecture_design.md
 
 DELIVERABLE CRITERIA:
-- Architecture diagram: Components, interfaces, data flows
-- Technology selection: Justified choices with proof-of-concept evidence
-- Proof-of-concept: Working skeleton demonstrating architecture
-- Interface definitions: Clear API/protocol specifications
-- Feasibility validation: Evidence architecture can satisfy requirements
-- Task incomplete until ALL criteria met
+- Diagram(s), interface/data‑flow descriptions
+- Component↔requirement allocation table (high‑level)
+- PoC run log + artifact samples proving feasibility
 
-Success confirmation: "Architecture designed and feasibility proven through working proof-of-concept"
-```
+Success Criteria: Architecture designed; PoC demonstrates feasibility on MVP path.
 
-### 2. Interface Definition and Validation (Developer)
-```
+2. Interface Definition & Validation (Developer)
+
 Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Define all system interfaces and validate through working prototypes
+Task: Define and exercise interfaces via executable prototypes.
 
 Execute exactly:
-1. Define external interfaces (APIs, protocols, data formats)
-2. Define internal interfaces between components
-3. Create interface prototypes and test harnesses
-4. Validate interface designs through actual data exchange
-5. Document interface contracts and error handling
-
-VALIDATION LOOP:
-- If interfaces fail validation testing, iterate design until working
-- If data formats cause issues, refine until clean exchange achieved
-- If error handling inadequate, enhance until robust
-- Verify all interfaces work with actual test data
+1) Define external API/protocols (request/response schemas; error codes)
+2) Define critical internal interfaces
+3) Provide tiny harnesses (e.g., JSON‑RPC sample client) and run them
+4) Log actual request/response exchanges; validate error handling
 
 Create: evidence/sdr-actual/02_interface_validation.md
 
 DELIVERABLE CRITERIA:
-- Interface specifications: Complete API/protocol definitions
-- Prototype validation: Working interface demonstrations
-- Data format validation: Actual data exchange tested
-- Error handling: Interface failure modes tested
-- Contract documentation: Clear interface agreements
-- Task incomplete until ALL criteria met
+- Interface specs (schemas/examples)
+- Prototype transcripts (real exchanges)
+- Error‑path evidence (negative tests)
 
-Success confirmation: "All interfaces defined and validated through working prototypes"
-```
+Success Criteria: Interfaces defined and validated through working prototypes.
 
-### 3. Technology Spike Validation (Developer)
-```
+2a. Minimal Security & Time Integrity Baseline (Developer)
+
 Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Validate critical technology selections through spike implementations
+Task: Establish baseline safeguards relevant to camera evidence.
 
 Execute exactly:
-1. Identify high-risk technology decisions
-2. Implement focused spikes for each critical technology
-3. Test technology integration and compatibility
-4. Validate performance characteristics under load
-5. Assess technology learning curve and documentation
+1) Time source policy: document clock source and timestamping approach
+2) Logging policy: avoid PII; include request IDs and monotonic timestamps
+3) Auth baseline: ensure token validation path exists and rejects invalid/expired
 
-VALIDATION LOOP:
-- If technology spikes fail, evaluate alternatives until viable solution found
-- If performance inadequate, tune or select different technology
-- If integration issues found, resolve or change technology stack
-- Verify chosen technologies can deliver required functionality
+Create: evidence/sdr-actual/02a_security_time_baseline.md
+
+Success Criteria: Time, logging, and minimal auth behaviors demonstrated in prototype logs.
+
+3. Technology Spike Validation (Developer)
+
+Your role: Developer
+Task: Validate critical technology selections via focused spikes.
+
+Execute exactly:
+1) Identify top 2–3 high‑risk tech choices (e.g., MediaMTX integration, WebSocket handling)
+2) Implement minimal spikes proving integration/perf viability
+3) Capture load sanity (e.g., one recording for 60–120 s; CPU/RSS snapshots)
 
 Create: evidence/sdr-actual/03_technology_validation.md
 
 DELIVERABLE CRITERIA:
-- Spike implementations: Working code proving technology viability
-- Performance validation: Technology meets performance requirements
-- Integration testing: Technologies work together successfully
-- Risk assessment: Technology risks identified and mitigated
-- Learning validation: Team can effectively use selected technologies
-- Task incomplete until ALL criteria met
+- Spike code refs and commands used
+- Screenshots/logs showing behavior under light load
+- Brief risk notes per tech
 
-Success confirmation: "All critical technologies validated through working spike implementations"
-```
+Success Criteria: Critical technologies validated with working spikes.
 
-### 3a. Architecture Feasibility Gate Review (Project Manager)
-```
+3a. Architecture Feasibility Gate Review (Project Manager)
+
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+Inputs: 01_architecture_design.md, 02_interface_validation.md, 02a_security_time_baseline.md, 03_technology_validation.md
 
-Input: evidence/sdr-actual/01_architecture_design.md, 02_interface_validation.md, 03_technology_validation.md
-
-GATE REVIEW: Assess architecture feasibility for detailed design
-- Evaluate architecture proof-of-concept evidence
-- Review interface validation results
-- Assess technology spike validation outcomes
-- Decide if architecture foundation sufficient for detailed design
-
-DECISION OPTIONS:
-- PROCEED: Architecture proven feasible, authorize detailed design
-- REMEDIATE: Fix critical architecture issues before proceeding
-- CONDITIONAL: Proceed with documented architecture limitations
-- HALT: Architecture infeasible, requires fundamental redesign
+Gate review: evaluate PoC evidence, interface validation, minimal security/time integrity, and spikes.
+Decision: PROCEED | REMEDIATE | CONDITIONAL | HALT
 
 Create: evidence/sdr-actual/03a_architecture_feasibility_gate_review.md
-Include: Architecture assessment, technology validation review, gate decision
 
-If REMEDIATE: Generate copy-paste ready Developer prompts for architecture/technology fixes
-If PROCEED: Authorize Phase 2 risk and integration assessment
-```
+Phase 2: Risk & Integration Assessment
 
----
+4. Risk Assessment & Mitigation Planning (IV&V)
 
-## Phase 2: Risk and Integration Assessment
-
-### 4. Risk Assessment and Mitigation Planning (IV&V)
-```
 Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Identify and assess system risks with evidence-based mitigation plans
-
-Execute exactly:
-1. Identify technical, schedule, and integration risks
-2. Assess risk probability and impact through analysis
-3. Develop mitigation plans with measurable success criteria
-4. Create risk monitoring and early warning indicators
-5. Validate mitigation approaches through proof-of-concept where possible
-
-VALIDATION LOOP:
-- If high risks lack mitigation plans, develop until acceptable
-- If mitigation plans are unproven, prototype until validated
-- If early warning indicators are inadequate, enhance monitoring
-- Verify risk register is complete and actionable
+Task: Identify risks; propose evidence‑based mitigations and monitors.
 
 Create: evidence/sdr-actual/04_risk_assessment.md
+Contents:
+- Risk register with probability/impact
+- Mitigation plans with success criteria
+- Early‑warning indicators/telemetry
+- Validation evidence for critical mitigations (tiny demos acceptable)
 
-DELIVERABLE CRITERIA:
-- Risk register: Complete inventory with probability/impact assessment
-- Mitigation plans: Concrete actions with success criteria
-- Monitoring plan: Early warning indicators and triggers
-- Validation evidence: Proof-of-concept for critical mitigations
-- Residual risk assessment: Remaining risks after mitigation
-- Task incomplete until ALL criteria met
+5. Integration Strategy Validation (IV&V)
 
-Success confirmation: "All risks identified with validated mitigation plans and monitoring"
-```
-
-### 5. Integration Strategy Validation (IV&V)
-```
 Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Define and validate system integration approach through testing
-
-Execute exactly:
-1. Define integration sequence and dependencies
-2. Identify integration test points and criteria
-3. Create integration test framework and harnesses
-4. Validate integration approach through component simulation
-5. Test integration failure modes and recovery procedures
-
-VALIDATION LOOP:
-- If integration sequence has issues, reorder until dependencies resolved
-- If test framework inadequate, enhance until comprehensive
-- If integration simulations fail, adjust approach until successful
-- Verify integration strategy handles all identified scenarios
+Task: Define and validate the integration approach through simulation/mocks.
 
 Create: evidence/sdr-actual/05_integration_strategy.md
+Contents:
+- Dependency‑ordered integration sequence
+- Integration test harness outline and a working mock sim
+- Failure‑mode/recovery checks (e.g., camera flap, restart)
 
-DELIVERABLE CRITERIA:
-- Integration sequence: Dependency-ordered component integration plan
-- Test framework: Working integration test harnesses
-- Simulation validation: Integration approach tested with mock components
-- Failure mode testing: Integration error handling validated
-- Recovery procedures: Integration rollback and retry mechanisms tested
-- Task incomplete until ALL criteria met
+5a. Risk & Integration Gate Review (Project Manager)
 
-Success confirmation: "Integration strategy defined and validated through working test framework"
-```
-
-### 5a. Risk and Integration Gate Review (Project Manager)
-```
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Input: evidence/sdr-actual/04_risk_assessment.md, 05_integration_strategy.md
-
-GATE REVIEW: Assess risk management and integration readiness
-- Evaluate risk assessment completeness and mitigation viability
-- Review integration strategy validation results
-- Assess overall system development readiness
-- Decide if system design sufficient for detailed implementation planning
-
-DECISION OPTIONS:
-- PROCEED: Risks managed, integration proven, authorize SDR completion
-- REMEDIATE: Address critical risks/integration issues before proceeding
-- CONDITIONAL: Proceed with enhanced risk monitoring
-- HALT: Risks too high or integration approach unworkable
+Inputs: 04_risk_assessment.md, 05_integration_strategy.md
+Decision: PROCEED | REMEDIATE | CONDITIONAL | HALT
 
 Create: evidence/sdr-actual/05a_risk_integration_gate_review.md
-Include: Risk management assessment, integration validation review, gate decision
 
-If REMEDIATE: Generate copy-paste ready IV&V prompts for risk/integration resolution
-If PROCEED: Authorize SDR final assessment
-```
+Phase 3: SDR Decision
 
----
+6. SDR Technical Assessment (IV&V)
 
-## Phase 3: SDR Decision
-
-### 6. SDR Technical Assessment (IV&V)
-```
 Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Compile comprehensive SDR assessment based on all validation evidence
-
-Input: All evidence files from evidence/sdr-actual/ (00 through 05a)
-
-Execute exactly:
-1. Assess requirements validation completeness
-2. Evaluate architecture feasibility evidence
-3. Review technology validation results
-4. Analyze risk management adequacy
-5. Assess integration strategy viability
+Task: Compile SDR assessment across requirements, architecture, interfaces, technology, risks, and integration.
 
 Create: evidence/sdr-actual/06_sdr_technical_assessment.md
+Outcome: Recommendation = PROCEED/CONDITIONAL/DENY for detailed design (PDR entry)
 
-DELIVERABLE CRITERIA:
-- Requirements assessment: Validation of requirement quality and completeness
-- Architecture evaluation: Feasibility confirmed through proof-of-concept
-- Technology assessment: Spike validation results and technology viability
-- Risk evaluation: Risk management plan adequacy and mitigation validation
-- Integration assessment: Integration strategy validation and test framework
-- SDR recommendation: PROCEED/CONDITIONAL/DENY for detailed design phase
-- Task incomplete until ALL criteria met
+7. SDR Authorization Decision (Project Manager)
 
-Success confirmation: "SDR technical assessment complete with detailed design recommendation"
-```
-
-### 7. SDR Authorization Decision (Project Manager)
-```
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Make SDR authorization decision for detailed design phase entry
-
-Input: evidence/sdr-actual/06_sdr_technical_assessment.md
-
-Execute exactly:
-1. Review comprehensive technical assessment
-2. Evaluate business risk vs development readiness
-3. Assess resource and schedule implications
-4. Make informed authorization decision
-5. Define conditions and next steps
-
-DECISION OPTIONS:
-- AUTHORIZE: System design adequate, proceed to detailed design (PDR phase)
-- CONDITIONAL: Proceed with specific conditions and enhanced monitoring
-- DENY: System design inadequate, requires fundamental rework
+Task: Make SDR authorization decision and conditions for PDR entry.
 
 Create: evidence/sdr-actual/07_sdr_authorization_decision.md
 
-DELIVERABLE CRITERIA:
-- Authorization decision: Clear AUTHORIZE/CONDITIONAL/DENY
-- Decision rationale: Evidence-based justification referencing assessments
-- Conditions: Specific requirements if conditional authorization
-- Next steps: Clear direction for detailed design phase entry
-- Risk acceptance: Documented acceptance of residual risks
-- Task incomplete until ALL criteria met
+Evidence Management & Structure
 
-Success confirmation: "SDR authorization decision complete with detailed design phase direction"
-```
+Document Template:
 
----
-
-## Evidence Management
-
-**Document Structure:**
-```markdown
 # Document Title
 **Version:** 1.0
-**Date:** YYYY-MM-DD  
+**Date:** YYYY-MM-DD
 **Role:** [Developer/IV&V/Project Manager]
 **SDR Phase:** [Phase Number]
+**Status:** [Draft/Review/Final]
 
 ## Purpose
-[Brief task description]
 
-## Execution Results  
-[Proof-of-concept outputs, validation evidence, working demonstrations]
+## Execution Results
 
 ## Validation Evidence
-[Actual test results, prototype demonstrations, spike implementation results]
 
 ## Conclusion
-[Pass/fail assessment with evidence]
-```
 
-**File Naming:** ##_descriptive_name.md (00-07)
-**Location:** evidence/sdr-actual/
-**Requirements:** Include actual working demonstrations, not theoretical analysis
+Folders & Naming: evidence/sdr-actual/##_<descriptive>.md (00–07, with 0c, 2a as additions)
 
----
+Evidence Integrity: Include command outputs and hashes where relevant. Keep all PoC logs and media under evidence/sdr-actual/artifacts/.
 
-## Key SDR Principles
-
-**Proof-of-Concept Driven:** Every major decision backed by working demonstration
-**Risk-Based:** Focus on highest-risk elements first
-**Interface-Centric:** Validate all major interfaces through prototyping
-**Technology Validation:** Prove technology stack through spike implementations
-**Early Problem Detection:** Surface issues before detailed design investment
-**Evidence-Based Decisions:** No claims without working proof
-
-This SDR process ensures that detailed design begins with a **validated, feasible foundation** rather than untested assumptions.
+Change Control: Any deviation from assumptions/non‑goals requires a one‑line PM waiver appended to 00c_assumptions_and_non_goals.md.
