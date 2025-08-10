@@ -42,6 +42,16 @@ This roadmap defines the current development status, completed work, and priorit
   - Summary: Real integration testing validates end-to-end functionality, component coordination, error recovery, and performance characteristics. Over-mocking concerns addressed with actual component validation.
   - Evidence: `tests/ivv/test_real_integration.py` (6 tests, 100% pass rate), real component testing artifacts (2025-08-05)
 
+---
+### **🚪 SDR (System Design Review) - GATE REQUIRED**
+**Status**: ⚠️ **RETROACTIVE EXECUTION REQUIRED**  
+**Authority**: Project Manager  
+**Scope**: Requirements baseline and architecture validation for E1  
+**Reference**: `docs/systems-engineering-gates/sdr-system-design-review.md`  
+**Evidence**: `evidence/camera-service-sdr/`  
+**STOP**: E2 validation requires SDR completion for E1 baseline
+---
+
 ### E2: Security and Production Hardening - ✅ COMPLETE
 
 - **S6: Security Features Implementation**  
@@ -62,6 +72,16 @@ This roadmap defines the current development status, completed work, and priorit
         - `tests/installation/test_security_setup.py`
         - `deployment/scripts/qa_installation_validation.sh`
         - `docs/deployment/INSTALLATION_VALIDATION_REPORT.md`
+
+---
+### **🚪 PDR (Preliminary Design Review) - GATE REQUIRED**
+**Status**: ⚠️ **RETROACTIVE EXECUTION REQUIRED**  
+**Authority**: IV&V Technical Assessment → Project Manager Decision  
+**Scope**: Core implementation validation for E1-E2 completion  
+**Reference**: `docs/systems-engineering-gates/pdr-preliminary-design-review.md`  
+**Evidence**: `evidence/camera-service-pdr/`  
+**STOP**: E3 authorization requires PDR completion for foundation validation
+---
 
 ### E3: Client API & SDK Ecosystem - 🚀 AUTHORIZED TO BEGIN
 
@@ -120,6 +140,16 @@ This roadmap defines the current development status, completed work, and priorit
         - Usability testing results
         - S9 IV&V control point sign-off
         - E3 COMPLETION with full evidence package
+
+---
+### **🚪 CDR (Critical Design Review) - GATE PLANNED**
+**Target**: End of Sprint 4 (E3 Complete)  
+**Authority**: IV&V Assessment → Project Manager Production Authorization  
+**Scope**: Production readiness and deployment authorization  
+**Reference**: `docs/systems-engineering-gates/cdr-critical-design-review.md` ✅ EXISTS  
+**Evidence**: `evidence/camera-service-cdr/`  
+**STOP**: Production deployment requires CDR authorization
+---
 
 ### E4: Future Extensibility - PLANNING ONLY
 
@@ -210,6 +240,12 @@ This roadmap defines the current development status, completed work, and priorit
 - **Sprint 4 SDK Validation:** 📋 PLANNED
 - **E3 Completion:** Target Week 4
 - **E3 Authorization:** Pending Sprint 4 completion
+
+### **Gate Dependencies**
+- **SDR Completion**: Required before E2 validation
+- **PDR Completion**: Required before E3 authorization  
+- **CDR Completion**: Required before production deployment
+- **Gate Documentation**: Reference `docs/systems-engineering-gates/`
 
 ---
 
