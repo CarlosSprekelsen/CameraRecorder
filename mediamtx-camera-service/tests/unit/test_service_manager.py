@@ -94,7 +94,7 @@ async def test_req_svc_lifecycle_001_start_and_ping_ws():
 async def test_req_svc_api_cam_list_001_get_camera_list_structure():
     """
     Req: SVC-API-CAM-LIST-001
-    WebSocket API must return a list for get_camera_list (may be empty).
+    WebSocket API must return an object with cameras, total, and connected fields for get_camera_list.
     """
     api_port = _free_port()
     ws_port = _free_port()
@@ -107,7 +107,11 @@ async def test_req_svc_api_cam_list_001_get_camera_list_structure():
             async with websockets.connect(uri) as ws:
                 await ws.send(json.dumps({"jsonrpc": "2.0", "id": 2, "method": "get_camera_list"}))
                 resp = json.loads(await ws.recv())
-                assert isinstance(resp.get("result"), list)
+                assert isinstance(resp.get("result"), dict)
+                assert "cameras" in resp["result"]
+                assert "total" in resp["result"]
+                assert "connected" in resp["result"]
+                assert isinstance(resp["result"]["cameras"], list)
         finally:
             await svc.stop()
 
