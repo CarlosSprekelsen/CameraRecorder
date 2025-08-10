@@ -20,7 +20,6 @@ sys.path.insert(0, 'src')
 
 try:
     from camera_service.config import MediaMTXConfig, Config
-    from camera_service.service_manager import ServiceManager
     from mediamtx_wrapper.controller import MediaMTXController
 except ImportError as e:
     print(f"Import error: {e}")
@@ -98,7 +97,7 @@ def test_mediamtx_config_field_types():
         # Handle special cases like Optional types
         if hasattr(actual_type, '__origin__') and actual_type.__origin__ is not None:
             # For Optional[T], check that T matches expected_type
-            if actual_type.__origin__ == type(Union):
+            if actual_type.__origin__ is type(Union):
                 union_types = actual_type.__args__
                 # Remove None from union types
                 non_none_types = [t for t in union_types if t is not type(None)]

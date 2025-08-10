@@ -1,6 +1,4 @@
-import asyncio
 import json
-import os
 import pytest
 
 from src.websocket_server.server import WebSocketJsonRpcServer

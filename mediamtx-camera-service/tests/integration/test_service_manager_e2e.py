@@ -1,7 +1,5 @@
-import asyncio
 import socket
 from contextlib import asynccontextmanager
-from dataclasses import replace
 
 import pytest
 from aiohttp import web

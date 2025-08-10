@@ -5,15 +5,11 @@ Provides REST health endpoints for monitoring and Kubernetes readiness probes
 as specified in Architecture Decision AD-6.
 """
 
-import asyncio
-import json
 import logging
-import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict
 from dataclasses import dataclass
 
-import aiohttp
 from aiohttp import web
 
 
@@ -194,7 +190,7 @@ class HealthServer:
         try:
             # Check if all critical components are healthy
             mediamtx_health = await self._check_mediamtx_health()
-            camera_health = await self._check_camera_health()
+            await self._check_camera_health()
             service_health = await self._check_service_health()
             
             # Service is ready if MediaMTX is healthy and service manager is healthy

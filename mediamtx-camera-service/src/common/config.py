@@ -8,9 +8,8 @@ and comprehensive schema validation as specified in Architecture Decision AD-3.
 import os
 import yaml
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
-from pathlib import Path
 
 
 @dataclass

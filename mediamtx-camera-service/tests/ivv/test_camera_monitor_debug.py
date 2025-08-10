@@ -6,8 +6,6 @@ that's causing the hanging behavior.
 """
 
 import asyncio
-import tempfile
-import os
 from typing import Dict, Any
 
 import pytest

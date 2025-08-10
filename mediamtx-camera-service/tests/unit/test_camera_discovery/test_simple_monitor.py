@@ -4,7 +4,7 @@ Simple test to isolate hanging issues in HybridCameraMonitor.
 
 import asyncio
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from src.camera_discovery.hybrid_monitor import HybridCameraMonitor
 

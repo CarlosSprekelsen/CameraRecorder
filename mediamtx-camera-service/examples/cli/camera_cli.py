@@ -16,7 +16,7 @@ import argparse
 import json
 import sys
 import time
-from typing import Dict, Any, Optional, List
+from typing import List
 from pathlib import Path
 
 # Add the parent directory to the path to import the camera client
@@ -25,8 +25,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from examples.python.camera_client import (
     CameraClient,
     CameraServiceError,
-    AuthenticationError,
-    ConnectionError,
     CameraNotFoundError,
     MediaMTXError
 )

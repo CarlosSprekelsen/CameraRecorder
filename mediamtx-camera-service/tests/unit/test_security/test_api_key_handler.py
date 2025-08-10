@@ -6,11 +6,8 @@ as specified in Architecture Decision AD-7.
 """
 
 import pytest
-import json
 import os
 import tempfile
-import time
-from unittest.mock import patch, mock_open
 from datetime import datetime, timedelta, timezone
 
 from src.security.api_key_handler import APIKeyHandler, APIKey
@@ -197,7 +194,7 @@ class TestAPIKeyHandler:
     def test_revoke_api_key_success(self, api_key_handler):
         """Test successful API key revocation."""
         # Create a key
-        key = api_key_handler.create_api_key("Test Key", "viewer", 1)
+        api_key_handler.create_api_key("Test Key", "viewer", 1)
         
         # Get the key ID
         stored_key = list(api_key_handler._keys.values())[0]
@@ -233,7 +230,7 @@ class TestAPIKeyHandler:
     def test_rotate_api_key_success(self, api_key_handler):
         """Test successful API key rotation."""
         # Create a key
-        key = api_key_handler.create_api_key("Test Key", "operator", 1)
+        api_key_handler.create_api_key("Test Key", "operator", 1)
         
         # Get the key ID
         stored_key = list(api_key_handler._keys.values())[0]

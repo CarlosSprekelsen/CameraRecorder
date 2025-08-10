@@ -8,9 +8,6 @@ as specified in Sprint 2 Day 3 Task S7.4.
 import pytest
 import subprocess
 import tempfile
-import os
-import time
-import json
 import logging
 from pathlib import Path
 
@@ -378,8 +375,7 @@ class TestSecurityImplementationValidation:
         try:
             import re
             user_input = "admin'; DROP TABLE users; --"
-            sanitized = re.sub(r"[;'\"\-]", "", user_input)
-            safe = ";" not in sanitized and "'" not in sanitized
+            re.sub(r"[;'\"\-]", "", user_input)
             log_success("Input validation implementation validated")
         except Exception as e:
             log_error(f"Input validation implementation error: {e}")
@@ -435,7 +431,7 @@ class TestSecurityImplementationValidation:
             try:
                 raise ValueError("Test error")
             except ValueError as e:
-                error_response = {"error": "validation_failed", "message": str(e)}
+                {"error": "validation_failed", "message": str(e)}
             log_success("Error handling implementation validated")
         except Exception as e:
             log_error(f"Error handling implementation error: {e}")

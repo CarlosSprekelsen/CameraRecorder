@@ -22,14 +22,12 @@ Usage:
 import asyncio
 import json
 import logging
-import sys
-import time
 import uuid
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import argparse
 import websockets
-from websockets.exceptions import ConnectionClosed, WebSocketException
+from websockets.exceptions import ConnectionClosed
 import ssl
 
 

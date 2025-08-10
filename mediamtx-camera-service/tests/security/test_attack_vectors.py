@@ -113,7 +113,7 @@ class TestJWTSecurityAttacks:
     def test_jwt_brute_force_attack_simulation(self, jwt_handler):
         """Test JWT brute force attack simulation."""
         # Generate valid token
-        valid_token = jwt_handler.generate_token("test_user", "admin")
+        jwt_handler.generate_token("test_user", "admin")
         
         # Simulate brute force attempts with invalid tokens
         invalid_attempts = [
@@ -183,7 +183,7 @@ class TestAPIKeySecurityAttacks:
     def test_api_key_brute_force_attack_simulation(self, api_key_handler):
         """Test API key brute force attack simulation."""
         # Create valid API key
-        valid_key = api_key_handler.create_api_key("Valid Key", "admin", 1)
+        api_key_handler.create_api_key("Valid Key", "admin", 1)
         
         # Simulate brute force attempts
         invalid_attempts = [

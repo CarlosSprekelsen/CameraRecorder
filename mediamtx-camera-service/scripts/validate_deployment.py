@@ -7,7 +7,6 @@ Runs during installation to catch configuration and component mismatches early.
 import sys
 import subprocess
 import importlib.util
-import os
 from pathlib import Path
 
 def test_python_compatibility():
@@ -64,11 +63,11 @@ def test_component_instantiation():
         config = config_manager.load_config()
         
         # Test service manager instantiation
-        service_manager = ServiceManager(config)
+        ServiceManager(config)
         
         # Test camera monitor instantiation
         from camera_discovery.hybrid_monitor import HybridCameraMonitor
-        camera_monitor = HybridCameraMonitor(
+        HybridCameraMonitor(
             device_range=config.camera.device_range,
             poll_interval=config.camera.poll_interval,
             detection_timeout=config.camera.detection_timeout,
@@ -77,7 +76,7 @@ def test_component_instantiation():
         
         # Test WebSocket server instantiation
         from websocket_server.server import WebSocketJsonRpcServer
-        websocket_server = WebSocketJsonRpcServer(
+        WebSocketJsonRpcServer(
             host=config.server.host,
             port=config.server.port,
             websocket_path=config.server.websocket_path,

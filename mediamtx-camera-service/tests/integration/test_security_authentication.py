@@ -7,11 +7,9 @@ specified in Sprint 2 Task S7.1.
 """
 
 import pytest
-import asyncio
 import tempfile
 import os
 import time
-from datetime import datetime, timedelta, timezone
 
 from src.security.jwt_handler import JWTHandler
 from src.security.auth_manager import AuthManager

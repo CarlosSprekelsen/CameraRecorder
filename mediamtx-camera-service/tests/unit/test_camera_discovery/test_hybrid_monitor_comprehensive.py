@@ -21,7 +21,6 @@ from src.camera_discovery.hybrid_monitor import (
     CameraEvent,
     CapabilityDetectionResult,
 )
-from src.common.types import CameraDevice
 
 
 class TestCapabilityParsingVariations:
@@ -308,7 +307,6 @@ class TestPollingFallbackBehavior:
     async def test_polling_failure_backoff_with_jitter(self, monitor_no_udev):
         """Test polling failure backoff with jitter."""
 
-        initial_interval = monitor_no_udev._current_poll_interval
 
         # Simulate polling failure
         with patch.object(monitor_no_udev, "_discover_cameras", side_effect=Exception("Test failure")):

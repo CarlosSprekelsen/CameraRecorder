@@ -1,6 +1,5 @@
 import asyncio
 import json
-import socket
 from contextlib import asynccontextmanager
 
 import pytest
@@ -283,7 +282,7 @@ async def test_requirement_F313_notification_delivery_failure_tolerance():
         try:
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             # Connect and immediately close to simulate delivery failure
-            async with websockets.connect(uri) as ws:
+            async with websockets.connect(uri):
                 await asyncio.sleep(0.2)
             # Trigger event after client disconnect
             event = CameraEventData(device_path="/dev/video0", event_type=CameraEvent.CONNECTED, device_info=CameraDevice(device="/dev/video0", name="Camera 0", status="CONNECTED"), timestamp=0.0)

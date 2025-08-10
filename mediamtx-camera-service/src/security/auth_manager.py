@@ -6,11 +6,11 @@ interface for the WebSocket server as specified in Architecture Decision AD-7.
 """
 
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Optional
 from dataclasses import dataclass
 
-from .jwt_handler import JWTHandler, JWTClaims
-from .api_key_handler import APIKeyHandler, APIKey
+from .jwt_handler import JWTHandler
+from .api_key_handler import APIKeyHandler
 
 
 @dataclass

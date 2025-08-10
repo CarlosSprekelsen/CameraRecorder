@@ -344,7 +344,7 @@ class TestAPIKeySecurity:
     def test_api_key_storage_security(self, api_key_handler):
         """Test API key storage security features."""
         # Create key
-        key = api_key_handler.create_api_key("Security Test Key", "admin", 1)
+        api_key_handler.create_api_key("Security Test Key", "admin", 1)
         
         # Verify key is not stored in plain text
         stored_keys = list(api_key_handler._keys.values())

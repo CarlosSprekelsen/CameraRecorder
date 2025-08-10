@@ -38,7 +38,7 @@ import time
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Optional
 
 # Ensure UTF-8 console to avoid Windows cp1252 encode errors when printing
 try:
@@ -291,10 +291,10 @@ class TestRunner:
         if not self.args.no_coverage:
             coverage_threshold = self.args.threshold
             cmd.extend([
-                f"--cov=src/camera_discovery",
-                f"--cov=src/camera_service",
-                f"--cov=src/security",
-                f"--cov-report=term-missing",
+                "--cov=src/camera_discovery",
+                "--cov=src/camera_service",
+                "--cov=src/security",
+                "--cov-report=term-missing",
                 f"--cov-report=html:{self.artifacts_dir}/htmlcov",
                 f"--cov-fail-under={coverage_threshold}"
             ])
@@ -389,21 +389,21 @@ class TestRunner:
         print(f"{'='*80}")
         
         # Environment info
-        print(f"\nENVIRONMENT:")
+        print("\nENVIRONMENT:")
         print(f"  Python: {sys.version.split()[0]}")
         print(f"  Platform: {platform.system()} {platform.release()}")
         print(f"  Virtual Environment: {'Yes' if self.venv_active else 'No'}")
         print(f"  Working Directory: {self.project_root}")
         
         # Artifacts info  
-        print(f"\nARTIFACTS:")
+        print("\nARTIFACTS:")
         print(f"  Directory: {self.artifacts_dir}")
         print(f"  Coverage Report: {self.artifacts_dir}/htmlcov/index.html")
         print(f"  Log Files: {len(list(self.artifacts_dir.glob('*.txt')))} files")
         
         # Next steps
         if not overall_success:
-            print(f"\nNEXT STEPS:")
+            print("\nNEXT STEPS:")
             failed_stages = [s for s in self.stages if s.status == "FAILED"]
             for stage in failed_stages:
                 print(f"  - Fix {stage.name.lower()} issues")

@@ -8,12 +8,11 @@ as specified in Architecture Decision AD-7.
 import pytest
 import tempfile
 import os
-from unittest.mock import Mock, patch
 from datetime import datetime, timedelta, timezone
 
 from src.security.auth_manager import AuthManager, AuthResult
 from src.security.jwt_handler import JWTHandler
-from src.security.api_key_handler import APIKeyHandler, APIKey
+from src.security.api_key_handler import APIKeyHandler
 
 
 class TestAuthResult:

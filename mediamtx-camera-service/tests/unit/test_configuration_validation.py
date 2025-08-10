@@ -14,7 +14,7 @@ parameter mismatches that cause startup failures.
 import pytest
 import inspect
 from dataclasses import fields
-from typing import get_type_hints, Any, Dict, Union
+from typing import get_type_hints, Union
 
 from src.camera_service.config import MediaMTXConfig, Config
 from src.camera_service.service_manager import ServiceManager
@@ -84,7 +84,7 @@ class TestConfigurationSchemaValidation:
             # Handle special cases like Optional types
             if hasattr(actual_type, '__origin__') and actual_type.__origin__ is not None:
                 # For Optional[T], check that T matches expected_type
-                if actual_type.__origin__ == type(Union):
+                if actual_type.__origin__ is type(Union):
                     union_types = actual_type.__args__
                     # Remove None from union types
                     non_none_types = [t for t in union_types if t is not type(None)]

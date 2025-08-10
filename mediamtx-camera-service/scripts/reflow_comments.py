@@ -25,7 +25,7 @@ def process_file(path: pathlib.Path):
             while i < len(lines) and lines[i].lstrip().startswith("#"):
                 block.append(lines[i])
                 i += 1
-            if any(len(l) > MAX_WIDTH for l in block):
+            if any(len(line) > MAX_WIDTH for line in block):
                 new_block = reflow_comment_block(block, indent)
                 new_lines.extend(new_block)
             else:
@@ -45,7 +45,7 @@ def process_file(path: pathlib.Path):
                     start = doc_lines[0]
                     end = doc_lines[-1]
                     inner = doc_lines[1:-1]
-                    inner_text = " ".join(l.strip() for l in inner)
+                    inner_text = " ".join(line.strip() for line in inner)
                     wrapped_inner = textwrap.wrap(inner_text, width=MAX_WIDTH)
                     new_doc = [start] + wrapped_inner + [end]
                     new_lines.extend(new_doc)

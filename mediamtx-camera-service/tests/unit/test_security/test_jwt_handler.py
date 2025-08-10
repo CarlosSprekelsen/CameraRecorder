@@ -8,7 +8,6 @@ as specified in Architecture Decision AD-7.
 import pytest
 import time
 import jwt
-from unittest.mock import patch
 
 from src.security.jwt_handler import JWTHandler, JWTClaims
 

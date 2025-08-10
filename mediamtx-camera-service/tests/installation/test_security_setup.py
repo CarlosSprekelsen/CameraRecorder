@@ -7,11 +7,9 @@ API key management, and authentication configuration
 as specified in Sprint 2 Day 2 Task S7.3.
 """
 
-import pytest
 import subprocess
 import tempfile
 import os
-import time
 import json
 import logging
 from pathlib import Path

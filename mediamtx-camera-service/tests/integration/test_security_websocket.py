@@ -10,7 +10,6 @@ import asyncio
 import tempfile
 import os
 import time
-from unittest.mock import Mock, AsyncMock
 
 from src.security.middleware import SecurityMiddleware
 from src.security.auth_manager import AuthManager

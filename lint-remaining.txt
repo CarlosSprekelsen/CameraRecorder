@@ -1,0 +1,52 @@
+mediamtx-camera-service/scripts/reflow_comments.py:28:43: E741 Ambiguous variable name: `l`
+   |
+26 |                 block.append(lines[i])
+27 |                 i += 1
+28 |             if any(len(l) > MAX_WIDTH for l in block):
+   |                                           ^ E741
+29 |                 new_block = reflow_comment_block(block, indent)
+30 |                 new_lines.extend(new_block)
+   |
+
+mediamtx-camera-service/scripts/reflow_comments.py:48:57: E741 Ambiguous variable name: `l`
+   |
+46 |                     end = doc_lines[-1]
+47 |                     inner = doc_lines[1:-1]
+48 |                     inner_text = " ".join(l.strip() for l in inner)
+   |                                                         ^ E741
+49 |                     wrapped_inner = textwrap.wrap(inner_text, width=MAX_WIDTH)
+50 |                     new_doc = [start] + wrapped_inner + [end]
+   |
+
+mediamtx-camera-service/tests/unit/test_configuration_validation.py:87:20: E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+   |
+85 |             if hasattr(actual_type, '__origin__') and actual_type.__origin__ is not None:
+86 |                 # For Optional[T], check that T matches expected_type
+87 |                 if actual_type.__origin__ == type(Union):
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ E721
+88 |                     union_types = actual_type.__args__
+89 |                     # Remove None from union types
+   |
+
+mediamtx-camera-service/validate_config.py:23:48: F401 `camera_service.service_manager.ServiceManager` imported but unused; consider using `importlib.util.find_spec` to test for availability
+   |
+21 | try:
+22 |     from camera_service.config import MediaMTXConfig, Config
+23 |     from camera_service.service_manager import ServiceManager
+   |                                                ^^^^^^^^^^^^^^ F401
+24 |     from mediamtx_wrapper.controller import MediaMTXController
+25 | except ImportError as e:
+   |
+   = help: Remove unused import: `camera_service.service_manager.ServiceManager`
+
+mediamtx-camera-service/validate_config.py:101:16: E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+    |
+ 99 |         if hasattr(actual_type, '__origin__') and actual_type.__origin__ is not None:
+100 |             # For Optional[T], check that T matches expected_type
+101 |             if actual_type.__origin__ == type(Union):
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ E721
+102 |                 union_types = actual_type.__args__
+103 |                 # Remove None from union types
+    |
+
+Found 5 errors.

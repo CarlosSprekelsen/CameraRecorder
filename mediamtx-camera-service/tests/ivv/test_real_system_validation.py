@@ -11,8 +11,6 @@ import asyncio
 import json
 import os
 import tempfile
-import time
-import uuid
 from typing import Dict, Any
 
 import pytest
@@ -25,7 +23,6 @@ from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, Came
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.mediamtx_wrapper.controller import MediaMTXController
 from src.camera_discovery.hybrid_monitor import HybridCameraMonitor
-from src.common.types import CameraDevice
 
 
 class RealSystemValidator:

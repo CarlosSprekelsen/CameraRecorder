@@ -24,8 +24,6 @@ import json
 import os
 import tempfile
 import time
-import uuid
-from unittest.mock import Mock, AsyncMock, patch
 from typing import Dict, Any
 
 import pytest
@@ -36,7 +34,6 @@ import websockets
 from src.camera_service.service_manager import ServiceManager
 from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, RecordingConfig
 from src.websocket_server.server import WebSocketJsonRpcServer
-from src.common.types import CameraDevice
 
 
 class WebSocketTestClient:
@@ -401,7 +398,7 @@ class TestRealIntegration:
         
         # Measure memory usage
         process = psutil.Process()
-        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+        process.memory_info().rss / 1024 / 1024  # MB
         
         try:
             await service_manager.start()

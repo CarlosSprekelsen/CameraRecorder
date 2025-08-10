@@ -17,9 +17,6 @@ import os
 import time
 import socket
 import requests
-import json
-from pathlib import Path
-from typing import Dict, Any
 
 # Setup logging
 import logging
@@ -208,7 +205,7 @@ class TestInstallationValidation:
             pytest.skip("Failed to retrieve service logs")
         
         # Check for error messages
-        log_output = result.stdout.lower()
+        result.stdout.lower()
         error_indicators = [
             "error",
             "exception",
@@ -381,7 +378,7 @@ class TestProductionDeployment:
         
         # Run validation script (this might fail in test environment)
         try:
-            result = subprocess.run([script_path], capture_output=True, text=True, timeout=30)
+            subprocess.run([script_path], capture_output=True, text=True, timeout=30)
             logger.info("Installation validation script executed")
         except subprocess.TimeoutExpired:
             logger.warning("Installation validation script timed out")

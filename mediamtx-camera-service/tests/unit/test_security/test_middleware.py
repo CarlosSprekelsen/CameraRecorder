@@ -6,15 +6,13 @@ rate limiting, and connection control as specified in Architecture Decision AD-7
 """
 
 import pytest
-import asyncio
 import tempfile
 import os
 import time
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime, timedelta, timezone
+from unittest.mock import Mock
 
 from src.security.middleware import SecurityMiddleware, RateLimitInfo
-from src.security.auth_manager import AuthManager, AuthResult
+from src.security.auth_manager import AuthManager
 from src.security.jwt_handler import JWTHandler
 from src.security.api_key_handler import APIKeyHandler
 

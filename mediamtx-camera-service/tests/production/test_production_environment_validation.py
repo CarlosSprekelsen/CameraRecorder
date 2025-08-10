@@ -9,21 +9,14 @@ Comprehensive validation of production deployment scenarios including:
 """
 
 import os
-import sys
 import subprocess
-import tempfile
-import shutil
 import time
-import json
-import ssl
 import socket
 import stat
 import pytest
 import requests
 import jwt
 from pathlib import Path
-from unittest.mock import Mock, patch
-from typing import Dict, Any, List, Optional
 
 
 class TestSystemdServiceIntegration:
@@ -119,7 +112,7 @@ class TestSystemdServiceIntegration:
                 assert status_result.stdout.decode().strip() == "active", f"Service {service_name} not running"
                 
                 # Stop service
-                stop_result = subprocess.run(["systemctl", "stop", service_name],
+                subprocess.run(["systemctl", "stop", service_name],
                                           capture_output=True, timeout=30)
                 
                 # Check service stopped

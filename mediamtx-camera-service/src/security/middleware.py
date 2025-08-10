@@ -5,10 +5,9 @@ Provides authentication middleware for WebSocket connections,
 rate limiting, and connection control as specified in Architecture Decision AD-7.
 """
 
-import asyncio
 import logging
 import time
-from typing import Dict, Any, Optional, Callable, Set
+from typing import Dict, Any, Optional, Set
 from dataclasses import dataclass
 
 from .auth_manager import AuthManager, AuthResult

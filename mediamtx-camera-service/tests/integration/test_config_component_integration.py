@@ -8,12 +8,9 @@ Replaces smoke/instantiation-only checks with tests that:
 """
 
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock
 
 from src.camera_service.config import ConfigManager
 from src.camera_service.service_manager import ServiceManager
-from src.mediamtx_wrapper.controller import MediaMTXController
 
 
 class TestConfigurationComponentIntegration:

@@ -8,8 +8,7 @@ and role-based access control as specified in Architecture Decision AD-7.
 import jwt
 import time
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)

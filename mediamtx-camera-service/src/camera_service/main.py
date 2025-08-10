@@ -9,7 +9,6 @@ import asyncio
 import logging
 import signal
 import sys
-from pathlib import Path
 from typing import Optional
 
 from .config import load_config

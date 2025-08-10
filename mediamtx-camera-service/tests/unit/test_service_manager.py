@@ -6,7 +6,6 @@ Each test traces to a customer requirement and validates real component
 behavior via the public WebSocket API and MediaMTX HTTP integration.
 """
 
-import asyncio
 import json
 import socket
 from contextlib import asynccontextmanager
