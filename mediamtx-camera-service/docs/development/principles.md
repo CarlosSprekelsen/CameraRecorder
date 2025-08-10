@@ -25,6 +25,9 @@ These principles must be followed by all contributors and maintainers of the pro
 - **Traceability & Control Points**  
   Work flows through defined IV&V control points (architecture/scaffolding, implementation/integration, testing/verification, release/operations). No phase may advance without passing the prior gate with evidence: code, docs, tests, and explicit reviewer sign-off.
 
+- **SDR Implementation Readiness**  
+  Architecture must demonstrate implementation feasibility through proof-of-concept validation before detailed implementation begins. No implementation phase may commence without validated architecture components, integration patterns, and performance characteristics.
+
 ---
 
 ## TODO and STOP Comment Formatting Standard

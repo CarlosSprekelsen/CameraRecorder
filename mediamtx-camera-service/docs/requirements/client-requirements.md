@@ -3,7 +3,7 @@
 **Version:** 1.1  
 **Authors:** System Architect  
 **Date:** 2025-08-04  
-**Status:** Draft  
+**Status:** Approved  
 **Related Epic:** Client Applications Development
 
 ---
@@ -49,9 +49,8 @@ The client applications will provide camera control functionality by communicati
 #### F1.2: Video Recording
 - **F1.2.1:** The application SHALL allow users to record videos using available cameras
 - **F1.2.2:** The application SHALL support unlimited duration recording mode
-  - API Contract: JSON-RPC `start_recording` without a `duration` parameter SHALL start an unlimited recording session which continues until `stop_recording` is invoked.
-  - Alternative: When `duration_mode` is "unlimited", the `duration_value` parameter MUST be omitted.
-  - Service Behavior: Service SHALL maintain the session until explicit stop; intermediate status updates MAY be emitted by service as notifications.
+  - API Contract: JSON-RPC `start_recording` without a `duration` parameter SHALL start unlimited recording
+  - Service Behavior: Service SHALL maintain session until explicit stop_recording call
 - **F1.2.3:** The application SHALL support timed recording with user-specified duration in seconds, minutes, or hours
   - API Contract: JSON-RPC `start_recording` accepts one of the following mutually exclusive parameter sets:
     - `{ device: string, duration_seconds: integer (1-3600) }`
@@ -155,11 +154,11 @@ The client applications will provide camera control functionality by communicati
 ## Non-Functional Requirements
 
 ### N1: Performance Requirements
-- **N1.1:** Application startup time SHALL be under 3 seconds
-- **N1.2:** Camera list refresh SHALL complete within 1 second
-- **N1.3:** Photo capture response SHALL be under 2 seconds
-- **N1.4:** Video recording start SHALL begin within 2 seconds
-- **N1.5:** UI interactions SHALL provide immediate feedback (200ms)
+- **N1.1:** Application startup time SHALL be under 3 seconds (includes service connection <1s)
+- **N1.2:** Camera list refresh SHALL complete within 1 second (service API <50ms + UI rendering)
+- **N1.3:** Photo capture response SHALL be under 2 seconds (service processing <100ms + file transfer)
+- **N1.4:** Video recording start SHALL begin within 2 seconds (service API <100ms + MediaMTX setup)
+- **N1.5:** UI interactions SHALL provide immediate feedback (200ms, excludes service calls)
 
 ### N2: Reliability Requirements
 - **N2.1:** Application SHALL handle service disconnections gracefully

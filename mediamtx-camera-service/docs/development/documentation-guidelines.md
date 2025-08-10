@@ -307,5 +307,17 @@ Before finalizing any documentation:
 
 ---
 
+## Performance Documentation Standards
+
+All performance requirements must include:
+- **Quantitative Targets**: Specific thresholds with measurement units
+- **Measurement Methodology**: How performance will be validated
+- **Baseline Conditions**: Environment and load conditions for measurements
+- **Acceptance Criteria**: Clear pass/fail thresholds for validation
+
+Example: "API Response: <50ms for status queries measured from WebSocket message receipt to response transmission under 10 concurrent client load"
+
+---
+
 **Questions or Clarifications?**  
 See `docs/development/principles.md` for project values and `docs/roadmap.md` for current development priorities.

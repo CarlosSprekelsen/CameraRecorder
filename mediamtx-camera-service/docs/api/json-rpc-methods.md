@@ -9,6 +9,15 @@ Connect to the WebSocket endpoint:
 ws://localhost:8002/ws
 ```
 
+## Performance Guarantees
+
+All API methods adhere to architecture performance targets:
+- **Status Methods** (get_camera_list, get_camera_status, ping): <50ms response time
+- **Control Methods** (take_snapshot, start_recording, stop_recording): <100ms response time
+- **WebSocket Notifications**: <20ms delivery latency from event occurrence
+
+Performance measured from request receipt to response transmission at service level.
+
 ## Core Methods
 
 ### ping
@@ -352,6 +361,16 @@ Custom error codes:
 - Comprehensive error responses with meaningful messages
 - Graceful degradation when dependencies unavailable
 - Proper cleanup and resource management
+
+## Error Codes
+
+Standard JSON-RPC 2.0 error codes plus service-specific codes:
+- **-32001**: Camera not found or disconnected
+- **-32002**: Recording already in progress
+- **-32003**: MediaMTX service unavailable  
+- **-32004**: Authentication required or token expired
+- **-32005**: Insufficient storage space
+- **-32006**: Camera capability not supported
 
 ---
 
