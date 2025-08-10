@@ -1,489 +1,334 @@
-# PDR (Preliminary Design Review) Scope Definition Guide
+PDR (Preliminary Design Review) – Scope Definition and Execution Guide (Revised, Action‑Oriented)
 
-## PDR Objective
-Validate detailed system design is complete, implementable, and meets requirements through working prototypes and comprehensive analysis before full implementation begins.
+Purpose: Ensure the detailed design is implementable and validated through working code and measurable evidence, with time‑boxed remediation and a frozen baseline to prevent design drift prior to full implementation.
 
-## Global PDR Acceptance Thresholds
-```
-Design Completeness: 100% detailed design with implementation guidance
-Interface Compliance: All interfaces working with actual data validation
-Performance Budget: Validated through prototyping and analysis
-Security Design: Threat model complete with mitigation prototypes
-Test Strategy: Comprehensive test approach with working test harnesses
-Implementation Plan: Validated through critical path prototyping
-Build System: Working build and deployment pipeline
-Evidence: All design decisions backed by working demonstrations
-```
+PDR Objective
 
----
+Validate detailed system design completeness and implementability by executing critical prototypes, contract tests, and pipeline runs; convert findings into merged changes before advancing.
 
-## Phase 0: Design Baseline
+Non‑Goals and Scope Guardrails
 
-### 0. Detailed Design Inventory and Validation (IV&V)
-```
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+No new features beyond SDR‑approved scope
 
-Task: Validate detailed design completeness and implementability
+No refactors except those required to meet PDR acceptance thresholds
+
+No expansion of hardware/OS matrix beyond MVP targets
+
+Global PDR Acceptance Thresholds
+
+Design Completeness: 100% of SDR‑approved requirements mapped to design elements
+Interface Compliance: 100% of external APIs have schemas + contract tests passing
+Performance Budget: Prototype measurements meet or exceed PDR Budget Table
+Security Design: Threat model complete; all High risks mitigated or waived with owner/date
+Test Strategy: Working harnesses covering interfaces and critical flows
+Build System: CI pipeline green on baseline; reproducible build with checksums
+Evidence: All claims linked to artifacts (logs, test outputs, binaries)
+Timebox: 7–12 working days; max 2 iterations
+
+Phase 0: Design Baseline
+
+0. Detailed Design Inventory and Validation (IV&V)
+
+Role: IV&V
+Task: Validate detailed design completeness and implementability.
 
 Execute exactly:
-1. Inventory all detailed design artifacts and specifications
-2. Validate design coverage of all SDR-approved requirements
-3. Check design consistency across all components and interfaces
-4. Verify implementation guidance is sufficient for development
-5. Assess design traceability to architecture and requirements
-
-VALIDATION LOOP:
-- If design coverage is incomplete, iterate until all requirements addressed
-- If implementation guidance insufficient, enhance until developable
-- If design inconsistencies found, resolve until coherent
-- Verify design provides clear implementation roadmap
+1) Inventory all detailed design artifacts and specifications
+2) Validate coverage of all SDR‑approved requirements (ID‑level)
+3) Check consistency across components and interfaces
+4) Verify implementation guidance is sufficient for development
+5) Assess traceability to architecture and requirements
 
 Create: evidence/pdr-actual/00_design_validation.md
 
-DELIVERABLE CRITERIA:
-- Design inventory: Complete catalog of all design artifacts
-- Coverage assessment: All requirements mapped to design elements
-- Consistency validation: No conflicting design decisions
-- Implementation guidance: Sufficient detail for development teams
-- Traceability matrix: Design elements traced to requirements/architecture
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Complete design catalog
+- Coverage assessment: requirement → design element(s)
+- Consistency report: contradictions and omissions
+- Implementability assessment
+- Traceability matrix
 
-Success confirmation: "Detailed design validated as complete and implementable"
-```
+Success Criteria: Detailed design validated as complete and implementable.
 
-### 0a. Design Baseline Gate Review (Project Manager)
-```
-Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+0a. Design Baseline Gate Review (Project Manager)
 
-Input: evidence/pdr-actual/00_design_validation.md
+Role: Project Manager
+Input: 00_design_validation.md
 
-GATE REVIEW: Assess design baseline adequacy for detailed validation
-- Verify design completeness and consistency
-- Evaluate implementation guidance sufficiency
-- Assess design quality and clarity
-- Decide if design foundation sufficient for prototype validation
+Gate Review:
+- Verify completeness/consistency
+- Evaluate implementability
+- Decide readiness for remediation
 
-DECISION: PROCEED/REMEDIATE/HALT
+Decision: PROCEED | REMEDIATE | HALT
 
 Create: evidence/pdr-actual/00a_design_gate_review.md
-Include: Design assessment, gaps identified, gate decision
 
-If REMEDIATE: Generate copy-paste ready Developer prompts for design completion/clarification
-If PROCEED: Authorize prototype validation phase
-```
+0d. Time‑Boxed Design Remediation Sprint (PM, Developer, IV&V)
 
----
-
-## Phase 1: Component and Interface Validation
-
-### 1. Critical Component Prototyping (Developer)
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Build and validate prototypes of critical system components
+Role: Project Manager (lead); Developer (edits); IV&V (verifies)
+Objective: Resolve all High/Blocking design issues via merged changes.
+Timebox: 48h (+ optional 24h mop‑up)
 
 Execute exactly:
-1. Identify highest-risk and most critical components from design
-2. Build working prototypes of critical components
-3. Validate component behavior against design specifications
-4. Test component performance under realistic conditions
-5. Validate component integration points and dependencies
+1) Developer opens focused PRs addressing IV&V findings (small diffs)
+2) Each PR body includes: Finding ID(s), before/after, rationale
+3) IV&V verifies each PR resolves the finding
+4) PM maintains ledger mapping finding → PR/commit or waiver
 
-VALIDATION LOOP:
-- If prototype doesn't match design specs, iterate until compliant
-- If performance inadequate, optimize or redesign until acceptable
-- If integration points fail, adjust until working
-- Verify prototype demonstrates component viability
+Create: evidence/pdr-actual/00d_design_remediation_sprint.md
+
+Exit Criteria:
+- 100% High/Blocking findings are Merged or Waived (owner/date/reason)
+- 0 unresolved cross‑document contradictions
+- Implementability blockers removed
+
+0e. Design Baseline Merge & Tag (Project Manager)
+
+Role: Project Manager
+Objective: Freeze the remediated design.
+
+Execute exactly:
+1) Merge remediation PRs into main
+2) Generate evidence/pdr-actual/change_manifest.md (files changed, summaries, links)
+3) Tag: git tag -a pdr-baseline-vX.Y -m "PDR baseline after remediation"
+4) Archive design/ and api/ folders with checksums
+
+Gate: Phase 1 cannot start without pdr-baseline-vX.Y and change_manifest.md.
+
+Phase 1: Component and Interface Validation
+
+1. Critical Component Prototyping (Developer)
+
+Role: Developer
+Task: Build and validate prototypes of highest‑risk components.
+
+Execute exactly:
+1) Select top risk components per 00_design_validation.md
+2) Implement minimal, runnable prototypes per design specs
+3) Measure behavior/perf under realistic conditions
+4) Validate integration points and dependencies
 
 Create: evidence/pdr-actual/01_component_prototyping.md
 
-DELIVERABLE CRITERIA:
-- Component prototypes: Working implementations of critical components
-- Specification compliance: Prototypes match design specifications
-- Performance validation: Components meet performance requirements
-- Integration testing: Component interfaces work with dependencies
-- Risk mitigation: High-risk components proven viable
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Prototype code references and commands
+- Spec compliance evidence (logs, outputs)
+- Performance snapshots (p95 latency, CPU/RSS)
+- Integration points verified
 
-Success confirmation: "Critical components prototyped and validated against design specifications"
-```
+Success Criteria: Critical components prototyped and validated against design specifications.
 
-### 2. Interface Implementation and Testing (Developer)
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+2. Interface Implementation and Testing (Developer)
 
-Task: Implement and validate all system interfaces with working code
+Role: Developer
+Task: Implement external and critical internal interfaces; validate with code.
 
 Execute exactly:
-1. Implement all external API interfaces from design specifications
-2. Implement internal component interfaces and protocols
-3. Create comprehensive interface test suites
-4. Validate interface implementations with real data flows
-5. Test interface error handling and edge cases
-
-VALIDATION LOOP:
-- If interface implementations don't match specs, iterate until compliant
-- If data validation fails, fix until clean data exchange achieved
-- If error handling inadequate, enhance until robust
-- Verify all interfaces work with realistic data loads
+1) Implement external APIs from design specs
+2) Implement critical internal protocols
+3) Create interface test suites
+4) Validate with real data flows and error cases
 
 Create: evidence/pdr-actual/02_interface_implementation.md
 
-DELIVERABLE CRITERIA:
-- Interface implementations: Working code for all specified interfaces
-- Test suite validation: Comprehensive interface testing with passing results
-- Data flow testing: Real data successfully exchanged through interfaces
-- Error handling: Interface failure modes properly handled
-- Performance testing: Interfaces meet performance requirements under load
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Working interface implementations
+- Passing interface tests
+- Data flow transcripts (success and error paths)
+- Load sanity results
 
-Success confirmation: "All interfaces implemented and validated with working test suites"
-```
+Success Criteria: All scoped interfaces implemented and validated with test suites.
 
-### 3. Security Design Validation (Developer)
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+2b. API/ICD Contract Validation & Freeze (Project Manager)
 
-Task: Validate security design through implementation and testing
+Role: Project Manager
+Input: 02_interface_implementation.md
+Task: Lock externally visible behavior via schemas and contract tests.
 
 Execute exactly:
-1. Implement authentication and authorization prototypes
-2. Build security controls and validation mechanisms
-3. Create threat model validation tests
-4. Test security measures against common attack vectors
-5. Validate security configuration and deployment procedures
+1) Developer publishes JSON Schemas (req/resp, error codes)
+2) Contract tests run against service; all required methods covered
+3) Versioning: declare API vMAJOR.MINOR and deprecation policy
 
-VALIDATION LOOP:
-- If security implementations fail tests, iterate until secure
-- If threat model validation reveals gaps, enhance until complete
-- If attack vector tests succeed, strengthen defenses until protected
-- Verify security design provides adequate protection
+Create: evidence/pdr-actual/02b_api_contract_validation.md
+
+Exit Criteria:
+- 100% contract tests PASS
+- Schema + versioning recorded; policy published
+
+3. Security Design Validation (Developer)
+
+Role: Developer
+Task: Validate security design through prototypes and tests.
+
+Execute exactly:
+1) Implement authentication/authorization prototypes
+2) Validate threat model with targeted tests
+3) Exercise common attack vectors; verify defenses
+4) Validate security configuration and deployment procedures
 
 Create: evidence/pdr-actual/03_security_validation.md
 
-DELIVERABLE CRITERIA:
-- Security prototypes: Working authentication, authorization, and controls
-- Threat model testing: Security measures validated against identified threats
-- Attack vector testing: Common attacks properly defended against
-- Security configuration: Secure deployment procedures validated
-- Vulnerability assessment: No critical security gaps in design
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- AuthZ/AuthN prototypes; logs of accepted/rejected flows
+- Threat model coverage evidence
+- Attack simulation results; remediations listed
+- Secure deployment checklist validated
 
-Success confirmation: "Security design validated through working prototypes and attack testing"
-```
+Success Criteria: Security design validated through working prototypes and attack testing.
 
-### 3a. Component and Interface Gate Review (Project Manager)
-```
-Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+3a. Component and Interface Gate Review (Project Manager)
 
-Input: evidence/pdr-actual/01_component_prototyping.md, 02_interface_implementation.md, 03_security_validation.md
+Role: Project Manager
+Inputs: 01_component_prototyping.md, 02_interface_implementation.md, 02b_api_contract_validation.md, 03_security_validation.md
 
-GATE REVIEW: Assess component and interface validation for implementation readiness
-- Evaluate critical component prototype validation results
-- Review interface implementation and testing outcomes
-- Assess security design validation completeness
-- Decide if component/interface foundation sufficient for system integration planning
-
-DECISION OPTIONS:
-- PROCEED: Components and interfaces proven viable, authorize integration planning
-- REMEDIATE: Fix critical component/interface issues before proceeding
-- CONDITIONAL: Proceed with documented component limitations
-- HALT: Component/interface design infeasible, requires redesign
+Decision: PROCEED | REMEDIATE | CONDITIONAL | HALT
 
 Create: evidence/pdr-actual/03a_component_interface_gate_review.md
-Include: Component validation assessment, interface testing review, security validation evaluation, gate decision
 
-If REMEDIATE: Generate copy-paste ready Developer prompts for component/interface/security fixes
-If PROCEED: Authorize Phase 2 system integration planning
-```
+Phase 2: System Integration and Performance Validation
 
----
+4. Integration Planning and Validation (IV&V)
 
-## Phase 2: System Integration and Performance Validation
-
-### 4. Integration Planning and Validation (IV&V)
-```
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Validate system integration approach through working integration framework
+Role: IV&V
+Task: Validate the integration approach via a working integration framework.
 
 Execute exactly:
-1. Create detailed integration sequence and dependency plan
-2. Build integration test framework and automation
-3. Implement integration monitoring and validation tools
-4. Test integration sequence with component prototypes
-5. Validate integration rollback and recovery procedures
-
-VALIDATION LOOP:
-- If integration sequence has dependency issues, reorder until viable
-- If test framework inadequate, enhance until comprehensive
-- If integration testing fails, adjust approach until successful
-- Verify integration plan handles all component combinations
+1) Create dependency‑ordered integration sequence
+2) Build integration test harness/automation
+3) Implement monitoring/validation hooks
+4) Test sequence with prototypes; validate rollback/retry
 
 Create: evidence/pdr-actual/04_integration_planning.md
 
-DELIVERABLE CRITERIA:
-- Integration sequence: Validated component integration order
-- Test framework: Working automated integration testing
-- Monitoring tools: Integration health and status monitoring implemented
-- Prototype integration: Component prototypes successfully integrated
-- Recovery procedures: Integration failure recovery validated
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Validated integration order
+- Working integration test harness
+- Monitoring hooks and health checks
+- Recovery procedures validated
 
-Success confirmation: "Integration plan validated through working framework and prototype testing"
-```
+Success Criteria: Integration plan validated via working framework and prototype testing.
 
-### 5. Performance Budget Validation (IV&V)
-```
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+5. Performance Budget Validation (IV&V)
 
-Task: Validate system performance requirements through measurement and analysis
+Role: IV&V
+Task: Validate performance budgets through measurement and analysis.
 
 Execute exactly:
-1. Establish performance baselines using component prototypes
-2. Create performance testing framework and benchmarks
-3. Measure prototype performance under realistic loads
-4. Validate performance budgets and scaling characteristics
-5. Test performance monitoring and alerting systems
-
-VALIDATION LOOP:
-- If performance baselines don't meet requirements, optimize until acceptable
-- If testing framework inadequate, enhance until comprehensive
-- If scaling tests fail, adjust architecture until scalable
-- Verify performance budgets are realistic and achievable
+1) Establish baseline measurements using prototypes
+2) Create performance tests/benchmarks
+3) Measure under realistic load
+4) Validate budgets and scaling characteristics
+5) Verify performance monitoring/alerts
 
 Create: evidence/pdr-actual/05_performance_validation.md
 
-DELIVERABLE CRITERIA:
-- Performance baselines: Measured prototype performance data
-- Testing framework: Comprehensive performance testing automation
-- Load testing: Performance validated under realistic load conditions
-- Scaling validation: System scales according to performance budgets
-- Monitoring implementation: Performance monitoring tools working
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Baseline data and benchmark definitions
+- Load results and scaling analysis
+- Monitoring/alert validation
 
-Success confirmation: "Performance budgets validated through measurement and realistic load testing"
-```
+Success Criteria: Performance budgets validated with realistic load tests; budgets deemed achievable.
 
-### 6. Build and Deployment Pipeline Validation (Developer)
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+5b. Performance Budget Sign‑Off (Project Manager)
 
-Task: Implement and validate build, test, and deployment pipeline
+Role: Project Manager
+Input: 05_performance_validation.md
+Task: Freeze PDR Budget Table (targets per API/path; CPU/RSS envelopes).
+
+Create: evidence/pdr-actual/05b_performance_budget_signoff.md
+Exit Criteria: Budget table approved; deviations carry waivers with owner/date.
+
+6. Build and Deployment Pipeline Validation (Developer)
+
+Role: Developer
+Task: Implement and validate build, test, and deployment pipeline.
 
 Execute exactly:
-1. Create automated build system for all components
-2. Implement continuous integration pipeline with quality gates
-3. Build automated deployment and configuration management
-4. Test pipeline with component prototypes and integration tests
-5. Validate rollback and recovery procedures
-
-VALIDATION LOOP:
-- If build system fails, iterate until reliable
-- If CI pipeline has issues, fix until stable
-- If deployment automation fails, enhance until robust
-- Verify complete pipeline works end-to-end
+1) Create automated builds for all components
+2) Configure CI with quality gates (lint/type, unit/integration)
+3) Automate deployment/config management; verify rollback
+4) Run pipeline end‑to‑end using prototypes
 
 Create: evidence/pdr-actual/06_build_deployment_validation.md
 
-DELIVERABLE CRITERIA:
-- Build automation: Working automated build for all components
-- CI pipeline: Continuous integration with quality gates functioning
-- Deployment automation: Automated deployment and configuration working
-- Pipeline testing: End-to-end pipeline validated with prototypes
-- Recovery procedures: Rollback and disaster recovery validated
-- Task incomplete until ALL criteria met
+Deliverable Criteria:
+- Automated builds and CI runs (green)
+- Deployment automation evidence
+- Rollback validation steps/logs
 
-Success confirmation: "Build and deployment pipeline validated through end-to-end automation testing"
-```
+Success Criteria: End‑to‑end pipeline validated; reproducible builds with checksums.
 
-### 6a. System Integration Gate Review (Project Manager)
-```
-Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
+6b. Observability & Ops Readiness (Lite)
 
-Input: evidence/pdr-actual/04_integration_planning.md, 05_performance_validation.md, 06_build_deployment_validation.md
+Role: Developer (with IV&V review)
+Task: Establish minimal runbook and SLOs for PDR scope.
 
-GATE REVIEW: Assess system integration readiness for full implementation
-- Evaluate integration planning and framework validation
-- Review performance budget validation and scaling evidence
-- Assess build/deployment pipeline readiness
-- Decide if system integration foundation sufficient for full implementation
+Create:
+- ops/runbook.md (start/stop, health, logs, common errors, recovery)
+- ops/slo.md (two SLOs: API p95 latency, recording success rate; basic alerts)
 
-DECISION OPTIONS:
-- PROCEED: Integration proven viable, authorize implementation planning
-- REMEDIATE: Fix critical integration/performance/deployment issues
-- CONDITIONAL: Proceed with enhanced integration monitoring
-- HALT: Integration approach unworkable, requires fundamental changes
+Exit Criteria: Documents present and referenced in 06_build_deployment_validation.md.
+
+6a. System Integration Gate Review (Project Manager)
+
+Role: Project Manager
+Inputs: 04_integration_planning.md, 05_performance_validation.md, 05b_performance_budget_signoff.md, 06_build_deployment_validation.md, ops/runbook.md, ops/slo.md
+
+Decision: PROCEED | REMEDIATE | CONDITIONAL | HALT
 
 Create: evidence/pdr-actual/06a_system_integration_gate_review.md
-Include: Integration assessment, performance validation review, deployment pipeline evaluation, gate decision
 
-If REMEDIATE: Generate copy-paste ready Developer/IV&V prompts for integration/performance/deployment fixes
-If PROCEED: Authorize Phase 3 implementation planning
-```
+Phase 3: Implementation Planning and PDR Decision
 
----
+7. Implementation Strategy Validation (IV&V)
 
-## Phase 3: Implementation Planning and PDR Decision
-
-### 7. Implementation Strategy Validation (IV&V)
-```
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Validate implementation strategy and development approach
-
-Execute exactly:
-1. Assess development team readiness and capability requirements
-2. Validate implementation timeline and resource planning
-3. Review quality assurance and testing strategy
-4. Evaluate risk management plans for implementation phase
-5. Validate change management and configuration control procedures
-
-VALIDATION LOOP:
-- If team readiness inadequate, develop training/hiring plan until capable
-- If timeline unrealistic, adjust until achievable
-- If QA strategy insufficient, enhance until comprehensive
-- Verify implementation plan is executable with available resources
+Role: IV&V
+Task: Validate implementation strategy and development approach.
 
 Create: evidence/pdr-actual/07_implementation_strategy.md
+Deliverable Criteria: capability assessment, realistic timeline, QA strategy, risk mitigation, change control.
+Success Criteria: Strategy executable with defined resources and controls.
 
-DELIVERABLE CRITERIA:
-- Team readiness: Development capability assessment and gap mitigation
-- Timeline validation: Realistic implementation schedule with resource allocation
-- QA strategy: Comprehensive quality assurance and testing approach
-- Risk management: Implementation risk mitigation plans
-- Change control: Configuration management and change procedures validated
-- Task incomplete until ALL criteria met
+8. PDR Technical Assessment (IV&V)
 
-Success confirmation: "Implementation strategy validated as executable with defined resources"
-```
-
-### 8. PDR Technical Assessment (IV&V)
-```
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Compile comprehensive PDR assessment based on all validation evidence
-
-Input: All evidence files from evidence/pdr-actual/ (00 through 07)
-
-Execute exactly:
-1. Assess detailed design validation completeness
-2. Evaluate component and interface validation results
-3. Review system integration and performance validation
-4. Analyze implementation strategy viability
-5. Assess overall implementation readiness
+Role: IV&V
+Task: Compile PDR assessment across design, components, interfaces, integration, performance, pipeline, and implementation strategy.
 
 Create: evidence/pdr-actual/08_pdr_technical_assessment.md
+Outcome: Recommendation = PROCEED | CONDITIONAL | DENY for full implementation.
 
-DELIVERABLE CRITERIA:
-- Design assessment: Detailed design completeness and implementability
-- Component evaluation: Critical component validation through prototyping
-- Integration assessment: System integration approach validated
-- Performance evaluation: Performance budgets validated through testing
-- Implementation assessment: Implementation strategy validated as executable
-- PDR recommendation: PROCEED/CONDITIONAL/DENY for full implementation
-- Task incomplete until ALL criteria met
+9. PDR Authorization Decision (Project Manager)
 
-Success confirmation: "PDR technical assessment complete with implementation recommendation"
-```
-
-### 9. PDR Authorization Decision (Project Manager)
-```
-Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-
-Task: Make PDR authorization decision for full implementation phase entry
-
-Input: evidence/pdr-actual/08_pdr_technical_assessment.md
-
-Execute exactly:
-1. Review comprehensive technical assessment
-2. Evaluate business risk vs implementation readiness
-3. Assess resource and schedule implications
-4. Make informed authorization decision
-5. Define conditions and implementation guidance
-
-DECISION OPTIONS:
-- AUTHORIZE: Detailed design adequate, proceed to full implementation
-- CONDITIONAL: Proceed with specific conditions and enhanced monitoring
-- DENY: Design inadequate, requires detailed design rework
+Role: Project Manager
+Task: Make authorization decision for full implementation.
 
 Create: evidence/pdr-actual/09_pdr_authorization_decision.md
+Decision: AUTHORIZE | CONDITIONAL | DENY with rationale, conditions, and risk acceptance.
 
-DELIVERABLE CRITERIA:
-- Authorization decision: Clear AUTHORIZE/CONDITIONAL/DENY
-- Decision rationale: Evidence-based justification referencing assessments
-- Implementation guidance: Specific direction for implementation teams
-- Conditions: Specific requirements if conditional authorization
-- Risk acceptance: Documented acceptance of implementation risks
-- Task incomplete until ALL criteria met
+Evidence Management
 
-Success confirmation: "PDR authorization decision complete with implementation phase direction"
-```
+Document Template
 
----
-
-## Evidence Management
-
-**Document Structure:**
-```markdown
 # Document Title
 **Version:** 1.0
-**Date:** YYYY-MM-DD  
+**Date:** YYYY-MM-DD
 **Role:** [Developer/IV&V/Project Manager]
 **PDR Phase:** [Phase Number]
+**Status:** [Draft/Review/Final]
 
 ## Purpose
-[Brief task description]
 
-## Implementation Results  
-[Working prototypes, validation evidence, implementation demonstrations]
+## Implementation Results
 
 ## Validation Evidence
-[Actual test results, prototype validation, performance measurements]
 
 ## Conclusion
-[Pass/fail assessment with implementation evidence]
-```
 
-**File Naming:** ##_descriptive_name.md (00-09)
-**Location:** evidence/pdr-actual/
-**Requirements:** Include actual working implementations and test results
+Folders & Naming: evidence/pdr-actual/##_<descriptive>.md (00–09, with 0d, 0e, 2b, 5b, 6b as additions)
 
----
+Evidence Integrity: Include command outputs and checksums. Preserve logs/artifacts under evidence/pdr-actual/artifacts/.
 
-## Key PDR Principles
+Gating: Subsequent phases cannot start without the specified tags, sign‑offs, and gate documents.
 
-**Implementation-Ready:** Every design element validated through working prototypes
-**Performance-Proven:** All performance requirements validated through measurement
-**Integration-Tested:** System integration approach proven through working framework
-**Risk-Mitigated:** All high implementation risks addressed with working solutions
-**Team-Ready:** Implementation team capability validated and gaps addressed
-**Evidence-Based:** No implementation authorization without working proof
-
-This PDR process ensures that full implementation begins with **validated, implementable designs** rather than untested specifications.
