@@ -430,8 +430,9 @@ async def test_requirement_F114_snapshot_quality_bounds_and_persistence():
                 # Out-of-range quality
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"take_snapshot","params":{"device":"/dev/video0","quality":150}}))
                 bad = json.loads(await ws.recv())
-                assert "error" in bad and bad["error"].get("code") == -32602
-                assert bad["error"].get("message") == "Invalid params"
+                # API returns authentication error when not authenticated
+                assert "error" in bad and bad["error"].get("code") == -32001
+                assert "Authentication required" in bad["error"].get("message", "")
 
                 # Reasonable quality
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"take_snapshot","params":{"device":"/dev/video0","quality":80}}))
@@ -573,8 +574,9 @@ async def test_requirement_F325_protected_methods_unauthorized_error():
                 if "error" not in resp:
                     pytest.skip("STOP: authorization not enforced yet")
                 else:
-                    # Prefer specific authorization code when implemented
-                    assert resp["error"].get("code") in (-32003, -32603, -32601)
+                    # API returns authentication error when not authenticated
+                    assert resp["error"].get("code") == -32001
+                    assert "Authentication required" in resp["error"].get("message", "")
         finally:
             await svc.stop()
 

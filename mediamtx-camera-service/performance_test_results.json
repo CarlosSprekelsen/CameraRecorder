@@ -1,0 +1,62 @@
+{
+  "startup_timing": {
+    "service_manager_startup": {
+      "duration_seconds": 4.1961669921875e-05,
+      "status": "success",
+      "acceptable": true
+    },
+    "websocket_server_startup": {
+      "duration_seconds": 5.555152893066406e-05,
+      "status": "success",
+      "acceptable": true
+    },
+    "security_startup": {
+      "duration_seconds": 1.049041748046875e-05,
+      "status": "success",
+      "acceptable": true
+    }
+  },
+  "operation_timing": {
+    "jwt_generation": {
+      "total_duration_seconds": 0.0003821849822998047,
+      "average_duration_seconds": 3.821849822998047e-05,
+      "tokens_generated": 10,
+      "status": "success",
+      "acceptable": true
+    },
+    "jwt_validation": {
+      "total_duration_seconds": 0.0038843154907226562,
+      "average_duration_seconds": 3.884315490722656e-05,
+      "validations_performed": 100,
+      "status": "success",
+      "acceptable": true
+    },
+    "authentication": {
+      "total_duration_seconds": 0.003192424774169922,
+      "average_duration_seconds": 6.384849548339844e-05,
+      "authentications_performed": 50,
+      "status": "success",
+      "acceptable": true
+    },
+    "permission_checking": {
+      "total_duration_seconds": 0.000148773193359375,
+      "average_duration_seconds": 1.48773193359375e-06,
+      "checks_performed": 100,
+      "status": "success",
+      "acceptable": true
+    }
+  },
+  "memory_sanity": {
+    "memory_usage": {
+      "status": "skipped",
+      "reason": "psutil not available",
+      "acceptable": true
+    }
+  },
+  "overall_assessment": {
+    "startup_acceptable": true,
+    "operation_acceptable": true,
+    "memory_acceptable": true,
+    "overall_acceptable": true
+  }
+}

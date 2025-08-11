@@ -1,0 +1,52 @@
+{
+  "jwt_authentication": {
+    "jwt_success": {
+      "user_id": "test_user_123",
+      "role": "operator",
+      "expires": 1754827315,
+      "valid": true
+    },
+    "jwt_negative": {
+      "valid": false,
+      "expected": "rejected"
+    },
+    "jwt_expired": {
+      "valid": true,
+      "expected": "rejected"
+    }
+  },
+  "authorization": {
+    "auth_success": {
+      "authenticated": true,
+      "user_id": "test_operator",
+      "role": "operator",
+      "can_take_snapshot": true,
+      "can_view": true
+    },
+    "auth_negative": {
+      "authenticated": true,
+      "role": "viewer",
+      "operator_access_denied": true,
+      "viewer_access_granted": true
+    },
+    "auth_no_token": {
+      "authenticated": false,
+      "expected": "rejected",
+      "error": "No authentication token provided"
+    }
+  },
+  "security_middleware": {
+    "middleware_success": {
+      "connection_accepted": true,
+      "authenticated": true,
+      "user_id": "test_user",
+      "role": "operator",
+      "has_permission": true
+    },
+    "middleware_unauthorized": {
+      "connection_accepted": true,
+      "has_permission": false,
+      "expected": "rejected"
+    }
+  }
+}
