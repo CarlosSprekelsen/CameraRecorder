@@ -1,0 +1,15 @@
+[1mdiff --git a/mediamtx-camera-service/docs/api/json-rpc-methods.md b/mediamtx-camera-service/docs/api/json-rpc-methods.md[m
+[1mindex cde3105..6d20ee4 100644[m
+[1m--- a/mediamtx-camera-service/docs/api/json-rpc-methods.md[m
+[1m+++ b/mediamtx-camera-service/docs/api/json-rpc-methods.md[m
+[36m@@ -358,7 +358,9 @@[m [mCustom error codes:[m
+ - Correlation ID support for request tracing[m
+ [m
+ **Error Handling:**[m
+[31m-- Comprehensive error responses with meaningful messages[m
+[32m+[m[32m- Comprehensive error responses with meaningful messages following N4.1 requirements[m
+[32m+[m[32m- Error messages use plain language with specific action steps for resolution[m
+[32m+[m[32m- Error format: [Problem Description] + [Specific Action] + [Contact Support if unresolved][m
+ - Graceful degradation when dependencies unavailable[m
+ - Proper cleanup and resource management[m
+ [m

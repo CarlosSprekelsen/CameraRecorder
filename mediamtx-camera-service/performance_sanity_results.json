@@ -1,0 +1,22 @@
+{
+  "jwt_operations": {
+    "jwt_generation": 0.00021338462829589844,
+    "jwt_validation": 0.00021457672119140625,
+    "status": "success"
+  },
+  "basic_operations": {
+    "basic_operations": 5.936622619628906e-05,
+    "string_operations": 0.0010685920715332031,
+    "status": "success"
+  },
+  "memory_usage": {
+    "status": "skipped",
+    "reason": "psutil not available"
+  },
+  "sanity_assessment": {
+    "jwt_sanity": "pass",
+    "basic_sanity": "pass",
+    "memory_sanity": "skipped",
+    "overall": "feasible"
+  }
+}

@@ -114,7 +114,8 @@ async def test_e2e_connect_disconnect_creates_and_deletes_paths():
             async with websockets.connect(uri) as ws:
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"get_camera_list"}))
                 resp = json.loads(await ws.recv())
-                assert "result" in resp and isinstance(resp["result"], list)
+                assert "result" in resp and isinstance(resp["result"], dict)
+                assert "cameras" in resp["result"] and isinstance(resp["result"]["cameras"], list)
         finally:
             await svc.stop()
 

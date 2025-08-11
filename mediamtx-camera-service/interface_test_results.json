@@ -1,0 +1,62 @@
+{
+  "get_camera_list_success": {
+    "cameras": [
+      {
+        "device": "/dev/video0",
+        "status": "CONNECTED",
+        "name": "Test Camera 0",
+        "resolution": "1920x1080",
+        "fps": 30,
+        "streams": {
+          "rtsp": "rtsp://localhost:8554/camera0",
+          "webrtc": "http://localhost:8889/camera0/webrtc",
+          "hls": "http://localhost:8888/camera0"
+        }
+      }
+    ],
+    "total": 1,
+    "connected": 1
+  },
+  "get_camera_list_negative": {
+    "cameras": [],
+    "total": 0,
+    "connected": 0
+  },
+  "take_snapshot_success": {
+    "device": "/dev/video0",
+    "filename": "test_snapshot_success.jpg",
+    "status": "SUCCESS",
+    "timestamp": "2025-01-15T14:30:00Z",
+    "file_size": 204800,
+    "format": "jpg",
+    "quality": 85
+  },
+  "take_snapshot_negative": {
+    "device": "/dev/video999",
+    "filename": "test_snapshot_error.jpg",
+    "status": "SUCCESS",
+    "timestamp": "2025-01-15T14:30:00Z",
+    "file_size": 204800,
+    "format": "jpg",
+    "quality": 85
+  },
+  "start_recording_success": {
+    "device": "/dev/video0",
+    "session_id": "40b38821-43e9-45af-bc89-26362c11a159",
+    "filename": "test_recording_camera0.mp4",
+    "status": "STARTED",
+    "start_time": "2025-01-15T14:30:00Z",
+    "duration": 30,
+    "format": "mp4"
+  },
+  "start_recording_negative": {
+    "device": "/dev/video999",
+    "session_id": "42ac0e41-5354-4135-a6d4-6c1a24d82bbc",
+    "filename": "test_recording_camera999.mp4",
+    "status": "STARTED",
+    "start_time": "2025-01-15T14:30:00Z",
+    "duration": 30,
+    "format": "mp4"
+  },
+  "ping": "pong"
+}

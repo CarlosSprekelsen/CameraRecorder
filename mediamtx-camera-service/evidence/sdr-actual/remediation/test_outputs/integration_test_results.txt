@@ -1,0 +1,364 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/dts/CameraRecorder/mediamtx-camera-service
+configfile: pytest.ini
+plugins: asyncio-1.1.0, cov-6.2.1, anyio-4.9.0
+asyncio: mode=strict, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 73 items
+
+tests/integration/test_config_component_integration.py FF.               [  4%]
+tests/integration/test_security_api_keys.py ..................           [ 28%]
+tests/integration/test_security_authentication.py ...............        [ 49%]
+tests/integration/test_security_websocket.py ................            [ 71%]
+tests/integration/test_service_manager_e2e.py ..                         [ 73%]
+tests/integration/test_service_manager_requirements.py ...........F...F. [ 97%]
+..                                                                       [100%]
+
+=================================== FAILURES ===================================
+_ TestConfigurationComponentIntegration.test_stream_creation_uses_configured_endpoints_on_connect _
+
+self = <mediamtx_wrapper.controller.MediaMTXController object at 0x7efc0b5b8b50>
+
+    async def _validate_directory_permissions(self) -> None:
+        """Validate that required directories exist and are writable."""
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+    
+        directories = [
+            ("recordings", self._recordings_path),
+            ("snapshots", self._snapshots_path),
+        ]
+    
+        for dir_type, dir_path in directories:
+            try:
+                # Create directory if it doesn't exist
+                os.makedirs(dir_path, exist_ok=True)
+    
+                # Test write permissions
+                test_file = os.path.join(
+                    dir_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                )
+>               with open(test_file, "w") as f:
+E               PermissionError: [Errno 13] Permission denied: '/opt/camera-service/recordings/.write_test_39d1e2c7'
+
+src/mediamtx_wrapper/controller.py:246: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <tests.integration.test_config_component_integration.TestConfigurationComponentIntegration object at 0x7efc0c352680>
+
+    @pytest.mark.asyncio
+    async def test_stream_creation_uses_configured_endpoints_on_connect(self):
+        """
+        Req: S5-STREAM-ADD-001
+        On camera CONNECTED, service must create MediaMTX path using configured host/ports.
+        Verifies real orchestration with external HTTP boundary patched.
+        """
+        cfg = ConfigManager().load_config()
+        svc = ServiceManager(cfg)
+    
+        # Patch only external HTTP client
+        with pytest.MonkeyPatch.context() as mp:
+            async def _fake_ctx_enter_ok():
+                class Resp:
+                    status = 200
+    
+                    async def json(self):
+                        return {"serverVersion": "x", "serverUptime": 1}
+    
+                return Resp()
+    
+            class FakeCtx:
+                async def __aenter__(self):
+                    return await _fake_ctx_enter_ok()
+    
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+    
+            class FakeSession:
+                def get(self, *_, **__):
+                    return FakeCtx()
+    
+                def post(self, url, *_, **__):
+                    FakeSession.post_urls.append(url)
+                    return FakeCtx()
+    
+            FakeSession.post_urls = []
+    
+            from src.mediamtx_wrapper import controller as ctrl
+    
+            def _fake_client_session(*_args, **_kwargs):
+                return FakeSession()
+    
+            mp.setattr(ctrl.aiohttp, "ClientSession", _fake_client_session)
+    
+>           await svc.start()
+
+tests/integration/test_config_component_integration.py:64: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/camera_service/service_manager.py:174: in start
+    await self._start_mediamtx_controller()
+src/camera_service/service_manager.py:842: in _start_mediamtx_controller
+    await self._mediamtx_controller.start()
+src/mediamtx_wrapper/controller.py:167: in start
+    await self._validate_directory_permissions()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mediamtx_wrapper.controller.MediaMTXController object at 0x7efc0b5b8b50>
+
+    async def _validate_directory_permissions(self) -> None:
+        """Validate that required directories exist and are writable."""
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+    
+        directories = [
+            ("recordings", self._recordings_path),
+            ("snapshots", self._snapshots_path),
+        ]
+    
+        for dir_type, dir_path in directories:
+            try:
+                # Create directory if it doesn't exist
+                os.makedirs(dir_path, exist_ok=True)
+    
+                # Test write permissions
+                test_file = os.path.join(
+                    dir_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                )
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+    
+                self._logger.debug(
+                    f"Validated {dir_type} directory: {dir_path}",
+                    extra={"correlation_id": correlation_id},
+                )
+    
+            except PermissionError as e:
+                error_msg = f"Permission denied for {dir_type} directory: {dir_path}"
+                self._logger.error(error_msg, extra={"correlation_id": correlation_id})
+>               raise RuntimeError(error_msg) from e
+E               RuntimeError: Permission denied for recordings directory: /opt/camera-service/recordings
+
+src/mediamtx_wrapper/controller.py:258: RuntimeError
+------------------------------ Captured log call -------------------------------
+ERROR    mediamtx_wrapper.controller:controller.py:257 Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    mediamtx_wrapper.controller:controller.py:187 Failed to start MediaMTX controller: Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    src.camera_service.service_manager:service_manager.py:852 Failed to start MediaMTX controller: Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    src.camera_service.service_manager:service_manager.py:193 Failed to start service components: Permission denied for recordings directory: /opt/camera-service/recordings
+WARNING  src.camera_service.service_manager:service_manager.py:1068 Cleaning up partially started components
+_ TestConfigurationComponentIntegration.test_resilience_on_stream_creation_failure _
+
+self = <mediamtx_wrapper.controller.MediaMTXController object at 0x7efc0d19f220>
+
+    async def _validate_directory_permissions(self) -> None:
+        """Validate that required directories exist and are writable."""
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+    
+        directories = [
+            ("recordings", self._recordings_path),
+            ("snapshots", self._snapshots_path),
+        ]
+    
+        for dir_type, dir_path in directories:
+            try:
+                # Create directory if it doesn't exist
+                os.makedirs(dir_path, exist_ok=True)
+    
+                # Test write permissions
+                test_file = os.path.join(
+                    dir_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                )
+>               with open(test_file, "w") as f:
+E               PermissionError: [Errno 13] Permission denied: '/opt/camera-service/recordings/.write_test_8c2b67ad'
+
+src/mediamtx_wrapper/controller.py:246: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+self = <tests.integration.test_config_component_integration.TestConfigurationComponentIntegration object at 0x7efc0c350400>
+
+    @pytest.mark.asyncio
+    async def test_resilience_on_stream_creation_failure(self):
+        """
+        Req: S5-RES-002
+        If MediaMTX path creation fails, service remains operational and does not crash.
+        """
+        cfg = ConfigManager().load_config()
+        svc = ServiceManager(cfg)
+    
+        with pytest.MonkeyPatch.context() as mp:
+            async def _fake_ctx_enter_fail():
+                class Resp:
+                    status = 500
+    
+                    async def text(self):
+                        return "error"
+    
+                return Resp()
+    
+            async def _fake_ctx_enter_ok():
+                class Resp:
+                    status = 200
+    
+                    async def json(self):
+                        return {"serverVersion": "x", "serverUptime": 1}
+    
+                return Resp()
+    
+            class FakeOkCtx:
+                async def __aenter__(self):
+                    return await _fake_ctx_enter_ok()
+    
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+    
+            class FakeFailCtx:
+                async def __aenter__(self):
+                    return await _fake_ctx_enter_fail()
+    
+                async def __aexit__(self, exc_type, exc, tb):
+                    return False
+    
+            class FakeSession:
+                def get(self, *_, **__):
+                    return FakeOkCtx()
+    
+                def post(self, *_, **__):
+                    return FakeFailCtx()
+    
+            from src.mediamtx_wrapper import controller as ctrl
+    
+            def _fake_client_session(*_args, **_kwargs):
+                return FakeSession()
+    
+            mp.setattr(ctrl.aiohttp, "ClientSession", _fake_client_session)
+    
+>           await svc.start()
+
+tests/integration/test_config_component_integration.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/camera_service/service_manager.py:174: in start
+    await self._start_mediamtx_controller()
+src/camera_service/service_manager.py:842: in _start_mediamtx_controller
+    await self._mediamtx_controller.start()
+src/mediamtx_wrapper/controller.py:167: in start
+    await self._validate_directory_permissions()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <mediamtx_wrapper.controller.MediaMTXController object at 0x7efc0d19f220>
+
+    async def _validate_directory_permissions(self) -> None:
+        """Validate that required directories exist and are writable."""
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+    
+        directories = [
+            ("recordings", self._recordings_path),
+            ("snapshots", self._snapshots_path),
+        ]
+    
+        for dir_type, dir_path in directories:
+            try:
+                # Create directory if it doesn't exist
+                os.makedirs(dir_path, exist_ok=True)
+    
+                # Test write permissions
+                test_file = os.path.join(
+                    dir_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                )
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+    
+                self._logger.debug(
+                    f"Validated {dir_type} directory: {dir_path}",
+                    extra={"correlation_id": correlation_id},
+                )
+    
+            except PermissionError as e:
+                error_msg = f"Permission denied for {dir_type} directory: {dir_path}"
+                self._logger.error(error_msg, extra={"correlation_id": correlation_id})
+>               raise RuntimeError(error_msg) from e
+E               RuntimeError: Permission denied for recordings directory: /opt/camera-service/recordings
+
+src/mediamtx_wrapper/controller.py:258: RuntimeError
+------------------------------ Captured log call -------------------------------
+ERROR    mediamtx_wrapper.controller:controller.py:257 Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    mediamtx_wrapper.controller:controller.py:187 Failed to start MediaMTX controller: Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    src.camera_service.service_manager:service_manager.py:852 Failed to start MediaMTX controller: Permission denied for recordings directory: /opt/camera-service/recordings
+ERROR    src.camera_service.service_manager:service_manager.py:193 Failed to start service components: Permission denied for recordings directory: /opt/camera-service/recordings
+WARNING  src.camera_service.service_manager:service_manager.py:1068 Cleaning up partially started components
+________ test_requirement_F114_snapshot_quality_bounds_and_persistence _________
+
+    @pytest.mark.asyncio
+    async def test_requirement_F114_snapshot_quality_bounds_and_persistence():
+        """
+        Validates F1.1.4: Snapshot quality bounds and basic persistence semantics
+    
+        Business Scenario: Client requests snapshot with out-of-range quality
+        Error Cases: Quality > 100 rejected (or fails gracefully)
+        Success Criteria: API returns error/failure for bad quality; accepts reasonable quality
+    
+        STOP: File persistence (on disk) cannot be validated without real snapshot pipeline;
+        test asserts presence of filename in result for valid request when supported.
+        """
+        api_port, ws_port = _free_port(), _free_port()
+        async with _mediamtx_ok("127.0.0.1", api_port):
+            cfg = _build_config(api_port, ws_port)
+            svc = ServiceManager(cfg)
+            await svc.start()
+            try:
+                uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+                async with websockets.connect(uri) as ws:
+                    # Out-of-range quality
+                    await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"take_snapshot","params":{"device":"/dev/video0","quality":150}}))
+                    bad = json.loads(await ws.recv())
+>                   assert "error" in bad and bad["error"].get("code") == -32602
+E                   AssertionError: assert ('error' in {'error': {'code': -32001, 'message': 'Authentication required - call authenticate or provide auth_token'}, 'id': 1, 'jsonrpc': '2.0'} and -32001 == -32602)
+E                    +  where -32001 = <built-in method get of dict object at 0x7efc0b3f2c80>('code')
+E                    +    where <built-in method get of dict object at 0x7efc0b3f2c80> = {'code': -32001, 'message': 'Authentication required - call authenticate or provide auth_token'}.get
+
+tests/integration/test_service_manager_requirements.py:433: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  camera_discovery.hybrid_monitor:hybrid_monitor.py:247 pyudev not available - falling back to polling-only monitoring
+ERROR    security.api_key_handler.APIKeyHandler:api_key_handler.py:93 Failed to load API keys: Expecting value: line 1 column 1 (char 0)
+WARNING  mediamtx_wrapper.controller:controller.py:1476 MediaMTX health DEGRADED: unknown -> unhealthy (consecutive_failures: 1/10)
+__________ test_requirement_F325_protected_methods_unauthorized_error __________
+
+    @pytest.mark.asyncio
+    async def test_requirement_F325_protected_methods_unauthorized_error():
+        """
+        Validates F3.2.5: Protected methods require operator role (unauthorized error case)
+    
+        Business Scenario: Client calls protected method without authenticate
+        Error Cases: Service should return authorization error when enforced; else test is skipped (STOP)
+        Success Criteria: JSON-RPC error with authorization code (-32003)
+        """
+        api_port, ws_port = _free_port(), _free_port()
+        async with _mediamtx_ok("127.0.0.1", api_port):
+            cfg = _build_config(api_port, ws_port)
+            svc = ServiceManager(cfg)
+            await svc.start()
+            try:
+                uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+                async with websockets.connect(uri) as ws:
+                    await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"take_snapshot","params":{"device":"/dev/video0"}}))
+                    resp = json.loads(await ws.recv())
+                    if "error" not in resp:
+                        pytest.skip("STOP: authorization not enforced yet")
+                    else:
+                        # Prefer specific authorization code when implemented
+>                       assert resp["error"].get("code") in (-32003, -32603, -32601)
+E                       AssertionError: assert -32001 in (-32003, -32603, -32601)
+E                        +  where -32001 = <built-in method get of dict object at 0x7efc0b401840>('code')
+E                        +    where <built-in method get of dict object at 0x7efc0b401840> = {'code': -32001, 'message': 'Authentication required - call authenticate or provide auth_token'}.get
+
+tests/integration/test_service_manager_requirements.py:577: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  camera_discovery.hybrid_monitor:hybrid_monitor.py:247 pyudev not available - falling back to polling-only monitoring
+ERROR    security.api_key_handler.APIKeyHandler:api_key_handler.py:93 Failed to load API keys: Expecting value: line 1 column 1 (char 0)
+WARNING  mediamtx_wrapper.controller:controller.py:1476 MediaMTX health DEGRADED: unknown -> unhealthy (consecutive_failures: 1/10)
+=========================== short test summary info ============================
+FAILED tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration::test_stream_creation_uses_configured_endpoints_on_connect
+FAILED tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration::test_resilience_on_stream_creation_failure
+FAILED tests/integration/test_service_manager_requirements.py::test_requirement_F114_snapshot_quality_bounds_and_persistence
+FAILED tests/integration/test_service_manager_requirements.py::test_requirement_F325_protected_methods_unauthorized_error
+========================= 4 failed, 69 passed in 2.66s =========================
