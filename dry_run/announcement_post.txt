@@ -1,6 +1,0 @@
-Goal: 3-day MVP dry-run to de-risk CDR. Scope = SMK-1..7 only. No features; fix-only.
-Baseline = vX.Y.Z-cdr.
-Gates: All SMK pass; flaky ≤5%; no criticals.
-Artifacts under: dry_run/.
-Stand-ups: 09:00 + 16:00.
-Decision points: Iteration end of Day-1 and Day-2.
