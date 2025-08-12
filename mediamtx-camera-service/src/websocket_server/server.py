@@ -141,6 +141,8 @@ class WebSocketJsonRpcServer:
 
         # Security middleware (set by service manager)
         self._security_middleware = None
+        # Service manager (set by service manager)
+        self._service_manager = None
         # Simple performance metrics per method
         self._perf_metrics: Dict[str, Dict[str, float]] = {}
 
@@ -939,6 +941,10 @@ class WebSocketJsonRpcServer:
             Stream name for MediaMTX (e.g., camera0)
         """
         try:
+            # Handle empty or invalid device paths
+            if not device_path or not isinstance(device_path, str):
+                return "camera_unknown"
+            
             # Extract device number from path like /dev/video0
             if device_path.startswith("/dev/video"):
                 device_num = device_path.replace("/dev/video", "")
