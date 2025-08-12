@@ -3,7 +3,7 @@
     "jwt_success": {
       "user_id": "test_user_123",
       "role": "operator",
-      "expires": 1754827315,
+      "expires": 1754976343,
       "valid": true
     },
     "jwt_negative": {

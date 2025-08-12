@@ -1,0 +1,42 @@
+Installation Return Code: 1
+STDOUT:
+[0;34m[2025-08-12 04:05:27][0m Starting MediaMTX Camera Service installation...
+[0;34m[2025-08-12 04:05:27][0m ================================================
+[0;34m[2025-08-12 04:05:27][0m Installing system dependencies...
+Get:1 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Hit:2 http://ae.archive.ubuntu.com/ubuntu jammy InRelease
+Get:3 http://ae.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:4 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [2,558 kB]
+Get:5 http://ae.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Get:6 http://ae.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [2,803 kB]
+Get:7 http://security.ubuntu.com/ubuntu jammy-security/main Translation-en [379 kB]
+Get:8 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [4,018 kB]
+Get:9 http://security.ubuntu.com/ubuntu jammy-security/restricted Translation-en [732 kB]
+Get:10 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [993 kB]
+Get:11 http://ae.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [443 kB]
+Get:12 http://ae.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [4,163 kB]
+Get:13 http://ae.archive.ubuntu.com/ubuntu jammy-updates/restricted Translation-en [756 kB]
+Fetched 17.2 MB in 8s (2,143 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+v4l-utils is already the newest version (1.22.1-2build1).
+curl is already the newest version (7.81.0-1ubuntu1.20).
+git is already the newest version (1:2.34.1-1ubuntu1.15).
+python3 is already the newest version (3.10.6-1~22.04.1).
+systemd is already the newest version (249.11-0ubuntu3.16).
+systemd-sysv is already the newest version (249.11-0ubuntu3.16).
+wget is already the newest version (1.21.2-2ubuntu1.1).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+python3-pip is already the newest version (22.0.2+dfsg-1ubuntu0.6).
+python3-venv is already the newest version (3.10.6-1~22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+[0;32m[2025-08-12 04:05:45] SUCCESS:[0m System dependencies installed
+[0;34m[2025-08-12 04:05:45][0m Creating service user...
+[0;34m[2025-08-12 04:05:45][0m Service user already exists: camera-service
+[0;34m[2025-08-12 04:05:45][0m Installing MediaMTX server...
+[0;31m[2025-08-12 04:05:45] ERROR:[0m Bundled MediaMTX not found at /home/dts/CameraRecorder/mediamtx-camera-service/dependencies/mediamtx/mediamtx
+
+STDERR:
+

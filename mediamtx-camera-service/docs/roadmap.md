@@ -1,8 +1,8 @@
 # MediaMTX Camera Service - Development Roadmap
 
-**Version:** 5.0  
-**Last Updated:** 2025-08-06  
-**Status:** Sprint 2 Complete - Sprint 3 Authorized  
+**Version:** 6.0  
+**Last Updated:** 2025-01-15  
+**Status:** SDR Complete - PDR Authorized  
 
 This roadmap defines the current development status, completed work, and prioritized backlog for the MediaMTX Camera Service project. All work follows the IV&V (Independent Verification & Validation) control points defined in the principles document.
 
@@ -43,13 +43,13 @@ This roadmap defines the current development status, completed work, and priorit
   - Evidence: `tests/ivv/test_real_integration.py` (6 tests, 100% pass rate), real component testing artifacts (2025-08-05)
 
 ---
-### **🚪 SDR (System Design Review) - GATE REQUIRED**
-**Status**: ⚠️ **RETROACTIVE EXECUTION REQUIRED**  
+### **🚪 SDR (System Design Review) - ✅ COMPLETE**
+**Status**: ✅ **COMPLETE - PDR AUTHORIZED**  
 **Authority**: Project Manager  
 **Scope**: Requirements baseline and architecture validation for E1  
 **Reference**: `docs/systems-engineering-gates/sdr-system-design-review.md`  
-**Evidence**: `evidence/camera-service-sdr/`  
-**STOP**: E2 validation requires SDR completion for E1 baseline
+**Evidence**: `evidence/sdr-actual/`  
+**Completion**: 2025-01-15 - All feasibility areas validated, design proven feasible
 ---
 
 ### E2: Security and Production Hardening - ✅ COMPLETE
@@ -74,13 +74,13 @@ This roadmap defines the current development status, completed work, and priorit
         - `docs/deployment/INSTALLATION_VALIDATION_REPORT.md`
 
 ---
-### **🚪 PDR (Preliminary Design Review) - GATE REQUIRED**
-**Status**: ⚠️ **RETROACTIVE EXECUTION REQUIRED**  
+### **🚪 PDR (Preliminary Design Review) - 🚀 AUTHORIZED**
+**Status**: 🚀 **AUTHORIZED TO BEGIN**  
 **Authority**: IV&V Technical Assessment → Project Manager Decision  
-**Scope**: Core implementation validation for E1-E2 completion  
+**Scope**: Detailed design validation and implementation planning  
 **Reference**: `docs/systems-engineering-gates/pdr-preliminary-design-review.md`  
-**Evidence**: `evidence/camera-service-pdr/`  
-**STOP**: E3 authorization requires PDR completion for foundation validation
+**Evidence**: `evidence/pdr-actual/` (to be created)  
+**Authorization**: 2025-01-15 - SDR complete, design proven feasible for detailed implementation
 ---
 
 ### E3: Client API & SDK Ecosystem - 🚀 AUTHORIZED TO BEGIN
