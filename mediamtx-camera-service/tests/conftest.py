@@ -35,7 +35,7 @@ def pytest_sessionfinish(session, exitstatus):
 def pytest_configure(config):
     """Configure pytest with comprehensive no-mock guard if FORBID_MOCKS=1 is set."""
     if os.environ.get("FORBID_MOCKS") == "1":
-        # Monkey patch unittest.mock to raise on import
+        # Store original modules for potential restoration
         import sys
         
         class MockForbiddenError(Exception):
@@ -48,12 +48,16 @@ def pytest_configure(config):
                 "Implement real async context manager behavior instead."
             )
         
+        # Store original unittest.mock if it exists
+        original_unittest_mock = sys.modules.get('unittest.mock')
+        
         # Replace mock classes with forbidden versions
         sys.modules['unittest.mock'] = type('MockModule', (), {
             'Mock': forbidden_mock,
             'MagicMock': forbidden_mock,
             'AsyncMock': forbidden_mock,
             'patch': forbidden_mock,
+            'mock_open': forbidden_mock,
             'MockForbiddenError': MockForbiddenError,
         })
         
@@ -81,20 +85,22 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     """Add PDR-specific markers and enforce no-mock for PDR tests."""
     for item in items:
-        # Add pdr marker for tests in pdr directory
-        if "pdr" in str(item.fspath):
+        file_path = str(item.fspath)
+        
+        # Add pdr marker for tests in prototypes directory (PDR tests)
+        if "/prototypes/" in file_path:
             item.add_marker(pytest.mark.pdr)
         
-        # Add integration marker for tests in integration directory
-        if "integration" in str(item.fspath):
+        # Add integration marker for tests in contracts directory (integration tests)
+        if "/contracts/" in file_path:
             item.add_marker(pytest.mark.integration)
         
         # Add ivv marker for tests in ivv directory
-        if "ivv" in str(item.fspath):
+        if "/ivv/" in file_path:
             item.add_marker(pytest.mark.ivv)
         
         # Enforce no-mock for PDR, integration, and IVV tests
-        if any(marker in str(item.fspath) for marker in ["pdr", "integration", "ivv"]):
+        if any(marker in file_path for marker in ["/prototypes/", "/contracts/", "/ivv/"]):
             if os.environ.get("FORBID_MOCKS") != "1":
                 pytest.skip("PDR/Integration/IVV tests require FORBID_MOCKS=1 environment variable")
 
