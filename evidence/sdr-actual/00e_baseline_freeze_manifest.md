@@ -1,5 +1,5 @@
 # Baseline Freeze Manifest
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** 2025-01-15  
 **Role:** Developer  
 **SDR Phase:** Phase 0 - Requirements Baseline Freeze
@@ -10,7 +10,7 @@ Capture baseline state for reproducibility and prevent drift during SDR validati
 ## Baseline Tag
 **Tag**: `sdr-baseline-v1.0`  
 **Message**: "SDR baseline after remediation"  
-**Commit**: Current HEAD at baseline freeze  
+**Commit**: 1913d27 (HEAD -> main, tag: sdr-baseline-v1.0)  
 **Date**: 2025-01-15
 
 ---
@@ -67,7 +67,8 @@ Capture baseline state for reproducibility and prevent drift during SDR validati
 
 #### 1. `mediamtx-camera-service/docs/development/systems_engineering_gates.md/sdr_scope_definition_guidel.md`
 **Reason**: Renamed to fix typo and reformat  
-**Replacement**: `sdr_scope_definition_guide.md`
+**Replacement**: `sdr_scope_definition_guide.md`  
+**Commit**: 1913d27 - "Fix typo: rename sdr_scope_definition_guidel.md to sdr_scope_definition_guide.md"
 
 ---
 
@@ -94,7 +95,7 @@ Capture baseline state for reproducibility and prevent drift during SDR validati
 - **Branch**: main
 - **Status**: Up to date with origin/main
 - **Baseline Tag**: sdr-baseline-v1.0
-- **Last Commit**: Current HEAD at baseline freeze
+- **Last Commit**: 1913d27 - "Fix typo: rename sdr_scope_definition_guidel.md to sdr_scope_definition_guide.md"
 
 ### Project Structure
 ```
