@@ -95,9 +95,9 @@ FORBID_MOCKS=1 pytest tests/contracts/ -m "integration" -v
 ### 🔴 **Critical Implementation Gaps (High Severity)**
 
 1. **MediaMTX Server Integration**
-   - **Gap**: MediaMTX server not started in test environment
+   - **Gap**: MediaMTX server not started in test environment [Note: the computer has a real MediaMTX server runnint test shall try to use it ans is fully operational and frshly installed]
    - **Impact**: Stream creation, management, and validation cannot be tested
-   - **Required Fix**: Implement MediaMTX server startup in test environment
+   - **Required Fix**: Implement MediaMTX server startup (or check service is running via systemd) in test environment
 
 2. **Camera Monitor Component**
    - **Gap**: Camera monitor not properly initialized in ServiceManager

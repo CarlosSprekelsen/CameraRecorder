@@ -9,6 +9,7 @@ import time
 import uuid
 from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
+from collections import defaultdict
 
 import websockets
 from websockets.server import ServerProtocol as WebSocketServerProtocol
@@ -25,6 +26,58 @@ class CameraNotFoundError(Exception):
 class MediaMTXError(Exception):
     """Exception raised when MediaMTX operations fail."""
     pass
+
+
+class AuthenticationError(Exception):
+    """Exception raised when authentication fails."""
+    pass
+
+
+class PermissionError(Exception):
+    """Exception raised when user lacks permission for operation."""
+    pass
+
+
+class StreamError(Exception):
+    """Exception raised when stream operations fail."""
+    pass
+
+
+class PerformanceMetrics:
+    """Performance metrics collection for WebSocket server."""
+    
+    def __init__(self):
+        self.request_count = 0
+        self.response_times = defaultdict(list)
+        self.error_count = 0
+        self.active_connections = 0
+        self.start_time = time.time()
+    
+    def record_request(self, method: str, response_time: float):
+        """Record a request with its response time."""
+        self.request_count += 1
+        self.response_times[method].append(response_time)
+    
+    def record_error(self):
+        """Record an error occurrence."""
+        self.error_count += 1
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current performance metrics."""
+        uptime = time.time() - self.start_time
+        avg_response_times = {}
+        for method, times in self.response_times.items():
+            if times:
+                avg_response_times[method] = sum(times) / len(times)
+        
+        return {
+            "uptime": uptime,
+            "request_count": self.request_count,
+            "error_count": self.error_count,
+            "active_connections": self.active_connections,
+            "avg_response_times": avg_response_times,
+            "requests_per_second": self.request_count / uptime if uptime > 0 else 0
+        }
 
 
 @dataclass
@@ -143,8 +196,8 @@ class WebSocketJsonRpcServer:
         self._security_middleware = None
         # Service manager (set by service manager)
         self._service_manager = None
-        # Simple performance metrics per method
-        self._perf_metrics: Dict[str, Dict[str, float]] = {}
+        # Performance metrics collection
+        self._performance_metrics = PerformanceMetrics()
 
         # Scheduled auto-stop tasks per stream name
         self._recording_stop_tasks: Dict[str, asyncio.Task] = {}
@@ -184,6 +237,17 @@ class WebSocketJsonRpcServer:
             security_middleware: Security middleware instance
         """
         self._security_middleware = security_middleware
+    
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """
+        Get current performance metrics.
+
+        Returns:
+            Dict containing performance metrics
+        """
+        metrics = self._performance_metrics.get_metrics()
+        metrics["active_connections"] = len(self._clients)
+        return metrics
 
     async def start(self) -> None:
         """
@@ -316,7 +380,15 @@ class WebSocketJsonRpcServer:
             websocket.remote_address[0] if websocket.remote_address else "unknown"  # type: ignore[attr-defined]
         )
 
-        self._logger.info(f"New client connection: {client_id} from {client_ip}")
+        self._logger.info(
+            f"New client connection: {client_id} from {client_ip}",
+            extra={
+                "client_id": client_id,
+                "client_ip": client_ip,
+                "correlation_id": client_id,
+                "event": "client_connected"
+            }
+        )
 
         # Create client connection object
         client = ClientConnection(websocket, client_id)
@@ -453,7 +525,13 @@ class WebSocketJsonRpcServer:
             params = request_data.get("params")
 
             self._logger.debug(
-                f"Processing JSON-RPC method '{method_name}' from client {client.client_id}"
+                f"Processing JSON-RPC method '{method_name}' from client {client.client_id}",
+                extra={
+                    "method": method_name,
+                    "client_id": client.client_id,
+                    "correlation_id": correlation_id,
+                    "event": "method_processing"
+                }
             )
 
             # Check if method exists
@@ -607,14 +685,9 @@ class WebSocketJsonRpcServer:
                 else:
                     result = await handler()
                 duration_ms = (time.perf_counter() - start_ts) * 1000.0
-                m = self._perf_metrics.setdefault(
-                    method_name, {"count": 0.0, "total_ms": 0.0, "max_ms": 0.0, "last_ms": 0.0}
-                )
-                m["count"] += 1
-                m["total_ms"] += duration_ms
-                m["last_ms"] = duration_ms
-                if duration_ms > m["max_ms"]:
-                    m["max_ms"] = duration_ms
+                
+                # Record performance metrics
+                self._performance_metrics.record_request(method_name, duration_ms / 1000.0)
 
                 # Return response for requests with ID (notifications have no ID)
                 if request_id is not None:
@@ -627,6 +700,8 @@ class WebSocketJsonRpcServer:
 
             except Exception as e:
                 self._logger.error(f"Error in method handler '{method_name}': {e}")
+                # Record error in performance metrics
+                self._performance_metrics.record_error()
                 if request_id is not None:
                     # Map custom exceptions to specific error codes
                     if isinstance(e, CameraNotFoundError):
@@ -635,9 +710,24 @@ class WebSocketJsonRpcServer:
                     elif isinstance(e, MediaMTXError):
                         error_code = -1003
                         error_message = "MediaMTX operation failed"
+                    elif isinstance(e, AuthenticationError):
+                        error_code = -1001
+                        error_message = "Authentication failed"
+                    elif isinstance(e, PermissionError):
+                        error_code = -1002
+                        error_message = "Permission denied"
+                    elif isinstance(e, StreamError):
+                        error_code = -1004
+                        error_message = "Stream operation failed"
                     elif isinstance(e, ValueError):
                         error_code = -32602
                         error_message = "Invalid params"
+                    elif isinstance(e, KeyError):
+                        error_code = -32602
+                        error_message = "Missing required parameter"
+                    elif isinstance(e, TypeError):
+                        error_code = -32602
+                        error_message = "Invalid parameter type"
                     else:
                         error_code = -32603
                         error_message = "Internal error"
@@ -1038,18 +1128,16 @@ class WebSocketJsonRpcServer:
     async def _method_get_metrics(
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        summary: Dict[str, Any] = {}
-        for method, m in self._perf_metrics.items():
-            count = int(m.get("count", 0))
-            total = float(m.get("total_ms", 0.0))
-            avg = (total / count) if count > 0 else 0.0
-            summary[method] = {
-                "count": count,
-                "avg_ms": round(avg, 2),
-                "max_ms": round(float(m.get("max_ms", 0.0)), 2),
-                "last_ms": round(float(m.get("last_ms", 0.0)), 2),
-            }
-        return {"methods": summary}
+        """
+        Get performance metrics for the WebSocket server.
+
+        Args:
+            params: Method parameters (unused)
+
+        Returns:
+            Dict containing performance metrics
+        """
+        return self.get_performance_metrics()
 
     async def _method_get_camera_list(
         self, params: Optional[Dict[str, Any]] = None

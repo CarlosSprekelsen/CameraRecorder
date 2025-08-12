@@ -95,7 +95,7 @@ class RealRTSPStreamHandlingPrototype:
             await self.mediamtx_controller.stop()
         
         if self.service_manager:
-            await self.service_manager.shutdown()
+            await self.service_manager.stop()
             
         if self.temp_dir and os.path.exists(self.temp_dir):
             import shutil
@@ -147,8 +147,8 @@ class RealRTSPStreamHandlingPrototype:
             await asyncio.sleep(3)
             
             # Check if stream is registered with MediaMTX
-            streams = await self.mediamtx_controller.list_streams()
-            stream_registered = stream_name in streams
+            streams = await self.mediamtx_controller.get_stream_list()
+            stream_registered = any(stream["name"] == stream_name for stream in streams)
             
             # Test stream URL accessibility
             stream_url_valid = await self.mediamtx_controller.validate_stream_url(rtsp_url)
