@@ -61,7 +61,16 @@ class RealRTSPStreamHandlingPrototype:
         )
         
         # Initialize real MediaMTX controller
-        self.mediamtx_controller = MediaMTXController(mediamtx_config)
+        self.mediamtx_controller = MediaMTXController(
+            host=mediamtx_config.host,
+            api_port=mediamtx_config.api_port,
+            rtsp_port=mediamtx_config.rtsp_port,
+            webrtc_port=mediamtx_config.webrtc_port,
+            hls_port=mediamtx_config.hls_port,
+            config_path=mediamtx_config.config_path,
+            recordings_path=mediamtx_config.recordings_path,
+            snapshots_path=mediamtx_config.snapshots_path
+        )
         
         # Initialize real service manager
         config = Config(

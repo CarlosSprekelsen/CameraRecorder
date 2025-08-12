@@ -1102,13 +1102,13 @@ class MediaMTXController:
 
                     # Parse MediaMTX paths list response
                     if "items" in data:
-                        for path_name, path_info in data["items"].items():
+                        for path_info in data["items"]:
                             streams.append(
                                 {
-                                    "name": path_name,
-                                    "source": path_info.get("source", ""),
+                                    "name": path_info.get("name", ""),
+                                    "source": path_info.get("source", {}),
                                     "ready": path_info.get("ready", False),
-                                    "readers": path_info.get("readers", 0),
+                                    "readers": len(path_info.get("readers", [])),
                                     "bytes_sent": path_info.get("bytesSent", 0),
                                 }
                             )
