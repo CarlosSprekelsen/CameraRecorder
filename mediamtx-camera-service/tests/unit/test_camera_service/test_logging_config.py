@@ -273,22 +273,30 @@ class TestSetupLogging:
     def test_setup_logging_development_mode(self, logging_config):
         """Test logging setup in development mode."""
         # TODO: HIGH: Test development mode console formatter usage [Story:S14]
-        # Clear any existing handlers
+        # Clear any existing handlers and filters
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
 
         setup_logging(logging_config, development_mode=True)
 
         # Should have console handler
         assert len(root_logger.handlers) >= 1
 
-        # Should have correlation filter
+        # Should have correlation filter on handler
         handler = root_logger.handlers[0]
         correlation_filters = [
             f for f in handler.filters if isinstance(f, CorrelationIdFilter)
         ]
         assert len(correlation_filters) == 1
+
+        # Should also have correlation filter on root logger
+        root_correlation_filters = [
+            f for f in root_logger.filters if isinstance(f, CorrelationIdFilter)
+        ]
+        assert len(root_correlation_filters) == 1
 
         # Should use console formatter in development mode
         assert isinstance(handler.formatter, ConsoleFormatter)
@@ -296,31 +304,47 @@ class TestSetupLogging:
     def test_setup_logging_production_mode(self, logging_config):
         """Test logging setup in production mode."""
         # TODO: HIGH: Test production mode JSON formatter usage [Story:S14]
-        # Clear any existing handlers
+        # Clear any existing handlers and filters
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
 
         setup_logging(logging_config, development_mode=False)
 
         # Should use JSON formatter in production mode
         handler = root_logger.handlers[0]
         assert isinstance(handler.formatter, JsonFormatter)
+        
+        # Should have correlation filter on root logger
+        root_correlation_filters = [
+            f for f in root_logger.filters if isinstance(f, CorrelationIdFilter)
+        ]
+        assert len(root_correlation_filters) == 1
 
     def test_setup_logging_auto_mode_detection(self, logging_config):
         """Test automatic development/production mode detection."""
         # TODO: MEDIUM: Test environment-based mode detection [Story:S14]
         with patch.dict(os.environ, {"CAMERA_SERVICE_ENV": "development"}):
-            # Clear any existing handlers
+            # Clear any existing handlers and filters
             root_logger = logging.getLogger()
             for handler in root_logger.handlers[:]:
                 root_logger.removeHandler(handler)
+            for filter_obj in root_logger.filters[:]:
+                root_logger.removeFilter(filter_obj)
 
             setup_logging(logging_config, development_mode=None)
 
             # Should detect development mode and use console formatter
             handler = root_logger.handlers[0]
             assert isinstance(handler.formatter, ConsoleFormatter)
+            
+            # Should have correlation filter on root logger
+            root_correlation_filters = [
+                f for f in root_logger.filters if isinstance(f, CorrelationIdFilter)
+            ]
+            assert len(root_correlation_filters) == 1
 
     def test_setup_logging_with_rotation(self):
         """Test logging setup with file rotation enabled."""
@@ -336,10 +360,12 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             config.file_path = str(Path(temp_dir) / "test.log")
 
-            # Clear any existing handlers
+            # Clear any existing handlers and filters
             root_logger = logging.getLogger()
             for handler in root_logger.handlers[:]:
                 root_logger.removeHandler(handler)
+            for filter_obj in root_logger.filters[:]:
+                root_logger.removeFilter(filter_obj)
 
             setup_logging(config, development_mode=True)
 
@@ -356,16 +382,24 @@ class TestSetupLogging:
 
             # File should be created
             assert Path(config.file_path).exists()
+            
+            # Should have correlation filter on root logger
+            root_correlation_filters = [
+                f for f in root_logger.filters if isinstance(f, CorrelationIdFilter)
+            ]
+            assert len(root_correlation_filters) == 1
 
     def test_setup_logging_level_configuration(self, logging_config):
         """Test logging level is set correctly."""
         # TODO: MEDIUM: Test logging level configuration [Story:S14]
         logging_config.level = "DEBUG"
 
-        # Clear any existing handlers
+        # Clear any existing handlers and filters
         root_logger = logging.getLogger()
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
 
         setup_logging(logging_config)
 
@@ -378,10 +412,12 @@ class TestSetupLogging:
             log_path = Path(temp_dir) / "logs" / "service.log"
             config = LoggingConfig(file_enabled=True, file_path=str(log_path))
 
-            # Clear any existing handlers
+            # Clear any existing handlers and filters
             root_logger = logging.getLogger()
             for handler in root_logger.handlers[:]:
                 root_logger.removeHandler(handler)
+            for filter_obj in root_logger.filters[:]:
+                root_logger.removeFilter(filter_obj)
 
             setup_logging(config)
 
@@ -401,10 +437,12 @@ class TestSetupLogging:
         with tempfile.TemporaryDirectory() as temp_dir:
             config.file_path = str(Path(temp_dir) / "test.log")
 
-            # Clear any existing handlers
+            # Clear any existing handlers and filters
             root_logger = logging.getLogger()
             for handler in root_logger.handlers[:]:
                 root_logger.removeHandler(handler)
+            for filter_obj in root_logger.filters[:]:
+                root_logger.removeFilter(filter_obj)
 
             setup_logging(config, development_mode=True)
 

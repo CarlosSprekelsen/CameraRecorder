@@ -13,6 +13,13 @@ import tempfile
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.mediamtx_wrapper.controller import MediaMTXController
+from .async_mock_helpers import (
+    create_mock_session, 
+    create_success_response, 
+    create_failure_response,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect
+)
 
 
 class TestRecordingDuration:
@@ -32,22 +39,14 @@ class TestRecordingDuration:
                 recordings_path=os.path.join(temp_dir, "recordings"),
                 snapshots_path=os.path.join(temp_dir, "snapshots"),
             )
-            # Mock session for HTTP calls
-            controller._session = Mock()
+            # Mock session for HTTP calls with proper async context manager support
+            controller._session = create_mock_session()
             yield controller
 
     @pytest.fixture
     def mock_http_success(self):
         """Mock successful HTTP responses."""
-
-        def _mock_response(status=200, json_data=None):
-            response = Mock()
-            response.status = status
-            response.json = AsyncMock(return_value=json_data or {})
-            response.text = AsyncMock(return_value="")
-            return response
-
-        return _mock_response
+        return create_success_response
 
     @pytest.mark.asyncio
     async def test_recording_duration_calculation_precision(
@@ -55,7 +54,7 @@ class TestRecordingDuration:
     ):
         """Test accurate duration calculation using session timestamps."""
         # Mock successful HTTP responses for start and stop
-        controller._session.post = AsyncMock(return_value=mock_http_success())
+        # The session is already properly mocked with async context managers
 
         # Start recording and capture start time
         start_time = time.time()
@@ -81,7 +80,7 @@ class TestRecordingDuration:
     async def test_recording_missing_file_handling(self, controller, mock_http_success):
         """Test stop_recording when file doesn't exist on disk."""
         # Setup recording session
-        controller._session.post = AsyncMock(return_value=mock_http_success())
+        controller._session.post = create_async_mock_with_response(mock_http_success())
         await controller.start_recording("test_stream", format="mp4")
 
         # Mock file doesn't exist
@@ -99,7 +98,7 @@ class TestRecordingDuration:
     async def test_recording_file_permission_error(self, controller, mock_http_success):
         """Test handling when file exists but cannot be accessed due to permissions."""
         # Setup recording session
-        controller._session.post = AsyncMock(return_value=mock_http_success())
+        controller._session.post = create_async_mock_with_response(mock_http_success())
         await controller.start_recording("test_stream", format="mp4")
 
         # Mock file exists but permission error on getsize
@@ -167,16 +166,13 @@ class TestRecordingDuration:
     async def test_recording_api_failure_preserves_session(self, controller):
         """Test that API failures during stop don't lose session data for retry."""
         # Start recording successfully
-        success_response = Mock()
-        success_response.status = 200
-        controller._session.post = AsyncMock(return_value=success_response)
+        success_response = create_success_response()
+        controller._session.post = create_async_mock_with_response(success_response)
         await controller.start_recording("test_stream", format="mp4")
 
         # Mock API failure during stop
-        failure_response = Mock()
-        failure_response.status = 500
-        failure_response.text = AsyncMock(return_value="Internal Server Error")
-        controller._session.post = AsyncMock(return_value=failure_response)
+        failure_response = create_failure_response(500, "Internal Server Error")
+        controller._session.post = create_async_mock_with_response(failure_response)
 
         # Attempt to stop recording
         with pytest.raises(ValueError, match="Failed to stop recording"):
@@ -188,7 +184,7 @@ class TestRecordingDuration:
     @pytest.mark.asyncio
     async def test_recording_duplicate_start_error(self, controller, mock_http_success):
         """Test error when trying to start recording on already recording stream."""
-        controller._session.post = AsyncMock(return_value=mock_http_success())
+        controller._session.post = create_async_mock_with_response(mock_http_success())
 
         # Start first recording
         await controller.start_recording("test_stream", format="mp4")
@@ -200,8 +196,8 @@ class TestRecordingDuration:
     @pytest.mark.asyncio
     async def test_recording_stop_without_start_error(self, controller):
         """Test error when trying to stop recording that was never started."""
-        # Mock session for stop request
-        controller._session = Mock()
+        # Mock session for stop request with proper async context manager support
+        controller._session = create_mock_session()
 
         # Attempt to stop recording without starting
         with pytest.raises(ValueError, match="No active recording session found"):
@@ -220,10 +216,7 @@ class TestRecordingDuration:
             # This would normally require mocking the HTTP call
             # but we're just testing the validation doesn't raise
             try:
-                controller._session = Mock()
-                success_response = Mock()
-                success_response.status = 200
-                controller._session.post = AsyncMock(return_value=success_response)
+                controller._session = create_mock_session()
 
                 await controller.start_recording(
                     f"test_stream_{format_type}", format=format_type

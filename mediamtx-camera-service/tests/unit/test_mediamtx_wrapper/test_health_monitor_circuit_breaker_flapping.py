@@ -11,6 +11,12 @@ import asyncio
 from unittest.mock import Mock, AsyncMock
 
 from src.mediamtx_wrapper.controller import MediaMTXController
+from .async_mock_helpers import (
+    create_mock_session,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect,
+    MockResponse
+)
 
 
 class TestHealthMonitorFlapping:
@@ -40,19 +46,12 @@ class TestHealthMonitorFlapping:
 
     @pytest.fixture
     def mock_session(self):
-        """Create mock aiohttp session."""
-        session = Mock()
-        session.get = AsyncMock()
-        session.close = AsyncMock()
-        return session
+        """Create mock aiohttp session with proper async context manager support."""
+        return create_mock_session()
 
     def _mock_response(self, status, json_data=None, text_data=""):
         """Helper to create mock HTTP response."""
-        response = Mock()
-        response.status = status
-        response.json = AsyncMock(return_value=json_data or {})
-        response.text = AsyncMock(return_value=text_data)
-        return response
+        return MockResponse(status, json_data, text_data)
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_activation_threshold(
@@ -74,7 +73,9 @@ class TestHealthMonitorFlapping:
             failure_response,
             failure_response,  # 3 failures - should trigger CB
         ]
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         await controller.start()
         await asyncio.sleep(0.4)  # Let sequence run
@@ -110,7 +111,9 @@ class TestHealthMonitorFlapping:
             success_response,  # 2nd consecutive success
             success_response,  # 3rd consecutive success - should fully recover
         ]
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         with caplog.at_level("INFO"):
             await controller.start()
@@ -156,7 +159,9 @@ class TestHealthMonitorFlapping:
             success_response,
             success_response,  # Should fully recover
         ]
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         await controller.start()
         await asyncio.sleep(0.8)  # Extended time for rapid sequence
@@ -195,7 +200,9 @@ class TestHealthMonitorFlapping:
             success_response,
             success_response,  # Recover from CB #2
         ]
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         await controller.start()
         await asyncio.sleep(0.8)  # Extended time for two cycles

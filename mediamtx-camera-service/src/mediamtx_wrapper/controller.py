@@ -1335,6 +1335,45 @@ class MediaMTXController:
             self._logger.error(error_msg, extra={"correlation_id": correlation_id})
             raise ConnectionError(error_msg)
 
+    def _calculate_backoff_interval(self, consecutive_failures: int) -> int:
+        """
+        Calculate safe backoff interval with protection against overflow.
+        
+        Args:
+            consecutive_failures: Number of consecutive failures
+            
+        Returns:
+            Backoff interval in seconds (capped at maximum)
+        """
+        # Use math.pow for safer exponential calculation
+        import math
+        
+        # Cap consecutive_failures to prevent overflow
+        max_safe_failures = 20  # Reasonable upper limit
+        safe_failures = min(consecutive_failures, max_safe_failures)
+        
+        # Calculate exponential backoff with safety checks
+        try:
+            exponential_factor = math.pow(self._backoff_base_multiplier, safe_failures)
+            base_interval = self._health_check_interval * exponential_factor
+            
+            # Apply maximum cap
+            capped_interval = min(base_interval, self._health_max_backoff_interval)
+            
+            # Apply jitter
+            jitter = random.uniform(*self._backoff_jitter_range)
+            final_interval = int(capped_interval * jitter)
+            
+            # Ensure minimum interval
+            return max(final_interval, 1)
+            
+        except (OverflowError, ValueError) as e:
+            # Fallback to maximum interval if calculation fails
+            self._logger.warning(
+                f"Backoff calculation failed for {consecutive_failures} failures, using maximum interval: {e}"
+            )
+            return self._health_max_backoff_interval
+
     async def _health_monitor_loop(self) -> None:
         """
         Background task for continuous health monitoring with configurable circuit breaker and adaptive backoff.
@@ -1510,15 +1549,9 @@ class MediaMTXController:
                         sleep_interval = self._health_check_interval
                         consecutive_failures = 0
                     else:
-                        # Configurable exponential backoff with jitter
-                        base_interval = min(
-                            self._health_check_interval
-                            * (self._backoff_base_multiplier**consecutive_failures),
-                            self._health_max_backoff_interval,
-                        )
-                        jitter = random.uniform(*self._backoff_jitter_range)
-                        sleep_interval = int(base_interval * jitter)
+                        # Use safe backoff calculation
                         consecutive_failures += 1
+                        sleep_interval = self._calculate_backoff_interval(consecutive_failures)
 
                         self._logger.debug(
                             f"Health monitoring backoff: {sleep_interval:.1f}s (failure #{consecutive_failures})",
@@ -1565,14 +1598,8 @@ class MediaMTXController:
                             },
                         )
 
-                    # Configurable error backoff with jitter
-                    base_error_sleep = min(
-                        self._health_check_interval
-                        * (self._backoff_base_multiplier**consecutive_failures),
-                        self._health_max_backoff_interval,
-                    )
-                    jitter = random.uniform(*self._backoff_jitter_range)
-                    error_sleep = int(base_error_sleep * jitter)
+                    # Use safe error backoff calculation
+                    error_sleep = self._calculate_backoff_interval(consecutive_failures)
                     await asyncio.sleep(error_sleep)
 
         except Exception as e:

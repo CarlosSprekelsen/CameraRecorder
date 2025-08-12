@@ -751,13 +751,24 @@ class HybridCameraMonitor:
                         )
                         break
 
-                    # Enhanced exponential backoff with jitter
-                    base_backoff = min(
-                        self._base_poll_interval * (2**self._polling_failure_count),
-                        self._max_poll_interval,
-                    )
-                    jitter = self._rng.uniform(0.8, 1.2)  # ±20% jitter
-                    backoff_interval = base_backoff * jitter
+                    # Enhanced exponential backoff with jitter (safe calculation)
+                    import math
+                    
+                    # Cap failure count to prevent overflow
+                    max_safe_failures = 20
+                    safe_failures = min(self._polling_failure_count, max_safe_failures)
+                    
+                    try:
+                        exponential_factor = math.pow(2, safe_failures)
+                        base_backoff = min(
+                            self._base_poll_interval * exponential_factor,
+                            self._max_poll_interval,
+                        )
+                        jitter = self._rng.uniform(0.8, 1.2)  # ±20% jitter
+                        backoff_interval = base_backoff * jitter
+                    except (OverflowError, ValueError):
+                        # Fallback to maximum interval
+                        backoff_interval = self._max_poll_interval
 
                     self._logger.debug(
                         f"Polling backoff: {backoff_interval:.2f}s (base: {base_backoff:.2f}s, jitter: {jitter:.2f})",

@@ -11,6 +11,12 @@ import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.mediamtx_wrapper.controller import MediaMTXController
+from .async_mock_helpers import (
+    create_mock_session,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect,
+    MockResponse
+)
 
 
 class TestHealthMonitorBackoffJitter:
@@ -39,19 +45,51 @@ class TestHealthMonitorBackoffJitter:
 
     @pytest.fixture
     def mock_session(self):
-        """Create mock aiohttp session."""
-        session = Mock()
-        session.get = AsyncMock()
-        session.close = AsyncMock()
-        return session
+        """Create mock aiohttp session with proper async context manager support."""
+        return create_mock_session()
 
     def _mock_response(self, status, json_data=None, text_data=""):
         """Helper to create mock HTTP response."""
-        response = Mock()
-        response.status = status
-        response.json = AsyncMock(return_value=json_data or {})
-        response.text = AsyncMock(return_value=text_data)
-        return response
+        return MockResponse(status, json_data, text_data)
+
+    def test_safe_backoff_calculation_large_failures(self, controller_backoff_test):
+        """Test that backoff calculation handles large failure counts safely."""
+        controller = controller_backoff_test
+        
+        # Test with very large failure counts that could cause overflow
+        large_failures = [50, 100, 1000]
+        
+        for failure_count in large_failures:
+            backoff_interval = controller._calculate_backoff_interval(failure_count)
+            
+            # Should not exceed maximum backoff interval
+            assert backoff_interval <= controller._health_max_backoff_interval
+            
+            # Should be a reasonable positive integer
+            assert backoff_interval > 0
+            assert isinstance(backoff_interval, int)
+            
+            # Should not cause any exceptions
+            assert backoff_interval is not None
+
+    def test_safe_backoff_calculation_edge_cases(self, controller_backoff_test):
+        """Test backoff calculation with edge cases."""
+        controller = controller_backoff_test
+        
+        # Test with zero failures
+        backoff_interval = controller._calculate_backoff_interval(0)
+        assert backoff_interval > 0
+        assert backoff_interval <= controller._health_max_backoff_interval
+        
+        # Test with negative failures (should handle gracefully)
+        backoff_interval = controller._calculate_backoff_interval(-1)
+        assert backoff_interval > 0
+        assert backoff_interval <= controller._health_max_backoff_interval
+        
+        # Test with very large multiplier
+        controller._backoff_base_multiplier = 10.0
+        backoff_interval = controller._calculate_backoff_interval(5)
+        assert backoff_interval <= controller._health_max_backoff_interval
 
     @pytest.mark.asyncio
     async def test_exponential_backoff_calculation(
@@ -65,14 +103,16 @@ class TestHealthMonitorBackoffJitter:
 
         # All failures to trigger exponential backoff
         responses = [failure_response] * 10
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         # Mock asyncio.sleep to capture sleep intervals
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)  # Short actual sleep for test speed
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()
@@ -119,13 +159,15 @@ class TestHealthMonitorBackoffJitter:
 
         failure_response = self._mock_response(500, text_data="Error")
         responses = [failure_response] * 8
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()
@@ -154,13 +196,15 @@ class TestHealthMonitorBackoffJitter:
 
         failure_response = self._mock_response(500, text_data="Error")
         responses = [failure_response] * 15  # Many failures to exceed cap
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()
@@ -197,13 +241,15 @@ class TestHealthMonitorBackoffJitter:
             failure_response,
             failure_response,  # Fresh backoff sequence
         ]
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()
@@ -307,13 +353,15 @@ class TestHealthMonitorBackoffJitter:
 
         failure_response = self._mock_response(500, text_data="Error")
         responses = [failure_response] * 8  # Enough to trigger CB and continue
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()
@@ -343,13 +391,15 @@ class TestHealthMonitorBackoffJitter:
 
         failure_response = self._mock_response(500, text_data="Error")
         responses = [failure_response] * 6
-        mock_session.get.side_effect = responses
+        mock_session.get = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: responses.pop(0) if responses else MockResponse(200, {"status": "ok"})
+        )
 
         sleep_intervals = []
 
         async def mock_sleep(interval):
             sleep_intervals.append(interval)
-            await asyncio.sleep(0.01)
+            # No actual sleep to avoid recursion
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             await controller.start()

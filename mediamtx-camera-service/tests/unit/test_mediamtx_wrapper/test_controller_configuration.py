@@ -12,6 +12,13 @@ from unittest.mock import Mock, AsyncMock, patch
 import aiohttp
 
 from src.mediamtx_wrapper.controller import MediaMTXController
+from .async_mock_helpers import (
+    create_mock_session, 
+    create_success_response, 
+    create_failure_response,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect
+)
 
 
 class TestConfigurationValidation:
@@ -31,46 +38,14 @@ class TestConfigurationValidation:
             snapshots_path="/tmp/snapshots",
         )
         
-        # Create a proper async context manager mock
-        class MockResponse:
-            def __init__(self):
-                self.status = 200
-                self._json_data = {"status": "ok"}
-                self._text_data = ""
-            
-            async def json(self):
-                return self._json_data
-            
-            async def text(self):
-                return self._text_data
-        
-        class MockPostContextManager:
-            def __init__(self, response):
-                self.response = response
-            
-            async def __aenter__(self):
-                return self.response
-            
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                pass
-        
-        # Create mock session with proper async context manager
-        mock_session = AsyncMock()
-        mock_response = MockResponse()
-        
-        # Make post() return an async context manager directly (not awaited)
-        mock_session.post = Mock(return_value=MockPostContextManager(mock_response))
-        
-        controller._session = mock_session
+        # Create mock session with proper async context manager support
+        controller._session = create_mock_session()
         return controller
 
     def _mock_response(self, status, json_data=None, text_data=""):
         """Helper to create mock HTTP response."""
-        response = Mock()
-        response.status = status
-        response.json = AsyncMock(return_value=json_data or {})
-        response.text = AsyncMock(return_value=text_data)
-        return response
+        from .async_mock_helpers import MockResponse
+        return MockResponse(status, json_data, text_data)
 
     @pytest.mark.asyncio
     async def test_configuration_validation_unknown_keys(self, controller):
@@ -187,7 +162,7 @@ class TestConfigurationValidation:
 
         # Mock API failure
         error_response = self._mock_response(500, text_data="Internal Server Error")
-        controller._session.post = AsyncMock(return_value=error_response)
+        controller._session.post = create_async_mock_with_response(error_response)
 
         # Should raise ValueError (not crash system)
         with pytest.raises(ValueError, match="Failed to update configuration"):
@@ -202,8 +177,8 @@ class TestConfigurationValidation:
         valid_config = {"logLevel": "info"}
 
         # Mock network error
-        controller._session.post = AsyncMock(
-            side_effect=aiohttp.ClientError("Connection refused")
+        controller._session.post = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: aiohttp.ClientError("Connection refused")
         )
 
         with pytest.raises(ConnectionError, match="MediaMTX unreachable"):
@@ -233,7 +208,7 @@ class TestConfigurationValidation:
 
         # Mock successful API response
         success_response = self._mock_response(200)
-        controller._session.post = AsyncMock(return_value=success_response)
+        controller._session.post = create_async_mock_with_response(success_response)
 
         result = await controller.update_configuration(valid_config)
 
@@ -314,7 +289,7 @@ class TestConfigurationValidation:
         ):
             # Mock successful response
             success_response = self._mock_response(200)
-            controller._session.post = AsyncMock(return_value=success_response)
+            controller._session.post = create_async_mock_with_response(success_response)
 
             await controller.update_configuration({"logLevel": "info"})
 

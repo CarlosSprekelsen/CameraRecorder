@@ -41,18 +41,44 @@ class TestHealthMonitoring:
 
     @pytest.fixture
     def mock_session(self):
-        """Create mock aiohttp session."""
+        """Create mock aiohttp session with proper async context manager support."""
         session = Mock()
-        session.get = AsyncMock()
+        
+        # Create a proper async context manager mock
+        class AsyncContextMock:
+            def __init__(self, response=None):
+                self.response = response
+            
+            async def __aenter__(self):
+                return self.response or self
+            
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        # Store responses for the mock
+        session._responses = []
+        
+        async def mock_get(*args, **kwargs):
+            if session._responses:
+                response = session._responses.pop(0)
+                return AsyncContextMock(response)
+            return AsyncContextMock()
+        
+        session.get = mock_get
         session.close = AsyncMock()
         return session
 
     def _mock_response(self, status, json_data=None, text_data=""):
-        """Helper to create mock HTTP response."""
+        """Helper to create mock HTTP response with proper async context manager."""
         response = Mock()
         response.status = status
         response.json = AsyncMock(return_value=json_data or {})
         response.text = AsyncMock(return_value=text_data)
+        
+        # Add async context manager support
+        response.__aenter__ = AsyncMock(return_value=response)
+        response.__aexit__ = AsyncMock(return_value=None)
+        
         return response
 
     def test_configurable_circuit_breaker_parameters(self):
@@ -126,7 +152,7 @@ class TestHealthMonitoring:
             success_response,  # Success again
             success_response,  # Second consecutive success - should fully recover
         ]
-        mock_session.get.side_effect = responses
+        mock_session._responses = responses
 
         await controller.start()
         await asyncio.sleep(0.6)  # Let health checks run through sequence
@@ -156,7 +182,7 @@ class TestHealthMonitoring:
             failure_response,
             success_response,
         ] * 3
-        mock_session.get.side_effect = responses
+        mock_session._responses = responses
 
         with caplog.at_level("INFO"):
             await controller.start()
@@ -177,7 +203,7 @@ class TestHealthMonitoring:
         controller._session = mock_session
 
         # Mock failing health checks
-        mock_session.get.side_effect = aiohttp.ClientError("Connection refused")
+        mock_session._responses = [aiohttp.ClientError("Connection refused")]
 
         # Record sleep intervals to verify backoff
         sleep_intervals = []
@@ -218,7 +244,7 @@ class TestHealthMonitoring:
             200, {"serverVersion": "1.0.0", "serverUptime": 1200}
         )
 
-        mock_session.get.side_effect = [
+        mock_session._responses = [
             failure_response,
             success_response,
             success_response,
@@ -290,7 +316,7 @@ class TestHealthMonitoring:
             self._mock_response(200, {"serverVersion": "1.0.0"}),
             self._mock_response(500, text_data="Error 3"),
         ]
-        mock_session.get.side_effect = responses
+        mock_session._responses = responses
 
         await controller.start()
         await asyncio.sleep(0.4)  # Let health checks run
@@ -309,9 +335,9 @@ class TestHealthMonitoring:
         controller._session = mock_session
 
         # Mock successful responses
-        mock_session.get.return_value = self._mock_response(
+        mock_session._responses = [self._mock_response(
             200, {"serverVersion": "1.0.0"}
-        )
+        )]
 
         await controller.start()
 
@@ -332,9 +358,9 @@ class TestHealthMonitoring:
         controller = controller_fast_timers
         controller._session = mock_session
 
-        mock_session.get.return_value = self._mock_response(
+        mock_session._responses = [self._mock_response(
             200, {"serverVersion": "1.0.0"}
-        )
+        )]
 
         # Mock correlation ID functions to capture calls
         correlation_ids = []

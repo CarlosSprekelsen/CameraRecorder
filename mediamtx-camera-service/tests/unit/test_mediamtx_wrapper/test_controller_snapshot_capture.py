@@ -13,6 +13,11 @@ import tempfile
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.mediamtx_wrapper.controller import MediaMTXController
+from .async_mock_helpers import (
+    create_mock_session,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect
+)
 
 
 class TestSnapshotCapture:
@@ -34,8 +39,8 @@ class TestSnapshotCapture:
                 process_termination_timeout=1.0,  # Short timeout for testing
                 process_kill_timeout=0.5,
             )
-            # Mock session to avoid HTTP calls
-            controller._session = Mock()
+            # Mock session to avoid HTTP calls with proper async context manager support
+            controller._session = create_mock_session()
             yield controller
 
     @pytest.mark.asyncio

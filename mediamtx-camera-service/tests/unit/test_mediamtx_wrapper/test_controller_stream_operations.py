@@ -11,6 +11,13 @@ from unittest.mock import Mock, AsyncMock
 import aiohttp
 
 from src.mediamtx_wrapper.controller import MediaMTXController, StreamConfig
+from .async_mock_helpers import (
+    create_mock_session, 
+    create_success_response, 
+    create_failure_response,
+    create_async_mock_with_response,
+    create_async_mock_with_side_effect
+)
 
 
 class TestStreamOperations:
@@ -29,8 +36,8 @@ class TestStreamOperations:
             recordings_path="/tmp/recordings",
             snapshots_path="/tmp/snapshots",
         )
-        # Mock session
-        controller._session = Mock()
+        # Mock session with proper async context manager support
+        controller._session = create_mock_session()
         return controller
 
     @pytest.fixture
@@ -40,18 +47,13 @@ class TestStreamOperations:
 
     def _mock_response(self, status, json_data=None, text_data=""):
         """Helper to create mock HTTP response."""
-        response = Mock()
-        response.status = status
-        response.json = AsyncMock(return_value=json_data or {})
-        response.text = AsyncMock(return_value=text_data)
-        return response
+        from .async_mock_helpers import MockResponse
+        return MockResponse(status, json_data, text_data)
 
     @pytest.mark.asyncio
     async def test_create_stream_success(self, controller, sample_stream_config):
         """Test successful stream creation returns correct URLs."""
-        # Mock successful response
-        success_response = self._mock_response(200)
-        controller._session.post = AsyncMock(return_value=success_response)
+        # Mock successful response - session is already properly mocked
 
         # Mock get_stream_status to return stream doesn't exist (for idempotency check)
         controller.get_stream_status = AsyncMock(
@@ -98,7 +100,7 @@ class TestStreamOperations:
 
         # Mock 409 conflict response from create call
         conflict_response = self._mock_response(409, text_data="Path already exists")
-        controller._session.post = AsyncMock(return_value=conflict_response)
+        controller._session.post = create_async_mock_with_response(conflict_response)
 
         result = await controller.create_stream(sample_stream_config)
 
@@ -129,7 +131,7 @@ class TestStreamOperations:
 
         # Mock API error response
         error_response = self._mock_response(500, text_data="Internal Server Error")
-        controller._session.post = AsyncMock(return_value=error_response)
+        controller._session.post = create_async_mock_with_response(error_response)
 
         with pytest.raises(ConnectionError) as exc_info:
             await controller.create_stream(sample_stream_config)
@@ -150,8 +152,8 @@ class TestStreamOperations:
         )
 
         # Mock network error
-        controller._session.post = AsyncMock(
-            side_effect=aiohttp.ClientError("Connection refused")
+        controller._session.post = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: aiohttp.ClientError("Connection refused")
         )
 
         with pytest.raises(ConnectionError, match="MediaMTX unreachable"):
@@ -162,7 +164,7 @@ class TestStreamOperations:
         """Test successful stream deletion."""
         # Mock successful deletion response
         success_response = self._mock_response(200)
-        controller._session.post = AsyncMock(return_value=success_response)
+        controller._session.post = create_async_mock_with_response(success_response)
 
         result = await controller.delete_stream("test_stream")
 
@@ -173,7 +175,7 @@ class TestStreamOperations:
         """Test 404 response is handled idempotently (stream already deleted)."""
         # Mock 404 not found response
         not_found_response = self._mock_response(404, text_data="Path not found")
-        controller._session.post = AsyncMock(return_value=not_found_response)
+        controller._session.post = create_async_mock_with_response(not_found_response)
 
         result = await controller.delete_stream("nonexistent_stream")
 
@@ -191,7 +193,7 @@ class TestStreamOperations:
         """Test API error during deletion."""
         # Mock API error response
         error_response = self._mock_response(500, text_data="Internal Server Error")
-        controller._session.post = AsyncMock(return_value=error_response)
+        controller._session.post = create_async_mock_with_response(error_response)
 
         result = await controller.delete_stream("test_stream")
 
@@ -202,8 +204,8 @@ class TestStreamOperations:
     async def test_delete_stream_network_error(self, controller):
         """Test network error during deletion."""
         # Mock network error
-        controller._session.post = AsyncMock(
-            side_effect=aiohttp.ClientError("Connection refused")
+        controller._session.post = create_async_mock_with_side_effect(
+            lambda *args, **kwargs: aiohttp.ClientError("Connection refused")
         )
 
         with pytest.raises(ConnectionError, match="MediaMTX unreachable"):
@@ -233,7 +235,7 @@ class TestStreamOperations:
 
         # Mock successful response
         success_response = self._mock_response(200)
-        controller._session.post = AsyncMock(return_value=success_response)
+        controller._session.post = create_async_mock_with_response(success_response)
 
         recording_config = StreamConfig(
             name="recording_stream",

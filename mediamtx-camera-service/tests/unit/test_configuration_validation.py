@@ -167,17 +167,20 @@ class TestConfigurationSchemaValidation:
         config = Config(**config_data)
         
         # Test that ServiceManager can be instantiated with this config
-        # (We'll mock the actual service manager to avoid starting real services)
-        with pytest.raises(Exception) as exc_info:
-            # This should fail because we're not in a proper async context
-            # but it should fail for the right reason, not parameter mismatch
-            ServiceManager(config)
-        
-        # The error should not be about parameter mismatch
-        error_msg = str(exc_info.value)
-        assert "unexpected keyword argument" not in error_msg, (
-            f"ServiceManager failed due to parameter mismatch: {error_msg}"
-        )
+        # without parameter mismatches
+        try:
+            service_manager = ServiceManager(config)
+            # If we get here, the ServiceManager was instantiated successfully
+            # without parameter mismatches
+            assert service_manager is not None
+            assert hasattr(service_manager, '_config')
+            assert service_manager._config == config
+        except Exception as e:
+            # If an exception is raised, it should not be about parameter mismatch
+            error_msg = str(e)
+            assert "unexpected keyword argument" not in error_msg, (
+                f"ServiceManager failed due to parameter mismatch: {error_msg}"
+            )
 
     def test_config_default_values(self):
         """Test that default configuration values are valid."""

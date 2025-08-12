@@ -58,7 +58,7 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_entry = {
-            "timestamp": self.formatTime(record, self.datefmt),
+            "timestamp": self.formatTime(record, self.datefmt or "%Y-%m-%dT%H:%M:%S"),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -115,19 +115,21 @@ class ConsoleFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record for console display."""
-        # Add correlation ID to the format if present
-        correlation_part = ""
-        if hasattr(record, "correlation_id"):
-            correlation_part = f"[{record.correlation_id}] "
-
-        # Format: timestamp - logger - level - [correlation_id] message
+        # Store original message
+        original_msg = record.getMessage()
+        
+        # Add correlation ID to the message if present
+        if hasattr(record, "correlation_id") and record.correlation_id:
+            # Create a new message with correlation ID
+            record.msg = f"[{record.correlation_id}] {original_msg}"
+            record.args = ()  # Clear args since we're replacing the message
+        
+        # Format using parent formatter
         formatted = super().format(record)
-        if correlation_part:
-            # Insert correlation ID after the level
-            parts = formatted.split(" - ", 3)
-            if len(parts) >= 4:
-                formatted = f"{parts[0]} - {parts[1]} - {parts[2]} - {correlation_part}{parts[3]}"
-
+        
+        # Restore original message to avoid side effects
+        record.msg = original_msg
+        
         return formatted
 
 
@@ -209,6 +211,9 @@ def setup_logging(
     # Setup console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.addFilter(correlation_filter)
+    
+    # Add correlation filter to root logger as well for global access
+    root_logger.addFilter(correlation_filter)
 
     if development_mode:
         # Development: Human-readable console format
@@ -265,6 +270,13 @@ def get_correlation_filter() -> Optional[CorrelationIdFilter]:
     the correlation filter for setting request-specific correlation IDs.
     """
     root_logger = logging.getLogger()
+    
+    # Check root logger filters first
+    for filter_obj in root_logger.filters:
+        if isinstance(filter_obj, CorrelationIdFilter):
+            return filter_obj
+    
+    # Check handler filters as fallback
     for handler in root_logger.handlers:
         for filter_obj in handler.filters:
             if isinstance(filter_obj, CorrelationIdFilter):

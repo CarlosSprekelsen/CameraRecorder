@@ -75,6 +75,9 @@ class CameraConfig:
     device_range: List[int] = field(default_factory=lambda: list(range(10)))
     enable_capability_detection: bool = True
     auto_start_streams: bool = False
+    capability_timeout: float = 5.0
+    capability_retry_interval: float = 1.0
+    capability_max_retries: int = 3
 
 
 @dataclass
@@ -85,28 +88,39 @@ class LoggingConfig:
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file_enabled: bool = False
     file_path: str = "/var/log/camera-service/camera-service.log"
-    max_file_size: str = "10MB"
+    max_file_size: int = 10485760
     backup_count: int = 5
+    console_enabled: bool = True
 
 
 @dataclass
 class RecordingConfig:
     """Recording configuration settings."""
 
-    auto_record: bool = False
-    format: str = "mp4"
+    enabled: bool = False
+    format: str = "fmp4"
     quality: str = "medium"
-    max_duration: int = 3600
-    cleanup_after_days: int = 30
+    segment_duration: int = 3600
+    max_segment_size: int = 524288000
+    auto_cleanup: bool = True
+    cleanup_interval: int = 86400
+    max_age: int = 604800
+    max_size: int = 10737418240
 
 
 @dataclass
 class SnapshotConfig:
     """Snapshot configuration settings."""
 
-    format: str = "jpg"
+    enabled: bool = True
+    format: str = "jpeg"
     quality: int = 85
-    cleanup_after_days: int = 7
+    max_width: int = 1920
+    max_height: int = 1080
+    auto_cleanup: bool = True
+    cleanup_interval: int = 3600
+    max_age: int = 86400
+    max_count: int = 1000
 
 
 @dataclass
@@ -120,48 +134,105 @@ class Config:
     recording: RecordingConfig = field(default_factory=RecordingConfig)
     snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
 
+    def __init__(self, **kwargs):
+        """Initialize configuration with proper dataclass conversion."""
+        # Create default instances
+        self.server = ServerConfig()
+        self.mediamtx = MediaMTXConfig()
+        self.camera = CameraConfig()
+        self.logging = LoggingConfig()
+        self.recording = RecordingConfig()
+        self.snapshots = SnapshotConfig()
+        
+        # Update with provided data
+        if kwargs:
+            self.update_from_dict(kwargs)
+
     def update_from_dict(self, config_data: Dict[str, Any]) -> None:
         """Update configuration from dictionary data."""
         if "server" in config_data:
-            for key, value in config_data["server"].items():
-                if hasattr(self.server, key):
-                    setattr(self.server, key, value)
+            server_data = config_data["server"]
+            if isinstance(server_data, dict):
+                for key, value in server_data.items():
+                    if hasattr(self.server, key):
+                        setattr(self.server, key, value)
+            elif isinstance(server_data, ServerConfig):
+                self.server = server_data
 
         if "mediamtx" in config_data:
-            for key, value in config_data["mediamtx"].items():
-                if hasattr(self.mediamtx, key):
-                    setattr(self.mediamtx, key, value)
+            mediamtx_data = config_data["mediamtx"]
+            if isinstance(mediamtx_data, dict):
+                for key, value in mediamtx_data.items():
+                    if hasattr(self.mediamtx, key):
+                        setattr(self.mediamtx, key, value)
+            elif isinstance(mediamtx_data, MediaMTXConfig):
+                self.mediamtx = mediamtx_data
 
         if "camera" in config_data:
-            for key, value in config_data["camera"].items():
-                if hasattr(self.camera, key):
-                    setattr(self.camera, key, value)
+            camera_data = config_data["camera"]
+            if isinstance(camera_data, dict):
+                for key, value in camera_data.items():
+                    if hasattr(self.camera, key):
+                        setattr(self.camera, key, value)
+            elif isinstance(camera_data, CameraConfig):
+                self.camera = camera_data
 
         if "logging" in config_data:
-            for key, value in config_data["logging"].items():
-                if hasattr(self.logging, key):
-                    setattr(self.logging, key, value)
+            logging_data = config_data["logging"]
+            if isinstance(logging_data, dict):
+                for key, value in logging_data.items():
+                    if hasattr(self.logging, key):
+                        setattr(self.logging, key, value)
+            elif isinstance(logging_data, LoggingConfig):
+                self.logging = logging_data
 
         if "recording" in config_data:
-            for key, value in config_data["recording"].items():
-                if hasattr(self.recording, key):
-                    setattr(self.recording, key, value)
+            recording_data = config_data["recording"]
+            if isinstance(recording_data, dict):
+                for key, value in recording_data.items():
+                    if hasattr(self.recording, key):
+                        setattr(self.recording, key, value)
+            elif isinstance(recording_data, RecordingConfig):
+                self.recording = recording_data
 
         if "snapshots" in config_data:
-            for key, value in config_data["snapshots"].items():
-                if hasattr(self.snapshots, key):
-                    setattr(self.snapshots, key, value)
+            snapshots_data = config_data["snapshots"]
+            if isinstance(snapshots_data, dict):
+                for key, value in snapshots_data.items():
+                    if hasattr(self.snapshots, key):
+                        setattr(self.snapshots, key, value)
+            elif isinstance(snapshots_data, SnapshotConfig):
+                self.snapshots = snapshots_data
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary for serialization."""
-        return {
-            "server": asdict(self.server),
-            "mediamtx": asdict(self.mediamtx),
-            "camera": asdict(self.camera),
-            "logging": asdict(self.logging),
-            "recording": asdict(self.recording),
-            "snapshots": asdict(self.snapshots),
-        }
+        try:
+            return {
+                "server": asdict(self.server),
+                "mediamtx": asdict(self.mediamtx),
+                "camera": asdict(self.camera),
+                "logging": asdict(self.logging),
+                "recording": asdict(self.recording),
+                "snapshots": asdict(self.snapshots),
+            }
+        except Exception as e:
+            # Fallback to manual conversion if asdict fails
+            def _to_dict(obj):
+                if hasattr(obj, '__dataclass_fields__'):
+                    return {k: getattr(obj, k) for k in obj.__dataclass_fields__}
+                elif isinstance(obj, dict):
+                    return obj
+                else:
+                    return obj.__dict__ if hasattr(obj, '__dict__') else str(obj)
+            
+            return {
+                "server": _to_dict(self.server),
+                "mediamtx": _to_dict(self.mediamtx),
+                "camera": _to_dict(self.camera),
+                "logging": _to_dict(self.logging),
+                "recording": _to_dict(self.recording),
+                "snapshots": _to_dict(self.snapshots),
+            }
 
 
 class ConfigManager:
@@ -784,7 +855,7 @@ class ConfigManager:
                         "format": {"type": "string", "minLength": 1},
                         "file_enabled": {"type": "boolean"},
                         "file_path": {"type": "string", "minLength": 1},
-                        "max_file_size": {"type": "string", "minLength": 1},
+                        "max_file_size": {"type": "integer", "minimum": 1},
                         "backup_count": {"type": "integer", "minimum": 0},
                     },
                 },
@@ -792,7 +863,7 @@ class ConfigManager:
                     "type": "object",
                     "properties": {
                         "auto_record": {"type": "boolean"},
-                        "format": {"type": "string", "enum": ["mp4", "mkv", "avi"]},
+                        "format": {"type": "string", "enum": ["mp4", "fmp4", "mkv", "avi"]},
                         "quality": {
                             "type": "string",
                             "enum": ["low", "medium", "high"],
@@ -804,7 +875,7 @@ class ConfigManager:
                 "snapshots": {
                     "type": "object",
                     "properties": {
-                        "format": {"type": "string", "enum": ["jpg", "png", "bmp"]},
+                        "format": {"type": "string", "enum": ["jpg", "jpeg", "png", "bmp"]},
                         "quality": {"type": "integer", "minimum": 1, "maximum": 100},
                         "cleanup_after_days": {"type": "integer", "minimum": 0},
                     },
@@ -886,7 +957,7 @@ class ConfigManager:
         recording = config_data.get("recording", {})
         if "format" in recording:
             format_val = recording["format"]
-            valid_formats = ["mp4", "mkv", "avi"]
+            valid_formats = ["mp4", "fmp4", "mkv", "avi"]
             if format_val not in valid_formats:
                 errors.append(
                     f"Invalid recording format: {format_val} (must be one of {valid_formats})"
@@ -904,7 +975,7 @@ class ConfigManager:
         snapshots = config_data.get("snapshots", {})
         if "format" in snapshots:
             format_val = snapshots["format"]
-            valid_formats = ["jpg", "png", "bmp"]
+            valid_formats = ["jpg", "jpeg", "png", "bmp"]
             if format_val not in valid_formats:
                 errors.append(
                     f"Invalid snapshot format: {format_val} (must be one of {valid_formats})"
@@ -921,9 +992,14 @@ class ConfigManager:
 
     def _create_config_object(self, config_data: Dict[str, Any]) -> Config:
         """Create Config object from validated configuration data."""
+        # Convert backoff_jitter_range from list to tuple if needed
+        mediamtx_data = config_data.get("mediamtx", {}).copy()
+        if "backoff_jitter_range" in mediamtx_data and isinstance(mediamtx_data["backoff_jitter_range"], list):
+            mediamtx_data["backoff_jitter_range"] = tuple(mediamtx_data["backoff_jitter_range"])
+        
         return Config(
             server=ServerConfig(**config_data.get("server", {})),
-            mediamtx=MediaMTXConfig(**config_data.get("mediamtx", {})),
+            mediamtx=MediaMTXConfig(**mediamtx_data),
             camera=CameraConfig(**config_data.get("camera", {})),
             logging=LoggingConfig(**config_data.get("logging", {})),
             recording=RecordingConfig(**config_data.get("recording", {})),
