@@ -31,9 +31,9 @@ def pytest_sessionfinish(session, exitstatus):
             except Exception:
                 pass  # Ignore cleanup errors
 
-# No-mock guard for FORBID_MOCKS=1
+# Enhanced no-mock guard for FORBID_MOCKS=1
 def pytest_configure(config):
-    """Configure pytest with no-mock guard if FORBID_MOCKS=1 is set."""
+    """Configure pytest with comprehensive no-mock guard if FORBID_MOCKS=1 is set."""
     if os.environ.get("FORBID_MOCKS") == "1":
         # Monkey patch unittest.mock to raise on import
         import sys
@@ -63,6 +63,40 @@ def pytest_configure(config):
                 "pytest-mock plugin is loaded but FORBID_MOCKS=1. "
                 "Remove pytest-mock from test environment."
             )
+        
+        # Block other common mocking libraries
+        forbidden_modules = [
+            'freezegun', 'responses', 'httpretty', 'requests_mock',
+            'factory_boy', 'faker', 'mimesis'
+        ]
+        
+        for module_name in forbidden_modules:
+            if module_name in sys.modules:
+                raise MockForbiddenError(
+                    f"{module_name} module is loaded but FORBID_MOCKS=1. "
+                    f"Remove {module_name} from test environment."
+                )
+
+# PDR-specific test markers
+def pytest_collection_modifyitems(config, items):
+    """Add PDR-specific markers and enforce no-mock for PDR tests."""
+    for item in items:
+        # Add pdr marker for tests in pdr directory
+        if "pdr" in str(item.fspath):
+            item.add_marker(pytest.mark.pdr)
+        
+        # Add integration marker for tests in integration directory
+        if "integration" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        
+        # Add ivv marker for tests in ivv directory
+        if "ivv" in str(item.fspath):
+            item.add_marker(pytest.mark.ivv)
+        
+        # Enforce no-mock for PDR, integration, and IVV tests
+        if any(marker in str(item.fspath) for marker in ["pdr", "integration", "ivv"]):
+            if os.environ.get("FORBID_MOCKS") != "1":
+                pytest.skip("PDR/Integration/IVV tests require FORBID_MOCKS=1 environment variable")
 
 @pytest.fixture(scope="session")
 def test_environment():
@@ -108,4 +142,39 @@ def mock_stream_urls():
         "webrtc": "http://127.0.0.1:8889/test_stream",
         "hls": "http://127.0.0.1:8888/test_stream",
     }
+
+# PDR-specific fixtures for real system validation
+@pytest.fixture(scope="session")
+def pdr_test_environment():
+    """PDR-specific test environment with real system validation."""
+    return {
+        "real_system_validation": True,
+        "no_mock_enforcement": True,
+        "integration_testing": True,
+        "ivv_validation": True,
+        "pdr_scope": True,
+    }
+
+@pytest.fixture
+def real_system_validator():
+    """Fixture for real system validation without mocking."""
+    class RealSystemValidator:
+        """Validates real system behavior without any mocking."""
+        
+        def __init__(self):
+            self.test_results = {}
+            self.system_issues = []
+        
+        def validate_component(self, component_name, validation_func):
+            """Validate a component using real system behavior."""
+            try:
+                result = validation_func()
+                self.test_results[component_name] = {"status": "PASS", "result": result}
+                return result
+            except Exception as e:
+                self.test_results[component_name] = {"status": "FAIL", "error": str(e)}
+                self.system_issues.append(f"{component_name}: {str(e)}")
+                raise
+    
+    return RealSystemValidator()
 
