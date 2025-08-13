@@ -1,0 +1,6 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting pyudev
+  Downloading pyudev-0.24.3-py3-none-any.whl.metadata (4.6 kB)
+Downloading pyudev-0.24.3-py3-none-any.whl (62 kB)
+Installing collected packages: pyudev
+Successfully installed pyudev-0.24.3

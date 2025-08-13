@@ -965,14 +965,16 @@ class ServiceManager(CameraEventHandler):
             from security.auth_manager import AuthManager
             from security.middleware import SecurityMiddleware
 
-            self._websocket_server = WebSocketJsonRpcServer(
-                host=self._config.server.host,
-                port=self._config.server.port,
-                websocket_path=self._config.server.websocket_path,
-                max_connections=self._config.server.max_connections,
-                mediamtx_controller=self._mediamtx_controller,
-                camera_monitor=self._camera_monitor,
-            )
+            # Only create WebSocket server if not provided in constructor
+            if self._websocket_server is None:
+                self._websocket_server = WebSocketJsonRpcServer(
+                    host=self._config.server.host,
+                    port=self._config.server.port,
+                    websocket_path=self._config.server.websocket_path,
+                    max_connections=self._config.server.max_connections,
+                    mediamtx_controller=self._mediamtx_controller,
+                    camera_monitor=self._camera_monitor,
+                )
             # Provide service manager reference for API methods that require it
             if hasattr(self._websocket_server, "set_service_manager"):
                 self._websocket_server.set_service_manager(self)

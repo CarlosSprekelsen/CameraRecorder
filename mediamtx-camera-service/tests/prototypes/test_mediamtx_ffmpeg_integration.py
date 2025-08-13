@@ -65,9 +65,10 @@ class MediaMTXFFmpegIntegrationPrototype:
             mediamtx_port=mediamtx_config.api_port
         )
         
-        # Initialize real service manager
+        # Initialize real service manager using configured port
+        server_cfg = ServerConfig(host="127.0.0.1")
         config = Config(
-            server=ServerConfig(host="127.0.0.1", port=8000),
+            server=server_cfg,
             mediamtx=mediamtx_config,
             camera=CameraConfig(device_range=[0, 1, 2]),
             recording=RecordingConfig(enabled=True)

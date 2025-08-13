@@ -1307,7 +1307,11 @@ class WebSocketJsonRpcServer:
             "name": f"Camera {device_path.split('video')[-1] if 'video' in device_path else 'unknown'}",
             "resolution": "1920x1080",  # Architecture default
             "fps": 30,  # Architecture default
-            "streams": {},
+            "streams": {
+                "rtsp": f"rtsp://127.0.0.1:8554/{device_path.split('/')[-1]}",
+                "webrtc": f"http://127.0.0.1:8889/{device_path.split('/')[-1]}",
+                "hls": f"http://127.0.0.1:8888/{device_path.split('/')[-1]}"
+            },
             "metrics": {"bytes_sent": 0, "readers": 0, "uptime": 0},
             "capabilities": {"formats": [], "resolutions": []},
         }

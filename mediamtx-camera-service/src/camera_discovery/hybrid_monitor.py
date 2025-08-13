@@ -390,10 +390,17 @@ class HybridCameraMonitor:
         try:
             while self._running and self._udev_monitor:
                 try:
-                    # Poll for udev events with timeout
-                    device = self._udev_monitor.poll(timeout=1.0)
+                    # Poll for udev events with timeout using thread executor to avoid blocking
+                    loop = asyncio.get_event_loop()
+                    device = await asyncio.wait_for(
+                        loop.run_in_executor(None, self._udev_monitor.poll, 1.0),
+                        timeout=2.0
+                    )
                     if device:
                         await asyncio.wait_for(self._process_udev_device_event(device), timeout=5.0)
+                    else:
+                        # No device event, yield control to allow other tasks
+                        await asyncio.sleep(0.1)
 
                 except asyncio.TimeoutError:
                     self._logger.warning("Udev event processing timed out, continuing...")
@@ -908,6 +915,14 @@ class HybridCameraMonitor:
     async def _handle_camera_event(self, event_data: CameraEventData) -> None:
         """Handle camera events by notifying all registered handlers and callbacks."""
         try:
+            # Update internal device state first
+            if event_data.event_type == CameraEvent.CONNECTED:
+                self._known_devices[event_data.device_path] = event_data.device_info
+                self._logger.debug(f"Added device to known devices: {event_data.device_path}")
+            elif event_data.event_type == CameraEvent.DISCONNECTED:
+                self._known_devices.pop(event_data.device_path, None)
+                self._logger.debug(f"Removed device from known devices: {event_data.device_path}")
+
             # Call all event handlers
             for handler in self._event_handlers:
                 try:

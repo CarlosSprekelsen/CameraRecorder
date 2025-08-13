@@ -43,8 +43,8 @@ class IndependentPrototypeValidator:
         self.service_manager = None
         self.mediamtx_controller = None
         self.temp_dir = None
-        self.server_url = "http://127.0.0.1:8000"
-        self.websocket_url = "ws://127.0.0.1:8000/ws"
+        self.server_url = None
+        self.websocket_url = None
         
     async def setup_real_environment(self):
         """Set up real test environment for independent validation."""
@@ -74,9 +74,10 @@ class IndependentPrototypeValidator:
             snapshots_path=mediamtx_config.snapshots_path
         )
         
-        # Initialize real service manager
+        # Initialize real service manager using configured port (no hardcoding)
+        server_cfg = ServerConfig(host="127.0.0.1")
         config = Config(
-            server=ServerConfig(host="127.0.0.1", port=8000),
+            server=server_cfg,
             mediamtx=mediamtx_config,
             camera=CameraConfig(device_range=[0, 1, 2]),
             recording=RecordingConfig(enabled=True)
@@ -84,10 +85,15 @@ class IndependentPrototypeValidator:
         
         self.service_manager = ServiceManager(config)
         
+        # Set URLs from configured port
+        port = server_cfg.port
+        self.server_url = f"http://127.0.0.1:{port}"
+        self.websocket_url = f"ws://127.0.0.1:{port}/ws"
+
         # Initialize real WebSocket server
         self.websocket_server = WebSocketJsonRpcServer(
             host="127.0.0.1",
-            port=8000,
+            port=port,
             websocket_path="/ws",
             max_connections=100
         )

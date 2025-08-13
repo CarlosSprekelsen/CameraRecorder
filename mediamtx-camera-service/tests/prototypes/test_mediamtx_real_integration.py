@@ -69,9 +69,10 @@ class RealMediaMTXIntegrationPrototype:
             snapshots_path=mediamtx_config.snapshots_path
         )
         
-        # Initialize real service manager
+        # Initialize real service manager using configured port
+        server_cfg = ServerConfig(host="127.0.0.1")
         config = Config(
-            server=ServerConfig(host="127.0.0.1", port=8000),
+            server=server_cfg,
             mediamtx=mediamtx_config,
             camera=CameraConfig(device_range=[0, 1, 2]),
             recording=RecordingConfig(enabled=True)
@@ -205,7 +206,7 @@ class RealMediaMTXIntegrationPrototype:
             await asyncio.sleep(2)
             
             # Connect to camera service WebSocket API
-            ws_url = "ws://127.0.0.1:8000/ws"
+            ws_url = f"ws://127.0.0.1:{server_cfg.port}/ws"
             
             async with websockets.connect(ws_url) as websocket:
                 # Send JSON-RPC ping message

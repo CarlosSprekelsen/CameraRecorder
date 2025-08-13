@@ -42,8 +42,8 @@ class APIContractValidator:
         self.service_manager = None
         self.mediamtx_controller = None
         self.temp_dir = None
-        self.server_url = "http://127.0.0.1:8000"
-        self.websocket_url = "ws://127.0.0.1:8000/ws"
+        self.server_url = None
+        self.websocket_url = None
         
     async def setup_real_environment(self):
         """Set up real test environment with actual API endpoints."""
@@ -73,23 +73,29 @@ class APIContractValidator:
             snapshots_path=mediamtx_config.snapshots_path
         )
         
-        # Initialize real service manager
+        # Initialize real service manager using configured port
+        server_cfg = ServerConfig(host="127.0.0.1")
         config = Config(
-            server=ServerConfig(host="127.0.0.1", port=8000),
+            server=server_cfg,
             mediamtx=mediamtx_config,
             camera=CameraConfig(device_range=[0, 1, 2]),
             recording=RecordingConfig(enabled=True)
         )
         
-        self.service_manager = ServiceManager(config)
-        
-        # Initialize real WebSocket server
+        # Initialize real WebSocket server first
+        # Build URLs from configured port and initialize server
+        port = server_cfg.port
+        self.server_url = f"http://127.0.0.1:{port}"
+        self.websocket_url = f"ws://127.0.0.1:{port}/ws"
         self.websocket_server = WebSocketJsonRpcServer(
             host="127.0.0.1",
-            port=8000,
+            port=port,
             websocket_path="/ws",
             max_connections=100
         )
+        
+        # Initialize service manager with WebSocket server to avoid port conflicts
+        self.service_manager = ServiceManager(config, websocket_server=self.websocket_server)
         self.websocket_server.set_service_manager(self.service_manager)
         
     async def cleanup_real_environment(self):
@@ -336,7 +342,10 @@ class APIContractValidator:
         try:
             await self.setup_real_environment()
             
-            # Start servers
+            # Start service manager first (creates camera monitor and MediaMTX controller)
+            await self.service_manager.start()
+            
+            # Start servers  
             await self.websocket_server.start()
             await self.mediamtx_controller.start()
             await asyncio.sleep(2)
@@ -376,7 +385,10 @@ class TestAPIContracts:
         await self.validator.setup_real_environment()
         
         try:
-            # Start servers
+            # Start service manager first (creates camera monitor and MediaMTX controller)
+            await self.validator.service_manager.start()
+            
+            # Start servers  
             await self.validator.websocket_server.start()
             await self.validator.mediamtx_controller.start()
             await asyncio.sleep(2)
@@ -399,7 +411,10 @@ class TestAPIContracts:
         await self.validator.setup_real_environment()
         
         try:
-            # Start servers
+            # Start service manager first (creates camera monitor and MediaMTX controller)
+            await self.validator.service_manager.start()
+            
+            # Start servers  
             await self.validator.websocket_server.start()
             await self.validator.mediamtx_controller.start()
             await asyncio.sleep(2)
@@ -421,7 +436,10 @@ class TestAPIContracts:
         await self.validator.setup_real_environment()
         
         try:
-            # Start servers
+            # Start service manager first (creates camera monitor and MediaMTX controller)
+            await self.validator.service_manager.start()
+            
+            # Start servers  
             await self.validator.websocket_server.start()
             await self.validator.mediamtx_controller.start()
             await asyncio.sleep(2)
@@ -442,7 +460,10 @@ class TestAPIContracts:
         await self.validator.setup_real_environment()
         
         try:
-            # Start servers
+            # Start service manager first (creates camera monitor and MediaMTX controller)
+            await self.validator.service_manager.start()
+            
+            # Start servers  
             await self.validator.websocket_server.start()
             await self.validator.mediamtx_controller.start()
             await asyncio.sleep(2)
