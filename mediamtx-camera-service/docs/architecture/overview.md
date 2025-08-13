@@ -2,6 +2,7 @@
 
 ## Change Log
 
+- **2025-08-13**: Updated architecture to reflect validated MediaMTX FFmpeg integration pattern. Added MediaMTX Path Manager component, updated data flow to show Camera → FFmpeg → MediaMTX → Clients, documented API-based dynamic path creation, and added comprehensive FFmpeg integration guidance for developers.
 - **2025-08-02**: Reorganized to separate core architecture from implementation decisions and examples per project standards and IV&V. Moved all implementation rationale, migration plans, version-specific details, and design notes to dedicated "Architecture Decisions & Design Notes" section.
 
 ## How to Use This Document
@@ -58,11 +59,11 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 │     • Camera status tracking                              │
 │     • Hot-plug event handling                             │
 ├─────────────────────────────────────────────────────────────┤
-│              MediaMTX Controller                          │
-│     • REST API client                                     │
-│     • Stream management                                   │
-│     • Recording coordination                              │
-│     • Health monitoring                                   │
+│            MediaMTX Path Manager                          │
+│     • Dynamic path creation via REST API                  │
+│     • FFmpeg command generation                           │
+│     • Path lifecycle management                           │
+│     • Error handling and recovery                         │
 ├─────────────────────────────────────────────────────────────┤
 │               Health & Monitoring                         │
 │     • Service health checks                               │
@@ -76,11 +77,11 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 ├─────────────────────────────────────────────────────────────┤
 │                Media Processing                           │
 │     • RTSP/WebRTC/HLS streaming                           │
-│     • Hardware-accelerated encoding                       │
+│     • FFmpeg process management                           │
 │     • Multi-protocol support                              │
 │     • Recording and snapshot generation                   │
 └─────────────────────┬───────────────────────────────────────┘
-                      │ FFmpeg + V4L2
+                      │ FFmpeg Processes
 ┌─────────────────────▼───────────────────────────────────────┐
 │                 USB Cameras                                 │
 │         /dev/video0, /dev/video1, etc.                     │
@@ -101,11 +102,12 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - Connection status tracking
 - Event generation for connect/disconnect
 
-#### MediaMTX Controller  
-- MediaMTX REST API communication
-- Stream path creation and deletion
-- Recording session management
-- Configuration updates
+#### MediaMTX Path Manager
+- MediaMTX REST API communication for dynamic path management
+- FFmpeg command generation with optimal encoding parameters
+- Path lifecycle management (create/delete/verify)
+- Error handling and recovery for path operations
+- Automatic path creation on camera detection
 
 #### Health & Monitoring
 - Service component health verification
@@ -118,18 +120,18 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 ### Camera Discovery Flow
 1. Monitor detects USB camera connection
 2. Detector probes camera capabilities
-3. Controller creates MediaMTX stream configuration
-4. Health Monitor verifies configuration acceptance
+3. Path Manager creates MediaMTX path via REST API with FFmpeg command
+4. Health Monitor verifies path creation and FFmpeg process start
 5. Server broadcasts camera status notification to clients
 6. Recovery Handler manages connection failures
 
 ### Streaming Flow  
 1. Client requests stream via JSON-RPC call
 2. Authorization validates client permissions
-3. Controller configures MediaMTX path with source
-4. Health Monitor verifies stream establishment
-5. MediaMTX starts camera capture and encoding
-6. Client accesses stream via provided URL
+3. Path Manager verifies existing MediaMTX path or creates new one
+4. MediaMTX starts FFmpeg process for camera capture and encoding
+5. Health Monitor verifies stream establishment
+6. Client accesses stream via provided RTSP/WebRTC/HLS URL
 
 ### Recording Flow
 1. Client requests recording start via JSON-RPC
@@ -148,10 +150,12 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - State preservation and restoration
 - Client notification of status changes
 - Graceful degradation when unavailable
+- FFmpeg process monitoring and restart
 
 ### Camera Disconnect Handling  
 - Event-based disconnect detection
-- Automatic MediaMTX path cleanup
+- Automatic MediaMTX path cleanup via REST API
+- FFmpeg process termination and cleanup
 - Real-time client notifications
 - Automatic reconnection handling
 - Configurable timeout management
@@ -225,11 +229,57 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - **Deployment**: Systemd services, Linux (Ubuntu 22.04+)
 - **Monitoring**: Prometheus metrics, structured JSON logging
 
+## MediaMTX FFmpeg Integration Pattern
+
+### Integration Architecture
+The system uses MediaMTX as a media server with FFmpeg as the camera capture and encoding bridge. This approach provides:
+
+- **Dynamic Path Creation**: MediaMTX paths created via REST API on camera detection
+- **FFmpeg Bridge**: FFmpeg processes handle camera capture and encoding
+- **Automatic Management**: Path creation and cleanup handled automatically
+- **Multi-Protocol Support**: RTSP, WebRTC, and HLS streaming from single FFmpeg source
+
+### Data Flow: Camera → FFmpeg → MediaMTX → Clients
+1. **Camera Detection**: USB camera detected via V4L2
+2. **Path Creation**: MediaMTX path created via REST API with FFmpeg command
+3. **FFmpeg Process**: MediaMTX starts FFmpeg process for camera capture
+4. **Stream Publishing**: FFmpeg publishes encoded stream to MediaMTX
+5. **Client Access**: Clients access streams via MediaMTX protocols (RTSP/WebRTC/HLS)
+
+### FFmpeg Command Template
+```bash
+ffmpeg -f v4l2 -i {device_path} -c:v libx264 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:{rtsp_port}/{path_name}
+```
+
+**Parameters**:
+- `-f v4l2`: Video4Linux2 input format
+- `-i {device_path}`: Camera device path (e.g., /dev/video0)
+- `-c:v libx264`: H.264 video codec
+- `-pix_fmt yuv420p`: Widely compatible pixel format
+- `-preset ultrafast`: Minimal encoding latency
+- `-b:v 600k`: Balanced quality/bandwidth
+- `-f rtsp`: RTSP output format
+
+### Dynamic vs. Static Configuration
+- **Dynamic Configuration**: Paths created via MediaMTX REST API on camera detection
+- **No Static Files**: No manual MediaMTX configuration files required
+- **Automatic Management**: Path creation and deletion handled by Path Manager
+- **Real-time Updates**: Configuration changes applied without service restart
+
+### Path Lifecycle Management
+1. **Creation**: Path created when camera detected
+2. **Verification**: Path status verified via REST API
+3. **Monitoring**: FFmpeg process health monitored
+4. **Cleanup**: Path deleted when camera disconnected
+5. **Recovery**: Automatic restart on FFmpeg process failure
+
 ## Non-Functional Requirements
 
 ### Performance Targets
 - Camera Detection: Sub-200ms USB connect/disconnect detection
+- Path Creation: <100ms (API call + verification)
 - API Response: <50ms for status queries, <100ms for control operations
+- FFmpeg Process Start: <200ms from path creation to stream availability
 - Memory Usage: <30MB base service footprint, <100MB with 10 cameras
 - CPU Usage: <5% idle, <20% with active streaming and recording
 
@@ -238,6 +288,7 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - Cross-Language Data Serialization: <1ms for typical payloads (<10KB)
 - Process Communication Overhead: <5% CPU impact under normal load
 - Error Propagation Latency: <20ms for service-to-client error reporting
+- FFmpeg Process Management: <50ms process start/stop operations
 
 ### Scalability Limits
 - Concurrent Cameras: Up to 16 USB cameras per service instance
@@ -401,6 +452,20 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - Automatic cleanup of recordings older than 30 days (configurable)  
 **Monitoring**: Resource usage tracked and exposed via health endpoints  
 **IV&V Reference**: Architecture Decisions v6, item 10
+
+### Decision AD-11: MediaMTX FFmpeg Integration Pattern
+**Date**: 2025-08-13  
+**Components**: MediaMTX Path Manager, MediaMTX Server  
+**Decision**: Use MediaMTX as media server with FFmpeg as camera capture and encoding bridge via API-driven dynamic path creation.  
+**Rationale**: Provides optimal balance of functionality, reliability, and maintainability while preserving the "plug-and-play" concept.  
+**Implementation Specifications**:
+- Dynamic path creation via MediaMTX REST API on camera detection
+- FFmpeg command template with optimized encoding parameters
+- Automatic path lifecycle management (create/verify/monitor/cleanup)
+- FFmpeg process monitoring and automatic restart on failure
+- No manual MediaMTX configuration files required
+**Validation**: IV&V confirmed 100% success rate with 4 cameras, all streams accessible  
+**IV&V Reference**: MediaMTX FFmpeg Validation Report, 2025-08-13
 
 ### Future Extensibility Framework (Not Current Implementation)
 **Note**: The following items are planned extensions NOT included in the current architecture implementation. These are design considerations for post-1.0 releases.

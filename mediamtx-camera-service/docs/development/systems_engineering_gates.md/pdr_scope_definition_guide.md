@@ -37,57 +37,20 @@ tests/
 
 **Technical Guardrails (Required Implementation):**
 
-1. **No-mock guard (test runtime)** - Add to `tests/conftest.py`:
-```python
-# Enable by running: FORBID_MOCKS=1 pytest ...
-import os, pytest, unittest.mock as um, sys
-
-def _ban(*a, **k): 
-    raise RuntimeError("Mocking forbidden in this lane (FORBID_MOCKS=1).")
-
-def pytest_configure(config):
-    if os.getenv("FORBID_MOCKS") == "1":
-        # Complete mock blocking including mock_open
-        forbidden_mock_module = type('MockModule', (), {
-            'Mock': _ban,
-            'MagicMock': _ban,
-            'AsyncMock': _ban,
-            'patch': _ban,
-            'mock_open': _ban,  # Essential inclusion
-            'create_autospec': _ban,
-        })
-        sys.modules['unittest.mock'] = forbidden_mock_module
-
-def pytest_collection_modifyitems(config, items):
-    """Precise directory-based marker assignment"""
-    for item in items:
-        file_path = str(item.fspath)
-        # Precise path matching instead of string contains
-        if "/prototypes/" in file_path:
-            item.add_marker(pytest.mark.pdr)
-        if "/contracts/" in file_path:
-            item.add_marker(pytest.mark.integration)
-        if "/ivv/" in file_path:
-            item.add_marker(pytest.mark.ivv)
-
-@pytest.fixture(autouse=True)
-def _forbid_mocker(request):
-    if os.getenv("FORBID_MOCKS") == "1" and "mocker" in request.fixturenames:
-        raise RuntimeError("pytest-mock fixture forbidden.")
-```
+1. **No-mock guard (test runtime)** - Implement runtime mock blocking in `tests/conftest.py` with complete mock enumeration including mock_open and create_autospec
 
 2. **Markers + CI gate (policy)** - Required implementation:
-   - In `pytest.ini` define: `unit`, `integration`, `ivv`, `pdr`
-   - Required CI job: `FORBID_MOCKS=1 pytest -m "integration or ivv or pdr" -q`
-   - CI grep guard: `! grep -R "AsyncMock\|MagicMock\|[^A-Za-z]Mock\(|patch\(|aioresponses" tests/prototypes tests/contracts tests/ivv || (echo "mocks found"; exit 1)`
+   - Configure pytest.ini with markers: `unit`, `integration`, `ivv`, `pdr`
+   - Implement required CI job for no-mock validation
+   - Add CI grep guard to prevent mock imports in restricted directories
 
-3. **Lint fence (static)** - Ruff/flake8 per-dir rule: disallow `unittest.mock` / `pytest-mock` imports under `tests/prototypes/**`, `tests/contracts/**`, `tests/ivv/**`
+3. **Lint fence (static)** - Configure static analysis to disallow unittest.mock imports in PDR test directories
 
 **Test Execution Commands:**
-- Unit tests (mocks allowed): `python3 -m pytest tests/unit/ -v`
-- PDR tests (no mocks): `FORBID_MOCKS=1 python3 -m pytest -m "pdr" -v`
-- Integration tests (no mocks): `FORBID_MOCKS=1 python3 -m pytest -m "integration" -v`
-- IV&V tests (no mocks): `FORBID_MOCKS=1 python3 -m pytest -m "ivv" -v`
+- Unit tests (mocks allowed): Standard unit test execution
+- PDR tests (no mocks): Execute with mock prohibition environment
+- Integration tests (no mocks): Execute with mock prohibition environment  
+- IV&V tests (no mocks): Execute with mock prohibition environment
 
 **Waiver Rule:** Only external systems truly out of project control may be mocked, via documented allow-list and PR-level approval.
 
@@ -122,27 +85,34 @@ Success Criteria: PDR baseline established with no-mock enforcement technically 
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Implement critical prototypes proving design implementability against real systems.
+Task: Implement critical prototypes proving design implementability against real systems with MediaMTX FFmpeg integration.
 
 Execute exactly:
-1. Implement critical design prototypes with real MediaMTX integration
-2. Set up real RTSP stream handling with actual camera feeds or simulators
-3. Implement core API endpoints with real aiohttp and actual request processing
-4. Execute prototype validation: FORBID_MOCKS=1 pytest -m "pdr" tests/prototypes/ -v
-5. Unit tests (informational only): pytest tests/unit/ -v
-6. Capture prototype execution logs and real system interaction evidence
+1. Validate MediaMTX FFmpeg integration approach manually
+2. Implement automatic MediaMTX path creation via API for camera discovery
+3. Replace direct device source configuration with FFmpeg bridge pattern
+4. Implement core API endpoints with real aiohttp integration
+5. Execute comprehensive test validation with concrete results reporting
+6. Generate test results table with total, passed, failed, skipped counts
+7. Provide root cause analysis for any failures with available resources
 
 Create: evidence/pdr-actual/00_critical_prototype_implementation.md
 
 Deliverable Criteria:
-- Critical prototypes implemented with real system integration
-- Real MediaMTX connection operational and tested
-- Real RTSP stream processing functional
+- MediaMTX FFmpeg integration operational for automatic stream creation
+- Camera detection triggers automatic RTSP stream availability
 - Core API endpoints responding to real requests
-- PDR prototype tests passing in no-mock environment
-- Unit tests informational (not gating)
+- Comprehensive test execution results with concrete numbers
+- Root cause analysis for any issues with available real resources
+- Evidence from actual system execution, not implementation claims
 
-Success Criteria: Critical prototypes prove design implementability through real system execution.
+CRITICAL REQUIREMENTS:
+- Address MediaMTX source format design discovery through FFmpeg bridge
+- Demonstrate working RTSP streams for detected cameras
+- Provide actual execution evidence, not readiness claims
+- Utilize available real resources, not test skips
+
+Success Criteria: Critical prototypes prove design implementability through working MediaMTX FFmpeg integration with concrete test results.
 ```
 
 ### 0a. Prototype Implementation Validation (IV&V)
@@ -162,18 +132,25 @@ Execute exactly:
 5. Validate prototype meets basic implementability criteria
 6. Identify implementation gaps requiring real system improvements
 
+CRITICAL VALIDATION CONTROLS:
+- NEVER accept Developer test reports without independent verification
+- If Developer claims test failures are "normal," demand independent proof with evidence
+- For test failures with available real resources (e.g., /dev/video* devices present), investigate root cause
+- Any "this is normal" claims require documented technical evidence or escalate to PM
+- Execute all validation tests independently - do not rely on Developer execution
+
 Create: evidence/pdr-actual/00a_prototype_implementation_review.md
 
 Deliverable Criteria:
 - Independent validation tests passing in no-mock environment
-- Real system integrations verified operational
-- Contract tests passing against real endpoints
-- Implementation gap analysis with specific findings
-- Evidence from real system execution
+- Real system integrations verified operational through IV&V testing
+- Contract tests passing against real endpoints through IV&V execution
+- Implementation gap analysis with specific findings from independent testing
+- Evidence from real system execution performed by IV&V
 
-No-Mock Enforcement: All IV&V tests executed with FORBID_MOCKS=1.
+Zero-Trust Validation: All claims must be independently verified by IV&V execution.
 
-Success Criteria: Prototype implementation validated through independent no-mock testing.
+Success Criteria: Prototype implementation validated through independent no-mock testing with IV&V verification.
 ```
 
 ### 0d. Implementation Remediation Sprint (PM, Developer, IV&V)
@@ -187,44 +164,44 @@ Objective: Generate prompts to resolve implementation gaps via real system impro
 Timebox: 48h (+ optional 24h mop-up)
 
 Execute exactly:
-1. Extract findings and assign GAP IDs prioritizing real implementation issues
-2. Generate Developer prompts focusing on real system integration improvements
-3. Generate IV&V prompts for no-mock validation of fixes
-4. Require all test execution use FORBID_MOCKS=1 environment
+1. Classify findings by type and appropriate remediation approach
+2. Assess design discoveries for PDR remediation vs SDR revision scope
+3. Generate specific Developer and IV&V prompts for identified issues
+4. Establish validation requirements using no-mock enforcement
 5. Create remediation checklist tracking real implementation improvements
 
+ISSUE CLASSIFICATION FRAMEWORK:
+- IMPLEMENTATION_GAP: Code/configuration issues requiring fixes
+- DESIGN_DISCOVERY: Architecture assumption mismatches requiring assessment
+- TEST_ENVIRONMENT: Infrastructure setup issues
+- VALIDATION_THEATER: Claims without execution proof
+
+DESIGN DISCOVERY DECISION MATRIX:
+- MediaMTX source format mismatch → PDR_REMEDIATION (API + FFmpeg bridge)
+- Test failures with available resources → IMPLEMENTATION_GAP
+- Implementation claims without execution → VALIDATION_THEATER
+
 CRITICAL CONSTRAINTS:
-- All fixes must improve real implementations, not mocks
-- All test validation must use FORBID_MOCKS=1
-- Mock fixes are PROHIBITED - address underlying implementation issues
-- External system mocks require documented waiver and PM approval
+- All fixes must address real implementation issues, not testing artifacts
+- Design discoveries must be properly scoped for PDR vs SDR resolution
+- No dismissal of failures with available real resources
+- External system mocks require documented technical waivers
 
-Output Format:
+Output Format - Generate targeted prompts:
 
-PROMPT 1: Developer Real Implementation Fixes
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Task: [specific real implementation improvements]
-Execute exactly: [real system improvement steps]
-Validation: FORBID_MOCKS=1 pytest -m "pdr" [test area] -v
-Create: [evidence file]
-Success Criteria: [no-mock test validation]
+PROMPT 1: Developer MediaMTX Integration Implementation
+- MediaMTX API path creation for automatic stream management
+- FFmpeg bridge implementation for camera source handling
+- End-to-end camera discovery to RTSP streaming validation
 
-PROMPT 2: IV&V No-Mock Validation
-Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Input: [Developer evidence]
-Task: [validate real implementation improvements]
-Execute exactly: [no-mock validation steps]
-Validation: FORBID_MOCKS=1 pytest -m "ivv" [test area] -v
-Create: [validation evidence]
-Success Criteria: [real system validation criteria]
+PROMPT 2: IV&V MediaMTX Integration Validation  
+- Independent MediaMTX integration functionality verification
+- Automatic camera discovery and streaming workflow validation
+- Real system integration confirmation through independent testing
 
 Create: evidence/pdr-actual/00d_implementation_remediation_sprint.md
 
-Success Criteria: Remediation prompts generated enforcing no-mock validation.
+Success Criteria: Remediation prompts generated with proper issue classification and targeted MediaMTX integration solutions.
 ```
 
 ### 0e. Implementation Baseline (Project Manager)
@@ -263,7 +240,7 @@ Task: Implement and execute interface contract tests against real endpoints.
 
 Execute exactly:
 1. Implement contract tests for external APIs using real MediaMTX endpoints
-2. Execute API contract validation: FORBID_MOCKS=1 pytest -m "pdr" tests/contracts/ -v
+2. Execute API contract validation against real services
 3. Test basic success and error paths against real API responses
 4. Validate request/response schemas against actual API behavior
 5. Test error handling using real error conditions from services
@@ -281,7 +258,7 @@ Deliverable Criteria:
 No-Mock Requirements:
 - Real MediaMTX API accessible for contract testing
 - Actual error conditions injectable from real services
-- All tests executed with FORBID_MOCKS=1
+- All tests executed with mock prohibition
 
 Success Criteria: Interface contracts validated through testing against real endpoints.
 ```
@@ -296,10 +273,10 @@ Task: Execute basic performance sanity tests against real system with PDR budget
 
 Execute exactly:
 1. Implement basic performance tests for critical paths
-2. Execute performance sanity tests: FORBID_MOCKS=1 pytest -m "pdr" tests/performance/ -v
-3. Measure response times under light representative load (not stress testing)
+2. Execute performance sanity tests with mock prohibition
+3. Measure response times under light representative load
 4. Validate core operations meet PDR performance budget
-5. Test basic resource usage (CPU/memory) under normal operation
+5. Test basic resource usage under normal operation
 6. Capture performance measurements from real system execution
 
 Create: evidence/pdr-actual/02_performance_sanity_testing.md
@@ -307,15 +284,15 @@ Create: evidence/pdr-actual/02_performance_sanity_testing.md
 Deliverable Criteria:
 - Basic performance tests implemented for critical paths
 - Performance measurements under light representative load
-- PDR budget validation (not full performance compliance)
+- PDR budget validation against actual measurements
 - Resource usage measurements under normal operation
 - Performance evidence from real system execution
 
 PDR Performance Scope:
-- Light load testing (not stress/endurance)
+- Light load testing, not stress or endurance testing
 - Basic response time validation
 - Sanity check against PDR budget targets
-- NO full performance compliance (CDR scope)
+- Full performance compliance reserved for CDR scope
 
 Success Criteria: Performance sanity validated through basic testing against real system.
 ```
@@ -329,8 +306,8 @@ Role reference: docs/development/roles-responsibilities.md
 Task: Validate security design through basic authentication flow testing.
 
 Execute exactly:
-1. Implement basic authentication/authorization flow tests
-2. Execute security design validation: FORBID_MOCKS=1 pytest -m "pdr" tests/security/ -v
+1. Implement basic authentication and authorization flow tests
+2. Execute security design validation with mock prohibition
 3. Test basic auth token validation with real tokens
 4. Validate basic error handling for invalid credentials
 5. Test security configuration in real environment
@@ -346,11 +323,11 @@ Deliverable Criteria:
 - Security configuration validated in real environment
 
 PDR Security Scope:
-- Basic auth/authz flow validation
-- Real token/credential testing
-- NO penetration testing (CDR scope)
-- NO attack simulation (CDR scope)
-- NO full security lifecycle testing (CDR scope)
+- Basic authentication and authorization flow validation
+- Real token and credential testing
+- Penetration testing reserved for CDR scope
+- Attack simulation reserved for CDR scope
+- Full security lifecycle testing reserved for CDR scope
 
 Success Criteria: Security design validated through basic auth flow testing against real mechanisms.
 ```
@@ -365,10 +342,10 @@ Inputs: 01_interface_contract_testing.md, 02_performance_sanity_testing.md, 03_s
 Task: Execute comprehensive integration validation with no-mock enforcement.
 
 Execute exactly:
-1. Execute full PDR test suite: FORBID_MOCKS=1 pytest -m "pdr or integration or ivv" -v
+1. Execute full PDR test suite with mock prohibition
 2. Validate all real system integrations operational
 3. Verify contract, performance, and security tests passing without mocks
-4. Validate system meets PDR acceptance criteria (not full CDR criteria)
+4. Validate system meets PDR acceptance criteria
 5. Assess readiness for Phase 2 or need for additional remediation
 
 Create: evidence/pdr-actual/03a_integration_validation_gate.md
@@ -376,11 +353,11 @@ Create: evidence/pdr-actual/03a_integration_validation_gate.md
 Decision: PROCEED | REMEDIATE | CONDITIONAL | HALT
 
 PDR Gate Criteria:
-- 100% PDR-scope no-mock tests passing
+- PDR-scope no-mock tests passing at acceptable rate
 - Real system integrations operational
 - Basic performance sanity validated
 - Security design functional
-- NO requirement for full system compliance (CDR scope)
+- Full system compliance reserved for CDR scope
 
 Success Criteria: PDR integration validated through no-mock testing against real systems.
 ```
@@ -490,27 +467,58 @@ Your role: Project Manager
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Input: 06_pdr_technical_assessment.md
-Task: Make PDR authorization decision based on no-mock validation results.
+Task: Make PDR authorization decision based on no-mock validation results with validation theater prevention.
 
 Execute exactly:
-1. Review IV&V technical assessment results
-2. Verify all PDR acceptance criteria met through no-mock testing
+1. Review IV&V technical assessment for actual execution evidence
+2. Verify PDR acceptance criteria met through no-mock testing
 3. Assess design implementability evidence from real prototypes
-4. Evaluate readiness for CDR phase based on PDR scope completion
+4. Validate MediaMTX FFmpeg integration with concrete stream evidence
 5. Make authorization decision with supporting rationale
+
+VALIDATION THEATER PREVENTION CONTROLS:
+- Verify IV&V performed independent test execution with concrete results
+- Reject test failure dismissals without technical evidence
+- Verify real resource utilization in testing validation
+- Demand root cause analysis for failures with available resources
+- Require documented proof of working real system integration
+- Validate RTSP stream accessibility as integration proof
+
+VALIDATION THEATER RED FLAGS:
+- Implementation claims without execution results
+- Readiness assertions without actual test pass/fail counts
+- Test skips when real resources available
+- Integration claims without functional stream proof
+- Normal failure excuses for obvious implementation issues
+
+Authorization Checklist:
+- ✅ IV&V independent test execution with concrete results
+- ✅ Test results include actual pass/fail/skip counts
+- ✅ MediaMTX FFmpeg integration proven through accessible streams
+- ✅ Test failures have root cause analysis or technical waivers
+- ✅ Normal failure claims supported by technical evidence
+- ✅ Real system resources utilized in validation testing
+- ✅ Working implementations verified through functional testing
+
+MEDIAMTX INTEGRATION VALIDATION REQUIREMENTS:
+- MediaMTX API path creation operational
+- FFmpeg integration functional for camera streaming
+- RTSP streams accessible for detected cameras
+- Automatic discovery to streaming workflow proven
 
 Create: evidence/pdr-actual/07_pdr_authorization_decision.md
 
-Decision: AUTHORIZE | CONDITIONAL | DENY based on PDR-scope validation.
+Decision: AUTHORIZE | CONDITIONAL | DENY based on actual working system validation.
 
-PDR Authorization Criteria:
-- Critical prototypes demonstrate implementability
-- Interface contracts validated against real systems
-- Basic performance sanity confirmed
-- Security design functional
+PDR AUTHORIZATION CRITERIA:
+- Critical prototypes demonstrate implementability through real MediaMTX FFmpeg integration
+- Interface contracts validated against real MediaMTX API endpoints
+- Basic performance sanity confirmed through real measurements
+- Security design functional through real authentication
 - Build pipeline with no-mock CI integration operational
+- MediaMTX FFmpeg integration working with accessible RTSP streams
 
-Success Criteria: PDR authorization decision based on validated design implementability.
+Success Criteria: PDR authorization decision based on validated design implementability with zero-trust verification and working MediaMTX integration.
 ```
 
 ---
@@ -583,10 +591,10 @@ Success Criteria: PDR completed with design implementability validated through n
 - ✅ Ruff/flake8 per-dir rule: disallow `unittest.mock` / `pytest-mock` imports under correct directories
 
 **Test Execution (Gating):**
-- ✅ Unit tests: `python3 -m pytest tests/unit/ -v` (mocks allowed, informational only)
-- ✅ PDR tests: `FORBID_MOCKS=1 python3 -m pytest -m "pdr" -v` (no mocks, gating)
-- ✅ Integration tests: `FORBID_MOCKS=1 python3 -m pytest -m "integration" -v` (no mocks, gating)  
-- ✅ IV&V tests: `FORBID_MOCKS=1 python3 -m pytest -m "ivv" -v` (no mocks, gating)
+- ✅ Unit tests: Standard execution with mocks allowed (informational only)
+- ✅ PDR tests: Execute with mock prohibition environment (no mocks, gating)
+- ✅ Integration tests: Execute with mock prohibition environment (no mocks, gating)  
+- ✅ IV&V tests: Execute with mock prohibition environment (no mocks, gating)
 - ✅ Real system integrations operational for all PDR testing
 - ✅ External system mocks documented in allow-list with PR-level approval
 

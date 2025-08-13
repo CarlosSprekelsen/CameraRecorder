@@ -15,6 +15,7 @@ from typing import Optional, Dict, Any
 
 from .config import Config
 from mediamtx_wrapper.controller import MediaMTXController, StreamConfig
+from mediamtx_wrapper.path_manager import MediaMTXPathManager
 from camera_discovery.hybrid_monitor import (
     CameraEventData,
     CameraEvent,
@@ -138,6 +139,7 @@ class ServiceManager(CameraEventHandler):
         self._camera_monitor = camera_monitor
         self._mediamtx_controller = mediamtx_controller
         self._health_monitor: Optional[HealthMonitor] = None
+        self._path_manager: Optional[MediaMTXPathManager] = None
 
     @property
     def is_running(self) -> bool:
@@ -172,6 +174,9 @@ class ServiceManager(CameraEventHandler):
 
             # Start MediaMTX Controller
             await self._start_mediamtx_controller()
+
+            # Start MediaMTX Path Manager
+            await self._start_path_manager()
 
             # Start Camera Discovery Monitor
             await self._start_camera_monitor()
@@ -226,6 +231,7 @@ class ServiceManager(CameraEventHandler):
             await self._stop_websocket_server()
             await self._stop_health_monitor()
             await self._stop_camera_monitor()
+            await self._stop_path_manager()
             await self._stop_mediamtx_controller()
 
             self._running = False
@@ -331,47 +337,50 @@ class ServiceManager(CameraEventHandler):
         # Get enhanced camera metadata with capability validation
         camera_metadata = await self._get_enhanced_camera_metadata(event_data)
 
-        # Defensive guard: Check MediaMTX controller availability
+        # Defensive guard: Check path manager availability
         stream_created = False
         streams_dict = {}
         mediamtx_error = None
 
-        if not self._mediamtx_controller:
+        if not self._path_manager:
             self._logger.warning(
-                "MediaMTX controller not available for stream creation",
+                "MediaMTX path manager not available for stream creation",
                 extra={"correlation_id": correlation_id, "device_path": device_path},
             )
         else:
             try:
-                # Create stream configuration
-                stream_config = StreamConfig(
-                    name=stream_name,
-                    source=device_path,
+                # Extract camera ID from device path (e.g., "/dev/video0" -> "0")
+                camera_id = device_path.split("/")[-1].replace("video", "")
+                
+                # Create MediaMTX path with FFmpeg publishing
+                stream_created = await self._path_manager.create_camera_path(
+                    camera_id=camera_id,
+                    device_path=device_path,
+                    rtsp_port=self._config.mediamtx.rtsp_port
                 )
 
-                # Create stream in MediaMTX
-                await self._mediamtx_controller.create_stream(stream_config)
-                stream_created = True
+                if stream_created:
+                    # Generate stream URLs for notification
+                    streams_dict = {
+                        "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/cam{camera_id}",
+                        "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/cam{camera_id}",
+                        "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/cam{camera_id}",
+                    }
 
-                # Generate stream URLs for notification
-                streams_dict = {
-                    "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/{stream_name}",
-                    "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/{stream_name}",
-                    "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/{stream_name}",
-                }
-
-                self._logger.debug(
-                    f"Successfully created stream: {stream_name}",
-                    extra={
-                        "correlation_id": correlation_id,
-                        "device_path": device_path,
-                    },
-                )
+                    self._logger.debug(
+                        f"Successfully created MediaMTX path: cam{camera_id}",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "device_path": device_path,
+                        },
+                    )
+                else:
+                    mediamtx_error = "Failed to create MediaMTX path"
 
             except Exception as e:
                 mediamtx_error = str(e)
                 self._logger.error(
-                    f"Failed to create MediaMTX stream for {device_path}: {e}",
+                    f"Failed to create MediaMTX path for {device_path}: {e}",
                     extra={
                         "correlation_id": correlation_id,
                         "device_path": device_path,
@@ -451,36 +460,38 @@ class ServiceManager(CameraEventHandler):
             extra={"correlation_id": correlation_id, "device_path": device_path},
         )
 
-        # Defensive guard: Check MediaMTX controller availability
+        # Defensive guard: Check path manager availability
         stream_removed = False
         mediamtx_error = None
 
-        if not self._mediamtx_controller:
+        if not self._path_manager:
             self._logger.warning(
-                "MediaMTX controller not available for stream removal",
+                "MediaMTX path manager not available for stream removal",
                 extra={"correlation_id": correlation_id, "device_path": device_path},
             )
         else:
             try:
-                # Extract stream name from device path
-                stream_name = self._get_stream_name_from_device_path(device_path)
+                # Extract camera ID from device path (e.g., "/dev/video0" -> "0")
+                camera_id = device_path.split("/")[-1].replace("video", "")
 
-                # Delete stream from MediaMTX with error handling
-                await self._mediamtx_controller.delete_stream(stream_name)
-                stream_removed = True
+                # Delete MediaMTX path with error handling
+                stream_removed = await self._path_manager.delete_camera_path(camera_id)
 
-                self._logger.debug(
-                    f"Successfully removed stream: {stream_name}",
-                    extra={
-                        "correlation_id": correlation_id,
-                        "device_path": device_path,
-                    },
-                )
+                if stream_removed:
+                    self._logger.debug(
+                        f"Successfully removed MediaMTX path: cam{camera_id}",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "device_path": device_path,
+                        },
+                    )
+                else:
+                    mediamtx_error = "Failed to delete MediaMTX path"
 
             except Exception as e:
                 mediamtx_error = str(e)
                 self._logger.error(
-                    f"Failed to delete MediaMTX stream for {device_path}: {e}",
+                    f"Failed to delete MediaMTX path for {device_path}: {e}",
                     extra={
                         "correlation_id": correlation_id,
                         "device_path": device_path,
@@ -855,6 +866,33 @@ class ServiceManager(CameraEventHandler):
             )
             raise
 
+    async def _start_path_manager(self) -> None:
+        """Start the MediaMTX path manager component."""
+        correlation_id = get_correlation_id()
+        self._logger.debug(
+            "Starting MediaMTX path manager", extra={"correlation_id": correlation_id}
+        )
+
+        try:
+            mediamtx_config = self._config.mediamtx
+            self._path_manager = MediaMTXPathManager(
+                mediamtx_host=mediamtx_config.host,
+                mediamtx_port=mediamtx_config.api_port
+            )
+            await self._path_manager.start()
+
+            self._logger.info(
+                "MediaMTX path manager started successfully",
+                extra={"correlation_id": correlation_id},
+            )
+
+        except Exception as e:
+            self._logger.error(
+                f"Failed to start MediaMTX path manager: {e}",
+                extra={"correlation_id": correlation_id},
+            )
+            raise
+
     async def _start_camera_monitor(self) -> None:
         """Start the camera discovery and monitoring component."""
         correlation_id = get_correlation_id()
@@ -1041,6 +1079,27 @@ class ServiceManager(CameraEventHandler):
             finally:
                 self._camera_monitor = None
 
+    async def _stop_path_manager(self) -> None:
+        """Stop the MediaMTX path manager component."""
+        if self._path_manager:
+            correlation_id = get_correlation_id()
+            self._logger.debug(
+                "Stopping MediaMTX path manager", extra={"correlation_id": correlation_id}
+            )
+            try:
+                await self._path_manager.stop()
+                self._logger.info(
+                    "MediaMTX path manager stopped",
+                    extra={"correlation_id": correlation_id},
+                )
+            except Exception as e:
+                self._logger.error(
+                    f"Error stopping MediaMTX path manager: {e}",
+                    extra={"correlation_id": correlation_id},
+                )
+            finally:
+                self._path_manager = None
+
     async def _stop_mediamtx_controller(self) -> None:
         """Stop the MediaMTX controller component."""
         if self._mediamtx_controller:
@@ -1084,6 +1143,10 @@ class ServiceManager(CameraEventHandler):
                     self._camera_monitor.remove_event_handler(self)
                 await self._camera_monitor.stop()
                 self._camera_monitor = None
+
+            if self._path_manager:
+                await self._path_manager.stop()
+                self._path_manager = None
 
             if self._mediamtx_controller:
                 await self._mediamtx_controller.stop()
