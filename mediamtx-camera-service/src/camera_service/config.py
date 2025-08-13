@@ -98,6 +98,7 @@ class RecordingConfig:
     """Recording configuration settings."""
 
     enabled: bool = False
+    auto_record: bool = False
     format: str = "fmp4"
     quality: str = "medium"
     segment_duration: int = 3600
@@ -106,6 +107,8 @@ class RecordingConfig:
     cleanup_interval: int = 86400
     max_age: int = 604800
     max_size: int = 10737418240
+    max_duration: int = 3600
+    cleanup_after_days: int = 30
 
 
 @dataclass
@@ -862,12 +865,19 @@ class ConfigManager:
                 "recording": {
                     "type": "object",
                     "properties": {
+                        "enabled": {"type": "boolean"},
                         "auto_record": {"type": "boolean"},
                         "format": {"type": "string", "enum": ["mp4", "fmp4", "mkv", "avi"]},
                         "quality": {
                             "type": "string",
                             "enum": ["low", "medium", "high"],
                         },
+                        "segment_duration": {"type": "integer", "minimum": 1},
+                        "max_segment_size": {"type": "integer", "minimum": 1},
+                        "auto_cleanup": {"type": "boolean"},
+                        "cleanup_interval": {"type": "integer", "minimum": 1},
+                        "max_age": {"type": "integer", "minimum": 1},
+                        "max_size": {"type": "integer", "minimum": 1},
                         "max_duration": {"type": "integer", "minimum": 1},
                         "cleanup_after_days": {"type": "integer", "minimum": 0},
                     },

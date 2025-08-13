@@ -66,9 +66,20 @@ class PerformanceMetrics:
         """Get current performance metrics."""
         uptime = time.time() - self.start_time
         avg_response_times = {}
+        methods = {}
+        
         for method, times in self.response_times.items():
             if times:
-                avg_response_times[method] = sum(times) / len(times)
+                avg_time = sum(times) / len(times)
+                max_time = max(times)
+                avg_response_times[method] = avg_time
+                
+                # Add detailed method metrics for performance framework
+                methods[method] = {
+                    "count": len(times),
+                    "avg_ms": avg_time * 1000,  # Convert to milliseconds
+                    "max_ms": max_time * 1000   # Convert to milliseconds
+                }
         
         return {
             "uptime": uptime,
@@ -76,7 +87,8 @@ class PerformanceMetrics:
             "error_count": self.error_count,
             "active_connections": self.active_connections,
             "avg_response_times": avg_response_times,
-            "requests_per_second": self.request_count / uptime if uptime > 0 else 0
+            "requests_per_second": self.request_count / uptime if uptime > 0 else 0,
+            "methods": methods  # Add the missing methods field
         }
 
 
@@ -1005,8 +1017,15 @@ class WebSocketJsonRpcServer:
         self.register_method(
             "get_camera_list", self._method_get_camera_list, version="1.0"
         )
+        # Alias for compatibility
+        self.register_method(
+            "get_cameras", self._method_get_camera_list, version="1.0"
+        )
         self.register_method(
             "get_camera_status", self._method_get_camera_status, version="1.0"
+        )
+        self.register_method(
+            "get_streams", self._method_get_streams, version="1.0"
         )
         self.register_method("take_snapshot", self._method_take_snapshot, version="1.0")
         self.register_method(
@@ -1018,6 +1037,8 @@ class WebSocketJsonRpcServer:
         # Security and observability
         self.register_method("authenticate", self._method_authenticate, version="1.0")
         self.register_method("get_metrics", self._method_get_metrics, version="1.0")
+        self.register_method("get_status", self._method_get_status, version="1.0")
+        self.register_method("get_server_info", self._method_get_server_info, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
@@ -1650,6 +1671,108 @@ class WebSocketJsonRpcServer:
         except Exception as e:
             self._logger.error(f"Error stopping recording for {device_path}: {e}")
             raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
+
+    async def _method_get_status(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get general server status information.
+
+        Returns:
+            Dict containing server status information
+        """
+        import time
+        
+        status = {
+            "server": {
+                "status": "running",
+                "uptime": time.time() - getattr(self, '_start_time', time.time()),
+                "version": "1.0.0",
+                "connections": len(self._clients)
+            },
+            "mediamtx": {
+                "status": "unknown",
+                "connected": False
+            }
+        }
+        
+        # Check MediaMTX status if available
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+            if mediamtx_controller:
+                try:
+                    health = await mediamtx_controller.health_check()
+                    status["mediamtx"]["status"] = health.get("status", "unknown")
+                    status["mediamtx"]["connected"] = health.get("status") == "healthy"
+                except:
+                    pass
+        
+        return status
+
+    async def _method_get_server_info(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get server information and capabilities.
+
+        Returns:
+            Dict containing server information
+        """
+        return {
+            "name": "MediaMTX Camera Service",
+            "version": "1.0.0",
+            "api_version": "1.0",
+            "supported_methods": list(self._methods.keys()),
+            "capabilities": [
+                "camera_monitoring",
+                "video_recording",
+                "snapshot_capture",
+                "rtsp_streaming",
+                "websocket_notifications"
+            ]
+        }
+
+    async def _method_get_streams(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get list of all active streams from MediaMTX.
+
+        Returns:
+            List of stream information dictionaries
+        """
+        # Get MediaMTX controller from service manager if available
+        mediamtx_controller = None
+        if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            mediamtx_controller = self._service_manager._mediamtx_controller
+        elif self._mediamtx_controller:
+            mediamtx_controller = self._mediamtx_controller
+
+        if not mediamtx_controller:
+            self._logger.warning("MediaMTX controller not available for get_streams")
+            return []
+
+        try:
+            # Get stream list from MediaMTX
+            streams = await mediamtx_controller.get_stream_list()
+            
+            # Format streams for API response
+            formatted_streams = []
+            for stream in streams:
+                formatted_stream = {
+                    "name": stream.get("name", "unknown"),
+                    "source": stream.get("source"),
+                    "ready": stream.get("ready", False),
+                    "readers": stream.get("readers", 0),
+                    "bytes_sent": stream.get("bytes_sent", 0)
+                }
+                formatted_streams.append(formatted_stream)
+            
+            return formatted_streams
+
+        except Exception as e:
+            self._logger.error(f"Error getting streams: {e}")
+            return []
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
         """

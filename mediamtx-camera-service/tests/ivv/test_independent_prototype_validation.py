@@ -143,13 +143,17 @@ class IndependentPrototypeValidator:
     async def validate_rtsp_stream_operational(self) -> Dict[str, Any]:
         """Validate that RTSP stream handling is operational."""
         try:
+            # Start MediaMTX controller first
+            await self.mediamtx_controller.start()
+            await asyncio.sleep(2)
+            
             # Test stream creation
             from src.mediamtx_wrapper.controller import StreamConfig
             stream_config = StreamConfig(
                 name="test_stream",
                 source="rtsp://127.0.0.1:8554/test_source"
             )
-            await self.mediamtx_controller.create_stream(stream_config)
+            stream_urls = await self.mediamtx_controller.create_stream(stream_config)
             await asyncio.sleep(1)
             
             # Check if stream is registered
@@ -160,8 +164,12 @@ class IndependentPrototypeValidator:
             stream_status = await self.mediamtx_controller.get_stream_status("test_stream")
             stream_info_retrievable = stream_status is not None
             
+            # Test stream URL generation (already got URLs from create_stream)
+            stream_url_valid = bool(stream_urls and "rtsp" in stream_urls)
+            
             return {
                 "stream_creation_successful": stream_registered,
+                "stream_url_valid": stream_url_valid,
                 "stream_info_retrievable": stream_info_retrievable,
                 "streams_list": streams
             }
@@ -300,6 +308,11 @@ class IndependentPrototypeValidator:
                     "description": "MediaMTX controller not properly integrated",
                     "severity": "high"
                 })
+            
+            # Start servers for API method testing
+            await self.websocket_server.start()
+            await self.mediamtx_controller.start()
+            await asyncio.sleep(2)
             
             # Check for API method availability
             async with websockets.connect(self.websocket_url) as websocket:
