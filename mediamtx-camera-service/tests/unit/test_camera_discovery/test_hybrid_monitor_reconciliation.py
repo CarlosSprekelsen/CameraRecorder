@@ -53,7 +53,7 @@ class TestCapabilityReconciliation:
 
         # Setup confirmed capability in hybrid_monitor
         confirmed_capability = CapabilityDetectionResult(
-            device_path=device_path,
+            device=device_path,
             detected=True,
             accessible=True,
             device_name="Confirmed Test Camera",
@@ -72,10 +72,10 @@ class TestCapabilityReconciliation:
 
         # Create camera event data
         camera_device = CameraDevice(
-            device_path=device_path, name="Test Camera Device", driver="uvcvideo"
+            device=device_path, name="Test Camera Device", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -116,7 +116,7 @@ class TestCapabilityReconciliation:
 
         # Setup provisional capability in hybrid_monitor
         provisional_capability = CapabilityDetectionResult(
-            device_path=device_path,
+            device=device_path,
             detected=True,
             accessible=True,
             device_name="Provisional Test Camera",
@@ -135,10 +135,10 @@ class TestCapabilityReconciliation:
 
         # Create camera event data
         camera_device = CameraDevice(
-            device_path=device_path, name="Provisional Camera Device", driver="uvcvideo"
+            device=device_path, name="Provisional Camera Device", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -184,10 +184,10 @@ class TestCapabilityReconciliation:
 
         # Create camera event data
         camera_device = CameraDevice(
-            device_path=device_path, name="Unknown Capability Camera", driver="unknown"
+            device=device_path, name="Unknown Capability Camera", driver="unknown"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -226,7 +226,7 @@ class TestCapabilityReconciliation:
 
         # Setup initial provisional capability
         provisional_capability = CapabilityDetectionResult(
-            device_path=device_path,
+            device=device_path,
             detected=True,
             accessible=True,
             device_name="Transitioning Camera",
@@ -242,10 +242,10 @@ class TestCapabilityReconciliation:
         service_manager._camera_monitor = hybrid_monitor
 
         camera_device = CameraDevice(
-            device_path=device_path, name="Test Camera", driver="uvcvideo"
+            device=device_path, name="Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -288,7 +288,7 @@ class TestCapabilityReconciliation:
 
         # Setup capability in hybrid_monitor
         capability = CapabilityDetectionResult(
-            device_path=device_path,
+            device=device_path,
             detected=True,
             accessible=True,
             resolutions=["1920x1080", "1280x720"],
@@ -303,10 +303,10 @@ class TestCapabilityReconciliation:
         service_manager._camera_monitor = hybrid_monitor
 
         camera_device = CameraDevice(
-            device_path=device_path, name="Test Camera", driver="uvcvideo"
+            device=device_path, name="Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -408,7 +408,7 @@ class TestCapabilityReconciliation:
             zip(frame_rate_detections, resolution_detections)
         ):
             capability = CapabilityDetectionResult(
-                device_path=device_path,
+                device=device_path,
                 detected=True,
                 accessible=True,
                 resolutions=[res],
@@ -423,10 +423,10 @@ class TestCapabilityReconciliation:
         service_manager._camera_monitor = hybrid_monitor
 
         camera_device = CameraDevice(
-            device_path=device_path, name="Frequency Test Camera", driver="uvcvideo"
+            device=device_path, name="Frequency Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -484,10 +484,10 @@ class TestReconciliationErrorCases:
         device_path = "/dev/video0"
 
         camera_device = CameraDevice(
-            device_path=device_path, name="Error Test Camera", driver="uvcvideo"
+            device=device_path, name="Error Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -522,10 +522,10 @@ class TestReconciliationErrorCases:
 
         device_path = "/dev/video0"
         camera_device = CameraDevice(
-            device_path=device_path, name="No Monitor Camera", driver="uvcvideo"
+            device=device_path, name="No Monitor Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device_path=device_path,
+            device=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )

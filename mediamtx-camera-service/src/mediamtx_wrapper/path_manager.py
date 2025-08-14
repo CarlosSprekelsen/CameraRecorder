@@ -67,15 +67,25 @@ class MediaMTXPathManager:
                 json=payload,
                 headers={"Content-Type": "application/json"}
             ) as response:
-                if response.status == 200:
+                if response.status in (200, 201):
                     self._logger.info(f"Successfully created MediaMTX path: {path_name}")
                     return True
-                else:
-                    error_text = await response.text()
-                    self._logger.error(
-                        f"Failed to create path {path_name}: HTTP {response.status} - {error_text}"
-                    )
-                    return False
+                # Treat 400/409 as idempotent success if path already exists
+                if response.status in (400, 409):
+                    try:
+                        text = await response.text()
+                        if "already exists" in text or "exists" in text:
+                            self._logger.info(
+                                f"MediaMTX path already exists, treating as success: {path_name}"
+                            )
+                            return True
+                    except Exception:
+                        pass
+                error_text = await response.text()
+                self._logger.error(
+                    f"Failed to create path {path_name}: HTTP {response.status} - {error_text}"
+                )
+                return False
         except Exception as e:
             self._logger.error(f"Failed to create path {path_name}: {e}")
             return False

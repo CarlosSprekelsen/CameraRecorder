@@ -81,28 +81,56 @@ def pytest_configure(config):
                     f"Remove {module_name} from test environment."
                 )
 
-# PDR-specific test markers
+# Test markers for different test types
 def pytest_collection_modifyitems(config, items):
-    """Add PDR-specific markers and enforce no-mock for PDR tests."""
+    """Add test markers based on directory structure and enforce no-mock for specific tests."""
     for item in items:
         file_path = str(item.fspath)
         
-        # Add pdr marker for tests in prototypes directory (PDR tests)
-        if "/prototypes/" in file_path:
-            item.add_marker(pytest.mark.pdr)
+        # Add unit marker for tests in unit directory
+        if "/unit/" in file_path:
+            item.add_marker(pytest.mark.unit)
         
-        # Add integration marker for tests in contracts directory (integration tests)
-        if "/contracts/" in file_path:
+        # Add integration marker for tests in integration directory
+        if "/integration/" in file_path:
             item.add_marker(pytest.mark.integration)
+        
+        # Add pdr marker for tests in prototypes directory (PDR tests)
+        if "/prototypes/" in file_path or "/pdr/" in file_path:
+            item.add_marker(pytest.mark.pdr)
         
         # Add ivv marker for tests in ivv directory
         if "/ivv/" in file_path:
             item.add_marker(pytest.mark.ivv)
         
-        # Enforce no-mock for PDR, integration, and IVV tests
-        if any(marker in file_path for marker in ["/prototypes/", "/contracts/", "/ivv/"]):
-            if os.environ.get("FORBID_MOCKS") != "1":
-                pytest.skip("PDR/Integration/IVV tests require FORBID_MOCKS=1 environment variable")
+        # Add security marker for tests in security directory
+        if "/security/" in file_path:
+            item.add_marker(pytest.mark.security)
+        
+        # Add installation marker for tests in installation directory
+        if "/installation/" in file_path:
+            item.add_marker(pytest.mark.installation)
+        
+        # Add production marker for tests in production directory
+        if "/production/" in file_path:
+            item.add_marker(pytest.mark.production)
+        
+        # Add performance marker for tests in performance directory
+        if "/performance/" in file_path:
+            item.add_marker(pytest.mark.performance)
+        
+        # Add e2e marker for tests in e2e directory
+        if "/e2e/" in file_path:
+            item.add_marker(pytest.mark.e2e)
+        
+        # Enforce no-mock for PDR, integration, and IVV tests ONLY when those specific tests are being executed
+        restricted_directories = ["/prototypes/", "/pdr/", "/contracts/", "/ivv/"]
+        is_restricted_test = any(marker in file_path for marker in restricted_directories)
+        
+        # Only apply the skip to the specific test item, not globally
+        if is_restricted_test and os.environ.get("FORBID_MOCKS") != "1":
+            # Mark this specific test to be skipped, don't fail the entire collection
+            item.add_marker(pytest.mark.skip(reason="PDR/Integration/IVV tests require FORBID_MOCKS=1 environment variable"))
 
 @pytest.fixture(scope="session")
 def test_environment():

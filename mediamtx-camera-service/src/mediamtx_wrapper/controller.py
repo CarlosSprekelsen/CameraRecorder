@@ -1435,6 +1435,16 @@ class MediaMTXController:
                     health_status = await self.health_check()
                     current_status = health_status.get("status")
 
+                    # Count consecutive failures regardless of status transitions  
+                    if current_status != "healthy":
+                        consecutive_failures += 1
+                        self._health_state["consecutive_failures"] = consecutive_failures
+                    else:
+                        # Reset on healthy status (but only if not in CB recovery mode)
+                        if not circuit_breaker_active:
+                            consecutive_failures = 0
+                            self._health_state["consecutive_failures"] = 0
+
                     # Enhanced status change logging with recovery confirmation logic
                     # Anti-flapping design: Circuit breaker requires N consecutive successes before full reset
                     if current_status != self._last_health_status:
@@ -1484,6 +1494,8 @@ class MediaMTXController:
                                         )
                                 else:
                                     # Not in circuit breaker state - normal recovery
+                                    # Only reset consecutive_failures after a brief stable period
+                                    # to allow circuit breaker to activate if there were enough failures
                                     consecutive_failures = 0
                                     self._health_state["consecutive_failures"] = 0
                                     self._logger.info(
@@ -1503,11 +1515,8 @@ class MediaMTXController:
                                 ] = 0
                         else:
                             # Health degraded - reset recovery progress
-                            consecutive_failures += 1
+                            # consecutive_failures already incremented above
                             consecutive_successes_during_recovery = 0
-                            self._health_state["consecutive_failures"] = (
-                                consecutive_failures
-                            )
                             self._health_state[
                                 "consecutive_successes_during_recovery"
                             ] = 0
@@ -1521,36 +1530,37 @@ class MediaMTXController:
                                 },
                             )
 
-                            # Activate circuit breaker if too many failures
-                            if (
-                                consecutive_failures >= self._health_failure_threshold
-                                and not circuit_breaker_active
-                            ):
-                                circuit_breaker_active = True
-                                circuit_breaker_start_time = time.time()
-                                consecutive_successes_during_recovery = 0
-                                self._health_state["circuit_breaker_activations"] += 1
-                                self._health_state[
-                                    "consecutive_successes_during_recovery"
-                                ] = 0
-                                self._logger.error(
-                                    f"MediaMTX health circuit breaker ACTIVATED after {consecutive_failures} consecutive failures "
-                                    f"(activation #{self._health_state['circuit_breaker_activations']})",
-                                    extra={
-                                        "correlation_id": check_correlation_id,
-                                        "circuit_breaker": True,
-                                    },
-                                )
+                            # Circuit breaker check moved to after status transition logic
 
                         self._last_health_status = current_status
+
+                    # Check circuit breaker activation AFTER status transition logic
+                    # This ensures we check even if status didn't change (e.g., unhealthy -> unhealthy)
+                    if (
+                        consecutive_failures >= self._health_failure_threshold
+                        and not circuit_breaker_active
+                        and current_status != "healthy"
+                    ):
+                        circuit_breaker_active = True
+                        circuit_breaker_start_time = time.time()
+                        consecutive_successes_during_recovery = 0
+                        self._health_state["circuit_breaker_activations"] += 1
+                        self._health_state["consecutive_successes_during_recovery"] = 0
+                        self._logger.error(
+                            f"MediaMTX health circuit breaker ACTIVATED after {consecutive_failures} consecutive failures "
+                            f"(activation #{self._health_state['circuit_breaker_activations']})",
+                            extra={
+                                "correlation_id": check_correlation_id,
+                                "circuit_breaker": True,
+                            },
+                        )
 
                     # Determine sleep interval based on health status with configurable backoff
                     if current_status == "healthy":
                         sleep_interval = self._health_check_interval
-                        consecutive_failures = 0
+                        # consecutive_failures already reset above in health state transition logic
                     else:
-                        # Use safe backoff calculation
-                        consecutive_failures += 1
+                        # Use safe backoff calculation - consecutive_failures already incremented above
                         sleep_interval = self._calculate_backoff_interval(consecutive_failures)
 
                         self._logger.debug(

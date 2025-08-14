@@ -300,6 +300,8 @@ class WebSocketJsonRpcServer:
                 ping_interval=30,  # Ping every 30 seconds
                 ping_timeout=10,  # Ping timeout
                 close_timeout=5,  # Close timeout
+                reuse_port=True,
+                reuse_address=True,
             )
 
             self._running = True
@@ -1200,6 +1202,29 @@ class WebSocketJsonRpcServer:
             cameras = []
             connected_count = 0
 
+            # Prepare concurrent stream status requests for connected cameras
+            stream_status_tasks = {}
+            if mediamtx_controller:
+                for device_path, camera_device in connected_cameras.items():
+                    if camera_device.status == "CONNECTED":
+                        stream_name = self._get_stream_name_from_device_path(device_path)
+                        # Create concurrent task for stream status
+                        task = asyncio.create_task(
+                            self._get_stream_status_safe(mediamtx_controller, stream_name)
+                        )
+                        stream_status_tasks[device_path] = task
+
+            # Wait for all stream status requests to complete (with timeout)
+            if stream_status_tasks:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*stream_status_tasks.values(), return_exceptions=True),
+                        timeout=0.030  # 30ms timeout for all MediaMTX calls
+                    )
+                except asyncio.TimeoutError:
+                    self._logger.debug("Stream status requests timed out, using cached data")
+
+            # Process cameras with concurrent stream data
             for device_path, camera_device in connected_cameras.items():
                 # Get real capability metadata with provisional/confirmed logic
                 resolution = "1920x1080"  # Architecture default
@@ -1234,24 +1259,22 @@ class WebSocketJsonRpcServer:
                 stream_name = self._get_stream_name_from_device_path(device_path)
                 streams = {}
 
-                # Get stream URLs from MediaMTX controller if available and camera connected
-                if mediamtx_controller and camera_device.status == "CONNECTED":
-                    try:
-                        stream_status = (
-                            await mediamtx_controller.get_stream_status(
-                                stream_name
+                # Get stream URLs from concurrent request results
+                if camera_device.status == "CONNECTED" and device_path in stream_status_tasks:
+                    task = stream_status_tasks[device_path]
+                    if task.done() and not task.exception():
+                        try:
+                            stream_status = task.result()
+                            if stream_status and stream_status.get("status") == "active":
+                                streams = {
+                                    "rtsp": f"rtsp://localhost:8554/{stream_name}",
+                                    "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
+                                    "hls": f"http://localhost:8888/{stream_name}",
+                                }
+                        except Exception as e:
+                            self._logger.debug(
+                                f"Error processing stream status for {stream_name}: {e}"
                             )
-                        )
-                        if stream_status.get("status") == "active":
-                            streams = {
-                                "rtsp": f"rtsp://localhost:8554/{stream_name}",
-                                "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
-                                "hls": f"http://localhost:8888/{stream_name}",
-                            }
-                    except Exception as e:
-                        self._logger.debug(
-                            f"Could not get stream status for {stream_name}: {e}"
-                        )
 
                 # Build camera info per API specification
                 camera_info = {
@@ -1277,6 +1300,23 @@ class WebSocketJsonRpcServer:
         except Exception as e:
             self._logger.error(f"Error getting camera list: {e}")
             return {"cameras": [], "total": 0, "connected": 0}
+
+    async def _get_stream_status_safe(self, mediamtx_controller, stream_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Safely get stream status with error handling and timeout.
+        
+        Args:
+            mediamtx_controller: MediaMTX controller instance
+            stream_name: Name of the stream
+            
+        Returns:
+            Stream status dict or None if error/timeout
+        """
+        try:
+            return await mediamtx_controller.get_stream_status(stream_name)
+        except Exception as e:
+            self._logger.debug(f"Could not get stream status for {stream_name}: {e}")
+            return None
 
     async def _method_get_camera_status(
         self, params: Optional[Dict[str, Any]] = None

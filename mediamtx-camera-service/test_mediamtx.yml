@@ -1,0 +1,6 @@
+api: yes
+apiAddress: ":9997"
+rtspAddress: ":8554"
+webrtcAddress: ":8889"
+hlsAddress: ":8888"
+logLevel: info

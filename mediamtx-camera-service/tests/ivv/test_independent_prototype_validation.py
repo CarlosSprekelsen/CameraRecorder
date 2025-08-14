@@ -74,8 +74,14 @@ class IndependentPrototypeValidator:
             snapshots_path=mediamtx_config.snapshots_path
         )
         
-        # Initialize real service manager using configured port (no hardcoding)
-        server_cfg = ServerConfig(host="127.0.0.1")
+        # Initialize real service manager using a dynamically assigned free port
+        import socket
+        def _find_free_port():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("", 0))
+                s.listen(1)
+                return s.getsockname()[1]
+        server_cfg = ServerConfig(host="127.0.0.1", port=_find_free_port())
         config = Config(
             server=server_cfg,
             mediamtx=mediamtx_config,
@@ -85,8 +91,8 @@ class IndependentPrototypeValidator:
         
         self.service_manager = ServiceManager(config)
         
-        # Set URLs from configured port
-        port = server_cfg.port
+        # Set URLs from actual configured port in service manager
+        port = self.service_manager._config.server.port
         self.server_url = f"http://127.0.0.1:{port}"
         self.websocket_url = f"ws://127.0.0.1:{port}/ws"
 

@@ -105,7 +105,7 @@ class TestUdevEventProcessing:
 
         # Pre-populate device
         test_device = CameraDevice(
-            device_path="/dev/video0", name="Test Camera", driver="uvcvideo"
+            device="/dev/video0", name="Test Camera", driver="uvcvideo"
         )
         monitor_with_udev._known_devices["/dev/video0"] = test_device
 
@@ -140,7 +140,7 @@ class TestUdevEventProcessing:
 
         # Pre-populate device
         test_device = CameraDevice(
-            device_path="/dev/video0", name="Test Camera", driver="uvcvideo"
+            device="/dev/video0", name="Test Camera", driver="uvcvideo"
         )
         monitor_with_udev._known_devices["/dev/video0"] = test_device
 
