@@ -32,7 +32,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-
+exit
 import pytest
 import pytest_asyncio
 import websockets
@@ -106,6 +106,18 @@ class RealMediaMTXServer:
             
         except Exception as e:
             logger.error(f"Failed to start MediaMTX server: {e}")
+            
+            # Log MediaMTX output for debugging
+            if self.process and self.process.poll() is not None:
+                try:
+                    stdout, stderr = self.process.communicate(timeout=1)
+                    if stdout:
+                        logger.error(f"MediaMTX stdout: {stdout.decode()}")
+                    if stderr:
+                        logger.error(f"MediaMTX stderr: {stderr.decode()}")
+                except Exception as comm_err:
+                    logger.error(f"Could not read MediaMTX output: {comm_err}")
+            
             await self.stop()
             raise
     
@@ -134,12 +146,20 @@ api: yes
 apiAddress: :{self.config.api_port}
 
 rtspAddress: :{self.config.rtsp_port}
-rtspTransports: [tcp, udp]
+rtspTransports: [tcp]
+
+# Set RTMP to custom port to avoid default 1935 conflict
+rtmpAddress: :{self.config.rtsp_port + 1}
+rtmpEncryption: "no"
 
 webrtcAddress: :{self.config.webrtc_port}
+webrtcLocalUDPAddress: :{self.config.webrtc_port + 1}
 
 hlsAddress: :{self.config.hls_port}
 hlsVariant: lowLatency
+
+# Set SRT to custom port to avoid default 8890 conflict
+srtAddress: :{self.config.hls_port + 1}
 
 logLevel: info
 logDestinations: [stdout]
@@ -148,38 +168,69 @@ paths:
   all:
     recordFormat: fmp4
     recordSegmentDuration: "3600s"
-    recordPath: {self.config.recordings_path}
-    snapshotPath: {self.config.snapshots_path}
+    # Fix: recordPath must contain %path and timestamp format
+    recordPath: {self.config.recordings_path}/%path/%Y-%m-%d_%H-%M-%S
+    # Fix: Remove snapshotPath as it's not a valid MediaMTX configuration field
 """
         
         with open(self.config_file, 'w') as f:
             f.write(config_content)
+        
+        logger.info(f"Created MediaMTX config at {self.config_file}")
+        logger.debug(f"MediaMTX config content:\n{config_content}")
     
     async def _wait_for_mediamtx_ready(self, timeout: float = 30.0) -> None:
         """Wait for MediaMTX server to be ready."""
         start_time = time.time()
+        last_error = None
+        
+        logger.info(f"Waiting for MediaMTX server on API port {self.config.api_port}...")
+        
         while time.time() - start_time < timeout:
             try:
+                # Check if process is still running
+                if self.process and self.process.poll() is not None:
+                    # Process died - get the output for debugging
+                    try:
+                        stdout, stderr = self.process.communicate(timeout=1)
+                        stdout_text = stdout.decode() if stdout else "No stdout"
+                        stderr_text = stderr.decode() if stderr else "No stderr"
+                        error_msg = f"MediaMTX process died with return code: {self.process.poll()}\n"
+                        error_msg += f"STDOUT: {stdout_text}\n"
+                        error_msg += f"STDERR: {stderr_text}"
+                        raise RuntimeError(error_msg)
+                    except subprocess.TimeoutExpired:
+                        raise RuntimeError(f"MediaMTX process died with return code: {self.process.poll()}")
+                
                 # Check if API port is listening
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1)
+                sock.settimeout(2)  # Increase timeout for socket check
                 result = sock.connect_ex(('127.0.0.1', self.config.api_port))
                 sock.close()
                 
                 if result == 0:
-                    # Test API health endpoint
+                    # Test API health endpoint with shorter timeout
                     import aiohttp
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(f"http://127.0.0.1:{self.config.api_port}/v3/health") as resp:
-                            if resp.status == 200:
-                                logger.info("MediaMTX server is ready")
-                                return
+                    timeout_aiohttp = aiohttp.ClientTimeout(total=5)
+                    async with aiohttp.ClientSession(timeout=timeout_aiohttp) as session:
+                        try:
+                            async with session.get(f"http://127.0.0.1:{self.config.api_port}/v3/health") as resp:
+                                if resp.status == 200:
+                                    logger.info("MediaMTX server is ready")
+                                    return
+                        except Exception as e:
+                            last_error = e
+                            logger.debug(f"Health check failed: {e}")
                 
-                await asyncio.sleep(1)
-            except Exception:
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)  # Wait longer between checks
+            except Exception as e:
+                last_error = e
+                await asyncio.sleep(2)
         
-        raise TimeoutError("MediaMTX server failed to start within timeout")
+        error_msg = f"MediaMTX server failed to start within {timeout}s"
+        if last_error:
+            error_msg += f". Last error: {last_error}"
+        raise TimeoutError(error_msg)
 
 
 class TestVideoStreamSimulator:
@@ -260,7 +311,7 @@ class TestVideoStreamSimulator:
         cmd = [
             "ffmpeg",
             "-re",  # Read input at native frame rate
-            "-stream_loop", "-1",  # Loop the video indefinitely
+            "-stream_loop", "10",  # Limit loops to prevent infinite streams during tests
             "-i", video_path,
             "-c:v", "libx264",
             "-preset", "ultrafast",
@@ -342,12 +393,20 @@ class WebSocketTestClient:
         """Listen for notifications from WebSocket server."""
         try:
             while self.websocket and not self.websocket.closed:
-                message = await self.websocket.recv()
-                data = json.loads(message)
-                
-                if "method" in data:  # This is a notification
-                    self.notifications.append(data)
-                    logger.info(f"Received notification: {data['method']}")
+                try:
+                    # Add timeout to prevent infinite blocking
+                    message = await asyncio.wait_for(self.websocket.recv(), timeout=30.0)
+                    data = json.loads(message)
+                    
+                    if "method" in data:  # This is a notification
+                        self.notifications.append(data)
+                        logger.info(f"Received notification: {data['method']}")
+                except asyncio.TimeoutError:
+                    logger.debug("WebSocket recv timeout - continuing")
+                    continue
+                except websockets.exceptions.ConnectionClosed:
+                    logger.info("WebSocket connection closed")
+                    break
         except Exception as e:
             logger.error(f"Error in notification listener: {e}")
 
@@ -374,12 +433,14 @@ class TestRealSystemIntegration:
                 port = s.getsockname()[1]
             return port
         
-        # Use dynamic port allocation to avoid conflicts
-        server_port = find_free_port()
-        mediamtx_api_port = find_free_port()
-        mediamtx_rtsp_port = find_free_port()
-        mediamtx_webrtc_port = find_free_port()
-        mediamtx_hls_port = find_free_port()
+        # Use dynamic port allocation with sufficient spacing to avoid conflicts
+        # MediaMTX config uses derived ports (port+1, port+2), so allocate with gaps
+        base_port = find_free_port()
+        server_port = base_port
+        mediamtx_api_port = base_port + 10
+        mediamtx_rtsp_port = base_port + 20  
+        mediamtx_webrtc_port = base_port + 30
+        mediamtx_hls_port = base_port + 40
         
         # Create temporary directories for real file operations
         temp_dir = tempfile.mkdtemp(prefix="real_integration_test_")
@@ -459,6 +520,7 @@ class TestRealSystemIntegration:
         await client.disconnect()
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)  # Maximum 60 seconds for this test
     async def test_real_mediamtx_server_startup_and_health(self, real_mediamtx_server, test_config):
         """
         Test real MediaMTX server startup and health monitoring.
@@ -494,6 +556,7 @@ class TestRealSystemIntegration:
         logger.info("Real MediaMTX server startup and health test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(90)  # Maximum 90 seconds for camera discovery test
     async def test_real_camera_discovery_and_stream_creation(self, service_manager, test_video_streams, websocket_client):
         """
         Test real camera discovery and stream creation end-to-end.
@@ -559,6 +622,7 @@ class TestRealSystemIntegration:
         logger.info("Real camera discovery and stream creation test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(120)  # Maximum 120 seconds for recording operations
     async def test_real_recording_and_snapshot_operations(self, service_manager, test_video_streams, websocket_client):
         """
         Test real recording and snapshot operations.
@@ -632,6 +696,7 @@ class TestRealSystemIntegration:
         logger.info("Real recording and snapshot operations test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)  # Maximum 60 seconds for websocket test
     async def test_real_websocket_authentication_and_control(self, service_manager, websocket_client):
         """
         Test real WebSocket authentication and camera control.
@@ -679,6 +744,7 @@ class TestRealSystemIntegration:
         logger.info("Real WebSocket authentication and control test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(90)  # Maximum 90 seconds for error recovery test
     async def test_real_error_scenarios_and_recovery(self, service_manager, real_mediamtx_server, websocket_client):
         """
         Test real error scenarios and recovery mechanisms.
@@ -724,6 +790,7 @@ class TestRealSystemIntegration:
         logger.info("Real error scenarios and recovery test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)  # Maximum 60 seconds for resource cleanup test
     async def test_real_resource_management_and_cleanup(self, service_manager, test_config):
         """
         Test real resource management and cleanup.
@@ -758,6 +825,7 @@ class TestRealSystemIntegration:
         logger.info("Real resource management and cleanup test passed")
     
     @pytest.mark.asyncio
+    @pytest.mark.timeout(180)  # Maximum 180 seconds for full lifecycle test
     async def test_real_end_to_end_camera_lifecycle(self, service_manager, test_video_streams, websocket_client):
         """
         Test complete real end-to-end camera lifecycle.

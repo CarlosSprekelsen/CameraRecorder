@@ -628,7 +628,7 @@ class MediaMTXController:
                         extra={
                             "correlation_id": correlation_id,
                             "stream_name": stream_name,
-                            "filename": filename,
+                            "source_file": filename,
                         },
                     )
                     return {
@@ -775,7 +775,7 @@ class MediaMTXController:
                         extra={
                             "correlation_id": correlation_id,
                             "stream_name": stream_name,
-                            "filename": session["filename"],
+                            "source_file": session["filename"],
                         },
                     )
 
@@ -877,7 +877,7 @@ class MediaMTXController:
                 extra={
                     "correlation_id": correlation_id,
                     "stream_name": stream_name,
-                    "filename": filename,
+                    "source_file": filename,
                 },
             )
 
@@ -923,7 +923,7 @@ class MediaMTXController:
                         extra={
                             "correlation_id": correlation_id,
                             "stream_name": stream_name,
-                            "filename": filename,
+                            "source_file": filename,
                         },
                     )
                     return {
@@ -1626,3 +1626,12 @@ class MediaMTXController:
                 f"recovery_confirmation_threshold={self._health_recovery_confirmation_threshold}",
                 extra={"correlation_id": correlation_id},
             )
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        # Clean up any resources if needed
+        pass

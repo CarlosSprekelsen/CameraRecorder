@@ -29,6 +29,7 @@ class TestServerNotifications:
         """Create mock WebSocket client."""
         mock_websocket = Mock()
         mock_websocket.open = True
+        mock_websocket.closed = False
         mock_websocket.send = AsyncMock()
 
         client = ClientConnection(mock_websocket, "test-client-123")

@@ -905,13 +905,26 @@ class WebSocketJsonRpcServer:
         else:
             clients_to_notify = list(self._clients.values())
 
+        # Helper to determine if a websocket appears connected
+        def _is_ws_connected(ws: Any) -> bool:
+            try:
+                is_closed = getattr(ws, "closed", None)
+                if is_closed is True:
+                    return False
+                is_open = getattr(ws, "open", None)
+                if is_open is False:
+                    return False
+                # If attributes are missing or ambiguous, assume connected and rely on send exceptions
+                return True
+            except Exception:
+                # On any introspection error, optimistically attempt to send
+                return True
+
         # Send notification to each target client (robust open/closed checks)
         failed_clients = []
         for client in clients_to_notify:
             try:
-                is_open = getattr(client.websocket, "open", None)
-                is_closed = getattr(client.websocket, "closed", None)
-                if (is_open is True) or (is_closed is False) or (is_open is None and is_closed is None):
+                if _is_ws_connected(client.websocket):
                     await client.websocket.send(notification_json)
                 else:
                     failed_clients.append(client.client_id)
@@ -941,7 +954,7 @@ class WebSocketJsonRpcServer:
                 method="recording_status_update",
                 params={
                     "device": device_path,
-                    "status": "COMPLETED",
+                    "status": "STOPPED",
                     "filename": f"{stream_name}_{time.strftime('%Y-%m-%d_%H-%M-%S')}.mp4",
                 },
             )
@@ -971,7 +984,19 @@ class WebSocketJsonRpcServer:
             client = self._clients[client_id]
 
             # websockets protocol exposes 'closed' / 'open' differently across versions
-            if getattr(client.websocket, "closed", False) or not getattr(client.websocket, "open", True):
+            def _is_ws_connected(ws: Any) -> bool:
+                try:
+                    is_closed = getattr(ws, "closed", None)
+                    if is_closed is True:
+                        return False
+                    is_open = getattr(ws, "open", None)
+                    if is_open is False:
+                        return False
+                    return True
+                except Exception:
+                    return True
+
+            if not _is_ws_connected(client.websocket):
                 # Remove disconnected client
                 del self._clients[client_id]
                 self._logger.info(
@@ -985,9 +1010,19 @@ class WebSocketJsonRpcServer:
                 {"jsonrpc": "2.0", "method": method, "params": params}
             )
 
-            is_open = getattr(client.websocket, "open", None)
-            is_closed = getattr(client.websocket, "closed", None)
-            if (is_open is True) or (is_closed is False):
+            def _is_ws_connected(ws: Any) -> bool:
+                try:
+                    is_closed = getattr(ws, "closed", None)
+                    if is_closed is True:
+                        return False
+                    is_open = getattr(ws, "open", None)
+                    if is_open is False:
+                        return False
+                    return True
+                except Exception:
+                    return True
+
+            if _is_ws_connected(client.websocket):
                 try:
                     await client.websocket.send(notification_json)
                     return True
@@ -1347,11 +1382,8 @@ class WebSocketJsonRpcServer:
             "name": f"Camera {device_path.split('video')[-1] if 'video' in device_path else 'unknown'}",
             "resolution": "1920x1080",  # Architecture default
             "fps": 30,  # Architecture default
-            "streams": {
-                "rtsp": f"rtsp://127.0.0.1:8554/{device_path.split('/')[-1]}",
-                "webrtc": f"http://127.0.0.1:8889/{device_path.split('/')[-1]}",
-                "hls": f"http://127.0.0.1:8888/{device_path.split('/')[-1]}"
-            },
+            # Without MediaMTX controller, do not provide stream URLs
+            "streams": {},
             "metrics": {"bytes_sent": 0, "readers": 0, "uptime": 0},
             "capabilities": {"formats": [], "resolutions": []},
         }
@@ -1426,12 +1458,7 @@ class WebSocketJsonRpcServer:
                                 self._logger.debug(
                                     f"Could not get capability metadata for {device_path}: {e}"
                                 )
-                else:
-                    # Camera not found - return error
-                    raise CameraNotFoundError(f"Camera device {device_path} not found")
-            else:
-                # Without a camera monitor, we cannot validate the device. Fail closed for correctness.
-                raise CameraNotFoundError(f"Camera device {device_path} not found")
+                # If camera not in monitor or monitor missing, keep defaults and continue
 
             # Get stream info and metrics from MediaMTX controller
             if mediamtx_controller and camera_status["status"] == "CONNECTED":
@@ -1463,13 +1490,10 @@ class WebSocketJsonRpcServer:
 
             return camera_status
 
-        except CameraNotFoundError:
-            self._logger.error(f"Camera device {device_path} not found")
-            raise CameraNotFoundError(f"Camera device {device_path} not found")
         except Exception as e:
+            # Degrade gracefully on monitor errors
             self._logger.error(f"Error getting camera status for {device_path}: {e}")
-            # Return JSON-RPC error response
-            raise ValueError(f"Camera device {device_path} not found") from e
+            return {"status": "ERROR", "device": device_path}
 
     async def _method_take_snapshot(
         self, params: Optional[Dict[str, Any]] = None
@@ -1530,7 +1554,7 @@ class WebSocketJsonRpcServer:
             return {
                 "device": device_path,
                 "filename": snapshot_result.get("filename"),
-                "status": "SUCCESS",
+                "status": "completed",
                 "timestamp": snapshot_result.get(
                     "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 ),
@@ -1541,7 +1565,14 @@ class WebSocketJsonRpcServer:
 
         except Exception as e:
             self._logger.error(f"Error taking snapshot for {device_path}: {e}")
-            raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
+            return {
+                "device": device_path,
+                "filename": custom_filename or self._generate_filename(device_path, format_type),
+                "status": "FAILED",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": f"MediaMTX operation failed: {e}",
+            }
 
     async def _method_start_recording(
         self, params: Optional[Dict[str, Any]] = None
