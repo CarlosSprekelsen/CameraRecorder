@@ -33,29 +33,46 @@ async def websocket_server():
         max_connections=10
     )
     
-    # Start real server
-    await server.start()
+    # Start real server as a task
+    server_task = asyncio.create_task(server.start())
     
     # Wait for server to be ready
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(0.5)
     
-    yield server
-    
-    # Cleanup: stop server
-    await server.stop()
-    await asyncio.sleep(0.2)
+    try:
+        yield server
+    finally:
+        # Cleanup: stop server
+        await server.stop()
+        server_task.cancel()
+        try:
+            await server_task
+        except asyncio.CancelledError:
+            pass
+        await asyncio.sleep(0.2)
 
 
 class TestWebSocketRealConnection:
     """Test real WebSocket server startup and connection."""
     
     @pytest.mark.asyncio
-    async def test_websocket_real_connection(self, websocket_server):
+    async def test_websocket_real_connection(self):
         """Test real WebSocket server startup and connection."""
-        # Connect with real WebSocket client
-        uri = "ws://127.0.0.1:8002/ws"
+        # Create and start server directly (following working pattern)
+        server = WebSocketJsonRpcServer(
+            host="127.0.0.1", 
+            port=8002, 
+            websocket_path="/ws", 
+            max_connections=10
+        )
+        
+        server_task = asyncio.create_task(server.start())
+        await asyncio.sleep(0.5)  # Wait for server to start
         
         try:
+            # Connect with real WebSocket client
+            uri = "ws://127.0.0.1:8002/ws"
+            
             async with websockets.connect(uri) as ws:
                 # Test real JSON-RPC ping
                 await ws.send(json.dumps({
@@ -69,8 +86,14 @@ class TestWebSocketRealConnection:
                 assert response["jsonrpc"] == "2.0"
                 assert "id" in response
                 
-        except Exception as e:
-            pytest.fail(f"WebSocket connection test failed: {e}")
+        finally:
+            # Cleanup
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
     
     @pytest.mark.asyncio
     async def test_websocket_server_lifecycle(self):
@@ -93,11 +116,22 @@ class TestWebSocketRealConnection:
         assert server.is_running is False
     
     @pytest.mark.asyncio
-    async def test_websocket_json_rpc_compliance(self, websocket_server):
+    async def test_websocket_json_rpc_compliance(self):
         """Test JSON-RPC 2.0 protocol compliance."""
-        uri = "ws://127.0.0.1:8002/ws"
+        # Create and start server directly
+        server = WebSocketJsonRpcServer(
+            host="127.0.0.1", 
+            port=8003, 
+            websocket_path="/ws", 
+            max_connections=10
+        )
+        
+        server_task = asyncio.create_task(server.start())
+        await asyncio.sleep(0.5)  # Wait for server to start
         
         try:
+            uri = "ws://127.0.0.1:8003/ws"
+            
             async with websockets.connect(uri) as ws:
                 # Test method not found
                 await ws.send(json.dumps({
@@ -112,23 +146,50 @@ class TestWebSocketRealConnection:
                 assert response["error"]["code"] == -32601  # Method not found
                 assert response["id"] == 2
                 
-        except Exception as e:
-            pytest.fail(f"JSON-RPC compliance test failed: {e}")
+        finally:
+            # Cleanup
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
     
     @pytest.mark.asyncio
-    async def test_websocket_server_stats(self, websocket_server):
+    async def test_websocket_server_stats(self):
         """Test WebSocket server statistics and status."""
-        # Get server stats - websocket_server is the actual server instance
-        stats = websocket_server.get_server_stats()
+        # Create and start server directly
+        server = WebSocketJsonRpcServer(
+            host="127.0.0.1", 
+            port=8004, 
+            websocket_path="/ws", 
+            max_connections=10
+        )
         
-        assert "running" in stats
-        assert "connected_clients" in stats
-        assert "max_connections" in stats
-        assert "registered_methods" in stats
+        server_task = asyncio.create_task(server.start())
+        await asyncio.sleep(0.5)  # Wait for server to start
         
-        assert stats["running"] is True
-        assert stats["max_connections"] == 10
-        assert stats["connected_clients"] >= 0
+        try:
+            # Get server stats
+            stats = server.get_server_stats()
+            
+            assert "running" in stats
+            assert "connected_clients" in stats
+            assert "max_connections" in stats
+            assert "registered_methods" in stats
+            
+            assert stats["running"] is True
+            assert stats["max_connections"] == 10
+            assert stats["connected_clients"] >= 0
+            
+        finally:
+            # Cleanup
+            await server.stop()
+            server_task.cancel()
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
 
 
 if __name__ == "__main__":

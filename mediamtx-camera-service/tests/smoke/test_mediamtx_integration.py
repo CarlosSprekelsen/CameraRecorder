@@ -51,10 +51,11 @@ async def mediamtx_controller():
         # Start controller
         await controller.start()
         
-        yield controller
-        
-        # Cleanup: stop controller
-        await controller.stop()
+        try:
+            yield controller
+        finally:
+            # Cleanup: stop controller
+            await controller.stop()
 
 
 @pytest.fixture(scope="function")
@@ -174,43 +175,69 @@ class TestMediaMTXRealIntegration:
     """Test real MediaMTX integration."""
     
     @pytest.mark.asyncio
-    async def test_mediamtx_real_integration(self, mediamtx_controller, mediamtx_server):
-        """Test real MediaMTX integration."""
-        if not mediamtx_server:
-            pytest.skip("Failed to start MediaMTX server")
-        
-        # Test real health check
-        health_status = await mediamtx_controller.health_check()
-        assert "status" in health_status
-        assert health_status["status"] in ["healthy", "degraded", "unhealthy"]
-        assert "api_port" in health_status
-        assert health_status["api_port"] == 9997
-        
-        print("✓ MediaMTX real integration test passed")
+    async def test_mediamtx_real_integration(self):
+        """Test real MediaMTX integration without fixtures."""
+        # Create controller directly (following working pattern)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recordings_path = os.path.join(temp_dir, "recordings")
+            snapshots_path = os.path.join(temp_dir, "snapshots")
+            config_path = os.path.join(temp_dir, "mediamtx.yml")
+            
+            os.makedirs(recordings_path, exist_ok=True)
+            os.makedirs(snapshots_path, exist_ok=True)
+            
+            controller = MediaMTXController(
+                host="localhost",
+                api_port=9997,
+                rtsp_port=8554,
+                webrtc_port=8889,
+                hls_port=8888,
+                config_path=config_path,
+                recordings_path=recordings_path,
+                snapshots_path=snapshots_path
+            )
+            
+            # Start controller
+            await controller.start()
+            
+            try:
+                # Test real health check
+                health_status = await controller.health_check()
+                assert "status" in health_status
+                assert health_status["status"] in ["healthy", "degraded", "unhealthy"]
+                assert "api_port" in health_status
+                assert health_status["api_port"] == 9997
+                
+                print("✓ MediaMTX real integration test passed")
+                
+            finally:
+                # Cleanup
+                await controller.stop()
     
     @pytest.mark.asyncio
-    async def test_mediamtx_api_endpoints(self, mediamtx_server):
+    async def test_mediamtx_api_endpoints(self):
         """Test real MediaMTX API endpoints."""
-        if not mediamtx_server:
-            pytest.skip("Failed to start MediaMTX server")
-        
-        # Test against actual MediaMTX API
+        # Test against actual MediaMTX API (assume it's running)
         api_port = 9997  # Use default port for existing server
-        async with aiohttp.ClientSession() as session:
-            # Test global config endpoint
-            async with session.get(f'http://localhost:{api_port}/v3/config/global/get') as response:
-                assert response.status == 200
-                config_data = await response.json()
-                assert "api" in config_data
-                assert config_data["api"] is True
-                print(f"✓ MediaMTX API accessible, API enabled: {config_data.get('api')}")
-            
-            # Test paths list endpoint
-            async with session.get(f'http://localhost:{api_port}/v3/paths/list') as response:
-                assert response.status == 200
-                paths_data = await response.json()
-                assert isinstance(paths_data, dict)
-                print(f"✓ MediaMTX paths endpoint accessible")
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Test global config endpoint
+                async with session.get(f'http://localhost:{api_port}/v3/config/global/get') as response:
+                    assert response.status == 200
+                    config_data = await response.json()
+                    assert "api" in config_data
+                    assert config_data["api"] is True
+                    print(f"✓ MediaMTX API accessible, API enabled: {config_data.get('api')}")
+                
+                # Test paths list endpoint
+                async with session.get(f'http://localhost:{api_port}/v3/paths/list') as response:
+                    assert response.status == 200
+                    paths_data = await response.json()
+                    assert isinstance(paths_data, dict)
+                    print(f"✓ MediaMTX paths endpoint accessible")
+        except aiohttp.ClientError:
+            pytest.skip("MediaMTX server not available for API endpoint testing")
     
     @pytest.mark.asyncio
     async def test_mediamtx_controller_lifecycle(self):
@@ -244,45 +271,91 @@ class TestMediaMTXRealIntegration:
             assert controller._session is None
     
     @pytest.mark.asyncio
-    async def test_mediamtx_stream_management(self, mediamtx_controller, mediamtx_server):
+    async def test_mediamtx_stream_management(self):
         """Test MediaMTX stream management capabilities."""
-        if not mediamtx_server:
-            pytest.skip("Failed to start MediaMTX server")
-        
-        # Test stream list retrieval
-        streams = await mediamtx_controller.get_stream_list()
-        assert isinstance(streams, list)
-        
-        # Test stream creation
-        stream_config = StreamConfig(
-            name="test_stream",
-            source="rtsp://localhost:8554/test",
-            record=False
-        )
-        
-        result = await mediamtx_controller.create_stream(stream_config)
-        assert isinstance(result, dict)
-        print(f"✓ Stream creation successful: {result}")
+        # Create controller directly
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recordings_path = os.path.join(temp_dir, "recordings")
+            snapshots_path = os.path.join(temp_dir, "snapshots")
+            config_path = os.path.join(temp_dir, "mediamtx.yml")
+            
+            os.makedirs(recordings_path, exist_ok=True)
+            os.makedirs(snapshots_path, exist_ok=True)
+            
+            controller = MediaMTXController(
+                host="localhost",
+                api_port=9997,
+                rtsp_port=8554,
+                webrtc_port=8889,
+                hls_port=8888,
+                config_path=config_path,
+                recordings_path=recordings_path,
+                snapshots_path=snapshots_path
+            )
+            
+            await controller.start()
+            
+            try:
+                # Test stream list retrieval
+                streams = await controller.get_stream_list()
+                assert isinstance(streams, list)
+                
+                # Test stream creation
+                stream_config = StreamConfig(
+                    name="test_stream",
+                    source="rtsp://localhost:8554/test",
+                    record=False
+                )
+                
+                result = await controller.create_stream(stream_config)
+                assert isinstance(result, dict)
+                print(f"✓ Stream creation successful: {result}")
+                
+            finally:
+                await controller.stop()
     
     @pytest.mark.asyncio
-    async def test_mediamtx_health_monitoring(self, mediamtx_controller, mediamtx_server):
+    async def test_mediamtx_health_monitoring(self):
         """Test MediaMTX health monitoring behavior."""
-        if not mediamtx_server:
-            pytest.skip("Failed to start MediaMTX server")
-        
-        # Test health check with detailed response
-        health_status = await mediamtx_controller.health_check()
-        
-        # Validate health response structure
-        required_fields = ["status", "api_port", "correlation_id"]
-        for field in required_fields:
-            assert field in health_status
-        
-        # Test health state tracking
-        if hasattr(mediamtx_controller, '_health_state'):
-            health_state = mediamtx_controller._health_state
-            assert "total_checks" in health_state
-            assert "consecutive_failures" in health_state
+        # Create controller directly
+        with tempfile.TemporaryDirectory() as temp_dir:
+            recordings_path = os.path.join(temp_dir, "recordings")
+            snapshots_path = os.path.join(temp_dir, "snapshots")
+            config_path = os.path.join(temp_dir, "mediamtx.yml")
+            
+            os.makedirs(recordings_path, exist_ok=True)
+            os.makedirs(snapshots_path, exist_ok=True)
+            
+            controller = MediaMTXController(
+                host="localhost",
+                api_port=9997,
+                rtsp_port=8554,
+                webrtc_port=8889,
+                hls_port=8888,
+                config_path=config_path,
+                recordings_path=recordings_path,
+                snapshots_path=snapshots_path
+            )
+            
+            await controller.start()
+            
+            try:
+                # Test health check with detailed response
+                health_status = await controller.health_check()
+                
+                # Validate health response structure
+                required_fields = ["status", "api_port", "correlation_id"]
+                for field in required_fields:
+                    assert field in health_status
+                
+                # Test health state tracking
+                if hasattr(controller, '_health_state'):
+                    health_state = controller._health_state
+                    assert "total_checks" in health_state
+                    assert "consecutive_failures" in health_state
+                    
+            finally:
+                await controller.stop()
 
 
 if __name__ == "__main__":

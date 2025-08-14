@@ -1,12 +1,13 @@
 Installation Return Code: 1
 STDOUT:
-[0;34m[2025-08-14 12:05:04][0m Starting MediaMTX Camera Service installation...
-[0;34m[2025-08-14 12:05:04][0m ================================================
-[0;34m[2025-08-14 12:05:04][0m Installing system dependencies...
+[0;34m[2025-08-14 13:08:12][0m Starting MediaMTX Camera Service installation...
+[0;34m[2025-08-14 13:08:12][0m ================================================
+[0;34m[2025-08-14 13:08:12][0m Installing system dependencies...
 Hit:1 http://ae.archive.ubuntu.com/ubuntu jammy InRelease
-Hit:2 http://security.ubuntu.com/ubuntu jammy-security InRelease
-Hit:3 http://ae.archive.ubuntu.com/ubuntu jammy-updates InRelease
-Hit:4 http://ae.archive.ubuntu.com/ubuntu jammy-backports InRelease
+Get:2 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:3 http://ae.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:4 http://ae.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Fetched 384 kB in 3s (128 kB/s)
 Reading package lists...
 Reading package lists...
 Building dependency tree...
@@ -22,11 +23,11 @@ ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
 python3-pip is already the newest version (22.0.2+dfsg-1ubuntu0.6).
 python3-venv is already the newest version (3.10.6-1~22.04.1).
 0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.
-[0;32m[2025-08-14 12:05:07] SUCCESS:[0m System dependencies installed
-[0;34m[2025-08-14 12:05:07][0m Creating service user...
-[0;34m[2025-08-14 12:05:07][0m Service user already exists: camera-service
-[0;34m[2025-08-14 12:05:07][0m Installing MediaMTX server...
-[0;31m[2025-08-14 12:05:07] ERROR:[0m Bundled MediaMTX not found at /home/dts/CameraRecorder/mediamtx-camera-service/dependencies/mediamtx/mediamtx
+[0;32m[2025-08-14 13:08:20] SUCCESS:[0m System dependencies installed
+[0;34m[2025-08-14 13:08:20][0m Creating service user...
+[0;34m[2025-08-14 13:08:20][0m Service user already exists: camera-service
+[0;34m[2025-08-14 13:08:20][0m Installing MediaMTX server...
+[0;31m[2025-08-14 13:08:20] ERROR:[0m Bundled MediaMTX not found at /home/dts/CameraRecorder/mediamtx-camera-service/dependencies/mediamtx/mediamtx
 
 STDERR:
 
