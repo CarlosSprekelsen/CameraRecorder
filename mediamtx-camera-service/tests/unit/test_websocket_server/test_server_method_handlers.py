@@ -72,39 +72,48 @@ paths:
             await controller.start()
             return controller
         except Exception as e:
-            # If MediaMTX is not available, create a mock controller for testing
+            # If MediaMTX is not available, create a real HTTP test server for testing
             # This ensures tests can run even without MediaMTX installed
-            mock_controller = Mock()
+            from aiohttp import web
             
-            # Mock take_snapshot that accepts the parameters the WebSocket server passes
-            async def mock_take_snapshot(stream_name, format=None, quality=None, filename=None):
-                return {
-                    "filename": filename or f"test_snapshot.{format or 'jpg'}",
-                    "file_size": 12345,
-                    "timestamp": "2025-08-03T12:00:00Z",
-                }
-            mock_controller.take_snapshot = mock_take_snapshot
+            async def handle_health_check(request):
+                return web.json_response({
+                    "serverVersion": "v1.0.0",
+                    "serverUptime": 3600,
+                    "apiVersion": "v3"
+                })
             
-            # Mock start_recording that accepts the parameters the WebSocket server passes
-            async def mock_start_recording(stream_name, duration=None, format=None):
-                return {
-                    "filename": f"test_recording.{format or 'mp4'}",
-                    "start_time": "2025-08-03T12:00:00Z",
-                }
-            mock_controller.start_recording = mock_start_recording
+            async def handle_stream_operations(request):
+                return web.json_response({"status": "success"})
             
-            # Mock stop_recording
-            async def mock_stop_recording(stream_name):
-                return {
-                    "filename": "test_recording.mp4",
-                    "start_time": "2025-08-03T12:00:00Z",
-                    "duration": 3600,
-                    "file_size": 1073741824,
-                }
-            mock_controller.stop_recording = mock_stop_recording
+            async def handle_recording_operations(request):
+                return web.json_response({"status": "recording started"})
             
-            mock_controller.get_stream_status = AsyncMock(return_value={"status": "inactive"})
-            return mock_controller
+            app = web.Application()
+            app.router.add_get('/v3/config/global/get', handle_health_check)
+            app.router.add_post('/v3/config/paths/add/{name}', handle_stream_operations)
+            app.router.add_post('/v3/config/paths/delete/{name}', handle_stream_operations)
+            app.router.add_post('/v3/config/paths/edit/{name}', handle_recording_operations)
+            
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '127.0.0.1', 10002)
+            await site.start()
+            
+            # Create controller that uses the test server
+            test_controller = MediaMTXController(
+                host="127.0.0.1",
+                api_port=10002,
+                rtsp_port=8554,
+                webrtc_port=8889,
+                hls_port=8888,
+                config_path=os.path.join(temp_dir, "mediamtx.yml"),
+                recordings_path=os.path.join(temp_dir, "recordings"),
+                snapshots_path=os.path.join(temp_dir, "snapshots")
+            )
+            
+            await test_controller.start()
+            return test_controller
         finally:
             import shutil
             shutil.rmtree(temp_dir, ignore_errors=True)

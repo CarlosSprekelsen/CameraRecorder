@@ -3,6 +3,12 @@ Test suite for logging configuration module.
 
 Tests correlation ID propagation, formatter behavior, rotation functionality,
 and environment-based mode detection per Story S14.
+
+Requirements:
+- REQ-HEALTH-001: System shall provide comprehensive logging for health monitoring
+- REQ-HEALTH-002: System shall support structured logging for production environments
+- REQ-HEALTH-003: System shall enable correlation ID tracking across components
+- REQ-ERROR-006: System shall handle logging configuration failures gracefully
 """
 
 import json

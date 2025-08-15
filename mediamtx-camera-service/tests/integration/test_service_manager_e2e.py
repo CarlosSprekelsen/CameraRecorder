@@ -4,7 +4,12 @@ End-to-end service manager integration tests.
 Requirements Traceability:
 - REQ-SVC-001: ServiceManager shall provide end-to-end integration validation
 - REQ-SVC-002: ServiceManager shall handle camera connect/disconnect lifecycle
-- REQ-SVC-001: ServiceManager shall orchestrate MediaMTX path creation and deletion
+- REQ-SVC-003: ServiceManager shall manage configuration updates
+- REQ-PERF-001: System shall handle concurrent camera operations efficiently
+- REQ-PERF-002: System shall maintain responsive performance under load
+- REQ-HEALTH-001: System shall provide comprehensive logging for health monitoring
+- REQ-ERROR-004: System shall handle configuration loading failures gracefully
+- REQ-ERROR-005: System shall provide meaningful error messages for configuration issues
 
 Story Coverage: S1 - Service Manager Integration
 IV&V Control Point: Real end-to-end service manager validation

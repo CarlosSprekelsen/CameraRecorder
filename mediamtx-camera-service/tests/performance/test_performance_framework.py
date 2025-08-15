@@ -1,3 +1,24 @@
+"""
+Performance framework tests.
+
+Tests performance monitoring and metrics collection framework
+for real-time performance analysis and optimization.
+
+Requirements:
+- REQ-PERF-001: System shall handle concurrent camera operations efficiently
+- REQ-PERF-002: System shall maintain responsive performance under load
+- REQ-PERF-003: System shall meet latency requirements for real-time operations
+- REQ-PERF-004: System shall handle resource constraints gracefully
+- REQ-HEALTH-001: System shall provide comprehensive logging for health monitoring
+- REQ-HEALTH-002: System shall support structured logging for production environments
+- REQ-HEALTH-003: System shall enable correlation ID tracking across components
+- REQ-ERROR-004: System shall handle configuration loading failures gracefully
+- REQ-ERROR-005: System shall provide meaningful error messages for configuration issues
+- REQ-ERROR-006: System shall handle logging configuration failures gracefully
+- REQ-ERROR-007: System shall handle WebSocket connection failures gracefully
+- REQ-ERROR-008: System shall handle MediaMTX service failures gracefully
+"""
+
 import asyncio
 import json
 import pytest

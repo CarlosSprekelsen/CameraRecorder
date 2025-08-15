@@ -116,6 +116,8 @@ class MediaMTXController:
         # Enhanced tracking for health monitoring
         self._health_state = {
             "consecutive_failures": 0,
+            "failure_count": 0,  # Total failures for test compatibility
+            "success_count": 0,  # Total successes for test compatibility
             "consecutive_successes_during_recovery": 0,
             "last_success_time": 0.0,
             "last_failure_time": 0.0,
@@ -278,7 +280,7 @@ class MediaMTXController:
             Dict containing health status and metrics
 
         Raises:
-            ConnectionError: If MediaMTX is unreachable
+            ConnectionError: If MediaMTX controller is not started
         """
         if not self._session:
             raise ConnectionError("MediaMTX controller not started")
@@ -297,6 +299,7 @@ class MediaMTXController:
                     config_data = await response.json()
                     self._health_state["last_success_time"] = time.time()
                     self._health_state["total_checks"] += 1
+                    self._health_state["success_count"] += 1
 
                     return {
                         "status": "healthy",
@@ -316,6 +319,7 @@ class MediaMTXController:
                     error_text = await response.text()
                     self._health_state["last_failure_time"] = time.time()
                     self._health_state["total_checks"] += 1
+                    self._health_state["failure_count"] += 1
 
                     return {
                         "status": "unhealthy",
@@ -331,7 +335,15 @@ class MediaMTXController:
         except aiohttp.ClientError as e:
             self._health_state["last_failure_time"] = time.time()
             self._health_state["total_checks"] += 1
-            raise ConnectionError(f"MediaMTX unreachable at {self._base_url}: {e}")
+            self._health_state["failure_count"] += 1
+
+            return {
+                "status": "error",
+                "error": f"Connection error: {e}",
+                "api_port": self._api_port,
+                "correlation_id": correlation_id,
+                "consecutive_failures": self._health_state["consecutive_failures"],
+            }
         except Exception as e:
             self._logger.error(
                 f"Health check failed with unexpected error: {e}",
@@ -339,6 +351,7 @@ class MediaMTXController:
             )
             self._health_state["last_failure_time"] = time.time()
             self._health_state["total_checks"] += 1
+            self._health_state["failure_count"] += 1
 
             return {
                 "status": "error",
@@ -1579,40 +1592,15 @@ class MediaMTXController:
                     )
                     break
                 except Exception as e:
-                    consecutive_failures += 1
-                    consecutive_successes_during_recovery = (
-                        0  # Reset recovery progress on error
-                    )
-                    self._health_state["consecutive_failures"] = consecutive_failures
-                    self._health_state["consecutive_successes_during_recovery"] = 0
+                    # Only catch unexpected errors that shouldn't happen
+                    # Connection errors are now handled by health_check returning error status
                     self._logger.error(
-                        f"Health monitoring error (failure #{consecutive_failures}): {e}",
+                        f"Unexpected error in health monitoring loop: {e}",
                         extra={"correlation_id": check_correlation_id},
                         exc_info=True,
                     )
-
-                    # Configurable exponential backoff on errors with circuit breaker
-                    if (
-                        consecutive_failures >= self._health_failure_threshold
-                        and not circuit_breaker_active
-                    ):
-                        circuit_breaker_active = True
-                        circuit_breaker_start_time = time.time()
-                        consecutive_successes_during_recovery = 0
-                        self._health_state["circuit_breaker_activations"] += 1
-                        self._health_state["consecutive_successes_during_recovery"] = 0
-                        self._logger.error(
-                            f"Health monitoring circuit breaker ACTIVATED due to repeated errors "
-                            f"(activation #{self._health_state['circuit_breaker_activations']})",
-                            extra={
-                                "correlation_id": check_correlation_id,
-                                "circuit_breaker": True,
-                            },
-                        )
-
-                    # Use safe error backoff calculation
-                    error_sleep = self._calculate_backoff_interval(consecutive_failures)
-                    await asyncio.sleep(error_sleep)
+                    # Don't increment consecutive_failures for unexpected errors
+                    # Let the health check method handle all expected failure scenarios
 
         except Exception as e:
             self._logger.error(

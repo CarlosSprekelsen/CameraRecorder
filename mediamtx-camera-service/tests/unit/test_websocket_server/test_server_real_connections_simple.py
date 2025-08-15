@@ -1,6 +1,13 @@
 # tests/unit/test_websocket_server/test_server_real_connections_simple.py
 """
 Simplified real connection test for debugging.
+
+Requirements:
+- REQ-WS-001: WebSocket server shall aggregate camera status
+- REQ-WS-002: WebSocket server shall provide camera capability metadata
+- REQ-WS-003: WebSocket server shall handle MediaMTX stream status queries
+- REQ-ERROR-007: System shall handle WebSocket connection failures gracefully
+- REQ-ERROR-008: System shall handle MediaMTX service failures gracefully
 """
 
 import asyncio

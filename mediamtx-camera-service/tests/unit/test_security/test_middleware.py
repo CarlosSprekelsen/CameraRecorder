@@ -175,8 +175,26 @@ class TestSecurityMiddleware:
     
     def test_is_authenticated_true(self, security_middleware):
         """Test checking authenticated client."""
-        security_middleware.connection_auth["client_1"] = Mock()
-        security_middleware.connection_auth["client_2"] = Mock()
+        # Create real authentication results
+        from src.security.auth_manager import AuthResult
+        
+        auth_result1 = AuthResult(
+            authenticated=True,
+            role="admin",
+            user_id="user1",
+            auth_method="jwt",
+            expires_at=time.time() + 3600
+        )
+        auth_result2 = AuthResult(
+            authenticated=True,
+            role="operator",
+            user_id="user2",
+            auth_method="api_key",
+            expires_at=time.time() + 3600
+        )
+        
+        security_middleware.connection_auth["client_1"] = auth_result1
+        security_middleware.connection_auth["client_2"] = auth_result2
         
         assert security_middleware.is_authenticated("client_1") is True
         assert security_middleware.is_authenticated("client_2") is True
@@ -187,11 +205,19 @@ class TestSecurityMiddleware:
     
     def test_get_auth_result(self, security_middleware):
         """Test getting authentication result."""
-        mock_result = Mock()
-        security_middleware.connection_auth["client_1"] = mock_result
+        from src.security.auth_manager import AuthResult
+        
+        auth_result = AuthResult(
+            authenticated=True,
+            role="admin",
+            user_id="user1",
+            auth_method="jwt",
+            expires_at=time.time() + 3600
+        )
+        security_middleware.connection_auth["client_1"] = auth_result
         
         result = security_middleware.get_auth_result("client_1")
-        assert result == mock_result
+        assert result == auth_result
     
     def test_get_auth_result_none(self, security_middleware):
         """Test getting authentication result for non-authenticated client."""
@@ -200,10 +226,17 @@ class TestSecurityMiddleware:
     
     def test_has_permission_true(self, security_middleware):
         """Test permission checking for authenticated client."""
-        # Create a mock auth result with admin role
-        mock_result = Mock()
-        mock_result.role = "admin"
-        security_middleware.connection_auth["client_1"] = mock_result
+        # Create a real auth result with admin role
+        from src.security.auth_manager import AuthResult
+        
+        auth_result = AuthResult(
+            authenticated=True,
+            role="admin",
+            user_id="user1",
+            auth_method="jwt",
+            expires_at=time.time() + 3600
+        )
+        security_middleware.connection_auth["client_1"] = auth_result
         
         assert security_middleware.has_permission("client_1", "viewer") is True
         assert security_middleware.has_permission("client_1", "operator") is True
@@ -211,10 +244,17 @@ class TestSecurityMiddleware:
     
     def test_has_permission_false(self, security_middleware):
         """Test permission checking for insufficient role."""
-        # Create a mock auth result with viewer role
-        mock_result = Mock()
-        mock_result.role = "viewer"
-        security_middleware.connection_auth["client_1"] = mock_result
+        # Create a real auth result with viewer role
+        from src.security.auth_manager import AuthResult
+        
+        auth_result = AuthResult(
+            authenticated=True,
+            role="viewer",
+            user_id="user1",
+            auth_method="jwt",
+            expires_at=time.time() + 3600
+        )
+        security_middleware.connection_auth["client_1"] = auth_result
         
         assert security_middleware.has_permission("client_1", "viewer") is True
         assert security_middleware.has_permission("client_1", "operator") is False

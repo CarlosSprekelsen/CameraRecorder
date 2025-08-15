@@ -3,6 +3,12 @@ Unit tests for camera service configuration management.
 
 Tests the ConfigManager class for loading, validation, environment overrides,
 hot reload, and error handling as specified in the architecture.
+
+Requirements:
+- REQ-CONFIG-002: System shall support configuration hot reload
+- REQ-CONFIG-003: System shall validate configuration parameters at runtime
+- REQ-ERROR-004: System shall handle configuration loading failures gracefully
+- REQ-ERROR-005: System shall provide meaningful error messages for configuration issues
 """
 
 import os

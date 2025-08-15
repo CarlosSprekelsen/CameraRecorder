@@ -6,6 +6,13 @@ Requirements Traceability:
 - REQ-INT-001: Integration system shall provide real end-to-end system behavior validation
 - REQ-INT-002: Integration system shall validate real MediaMTX server integration
 - REQ-INT-003: Integration system shall test real WebSocket connections and camera control
+- REQ-PERF-001: System shall handle concurrent camera operations efficiently
+- REQ-PERF-002: System shall maintain responsive performance under load
+- REQ-HEALTH-001: System shall provide comprehensive logging for health monitoring
+- REQ-HEALTH-002: System shall support structured logging for production environments
+- REQ-ERROR-004: System shall handle configuration loading failures gracefully
+- REQ-ERROR-005: System shall provide meaningful error messages for configuration issues
+- REQ-ERROR-006: System shall handle logging configuration failures gracefully
 
 Story Coverage: S4 - System Integration
 IV&V Control Point: Real system integration validation

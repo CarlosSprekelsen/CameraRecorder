@@ -1,3 +1,95 @@
+# Corrected Developer Task Prompt
+
+## Generic Reusable Developer Task
+
+```
+Your role: Developer
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Fix real system issues discovered through test analysis and implement real component integration
+
+CONTEXT: Tests revealed actual system integration problems, interface mismatches, and missing functionality. Your job is to fix the REAL SYSTEM, not make tests pass by mocking problems away.
+
+TARGET: Work through Active Issues in priority order, fixing actual system bugs and integration issues
+
+SYSTEM FIXING APPROACH:
+1. Analyze the violation to understand the real system problem
+2. Fix the actual system code (not just the test) to resolve integration issues
+3. Replace mocks with real component integration where specified
+4. Add missing requirements traceability to improve system documentation
+5. Validate fixes work with real components and real usage scenarios
+6. Clean up obsolete test files that are no longer needed
+
+REAL BUG FIXING MINDSET:
+- If tests reveal interface mismatches → Fix the interface, not the test
+- If mocks hide integration issues → Replace with real integration
+- If components don't work together → Fix the integration
+- If functionality is missing → Implement the missing functionality
+- If tests pass but system doesn't work → Fix the system
+
+VALIDATION APPROACH:
+- Run tests with real components to verify actual system behavior
+- Test end-to-end workflows to ensure integration works
+- Verify system meets requirements through real usage
+- Confirm no regressions in actual system functionality
+
+CLEANUP REQUIREMENTS:
+- Delete obsolete test files that duplicate functionality
+- Consolidate scattered test files into coherent modules
+- Remove test variations (_real, _fixed, _v2) that create confusion
+- Maintain functionality while reducing file proliferation
+
+FORBIDDEN SYSTEM-HIDING ACTIONS:
+- Mocking away real integration problems
+- Creating test variants instead of fixing root issues
+- Making tests pass without fixing underlying system problems
+- Assuming this is "just a test exercise" - this is real system improvement
+
+SUCCESS CRITERIA:
+- Real system issues resolved through code changes
+- Integration problems fixed with working real component connections
+- Requirements properly documented and traceable to implementation
+- Test file organization improved without functionality loss
+- System demonstrably works better after fixes
+
+INPUT: Specific Issue IDs from test_status.md Active Issues table
+REFERENCE: See test_status.md for exact file paths, line numbers, and specific actions required
+
+CURRENT FOCUS: Issues T001-T005 in test_server_method_handlers.py
+DETAILED SPECIFICATIONS: Refer to test_status.md Active Issues table for exact violations and required fixes
+```
+
+## Key Changes Made
+
+### ❌ Old Misleading Language
+- "Fix specific test compliance issue"
+- "test fixing exercise" 
+- Focus on making tests pass
+
+### ✅ New System-Focused Language
+- "Fix real system issues discovered through test analysis"
+- "Your job is to fix the REAL SYSTEM, not make tests pass by mocking problems away"
+- "REAL BUG FIXING MINDSET"
+
+### ❌ Old Test-Centric Approach
+- Fix violations to make tests compliant
+- Focus on test file management
+
+### ✅ New System-Centric Approach
+- Fix actual system integration problems
+- Replace mocks with real component integration
+- Fix interfaces and missing functionality
+
+### Added Context
+- "Tests revealed actual system integration problems"
+- "If tests reveal interface mismatches → Fix the interface, not the test"
+- "If tests pass but system doesn't work → Fix the system"
+
+## Result
+This prompt will make AI agents understand they're doing **real system engineering** to fix **actual bugs discovered through testing**, not just making tests pass through better mocking.
+
+The AI should now recognize that WebSocket→MediaMTX parameter mismatch as a **real bug requiring system fixes**, not a test compliance issue requiring better mocks.
+
 ---------------------------------------------------------------------------
 Prompt 5 [Complete]: src/camera_service/main.py
 

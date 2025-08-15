@@ -360,32 +360,37 @@ class TestServerNotifications:
     @pytest.mark.asyncio
     async def test_targeted_notification_broadcast(self, server):
         """Test broadcasting notifications to specific client list."""
-        # Setup multiple mock clients
-        client1 = Mock()
-        client1.websocket.open = True
-        client1.websocket.send = AsyncMock()
+        # Setup multiple real WebSocket clients
+        client1 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        client2 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        client3 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
 
-        client2 = Mock()
-        client2.websocket.open = True
-        client2.websocket.send = AsyncMock()
+        # Connect all clients
+        await client1.connect()
+        await client2.connect()
+        await client3.connect()
 
-        client3 = Mock()
-        client3.websocket.open = True
-        client3.websocket.send = AsyncMock()
+        try:
+            # Broadcast to specific clients only
+            await server.broadcast_notification(
+                method="targeted_notification",
+                params={"message": "test"},
+                target_clients=["client1", "client3"],
+            )
 
-        server._clients = {"client1": client1, "client2": client2, "client3": client3}
+            # Wait for notifications to be sent
+            await asyncio.sleep(0.1)
 
-        # Broadcast to specific clients only
-        await server.broadcast_notification(
-            method="targeted_notification",
-            params={"message": "test"},
-            target_clients=["client1", "client3"],
-        )
+            # Verify notifications were sent (check received messages)
+            assert len(client1.received_messages) > 0
+            assert len(client2.received_messages) == 0  # Should not receive
+            assert len(client3.received_messages) > 0
 
-        # Verify only targeted clients received notification
-        client1.websocket.send.assert_called_once()
-        client2.websocket.send.assert_not_called()  # Should not receive
-        client3.websocket.send.assert_called_once()
+        finally:
+            # Clean up connections
+            await client1.disconnect()
+            await client2.disconnect()
+            await client3.disconnect()
 
     def test_api_specification_compliance_documentation(self, server):
         """Verify notification methods document API compliance."""

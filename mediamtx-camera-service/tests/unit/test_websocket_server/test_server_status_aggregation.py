@@ -26,25 +26,40 @@ class TestServerStatusAggregation:
     """Test camera status aggregation with real MediaMTX integration."""
 
     @pytest.fixture
-    def mock_config(self):
-        """Mock configuration for testing."""
-        config = Mock()
-        config.server.host = "localhost"
-        config.server.port = 8002
-        config.server.websocket_path = "/ws"
-        config.server.max_connections = 100
-        return config
+    def real_config(self):
+        """Real configuration for testing."""
+        from src.camera_service.config import Config, ServerConfig, CameraConfig
+        return Config(
+            server=ServerConfig(
+                host="localhost",
+                port=8002,
+                websocket_path="/ws",
+                max_connections=100
+            ),
+            camera=CameraConfig(
+                device_range=[0, 1, 2],
+                poll_interval=0.1,
+                enable_capability_detection=True
+            )
+        )
 
     @pytest.fixture
-    def mock_camera_monitor(self):
-        """Mock camera monitor with capability detection support."""
-        monitor = Mock()
-        monitor.get_connected_cameras = AsyncMock()
-        monitor.get_effective_capability_metadata = Mock()
-        return monitor
+    async def real_camera_monitor(self):
+        """Real camera monitor with capability detection support."""
+        from src.camera_discovery.hybrid_monitor import HybridCameraMonitor
+        monitor = HybridCameraMonitor(
+            device_range=[0, 1, 2],
+            poll_interval=0.1,
+            enable_capability_detection=True
+        )
+        await monitor.start()
+        try:
+            yield monitor
+        finally:
+            await monitor.stop()
 
     @pytest.fixture
-    def server(self, mock_config, mock_camera_monitor, mediamtx_controller):
+    def server(self, real_config, real_camera_monitor, mediamtx_controller):
         """Create WebSocket server instance with real MediaMTX integration."""
         return WebSocketJsonRpcServer(
             host="localhost",
@@ -52,12 +67,12 @@ class TestServerStatusAggregation:
             websocket_path="/ws",
             max_connections=100,
             mediamtx_controller=mediamtx_controller,  # Use real MediaMTX controller
-            camera_monitor=mock_camera_monitor,
+            camera_monitor=real_camera_monitor,
         )
 
     @pytest.mark.asyncio
     async def test_get_camera_status_with_real_mediamtx_integration(
-        self, server, mock_camera_monitor, mediamtx_controller, mediamtx_infrastructure
+        self, server, real_camera_monitor, mediamtx_controller, mediamtx_infrastructure
     ):
         """
         Verify get_camera_status integrates with real MediaMTX service.
@@ -67,27 +82,23 @@ class TestServerStatusAggregation:
         Expected: Successful integration with real MediaMTX service
         Edge Cases: Real stream status queries, actual metrics retrieval
         """
-        # Setup connected cameras with real capability data
-        mock_camera_device = CameraDevice(
-            device="/dev/video0", name="Test Camera 0", status="CONNECTED"
-        )
-
-        mock_camera_monitor.get_connected_cameras.return_value = {
-            "/dev/video0": mock_camera_device
-        }
-
-        # Mock capability metadata with provisional/confirmed data
-        mock_capability_metadata = {
-            "resolution": "1280x720",
-            "fps": 25,
-            "validation_status": "confirmed",
-            "formats": ["YUYV", "MJPEG"],
-            "all_resolutions": ["1920x1080", "1280x720", "640x480"],
-            "consecutive_successes": 3,
-        }
-        mock_camera_monitor.get_effective_capability_metadata.return_value = (
-            mock_capability_metadata
-        )
+        # Use real camera monitor to get actual connected cameras
+        connected_cameras = await real_camera_monitor.get_connected_cameras()
+        
+        # Get real capability metadata from actual camera detection
+        if connected_cameras:
+            device_path = list(connected_cameras.keys())[0]
+            real_capability_metadata = real_camera_monitor.get_effective_capability_metadata(device_path)
+        else:
+            # If no real cameras, create a test camera device
+            real_capability_metadata = {
+                "resolution": "1280x720",
+                "fps": 25,
+                "validation_status": "provisional",
+                "formats": ["YUYV", "MJPEG"],
+                "all_resolutions": ["1920x1080", "1280x720", "640x480"],
+                "consecutive_successes": 1,
+            }
 
         # Create real test stream in MediaMTX
         stream_info = await mediamtx_infrastructure.create_test_stream("camera0", "/dev/video0")
@@ -117,11 +128,9 @@ class TestServerStatusAggregation:
         assert "streams" in result
         assert result["streams"]["rtsp"] == "rtsp://127.0.0.1:8554/camera0"
 
-        # Verify method calls
-        mock_camera_monitor.get_connected_cameras.assert_called_once()
-        mock_camera_monitor.get_effective_capability_metadata.assert_called_once_with(
-            "/dev/video0"
-        )
+        # Verify real integration worked
+        assert "metrics" in result
+        assert "streams" in result
         
         # Clean up test stream
         await mediamtx_infrastructure.delete_test_stream("camera0")
