@@ -19,6 +19,7 @@ Never override without explicit sign-off:
 4. **Roles and Responsibilities**: `docs/development/roles-responsibilities.md` (universal)
 5. **API Reference**: `docs/api/` (project-specific)
 6. **Project Requirements**: Project requirements document (project-specific)
+7. **Test Guidelines**: `docs/development/testing-guide.md` (project-specific)
 
 ## 2. Decision Priority  
 When encountering conflicting information:

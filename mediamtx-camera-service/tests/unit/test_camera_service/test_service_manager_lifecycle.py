@@ -2,6 +2,14 @@
 """
 Real component lifecycle tests for ServiceManager.
 
+Requirements Traceability:
+- REQ-SVC-001: ServiceManager shall orchestrate camera discovery and MediaMTX integration
+- REQ-SVC-002: ServiceManager shall handle camera lifecycle events with real component coordination
+- REQ-ERROR-003: ServiceManager shall maintain operation during MediaMTX failures
+
+Story Coverage: S1 - Service Manager Integration
+IV&V Control Point: Real component orchestration validation
+
 Replaces over-mocked tests by orchestrating actual internal components and mocking
 only external boundaries (HTTP to MediaMTX via aiohttp and filesystem isolation).
 """
@@ -9,11 +17,13 @@ only external boundaries (HTTP to MediaMTX via aiohttp and filesystem isolation)
 import asyncio
 import tempfile
 import shutil
+import aiohttp
+import aiohttp.test_utils
 from pathlib import Path
 from typing import Dict
 
 import pytest
-from unittest.mock import AsyncMock, patch
+# Real HTTP integration - no mocks needed
 
 from src.camera_service.service_manager import ServiceManager
 from src.camera_service.config import (
@@ -67,6 +77,87 @@ def service_manager(real_config: Config) -> ServiceManager:
     return ServiceManager(real_config)
 
 
+@pytest.fixture
+async def mock_mediamtx_server():
+    """Create a real HTTP test server that simulates MediaMTX API responses."""
+    
+    async def handle_health_check(request):
+        """Handle MediaMTX health check endpoint."""
+        return aiohttp.web.json_response({
+            "serverVersion": "v1.0.0",
+            "serverUptime": 3600,
+            "apiVersion": "v3"
+        })
+    
+    async def handle_path_config(request):
+        """Handle MediaMTX path configuration endpoint."""
+        return aiohttp.web.json_response({"status": "ok"})
+    
+    async def handle_stream_status(request):
+        """Handle MediaMTX stream status endpoint."""
+        return aiohttp.web.json_response({
+            "items": [
+                {
+                    "name": "camera0",
+                    "status": "active",
+                    "source": "rtsp://localhost:8554/camera0"
+                }
+            ]
+        })
+    
+    app = aiohttp.web.Application()
+    app.router.add_get('/v3/config/global/get', handle_health_check)
+    app.router.add_post('/v3/config/paths/edit/{path_name}', handle_path_config)
+    app.router.add_get('/v3/paths/list', handle_stream_status)
+    
+    runner = aiohttp.test_utils.TestServer(app, port=9997)
+    await runner.start_server()
+    
+    try:
+        yield runner
+    finally:
+        await runner.close()
+
+
+@pytest.fixture
+async def mock_mediamtx_server_failure():
+    """Create a real HTTP test server that simulates MediaMTX failures."""
+    
+    async def handle_health_check(request):
+        """Handle MediaMTX health check endpoint."""
+        return aiohttp.web.json_response({
+            "serverVersion": "v1.0.0",
+            "serverUptime": 3600,
+            "apiVersion": "v3"
+        })
+    
+    async def handle_path_config_failure(request):
+        """Handle MediaMTX path configuration endpoint with failure."""
+        return aiohttp.web.json_response(
+            {"error": "Internal server error"}, 
+            status=500
+        )
+    
+    async def handle_stream_status(request):
+        """Handle MediaMTX stream status endpoint."""
+        return aiohttp.web.json_response({
+            "items": []
+        })
+    
+    app = aiohttp.web.Application()
+    app.router.add_get('/v3/config/global/get', handle_health_check)
+    app.router.add_post('/v3/config/paths/edit/{path_name}', handle_path_config_failure)
+    app.router.add_get('/v3/paths/list', handle_stream_status)
+    
+    runner = aiohttp.test_utils.TestServer(app, port=9998)
+    await runner.start_server()
+    
+    try:
+        yield runner
+    finally:
+        await runner.close()
+
+
 def _connected_event(device_path: str = "/dev/video0") -> CameraEventData:
     dev = CameraDevice(device=device_path, name=f"Camera {device_path}", status="CONNECTED")
     return CameraEventData(device_path=device_path, event_type=CameraEvent.CONNECTED, device_info=dev, timestamp=1234567890.0)
@@ -78,109 +169,52 @@ def _disconnected_event(device_path: str = "/dev/video0") -> CameraEventData:
 
 
 @pytest.mark.asyncio
-async def test_real_connect_flow(service_manager: ServiceManager):
-    with patch("src.mediamtx_wrapper.controller.aiohttp.ClientSession") as mock_session:
-        from unittest.mock import MagicMock
-        sess = MagicMock()
-        get_ctx = MagicMock()
-        get_enter = MagicMock()
-        get_enter.status = 200
-        get_enter.json = AsyncMock(return_value={"serverVersion": "x", "serverUptime": 1})
-        get_ctx.__aenter__ = AsyncMock(return_value=get_enter)
-        post_ctx = MagicMock()
-        post_enter = MagicMock()
-        post_enter.status = 200
-        post_ctx.__aenter__ = AsyncMock(return_value=post_enter)
-        sess.get.return_value = get_ctx
-        sess.post.return_value = post_ctx
-        mock_session.return_value = sess
+async def test_real_connect_flow(service_manager: ServiceManager, mock_mediamtx_server):
+    """Test real camera connect flow with actual HTTP integration."""
+    # Use real HTTP server instead of mocked session
+    await asyncio.wait_for(service_manager.start(), timeout=10.0)
+    await service_manager.handle_camera_event(_connected_event("/dev/video0"))
 
-        await asyncio.wait_for(service_manager.start(), timeout=10.0)
-        await service_manager.handle_camera_event(_connected_event("/dev/video0"))
+    # Ensure service remained running
+    assert service_manager.is_running is True
 
-        # Ensure service remained running
-        assert service_manager.is_running is True
-
-        await service_manager.stop()
+    await service_manager.stop()
 
 
 @pytest.mark.asyncio
-async def test_real_disconnect_flow(service_manager: ServiceManager):
-    with patch("src.mediamtx_wrapper.controller.aiohttp.ClientSession") as mock_session:
-        from unittest.mock import MagicMock
-        sess = MagicMock()
-        get_ctx = MagicMock()
-        get_enter = MagicMock()
-        get_enter.status = 200
-        get_enter.json = AsyncMock(return_value={"serverVersion": "x", "serverUptime": 1})
-        get_ctx.__aenter__ = AsyncMock(return_value=get_enter)
-        post_ctx = MagicMock()
-        post_enter = MagicMock()
-        post_enter.status = 200
-        post_ctx.__aenter__ = AsyncMock(return_value=post_enter)
-        sess.get.return_value = get_ctx
-        sess.post.return_value = post_ctx
-        mock_session.return_value = sess
+async def test_real_disconnect_flow(service_manager: ServiceManager, mock_mediamtx_server):
+    """Test real camera disconnect flow with actual HTTP integration."""
+    # Use real HTTP server instead of mocked session
+    await asyncio.wait_for(service_manager.start(), timeout=10.0)
+    await service_manager.handle_camera_event(_connected_event("/dev/video0"))
 
-        await asyncio.wait_for(service_manager.start(), timeout=10.0)
-        await service_manager.handle_camera_event(_connected_event("/dev/video0"))
+    await service_manager.handle_camera_event(_disconnected_event("/dev/video0"))
+    assert service_manager.is_running is True
 
-        await service_manager.handle_camera_event(_disconnected_event("/dev/video0"))
-        assert service_manager.is_running is True
-
-        await service_manager.stop()
+    await service_manager.stop()
 
 
 @pytest.mark.asyncio
-async def test_real_mediamtx_failure_keeps_service_running(service_manager: ServiceManager):
-    with patch("src.mediamtx_wrapper.controller.aiohttp.ClientSession") as mock_session:
-        from unittest.mock import MagicMock
-        sess = MagicMock()
-        get_ctx = MagicMock()
-        get_enter = MagicMock()
-        get_enter.status = 200
-        get_enter.json = AsyncMock(return_value={"serverVersion": "x", "serverUptime": 1})
-        get_ctx.__aenter__ = AsyncMock(return_value=get_enter)
-        post_ctx = MagicMock()
-        post_enter = MagicMock()
-        post_enter.status = 500
-        post_enter.text = AsyncMock(return_value="error")
-        post_ctx.__aenter__ = AsyncMock(return_value=post_enter)
-        sess.get.return_value = get_ctx
-        sess.post.return_value = post_ctx
-        mock_session.return_value = sess
-
-        await asyncio.wait_for(service_manager.start(), timeout=10.0)
-        await service_manager.handle_camera_event(_connected_event("/dev/video0"))
-        assert service_manager.is_running is True
-        await service_manager.stop()
+async def test_real_mediamtx_failure_keeps_service_running(service_manager: ServiceManager, mock_mediamtx_server_failure):
+    """Test that service remains running when MediaMTX fails with real HTTP integration."""
+    # Use real HTTP server that returns 500 errors instead of mocked session
+    await asyncio.wait_for(service_manager.start(), timeout=10.0)
+    await service_manager.handle_camera_event(_connected_event("/dev/video0"))
+    assert service_manager.is_running is True
+    await service_manager.stop()
 
 
 @pytest.mark.asyncio
-async def test_real_capability_metadata(service_manager: ServiceManager):
-    with patch("src.mediamtx_wrapper.controller.aiohttp.ClientSession") as mock_session:
-        from unittest.mock import MagicMock
-        sess = MagicMock()
-        get_ctx = MagicMock()
-        get_enter = MagicMock()
-        get_enter.status = 200
-        get_enter.json = AsyncMock(return_value={"serverVersion": "x", "serverUptime": 1})
-        get_ctx.__aenter__ = AsyncMock(return_value=get_enter)
-        post_ctx = MagicMock()
-        post_enter = MagicMock()
-        post_enter.status = 200
-        post_ctx.__aenter__ = AsyncMock(return_value=post_enter)
-        sess.get.return_value = get_ctx
-        sess.post.return_value = post_ctx
-        mock_session.return_value = sess
-
-        await asyncio.wait_for(service_manager.start(), timeout=10.0)
-        try:
-            md = await service_manager._get_enhanced_camera_metadata(_connected_event("/dev/video0"))
-            assert isinstance(md, dict)
-            assert "resolution" in md and "fps" in md and "validation_status" in md
-        finally:
-            await service_manager.stop()
+async def test_real_capability_metadata(service_manager: ServiceManager, mock_mediamtx_server):
+    """Test real camera capability metadata with actual HTTP integration."""
+    # Use real HTTP server instead of mocked session
+    await asyncio.wait_for(service_manager.start(), timeout=10.0)
+    try:
+        md = await service_manager._get_enhanced_camera_metadata(_connected_event("/dev/video0"))
+        assert isinstance(md, dict)
+        assert "resolution" in md and "fps" in md and "validation_status" in md
+    finally:
+        await service_manager.stop()
 
 
 # TODO: HIGH: Add integration tests with real camera monitor instance [Story:E1/S5]

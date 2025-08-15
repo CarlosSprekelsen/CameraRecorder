@@ -804,7 +804,7 @@ class MediaMTXController:
             raise ConnectionError(error_msg)
 
     async def take_snapshot(
-        self, stream_name: str, filename: Optional[str] = None
+        self, stream_name: str, filename: Optional[str] = None, format: str = "jpg", quality: int = 85
     ) -> Dict[str, Any]:
         """
         Capture a snapshot from the specified stream using FFmpeg with enhanced process management.
@@ -812,6 +812,8 @@ class MediaMTXController:
         Args:
             stream_name: Name of the stream to capture
             filename: Custom filename (None for auto-generated)
+            format: Image format (jpg, png)
+            quality: Image quality (1-100)
 
         Returns:
             Dict containing snapshot information
@@ -835,7 +837,7 @@ class MediaMTXController:
             # Generate filename if not provided
             if not filename:
                 timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-                filename = f"{stream_name}_snapshot_{timestamp}.jpg"
+                filename = f"{stream_name}_snapshot_{timestamp}.{format}"
 
             # Validate snapshots directory with enhanced error handling
             try:
@@ -890,7 +892,7 @@ class MediaMTXController:
                 "-vframes",
                 "1",  # Capture only 1 frame
                 "-q:v",
-                "2",  # High quality
+                str(quality),  # Use specified quality
                 "-timeout",
                 "5000000",  # 5 second timeout in microseconds
                 "-rtsp_transport",

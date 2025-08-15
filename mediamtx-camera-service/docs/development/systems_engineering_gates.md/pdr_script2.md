@@ -1,9 +1,9 @@
 # Technology-Agnostic PDR Execution Framework
 
 ## Systems Engineering Principles
-**Primary Goal:** Validate system design through executable evidence
-**Quality Gate:** Working system with meaningful validation coverage
-**Failure Mode:** Process continues despite component failures - agents adapt and report
+**Primary Goal:** Validate detailed design through executable evidence and systematic remediation
+**Quality Gate:** Working system with comprehensive validation coverage
+**Key Innovation:** Every document output has follow-up prompts that use it to drive immediate action
 
 ## Universal Agent Framework
 ```
@@ -40,11 +40,12 @@ EXECUTION STRATEGY:
 - Categorize rather than fix during assessment
 
 OUTPUT FORMAT:
-Create test_reality_assessment.md with:
+Create evidence/pdr-actual/01_test_reality_assessment.md with:
 - Total tests discovered: N
 - Execution results: PASS/FAIL/TIMEOUT/ERROR counts
 - Failure categorization by system impact
 - Estimated fix effort per category (hours/days)
+- Specific failing tests listed by category
 
 SUCCESS CRITERIA:
 - Complete test inventory executed individually
@@ -57,12 +58,53 @@ If tests fail to run → document tooling gaps and continue assessment
 If timeout occurs → mark as infrastructure issue and continue
 ```
 
-### Task 1.2: End-to-End System Validation
+### Task 1.2: System Critical Fix Execution
+```
+Your role: Developer
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Use evidence/pdr-actual/01_test_reality_assessment.md to fix all SYSTEM_CRITICAL failures immediately.
+
+INPUT DOCUMENT: evidence/pdr-actual/01_test_reality_assessment.md
+
+EXECUTION APPROACH:
+1. Extract all SYSTEM_CRITICAL failures from assessment document
+2. For each failure: analyze root cause, implement fix, verify fix
+3. Re-run each fixed test individually to confirm resolution
+4. Update assessment document with fix results
+
+FIX STRATEGY:
+- Focus only on SYSTEM_CRITICAL issues that break core functionality
+- Implement minimal viable fixes that restore functionality
+- Verify each fix through test re-execution
+- Document any fixes that create new issues
+
+OUTPUT FORMAT:
+Update evidence/pdr-actual/01_test_reality_assessment.md with:
+- Fix implemented for each SYSTEM_CRITICAL issue
+- Before/after test results
+- Any new issues discovered during fixes
+- Remaining SYSTEM_CRITICAL issues (if any) with blocking reasons
+
+SUCCESS CRITERIA:
+- All SYSTEM_CRITICAL test failures resolved or documented as blocked
+- Core system functionality restored through test validation
+- Assessment document updated with actual fix results
+
+AGENT ADAPTATION:
+If fix creates new issues → document in assessment and continue
+If fix impossible → document blocking issue and rationale
+If test passes but functionality still broken → investigate and document mismatch
+```
+
+### Task 1.3: End-to-End System Validation
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Task: Validate critical system workflows through black-box integration testing.
+
+INPUT CONTEXT: System with SYSTEM_CRITICAL issues resolved per Task 1.2
 
 SYSTEMS ENGINEERING APPROACH:
 1. Identify primary system use cases from requirements
@@ -77,11 +119,12 @@ VALIDATION METHODOLOGY:
 - Error condition and boundary testing
 
 OUTPUT FORMAT:
-Create system_validation_report.md with:
+Create evidence/pdr-actual/02_system_validation_report.md with:
 - Use case execution results: WORKING/BROKEN/PARTIAL
 - Performance characteristics: response times, resource usage
 - Integration points: FUNCTIONAL/FAILED/UNTESTED
 - Requirement coverage: VERIFIED/UNVERIFIED/CONTRADICTED
+- Specific broken workflows with error details
 
 SUCCESS CRITERIA:
 - Critical workflows tested end-to-end
@@ -94,89 +137,81 @@ If system fails to start → document startup issues and test what's possible
 If requirements unclear → test observable system behavior
 ```
 
----
-
-## Phase 2: System Correction (2-3 Days)
-
-### Task 2.1: Critical System Repair
+### Task 1.4: Integration Issue Fix Execution
 ```
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Repair system components to achieve working end-to-end functionality.
+Task: Use evidence/pdr-actual/02_system_validation_report.md to fix all BROKEN workflows.
 
-SYSTEMS ENGINEERING APPROACH:
-1. Prioritize fixes by system impact (CRITICAL → HIGH → MEDIUM)
-2. Focus on integration points and core workflows first
-3. Implement minimal viable fixes that restore functionality
-4. Validate each fix through system-level testing
+INPUT DOCUMENT: evidence/pdr-actual/02_system_validation_report.md
 
-REPAIR STRATEGY:
-- Fix system functionality, not test compliance
-- Address integration failures before unit test failures
+EXECUTION APPROACH:
+1. Extract all BROKEN workflows from validation report
+2. For each broken workflow: analyze failure, implement fix, validate fix
+3. Re-run workflow validation to confirm resolution
+4. Update validation report with fix results
+
+FIX STRATEGY:
+- Prioritize workflows by business impact
+- Fix integration points and external dependencies first
 - Implement error handling for known failure modes
-- Document system behavior changes
-
-QUALITY GATES:
-- Each fix improves observable system behavior
-- Integration points become functional
-- Core workflows complete successfully
-- System startup and shutdown work reliably
+- Validate each fix through end-to-end workflow execution
 
 OUTPUT FORMAT:
-Create system_repair_log.md with:
-- Fix priority and system impact
-- Before/after behavior comparison
-- Integration point status changes
-- Remaining known issues
+Update evidence/pdr-actual/02_system_validation_report.md with:
+- Fix implemented for each BROKEN workflow
+- Before/after workflow execution results
+- Any new issues discovered during fixes
+- Remaining BROKEN workflows with blocking reasons
 
 SUCCESS CRITERIA:
-- Critical workflows functional end-to-end
+- All critical workflows functional end-to-end
 - System operates reliably in target environment
-- Integration points work with real dependencies
+- Validation report updated with actual fix results
 
 AGENT ADAPTATION:
-If dependencies missing → implement stubs with clear TODOs
+If dependencies missing → implement stubs with clear TODOs and document
 If architecture issues found → document and implement minimal fixes
 If requirements conflicts → document discrepancies and choose implementation
 ```
 
-### Task 2.2: Test System Improvement
+---
+
+## Phase 2: Test System Improvement (1-2 Days)
+
+### Task 2.1: Test Artifact Cleanup
 ```
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Improve test system to detect real regressions and validate requirements.
+Task: Use evidence/pdr-actual/01_test_reality_assessment.md to fix all TEST_ARTIFACT failures.
 
-SYSTEMS ENGINEERING APPROACH:
-1. Eliminate tests that don't detect real system problems
-2. Add tests for critical failure modes
-3. Ensure tests validate requirements, not implementation details
-4. Focus on integration and boundary condition testing
+INPUT DOCUMENT: evidence/pdr-actual/01_test_reality_assessment.md
 
-TEST IMPROVEMENT STRATEGY:
+EXECUTION APPROACH:
+1. Extract all TEST_ARTIFACT failures from assessment document
+2. For each failure: fix test infrastructure, remove broken tests, or improve test quality
+3. Re-run affected tests to confirm fixes
+4. Document test improvements and removals
+
+CLEANUP STRATEGY:
 - Remove over-mocked tests that hide integration issues
-- Add tests that would catch real regressions
-- Test error conditions and edge cases
-- Validate requirement satisfaction through testing
-
-QUALITY METRICS:
-- Tests detect when requirements are violated
-- Test failures indicate real system problems
-- Integration tests exercise realistic scenarios
-- Error condition coverage for critical paths
+- Fix test infrastructure and tooling problems
+- Improve test reliability and execution speed
+- Focus on tests that validate requirements, not implementation details
 
 OUTPUT FORMAT:
-Create test_improvement_report.md with:
-- Tests removed/simplified with justification
+Create evidence/pdr-actual/03_test_improvement_report.md with:
+- Tests removed with justification for removal
+- Test infrastructure fixes implemented
 - New tests added with coverage rationale
-- Test execution time and reliability improvements
-- Requirement coverage validation
+- Test execution reliability improvements
 
 SUCCESS CRITERIA:
-- Test failures indicate real system issues
-- Tests would catch regressions in critical functionality
-- Test execution is reliable and informative
+- TEST_ARTIFACT failures resolved through infrastructure fixes or test removal
+- Test execution reliable and informative
+- Test suite focused on meaningful validation
 
 AGENT ADAPTATION:
 If test framework limitations → work within constraints and document gaps
@@ -184,22 +219,67 @@ If requirements unclear → test observable system behavior
 If test execution unreliable → simplify and improve reliability
 ```
 
+### Task 2.2: Integration Test Enhancement
+```
+Your role: Developer
+Ground rules: docs/development/project-ground-rules.md
+Role reference: docs/development/roles-responsibilities.md
+Task: Use evidence/pdr-actual/01_test_reality_assessment.md to address INTEGRATION_ISSUE failures.
+
+INPUT DOCUMENT: evidence/pdr-actual/01_test_reality_assessment.md
+
+EXECUTION APPROACH:
+1. Extract all INTEGRATION_ISSUE failures from assessment document
+2. For each issue: implement proper integration testing or fix component interactions
+3. Add integration tests for workflows validated in Task 1.3
+4. Focus on realistic integration scenarios, not mocked interactions
+
+INTEGRATION STRATEGY:
+- Test with real external dependencies where possible
+- Add integration tests for critical component interactions
+- Test error conditions and boundary cases
+- Validate data flow and communication patterns
+
+OUTPUT FORMAT:
+Update evidence/pdr-actual/03_test_improvement_report.md with:
+- Integration issues resolved through proper testing
+- New integration tests added with coverage rationale
+- Component interaction validation improvements
+- External dependency testing enhancements
+
+SUCCESS CRITERIA:
+- INTEGRATION_ISSUE failures resolved through proper integration testing
+- Integration tests exercise realistic scenarios
+- Component interactions validated through testing
+
+AGENT ADAPTATION:
+If external systems unavailable → implement realistic stubs with behavior validation
+If component interfaces unclear → test observable behavior and document requirements
+If integration complex → focus on critical paths and document coverage gaps
+```
+
 ---
 
 ## Phase 3: System Acceptance (1 Day)
 
-### Task 3.1: System Acceptance Testing
+### Task 3.1: Comprehensive System Validation
 ```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Validate system readiness through comprehensive acceptance testing.
+Task: Re-validate complete system using all previous fix results.
 
-SYSTEMS ENGINEERING APPROACH:
+INPUT DOCUMENTS: 
+- evidence/pdr-actual/01_test_reality_assessment.md (updated with fixes)
+- evidence/pdr-actual/02_system_validation_report.md (updated with fixes)
+- evidence/pdr-actual/03_test_improvement_report.md
+
+VALIDATION APPROACH:
 1. Deploy system in clean target environment
-2. Execute complete acceptance test suite
-3. Validate all critical requirements through system operation
+2. Execute complete test suite with individual test execution
+3. Re-run all workflows from system validation report
 4. Measure system performance under realistic conditions
+5. Validate all fixes are working correctly
 
 ACCEPTANCE CRITERIA:
 - System deploys successfully in target environment
@@ -208,15 +288,10 @@ ACCEPTANCE CRITERIA:
 - Error handling works for known failure modes
 - Integration points function with real dependencies
 
-VALIDATION METHODOLOGY:
-- Clean environment deployment testing
-- Full workflow execution with realistic data
-- Performance and reliability testing
-- Boundary condition and error testing
-
 OUTPUT FORMAT:
-Create acceptance_test_results.md with:
+Create evidence/pdr-actual/04_acceptance_test_results.md with:
 - Deployment success/failure in clean environment
+- Complete test suite execution results
 - Use case execution results with evidence
 - Performance measurements vs requirements
 - Integration point validation results
@@ -230,20 +305,26 @@ SUCCESS CRITERIA:
 AGENT ADAPTATION:
 If deployment fails → document issues and test what's possible
 If performance issues → measure and document actual performance
-If requirements unclear → validate against observable system behavior
+If new issues found → document for potential next iteration
 ```
 
-### Task 3.2: Authorization Decision
+### Task 3.2: Final Authorization Decision
 ```
 Your role: Project Manager
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
-Task: Make authorization decision based on system demonstration and risk assessment.
+Task: Make authorization decision based on all validation evidence.
+
+INPUT DOCUMENTS:
+- evidence/pdr-actual/01_test_reality_assessment.md (with fixes)
+- evidence/pdr-actual/02_system_validation_report.md (with fixes)  
+- evidence/pdr-actual/03_test_improvement_report.md
+- evidence/pdr-actual/04_acceptance_test_results.md
 
 DECISION FRAMEWORK:
-1. Review system acceptance test results
-2. Assess risks of proceeding vs waiting
-3. Evaluate system readiness for next phase
+1. Review all validation evidence and fix results
+2. Assess remaining risks and technical debt
+3. Evaluate system readiness for production deployment
 4. Make authorization decision with clear rationale
 
 DECISION CRITERIA:
@@ -251,18 +332,13 @@ DECISION CRITERIA:
 - CONDITIONAL: System functional but requires specific conditions/limitations
 - DENY: Critical functionality missing or unacceptable risks identified
 
-RISK ASSESSMENT:
-- Technical risks from system gaps
-- Schedule risks from remaining work
-- Integration risks from external dependencies
-- Operational risks from known issues
-
 OUTPUT FORMAT:
-Create authorization_decision.md with:
+Create evidence/pdr-actual/05_authorization_decision.md with:
 - Decision: AUTHORIZE/CONDITIONAL/DENY
-- Risk assessment and mitigation strategy
-- Conditions or limitations if applicable
-- Next phase authorization and scope
+- Evidence summary: key validation results supporting decision
+- Risk assessment: remaining technical risks and mitigation strategy
+- Conditions: specific requirements if conditional authorization
+- Next phase scope: clear direction for production deployment
 
 SUCCESS CRITERIA:
 - Decision based on demonstrated system capability
@@ -270,39 +346,31 @@ SUCCESS CRITERIA:
 - Path forward clearly defined
 
 AGENT ADAPTATION:
-If results unclear → request clarification and additional testing
-If risks high → define conditions and mitigations
-If system inadequate → define specific requirements for retry
+If evidence unclear → request specific additional validation
+If risks high → define specific conditions and monitoring requirements
+If system inadequate → specify requirements for next iteration
 ```
 
 ---
 
-## Framework Characteristics
+## Key Framework Improvements
 
-### Process Resilience
-- **Failure Tolerance:** Individual component failures don't stop process
-- **Agent Adaptation:** Clear guidance for handling unexpected conditions
-- **Graceful Degradation:** Process continues with documented limitations
+### Document-Action Coupling
+- Every document has immediate follow-up tasks that use it
+- No document exists without a consumer task
+- Assessment documents get updated with actual fix results
+
+### Individual Task Focus
+- Each task has single, clear objective
+- Tasks build on previous results systematically
+- No attempt to do everything in one prompt
 
 ### Technology Independence
-- **Language Agnostic:** Principles apply to any technology stack
-- **Framework Neutral:** Adapts to any testing or build framework
-- **Environment Flexible:** Works with any deployment target
+- Framework adapts to any technology stack
+- Uses project's existing tools and approaches
+- Focuses on systems engineering principles, not implementation details
 
-### Systems Engineering Focus
-- **Requirements Driven:** Validate requirement satisfaction through system behavior
-- **Integration Emphasis:** Focus on component interaction over unit testing
-- **Risk Based:** Prioritize by system impact and failure consequences
-- **Evidence Based:** Decisions made on demonstrated system capability
-
-### Quality Principles
-- **Working System First:** Functionality over documentation compliance
-- **Meaningful Testing:** Tests that detect real problems
-- **Realistic Validation:** Testing with real dependencies and conditions
-- **Continuous Adaptation:** Process adapts to project realities
-
-### Timeline Optimization
-- **Parallel Execution:** Tasks can overlap where dependencies allow
-- **Individual Test Strategy:** Faster feedback and better isolation
-- **Focused Effort:** Effort directed at system functionality
-- **Decision Velocity:** Quick go/no-go based on demonstrated capability
+### Evidence-Based Progression
+- Each phase validates that previous fixes actually worked
+- System behavior drives decisions, not documentation compliance
+- Real validation with working software throughout process

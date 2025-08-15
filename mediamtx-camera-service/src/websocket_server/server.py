@@ -1,5 +1,15 @@
 """
 WebSocket JSON-RPC 2.0 server for camera control and notifications.
+
+Requirements Traceability:
+- REQ-WS-001: WebSocket server shall aggregate camera status with real MediaMTX integration
+- REQ-WS-002: WebSocket server shall provide camera capability metadata integration  
+- REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
+- REQ-MEDIA-001: System shall support snapshot capture with configurable format and quality
+- REQ-MEDIA-002: System shall support video recording with duration and format control
+
+Story Coverage: S3 - WebSocket API Integration
+IV&V Control Point: Real WebSocket communication validation
 """
 
 import asyncio
@@ -1544,24 +1554,46 @@ class WebSocketJsonRpcServer:
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
 
+            # Generate filename with format extension if not provided
+            if not custom_filename:
+                timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+                custom_filename = f"{stream_name}_snapshot_{timestamp}.{format_type}"
+            elif not custom_filename.endswith(f".{format_type}"):
+                custom_filename = f"{custom_filename}.{format_type}"
+
             snapshot_result = await mediamtx_controller.take_snapshot(
                 stream_name=stream_name,
+                filename=custom_filename,
                 format=format_type,
                 quality=quality,
-                filename=custom_filename,
             )
 
-            return {
-                "device": device_path,
-                "filename": snapshot_result.get("filename"),
-                "status": "completed",
-                "timestamp": snapshot_result.get(
-                    "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                ),
-                "file_size": snapshot_result.get("file_size", 0),
-                "format": format_type,
-                "quality": quality,
-            }
+            # Check MediaMTX controller response status
+            if snapshot_result.get("status") == "failed":
+                return {
+                    "device": device_path,
+                    "filename": snapshot_result.get("filename"),
+                    "status": "FAILED",
+                    "timestamp": snapshot_result.get(
+                        "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    ),
+                    "file_size": snapshot_result.get("file_size", 0),
+                    "format": format_type,
+                    "quality": quality,
+                    "error": snapshot_result.get("error", "MediaMTX operation failed"),
+                }
+            else:
+                return {
+                    "device": device_path,
+                    "filename": snapshot_result.get("filename"),
+                    "status": "completed",
+                    "timestamp": snapshot_result.get(
+                        "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    ),
+                    "file_size": snapshot_result.get("file_size", 0),
+                    "format": format_type,
+                    "quality": quality,
+                }
 
         except Exception as e:
             self._logger.error(f"Error taking snapshot for {device_path}: {e}")

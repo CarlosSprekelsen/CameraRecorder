@@ -1,0 +1,5589 @@
+{
+  "total_tests": 556,
+  "pass": 276,
+  "fail": 250,
+  "timeout": 30,
+  "error": 0,
+  "categories": {
+    "SYSTEM_CRITICAL": [
+      {
+        "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_timeout",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_error",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestReconciliationErrorCases",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestReconciliationErrorCases",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_filtering",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_actions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_race_condition_handling",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_connect_flow",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_disconnect_flow",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_mediamtx_failure_keeps_service_running",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_capability_metadata",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_service_manager_e2e.py::test_e2e_connect_disconnect_creates_and_deletes_paths",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_service_manager_e2e.py::test_e2e_resilience_on_mediamtx_failure",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F312_camera_status_api_contract_and_errors",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      },
+      {
+        "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+        "status": "FAIL",
+        "error": "",
+        "estimated_fix": "2-5 days"
+      }
+    ],
+    "INTEGRATION_ISSUE": [
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      },
+      {
+        "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+        "status": "TIMEOUT",
+        "error": "Test timed out after 60 seconds",
+        "estimated_fix": "1-3 days"
+      }
+    ],
+    "TEST_ARTIFACT": [],
+    "REQUIREMENT_GAP": []
+  },
+  "test_details": [
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_real_v4l2",
+      "status": "PASS",
+      "duration": 1.0103521347045898,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_with_mock_QUARANTINED",
+      "status": "PASS",
+      "duration": 1.092956781387329,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_timeout",
+      "status": "FAIL",
+      "duration": 1.059095859527588,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_error",
+      "status": "FAIL",
+      "duration": 0.9778773784637451,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_malformed_output_QUARANTINED",
+      "status": "PASS",
+      "duration": 0.9422883987426758,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_device_unavailable_QUARANTINED",
+      "status": "PASS",
+      "duration": 0.9262814521789551,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 1.1532530784606934,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 1.5321805477142334,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 0.9846045970916748,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 0.9611165523529053,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 1.022500991821289,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 0.9818367958068848,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup",
+      "status": "FAIL",
+      "duration": 1.0043096542358398,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation",
+      "status": "FAIL",
+      "duration": 0.9932816028594971,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation",
+      "status": "FAIL",
+      "duration": 0.9603381156921387,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+      "status": "FAIL",
+      "duration": 0.9829452037811279,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+      "status": "FAIL",
+      "duration": 1.0655975341796875,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+      "status": "FAIL",
+      "duration": 1.0050673484802246,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies",
+      "status": "FAIL",
+      "duration": 0.9885375499725342,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+      "status": "FAIL",
+      "duration": 0.9840247631072998,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+      "status": "FAIL",
+      "duration": 0.9604790210723877,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness",
+      "status": "FAIL",
+      "duration": 0.958183765411377,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1993591785430908,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.0835819244384766,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.096747875213623,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1623659133911133,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.125277042388916,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1572465896606445,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1044483184814453,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.0781433582305908,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1085484027862549,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal",
+      "status": "FAIL",
+      "duration": 1.1444323062896729,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+      "status": "FAIL",
+      "duration": 0.9944941997528076,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+      "status": "FAIL",
+      "duration": 1.0300757884979248,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+      "status": "FAIL",
+      "duration": 0.9872214794158936,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy",
+      "status": "FAIL",
+      "duration": 1.0113146305084229,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0894112586975098,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0012247562408447,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0020945072174072,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0775020122528076,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0097949504852295,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0545785427093506,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.987494945526123,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.9708442687988281,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.9302997589111328,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.9747986793518066,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.9752669334411621,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityConfirmationLogic",
+      "status": "PASS",
+      "duration": 0.9297585487365723,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityIntegration",
+      "status": "PASS",
+      "duration": 0.9599123001098633,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityIntegration",
+      "status": "PASS",
+      "duration": 0.934579610824585,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py::TestCapabilityIntegration",
+      "status": "PASS",
+      "duration": 0.9423785209655762,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0530531406402588,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0111124515533447,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.016084909439087,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations",
+      "status": "FAIL",
+      "duration": 1.0390779972076416,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+      "status": "FAIL",
+      "duration": 1.0509092807769775,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+      "status": "FAIL",
+      "duration": 1.0601694583892822,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions",
+      "status": "FAIL",
+      "duration": 1.0593981742858887,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+      "status": "FAIL",
+      "duration": 0.9970810413360596,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+      "status": "FAIL",
+      "duration": 0.9839894771575928,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior",
+      "status": "FAIL",
+      "duration": 1.0375945568084717,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+      "status": "FAIL",
+      "duration": 1.0164663791656494,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+      "status": "FAIL",
+      "duration": 1.0107498168945312,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling",
+      "status": "FAIL",
+      "duration": 1.3259539604187012,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle",
+      "status": "FAIL",
+      "duration": 1.0886356830596924,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle",
+      "status": "FAIL",
+      "duration": 1.5962257385253906,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4258410930633545,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4599957466125488,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4454548358917236,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4722845554351807,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4458847045898438,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation",
+      "status": "FAIL",
+      "duration": 1.4497292041778564,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestReconciliationErrorCases",
+      "status": "FAIL",
+      "duration": 1.4165856838226318,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestReconciliationErrorCases",
+      "status": "FAIL",
+      "duration": 1.4034342765808105,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.0333263874053955,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.0197551250457764,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.0422537326812744,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.059056282043457,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.0211842060089111,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing",
+      "status": "FAIL",
+      "duration": 1.043837070465088,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+      "status": "FAIL",
+      "duration": 0.9991278648376465,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+      "status": "FAIL",
+      "duration": 1.0023565292358398,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+      "status": "FAIL",
+      "duration": 1.1168863773345947,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+      "status": "FAIL",
+      "duration": 1.0094292163848877,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback",
+      "status": "FAIL",
+      "duration": 1.0215470790863037,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+      "status": "FAIL",
+      "duration": 0.9944298267364502,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+      "status": "FAIL",
+      "duration": 0.9577994346618652,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor",
+      "status": "FAIL",
+      "duration": 0.9759111404418945,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_filtering",
+      "status": "FAIL",
+      "duration": 0.967353343963623,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_actions",
+      "status": "FAIL",
+      "duration": 0.9398880004882812,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_race_condition_handling",
+      "status": "FAIL",
+      "duration": 0.9384608268737793,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigDataClasses",
+      "status": "PASS",
+      "duration": 1.1399552822113037,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigDataClasses",
+      "status": "PASS",
+      "duration": 1.2005906105041504,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.354475736618042,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.4206173419952393,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3677315711975098,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.4854722023010254,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3472988605499268,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3919332027435303,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3775174617767334,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3864328861236572,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3055763244628906,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3204338550567627,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3416078090667725,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.3091328144073486,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigManager",
+      "status": "FAIL",
+      "duration": 1.324049949645996,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+      "status": "FAIL",
+      "duration": 1.1715900897979736,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+      "status": "FAIL",
+      "duration": 1.2895023822784424,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_config_manager.py::TestConfigurationIntegration",
+      "status": "FAIL",
+      "duration": 1.2001054286956787,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestCorrelationIdFilter",
+      "status": "PASS",
+      "duration": 1.1816329956054688,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestCorrelationIdFilter",
+      "status": "PASS",
+      "duration": 1.1411678791046143,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+      "status": "FAIL",
+      "duration": 1.2509465217590332,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+      "status": "FAIL",
+      "duration": 1.275843620300293,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+      "status": "FAIL",
+      "duration": 1.2188820838928223,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestJsonFormatter",
+      "status": "FAIL",
+      "duration": 1.827237844467163,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestConsoleFormatter",
+      "status": "PASS",
+      "duration": 1.216421127319336,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestConsoleFormatter",
+      "status": "PASS",
+      "duration": 1.1610000133514404,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestFileSizeParsing",
+      "status": "PASS",
+      "duration": 1.194714069366455,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestFileSizeParsing",
+      "status": "PASS",
+      "duration": 1.1151151657104492,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.229851484298706,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.1821866035461426,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.188894510269165,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.2102606296539307,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.2070536613464355,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.2540898323059082,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestSetupLogging",
+      "status": "FAIL",
+      "duration": 1.1910552978515625,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+      "status": "FAIL",
+      "duration": 1.2102532386779785,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+      "status": "FAIL",
+      "duration": 1.284226894378662,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+      "status": "FAIL",
+      "duration": 1.2083549499511719,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestGlobalHelperFunctions",
+      "status": "FAIL",
+      "duration": 1.2352910041809082,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_logging_config.py::TestLoggingIntegration",
+      "status": "PASS",
+      "duration": 1.1364719867706299,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_connect_flow",
+      "status": "FAIL",
+      "duration": 1.3651762008666992,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_disconnect_flow",
+      "status": "FAIL",
+      "duration": 1.4035367965698242,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_mediamtx_failure_keeps_service_running",
+      "status": "FAIL",
+      "duration": 1.3375368118286133,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_capability_metadata",
+      "status": "FAIL",
+      "duration": 1.4060232639312744,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.3166530132293701,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.3472704887390137,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.318329095840454,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.3193528652191162,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.3363022804260254,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationSchemaValidation",
+      "status": "PASS",
+      "duration": 1.3873028755187988,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationFileValidation",
+      "status": "PASS",
+      "duration": 1.334416151046753,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_configuration_validation.py::TestConfigurationFileValidation",
+      "status": "PASS",
+      "duration": 1.3743202686309814,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.7521846294403076,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6477677822113037,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6175565719604492,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.7493948936462402,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6421639919281006,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6435999870300293,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6457812786102295,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6583330631256104,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.649207353591919,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.695265531539917,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6633737087249756,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation",
+      "status": "FAIL",
+      "duration": 1.6108202934265137,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.5397558212280273,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.446882963180542,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 2.1066551208496094,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.439741611480713,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.4555449485778809,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.366407871246338,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.417402744293213,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.4031879901885986,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.420367956161499,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring",
+      "status": "FAIL",
+      "duration": 1.3820674419403076,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.4718868732452393,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.5878853797912598,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.4540011882781982,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.4301824569702148,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.5427703857421875,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.3848438262939453,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.4153478145599365,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal",
+      "status": "FAIL",
+      "duration": 1.4498729705810547,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 1.7722597122192383,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 1.7115974426269531,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 1.7535810470581055,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 1.6809165477752686,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 1.7205533981323242,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 2.4820621013641357,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal",
+      "status": "FAIL",
+      "duration": 2.0202956199645996,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.889094591140747,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.4178745746612549,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.458087682723999,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.442230224609375,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.4788856506347656,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.440974473953247,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.423227071762085,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.4218323230743408,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.4417304992675781,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestStreamOperationsReal",
+      "status": "PASS",
+      "duration": 1.3954908847808838,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 9.991742372512817,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 10.211536884307861,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 9.851022243499756,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 9.69451117515564,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 9.777733087539673,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal",
+      "status": "FAIL",
+      "duration": 9.74029803276062,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.3946340084075928,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.4419183731079102,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.3801989555358887,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.4060006141662598,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.536710500717163,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.4188499450683594,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation",
+      "status": "FAIL",
+      "duration": 1.4033300876617432,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKey",
+      "status": "PASS",
+      "duration": 1.1051323413848877,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKey",
+      "status": "PASS",
+      "duration": 1.5246222019195557,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.068359375,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0666871070861816,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0404739379882812,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1120936870574951,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1053321361541748,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0461361408233643,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0553197860717773,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1015689373016357,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0846271514892578,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0880863666534424,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0567986965179443,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.056276798248291,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.2011454105377197,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0939877033233643,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0485813617706299,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1061186790466309,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.060309648513794,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.0820949077606201,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1026268005371094,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.069108486175537,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandler",
+      "status": "PASS",
+      "duration": 1.1009697914123535,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandlerIntegration",
+      "status": "PASS",
+      "duration": 1.052297830581665,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandlerIntegration",
+      "status": "PASS",
+      "duration": 1.0775232315063477,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_api_key_handler.py::TestAPIKeyHandlerIntegration",
+      "status": "PASS",
+      "duration": 1.0341551303863525,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthResult",
+      "status": "PASS",
+      "duration": 0.9667229652404785,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthResult",
+      "status": "PASS",
+      "duration": 0.9798061847686768,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.1126635074615479,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.099350929260254,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0975897312164307,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.110813856124878,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0846104621887207,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.1689789295196533,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.121391773223877,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.048363208770752,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0675311088562012,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0924677848815918,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0873370170593262,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.1113426685333252,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0674259662628174,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.073439598083496,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.1411736011505127,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.0901517868041992,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.057446002960205,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManager",
+      "status": "PASS",
+      "duration": 1.1036345958709717,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManagerIntegration",
+      "status": "PASS",
+      "duration": 0.9774982929229736,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManagerIntegration",
+      "status": "PASS",
+      "duration": 1.05393385887146,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_auth_manager.py::TestAuthManagerIntegration",
+      "status": "PASS",
+      "duration": 1.0221178531646729,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTClaims",
+      "status": "PASS",
+      "duration": 0.9702465534210205,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTClaims",
+      "status": "PASS",
+      "duration": 0.9722104072570801,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0391645431518555,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.160590410232544,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.090139389038086,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.020019292831421,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.01725435256958,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.290525197982788,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.2921035289764404,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0922610759735107,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0519354343414307,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.020555019378662,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0547130107879639,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0775058269500732,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0110557079315186,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0140724182128906,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0781078338623047,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0537564754486084,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0619375705718994,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0470173358917236,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0105092525482178,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.053468942642212,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandler",
+      "status": "PASS",
+      "duration": 1.0849285125732422,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandlerIntegration",
+      "status": "PASS",
+      "duration": 1.0160539150238037,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_jwt_handler.py::TestJWTHandlerIntegration",
+      "status": "PASS",
+      "duration": 1.0406906604766846,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestRateLimitInfo",
+      "status": "PASS",
+      "duration": 0.9862728118896484,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.208709478378296,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2235207557678223,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.1839818954467773,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2054717540740967,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2369914054870605,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2456200122833252,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2344965934753418,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.208556890487671,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2476820945739746,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2830872535705566,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.279815435409546,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.255711317062378,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2157623767852783,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2803983688354492,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.4947490692138672,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2788288593292236,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2222633361816406,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2368698120117188,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2039010524749756,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2027459144592285,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2243847846984863,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2168951034545898,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2409958839416504,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.1792783737182617,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddleware",
+      "status": "FAIL",
+      "duration": 1.2200472354888916,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddlewareIntegration",
+      "status": "PASS",
+      "duration": 1.0597450733184814,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddlewareIntegration",
+      "status": "PASS",
+      "duration": 0.9951009750366211,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddlewareIntegration",
+      "status": "PASS",
+      "duration": 0.9900853633880615,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_security/test_middleware.py::TestSecurityMiddlewareIntegration",
+      "status": "PASS",
+      "duration": 1.0276000499725342,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_service_manager.py::test_req_svc_lifecycle_001_start_and_ping_ws",
+      "status": "PASS",
+      "duration": 2.5161492824554443,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_service_manager.py::test_req_svc_api_cam_list_001_get_camera_list_structure",
+      "status": "PASS",
+      "duration": 2.442141056060791,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_service_manager.py::test_req_svc_error_001_invalid_method_returns_error",
+      "status": "PASS",
+      "duration": 2.4803786277770996,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_service_manager.py::test_req_svc_shutdown_001_clean_shutdown_and_ws_unavailable",
+      "status": "PASS",
+      "duration": 2.4381864070892334,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_bind.py::test_websocket_server_binds_and_ping",
+      "status": "PASS",
+      "duration": 1.144397258758545,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3184723854064941,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3002455234527588,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.308234691619873,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.313032865524292,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3426802158355713,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.29060959815979,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.2404696941375732,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3298194408416748,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.333646535873413,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3599839210510254,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.2726075649261475,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.3367729187011719,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers",
+      "status": "FAIL",
+      "duration": 1.2824432849884033,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3121678829193115,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3212459087371826,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3349037170410156,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3603858947753906,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3616077899932861,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.4005939960479736,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.4269862174987793,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.371333122253418,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.3497521877288818,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.418020486831665,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.7134041786193848,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications",
+      "status": "FAIL",
+      "duration": 1.643085241317749,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_real_connections_simple.py::test_simple_real_connection",
+      "status": "PASS",
+      "duration": 1.2110731601715088,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_real_connections_simple.py::test_real_connection_with_security",
+      "status": "PASS",
+      "duration": 1.2959442138671875,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.3062119483947754,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.2942895889282227,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.4052224159240723,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.3570375442504883,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.5053348541259766,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.537015438079834,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.4002070426940918,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.3371548652648926,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation",
+      "status": "FAIL",
+      "duration": 1.3407135009765625,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration",
+      "status": "FAIL",
+      "duration": 1.6441245079040527,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration",
+      "status": "FAIL",
+      "duration": 1.6835482120513916,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_config_component_integration.py::TestConfigurationValidation",
+      "status": "PASS",
+      "duration": 1.667675256729126,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_real_system_integration.py::TestRealSystemIntegration",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "INTEGRATION_ISSUE",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0147366523742676,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "FAIL",
+      "duration": 1.2385826110839844,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.1033895015716553,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.2258479595184326,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.5343196392059326,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.1009786128997803,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0968351364135742,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0678255558013916,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.1007323265075684,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyManagement",
+      "status": "PASS",
+      "duration": 1.0188345909118652,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyManagement",
+      "status": "PASS",
+      "duration": 1.009383201599121,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyManagement",
+      "status": "PASS",
+      "duration": 0.9724674224853516,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyManagement",
+      "status": "PASS",
+      "duration": 1.0022070407867432,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeyManagement",
+      "status": "PASS",
+      "duration": 0.9844191074371338,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeySecurity",
+      "status": "PASS",
+      "duration": 1.131394386291504,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeySecurity",
+      "status": "PASS",
+      "duration": 1.200143814086914,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeySecurity",
+      "status": "PASS",
+      "duration": 1.1326210498809814,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_api_keys.py::TestAPIKeySecurity",
+      "status": "PASS",
+      "duration": 1.1172475814819336,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0743396282196045,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 0.9480712413787842,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0040526390075684,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.030278205871582,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 0.9783365726470947,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0084335803985596,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.035658597946167,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestJWTAuthenticationFlow",
+      "status": "PASS",
+      "duration": 1.0035111904144287,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationErrorHandling",
+      "status": "PASS",
+      "duration": 0.9232304096221924,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationErrorHandling",
+      "status": "PASS",
+      "duration": 0.9771568775177002,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationErrorHandling",
+      "status": "PASS",
+      "duration": 0.9761307239532471,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationErrorHandling",
+      "status": "PASS",
+      "duration": 0.9635155200958252,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationIntegration",
+      "status": "PASS",
+      "duration": 1.0568218231201172,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationIntegration",
+      "status": "PASS",
+      "duration": 0.9813644886016846,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_authentication.py::TestAuthenticationIntegration",
+      "status": "PASS",
+      "duration": 0.9697403907775879,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketAuthentication",
+      "status": "PASS",
+      "duration": 1.022998571395874,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketAuthentication",
+      "status": "PASS",
+      "duration": 0.9805781841278076,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketAuthentication",
+      "status": "PASS",
+      "duration": 0.982774019241333,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketAuthentication",
+      "status": "PASS",
+      "duration": 1.0110888481140137,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketAuthentication",
+      "status": "PASS",
+      "duration": 0.9571805000305176,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityIntegration",
+      "status": "PASS",
+      "duration": 1.0107522010803223,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityIntegration",
+      "status": "PASS",
+      "duration": 1.0111720561981201,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityIntegration",
+      "status": "PASS",
+      "duration": 0.9845304489135742,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityIntegration",
+      "status": "PASS",
+      "duration": 1.0011887550354004,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityPerformance",
+      "status": "PASS",
+      "duration": 1.001570463180542,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityPerformance",
+      "status": "PASS",
+      "duration": 0.9813451766967773,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityPerformance",
+      "status": "PASS",
+      "duration": 0.9755434989929199,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityPerformance",
+      "status": "PASS",
+      "duration": 1.0104434490203857,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityErrorHandling",
+      "status": "PASS",
+      "duration": 0.9911181926727295,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityErrorHandling",
+      "status": "PASS",
+      "duration": 0.9416985511779785,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_security_websocket.py::TestWebSocketSecurityErrorHandling",
+      "status": "PASS",
+      "duration": 0.9608001708984375,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_e2e.py::test_e2e_connect_disconnect_creates_and_deletes_paths",
+      "status": "FAIL",
+      "duration": 2.486602306365967,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_e2e.py::test_e2e_resilience_on_mediamtx_failure",
+      "status": "FAIL",
+      "duration": 2.421988010406494,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F111_photo_capture_service_availability",
+      "status": "PASS",
+      "duration": 2.4730265140533447,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F313_camera_hotplug_notifications",
+      "status": "PASS",
+      "duration": 2.425381898880005,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F125_recording_session_management",
+      "status": "PASS",
+      "duration": 2.473081588745117,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F311_camera_list_availability",
+      "status": "PASS",
+      "duration": 2.4961910247802734,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F111_photo_capture_error_handling",
+      "status": "PASS",
+      "duration": 2.5386359691619873,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F125_recording_concurrent_conflict_detection",
+      "status": "PASS",
+      "duration": 2.500124216079712,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F311_camera_list_empty_structure",
+      "status": "PASS",
+      "duration": 2.425478458404541,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F313_notification_delivery_failure_tolerance",
+      "status": "PASS",
+      "duration": 2.4527804851531982,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F312_camera_status_api_contract_and_errors",
+      "status": "FAIL",
+      "duration": 2.4622814655303955,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F126_recording_duration_constraints",
+      "status": "PASS",
+      "duration": 2.454759359359741,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F320_operator_permissions_enforced",
+      "status": "PASS",
+      "duration": 2.4485654830932617,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F114_snapshot_quality_bounds_and_persistence",
+      "status": "PASS",
+      "duration": 2.466357469558716,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F313_notifications_multiple_clients",
+      "status": "PASS",
+      "duration": 2.4276111125946045,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F325_authenticate_and_protected_methods_success",
+      "status": "PASS",
+      "duration": 2.442843198776245,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F326_token_expiration_and_reauth",
+      "status": "PASS",
+      "duration": 2.472377061843872,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F325_protected_methods_unauthorized_error",
+      "status": "PASS",
+      "duration": 2.5322327613830566,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F123_recording_timed_minutes",
+      "status": "PASS",
+      "duration": 2.7928194999694824,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F123_recording_timed_hours",
+      "status": "PASS",
+      "duration": 2.449669361114502,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/integration/test_service_manager_requirements.py::test_requirement_F122_recording_unlimited_mode",
+      "status": "PASS",
+      "duration": 2.4328246116638184,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug",
+      "status": "PASS",
+      "duration": 3.3728466033935547,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug",
+      "status": "PASS",
+      "duration": 3.340212345123291,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug",
+      "status": "PASS",
+      "duration": 3.328784465789795,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug",
+      "status": "PASS",
+      "duration": 3.3359286785125732,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_camera_monitor_debug.py::TestCameraMonitorDebug",
+      "status": "PASS",
+      "duration": 3.2762091159820557,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.429861545562744,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.483492374420166,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.461305379867554,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.47819447517395,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.42698097229004,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_independent_prototype_validation.py::TestIndependentPrototypeValidation",
+      "status": "PASS",
+      "duration": 23.45193839073181,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.543107986450195,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.54709792137146,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.588121175765991,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.571043968200684,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.5361082553863525,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 7.55683708190918,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_integration_smoke.py::TestRealIntegration",
+      "status": "FAIL",
+      "duration": 8.007015228271484,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.509494066238403,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.497452020645142,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.513052701950073,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.527947664260864,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.480566501617432,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_integration.py::TestRealIntegration",
+      "status": "PASS",
+      "duration": 6.476711273193359,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.48176908493042,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.491943836212158,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.503515243530273,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.497691631317139,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.4802703857421875,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/ivv/test_real_system_validation.py::TestRealSystemValidation",
+      "status": "PASS",
+      "duration": 6.458498239517212,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.0435996055603027,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.028926134109497,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.4800128936767578,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.236506700515747,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.062929630279541,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestJWTSecurityAttacks",
+      "status": "PASS",
+      "duration": 0.990645170211792,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestAPIKeySecurityAttacks",
+      "status": "PASS",
+      "duration": 0.9713811874389648,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestAPIKeySecurityAttacks",
+      "status": "PASS",
+      "duration": 1.028946876525879,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestAPIKeySecurityAttacks",
+      "status": "PASS",
+      "duration": 1.041961431503296,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestAPIKeySecurityAttacks",
+      "status": "PASS",
+      "duration": 0.9697535037994385,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestAPIKeySecurityAttacks",
+      "status": "PASS",
+      "duration": 0.9898209571838379,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRateLimitSecurityAttacks",
+      "status": "PASS",
+      "duration": 0.9603757858276367,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRateLimitSecurityAttacks",
+      "status": "PASS",
+      "duration": 0.9641005992889404,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRateLimitSecurityAttacks",
+      "status": "PASS",
+      "duration": 1.0188343524932861,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRoleElevationAttacks",
+      "status": "PASS",
+      "duration": 0.9797265529632568,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRoleElevationAttacks",
+      "status": "PASS",
+      "duration": 0.9488792419433594,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRoleElevationAttacks",
+      "status": "PASS",
+      "duration": 0.9748871326446533,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestRoleElevationAttacks",
+      "status": "PASS",
+      "duration": 0.9842104911804199,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestInputValidationAttacks",
+      "status": "PASS",
+      "duration": 0.9814164638519287,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestInputValidationAttacks",
+      "status": "PASS",
+      "duration": 1.0017204284667969,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestInputValidationAttacks",
+      "status": "PASS",
+      "duration": 0.9722690582275391,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_attack_vectors.py::TestInputValidationAttacks",
+      "status": "PASS",
+      "duration": 0.9486405849456787,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_auth_enforcement_ws.py::test_rejects_invalid_token",
+      "status": "PASS",
+      "duration": 1.2255470752716064,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_auth_enforcement_ws.py::test_accepts_valid_token_and_enforces_role",
+      "status": "PASS",
+      "duration": 1.2413082122802734,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/security/test_auth_enforcement_ws.py::test_expired_token_rejected",
+      "status": "PASS",
+      "duration": 1.1881468296051025,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestFreshInstallationProcess",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationIssuesAndResolutions",
+      "status": "PASS",
+      "duration": 0.8276219367980957,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationIssuesAndResolutions",
+      "status": "PASS",
+      "duration": 0.8903834819793701,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationIssuesAndResolutions",
+      "status": "PASS",
+      "duration": 0.941199779510498,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestPostInstallationHealthChecks",
+      "status": "PASS",
+      "duration": 0.9196884632110596,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestPostInstallationHealthChecks",
+      "status": "PASS",
+      "duration": 0.8636877536773682,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestPostInstallationHealthChecks",
+      "status": "PASS",
+      "duration": 0.8795535564422607,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationAutomation",
+      "status": "PASS",
+      "duration": 0.9221394062042236,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationAutomation",
+      "status": "PASS",
+      "duration": 0.8803095817565918,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_fresh_installation.py::TestInstallationAutomation",
+      "status": "PASS",
+      "duration": 0.8555901050567627,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestInstallationValidation",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_installation_validation.py::TestProductionDeployment",
+      "status": "TIMEOUT",
+      "duration": 60,
+      "category": "SYSTEM_CRITICAL",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.7204318046569824,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.789929151535034,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 3.3111977577209473,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 3.369004964828491,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.958824396133423,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.750668525695801,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.7156124114990234,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.6446781158447266,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 3.3200411796569824,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.978572368621826,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecuritySetupValidation",
+      "status": "PASS",
+      "duration": 2.7885582447052,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityConfigurationValidation",
+      "status": "PASS",
+      "duration": 0.9615566730499268,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityConfigurationValidation",
+      "status": "PASS",
+      "duration": 1.009796380996704,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityConfigurationValidation",
+      "status": "PASS",
+      "duration": 1.012415885925293,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityMonitoringValidation",
+      "status": "PASS",
+      "duration": 1.0781948566436768,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityMonitoringValidation",
+      "status": "PASS",
+      "duration": 1.021996021270752,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityMonitoringValidation",
+      "status": "PASS",
+      "duration": 1.1193220615386963,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityComplianceValidation",
+      "status": "PASS",
+      "duration": 0.9646668434143066,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityComplianceValidation",
+      "status": "PASS",
+      "duration": 0.9167218208312988,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/installation/test_security_setup.py::TestSecurityComplianceValidation",
+      "status": "PASS",
+      "duration": 0.9314529895782471,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+      "status": "FAIL",
+      "duration": 1.6580498218536377,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+      "status": "FAIL",
+      "duration": 1.7781071662902832,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+      "status": "FAIL",
+      "duration": 1.6675739288330078,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+      "status": "FAIL",
+      "duration": 1.6937267780303955,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSystemdServiceIntegration",
+      "status": "FAIL",
+      "duration": 1.7036073207855225,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.2974846363067627,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.2732839584350586,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.2899315357208252,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.3280458450317383,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.2576062679290771,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestSecurityBoundaryValidation",
+      "status": "FAIL",
+      "duration": 1.291686773300171,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+      "status": "FAIL",
+      "duration": 1.4454548358917236,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+      "status": "FAIL",
+      "duration": 1.498189926147461,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+      "status": "FAIL",
+      "duration": 1.4136497974395752,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestDeploymentAutomation",
+      "status": "FAIL",
+      "duration": 1.433166265487671,
+      "category": "SYSTEM_CRITICAL",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestProductionReadinessAssessment",
+      "status": "PASS",
+      "duration": 1.4607455730438232,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestProductionReadinessAssessment",
+      "status": "PASS",
+      "duration": 1.2560515403747559,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestProductionReadinessAssessment",
+      "status": "PASS",
+      "duration": 1.1973695755004883,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestProductionReadinessAssessment",
+      "status": "PASS",
+      "duration": 1.1771154403686523,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/production/test_production_environment_validation.py::TestProductionEnvironmentValidation",
+      "status": "PASS",
+      "duration": 1.7431135177612305,
+      "category": "N/A",
+      "error": ""
+    },
+    {
+      "test": "tests/performance/test_performance_framework.py::test_get_metrics_and_method_timings",
+      "status": "PASS",
+      "duration": 1.588949203491211,
+      "category": "N/A",
+      "error": ""
+    }
+  ]
+}

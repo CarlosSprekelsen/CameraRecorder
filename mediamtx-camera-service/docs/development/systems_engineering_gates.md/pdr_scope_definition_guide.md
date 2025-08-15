@@ -56,14 +56,12 @@ tests/
 
 ---
 
-## Phase 0: Design Baseline
+# Phase 0 — System Readiness for PDR (No‑Mock, Real Services)
 
-### 0-pre. PDR Entry Baseline (Project Manager)
+## 0-pre. PDR Entry Baseline (Project Manager)
 
 ```
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
 Task: Establish PDR entry baseline and no-mock enforcement.
 
 Execute exactly:
@@ -75,142 +73,56 @@ Execute exactly:
 6. Push entry tag: git push origin pdr-entry-vX.Y
 
 Create: evidence/pdr-actual/00-pre_pdr_entry_baseline.md
-
 Success Criteria: PDR baseline established with no-mock enforcement technically implemented.
 ```
 
-### 0. Critical Prototype Implementation (Developer)
+---
 
-```
-Your role: Developer
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Task: Implement critical prototypes proving design implementability against real systems with MediaMTX FFmpeg integration.
-
-Execute exactly:
-1. Validate MediaMTX FFmpeg integration approach manually
-2. Implement automatic MediaMTX path creation via API for camera discovery
-3. Replace direct device source configuration with FFmpeg bridge pattern
-4. Implement core API endpoints with real aiohttp integration
-5. Execute comprehensive test validation with concrete results reporting
-6. Generate test results table with total, passed, failed, skipped counts
-7. Provide root cause analysis for any failures with available resources
-
-Create: evidence/pdr-actual/00_critical_prototype_implementation.md
-
-Deliverable Criteria:
-- MediaMTX FFmpeg integration operational for automatic stream creation
-- Camera detection triggers automatic RTSP stream availability
-- Core API endpoints responding to real requests
-- Comprehensive test execution results with concrete numbers
-- Root cause analysis for any issues with available real resources
-- Evidence from actual system execution, not implementation claims
-
-CRITICAL REQUIREMENTS:
-- Address MediaMTX source format design discovery through FFmpeg bridge
-- Demonstrate working RTSP streams for detected cameras
-- Provide actual execution evidence, not readiness claims
-- Utilize available real resources, not test skips
-
-Success Criteria: Critical prototypes prove design implementability through working MediaMTX FFmpeg integration with concrete test results.
-```
-
-### 0a. Prototype Implementation Validation (IV&V)
+## 0. System Readiness Validation (IV\&V)
 
 ```
 Your role: IV&V
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Input: 00_critical_prototype_implementation.md
-Task: Validate prototype implementations through independent no-mock testing.
+Task: Execute a system readiness gate to validate the current implementation status using no-mock tests.
 
 Execute exactly:
-1. Review Developer's prototype implementations against design specifications
-2. Execute independent prototype validation: FORBID_MOCKS=1 pytest -m "ivv" tests/ivv/ -v
-3. Verify real system integrations operational (MediaMTX, RTSP streams)
-4. Execute contract test validation: FORBID_MOCKS=1 pytest -m "integration" tests/contracts/ -v
-5. Validate prototype meets basic implementability criteria
-6. Identify implementation gaps requiring real system improvements
+1. Run preflight tests to confirm environment readiness (MediaMTX running, ffmpeg installed, /dev/video* available)
+2. Execute no-mock PDR gating suite: FORBID_MOCKS=1 pytest -m "pdr or integration or ivv or unit" -v
+3. Identify any blockers, failures, or flaky tests; confirm each has a requirement trace
+4. Quarantine tests that are non-blocking, low-value, or unrelated to requirements
+5. Classify failures: IMPLEMENTATION_GAP, DESIGN_DISCOVERY, TEST_ENVIRONMENT, VALIDATION_THEATER
+6. Prepare remediation prompt set for each IMPLEMENTATION_GAP or DESIGN_DISCOVERY
 
-CRITICAL VALIDATION CONTROLS:
-- NEVER accept Developer test reports without independent verification
-- If Developer claims test failures are "normal," demand independent proof with evidence
-- For test failures with available real resources (e.g., /dev/video* devices present), investigate root cause
-- Any "this is normal" claims require documented technical evidence or escalate to PM
-- Execute all validation tests independently - do not rely on Developer execution
-
-Create: evidence/pdr-actual/00a_prototype_implementation_review.md
-
-Deliverable Criteria:
-- Independent validation tests passing in no-mock environment
-- Real system integrations verified operational through IV&V testing
-- Contract tests passing against real endpoints through IV&V execution
-- Implementation gap analysis with specific findings from independent testing
-- Evidence from real system execution performed by IV&V
-
-Zero-Trust Validation: All claims must be independently verified by IV&V execution.
-
-Success Criteria: Prototype implementation validated through independent no-mock testing with IV&V verification.
+Create: evidence/pdr-actual/00_system_readiness_validation.md
+Success Criteria: Readiness confirmed OR blockers identified with clear remediation prompts.
 ```
 
-### 0d. Implementation Remediation Sprint (PM, Developer, IV&V)
+---
+
+## 0d. Implementation Remediation Sprint (PM, Developer, IV\&V)
 
 ```
 Your role: Project Manager (lead); Developer (implements); IV&V (validates)
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Input: 00a_prototype_implementation_review.md with identified issues
-Objective: Generate prompts to resolve implementation gaps via real system improvements.
-Timebox: 48h (+ optional 24h mop-up)
+Input: 00_system_readiness_validation.md with identified issues
+Objective: Resolve PDR blockers before baseline freeze.
 
 Execute exactly:
-1. Classify findings by type and appropriate remediation approach
-2. Assess design discoveries for PDR remediation vs SDR revision scope
-3. Generate specific Developer and IV&V prompts for identified issues
-4. Establish validation requirements using no-mock enforcement
-5. Create remediation checklist tracking real implementation improvements
+1. Assign remediation actions per blocker classification
+2. Implement fixes with no-mock validation after each resolution
+3. Verify remediation after changes have been implemented (zero-trust policy).
+4. Maintain a remediation checklist and update status until all blockers resolved
 
-ISSUE CLASSIFICATION FRAMEWORK:
-- IMPLEMENTATION_GAP: Code/configuration issues requiring fixes
-- DESIGN_DISCOVERY: Architecture assumption mismatches requiring assessment
-- TEST_ENVIRONMENT: Infrastructure setup issues
-- VALIDATION_THEATER: Claims without execution proof
-
-DESIGN DISCOVERY DECISION MATRIX:
-- MediaMTX source format mismatch → PDR_REMEDIATION (API + FFmpeg bridge)
-- Test failures with available resources → IMPLEMENTATION_GAP
-- Implementation claims without execution → VALIDATION_THEATER
-
-CRITICAL CONSTRAINTS:
-- All fixes must address real implementation issues, not testing artifacts
-- Design discoveries must be properly scoped for PDR vs SDR resolution
-- No dismissal of failures with available real resources
-- External system mocks require documented technical waivers
-
-Output Format - Generate targeted prompts:
-
-PROMPT 1: Developer MediaMTX Integration Implementation
-- MediaMTX API path creation for automatic stream management
-- FFmpeg bridge implementation for camera source handling
-- End-to-end camera discovery to RTSP streaming validation
-
-PROMPT 2: IV&V MediaMTX Integration Validation  
-- Independent MediaMTX integration functionality verification
-- Automatic camera discovery and streaming workflow validation
-- Real system integration confirmation through independent testing
 
 Create: evidence/pdr-actual/00d_implementation_remediation_sprint.md
-
-Success Criteria: Remediation prompts generated with proper issue classification and targeted MediaMTX integration solutions.
+Success Criteria: All gating issues resolved and validated in a no-mock environment.
 ```
 
-### 0e. Implementation Baseline (Project Manager)
+---
+
+## 0e. Implementation Baseline (Project Manager)
 
 ```
 Your role: Project Manager
-Ground rules: docs/development/project-ground-rules.md
-Role reference: docs/development/roles-responsibilities.md
-Objective: Freeze working implementation baseline with no-mock validation.
+Task: Freeze working implementation baseline with no-mock validation.
 
 Execute exactly:
 1. Verify all PDR tests passing: FORBID_MOCKS=1 pytest -m "pdr or integration or ivv" -v
@@ -220,11 +132,9 @@ Execute exactly:
 5. Push baseline tag: git push origin pdr-baseline-vX.Y
 
 Create: evidence/pdr-actual/00e_implementation_baseline.md
-
-Gate: Phase 1 cannot start without pdr-baseline-vX.Y tag and 100% no-mock PDR test pass rate.
-
 Success Criteria: Implementation baseline established with no-mock test validation.
 ```
+
 
 ---
 

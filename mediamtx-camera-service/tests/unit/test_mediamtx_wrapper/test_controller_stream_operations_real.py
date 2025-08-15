@@ -2,6 +2,15 @@
 """
 Real MediaMTX controller validation tests.
 
+Requirements Traceability:
+- REQ-MTX-001: System shall manage MediaMTX streams via REST API
+- REQ-MTX-005: System shall manage stream lifecycle (create/delete/status)
+- REQ-MTX-008: System shall generate correct stream URLs
+- REQ-MTX-009: System shall validate stream configurations
+
+Story Coverage: S3 - MediaMTX Integration & Management
+IV&V Control Point: Real stream operations validation
+
 Test policy: Validate actual MediaMTX controller behavior, configuration,
 and URL generation without requiring external MediaMTX server startup.
 """
@@ -32,7 +41,14 @@ class TestStreamOperationsReal:
 
     @pytest.mark.asyncio
     async def test_controller_creation(self):
-        """Test that MediaMTX controller can be created properly."""
+        """
+        Test that MediaMTX controller can be created properly.
+        
+        Requirements: REQ-MTX-001
+        Scenario: MediaMTX controller initialization
+        Expected: Proper controller creation with correct configuration
+        Edge Cases: Invalid configuration parameters, missing required fields
+        """
         controller = MediaMTXController(
             host="127.0.0.1",
             api_port=9997,
@@ -54,7 +70,14 @@ class TestStreamOperationsReal:
 
     @pytest.mark.asyncio
     async def test_stream_config_creation(self):
-        """Test that StreamConfig can be created properly."""
+        """
+        Test that StreamConfig can be created properly.
+        
+        Requirements: REQ-MTX-009
+        Scenario: Stream configuration object creation
+        Expected: Proper StreamConfig object with validated parameters
+        Edge Cases: Invalid stream names, missing required fields
+        """
         config = StreamConfig(
             name="test_stream",
             source="/dev/video0",
@@ -67,7 +90,14 @@ class TestStreamOperationsReal:
 
     @pytest.mark.asyncio
     async def test_generate_stream_urls_format(self):
-        """Test stream URL generation format."""
+        """
+        Test stream URL generation format.
+        
+        Requirements: REQ-MTX-008
+        Scenario: Stream URL generation for different protocols
+        Expected: Correct URL formats for RTSP, WebRTC, and HLS
+        Edge Cases: Different host configurations, port variations
+        """
         controller = MediaMTXController(
             host="127.0.0.1",
             api_port=9997,

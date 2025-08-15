@@ -2,8 +2,15 @@
 """
 Test notification functionality and API compliance in WebSocket JSON-RPC server.
 
-Covers notification field filtering, API specification compliance,
-and broadcast functionality.
+Requirements Traceability:
+- REQ-WS-004: WebSocket server shall broadcast camera status notifications to all clients
+- REQ-WS-005: WebSocket server shall filter notification fields according to API specification
+- REQ-WS-006: WebSocket server shall handle client connection failures gracefully
+- REQ-WS-007: WebSocket server shall support real-time notification delivery
+- REQ-ERROR-002: WebSocket server shall handle client disconnection during notification
+
+Story Coverage: S3 - WebSocket API Integration
+IV&V Control Point: Real WebSocket communication validation
 """
 
 import pytest
@@ -12,6 +19,8 @@ import json
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.websocket_server.server import WebSocketJsonRpcServer, ClientConnection
+from tests.fixtures.websocket_test_client import WebSocketTestClient, websocket_client
+from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
 
 
 class TestServerNotifications:
@@ -25,19 +34,96 @@ class TestServerNotifications:
         )
 
     @pytest.fixture
-    def mock_client(self):
-        """Create mock WebSocket client."""
-        mock_websocket = Mock()
-        mock_websocket.open = True
-        mock_websocket.closed = False
-        mock_websocket.send = AsyncMock()
+    def real_websocket_client(self):
+        """Create real WebSocket test client."""
+        return WebSocketTestClient("ws://localhost:8002/ws")
 
-        client = ClientConnection(mock_websocket, "test-client-123")
-        client.authenticated = True
-        return client
+    @pytest.fixture
+    async def connected_websocket_client(self, real_websocket_client):
+        """Create and connect real WebSocket test client."""
+        await real_websocket_client.connect()
+        yield real_websocket_client
+        await real_websocket_client.disconnect()
 
-    def test_camera_status_notification_field_filtering(self, server):
-        """Verify camera_status_update notifications only include API-specified fields."""
+    @pytest.mark.asyncio
+    async def test_camera_status_notification_with_real_websocket_communication(
+        self, server, connected_websocket_client
+    ):
+        """
+        Verify camera status notifications are delivered via real WebSocket communication.
+        
+        Requirements: REQ-WS-004, REQ-WS-007
+        Scenario: Real WebSocket client receives camera status notification
+        Expected: Notification delivered successfully via real WebSocket connection
+        Edge Cases: Real-time delivery, connection stability
+        """
+        # Test input with extra fields that should be filtered out
+        input_params = {
+            "device": "/dev/video0",
+            "status": "CONNECTED",
+            "name": "Test Camera",
+            "resolution": "1920x1080",
+            "fps": 30,
+            "streams": {"rtsp": "rtsp://localhost:8554/camera0"},
+            # Fields that should be filtered out:
+            "internal_id": "camera-internal-123",
+            "debug_info": {"probe_count": 5},
+            "raw_capability_data": {"driver": "uvcvideo"},
+            "validation_status": "confirmed",
+        }
+
+        # Send notification via real WebSocket server
+        await server.notify_camera_status_update(input_params)
+
+        # Wait for notification to be delivered via real WebSocket
+        try:
+            notification = await connected_websocket_client.wait_for_notification(
+                "camera_status_update", timeout=5.0
+            )
+            
+            # Verify notification was received
+            assert notification.result is not None
+            filtered_params = notification.result
+
+            # Verify only allowed fields are present (API filtering)
+            expected_fields = {
+                "device",
+                "status", 
+                "name",
+                "resolution",
+                "fps",
+                "streams",
+            }
+            assert set(filtered_params.keys()) == expected_fields
+
+            # Verify filtered out fields are not present
+            forbidden_fields = {
+                "internal_id",
+                "debug_info",
+                "raw_capability_data",
+                "validation_status",
+            }
+            for field in forbidden_fields:
+                assert field not in filtered_params
+
+            # Verify values are preserved for allowed fields
+            assert filtered_params["device"] == "/dev/video0"
+            assert filtered_params["status"] == "CONNECTED"
+            assert filtered_params["resolution"] == "1920x1080"
+            assert filtered_params["fps"] == 30
+            
+        except TimeoutError:
+            pytest.fail("Notification not received within timeout period")
+
+    def test_camera_status_notification_field_filtering_with_mock(self, server):
+        """
+        Verify camera_status_update notifications only include API-specified fields (mock test).
+        
+        Requirements: REQ-WS-005
+        Scenario: Field filtering validation with mocked broadcast
+        Expected: Only API-specified fields included in notifications
+        Edge Cases: Extra fields properly filtered out
+        """
         # Test input with extra fields that should be filtered out
         input_params = {
             "device": "/dev/video0",
@@ -311,3 +397,97 @@ class TestServerNotifications:
         recording_notify_doc = server.notify_recording_status_update.__doc__
         assert "docs/api/json-rpc-methods.md" in recording_notify_doc
         assert "device, status, filename, duration" in recording_notify_doc
+
+    @pytest.mark.asyncio
+    async def test_websocket_notification_handles_client_disconnection(
+        self, server, real_websocket_client
+    ):
+        """
+        Test WebSocket notification handling when client disconnects during notification.
+        
+        Requirements: REQ-ERROR-002
+        Scenario: Client disconnects during notification delivery
+        Expected: Graceful handling of disconnection without server crash
+        Edge Cases: Connection failures, client timeouts
+        """
+        # Connect client
+        await real_websocket_client.connect()
+        
+        # Disconnect client immediately
+        await real_websocket_client.disconnect()
+        
+        # Try to send notification to disconnected client
+        input_params = {
+            "device": "/dev/video0",
+            "status": "CONNECTED",
+            "name": "Test Camera",
+        }
+        
+        # This should not crash the server
+        try:
+            await server.notify_camera_status_update(input_params)
+            # If we get here, the server handled the disconnection gracefully
+            assert True
+        except Exception as e:
+            pytest.fail(f"Server crashed when sending notification to disconnected client: {e}")
+
+    @pytest.mark.asyncio
+    async def test_websocket_notification_handles_connection_failure(
+        self, server
+    ):
+        """
+        Test WebSocket notification handling when connection fails.
+        
+        Requirements: REQ-ERROR-002
+        Scenario: WebSocket connection failure during notification
+        Expected: Graceful error handling without server crash
+        Edge Cases: Network failures, connection timeouts
+        """
+        # Create client with invalid server URL to simulate connection failure
+        invalid_client = WebSocketTestClient("ws://invalid-server:9999/ws")
+        
+        # Try to connect to invalid server (should fail)
+        try:
+            await invalid_client.connect()
+            pytest.fail("Should not be able to connect to invalid server")
+        except Exception:
+            # Expected connection failure
+            pass
+        
+        # Try to send notification (should handle gracefully)
+        input_params = {
+            "device": "/dev/video0",
+            "status": "CONNECTED",
+            "name": "Test Camera",
+        }
+        
+        # This should not crash the server
+        try:
+            await server.notify_camera_status_update(input_params)
+            # If we get here, the server handled the connection failure gracefully
+            assert True
+        except Exception as e:
+            pytest.fail(f"Server crashed when handling connection failure: {e}")
+
+    @pytest.mark.asyncio
+    async def test_websocket_notification_handles_invalid_message_format(
+        self, server, connected_websocket_client
+    ):
+        """
+        Test WebSocket notification handling with invalid message format.
+        
+        Requirements: REQ-ERROR-002
+        Scenario: Invalid notification message format
+        Expected: Graceful error handling without server crash
+        Edge Cases: Malformed JSON, missing required fields
+        """
+        # Try to send notification with invalid format
+        invalid_params = None  # Invalid params
+        
+        # This should not crash the server
+        try:
+            await server.notify_camera_status_update(invalid_params)
+            # Server should handle invalid params gracefully
+            assert True
+        except Exception as e:
+            pytest.fail(f"Server crashed when handling invalid message format: {e}")

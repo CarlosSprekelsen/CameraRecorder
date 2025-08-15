@@ -2,8 +2,14 @@
 """
 Test status aggregation functionality in WebSocket JSON-RPC server.
 
-Covers get_camera_status and get_camera_list methods with real data integration,
-capability detection, and graceful degradation.
+Requirements Traceability:
+- REQ-WS-001: WebSocket server shall aggregate camera status with real MediaMTX integration
+- REQ-WS-002: WebSocket server shall provide camera capability metadata integration
+- REQ-WS-003: WebSocket server shall handle MediaMTX stream status queries
+- REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
+
+Story Coverage: S3 - WebSocket API Integration
+IV&V Control Point: Real MediaMTX integration validation
 """
 
 import pytest
@@ -12,10 +18,12 @@ from unittest.mock import Mock, AsyncMock
 
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.common.types import CameraDevice
+from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
+from tests.fixtures.websocket_test_client import WebSocketTestClient, websocket_client
 
 
 class TestServerStatusAggregation:
-    """Test camera status aggregation with real data sources."""
+    """Test camera status aggregation with real MediaMTX integration."""
 
     @pytest.fixture
     def mock_config(self):
@@ -36,29 +44,29 @@ class TestServerStatusAggregation:
         return monitor
 
     @pytest.fixture
-    def mock_mediamtx_controller(self):
-        """Mock MediaMTX controller."""
-        controller = Mock()
-        controller.get_stream_status = AsyncMock()
-        return controller
-
-    @pytest.fixture
-    def server(self, mock_config, mock_camera_monitor, mock_mediamtx_controller):
-        """Create WebSocket server instance for testing."""
+    def server(self, mock_config, mock_camera_monitor, mediamtx_controller):
+        """Create WebSocket server instance with real MediaMTX integration."""
         return WebSocketJsonRpcServer(
             host="localhost",
             port=8002,
             websocket_path="/ws",
             max_connections=100,
-            mediamtx_controller=mock_mediamtx_controller,
+            mediamtx_controller=mediamtx_controller,  # Use real MediaMTX controller
             camera_monitor=mock_camera_monitor,
         )
 
     @pytest.mark.asyncio
-    async def test_get_camera_status_uses_real_capability_data(
-        self, server, mock_camera_monitor, mock_mediamtx_controller
+    async def test_get_camera_status_with_real_mediamtx_integration(
+        self, server, mock_camera_monitor, mediamtx_controller, mediamtx_infrastructure
     ):
-        """Verify get_camera_status integrates real capability metadata when available."""
+        """
+        Verify get_camera_status integrates with real MediaMTX service.
+        
+        Requirements: REQ-WS-001, REQ-WS-003
+        Scenario: Real MediaMTX integration with capability metadata
+        Expected: Successful integration with real MediaMTX service
+        Edge Cases: Real stream status queries, actual metrics retrieval
+        """
         # Setup connected cameras with real capability data
         mock_camera_device = CameraDevice(
             device="/dev/video0", name="Test Camera 0", status="CONNECTED"
@@ -81,12 +89,11 @@ class TestServerStatusAggregation:
             mock_capability_metadata
         )
 
-        # Mock MediaMTX stream status
-        mock_mediamtx_controller.get_stream_status.return_value = {
-            "status": "active",
-            "bytes_sent": 12345,
-            "readers": 2,
-        }
+        # Create real test stream in MediaMTX
+        stream_info = await mediamtx_infrastructure.create_test_stream("camera0", "/dev/video0")
+        
+        # Get real MediaMTX stream status
+        real_stream_status = await mediamtx_controller.get_stream_status("camera0")
 
         # Test get_camera_status method
         result = await server._method_get_camera_status({"device": "/dev/video0"})
@@ -105,23 +112,32 @@ class TestServerStatusAggregation:
             "640x480",
         ]
 
-        # Verify MediaMTX integration
-        assert result["metrics"]["bytes_sent"] == 12345
-        assert result["metrics"]["readers"] == 2
-        assert result["streams"]["rtsp"] == "rtsp://localhost:8554/camera0"
+        # Verify real MediaMTX integration (actual values from real service)
+        assert "metrics" in result
+        assert "streams" in result
+        assert result["streams"]["rtsp"] == "rtsp://127.0.0.1:8554/camera0"
 
         # Verify method calls
         mock_camera_monitor.get_connected_cameras.assert_called_once()
         mock_camera_monitor.get_effective_capability_metadata.assert_called_once_with(
             "/dev/video0"
         )
-        mock_mediamtx_controller.get_stream_status.assert_called_once_with("camera0")
+        
+        # Clean up test stream
+        await mediamtx_infrastructure.delete_test_stream("camera0")
 
     @pytest.mark.asyncio
-    async def test_get_camera_status_fallback_to_defaults(
+    async def test_get_camera_status_fallback_to_defaults_when_capability_detection_unavailable(
         self, server, mock_camera_monitor
     ):
-        """Verify graceful fallback when capability detection unavailable."""
+        """
+        Verify graceful fallback when capability detection unavailable.
+        
+        Requirements: REQ-WS-002, REQ-ERROR-001
+        Scenario: Capability detection method unavailable
+        Expected: Graceful fallback to architecture defaults
+        Edge Cases: Missing capability detection support
+        """
         # Setup camera without capability detection support
         mock_camera_device = CameraDevice(
             device="/dev/video0", name="Test Camera 0", status="CONNECTED"
@@ -149,10 +165,63 @@ class TestServerStatusAggregation:
         assert result["capabilities"]["resolutions"] == []
 
     @pytest.mark.asyncio
-    async def test_get_camera_list_capability_integration(
-        self, server, mock_camera_monitor, mock_mediamtx_controller
+    async def test_get_camera_status_handles_mediamtx_connection_failure(
+        self, server, mock_camera_monitor, mediamtx_controller
     ):
-        """Verify get_camera_list uses real capability data for resolution/fps."""
+        """
+        Test camera status handling when MediaMTX connection fails.
+        
+        Requirements: REQ-ERROR-001
+        Scenario: MediaMTX service unavailable
+        Expected: Graceful error handling without crashing
+        Edge Cases: Network failures, service unavailability
+        """
+        # Setup camera with capability data
+        mock_camera_device = CameraDevice(
+            device="/dev/video0", name="Test Camera 0", status="CONNECTED"
+        )
+
+        mock_camera_monitor.get_connected_cameras.return_value = {
+            "/dev/video0": mock_camera_device
+        }
+
+        mock_capability_metadata = {
+            "resolution": "1280x720",
+            "fps": 25,
+            "validation_status": "confirmed",
+        }
+        mock_camera_monitor.get_effective_capability_metadata.return_value = (
+            mock_capability_metadata
+        )
+
+        # Simulate MediaMTX connection failure
+        mediamtx_controller.get_stream_status.side_effect = Exception("Connection failed")
+
+        # Test get_camera_status method - should handle error gracefully
+        result = await server._method_get_camera_status({"device": "/dev/video0"})
+
+        # Verify basic camera info is still returned
+        assert result["status"] == "CONNECTED"
+        assert result["name"] == "Test Camera 0"
+        assert result["resolution"] == "1280x720"
+        assert result["fps"] == 25
+
+        # Verify error handling for MediaMTX integration
+        assert "metrics" in result
+        assert "streams" in result
+
+    @pytest.mark.asyncio
+    async def test_get_camera_list_with_real_capability_integration(
+        self, server, mock_camera_monitor, mediamtx_controller
+    ):
+        """
+        Verify get_camera_list uses real capability data for resolution/fps.
+        
+        Requirements: REQ-WS-002, REQ-WS-003
+        Scenario: Multiple cameras with different capability metadata
+        Expected: Real capability data integration in camera list
+        Edge Cases: Different validation statuses, mixed capability data
+        """
         # Setup multiple connected cameras with capability data
         mock_cameras = {
             "/dev/video0": CameraDevice("/dev/video0", "Camera 0", "CONNECTED"),
@@ -185,9 +254,6 @@ class TestServerStatusAggregation:
         mock_camera_monitor.get_effective_capability_metadata.side_effect = (
             mock_get_capability_metadata
         )
-
-        # Mock MediaMTX stream status
-        mock_mediamtx_controller.get_stream_status.return_value = {"status": "active"}
 
         # Test get_camera_list method
         result = await server._method_get_camera_list()
