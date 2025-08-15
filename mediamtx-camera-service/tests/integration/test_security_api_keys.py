@@ -1,6 +1,14 @@
 """
 Integration tests for API key authentication flow validation.
 
+Requirements Traceability:
+- REQ-SEC-003: Security system shall provide API key authentication flow validation
+- REQ-SEC-003: Security system shall support API key creation, validation, and rotation
+- REQ-SEC-003: Security system shall handle concurrent API key usage scenarios
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real API key authentication validation
+
 Tests complete API key scenarios including creation, validation,
 rotation, and concurrent usage as specified in Sprint 2 Task S7.1.
 """

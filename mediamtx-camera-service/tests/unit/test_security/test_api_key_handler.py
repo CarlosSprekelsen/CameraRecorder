@@ -1,6 +1,14 @@
 """
 Unit tests for API key handler authentication.
 
+Requirements Traceability:
+- REQ-SEC-003: Security system shall provide API key handler validation
+- REQ-SEC-003: Security system shall support API key generation, validation, and rotation
+- REQ-SEC-003: Security system shall handle secure storage and lifecycle management
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real API key handler validation
+
 Tests API key generation, validation, rotation, and secure storage
 as specified in Architecture Decision AD-7.
 """

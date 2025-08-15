@@ -2,6 +2,14 @@
 """
 Test health monitoring recovery confirmation logic and circuit breaker state transitions.
 
+Requirements Traceability:
+- REQ-MEDIA-004: MediaMTX controller shall implement circuit breaker pattern for fault tolerance
+- REQ-ERROR-003: MediaMTX controller shall maintain operation during MediaMTX failures
+- REQ-MEDIA-004: MediaMTX controller shall provide configurable health monitoring with recovery confirmation
+
+Story Coverage: S2 - MediaMTX Integration
+IV&V Control Point: Real recovery confirmation validation
+
 Test policy: Verify that circuit breaker recovery requires exactly N consecutive
 successful health checks and that any failure during recovery resets the confirmation progress.
 """

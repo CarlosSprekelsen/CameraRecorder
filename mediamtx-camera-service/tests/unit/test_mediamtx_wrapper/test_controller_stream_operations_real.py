@@ -3,10 +3,9 @@
 Real MediaMTX controller validation tests.
 
 Requirements Traceability:
-- REQ-MTX-001: System shall manage MediaMTX streams via REST API
-- REQ-MTX-005: System shall manage stream lifecycle (create/delete/status)
-- REQ-MTX-008: System shall generate correct stream URLs
-- REQ-MTX-009: System shall validate stream configurations
+- REQ-MEDIA-002: MediaMTX controller shall manage stream lifecycle via REST API
+- REQ-MEDIA-008: MediaMTX controller shall generate correct stream URLs for all protocols
+- REQ-MEDIA-009: MediaMTX controller shall validate stream configurations with real validation
 
 Story Coverage: S3 - MediaMTX Integration & Management
 IV&V Control Point: Real stream operations validation

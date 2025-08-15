@@ -2,6 +2,14 @@
 """
 Real System Integration Tests - Validating Actual End-to-End System Behavior
 
+Requirements Traceability:
+- REQ-INT-001: Integration system shall provide real end-to-end system behavior validation
+- REQ-INT-002: Integration system shall validate real MediaMTX server integration
+- REQ-INT-003: Integration system shall test real WebSocket connections and camera control
+
+Story Coverage: S4 - System Integration
+IV&V Control Point: Real system integration validation
+
 This test suite validates real system integration without excessive mocking:
 - Real MediaMTX server integration (not mocked HTTP responses)
 - Real camera device simulation with test video streams

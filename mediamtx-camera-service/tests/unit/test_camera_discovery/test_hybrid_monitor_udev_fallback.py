@@ -1,6 +1,14 @@
 """
 Udev event processing and polling fallback tests for hybrid camera monitor.
 
+Requirements Traceability:
+- REQ-CAM-002: Camera discovery shall handle udev events with real hardware integration
+- REQ-CAM-004: Camera discovery shall provide polling fallback when udev events are missed
+- REQ-CAM-002: Camera discovery shall process device add/remove/change events with race condition handling
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real udev event processing validation
+
 Test coverage:
 - Udev add/remove/change events with race conditions
 - Invalid device node handling

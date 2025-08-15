@@ -1,6 +1,14 @@
 """
 Integration tests focused on requirement-based behavior validation.
 
+Requirements Traceability:
+- REQ-INT-001: Integration system shall provide requirement-based behavior validation
+- REQ-INT-004: Integration system shall validate real component orchestration
+- REQ-INT-001: Integration system shall test error/edge-case behavior and business logic
+
+Story Coverage: S4 - System Integration
+IV&V Control Point: Real component integration validation
+
 Replaces smoke/instantiation-only checks with tests that:
 - Trace to requirements
 - Exercise real component orchestration

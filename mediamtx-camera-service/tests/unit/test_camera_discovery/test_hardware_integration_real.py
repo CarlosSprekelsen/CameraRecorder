@@ -1,6 +1,14 @@
 """
 Strategic Mock Minimization for Hardware/UDev Integration Tests.
 
+Requirements Traceability:
+- REQ-CAM-001: Camera discovery shall integrate with real hardware devices
+- REQ-CAM-002: Camera discovery shall handle hardware device enumeration with real file operations
+- REQ-CAM-001: Camera discovery shall provide minimal mocking for true external dependencies
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real hardware integration validation
+
 This module implements the executive decision to assess hardware/UDev tests
 with minimal mocks ONLY for true external dependencies.
 

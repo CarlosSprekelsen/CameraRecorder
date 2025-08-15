@@ -3,92 +3,72 @@
 ## Overall Metrics (Updated Daily)
 | Metric | Current | Target | Trend |
 |---------|---------|---------|--------|
-| Tests with Requirements Traceability | 4/46 (9%) | 100% | ↗️ |
-| Tests Using Real Components | 20/46 (43%) | 90% | ↗️ |
-| Over-Mocking Violations | 15 | 0 | ↘️ |
-| Edge Case Coverage | 35/46 (76%) | 80% | ↗️ |
+| Tests with Requirements Traceability | 15/46 (33%) | 100% | ↗️ |
+| Tests Using Real Components | 35/46 (76%) | 90% | ↗️ |
+| Over-Mocking Violations | 1 | 0 | ↘️ |
+| Edge Case Coverage | 40/46 (87%) | 80% | ↗️ |
 
 ## Active Issues (Specific File Actions)
 | Issue ID | File Path | Violation | Specific Action | Delete These Files |
 |----------|-----------|-----------|-----------------|-------------------|
-| T001 | tests/unit/test_websocket_server/test_server_method_handlers.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-WS-001, REQ-WS-002, REQ-ERROR-001 | None |
-| T002 | tests/unit/test_websocket_server/test_server_method_handlers.py | Lines 91-97: Mocking MediaMTX controller | Replace mock_controller = Mock() with real MediaMTX test instance | None |
-| T003 | tests/unit/test_websocket_server/test_server_method_handlers.py | Lines 117-125: Mocking MediaMTX controller | Replace mock_controller = Mock() with real MediaMTX test instance | None |
-| T004 | tests/unit/test_websocket_server/test_server_method_handlers.py | Lines 259-265: Mocking camera monitor | Replace mock_camera_monitor = Mock() with real camera discovery | None |
-| T005 | tests/unit/test_websocket_server/test_server_method_handlers.py | Lines 200-210: Mocking MediaMTX controller | Replace mock_controller = Mock() with real MediaMTX test instance | None |
-| T006 | tests/unit/test_camera_service/test_service_manager_lifecycle.py | Lines 1-10: Missing REQ-* docstring | ✅ RESOLVED: Requirements docstring added with REQ-SVC-001, REQ-SVC-002, REQ-ERROR-003 | None |
-| T007 | tests/unit/test_camera_service/test_service_manager_lifecycle.py | Lines 82-119: Over-mocking HTTP session | ✅ RESOLVED: Replaced with real aiohttp TestServer integration | None |
-| T008 | tests/unit/test_camera_service/test_service_manager_lifecycle.py | Lines 120-150: Over-mocking HTTP session | ✅ RESOLVED: Replaced with real aiohttp TestServer integration | None |
-| T009 | tests/unit/test_camera_service/test_service_manager_lifecycle.py | Lines 151-180: Over-mocking HTTP session | ✅ RESOLVED: Replaced with real aiohttp TestServer integration | None |
-| T010 | tests/unit/test_camera_service/test_service_manager_lifecycle.py | Lines 181-190: Over-mocking HTTP session | ✅ RESOLVED: Replaced with real aiohttp TestServer integration | None |
-| T011 | tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | Lines 1-10: Missing REQ-* docstring | ✅ RESOLVED: Requirements docstring added with REQ-MEDIA-003, REQ-MEDIA-004, REQ-ERROR-003 | None |
-| T012 | tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | Lines 40-80: Mocking HTTP session | ✅ RESOLVED: Replaced with real aiohttp TestServer integration | None |
-| T013 | tests/unit/test_mediamtx_wrapper/test_controller_real_integration_simple.py | Lines 1-20: Duplicate of test_controller_health_monitoring.py | DELETE this file completely | test_controller_real_integration_simple.py |
-| T014 | tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-005 | None |
-| T015 | tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-005 | None |
-| T016 | tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-002, REQ-MEDIA-008, REQ-MEDIA-009 | None |
-| T017 | tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-004, REQ-ERROR-003 | None |
-| T018 | tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-004, REQ-ERROR-003 | None |
-| T019 | tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-003 | None |
-| T020 | tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-002, REQ-CAM-003 | None |
-| T021 | tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Lines 30-80: Duplicate of test_hybrid_monitor_capability_parsing.py | DELETE this file completely | test_hybrid_monitor_comprehensive.py |
-| T022 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002, REQ-CAM-004 | None |
-| T023 | tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002, REQ-CAM-004 | None |
-| T024 | tests/unit/test_camera_discovery/test_capability_detection.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-003 | None |
-| T025 | tests/unit/test_camera_discovery/test_environment_setup.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001 | None |
-| T026 | tests/unit/test_camera_discovery/test_hardware_integration_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-002 | None |
-| T027 | tests/unit/test_camera_discovery/test_simple_monitor.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001 | None |
-| T028 | tests/unit/test_camera_discovery/test_udev_processing.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002 | None |
-| T029 | tests/unit/test_configuration_validation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CONFIG-001 | None |
-| T030 | tests/unit/test_service_manager.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002 | None |
-| T031 | tests/unit/test_websocket_bind.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-WS-006 | None |
-| T032 | tests/integration/test_real_system_integration.py | Lines 1-20: Missing REQ-* docstring | Add requirements docstring with REQ-INT-001, REQ-INT-002, REQ-INT-003 | None |
-| T033 | tests/integration/test_real_system_integration.py | Lines 200-300: No edge case coverage | Add error scenarios: service failure, network timeout, resource exhaustion | None |
-| T034 | tests/integration/test_config_component_integration.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-INT-001, REQ-INT-004 | None |
-| T035 | tests/integration/test_security_api_keys.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-003 | None |
-| T036 | tests/integration/test_security_authentication.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002 | None |
-| T037 | tests/integration/test_security_websocket.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-004 | None |
-| T038 | tests/integration/test_service_manager_e2e.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002 | None |
-| T039 | tests/integration/test_service_manager_requirements.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002, REQ-SVC-003 | None |
-| T040 | tests/unit/test_security/test_middleware.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002, REQ-SEC-004 | None |
-| T041 | tests/unit/test_security/test_auth_manager.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002 | None |
-| T042 | tests/unit/test_security/test_jwt_handler.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001 | None |
-| T043 | tests/unit/test_security/test_api_key_handler.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-003 | None |
+| T001 | tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | Lines 40-80: Mocking HTTP session | ❌ FAILED: Real system issues - circuit breaker not activating, incorrect health state keys | None |
+| T002 | tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-005 | None |
+| T003 | tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-005 | None |
+| T004 | tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-002, REQ-MEDIA-008, REQ-MEDIA-009 | None |
+| T005 | tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-004, REQ-ERROR-003 | None |
+| T006 | tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-MEDIA-004, REQ-ERROR-003 | None |
+| T007 | tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-003 | None |
+| T008 | tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-002, REQ-CAM-003 | None |
+| T009 | tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Lines 30-80: Duplicate of test_hybrid_monitor_capability_parsing.py | DELETE this file completely | test_hybrid_monitor_comprehensive.py |
+| T010 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002, REQ-CAM-004 | None |
+| T011 | tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002, REQ-CAM-004 | None |
+| T012 | tests/unit/test_camera_discovery/test_capability_detection.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-003 | None |
+| T013 | tests/unit/test_camera_discovery/test_environment_setup.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001 | None |
+| T014 | tests/unit/test_camera_discovery/test_hardware_integration_real.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001, REQ-CAM-002 | None |
+| T015 | tests/unit/test_camera_discovery/test_simple_monitor.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-001 | None |
+| T016 | tests/unit/test_camera_discovery/test_udev_processing.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CAM-002 | None |
+| T017 | tests/unit/test_configuration_validation.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-CONFIG-001 | None |
+| T018 | tests/unit/test_service_manager.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002 | None |
+| T019 | tests/unit/test_websocket_bind.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-WS-006 | None |
+| T020 | tests/integration/test_real_system_integration.py | Lines 1-20: Missing REQ-* docstring | Add requirements docstring with REQ-INT-001, REQ-INT-002, REQ-INT-003 | None |
+| T021 | tests/integration/test_real_system_integration.py | Lines 200-300: No edge case coverage | Add error scenarios: service failure, network timeout, resource exhaustion | None |
+| T022 | tests/integration/test_config_component_integration.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-INT-001, REQ-INT-004 | None |
+| T023 | tests/integration/test_security_api_keys.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-003 | None |
+| T024 | tests/integration/test_security_authentication.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002 | None |
+| T025 | tests/integration/test_security_websocket.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-004 | None |
+| T026 | tests/integration/test_service_manager_e2e.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002 | None |
+| T027 | tests/integration/test_service_manager_requirements.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SVC-001, REQ-SVC-002, REQ-SVC-003 | None |
+| T028 | tests/unit/test_security/test_middleware.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002, REQ-SEC-004 | None |
+| T029 | tests/unit/test_security/test_auth_manager.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001, REQ-SEC-002 | None |
+| T030 | tests/unit/test_security/test_jwt_handler.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-001 | None |
+| T031 | tests/unit/test_security/test_api_key_handler.py | Lines 1-10: Missing REQ-* docstring | Add requirements docstring with REQ-SEC-003 | None |
 
 ## Files to Delete (Test Proliferation Prevention)
 | File Path | Reason for Deletion | Duplicate Of |
 |-----------|-------------------|--------------|
-| tests/unit/test_mediamtx_wrapper/test_controller_real_integration_simple.py | Duplicate functionality of test_controller_health_monitoring.py | test_controller_health_monitoring.py |
-| tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Duplicate functionality of test_hybrid_monitor_capability_parsing.py | test_hybrid_monitor_capability_parsing.py |
 
 ## Mocking Violations Summary
 | Violation Type | Count | Files Affected |
 |----------------|-------|----------------|
-| Mocking MediaMTX Controller | 4 | test_server_method_handlers.py |
-| Mocking HTTP Session | 5 | test_service_manager_lifecycle.py, test_controller_health_monitoring.py |
-| Mocking Camera Monitor | 1 | test_server_method_handlers.py |
-| Missing REQ-* Docstrings | 43 | All test files except templates |
+| Mocking HTTP Session | 1 | test_controller_health_monitoring.py (T001 - real system issues need fixing) |
+| Missing REQ-* Docstrings | 31 | Remaining test files need requirements traceability |
 
 ## Edge Case Coverage Gaps
 | Test File | Missing Edge Cases |
 |-----------|-------------------|
 | tests/integration/test_real_system_integration.py | Service failure, network timeout, resource exhaustion |
-| tests/unit/test_websocket_server/test_server_method_handlers.py | Real MediaMTX failure scenarios |
-| tests/unit/test_camera_service/test_service_manager_lifecycle.py | Real HTTP failure scenarios |
 
 ## Test File Consolidation Plan
 
 ### MediaMTX Wrapper Consolidation
 | Primary Test File | Files to Delete | Consolidation Action |
 |-------------------|-----------------|---------------------|
-| tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | tests/unit/test_mediamtx_wrapper/test_controller_real_integration_simple.py | Merge real integration tests into health monitoring file |
 | tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py | tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py, tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py | Consolidate all recording/snapshot operations into stream operations file |
 | tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py | tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py | Merge recovery confirmation tests into circuit breaker file |
 
 ### Camera Discovery Consolidation
 | Primary Test File | Files to Delete | Consolidation Action |
 |-------------------|-----------------|---------------------|
-| tests/unit/test_camera_discovery/test_hybrid_monitor_capability_parsing.py | tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py | Merge comprehensive tests into capability parsing file |
 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py | Merge udev fallback tests into reconciliation file |
 | tests/unit/test_camera_discovery/test_capability_detection.py | tests/unit/test_camera_discovery/test_simple_monitor.py | Merge simple monitor tests into capability detection file |
 

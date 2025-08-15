@@ -1,6 +1,14 @@
 """
 Integration tests for JWT authentication flow validation.
 
+Requirements Traceability:
+- REQ-SEC-001: Security system shall provide JWT authentication flow validation
+- REQ-SEC-002: Security system shall support role-based access control with JWT tokens
+- REQ-SEC-001: Security system shall handle JWT token generation, validation, and expiry
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real JWT authentication validation
+
 Tests complete authentication scenarios including token generation,
 validation, role-based access control, and error handling as
 specified in Sprint 2 Task S7.1.

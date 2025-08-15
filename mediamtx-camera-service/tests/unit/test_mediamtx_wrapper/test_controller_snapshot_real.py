@@ -2,6 +2,14 @@
 """
 Real FFmpeg process management tests for snapshot capture functionality.
 
+Requirements Traceability:
+- REQ-MEDIA-005: MediaMTX controller shall provide snapshot capture with real FFmpeg integration
+- REQ-MEDIA-005: MediaMTX controller shall handle snapshot file operations with real I/O
+- REQ-MEDIA-005: MediaMTX controller shall manage snapshot process lifecycle with timeout controls
+
+Story Coverage: S2 - MediaMTX Integration
+IV&V Control Point: Real FFmpeg snapshot validation
+
 Test policy: Validate actual FFmpeg process execution, real file I/O operations,
 and robust error handling with real subprocess management and timeout controls.
 """

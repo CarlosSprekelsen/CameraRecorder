@@ -3,6 +3,14 @@ QUARANTINED: Complex mock test - moved to tests/quarantine/
 Reason: Multiple v4l2-ctl subprocess calls are too complex to mock reliably
 Strategic Decision: Replace with real v4l2-ctl integration test
 Alternative Coverage: tests/integration/test_camera_discovery_real.py
+
+Requirements Traceability:
+- REQ-CAM-001: Camera discovery shall detect camera capabilities with real hardware integration
+- REQ-CAM-003: Camera discovery shall handle capability detection timeouts and errors
+- REQ-CAM-001: Camera discovery shall probe device capabilities with real v4l2-ctl integration
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real capability detection validation
 """
 
 import pytest

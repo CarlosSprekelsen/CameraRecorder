@@ -1,3 +1,15 @@
+"""
+Service manager requirements validation tests.
+
+Requirements Traceability:
+- REQ-SVC-001: ServiceManager shall validate functional requirements (F1.1.1, F3.1.3)
+- REQ-SVC-002: ServiceManager shall handle camera lifecycle requirements
+- REQ-SVC-003: ServiceManager shall provide photo capture and hot-plug notification capabilities
+
+Story Coverage: S1 - Service Manager Integration
+IV&V Control Point: Real requirements validation
+"""
+
 import asyncio
 import json
 from contextlib import asynccontextmanager

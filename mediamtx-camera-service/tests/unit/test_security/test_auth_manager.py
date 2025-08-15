@@ -1,6 +1,14 @@
 """
 Unit tests for authentication manager.
 
+Requirements Traceability:
+- REQ-SEC-001: Security system shall provide authentication manager validation
+- REQ-SEC-002: Security system shall support JWT and API key authentication coordination
+- REQ-SEC-002: Security system shall handle authentication result structure and role management
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real authentication manager validation
+
 Tests authentication coordination between JWT and API key handlers
 as specified in Architecture Decision AD-7.
 """

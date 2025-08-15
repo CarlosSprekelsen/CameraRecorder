@@ -1,6 +1,14 @@
 """
 Unit tests for security middleware.
 
+Requirements Traceability:
+- REQ-SEC-001: Security system shall provide WebSocket security middleware validation
+- REQ-SEC-002: Security system shall support authentication checks and rate limiting
+- REQ-SEC-004: Security system shall handle connection control and permission evaluation
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real security middleware validation
+
 Tests WebSocket security middleware including authentication,
 rate limiting, and connection control as specified in Architecture Decision AD-7.
 """

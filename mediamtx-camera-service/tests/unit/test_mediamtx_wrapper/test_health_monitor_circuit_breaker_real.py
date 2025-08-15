@@ -2,6 +2,14 @@
 """
 Test health monitoring circuit breaker flapping scenarios and edge cases.
 
+Requirements Traceability:
+- REQ-MEDIA-004: MediaMTX controller shall implement circuit breaker pattern for fault tolerance
+- REQ-ERROR-003: MediaMTX controller shall maintain operation during MediaMTX failures
+- REQ-MEDIA-004: MediaMTX controller shall provide configurable health monitoring with exponential backoff
+
+Story Coverage: S2 - MediaMTX Integration
+IV&V Control Point: Real circuit breaker validation
+
 Test policy: Verify circuit breaker stability under alternating success/failure
 patterns using REAL MediaMTX controller implementation and real HTTP servers.
 """

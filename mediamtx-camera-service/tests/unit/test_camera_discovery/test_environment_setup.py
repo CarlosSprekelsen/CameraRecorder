@@ -1,6 +1,14 @@
 """
 Camera discovery test environment setup and mock configurations.
 
+Requirements Traceability:
+- REQ-CAM-001: Camera discovery shall provide test environment setup for hardware integration
+- REQ-CAM-001: Camera discovery shall support dependency mocking for isolated testing
+- REQ-CAM-001: Camera discovery shall configure test fixtures for real hardware validation
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real environment setup validation
+
 This test file provides comprehensive testing of the camera discovery
 test environment setup, including robust mocks for udev events,
 capability parsing, and environment-specific dependencies.

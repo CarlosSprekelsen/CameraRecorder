@@ -1,6 +1,16 @@
 """
 Reconciliation tests between hybrid_monitor capability output and service_manager
-consumption.  Test coverage: - End-to-end capability flow validation - Provisional vs
+consumption.
+
+Requirements Traceability:
+- REQ-CAM-002: Camera discovery shall reconcile capability data between components
+- REQ-CAM-004: Camera discovery shall maintain metadata consistency across service boundaries
+- REQ-CAM-002: Camera discovery shall propagate confirmed vs provisional capability states
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real reconciliation validation
+
+Test coverage: - End-to-end capability flow validation - Provisional vs
 confirmed state propagation - Metadata consistency and drift detection - Integration
 validation between components  Created: 2025-08-04 Related: S3 Camera Discovery
 hardening, docs/roadmap.md Evidence: src/camera_discovery/hybrid_monitor.py lines

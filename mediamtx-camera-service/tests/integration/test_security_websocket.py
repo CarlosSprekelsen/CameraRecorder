@@ -1,6 +1,14 @@
 """
 Integration tests for WebSocket security validation.
 
+Requirements Traceability:
+- REQ-SEC-001: Security system shall provide WebSocket authentication validation
+- REQ-SEC-004: Security system shall support permission checking for WebSocket operations
+- REQ-SEC-001: Security system shall handle rate limiting and connection control
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real WebSocket security validation
+
 Tests WebSocket authentication, permission checking, rate limiting,
 and connection control as specified in Sprint 2 Task S7.1.
 """

@@ -2,6 +2,14 @@
 """
 Test recording lifecycle duration calculation and file handling robustness.
 
+Requirements Traceability:
+- REQ-MEDIA-005: MediaMTX controller shall provide accurate recording duration calculation
+- REQ-MEDIA-005: MediaMTX controller shall handle recording file lifecycle with real file operations
+- REQ-MEDIA-005: MediaMTX controller shall maintain recording session state with precision
+
+Story Coverage: S2 - MediaMTX Integration
+IV&V Control Point: Real recording duration validation
+
 Test policy: Verify accurate duration computation, graceful handling of
 missing files, permission errors, and proper session management using REAL
 file operations and MediaMTX server.

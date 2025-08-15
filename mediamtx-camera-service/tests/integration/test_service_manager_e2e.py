@@ -1,3 +1,15 @@
+"""
+End-to-end service manager integration tests.
+
+Requirements Traceability:
+- REQ-SVC-001: ServiceManager shall provide end-to-end integration validation
+- REQ-SVC-002: ServiceManager shall handle camera connect/disconnect lifecycle
+- REQ-SVC-001: ServiceManager shall orchestrate MediaMTX path creation and deletion
+
+Story Coverage: S1 - Service Manager Integration
+IV&V Control Point: Real end-to-end service manager validation
+"""
+
 import socket
 from contextlib import asynccontextmanager
 

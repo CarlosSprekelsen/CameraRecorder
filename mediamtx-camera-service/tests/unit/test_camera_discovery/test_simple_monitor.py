@@ -1,5 +1,13 @@
 """
 Simple test to isolate hanging issues in HybridCameraMonitor.
+
+Requirements Traceability:
+- REQ-CAM-001: Camera discovery shall provide simple monitor functionality without hanging
+- REQ-CAM-001: Camera discovery shall handle monitor lifecycle with timeout controls
+- REQ-CAM-001: Camera discovery shall isolate hanging issues in monitor operations
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real monitor lifecycle validation
 """
 
 import asyncio

@@ -1,6 +1,14 @@
 """
 Capability parsing and detection tests for hybrid camera monitor.
 
+Requirements Traceability:
+- REQ-CAM-001: Camera discovery shall detect camera capabilities with real hardware integration
+- REQ-CAM-003: Camera discovery shall handle malformed v4l2-ctl outputs with error recovery
+- REQ-CAM-001: Camera discovery shall provide frame rate extraction from various output formats
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real capability parsing validation
+
 Test coverage:
 - Frame rate extraction from various v4l2-ctl output formats
 - Malformed output handling and error recovery

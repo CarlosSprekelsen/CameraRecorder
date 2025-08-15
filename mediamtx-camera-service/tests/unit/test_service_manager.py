@@ -2,6 +2,14 @@
 """
 Requirement-based tests for ServiceManager behavior.
 
+Requirements Traceability:
+- REQ-SVC-001: ServiceManager shall orchestrate camera discovery and MediaMTX integration
+- REQ-SVC-002: ServiceManager shall handle camera lifecycle events with real component coordination
+- REQ-SVC-001: ServiceManager shall provide WebSocket API for camera management
+
+Story Coverage: S1 - Service Manager Integration
+IV&V Control Point: Real service manager validation
+
 Each test traces to a customer requirement and validates real component
 behavior via the public WebSocket API and MediaMTX HTTP integration.
 """

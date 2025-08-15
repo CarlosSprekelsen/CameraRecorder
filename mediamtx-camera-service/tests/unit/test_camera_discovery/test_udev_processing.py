@@ -1,3 +1,15 @@
+"""
+Udev event processing tests for camera discovery.
+
+Requirements Traceability:
+- REQ-CAM-002: Camera discovery shall process udev events with proper filtering
+- REQ-CAM-002: Camera discovery shall handle udev event actions (add/remove/change)
+- REQ-CAM-002: Camera discovery shall provide race condition protection for udev events
+
+Story Coverage: S3 - Camera Discovery Hardening
+IV&V Control Point: Real udev event processing validation
+"""
+
 import pytest
 from unittest.mock import AsyncMock, patch, Mock
 

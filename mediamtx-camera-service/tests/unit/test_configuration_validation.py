@@ -1,6 +1,14 @@
 """
 Test configuration schema validation and compatibility.
 
+Requirements Traceability:
+- REQ-CONFIG-001: Configuration system shall validate schema consistency and parameter compatibility
+- REQ-CONFIG-001: Configuration system shall prevent runtime parameter mismatches
+- REQ-CONFIG-001: Configuration system shall ensure component instantiation with valid config objects
+
+Story Coverage: S1 - Configuration Management
+IV&V Control Point: Real configuration validation
+
 This test suite validates that:
 1. MediaMTXConfig dataclass matches MediaMTXController constructor parameters
 2. Configuration files can be loaded without parameter mismatches

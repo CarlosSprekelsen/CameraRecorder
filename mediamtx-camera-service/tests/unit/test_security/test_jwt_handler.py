@@ -1,6 +1,14 @@
 """
 Unit tests for JWT handler authentication.
 
+Requirements Traceability:
+- REQ-SEC-001: Security system shall provide JWT handler validation
+- REQ-SEC-001: Security system shall support JWT token generation and validation
+- REQ-SEC-001: Security system shall handle role-based access control with JWT claims
+
+Story Coverage: S7 - Security Implementation
+IV&V Control Point: Real JWT handler validation
+
 Tests JWT token generation, validation, and role-based access control
 as specified in Architecture Decision AD-7.
 """
