@@ -5,6 +5,12 @@ This module validates API contracts against real endpoints to ensure
 interfaces work as specified in the design specifications.
 
 PRINCIPLE: NO MOCKING - Only real system validation
+
+Requirements Traceability:
+- REQ-INT-005: API contract validation
+
+Story Coverage: S3 - WebSocket API Integration
+IV&V Control Point: API contract validation
 """
 
 import asyncio

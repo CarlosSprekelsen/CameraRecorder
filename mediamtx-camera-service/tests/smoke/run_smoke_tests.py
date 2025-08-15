@@ -10,6 +10,12 @@ Tests:
 1. WebSocket Real Connection Test
 2. MediaMTX Real Integration Test  
 3. Health Endpoint Real Validation
+
+Requirements Traceability:
+- REQ-SMOKE-001: Smoke test validation
+
+Story Coverage: S3 - System Integration
+IV&V Control Point: Smoke test validation
 """
 
 import asyncio

@@ -1594,8 +1594,8 @@ class MediaMTXController:
                                     "circuit_breaker_reset": True,
                                 },
                             )
-                        elif consecutive_successes_during_recovery == 1 and current_status == self._last_health_status:
-                            # First consecutive success after circuit breaker activation (not status transition)
+                        elif consecutive_successes_during_recovery > 0 and current_status == self._last_health_status:
+                            # Consecutive success during circuit breaker recovery (not status transition)
                             self._logger.info(
                                 f"MediaMTX health IMPROVING: continuing healthy status "
                                 f"(confirmation: {consecutive_successes_during_recovery}/{self._health_recovery_confirmation_threshold})",

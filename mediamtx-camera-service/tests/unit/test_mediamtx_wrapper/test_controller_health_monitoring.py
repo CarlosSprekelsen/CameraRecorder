@@ -228,16 +228,21 @@ paths:
         
         with caplog.at_level("INFO"):
             await controller.start()
-            await asyncio.sleep(0.3)  # Let circuit breaker activate
+            await asyncio.sleep(0.8)  # Let circuit breaker activate and timeout
             await controller.stop()
 
-        # Switch to success server for partial recovery
+        # Verify circuit breaker was activated
+        assert controller._health_state["circuit_breaker_active"] == True, "Circuit breaker should be active"
+        assert controller._health_state["circuit_breaker_activations"] > 0, "Circuit breaker should have been activated"
+
+        # Switch to success server for partial recovery - but don't restart controller
+        # This simulates the MediaMTX service coming back online while circuit breaker is active
         controller._api_port = 9997
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         
         with caplog.at_level("INFO"):
             await controller.start()
-            await asyncio.sleep(0.2)  # Let some successful checks run
+            await asyncio.sleep(0.8)  # Let some successful checks run for partial recovery
             await controller.stop()
 
         # Switch back to failure server to reset recovery progress
@@ -246,7 +251,7 @@ paths:
         
         with caplog.at_level("INFO"):
             await controller.start()
-            await asyncio.sleep(0.2)  # Let failure reset recovery
+            await asyncio.sleep(0.3)  # Let failure reset recovery
             await controller.stop()
 
         # Verify partial recovery logging
@@ -354,7 +359,8 @@ paths:
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         
         await controller.start()
-        await asyncio.sleep(0.2)  # Let successful checks run
+        # Wait for circuit breaker timeout (1.0s) plus time for health checks to run
+        await asyncio.sleep(1.5)  # Let circuit breaker timeout expire and successful checks run
         await controller.stop()
 
         # Verify that success was registered and failure count was reset
