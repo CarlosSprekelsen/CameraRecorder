@@ -8,14 +8,18 @@
 | Over-Mocking Violations | 7 | 0 | ↘️ |
 | Edge Case Coverage | 55/56 (98%) | 80% | ✅ |
 
-## Active Issues (Zero-Trust Verification)
+## Active Issues (Zero-Trust Verification - Based on Actual Test Execution)
 | Issue ID | File Path | Violation | Specific Action | Status |
 |----------|-----------|-----------|-----------------|---------|
-| T001 | tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | Lines 214, 265: Circuit breaker recovery not working | Fix real system circuit breaker logic | PENDING |
-| T002 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 110, 386, 420, 454, 500, 517: Missing imports (patch, time) | Add missing imports: from unittest.mock import patch; import time | PENDING |
-| T003 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 65, 945, 983: TypeError: CapabilityDetectionResult.__init__() got unexpected keyword 'device' | Fix constructor parameter mismatch | PENDING |
-| T004 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 565, 628, 675, 737, 836: fixture 'hybrid_monitor' not found | Fix fixture dependencies and imports | PENDING |
-| T005 | tests/integration/test_real_system_integration.py | 4 tests failing | Add error scenarios: service failure, network timeout, resource exhaustion | PENDING |
+| T001 | tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py | Lines 255, 361: Circuit breaker recovery not working | Fix real system circuit breaker logic - recovery confirmation not logging | PENDING |
+| T002 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 429, 475, 548: Polling interval and failure recovery issues | Fix adaptive polling interval adjustment and failure recovery logic | PENDING |
+| T003 | tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py | Lines 548: AttributeError: 'FixtureFunctionDefinition' object has no attribute | Fix fixture reference issue in polling-only mode test | PENDING |
+| T004 | tests/integration/test_real_system_integration.py | Multiple tests failing | Add error scenarios: service failure, network timeout, resource exhaustion | PENDING |
+| T005 | tests/contracts/test_api_contracts.py | Missing REQ-INT-005 docstring | Add requirements traceability: "REQ-INT-005: API contract validation" | PENDING |
+| T006 | tests/smoke/run_smoke_tests.py | Missing REQ-SMOKE-001 docstring | Add requirements traceability: "REQ-SMOKE-001: Smoke test validation" | PENDING |
+| T007 | tests/integration/run_real_integration_tests.py | Missing REQ-INT-006 docstring | Add requirements traceability: "REQ-INT-006: Integration test runner" | PENDING |
+| T008 | Missing Test Implementation | REQ-CAM-005: Advanced camera capabilities | Generate test for advanced camera capabilities validation | PENDING |
+| T009 | Missing Test Implementation | REQ-ERR-002: Advanced error handling | Generate test for advanced error handling scenarios | PENDING |
 
 ## Requirements Coverage Analysis (Zero-Trust Verification)
 
