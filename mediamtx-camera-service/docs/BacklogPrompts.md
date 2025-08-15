@@ -5,6 +5,7 @@
 ```
 Your role: Developer
 Ground rules: docs/development/project-ground-rules.md
+Test rules: docs/development/testing-guide.md
 Role reference: docs/development/roles-responsibilities.md
 Task: Fix real system issues discovered through test analysis and implement real component integration
 
@@ -55,7 +56,7 @@ SUCCESS CRITERIA:
 INPUT: Specific Issue IDs from test_status.md Active Issues table
 REFERENCE: See test_status.md for exact file paths, line numbers, and specific actions required
 
-CURRENT FOCUS: Issues T001-T005 in test_server_method_handlers.py
+CURRENT FOCUS: Issue T001
 DETAILED SPECIFICATIONS: Refer to test_status.md Active Issues table for exact violations and required fixes
 ```
 

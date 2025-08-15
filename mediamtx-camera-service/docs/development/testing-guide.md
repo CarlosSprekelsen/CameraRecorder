@@ -16,6 +16,44 @@ Define comprehensive test design principles, requirements traceability standards
 ### Real System Testing Over Mocking
 **Principle:** Test with real components whenever possible to discover actual integration issues.
 
+#### MediaMTX Architecture Decision: Single Systemd-Managed Instance
+**CRITICAL:** All tests MUST use the single systemd-managed MediaMTX service instance. Tests MUST NOT create multiple MediaMTX instances or start their own MediaMTX processes.
+
+**Rationale:**
+- **Port Conflicts:** Multiple MediaMTX instances cause port conflicts and resource exhaustion
+- **Resource Management:** Single instance prevents orphaned processes and memory leaks
+- **Production Reality:** Tests should validate against the actual production MediaMTX service
+- **System Integration:** Real integration testing requires the actual systemd-managed service
+
+**Implementation:**
+```python
+# ✅ CORRECT: Use systemd-managed MediaMTX service
+class RealMediaMTXServer:
+    """Real MediaMTX server integration testing using systemd-managed service."""
+    
+    async def start(self) -> None:
+        """Verify systemd-managed MediaMTX server is running."""
+        # Check if MediaMTX service is running via systemd
+        result = subprocess.run(["systemctl", "is-active", "mediamtx"])
+        if result.returncode != 0:
+            raise RuntimeError("MediaMTX systemd service is not running")
+        
+        # Wait for MediaMTX API to be ready
+        await self._wait_for_mediamtx_ready()
+
+# ❌ FORBIDDEN: Creating multiple MediaMTX instances
+class WrongMediaMTXServer:
+    async def start(self) -> None:
+        # DON'T DO THIS - creates port conflicts and resource issues
+        self.process = subprocess.Popen(["mediamtx", config_file])
+```
+
+**Configuration:**
+- **API Port:** 9997 (fixed systemd service port)
+- **RTSP Port:** 8554 (fixed systemd service port)
+- **Health Check:** `/v3/config/global/get` endpoint
+- **Service Management:** `systemctl start/stop/restart mediamtx`
+
 ```python
 # ✅ PREFERRED: Test with real MediaMTX instance
 async def test_stream_creation_real_mediamtx(real_mediamtx_config):

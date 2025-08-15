@@ -203,7 +203,8 @@ paths:
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         
         # Let it run with success server for recovery
-        await asyncio.sleep(0.8)  # Let health checks run with success server
+        # Wait for circuit breaker timeout (1.0s) plus time for recovery confirmation
+        await asyncio.sleep(2.0)  # Let health checks run with success server
         
         # Stop controller
         await controller.stop()

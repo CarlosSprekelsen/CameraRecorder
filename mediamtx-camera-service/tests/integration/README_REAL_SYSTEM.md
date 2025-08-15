@@ -21,9 +21,26 @@ The Real System Integration Tests validate actual end-to-end system behavior wit
 
 ## Test Architecture
 
+### CRITICAL: MediaMTX Single Instance Architecture
+**ALL TESTS MUST USE THE SINGLE SYSTEMD-MANAGED MEDIAMTX SERVICE**
+
+**Architectural Decision:** Tests use the production systemd-managed MediaMTX service (port 9997) rather than creating multiple instances. This prevents port conflicts, resource exhaustion, and ensures tests validate against the actual production environment.
+
+**Implementation:**
+- **Service Management:** `systemctl start/stop/restart mediamtx`
+- **API Endpoint:** `http://127.0.0.1:9997/v3/config/global/get`
+- **Health Check:** Uses actual MediaMTX v1.13.1 API endpoints
+- **Port Configuration:** Fixed ports (9997, 8554, 8888, 8889) from systemd service
+
+**Benefits:**
+- ✅ **No Port Conflicts:** Single instance prevents multiple MediaMTX processes
+- ✅ **Resource Efficiency:** No orphaned processes or memory leaks
+- ✅ **Production Validation:** Tests against actual production MediaMTX service
+- ✅ **Real Integration:** Validates actual systemd service management
+
 ### Core Components
 
-1. **RealMediaMTXServer**: Manages actual MediaMTX server process lifecycle
+1. **RealMediaMTXServer**: Verifies systemd-managed MediaMTX service availability
 2. **TestVideoStreamSimulator**: Creates real video streams using FFmpeg
 3. **WebSocketTestClient**: Real WebSocket client for API testing
 4. **TestRealSystemIntegration**: Main test class with comprehensive test scenarios

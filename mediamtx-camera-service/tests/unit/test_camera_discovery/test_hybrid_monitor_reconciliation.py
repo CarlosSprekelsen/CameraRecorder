@@ -18,8 +18,10 @@ hardening, docs/roadmap.md Evidence: src/camera_discovery/hybrid_monitor.py line
 src/camera_service/service_manager.py lines 270-380 (_get_enhanced_camera_metadata)
 """
 
+import asyncio
 import pytest
-from unittest.mock import Mock
+import time
+from unittest.mock import Mock, patch
 
 # Test imports
 from src.camera_discovery.hybrid_monitor import (
@@ -32,15 +34,16 @@ from src.camera_service.service_manager import ServiceManager
 from src.common.types import CameraDevice
 
 
+@pytest.fixture
+def hybrid_monitor():
+    """Create hybrid monitor for reconciliation testing."""
+    return HybridCameraMonitor(
+        device_range=[0, 1, 2], enable_capability_detection=True
+    )
+
+
 class TestCapabilityReconciliation:
     """Test reconciliation between hybrid_monitor output and service_manager consumption."""
-
-    @pytest.fixture
-    def hybrid_monitor(self):
-        """Create hybrid monitor for reconciliation testing."""
-        return HybridCameraMonitor(
-            device_range=[0, 1, 2], enable_capability_detection=True
-        )
 
     @pytest.fixture
     def service_manager(self, mock_dependencies):
@@ -63,7 +66,7 @@ class TestCapabilityReconciliation:
 
         # Setup confirmed capability in hybrid_monitor
         confirmed_capability = CapabilityDetectionResult(
-            device=device_path,
+            device_path=device_path,
             detected=True,
             accessible=True,
             device_name="Confirmed Test Camera",
@@ -85,7 +88,7 @@ class TestCapabilityReconciliation:
             device=device_path, name="Test Camera Device", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -127,23 +130,11 @@ class TestUdevEventProcessing:
 
     @pytest.mark.asyncio
     async def test_udev_add_event_processing(self, monitor_with_udev, mock_udev_device):
-        """Test udev 'add' event processing and device registration."""
+        """Test udev 'add' event processing and device registration with real camera device."""
 
-        # Mock device availability checks
-        with (
-            patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.open", return_value=Mock()),
-            patch.object(
-                monitor_with_udev, "_should_monitor_device", return_value=True
-            ),
-            patch.object(
-                monitor_with_udev, "_create_camera_device_info", 
-                return_value=CameraDevice(
-                    device="/dev/video0", 
-                    name="Test Camera", 
-                    status="CONNECTED"
-                )
-            ),
+        # Use real camera device - no mocking of device access
+        with patch.object(
+            monitor_with_udev, "_should_monitor_device", return_value=True
         ):
 
             # Setup event handler to capture events
@@ -154,7 +145,7 @@ class TestUdevEventProcessing:
 
             monitor_with_udev.add_event_callback(capture_event)
 
-            # Simulate udev add event
+            # Simulate udev add event for real device
             mock_udev_device.action = "add"
             await monitor_with_udev._handle_udev_event(mock_udev_device)
 
@@ -262,12 +253,8 @@ class TestUdevEventProcessing:
             mock_device.subsystem = "video4linux"
             devices.append(mock_device)
 
-        with (
-            patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.open", return_value=Mock()),
-            patch.object(
-                monitor_with_udev, "_should_monitor_device", return_value=True
-            ),
+        with patch.object(
+            monitor_with_udev, "_should_monitor_device", return_value=True
         ):
 
             # Fire rapid sequential events
@@ -348,12 +335,7 @@ class TestUdevEventProcessing:
             mock_device.action = "add"
             mock_device.subsystem = "video4linux"
 
-            with (
-                patch("pathlib.Path.exists", return_value=True),
-                patch("builtins.open", return_value=Mock()),
-            ):
-
-                await monitor_with_udev._handle_udev_event(mock_device)
+            await monitor_with_udev._handle_udev_event(mock_device)
 
         # Only devices in range [0,1,2] should generate events
         processed_devices = [event.device_path for event in captured_events]
@@ -377,6 +359,24 @@ class TestPollingFallback:
             poll_interval=0.05,  # Fast polling for testing
             enable_capability_detection=False,
         )
+
+    @pytest.fixture
+    def hybrid_monitor(self):
+        """Create hybrid monitor for reconciliation testing."""
+        return HybridCameraMonitor(
+            device_range=[0, 1, 2], enable_capability_detection=True
+        )
+
+    @pytest.fixture
+    def service_manager(self, mock_dependencies):
+        """Create service manager with mocked dependencies."""
+        service_manager = ServiceManager(
+            config=mock_dependencies["config"],
+            mediamtx_controller=mock_dependencies["mediamtx_controller"],
+            websocket_server=mock_dependencies["websocket_server"],
+        )
+        # Will inject camera_monitor per test
+        return service_manager
 
     @pytest.mark.asyncio
     async def test_polling_fallback_when_udev_stale(self, monitor_polling_fallback):
@@ -404,7 +404,7 @@ class TestPollingFallback:
             # Fast-forward time to make udev events stale
             with patch("time.time", return_value=time.time() + 2.0):
                 # Run polling cycle
-                await monitor_polling_fallback._polling_monitor()
+                await monitor_polling_fallback._single_polling_cycle()
 
             # Verify polling was triggered due to stale udev events
             mock_discover.assert_called_once()
@@ -423,7 +423,7 @@ class TestPollingFallback:
 
         # Mock polling cycle execution
         with patch.object(monitor_polling_fallback, "_discover_cameras"):
-            await monitor_polling_fallback._polling_monitor()
+            await monitor_polling_fallback._single_polling_cycle()
 
         # Polling interval should have decreased (higher frequency)
         assert monitor_polling_fallback._current_poll_interval < initial_interval
@@ -460,7 +460,7 @@ class TestPollingFallback:
             # Run multiple polling cycles
             for _ in range(5):
                 try:
-                    await monitor_polling_fallback._polling_monitor()
+                    await monitor_polling_fallback._single_polling_cycle()
                 except Exception:
                     pass  # Expected for first few attempts
 
@@ -534,7 +534,7 @@ class TestPollingFallback:
                 patch("builtins.open", return_value=Mock()),
             ):
 
-                await monitor_no_udev._discover_cameras()
+                await monitor_no_udev._single_polling_cycle()
 
             # Should still detect devices through polling
             assert len(captured_events) > 0
@@ -572,7 +572,7 @@ class TestPollingFallback:
 
         # Setup provisional capability in hybrid_monitor
         provisional_capability = CapabilityDetectionResult(
-            device=device_path,
+            device_path=device_path,
             detected=True,
             accessible=True,
             device_name="Provisional Test Camera",
@@ -594,7 +594,7 @@ class TestPollingFallback:
             device=device_path, name="Provisional Camera Device", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -643,7 +643,7 @@ class TestPollingFallback:
             device=device_path, name="Unknown Capability Camera", driver="unknown"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -682,7 +682,7 @@ class TestPollingFallback:
 
         # Setup initial provisional capability
         provisional_capability = CapabilityDetectionResult(
-            device=device_path,
+            device_path=device_path,
             detected=True,
             accessible=True,
             device_name="Transitioning Camera",
@@ -701,7 +701,7 @@ class TestPollingFallback:
             device=device_path, name="Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -744,7 +744,7 @@ class TestPollingFallback:
 
         # Setup capability in hybrid_monitor
         capability = CapabilityDetectionResult(
-            device=device_path,
+            device_path=device_path,
             detected=True,
             accessible=True,
             resolutions=["1920x1080", "1280x720"],
@@ -762,7 +762,7 @@ class TestPollingFallback:
             device=device_path, name="Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -864,7 +864,7 @@ class TestPollingFallback:
             zip(frame_rate_detections, resolution_detections)
         ):
             capability = CapabilityDetectionResult(
-                device=device_path,
+                device_path=device_path,
                 detected=True,
                 accessible=True,
                 resolutions=[res],
@@ -882,7 +882,7 @@ class TestPollingFallback:
             device=device_path, name="Frequency Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -943,7 +943,7 @@ class TestReconciliationErrorCases:
             device=device_path, name="Error Test Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )
@@ -981,7 +981,7 @@ class TestReconciliationErrorCases:
             device=device_path, name="No Monitor Camera", driver="uvcvideo"
         )
         event_data = CameraEventData(
-            device=device_path,
+            device_path=device_path,
             event_type=CameraEvent.CONNECTED,
             device_info=camera_device,
         )

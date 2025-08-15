@@ -290,6 +290,10 @@ class HybridCameraMonitor:
             "polling_failure_count": self._polling_failure_count,
             "current_poll_interval": self._current_poll_interval,
             "known_devices_count": len(self._known_devices),
+            # Add missing udev stats
+            "udev_events_processed": self._stats.get("udev_events_processed", 0),
+            "udev_events_filtered": self._stats.get("udev_events_filtered", 0),
+            "udev_events_skipped": self._stats.get("udev_events_skipped", 0),
         }
 
     async def start(self) -> None:
@@ -2234,6 +2238,40 @@ class HybridCameraMonitor:
         Polling monitor for device discovery.
         """
         await self._adaptive_polling_loop()
+
+    async def _single_polling_cycle(self) -> None:
+        """
+        Execute a single polling cycle for testing purposes.
+        This method provides a test interface without breaking the continuous loop architecture.
+        """
+        try:
+            # Perform discovery with timeout protection
+            await asyncio.wait_for(self._discover_cameras(), timeout=5.0)
+            self._stats["polling_cycles"] += 1
+            self._polling_failure_count = 0
+
+            # Adaptive polling interval adjustment
+            await asyncio.wait_for(self._adjust_polling_interval(), timeout=1.0)
+
+        except asyncio.TimeoutError:
+            self._polling_failure_count += 1
+            self._logger.warning(
+                "Polling operation timed out",
+                extra={
+                    "component": "hybrid_monitor",
+                    "error_type": "polling_timeout",
+                },
+            )
+        except Exception as e:
+            self._polling_failure_count += 1
+            self._logger.error(
+                f"Polling discovery error: {e}",
+                extra={
+                    "component": "hybrid_monitor",
+                    "error_type": "polling_discovery",
+                },
+                exc_info=True,
+            )
 
     async def get_connected_cameras(self) -> Dict[str, CameraDevice]:
         """
