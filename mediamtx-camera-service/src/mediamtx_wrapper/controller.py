@@ -551,7 +551,7 @@ class MediaMTXController:
         self, stream_name: str, duration: Optional[int] = None, format: str = "mp4"
     ) -> Dict[str, Any]:
         """
-        Start recording for the specified stream with enhanced session management.
+        Start recording for the specified stream using external FFmpeg process.
 
         Args:
             stream_name: Name of the stream to record
@@ -617,47 +617,10 @@ class MediaMTXController:
             start_time = time.time()
             start_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            # Update stream configuration to enable recording
-            path_config = {"record": True, "recordPath": record_path}
-
-            if duration:
-                path_config["recordDuration"] = duration
-
-            async with self._session.post(
-                f"{self._base_url}/v3/config/paths/edit/{stream_name}", json=path_config
-            ) as response:
-                if response.status == 200:
-                    # Store recording session for duration tracking
-                    self._recording_sessions[stream_name] = {
-                        "filename": filename,
-                        "start_time": start_time,
-                        "start_time_iso": start_time_iso,
-                        "record_path": record_path,
-                        "format": format,
-                        "duration": duration,
-                        "correlation_id": correlation_id,
-                    }
-
-                    self._logger.info(
-                        f"Started recording for stream {stream_name}: {filename}",
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                            "source_file": filename,
-                        },
-                    )
-                    return {
-                        "stream_name": stream_name,
-                        "filename": filename,
-                        "status": "started",
-                        "start_time": start_time_iso,
-                        "record_path": record_path,
-                        "format": format,
-                        "duration": duration,
-                    }
-                else:
-                    error_text = await response.text()
-                    error_msg = f"Failed to start recording for {stream_name}: HTTP {response.status} - {error_text}"
+            # Verify stream is active and ready in MediaMTX
+            async with self._session.get(f"{self._base_url}/v3/paths/list") as response:
+                if response.status != 200:
+                    error_msg = f"Failed to get MediaMTX active paths: HTTP {response.status}"
                     self._logger.error(
                         error_msg,
                         extra={
@@ -666,6 +629,81 @@ class MediaMTXController:
                         },
                     )
                     raise ValueError(error_msg)
+                
+                paths_data = await response.json()
+                stream_active = any(
+                    path["name"] == stream_name and path.get("ready", False) 
+                    for path in paths_data.get("items", [])
+                )
+                
+                if not stream_active:
+                    error_msg = f"Stream {stream_name} is not active and ready in MediaMTX"
+                    self._logger.error(
+                        error_msg,
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                        },
+                    )
+                    raise ValueError(error_msg)
+
+            # Start external FFmpeg recording process
+            rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
+            
+            # Build FFmpeg command
+            ffmpeg_cmd = [
+                "ffmpeg",
+                "-i", rtsp_url,
+                "-c:v", "copy",  # Copy video codec without re-encoding
+                "-c:a", "copy",  # Copy audio codec without re-encoding
+                "-f", format,
+                "-y",  # Overwrite output file
+                record_path
+            ]
+            
+            # Add duration limit if specified
+            if duration:
+                ffmpeg_cmd.extend(["-t", str(duration)])
+
+            # Start FFmpeg process
+            process = await asyncio.create_subprocess_exec(
+                *ffmpeg_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            # Store recording session for tracking
+            self._recording_sessions[stream_name] = {
+                "filename": filename,
+                "start_time": start_time,
+                "start_time_iso": start_time_iso,
+                "record_path": record_path,
+                "format": format,
+                "duration": duration,
+                "correlation_id": correlation_id,
+                "process": process,
+                "rtsp_url": rtsp_url
+            }
+
+            self._logger.info(
+                f"Started recording for stream {stream_name}: {filename}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "source_file": filename,
+                    "rtsp_url": rtsp_url,
+                },
+            )
+            return {
+                "stream_name": stream_name,
+                "filename": filename,
+                "status": "started",
+                "start_time": start_time_iso,
+                "record_path": record_path,
+                "format": format,
+                "duration": duration,
+                "rtsp_url": rtsp_url,
+            }
 
         except aiohttp.ClientError as e:
             error_msg = (
@@ -679,7 +717,7 @@ class MediaMTXController:
 
     async def stop_recording(self, stream_name: str) -> Dict[str, Any]:
         """
-        Stop recording for the specified stream with enhanced error handling and accurate duration calculation.
+        Stop recording for the specified stream by terminating the FFmpeg process.
 
         Args:
             stream_name: Name of the stream to stop recording
@@ -713,100 +751,119 @@ class MediaMTXController:
             end_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
             actual_duration = int(end_time - session["start_time"])
 
-            # Update stream configuration to disable recording
-            path_config = {"record": False}
-
-            async with self._session.post(
-                f"{self._base_url}/v3/config/paths/edit/{stream_name}", json=path_config
-            ) as response:
-                if response.status == 200:
-                    # Enhanced file validation and error handling
-                    file_path = session["record_path"]
-                    file_size = 0
-                    file_exists = False
-                    file_error = None
-
+            # Terminate FFmpeg process gracefully
+            process = session.get("process")
+            if process:
+                try:
+                    # Send SIGTERM to gracefully stop FFmpeg
+                    process.terminate()
+                    
+                    # Wait for process to terminate (with timeout)
                     try:
-                        if os.path.exists(file_path):
-                            file_size = os.path.getsize(file_path)
-                            file_exists = True
-                            self._logger.debug(
-                                f"Recording file validated: {file_path} ({file_size} bytes)",
-                                extra={
-                                    "correlation_id": correlation_id,
-                                    "stream_name": stream_name,
-                                },
-                            )
-                        else:
-                            file_error = f"Recording file not found: {file_path}"
-                            self._logger.warning(
-                                file_error,
-                                extra={
-                                    "correlation_id": correlation_id,
-                                    "stream_name": stream_name,
-                                },
-                            )
-                    except PermissionError as e:
-                        file_error = (
-                            f"Permission denied accessing file: {file_path} - {e}"
-                        )
+                        await asyncio.wait_for(process.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        # Force kill if graceful termination fails
                         self._logger.warning(
-                            file_error,
+                            f"FFmpeg process did not terminate gracefully, forcing kill for {stream_name}",
                             extra={
                                 "correlation_id": correlation_id,
                                 "stream_name": stream_name,
                             },
                         )
-                    except OSError as e:
-                        file_error = f"Error accessing file: {file_path} - {e}"
-                        self._logger.warning(
-                            file_error,
-                            extra={
-                                "correlation_id": correlation_id,
-                                "stream_name": stream_name,
-                            },
-                        )
-
-                    # Clean up recording session
-                    del self._recording_sessions[stream_name]
-
-                    result = {
-                        "stream_name": stream_name,
-                        "filename": session["filename"],
-                        "status": "completed",
-                        "start_time": session["start_time_iso"],
-                        "end_time": end_time_iso,
-                        "duration": actual_duration,
-                        "file_size": file_size,
-                        "file_exists": file_exists,
-                    }
-
-                    if file_error:
-                        result["file_warning"] = file_error
-
-                    self._logger.info(
-                        f"Stopped recording for stream {stream_name}: duration={actual_duration}s, "
-                        f"file_size={file_size}, file_exists={file_exists}",
+                        process.kill()
+                        await process.wait()
+                    
+                    self._logger.debug(
+                        f"FFmpeg process terminated for {stream_name}",
                         extra={
                             "correlation_id": correlation_id,
                             "stream_name": stream_name,
-                            "source_file": session["filename"],
+                        },
+                    )
+                except Exception as e:
+                    self._logger.warning(
+                        f"Error terminating FFmpeg process for {stream_name}: {e}",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
                         },
                     )
 
-                    return result
+            # Enhanced file validation and error handling
+            file_path = session["record_path"]
+            file_size = 0
+            file_exists = False
+            file_error = None
+
+            try:
+                if os.path.exists(file_path):
+                    file_size = os.path.getsize(file_path)
+                    file_exists = True
+                    self._logger.debug(
+                        f"Recording file validated: {file_path} ({file_size} bytes)",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                        },
+                    )
                 else:
-                    error_text = await response.text()
-                    # Keep session for retry - don't delete on API failure
-                    error_msg = f"Failed to stop recording for {stream_name}: HTTP {response.status} - {error_text}"
-                    self._logger.error(
-                        error_msg,
+                    file_error = f"Recording file not found: {file_path}"
+                    self._logger.warning(
+                        file_error,
                         extra={
                             "correlation_id": correlation_id,
                             "stream_name": stream_name,
                         },
                     )
-                    raise ValueError(error_msg)
+            except PermissionError as e:
+                file_error = (
+                    f"Permission denied accessing file: {file_path} - {e}"
+                )
+                self._logger.warning(
+                    file_error,
+                    extra={
+                        "correlation_id": correlation_id,
+                        "stream_name": stream_name,
+                    },
+                )
+            except OSError as e:
+                file_error = f"Error accessing file: {file_path} - {e}"
+                self._logger.warning(
+                    file_error,
+                    extra={
+                        "correlation_id": correlation_id,
+                        "stream_name": stream_name,
+                    },
+                )
+
+            # Clean up recording session
+            del self._recording_sessions[stream_name]
+
+            result = {
+                "stream_name": stream_name,
+                "filename": session["filename"],
+                "status": "completed",
+                "start_time": session["start_time_iso"],
+                "end_time": end_time_iso,
+                "duration": actual_duration,
+                "file_size": file_size,
+                "file_exists": file_exists,
+            }
+
+            if file_error:
+                result["file_warning"] = file_error
+
+            self._logger.info(
+                f"Stopped recording for stream {stream_name}: duration={actual_duration}s, "
+                f"file_size={file_size}, file_exists={file_exists}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "source_file": session["filename"],
+                },
+            )
+
+            return result
 
         except aiohttp.ClientError as e:
             error_msg = (
@@ -1391,6 +1448,8 @@ class MediaMTXController:
             )
             return float(self._health_max_backoff_interval)
 
+
+
     async def _health_monitor_loop(self) -> None:
         """
         Background task for continuous health monitoring with configurable circuit breaker and adaptive backoff.
@@ -1458,12 +1517,16 @@ class MediaMTXController:
                         extra={"correlation_id": check_correlation_id},
                     )
 
-                    # Count consecutive failures regardless of status transitions  
+                    # Count consecutive failures and update success counters
                     if current_status != "healthy":
                         consecutive_failures += 1
                         self._health_state["consecutive_failures"] = consecutive_failures
                     else:
-                        # Reset on healthy status (but only if not in CB recovery mode)
+                        # Update success counters
+                        self._health_state["success_count"] += 1
+                        self._health_state["total_checks"] += 1
+                        
+                        # Reset consecutive failures on healthy status (but only if not in CB recovery mode)
                         if not circuit_breaker_active:
                             consecutive_failures = 0
                             self._health_state["consecutive_failures"] = 0
@@ -1474,49 +1537,17 @@ class MediaMTXController:
                         if current_status == "healthy":
                             if self._last_health_status in ["unhealthy", "error"] or self._last_health_status is None:
                                 if circuit_breaker_active:
-                                    # During circuit breaker recovery - count consecutive successes
-                                    consecutive_successes_during_recovery += 1
-                                    self._health_state[
-                                        "consecutive_successes_during_recovery"
-                                    ] = consecutive_successes_during_recovery
-
-                                    if (
-                                        consecutive_successes_during_recovery
-                                        >= self._health_recovery_confirmation_threshold
-                                    ):
-                                        # Confirmed recovery - fully reset circuit breaker
-                                        circuit_breaker_active = False
-                                        consecutive_failures = 0
-                                        consecutive_successes_during_recovery = 0
-                                        self._health_state["recovery_count"] += 1
-                                        self._health_state["consecutive_failures"] = 0
-                                        self._health_state[
-                                            "consecutive_successes_during_recovery"
-                                        ] = 0
-                                        self._health_state["circuit_breaker_active"] = False
-                                        self._health_state["circuit_breaker_start_time"] = 0.0
-
-                                        self._logger.info(
-                                            f"MediaMTX health FULLY RECOVERED: {self._last_health_status} -> {current_status} "
-                                            f"after {self._health_recovery_confirmation_threshold} consecutive successes "
-                                            f"(recovery #{self._health_state['recovery_count']})",
-                                            extra={
-                                                "correlation_id": check_correlation_id,
-                                                "health_transition": True,
-                                                "circuit_breaker_reset": True,
-                                            },
-                                        )
-                                    else:
-                                        # Partial recovery - still in confirmation phase
-                                        self._logger.info(
-                                            f"MediaMTX health IMPROVING: {self._last_health_status} -> {current_status} "
-                                            f"(confirmation: {consecutive_successes_during_recovery}/{self._health_recovery_confirmation_threshold})",
-                                            extra={
-                                                "correlation_id": check_correlation_id,
-                                                "health_transition": True,
-                                                "recovery_partial": True,
-                                            },
-                                        )
+                                    # During circuit breaker recovery - log the transition but don't count successes here
+                                    # Success counting is handled in the circuit breaker recovery logic below
+                                    self._logger.info(
+                                        f"MediaMTX health IMPROVING: {self._last_health_status} -> {current_status} "
+                                        f"(recovery in progress)",
+                                        extra={
+                                            "correlation_id": check_correlation_id,
+                                            "health_transition": True,
+                                            "recovery_partial": True,
+                                        },
+                                    )
                                 else:
                                     # Not in circuit breaker state - normal recovery
                                     # Only reset consecutive_failures after a brief stable period
@@ -1559,15 +1590,13 @@ class MediaMTXController:
 
                         self._last_health_status = current_status
 
-                    # Handle circuit breaker recovery for consecutive successful checks (not just status transitions)
+                    # Handle circuit breaker recovery for consecutive successful checks
                     if current_status == "healthy" and circuit_breaker_active:
-                        # Count consecutive successes during recovery, even if status didn't change
-                        # Only increment if we haven't already counted this success in the status transition logic above
-                        if current_status == self._last_health_status:
-                            consecutive_successes_during_recovery += 1
-                            self._health_state[
-                                "consecutive_successes_during_recovery"
-                            ] = consecutive_successes_during_recovery
+                        # Count consecutive successes during recovery (including status transitions)
+                        consecutive_successes_during_recovery += 1
+                        self._health_state[
+                            "consecutive_successes_during_recovery"
+                        ] = consecutive_successes_during_recovery
 
                         if (
                             consecutive_successes_during_recovery
@@ -1594,17 +1623,22 @@ class MediaMTXController:
                                     "circuit_breaker_reset": True,
                                 },
                             )
-                        elif consecutive_successes_during_recovery > 0 and current_status == self._last_health_status:
-                            # Consecutive success during circuit breaker recovery (not status transition)
+                        elif consecutive_successes_during_recovery > 0:
+                            # Partial recovery - still in confirmation phase
                             self._logger.info(
-                                f"MediaMTX health IMPROVING: continuing healthy status "
-                                f"(confirmation: {consecutive_successes_during_recovery}/{self._health_recovery_confirmation_threshold})",
+                                f"MediaMTX health IMPROVING: {consecutive_successes_during_recovery}/{self._health_recovery_confirmation_threshold} consecutive successes",
                                 extra={
                                     "correlation_id": check_correlation_id,
                                     "health_transition": True,
                                     "recovery_partial": True,
                                 },
                             )
+                    elif current_status != "healthy" and circuit_breaker_active:
+                        # Reset recovery progress on any failure during circuit breaker recovery
+                        consecutive_successes_during_recovery = 0
+                        self._health_state[
+                            "consecutive_successes_during_recovery"
+                        ] = 0
 
                     # Check circuit breaker activation AFTER status transition logic
                     # This ensures we check even if status didn't change (e.g., unhealthy -> unhealthy)
@@ -1675,6 +1709,8 @@ class MediaMTXController:
                 f"recovery_confirmation_threshold={self._health_recovery_confirmation_threshold}",
                 extra={"correlation_id": correlation_id},
             )
+
+
 
     async def __aenter__(self):
         """Async context manager entry."""

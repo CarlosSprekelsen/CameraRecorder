@@ -1,10 +1,10 @@
 # Test Reality Assessment Report - No-Mock Policy
 
 ## Executive Summary
-- **Total tests discovered:** 556
-- **Pass:** 276
-- **Fail:** 250
-- **Timeout:** 30
+- **Total tests discovered:** 512
+- **Pass:** 314
+- **Fail:** 155
+- **Timeout:** 43
 - **Error:** 0
 
 ## Test Execution Policy
@@ -16,7 +16,7 @@
 ## Failure Categorization by System Impact
 
 ### SYSTEM_CRITICAL: Core system function fails
-**Count:** 273
+**Count:** 178
 **Estimated fix effort:** 2-5 days
 
 - **tests/unit/test_camera_discovery/test_capability_detection.py::test_probe_device_capabilities_timeout** (FAIL)
@@ -27,123 +27,15 @@
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
+- **tests/unit/test_camera_discovery/test_capability_detection.py::TestSimpleMonitor** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
+- **tests/unit/test_camera_discovery/test_capability_detection.py::TestSimpleMonitor** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDiscoveryEnvironmentSetup** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestCameraDeviceSimulation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestEnvironmentSpecificDependencies** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_environment_setup.py::TestMockConfigurationRobustness** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestHardwareIntegrationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hardware_integration_real.py::TestMinimalMockingStrategy** (FAIL)
+- **tests/unit/test_camera_discovery/test_capability_detection.py::TestSimpleMonitor** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
@@ -171,87 +63,67 @@
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestCapabilityParsingVariations** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestUdevEventProcessing** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestUdevEventProcessingAndRaceConditions** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestPollingFallbackBehavior** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestTimeoutAndSubprocessFailureHandling** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_comprehensive.py::TestIntegrationAndLifecycle** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestCapabilityReconciliation** (FAIL)
+- **tests/unit/test_camera_discovery/test_hybrid_monitor_reconciliation.py::TestPollingFallback** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
@@ -263,74 +135,6 @@
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestUdevEventProcessing** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_hybrid_monitor_udev_fallback.py::TestPollingFallback** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_simple_monitor.py::TestSimpleMonitor** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_filtering** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_actions** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_camera_discovery/test_udev_processing.py::test_udev_event_race_condition_handling** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
 - **tests/unit/test_camera_service/test_config_manager.py::TestConfigManager** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
@@ -455,220 +259,196 @@
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_connect_flow** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f0470eb6fe0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f0470eb5930>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_disconnect_flow** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fa61efb4fa0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fa61efb5870>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_mediamtx_failure_keeps_service_running** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f6e5af57fa0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f6e5af54ac0>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_camera_service/test_service_manager_lifecycle.py::test_real_capability_metadata** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fdd0dde2980>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fdd0dde1b40>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fdfd6d46fe0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fdfd6d46320>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc70b81b5b0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc70b818e80>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f33e97c4430>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f33e97c5f00>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f85691c5300>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f85691c5840>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f3354a30460>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f3354a30cd0>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8e7442afe0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8e7442b910>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8689f124a0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8689ebfaf0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8694637340>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f86945e3a30>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8b52bc5240>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f8b538961a0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f5a6a6e6410>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f5a6b36c370>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f5857635090>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f585775cf70>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_configuration.py::TestConfigurationValidation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc74eeca470>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc74fb1cac0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f1abdedb670>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f1abeb3c6d0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fb8ae70f880>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fb8ae6bb430>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f4fe35d7ca0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f4fe35834c0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7ff64e793220>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7ff64e73f9d0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f4c74bc6080>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f4c758b2bf0>
+...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc89b0963b0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7fc89b096cb0>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f7c268fb430>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f7c268f9a80>
+Unclosed...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py::TestHealthMonitoring** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_recording_duration_real.py::TestRecordingDurationReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_controller_snapshot_real.py::TestSnapshotCaptureReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_circuit_breaker_real.py::TestHealthMonitorFlappingReal** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_mediamtx_wrapper/test_health_monitor_recovery_confirmation.py::TestHealthMonitorRecoveryConfirmation** (FAIL)
-  - Error: ...
+- **tests/unit/test_mediamtx_wrapper/test_controller_stream_operations_real.py::TestMediaMTXControllerComprehensive** (FAIL)
+  - Error: Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f2fe0e129e0>
+Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f2fe0e131f0>
+Unclosed...
   - Estimated fix: 2-5 days
 
 - **tests/unit/test_security/test_middleware.py::TestSecurityMiddleware** (FAIL)
@@ -768,58 +548,6 @@
   - Estimated fix: 2-5 days
 
 - **tests/unit/test_security/test_middleware.py::TestSecurityMiddleware** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_method_handlers.py::TestServerMethodHandlers** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
@@ -871,39 +599,19 @@
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
+- **tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
+- **tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
+- **tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
-  - Error: ...
-  - Estimated fix: 2-5 days
-
-- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (FAIL)
+- **tests/unit/test_websocket_server/test_server_notifications.py::TestServerNotifications** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
@@ -912,6 +620,14 @@
   - Estimated fix: 2-5 days
 
 - **tests/integration/test_config_component_integration.py::TestConfigurationComponentIntegration** (FAIL)
+  - Error: ...
+  - Estimated fix: 2-5 days
+
+- **tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow** (FAIL)
+  - Error: ...
+  - Estimated fix: 2-5 days
+
+- **tests/integration/test_security_api_keys.py::TestAPIKeyAuthenticationFlow** (FAIL)
   - Error: ...
   - Estimated fix: 2-5 days
 
@@ -1113,8 +829,20 @@
 
 
 ### INTEGRATION_ISSUE: Component interaction fails
-**Count:** 7
+**Count:** 10
 **Estimated fix effort:** 1-3 days
+
+- **tests/integration/test_real_system_integration.py::TestRealSystemIntegration** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 1-3 days
+
+- **tests/integration/test_real_system_integration.py::TestRealSystemIntegration** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 1-3 days
+
+- **tests/integration/test_real_system_integration.py::TestRealSystemIntegration** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 1-3 days
 
 - **tests/integration/test_real_system_integration.py::TestRealSystemIntegration** (TIMEOUT)
   - Error: Test timed out after 60 seconds...
@@ -1146,8 +874,48 @@
 
 
 ### TEST_ARTIFACT: Test infrastructure/tooling issue
-**Count:** 0
+**Count:** 10
 **Estimated fix effort:** 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
+
+- **tests/unit/test_websocket_server/test_server_status_aggregation.py::TestServerStatusAggregation** (TIMEOUT)
+  - Error: Test timed out after 60 seconds...
+  - Estimated fix: 2-8 hours
 
 
 ### REQUIREMENT_GAP: Test assumes unimplemented requirement

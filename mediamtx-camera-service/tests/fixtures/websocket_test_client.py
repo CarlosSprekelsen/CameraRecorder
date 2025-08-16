@@ -15,6 +15,7 @@ import pytest
 import pytest_asyncio
 import websockets
 from websockets.client import WebSocketClientProtocol
+from websockets.exceptions import ConnectionClosed
 from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ class WebSocketTestClient:
         self.message_id_counter = 1
         self._received_messages: List[WebSocketResponse] = []
         self._notification_queue: asyncio.Queue = asyncio.Queue()
+        self._listener_task: Optional[asyncio.Task] = None
     
     async def connect(self) -> None:
         """Connect to WebSocket server."""
@@ -57,7 +59,9 @@ class WebSocketTestClient:
             logger.info(f"Connected to WebSocket server: {self.server_url}")
             
             # Start listening for notifications
-            asyncio.create_task(self._listen_for_notifications())
+            self._listener_task = asyncio.create_task(self._listen_for_notifications())
+            # Give the task a moment to start
+            await asyncio.sleep(0.01)
             
         except Exception as e:
             logger.error(f"Failed to connect to WebSocket server: {e}")
@@ -65,9 +69,18 @@ class WebSocketTestClient:
     
     async def disconnect(self) -> None:
         """Disconnect from server."""
+        self.connected = False
+        
+        # Cancel listener task if running
+        if self._listener_task and not self._listener_task.done():
+            self._listener_task.cancel()
+            try:
+                await self._listener_task
+            except asyncio.CancelledError:
+                pass
+        
         if self.websocket:
             await self.websocket.close()
-            self.connected = False
             logger.info("Disconnected from WebSocket server")
     
     async def send_request(self, method: str, params: Dict[str, Any] = None) -> WebSocketResponse:
@@ -153,26 +166,47 @@ class WebSocketTestClient:
     async def _listen_for_notifications(self) -> None:
         """Listen for incoming notifications."""
         try:
+            print(f"DEBUG CLIENT: Starting notification listener for {self.server_url}")
             while self.connected:
                 try:
                     message_data = await self.websocket.recv()
+                    print(f"DEBUG CLIENT: Received message: {message_data[:100]}...")
                     message = json.loads(message_data)
                     
                     # Check if it's a notification (no id field)
                     if "id" not in message:
+                        print(f"DEBUG CLIENT: Processing notification: {message.get('method', 'unknown')}")
                         await self._notification_queue.put(message)
+                    else:
+                        print(f"DEBUG CLIENT: Received request/response with id: {message.get('id')}")
                         
                 except websockets.exceptions.ConnectionClosed:
+                    print(f"DEBUG CLIENT: Connection closed")
                     break
                 except Exception as e:
+                    print(f"DEBUG CLIENT: Error processing notification: {e}")
                     logger.warning(f"Error processing notification: {e}")
                     
         except Exception as e:
+            print(f"DEBUG CLIENT: Error in notification listener: {e}")
             logger.error(f"Error in notification listener: {e}")
     
     def get_received_messages(self) -> List[WebSocketResponse]:
-        """Get all received messages."""
-        return self._received_messages.copy()
+        """Get all received messages including notifications."""
+        messages = self._received_messages.copy()
+        
+        # Also include notifications from the queue
+        while not self._notification_queue.empty():
+            try:
+                notification = self._notification_queue.get_nowait()
+                messages.append(WebSocketResponse(
+                    result=notification.get("params"),
+                    jsonrpc=notification.get("jsonrpc", "2.0")
+                ))
+            except asyncio.QueueEmpty:
+                break
+                
+        return messages
     
     def clear_received_messages(self) -> None:
         """Clear received messages."""

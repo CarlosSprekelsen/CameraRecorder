@@ -294,6 +294,8 @@ class HybridCameraMonitor:
             "udev_events_processed": self._stats.get("udev_events_processed", 0),
             "udev_events_filtered": self._stats.get("udev_events_filtered", 0),
             "udev_events_skipped": self._stats.get("udev_events_skipped", 0),
+            # Add adaptive polling stats
+            "adaptive_poll_adjustments": self._stats.get("adaptive_poll_adjustments", 0),
         }
 
     async def start(self) -> None:
@@ -737,6 +739,25 @@ class HybridCameraMonitor:
                         )
                         break
 
+                    # Apply conservative backoff for timeout errors as well
+                    import math
+                    max_safe_failures = 10
+                    safe_failures = min(self._polling_failure_count, max_safe_failures)
+                    
+                    try:
+                        exponential_factor = math.pow(1.5, safe_failures)
+                        base_backoff = min(
+                            self._base_poll_interval * exponential_factor,
+                            self._max_poll_interval,
+                        )
+                        jitter = self._rng.uniform(0.9, 1.1)
+                        backoff_interval = base_backoff * jitter
+                        backoff_interval = max(backoff_interval, self._current_poll_interval * 0.5)
+                    except (OverflowError, ValueError):
+                        backoff_interval = min(self._current_poll_interval * 1.5, self._max_poll_interval)
+
+                    await asyncio.sleep(backoff_interval)
+
                 except Exception as e:
                     polling_error_count += 1
                     self._polling_failure_count += 1
@@ -762,24 +783,22 @@ class HybridCameraMonitor:
                         )
                         break
 
-                    # Enhanced exponential backoff with jitter (safe calculation)
+                    # Apply conservative backoff for general exceptions
                     import math
-                    
-                    # Cap failure count to prevent overflow
-                    max_safe_failures = 20
+                    max_safe_failures = 10
                     safe_failures = min(self._polling_failure_count, max_safe_failures)
                     
                     try:
-                        exponential_factor = math.pow(2, safe_failures)
+                        exponential_factor = math.pow(1.5, safe_failures)
                         base_backoff = min(
                             self._base_poll_interval * exponential_factor,
                             self._max_poll_interval,
                         )
-                        jitter = self._rng.uniform(0.8, 1.2)  # ±20% jitter
+                        jitter = self._rng.uniform(0.9, 1.1)
                         backoff_interval = base_backoff * jitter
+                        backoff_interval = max(backoff_interval, self._current_poll_interval * 0.5)
                     except (OverflowError, ValueError):
-                        # Fallback to maximum interval
-                        backoff_interval = self._max_poll_interval
+                        backoff_interval = min(self._current_poll_interval * 1.5, self._max_poll_interval)
 
                     self._logger.debug(
                         f"Polling backoff: {backoff_interval:.2f}s (base: {base_backoff:.2f}s, jitter: {jitter:.2f})",
@@ -813,21 +832,23 @@ class HybridCameraMonitor:
 
         # Determine new interval based on udev event freshness
         if time_since_udev > self._udev_event_freshness_threshold:
-            # No recent udev events - increase polling frequency
+            # No recent udev events - increase polling frequency (decrease interval)
             self._current_poll_interval = max(
                 self._min_poll_interval, self._current_poll_interval * 0.8
             )
         elif time_since_udev < self._udev_event_freshness_threshold / 2:
-            # Recent udev events - can reduce polling frequency
+            # Recent udev events - can reduce polling frequency (increase interval)
             self._current_poll_interval = min(
                 self._max_poll_interval, self._current_poll_interval * 1.2
             )
 
-        # Factor in recent failures
+        # Factor in recent failures - FIXED: decrease interval (increase frequency) when there are failures
         if self._polling_failure_count > 0:
-            failure_penalty = 1.0 + (self._polling_failure_count * 0.1)
-            self._current_poll_interval = min(
-                self._max_poll_interval, self._current_poll_interval * failure_penalty
+            # Apply failure penalty that increases polling frequency (decreases interval)
+            # This ensures we catch up quickly when there are issues
+            failure_penalty = max(0.5, 1.0 - (self._polling_failure_count * 0.1))  # Minimum 0.5x interval
+            self._current_poll_interval = max(
+                self._min_poll_interval, self._current_poll_interval * failure_penalty
             )
 
         # Update stats if interval changed significantly
@@ -2248,13 +2269,23 @@ class HybridCameraMonitor:
             # Perform discovery with timeout protection
             await asyncio.wait_for(self._discover_cameras(), timeout=5.0)
             self._stats["polling_cycles"] += 1
-            self._polling_failure_count = 0
+            
+            # Only reset failure count after multiple consecutive successes
+            # This provides better adaptive behavior and failure recovery
+            if self._polling_failure_count > 0:
+                self._consecutive_successes = getattr(self, '_consecutive_successes', 0) + 1
+                if self._consecutive_successes >= 3:  # Require 3 consecutive successes
+                    self._polling_failure_count = 0
+                    self._consecutive_successes = 0
+            else:
+                self._consecutive_successes = 0
 
             # Adaptive polling interval adjustment
             await asyncio.wait_for(self._adjust_polling_interval(), timeout=1.0)
 
         except asyncio.TimeoutError:
             self._polling_failure_count += 1
+            self._consecutive_successes = 0  # Reset on any failure
             self._logger.warning(
                 "Polling operation timed out",
                 extra={
@@ -2264,6 +2295,7 @@ class HybridCameraMonitor:
             )
         except Exception as e:
             self._polling_failure_count += 1
+            self._consecutive_successes = 0  # Reset on any failure
             self._logger.error(
                 f"Polling discovery error: {e}",
                 extra={

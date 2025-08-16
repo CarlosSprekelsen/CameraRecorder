@@ -46,9 +46,10 @@ class NoMockTestExecutor:
             )
             
             if result.returncode != 0 or result.stdout.strip() != 'active':
-                print("WARNING: MediaMTX server is not running. Starting it...")
-                subprocess.run(['sudo', 'systemctl', 'start', 'mediamtx'], check=True)
-                time.sleep(5)  # Wait for server to start
+                print("ERROR: MediaMTX server is not running.")
+                print("Please start it manually with: sudo systemctl start mediamtx")
+                print("Tests will fail without the MediaMTX service running.")
+                raise RuntimeError("MediaMTX service is not running")
                 
             print("✓ MediaMTX server is running and ready for tests")
             

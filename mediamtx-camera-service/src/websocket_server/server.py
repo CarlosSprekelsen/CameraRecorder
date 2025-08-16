@@ -399,6 +399,22 @@ class WebSocketJsonRpcServer:
         Args:
             websocket: WebSocket connection object
         """
+        # Validate WebSocket path - be more lenient for now since websockets.serve() doesn't handle path routing
+        path = getattr(websocket, 'path', '/')
+        if path != self._websocket_path and path != '/':
+            self._logger.warning(f"Invalid WebSocket path requested: {path}")
+            await websocket.close(1008, "Invalid path")
+            return
+
+        # Check connection limits
+        async with self._connection_lock:
+            if len(self._clients) >= self._max_connections:
+                self._logger.warning(
+                    f"Connection limit reached: {len(self._clients)}/{self._max_connections}"
+                )
+                await websocket.close(1013, "Connection limit reached")
+                return
+
         client_id = str(uuid.uuid4())
         client_ip = (
             websocket.remote_address[0] if websocket.remote_address else "unknown"  # type: ignore[attr-defined]
@@ -912,8 +928,10 @@ class WebSocketJsonRpcServer:
             clients_to_notify = [
                 self._clients[cid] for cid in target_clients if cid in self._clients
             ]
+            self._logger.debug(f"Target clients: {target_clients}, found: {[c.client_id for c in clients_to_notify]}")
         else:
             clients_to_notify = list(self._clients.values())
+            self._logger.debug(f"Broadcasting to all {len(clients_to_notify)} clients")
 
         # Helper to determine if a websocket appears connected
         def _is_ws_connected(ws: Any) -> bool:
@@ -932,13 +950,18 @@ class WebSocketJsonRpcServer:
 
         # Send notification to each target client (robust open/closed checks)
         failed_clients = []
+        print(f"DEBUG SERVER: Sending to {len(clients_to_notify)} clients")
         for client in clients_to_notify:
             try:
+                print(f"DEBUG SERVER: Sending notification to client {client.client_id}")
                 if _is_ws_connected(client.websocket):
                     await client.websocket.send(notification_json)
+                    print(f"DEBUG SERVER: Successfully sent notification to client {client.client_id}")
                 else:
+                    print(f"DEBUG SERVER: Client {client.client_id} websocket not connected")
                     failed_clients.append(client.client_id)
             except Exception as e:
+                print(f"DEBUG SERVER: Failed to send notification to client {client.client_id}: {e}")
                 self._logger.warning(
                     f"Failed to send notification to client {client.client_id}: {e}"
                 )

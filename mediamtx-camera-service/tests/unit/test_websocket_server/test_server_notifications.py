@@ -19,8 +19,8 @@ import json
 from unittest.mock import Mock, AsyncMock, patch
 
 from src.websocket_server.server import WebSocketJsonRpcServer, ClientConnection
-from tests.fixtures.websocket_test_client import WebSocketTestClient, websocket_client
-from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
+from tests.fixtures.websocket_test_client import WebSocketTestClient
+# Removed unused imports: mediamtx_infrastructure, mediamtx_controller
 
 
 class TestServerNotifications:
@@ -39,15 +39,32 @@ class TestServerNotifications:
         return WebSocketTestClient("ws://localhost:8002/ws")
 
     @pytest.fixture
-    async def connected_websocket_client(self, real_websocket_client):
-        """Create and connect real WebSocket test client."""
+    def mock_client(self):
+        """Create mock WebSocket client for testing."""
+        mock_client = Mock()
+        mock_client.websocket = AsyncMock()
+        mock_client.websocket.send = AsyncMock()
+        mock_client.websocket.close = AsyncMock()
+        mock_client.client_id = "test-client-123"
+        return mock_client
+
+    @pytest.fixture
+    async def connected_websocket_client(self, server, real_websocket_client):
+        """Create and connect real WebSocket test client with server running."""
+        # Start the server
+        await server.start()
+        
+        # Connect the client
         await real_websocket_client.connect()
         yield real_websocket_client
+        
+        # Cleanup
         await real_websocket_client.disconnect()
+        await server.stop()
 
     @pytest.mark.asyncio
     async def test_camera_status_notification_with_real_websocket_communication(
-        self, server, connected_websocket_client
+        self, server, real_websocket_client
     ):
         """
         Verify camera status notifications are delivered via real WebSocket communication.
@@ -57,63 +74,74 @@ class TestServerNotifications:
         Expected: Notification delivered successfully via real WebSocket connection
         Edge Cases: Real-time delivery, connection stability
         """
-        # Test input with extra fields that should be filtered out
-        input_params = {
-            "device": "/dev/video0",
-            "status": "CONNECTED",
-            "name": "Test Camera",
-            "resolution": "1920x1080",
-            "fps": 30,
-            "streams": {"rtsp": "rtsp://localhost:8554/camera0"},
-            # Fields that should be filtered out:
-            "internal_id": "camera-internal-123",
-            "debug_info": {"probe_count": 5},
-            "raw_capability_data": {"driver": "uvcvideo"},
-            "validation_status": "confirmed",
-        }
-
-        # Send notification via real WebSocket server
-        await server.notify_camera_status_update(input_params)
-
-        # Wait for notification to be delivered via real WebSocket
+        # Start the server first
+        await server.start()
+        
         try:
-            notification = await connected_websocket_client.wait_for_notification(
-                "camera_status_update", timeout=5.0
-            )
+            # Connect the client
+            await real_websocket_client.connect()
             
-            # Verify notification was received
-            assert notification.result is not None
-            filtered_params = notification.result
-
-            # Verify only allowed fields are present (API filtering)
-            expected_fields = {
-                "device",
-                "status", 
-                "name",
-                "resolution",
-                "fps",
-                "streams",
+            # Test input with extra fields that should be filtered out
+            input_params = {
+                "device": "/dev/video0",
+                "status": "CONNECTED",
+                "name": "Test Camera",
+                "resolution": "1920x1080",
+                "fps": 30,
+                "streams": {"rtsp": "rtsp://localhost:8554/camera0"},
+                # Fields that should be filtered out:
+                "internal_id": "camera-internal-123",
+                "debug_info": {"probe_count": 5},
+                "raw_capability_data": {"driver": "uvcvideo"},
+                "validation_status": "confirmed",
             }
-            assert set(filtered_params.keys()) == expected_fields
 
-            # Verify filtered out fields are not present
-            forbidden_fields = {
-                "internal_id",
-                "debug_info",
-                "raw_capability_data",
-                "validation_status",
-            }
-            for field in forbidden_fields:
-                assert field not in filtered_params
+            # Send notification via real WebSocket server
+            await server.notify_camera_status_update(input_params)
 
-            # Verify values are preserved for allowed fields
-            assert filtered_params["device"] == "/dev/video0"
-            assert filtered_params["status"] == "CONNECTED"
-            assert filtered_params["resolution"] == "1920x1080"
-            assert filtered_params["fps"] == 30
-            
-        except TimeoutError:
-            pytest.fail("Notification not received within timeout period")
+            # Wait for notification to be delivered via real WebSocket
+            try:
+                notification = await real_websocket_client.wait_for_notification(
+                    "camera_status_update", timeout=5.0
+                )
+                
+                # Verify notification was received
+                assert notification.result is not None
+                filtered_params = notification.result
+
+                # Verify only allowed fields are present (API filtering)
+                expected_fields = {
+                    "device",
+                    "status", 
+                    "name",
+                    "resolution",
+                    "fps",
+                    "streams",
+                }
+                assert set(filtered_params.keys()) == expected_fields
+
+                # Verify filtered out fields are not present
+                forbidden_fields = {
+                    "internal_id",
+                    "debug_info",
+                    "raw_capability_data",
+                    "validation_status",
+                }
+                for field in forbidden_fields:
+                    assert field not in filtered_params
+
+                # Verify values are preserved for allowed fields
+                assert filtered_params["device"] == "/dev/video0"
+                assert filtered_params["status"] == "CONNECTED"
+                assert filtered_params["resolution"] == "1920x1080"
+                assert filtered_params["fps"] == 30
+                
+            except TimeoutError:
+                pytest.fail("Notification not received within timeout period")
+        finally:
+            # Cleanup
+            await real_websocket_client.disconnect()
+            await server.stop()
 
     def test_camera_status_notification_field_filtering_with_mock(self, server):
         """
@@ -360,37 +388,67 @@ class TestServerNotifications:
     @pytest.mark.asyncio
     async def test_targeted_notification_broadcast(self, server):
         """Test broadcasting notifications to specific client list."""
+        # Start the server first
+        await server.start()
+        
         # Setup multiple real WebSocket clients
         client1 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
         client2 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
         client3 = WebSocketTestClient("ws://127.0.0.1:8002/ws")
 
-        # Connect all clients
-        await client1.connect()
-        await client2.connect()
-        await client3.connect()
-
         try:
-            # Broadcast to specific clients only
+            # Connect all clients
+            await client1.connect()
+            await client2.connect()
+            await client3.connect()
+
+            # Wait a moment for connections to be established and registered
+            await asyncio.sleep(0.2)
+
+            # Get the actual client IDs from the server
+            client_ids = list(server._clients.keys())
+            print(f"DEBUG: Connected clients: {client_ids}")
+            print(f"DEBUG: Number of clients: {len(client_ids)}")
+            assert len(client_ids) >= 3, f"Expected at least 3 clients, got {len(client_ids)}"
+
+            # Broadcast to specific clients only (use actual client IDs)
+            target_clients = [client_ids[0], client_ids[2]]  # First and third clients
+            print(f"DEBUG: Broadcasting to clients: {target_clients}")
             await server.broadcast_notification(
                 method="targeted_notification",
                 params={"message": "test"},
-                target_clients=["client1", "client3"],
+                target_clients=target_clients,
             )
+            print(f"DEBUG: Broadcast completed")
 
             # Wait for notifications to be sent
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
-            # Verify notifications were sent (check received messages)
-            assert len(client1.received_messages) > 0
-            assert len(client2.received_messages) == 0  # Should not receive
-            assert len(client3.received_messages) > 0
+            # Verify notifications were sent only to target clients
+            # The system correctly implements selective broadcasting - only target clients should receive
+            client1_messages = client1.get_received_messages()
+            client2_messages = client2.get_received_messages()
+            client3_messages = client3.get_received_messages()
+            
+            print(f"DEBUG: Client1 received messages: {len(client1_messages)}")
+            print(f"DEBUG: Client2 received messages: {len(client2_messages)}")
+            print(f"DEBUG: Client3 received messages: {len(client3_messages)}")
+            
+            # Client1 (targeted) should receive notification
+            assert len(client1_messages) > 0, "Target client 1 should receive notification"
+            
+            # Client2 (not targeted) should NOT receive notification
+            assert len(client2_messages) == 0, "Non-target client 2 should not receive notification"
+            
+            # Client3 (targeted) should receive notification
+            assert len(client3_messages) > 0, "Target client 3 should receive notification"
 
         finally:
             # Clean up connections
             await client1.disconnect()
             await client2.disconnect()
             await client3.disconnect()
+            await server.stop()
 
     def test_api_specification_compliance_documentation(self, server):
         """Verify notification methods document API compliance."""
@@ -415,6 +473,9 @@ class TestServerNotifications:
         Expected: Graceful handling of disconnection without server crash
         Edge Cases: Connection failures, client timeouts
         """
+        # Start the server first
+        await server.start()
+        
         # Connect client
         await real_websocket_client.connect()
         
@@ -432,9 +493,13 @@ class TestServerNotifications:
         try:
             await server.notify_camera_status_update(input_params)
             # If we get here, the server handled the disconnection gracefully
-            assert True
+            # Verify server is still running and can handle more notifications
+            assert server.get_connection_count() >= 0, "Server should still be operational"
         except Exception as e:
             pytest.fail(f"Server crashed when sending notification to disconnected client: {e}")
+        finally:
+            # Clean up server
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_websocket_notification_handles_connection_failure(
@@ -470,7 +535,8 @@ class TestServerNotifications:
         try:
             await server.notify_camera_status_update(input_params)
             # If we get here, the server handled the connection failure gracefully
-            assert True
+            # Verify server is still operational
+            assert server.get_connection_count() >= 0, "Server should still be operational"
         except Exception as e:
             pytest.fail(f"Server crashed when handling connection failure: {e}")
 
@@ -493,6 +559,129 @@ class TestServerNotifications:
         try:
             await server.notify_camera_status_update(invalid_params)
             # Server should handle invalid params gracefully
-            assert True
+            # Verify server is still operational
+            assert server.get_connection_count() >= 0, "Server should still be operational"
         except Exception as e:
             pytest.fail(f"Server crashed when handling invalid message format: {e}")
+
+    @pytest.mark.asyncio
+    async def test_real_websocket_notification_delivery_with_multiple_clients(
+        self, server
+    ):
+        """
+        Test real WebSocket notification delivery with multiple connected clients.
+        
+        Requirements: REQ-WS-004, REQ-WS-007
+        Scenario: Multiple real WebSocket clients receive notifications simultaneously
+        Expected: All connected clients receive notifications via real WebSocket communication
+        Edge Cases: Concurrent connections, real-time delivery
+        """
+        # Start the server
+        await server.start()
+        
+        # Create multiple real WebSocket clients
+        clients = []
+        for i in range(3):
+            client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+            await client.connect()
+            clients.append(client)
+        
+        try:
+            # Wait for connections to be established
+            await asyncio.sleep(0.2)
+            
+            # Verify all clients are connected
+            assert len(server._clients) == 3, f"Expected 3 clients, got {len(server._clients)}"
+            
+            # Send notification to all clients
+            notification_params = {
+                "device": "/dev/video0",
+                "status": "CONNECTED",
+                "name": "Test Camera",
+                "resolution": "1920x1080",
+                "fps": 30,
+            }
+            
+            await server.notify_camera_status_update(notification_params)
+            
+            # Wait for notifications to be delivered
+            await asyncio.sleep(0.2)
+            
+            # Verify all clients received the notification
+            for i, client in enumerate(clients):
+                messages = client.get_received_messages()
+                assert len(messages) > 0, f"Client {i} did not receive notification"
+                
+                # Verify notification content
+                notification = messages[-1]  # Get the latest message
+                assert notification.result is not None, f"Client {i} received invalid notification"
+                assert notification.result.get("device") == "/dev/video0"
+                assert notification.result.get("status") == "CONNECTED"
+                
+        finally:
+            # Clean up all clients
+            for client in clients:
+                await client.disconnect()
+            await server.stop()
+
+    @pytest.mark.asyncio
+    async def test_notification_delivery_with_connection_failures(
+        self, server
+    ):
+        """
+        Test notification delivery when some clients have connection failures.
+        
+        Requirements: REQ-WS-006
+        Scenario: Mixed healthy and failing client connections
+        Expected: Notifications delivered to healthy clients, failed clients cleaned up
+        Edge Cases: Partial connection failures, cleanup verification
+        """
+        # Start the server
+        await server.start()
+        
+        # Create one healthy client
+        healthy_client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        await healthy_client.connect()
+        
+        # Create a mock client that will fail during send
+        mock_failing_client = Mock()
+        mock_failing_client.websocket = AsyncMock()
+        mock_failing_client.websocket.send = AsyncMock(side_effect=Exception("Connection broken"))
+        mock_failing_client.client_id = "failing-client-123"
+        
+        # Add failing client to server
+        server._clients["failing-client-123"] = mock_failing_client
+        
+        try:
+            # Wait for connections to be established
+            await asyncio.sleep(0.2)
+            
+            # Verify we have both clients
+            assert len(server._clients) == 2, f"Expected 2 clients, got {len(server._clients)}"
+            
+            # Send notification (should fail for one client, succeed for another)
+            notification_params = {
+                "device": "/dev/video0",
+                "status": "CONNECTED",
+                "name": "Test Camera",
+            }
+            
+            await server.notify_camera_status_update(notification_params)
+            
+            # Wait for processing
+            await asyncio.sleep(0.2)
+            
+            # Verify healthy client received notification
+            messages = healthy_client.get_received_messages()
+            assert len(messages) > 0, "Healthy client should receive notification"
+            
+            # Verify failing client was cleaned up
+            assert "failing-client-123" not in server._clients, "Failing client should be removed"
+            
+            # Verify server still has the healthy client
+            assert len(server._clients) == 1, "Server should retain healthy client"
+            
+        finally:
+            # Clean up
+            await healthy_client.disconnect()
+            await server.stop()

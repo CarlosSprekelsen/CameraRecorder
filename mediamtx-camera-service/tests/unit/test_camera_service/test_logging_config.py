@@ -14,9 +14,10 @@ Requirements:
 import json
 import logging
 import os
+import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -154,7 +155,7 @@ class TestJsonFormatter:
         try:
             raise ValueError("Test exception")
         except ValueError:
-            exc_info = True
+            exc_info = sys.exc_info()
 
         record = logging.LogRecord(
             name="test",
@@ -332,6 +333,8 @@ class TestSetupLogging:
     def test_setup_logging_auto_mode_detection(self, logging_config):
         """Test automatic development/production mode detection."""
         # TODO: MEDIUM: Test environment-based mode detection [Story:S14]
+        
+        # Test development mode detection
         with patch.dict(os.environ, {"CAMERA_SERVICE_ENV": "development"}):
             # Clear any existing handlers and filters
             root_logger = logging.getLogger()
@@ -351,6 +354,21 @@ class TestSetupLogging:
                 f for f in root_logger.filters if isinstance(f, CorrelationIdFilter)
             ]
             assert len(root_correlation_filters) == 1
+        
+        # Test production mode detection (default)
+        with patch.dict(os.environ, {"CAMERA_SERVICE_ENV": "production"}):
+            # Clear any existing handlers and filters
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+            for filter_obj in root_logger.filters[:]:
+                root_logger.removeFilter(filter_obj)
+
+            setup_logging(logging_config, development_mode=None)
+
+            # Should detect production mode and use JSON formatter
+            handler = root_logger.handlers[0]
+            assert isinstance(handler.formatter, JsonFormatter)
 
     def test_setup_logging_with_rotation(self):
         """Test logging setup with file rotation enabled."""
@@ -463,59 +481,82 @@ class TestGlobalHelperFunctions:
     """Test global helper functions for correlation ID management."""
 
     def test_get_correlation_filter_function(self):
-        """Test get_correlation_filter function."""
+        """Test get_correlation_filter function with real logging system."""
         # TODO: MEDIUM: Test correlation filter retrieval [Story:S14]
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = Mock()
-            mock_handler = Mock()
-            mock_filter = CorrelationIdFilter()
-            mock_handler.filters = [mock_filter]
-            mock_logger.handlers = [mock_handler]
-            mock_get_logger.return_value = mock_logger
-
-            result = get_correlation_filter()
-
-            assert result is mock_filter
+        # Clear existing logging configuration
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
+        
+        # Setup real logging with correlation filter
+        config = LoggingConfig(level="INFO", file_enabled=False)
+        setup_logging(config, development_mode=True)
+        
+        # Test that we can retrieve the correlation filter
+        result = get_correlation_filter()
+        assert result is not None
+        assert isinstance(result, CorrelationIdFilter)
 
     def test_get_correlation_filter_not_found(self):
         """Test get_correlation_filter when no filter exists."""
         # TODO: MEDIUM: Test correlation filter not found case [Story:S14]
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = Mock()
-            mock_logger.handlers = []
-            mock_get_logger.return_value = mock_logger
-
-            result = get_correlation_filter()
-
-            assert result is None
+        # Clear existing logging configuration
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
+        
+        # Test that no correlation filter is found when logging is not set up
+        result = get_correlation_filter()
+        assert result is None
 
     def test_set_correlation_id_function(self):
-        """Test global set_correlation_id function."""
+        """Test global set_correlation_id function with real system."""
         # TODO: MEDIUM: Test global correlation ID setting [Story:S14]
-        with patch(
-            "camera_service.logging_config.get_correlation_filter"
-        ) as mock_get_filter:
-            mock_filter = Mock()
-            mock_get_filter.return_value = mock_filter
-
-            result = set_correlation_id("global-test-id")
-
-            mock_filter.set_correlation_id.assert_called_once_with("global-test-id")
-            assert result is True
+        # Clear existing logging configuration
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
+        
+        # Setup real logging with correlation filter
+        config = LoggingConfig(level="INFO", file_enabled=False)
+        setup_logging(config, development_mode=True)
+        
+        # Test setting correlation ID
+        result = set_correlation_id("global-test-id")
+        assert result is True
+        
+        # Verify correlation ID was set
+        retrieved_id = get_correlation_id()
+        assert retrieved_id == "global-test-id"
 
     def test_get_correlation_id_function(self):
-        """Test global get_correlation_id function."""
+        """Test global get_correlation_id function with real system."""
         # TODO: MEDIUM: Test global correlation ID retrieval [Story:S14]
-        with patch(
-            "camera_service.logging_config.get_correlation_filter"
-        ) as mock_get_filter:
-            mock_filter = Mock()
-            mock_filter.get_correlation_id.return_value = "current-id"
-            mock_get_filter.return_value = mock_filter
-
-            result = get_correlation_id()
-
-            assert result == "current-id"
+        # Clear existing logging configuration
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
+        
+        # Setup real logging with correlation filter
+        config = LoggingConfig(level="INFO", file_enabled=False)
+        setup_logging(config, development_mode=True)
+        
+        # Test getting correlation ID when none is set
+        result = get_correlation_id()
+        assert result is None
+        
+        # Set correlation ID and test retrieval
+        set_correlation_id("test-correlation-id")
+        result = get_correlation_id()
+        assert result == "test-correlation-id"
 
 
 class TestLoggingIntegration:
@@ -524,11 +565,63 @@ class TestLoggingIntegration:
     def test_end_to_end_logging_flow(self):
         """Test complete logging flow with correlation IDs."""
         # TODO: LOW: Test end-to-end logging integration [Story:S14]
-        # This would test the complete flow:
-        # 1. Setup logging
-        # 2. Set correlation ID
-        # 3. Log messages
-        # 4. Verify output format includes correlation ID
-        # 5. Verify structured/console format as appropriate
-
-        # Implementation deferred until integration test phase
+        # Clear existing logging configuration
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        for filter_obj in root_logger.filters[:]:
+            root_logger.removeFilter(filter_obj)
+        
+        # Setup logging in development mode with StringIO handler for testing
+        config = LoggingConfig(level="INFO", file_enabled=False)
+        setup_logging(config, development_mode=True)
+        
+        # Create a StringIO handler to capture log output
+        import io
+        string_handler = logging.StreamHandler(io.StringIO())
+        string_handler.setFormatter(ConsoleFormatter("%(levelname)s - %(name)s - %(message)s"))
+        string_handler.addFilter(get_correlation_filter())
+        
+        # Add the string handler to capture output
+        root_logger.addHandler(string_handler)
+        
+        # Set correlation ID
+        set_correlation_id("test-flow-123")
+        
+        # Log a message
+        logger = logging.getLogger("test.module")
+        logger.info("Test message with correlation ID")
+        
+        # Get the captured output
+        log_output = string_handler.stream.getvalue()
+        
+        # Verify correlation ID is included in output
+        assert "[test-flow-123]" in log_output
+        assert "Test message with correlation ID" in log_output
+        
+        # Test production mode JSON output
+        # Clear handlers and setup JSON logging
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+        
+        # Setup production mode logging with StringIO handler
+        setup_logging(config, development_mode=False)
+        
+        # Create JSON StringIO handler
+        json_string_handler = logging.StreamHandler(io.StringIO())
+        json_string_handler.setFormatter(JsonFormatter())
+        json_string_handler.addFilter(get_correlation_filter())
+        root_logger.addHandler(json_string_handler)
+        
+        set_correlation_id("test-json-456")
+        logger.info("Test JSON message")
+        
+        # Get the captured JSON output
+        json_log_output = json_string_handler.stream.getvalue()
+        
+        # Verify JSON format includes correlation ID
+        import json
+        log_data = json.loads(json_log_output.strip())
+        assert log_data["correlation_id"] == "test-json-456"
+        assert log_data["message"] == "Test JSON message"
+        assert log_data["level"] == "INFO"

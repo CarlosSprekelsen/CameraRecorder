@@ -76,23 +76,23 @@ class MediaMTXTestInfrastructure:
         os.makedirs(self.config.snapshots_path, exist_ok=True)
         
         # Start MediaMTX process
-        cmd = [
-            "mediamtx",  # Assume mediamtx is in PATH
-            self.config_file
-        ]
-        
+        # Use existing systemd-managed MediaMTX service instead of creating new instance
         try:
-            self.process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=self.temp_dir
+            # Check if MediaMTX service is running
+            result = subprocess.run(
+                ['systemctl', 'is-active', 'mediamtx'],
+                capture_output=True,
+                text=True,
+                timeout=10
             )
             
-            # Wait for MediaMTX to start
+            if result.returncode != 0 or result.stdout.strip() != 'active':
+                raise RuntimeError("MediaMTX service is not running. Please start it with: sudo systemctl start mediamtx")
+            
+            # Wait for MediaMTX to be ready
             await self._wait_for_mediamtx_startup()
             
-            # Create MediaMTX controller
+            # Create MediaMTX controller using existing service
             self.controller = MediaMTXController(
                 host=self.config.host,
                 api_port=self.config.api_port,
@@ -104,7 +104,7 @@ class MediaMTXTestInfrastructure:
                 snapshots_path=self.config.snapshots_path,
             )
             
-            logger.info("MediaMTX service started successfully")
+            logger.info("Using existing MediaMTX service successfully")
             
         except Exception as e:
             logger.error(f"Failed to start MediaMTX service: {e}")
@@ -113,7 +113,7 @@ class MediaMTXTestInfrastructure:
     
     async def _wait_for_mediamtx_startup(self, timeout: float = 10.0) -> None:
         """Wait for MediaMTX service to be ready."""
-        self._health_check_url = f"http://{self.config.host}:{self.config.api_port}/v3/health"
+        self._health_check_url = f"http://{self.config.host}:{self.config.api_port}/v3/config/global/get"
         
         start_time = time.time()
         while time.time() - start_time < timeout:
@@ -199,16 +199,8 @@ class MediaMTXTestInfrastructure:
         """Clean up MediaMTX test environment."""
         logger.info("Cleaning up MediaMTX test environment...")
         
-        # Stop MediaMTX process
-        if self.process:
-            try:
-                self.process.terminate()
-                self.process.wait(timeout=5.0)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
-            except Exception as e:
-                logger.warning(f"Error stopping MediaMTX process: {e}")
+        # Note: We don't stop the MediaMTX service since it's systemd-managed
+        # and shared across all tests. Only clean up test-specific resources.
         
         # Clean up temporary directory
         if self.temp_dir and os.path.exists(self.temp_dir):
