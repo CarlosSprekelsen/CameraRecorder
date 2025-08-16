@@ -22,6 +22,9 @@ from mediamtx_wrapper.controller import MediaMTXController, StreamConfig
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_camera_discovery():
     """Test camera discovery with real devices."""
     logger.info("=== Testing Camera Discovery ===")
@@ -71,6 +74,7 @@ async def test_camera_discovery():
     finally:
         await camera_monitor.stop()
 
+@pytest.mark.asyncio
 async def test_mediamtx_integration():
     """Test MediaMTX integration."""
     logger.info("=== Testing MediaMTX Integration ===")
@@ -106,6 +110,7 @@ async def test_mediamtx_integration():
     except Exception as e:
         logger.error(f"MediaMTX API test error: {e}")
 
+@pytest.mark.asyncio
 async def test_stream_creation():
     """Test stream creation for detected cameras."""
     logger.info("=== Testing Stream Creation ===")
@@ -161,6 +166,7 @@ async def test_stream_creation():
     except Exception as e:
         logger.error(f"Stream creation error: {e}")
 
+@pytest.mark.asyncio
 async def test_service_manager_integration():
     """Test full service manager integration."""
     logger.info("=== Testing Service Manager Integration ===")

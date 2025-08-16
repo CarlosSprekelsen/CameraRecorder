@@ -50,7 +50,7 @@ class MediaMTXPathManager:
             self._logger.error("Path manager not started")
             return False
 
-        path_name = f"cam{camera_id}"
+        path_name = f"camera{camera_id}"
         ffmpeg_command = (
             f"ffmpeg -f v4l2 -i {device_path} -c:v libx264 -pix_fmt yuv420p "
             f"-preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:{rtsp_port}/{path_name}"
@@ -104,10 +104,10 @@ class MediaMTXPathManager:
             self._logger.error("Path manager not started")
             return False
 
-        path_name = f"cam{camera_id}"
+        path_name = f"camera{camera_id}"
         
         try:
-            async with self._session.delete(f"{self.api_base}/config/paths/delete/{path_name}") as response:
+            async with self._session.post(f"{self.api_base}/config/paths/delete/{path_name}") as response:
                 if response.status == 200:
                     self._logger.info(f"Successfully deleted MediaMTX path: {path_name}")
                     return True
@@ -135,7 +135,7 @@ class MediaMTXPathManager:
             self._logger.error("Path manager not started")
             return False
 
-        path_name = f"cam{camera_id}"
+        path_name = f"camera{camera_id}"
         
         try:
             async with self._session.get(f"{self.api_base}/paths/list") as response:
@@ -157,13 +157,13 @@ class MediaMTXPathManager:
             camera_id: Camera identifier (e.g., "0", "1", "2", "3")
             
         Returns:
-            Path status dictionary or None if not found
+            Path status dictionary or None if None if not found
         """
         if not self._session:
             self._logger.error("Path manager not started")
             return None
 
-        path_name = f"cam{camera_id}"
+        path_name = f"camera{camera_id}"
         
         try:
             async with self._session.get(f"{self.api_base}/paths/list") as response:

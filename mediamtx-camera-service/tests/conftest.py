@@ -1,3 +1,34 @@
+# tests/conftest.py
+"""
+Main test configuration and fixtures for MediaMTX Camera Service.
+
+Requirements Traceability:
+- REQ-UTIL-001: Test configuration shall provide comprehensive test environment setup
+- REQ-UTIL-002: Test configuration shall enforce no-mock policies for integration tests
+- REQ-UTIL-003: Test configuration shall provide shared fixtures for real component testing
+- REQ-UTIL-004: Test configuration shall support test isolation and cleanup
+- REQ-UTIL-005: Test configuration shall provide environment variable management
+- REQ-UTIL-006: Test configuration shall provide test session management
+- REQ-UTIL-007: Test configuration shall provide mock usage control and validation
+- REQ-UTIL-008: Test configuration shall provide test collection and execution control
+
+Story Coverage: All test stories (S1-S17)
+IV&V Control Point: Test infrastructure validation and real component testing enforcement
+
+This configuration provides:
+1. Comprehensive test environment setup with real component support
+2. No-mock policy enforcement for integration tests
+3. Shared fixtures for real component testing
+4. Test isolation and cleanup mechanisms
+5. Environment variable management for test consistency
+6. Test session management and control
+7. Mock usage control and validation
+8. Test collection and execution control
+
+Critical Policy: Real component testing is preferred over mocking per testing guidelines.
+Mock usage is restricted to minimal strategic scenarios only.
+"""
+
 import os
 import tempfile
 import pytest

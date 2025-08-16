@@ -63,8 +63,8 @@ class MediaMTXConfig:
     webrtc_port: int = 8889
     hls_port: int = 8888
     config_path: str = "/opt/mediamtx/config/mediamtx.yml"
-    recordings_path: str = "/opt/camera-service/recordings"
-    snapshots_path: str = "/opt/camera-service/snapshots"
+    recordings_path: str = "./.tmp_recordings"
+    snapshots_path: str = "./.tmp_snapshots"
     
     # Health monitoring configuration
     health_check_interval: int = 30
@@ -96,7 +96,7 @@ class LoggingConfig:
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     file_enabled: bool = True
-    file_path: str = "/opt/camera-service/logs/camera-service.log"
+    file_path: str = "./.tmp_logs/camera-service.log"
     max_file_size: str = "10MB"
     backup_count: int = 5
 

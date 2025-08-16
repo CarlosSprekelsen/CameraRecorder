@@ -7,7 +7,8 @@ import asyncio
 import logging
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+import pytest
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from camera_service.config import Config
 from camera_service.service_manager import ServiceManager
@@ -16,6 +17,7 @@ from camera_service.service_manager import ServiceManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@pytest.mark.asyncio
 async def test_ffmpeg_integration():
     """Test the MediaMTX FFmpeg integration implementation."""
     

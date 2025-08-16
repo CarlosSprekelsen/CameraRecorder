@@ -362,13 +362,13 @@ class ServiceManager(CameraEventHandler):
                 if stream_created:
                     # Generate stream URLs for notification
                     streams_dict = {
-                        "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/cam{camera_id}",
-                        "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/cam{camera_id}",
-                        "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/cam{camera_id}",
+                        "rtsp": f"rtsp://{self._config.mediamtx.host}:{self._config.mediamtx.rtsp_port}/camera{camera_id}",
+                        "webrtc": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.webrtc_port}/camera{camera_id}",
+                        "hls": f"http://{self._config.mediamtx.host}:{self._config.mediamtx.hls_port}/camera{camera_id}",
                     }
 
                     self._logger.debug(
-                        f"Successfully created MediaMTX path: cam{camera_id}",
+                        f"Successfully created MediaMTX path: camera{camera_id}",
                         extra={
                             "correlation_id": correlation_id,
                             "device_path": device_path,

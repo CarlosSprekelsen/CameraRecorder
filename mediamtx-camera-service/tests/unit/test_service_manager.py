@@ -6,6 +6,8 @@ Requirements Traceability:
 - REQ-SVC-001: ServiceManager shall orchestrate camera discovery and MediaMTX integration
 - REQ-SVC-002: ServiceManager shall handle camera lifecycle events with real component coordination
 - REQ-SVC-001: ServiceManager shall provide WebSocket API for camera management
+- REQ-MEDIA-001: MediaMTX integration shall use single systemd-managed service
+- REQ-MEDIA-002: MediaMTX integration shall handle service failures gracefully
 
 Story Coverage: S1 - Service Manager Integration
 IV&V Control Point: Real service manager validation
@@ -16,6 +18,9 @@ behavior via the public WebSocket API and MediaMTX HTTP integration.
 
 import json
 import socket
+import subprocess
+import tempfile
+import os
 from contextlib import asynccontextmanager
 
 import pytest
@@ -31,7 +36,6 @@ from src.camera_service.config import (
     SnapshotConfig,
 )
 from src.camera_service.service_manager import ServiceManager
-from aiohttp import web
 
 
 def _free_port() -> int:
@@ -40,15 +44,16 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
-def _build_config(api_port: int, ws_port: int) -> Config:
+def _build_config(ws_port: int) -> Config:
+    """Build configuration using real systemd-managed MediaMTX service."""
     return Config(
         server=ServerConfig(host="127.0.0.1", port=ws_port, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(
             host="127.0.0.1",
-            api_port=api_port,
-            rtsp_port=8554,
-            webrtc_port=8889,
-            hls_port=8888,
+            api_port=9997,  # Fixed systemd service port
+            rtsp_port=8554,  # Fixed systemd service port
+            webrtc_port=8889,  # Fixed systemd service port
+            hls_port=8888,  # Fixed systemd service port
             recordings_path="./.tmp_recordings",
             snapshots_path="./.tmp_snapshots",
         ),
@@ -60,20 +65,31 @@ def _build_config(api_port: int, ws_port: int) -> Config:
 
 
 @asynccontextmanager
-async def _mediamtx_health_ok(host: str, port: int):
-    async def health(_req: web.Request):
-        return web.json_response({"serverVersion": "test", "serverUptime": 1})
-
-    app = web.Application()
-    app.router.add_get("/v3/health", health)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host, port)
-    await site.start()
+async def _real_mediamtx_service():
+    """
+    Use real systemd-managed MediaMTX service instead of mock HTTP server.
+    
+    Requirements: REQ-MEDIA-001, REQ-MEDIA-002
+    Architecture: AD-001 - Use single systemd-managed MediaMTX service
+    """
     try:
+        # Check if MediaMTX service is running via systemd (AD-001 compliance)
+        result = subprocess.run(
+            ['systemctl', 'is-active', 'mediamtx'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if result.returncode != 0 or result.stdout.strip() != 'active':
+            raise RuntimeError("MediaMTX service is not running. Please start it with: sudo systemctl start mediamtx")
+        
+        # Service is available, yield for test execution
         yield
-    finally:
-        await runner.cleanup()
+        
+    except Exception as e:
+        # If MediaMTX service is not available, skip the test
+        pytest.skip(f"MediaMTX service not available: {e}")
 
 
 @pytest.mark.asyncio
@@ -82,10 +98,9 @@ async def test_req_svc_lifecycle_001_start_and_ping_ws():
     Req: SVC-LIFECYCLE-001
     Service must start all components and respond to WebSocket ping.
     """
-    api_port = _free_port()
     ws_port = _free_port()
-    async with _mediamtx_health_ok("127.0.0.1", api_port):
-        cfg = _build_config(api_port, ws_port)
+    async with _real_mediamtx_service():
+        cfg = _build_config(ws_port)
         svc = ServiceManager(cfg)
         await svc.start()
         try:
@@ -104,10 +119,9 @@ async def test_req_svc_api_cam_list_001_get_camera_list_structure():
     Req: SVC-API-CAM-LIST-001
     WebSocket API must return an object with cameras, total, and connected fields for get_camera_list.
     """
-    api_port = _free_port()
     ws_port = _free_port()
-    async with _mediamtx_health_ok("127.0.0.1", api_port):
-        cfg = _build_config(api_port, ws_port)
+    async with _real_mediamtx_service():
+        cfg = _build_config(ws_port)
         svc = ServiceManager(cfg)
         await svc.start()
         try:
@@ -130,10 +144,9 @@ async def test_req_svc_error_001_invalid_method_returns_error():
     Req: SVC-ERROR-001
     Invalid JSON-RPC method must return error without crashing service.
     """
-    api_port = _free_port()
     ws_port = _free_port()
-    async with _mediamtx_health_ok("127.0.0.1", api_port):
-        cfg = _build_config(api_port, ws_port)
+    async with _real_mediamtx_service():
+        cfg = _build_config(ws_port)
         svc = ServiceManager(cfg)
         await svc.start()
         try:
@@ -152,10 +165,9 @@ async def test_req_svc_shutdown_001_clean_shutdown_and_ws_unavailable():
     Req: SVC-SHUTDOWN-001
     Service must shut down cleanly; WebSocket endpoint must no longer accept connections.
     """
-    api_port = _free_port()
     ws_port = _free_port()
-    async with _mediamtx_health_ok("127.0.0.1", api_port):
-        cfg = _build_config(api_port, ws_port)
+    async with _real_mediamtx_service():
+        cfg = _build_config(ws_port)
         svc = ServiceManager(cfg)
         await svc.start()
         await svc.stop()

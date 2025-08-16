@@ -1,25 +1,27 @@
 """
-Real MediaMTX testing infrastructure for all tests.
+MediaMTX test infrastructure fixture for MediaMTX Camera Service.
 
-This module provides real MediaMTX service integration for testing,
-replacing mocked components with actual service interactions.
+Requirements Traceability:
+- REQ-UTIL-017: MediaMTX test infrastructure shall provide real MediaMTX service testing
+
+Story Coverage: All MediaMTX test stories
+IV&V Control Point: MediaMTX test infrastructure validation
 """
 
 import asyncio
-import json
-import logging
-import os
 import subprocess
 import tempfile
+import os
+from pathlib import Path
+import json
+import logging
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Dict, Any, Optional
 
 import pytest
 import pytest_asyncio
 import aiohttp
-from aiohttp import web
 
 from src.camera_service.config import MediaMTXConfig
 from src.mediamtx_wrapper.controller import MediaMTXController
@@ -28,27 +30,29 @@ logger = logging.getLogger(__name__)
 
 
 class MediaMTXTestInfrastructure:
-    """Real MediaMTX testing infrastructure for all tests."""
+    """Real MediaMTX testing infrastructure using systemd-managed service."""
     
     def __init__(self, config: Optional[MediaMTXConfig] = None):
         self.config = config or self._create_test_config()
-        self.process: Optional[subprocess.Popen] = None
-        self.temp_dir: Optional[str] = None
-        self.config_file: Optional[str] = None
         self.controller: Optional[MediaMTXController] = None
         self._health_check_url: Optional[str] = None
+        self._temp_dir: Optional[str] = None
         
     def _create_test_config(self) -> MediaMTXConfig:
-        """Create test MediaMTX configuration."""
+        """Create test MediaMTX configuration using systemd service ports."""
+        # Use temporary directories for testing that don't require root permissions
+        import tempfile
+        self._temp_dir = tempfile.mkdtemp(prefix="mediamtx_test_")
+        
         return MediaMTXConfig(
             host="127.0.0.1",
-            api_port=9997,
-            rtsp_port=8554,
-            webrtc_port=8889,
-            hls_port=8888,
-            config_path="/tmp/test_mediamtx.yml",
-            recordings_path="/tmp/test_recordings",
-            snapshots_path="/tmp/test_snapshots",
+            api_port=9997,  # Fixed systemd service port
+            rtsp_port=8554,  # Fixed systemd service port
+            webrtc_port=8889,  # Fixed systemd service port
+            hls_port=8888,  # Fixed systemd service port
+            config_path="/etc/mediamtx/mediamtx.yml",  # Use systemd service config
+            recordings_path=os.path.join(self._temp_dir, "recordings"),  # Use temp directory
+            snapshots_path=os.path.join(self._temp_dir, "snapshots"),  # Use temp directory
             health_check_interval=1,
             health_failure_threshold=3,
             health_circuit_breaker_timeout=5,
@@ -61,24 +65,11 @@ class MediaMTXTestInfrastructure:
         )
     
     async def setup_mediamtx_service(self) -> None:
-        """Start real MediaMTX service for testing."""
-        logger.info("Setting up real MediaMTX service for testing...")
+        """Verify systemd-managed MediaMTX service is running for testing."""
+        logger.info("Verifying systemd-managed MediaMTX service for testing...")
         
-        # Create temporary directory for MediaMTX
-        self.temp_dir = tempfile.mkdtemp(prefix="mediamtx_test_")
-        
-        # Create MediaMTX configuration file
-        self.config_file = os.path.join(self.temp_dir, "mediamtx.yml")
-        self._create_mediamtx_config()
-        
-        # Create directories
-        os.makedirs(self.config.recordings_path, exist_ok=True)
-        os.makedirs(self.config.snapshots_path, exist_ok=True)
-        
-        # Start MediaMTX process
-        # Use existing systemd-managed MediaMTX service instead of creating new instance
         try:
-            # Check if MediaMTX service is running
+            # Check if MediaMTX service is running via systemd (AD-001 compliance)
             result = subprocess.run(
                 ['systemctl', 'is-active', 'mediamtx'],
                 capture_output=True,
@@ -92,7 +83,7 @@ class MediaMTXTestInfrastructure:
             # Wait for MediaMTX to be ready
             await self._wait_for_mediamtx_startup()
             
-            # Create MediaMTX controller using existing service
+            # Create MediaMTX controller using existing systemd-managed service
             self.controller = MediaMTXController(
                 host=self.config.host,
                 api_port=self.config.api_port,
@@ -104,11 +95,13 @@ class MediaMTXTestInfrastructure:
                 snapshots_path=self.config.snapshots_path,
             )
             
-            logger.info("Using existing MediaMTX service successfully")
+            # Start the controller
+            await self.controller.start()
+            
+            logger.info("Successfully connected to systemd-managed MediaMTX service")
             
         except Exception as e:
-            logger.error(f"Failed to start MediaMTX service: {e}")
-            await self.cleanup_mediamtx_service()
+            logger.error(f"Failed to connect to MediaMTX service: {e}")
             raise
     
     async def _wait_for_mediamtx_startup(self, timeout: float = 10.0) -> None:
@@ -128,33 +121,7 @@ class MediaMTXTestInfrastructure:
             
             await asyncio.sleep(0.5)
         
-        raise TimeoutError(f"MediaMTX service failed to start within {timeout} seconds")
-    
-    def _create_mediamtx_config(self) -> None:
-        """Create MediaMTX configuration file."""
-        config = {
-            "api": True,
-            "apiAddress": f"{self.config.host}:{self.config.api_port}",
-            "rtsp": True,
-            "rtspAddress": f"{self.config.host}:{self.config.rtsp_port}",
-            "webrtc": True,
-            "webrtcAddress": f"{self.config.host}:{self.config.webrtc_port}",
-            "hls": True,
-            "hlsAddress": f"{self.config.host}:{self.config.hls_port}",
-            "paths": {
-                "all": {
-                    "sourceOnDemand": True,
-                    "record": True,
-                    "recordPath": self.config.recordings_path,
-                    "snapshot": True,
-                    "snapshotPath": self.config.snapshots_path,
-                }
-            }
-        }
-        
-        with open(self.config_file, 'w') as f:
-            import yaml
-            yaml.dump(config, f)
+        raise TimeoutError(f"MediaMTX service failed to respond within {timeout} seconds")
     
     async def create_test_stream(self, stream_name: str, source: str = "/dev/video0") -> Dict[str, Any]:
         """Create real test stream in MediaMTX."""
@@ -177,8 +144,9 @@ class MediaMTXTestInfrastructure:
         
         return {
             "stream_id": result,
-            "config": stream_config,
-            "urls": self.controller._generate_stream_urls(stream_name)
+            "stream_name": stream_name,
+            "source": source,
+            "config": stream_config
         }
     
     async def get_stream_status(self, stream_name: str) -> Dict[str, Any]:
@@ -202,26 +170,31 @@ class MediaMTXTestInfrastructure:
         # Note: We don't stop the MediaMTX service since it's systemd-managed
         # and shared across all tests. Only clean up test-specific resources.
         
+        # Stop the controller if it's running
+        if self.controller:
+            try:
+                await self.controller.stop()
+            except Exception as e:
+                logger.warning(f"Error stopping MediaMTX controller: {e}")
+        
         # Clean up temporary directory
-        if self.temp_dir and os.path.exists(self.temp_dir):
+        if self._temp_dir and os.path.exists(self._temp_dir):
             try:
                 import shutil
-                shutil.rmtree(self.temp_dir)
+                shutil.rmtree(self._temp_dir)
             except Exception as e:
                 logger.warning(f"Error cleaning up temp directory: {e}")
         
         # Reset state
-        self.process = None
-        self.temp_dir = None
-        self.config_file = None
         self.controller = None
         self._health_check_url = None
+        self._temp_dir = None
 
 
 # Pytest fixtures for easy integration
 @pytest_asyncio.fixture
 async def mediamtx_infrastructure():
-    """Real MediaMTX infrastructure for testing."""
+    """Real MediaMTX infrastructure for testing using systemd-managed service."""
     infra = MediaMTXTestInfrastructure()
     await infra.setup_mediamtx_service()
     yield infra
@@ -236,7 +209,7 @@ async def mediamtx_controller(mediamtx_infrastructure):
 
 @asynccontextmanager
 async def mediamtx_test_context(config: Optional[MediaMTXConfig] = None):
-    """Context manager for MediaMTX testing."""
+    """Context manager for MediaMTX testing using systemd-managed service."""
     infra = MediaMTXTestInfrastructure(config)
     try:
         await infra.setup_mediamtx_service()

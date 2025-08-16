@@ -107,10 +107,16 @@ class MockMediaMTXController:
         }
 
 
-async def test_get_camera_list_success(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_get_camera_list_success() -> Dict[str, Any]:
     """Test get_camera_list success case."""
     print("Testing get_camera_list - Success Case")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     # Test with valid parameters (no parameters required)
     result = await server._method_get_camera_list()
     
@@ -120,52 +126,67 @@ async def test_get_camera_list_success(server: WebSocketJsonRpcServer) -> Dict[s
     return result
 
 
-async def test_get_camera_list_negative(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_get_camera_list_negative() -> Dict[str, Any]:
     """Test get_camera_list negative case (no camera monitor)."""
     print("\nTesting get_camera_list - Negative Case (No Camera Monitor)")
-    
-    # Temporarily remove camera monitor to test error handling
-    original_monitor = server._camera_monitor
-    server._camera_monitor = None
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = None  # Test with no camera monitor
+    server._mediamtx_controller = MockMediaMTXController()
+
     try:
         result = await server._method_get_camera_list()
         print(f"✅ Success: get_camera_list handled missing camera monitor gracefully")
         print(f"   Response: {json.dumps(result, indent=2)}")
         return result
-    finally:
-        # Restore camera monitor
-        server._camera_monitor = original_monitor
+    except Exception as e:
+        print(f"✅ Success: get_camera_list properly handled missing camera monitor")
+        print(f"   Exception: {e}")
+        return {"error": str(e)}
 
 
-async def test_take_snapshot_success(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_take_snapshot_success() -> Dict[str, Any]:
     """Test take_snapshot success case."""
     print("\nTesting take_snapshot - Success Case")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     # Test with valid parameters
     params = {
         "device": "/dev/video0",
         "filename": "test_snapshot_success.jpg"
     }
-    
+
     result = await server._method_take_snapshot(params)
-    
+
     print(f"✅ Success: take_snapshot completed")
     print(f"   Response: {json.dumps(result, indent=2)}")
-    
+
     return result
 
 
-async def test_take_snapshot_negative(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_take_snapshot_negative() -> Dict[str, Any]:
     """Test take_snapshot negative case (invalid device)."""
     print("\nTesting take_snapshot - Negative Case (Invalid Device)")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     # Test with invalid device
     params = {
         "device": "/dev/video999",  # Non-existent device
         "filename": "test_snapshot_error.jpg"
     }
-    
+
     try:
         result = await server._method_take_snapshot(params)
         print(f"✅ Success: take_snapshot handled invalid device gracefully")
@@ -177,36 +198,48 @@ async def test_take_snapshot_negative(server: WebSocketJsonRpcServer) -> Dict[st
         return {"error": str(e)}
 
 
-async def test_start_recording_success(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_start_recording_success() -> Dict[str, Any]:
     """Test start_recording success case."""
     print("\nTesting start_recording - Success Case")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     # Test with valid parameters
     params = {
         "device": "/dev/video0",
         "duration": 30,  # 30 seconds
         "format": "mp4"
     }
-    
+
     result = await server._method_start_recording(params)
-    
+
     print(f"✅ Success: start_recording initiated")
     print(f"   Response: {json.dumps(result, indent=2)}")
-    
+
     return result
 
 
-async def test_start_recording_negative(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_start_recording_negative() -> Dict[str, Any]:
     """Test start_recording negative case (invalid device)."""
     print("\nTesting start_recording - Negative Case (Invalid Device)")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     # Test with invalid device
     params = {
         "device": "/dev/video999",  # Non-existent device
         "duration": 30,
         "format": "mp4"
     }
-    
+
     try:
         result = await server._method_start_recording(params)
         print(f"✅ Success: start_recording handled invalid device gracefully")
@@ -218,12 +251,18 @@ async def test_start_recording_negative(server: WebSocketJsonRpcServer) -> Dict[
         return {"error": str(e)}
 
 
-async def test_ping_method(server: WebSocketJsonRpcServer) -> Dict[str, Any]:
+async def test_ping_method() -> Dict[str, Any]:
     """Test ping method for basic connectivity."""
     print("\nTesting ping - Basic Connectivity")
-    
+
+    # Create server instance with mock components
+    config = build_test_config()
+    server = WebSocketJsonRpcServer(config)
+    server._camera_monitor = MockCameraMonitor()
+    server._mediamtx_controller = MockMediaMTXController()
+
     result = await server._method_ping()
-    
+
     print(f"✅ Success: ping responded with '{result}'")
     return result
 

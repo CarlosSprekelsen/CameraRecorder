@@ -38,9 +38,14 @@ class TestServerMethodHandlers:
 
     @pytest.fixture
     async def real_mediamtx_environment(self):
-        """Create real MediaMTX test environment."""
+        """
+        Create real MediaMTX test environment using systemd-managed service.
+        
+        Requirements: REQ-WS-001, REQ-WS-002, REQ-ERROR-001
+        Architecture: AD-001 - Use single systemd-managed MediaMTX service
+        """
+        # Use temporary directories for testing that don't require root permissions
         temp_dir = tempfile.mkdtemp(prefix="websocket_test_")
-        config_path = os.path.join(temp_dir, "mediamtx.yml")
         recordings_path = os.path.join(temp_dir, "recordings")
         snapshots_path = os.path.join(temp_dir, "snapshots")
         
@@ -48,72 +53,37 @@ class TestServerMethodHandlers:
         os.makedirs(recordings_path, exist_ok=True)
         os.makedirs(snapshots_path, exist_ok=True)
         
-        # Create basic MediaMTX config
-        with open(config_path, 'w') as f:
-            f.write("""
-paths:
-  all:
-    runOnDemand: ffmpeg -f lavfi -i testsrc=duration=10:size=1280x720:rate=30 -c:v libx264 -f rtsp rtsp://127.0.0.1:8554/test
-            """)
-        
-        # Create real MediaMTX controller
-        controller = MediaMTXController(
-            host="127.0.0.1",
-            api_port=9997,
-            rtsp_port=8554,
-            webrtc_port=8889,
-            hls_port=8888,
-            config_path=config_path,
-            recordings_path=recordings_path,
-            snapshots_path=snapshots_path,
-        )
-        
         try:
-            await controller.start()
-            return controller
-        except Exception as e:
-            # If MediaMTX is not available, create a real HTTP test server for testing
-            # This ensures tests can run even without MediaMTX installed
-            from aiohttp import web
-            
-            async def handle_health_check(request):
-                return web.json_response({
-                    "serverVersion": "v1.0.0",
-                    "serverUptime": 3600,
-                    "apiVersion": "v3"
-                })
-            
-            async def handle_stream_operations(request):
-                return web.json_response({"status": "success"})
-            
-            async def handle_recording_operations(request):
-                return web.json_response({"status": "recording started"})
-            
-            app = web.Application()
-            app.router.add_get('/v3/config/global/get', handle_health_check)
-            app.router.add_post('/v3/config/paths/add/{name}', handle_stream_operations)
-            app.router.add_post('/v3/config/paths/delete/{name}', handle_stream_operations)
-            app.router.add_post('/v3/config/paths/edit/{name}', handle_recording_operations)
-            
-            runner = web.AppRunner(app)
-            await runner.setup()
-            site = web.TCPSite(runner, '127.0.0.1', 10002)
-            await site.start()
-            
-            # Create controller that uses the test server
-            test_controller = MediaMTXController(
-                host="127.0.0.1",
-                api_port=10002,
-                rtsp_port=8554,
-                webrtc_port=8889,
-                hls_port=8888,
-                config_path=os.path.join(temp_dir, "mediamtx.yml"),
-                recordings_path=os.path.join(temp_dir, "recordings"),
-                snapshots_path=os.path.join(temp_dir, "snapshots")
+            # Check if MediaMTX service is running via systemd (AD-001 compliance)
+            result = subprocess.run(
+                ['systemctl', 'is-active', 'mediamtx'],
+                capture_output=True,
+                text=True,
+                timeout=10
             )
             
-            await test_controller.start()
-            return test_controller
+            if result.returncode != 0 or result.stdout.strip() != 'active':
+                raise RuntimeError("MediaMTX service is not running. Please start it with: sudo systemctl start mediamtx")
+            
+            # Create real MediaMTX controller using existing systemd-managed service
+            controller = MediaMTXController(
+                host="127.0.0.1",
+                api_port=9997,  # Fixed systemd service port
+                rtsp_port=8554,  # Fixed systemd service port
+                webrtc_port=8889,  # Fixed systemd service port
+                hls_port=8888,  # Fixed systemd service port
+                config_path="/etc/mediamtx/mediamtx.yml",  # Use systemd service config
+                recordings_path=recordings_path,
+                snapshots_path=snapshots_path,
+            )
+            
+            # Start the controller
+            await controller.start()
+            return controller
+            
+        except Exception as e:
+            # If MediaMTX service is not available, skip the test
+            pytest.skip(f"MediaMTX service not available: {e}")
         finally:
             import shutil
             shutil.rmtree(temp_dir, ignore_errors=True)

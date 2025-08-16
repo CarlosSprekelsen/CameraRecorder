@@ -1,3 +1,24 @@
+"""
+Unit test configuration and fixtures for MediaMTX Camera Service.
+
+Requirements Traceability:
+- REQ-UTIL-009: Unit test configuration shall provide isolated test environment setup
+- REQ-UTIL-010: Unit test configuration shall provide mock-free fixtures for real component testing
+- REQ-UTIL-011: Unit test configuration shall support test isolation and cleanup
+- REQ-UTIL-012: Unit test configuration shall provide consistent test data and configurations
+- REQ-UTIL-013: Unit test configuration shall enforce real component testing policies
+
+Story Coverage: S1-S5 - All unit test stories
+IV&V Control Point: Unit test infrastructure validation
+
+This configuration provides:
+1. Real component fixtures without excessive mocking
+2. Consistent test environment setup
+3. Proper test isolation and cleanup
+4. Standardized test data and configurations
+5. Enforcement of real component testing policies
+"""
+
 import pytest
 import asyncio
 import tempfile

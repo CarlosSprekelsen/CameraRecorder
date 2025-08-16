@@ -6,12 +6,14 @@ Requirements Traceability:
 - REQ-MEDIA-003: MediaMTX controller shall implement circuit breaker pattern for fault tolerance
 - REQ-MEDIA-004: MediaMTX controller shall provide configurable health monitoring with exponential backoff
 - REQ-ERROR-003: MediaMTX controller shall maintain operation during MediaMTX failures
+- REQ-MEDIA-001: MediaMTX controller shall integrate with systemd-managed MediaMTX service
+- REQ-MEDIA-002: MediaMTX controller shall provide health monitoring with configurable parameters
 
 Story Coverage: S2 - MediaMTX Integration
 IV&V Control Point: Real MediaMTX health monitoring validation
 
 Test policy: Verify configurable circuit breaker behavior, exponential backoff
-with jitter, state transitions, and recovery logging with real HTTP integration.
+with jitter, state transitions, and recovery logging with real MediaMTX service integration.
 """
 
 import pytest
@@ -20,15 +22,13 @@ import tempfile
 import os
 import subprocess
 import aiohttp
-import aiohttp.test_utils
-import aiohttp.web
 from pathlib import Path
 
 from src.mediamtx_wrapper.controller import MediaMTXController
 
 
 class TestHealthMonitoring:
-    """Test health monitoring circuit breaker and backoff behavior."""
+    """Test health monitoring circuit breaker and backoff behavior with real MediaMTX service."""
 
     @pytest.fixture
     def controller_fast_timers(self, temp_dirs):
@@ -53,8 +53,8 @@ class TestHealthMonitoring:
         return controller
 
     @pytest.fixture
-    async def real_mediamtx_server(self):
-        """Use existing systemd-managed MediaMTX service instead of mock server."""
+    def real_mediamtx_service(self):
+        """Verify systemd-managed MediaMTX service is available for testing."""
         # Verify MediaMTX service is running
         result = subprocess.run(
             ['systemctl', 'is-active', 'mediamtx'],
@@ -66,28 +66,14 @@ class TestHealthMonitoring:
         if result.returncode != 0 or result.stdout.strip() != 'active':
             raise RuntimeError("MediaMTX service is not running. Please start it with: sudo systemctl start mediamtx")
         
-        # Wait for service to be ready
-        await asyncio.sleep(1.0)
-        
-        # Return None since we're using the real service
-        yield None
-
-    @pytest.fixture
-    async def real_mediamtx_server_failure(self):
-        """Use existing MediaMTX service - failures will be tested through real service behavior."""
-        # Verify MediaMTX service is running
-        result = subprocess.run(
-            ['systemctl', 'is-active', 'mediamtx'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        
-        if result.returncode != 0 or result.stdout.strip() != 'active':
-            raise RuntimeError("MediaMTX service is not running. Please start it with: sudo systemctl start mediamtx")
-        
-        # Return None since we're using the real service
-        yield None
+        # Return service info for testing
+        return {
+            "api_port": 9997,
+            "rtsp_port": 8554,
+            "webrtc_port": 8889,
+            "hls_port": 8888,
+            "host": "localhost"
+        }
 
     @pytest.fixture
     def temp_dirs(self):
@@ -147,26 +133,30 @@ paths:
             config_path="/tmp/config.yml",
             recordings_path="/tmp/recordings",
             snapshots_path="/tmp/snapshots",
-            health_failure_threshold=2,  # Different threshold
-            health_circuit_breaker_timeout=10,  # Different timeout
-            health_max_backoff_interval=30,  # Different max backoff
-            health_recovery_confirmation_threshold=4,  # Different recovery confirmation
+            health_failure_threshold=10,  # Different threshold
+            health_circuit_breaker_timeout=60,  # Different timeout
+            health_max_backoff_interval=120,  # Different max backoff
+            health_recovery_confirmation_threshold=5,  # Different recovery confirmation
         )
 
-        # Verify different controllers use their configured values
+        # Verify configurable parameters are respected
         assert controller1._health_failure_threshold == 5
         assert controller1._health_circuit_breaker_timeout == 30
         assert controller1._health_max_backoff_interval == 60
         assert controller1._health_recovery_confirmation_threshold == 2
 
-        assert controller2._health_failure_threshold == 2
-        assert controller2._health_circuit_breaker_timeout == 10
-        assert controller2._health_max_backoff_interval == 30
-        assert controller2._health_recovery_confirmation_threshold == 4
+        assert controller2._health_failure_threshold == 10
+        assert controller2._health_circuit_breaker_timeout == 60
+        assert controller2._health_max_backoff_interval == 120
+        assert controller2._health_recovery_confirmation_threshold == 5
+
+        # Verify health state includes recovery confirmation tracking
+        assert "consecutive_successes_during_recovery" in controller1._health_state
+        assert "consecutive_successes_during_recovery" in controller2._health_state
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_recovery_confirmation_threshold(
-        self, controller_fast_timers, real_mediamtx_server_failure, real_mediamtx_server
+        self, controller_fast_timers, real_mediamtx_service
     ):
         """Test circuit breaker recovery confirmation with real MediaMTX service."""
         controller = controller_fast_timers
@@ -177,7 +167,7 @@ paths:
         controller._health_failure_threshold = 2
 
         # Use real MediaMTX service (port 9997)
-        controller._api_port = 9997
+        controller._api_port = real_mediamtx_service["api_port"]
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         await controller.start()
         
@@ -194,7 +184,7 @@ paths:
 
     @pytest.mark.asyncio
     async def test_recovery_confirmation_reset_on_failure(
-        self, controller_fast_timers, real_mediamtx_server_failure, real_mediamtx_server, caplog
+        self, controller_fast_timers, real_mediamtx_service, caplog
     ):
         """Test health monitoring with real MediaMTX service."""
         controller = controller_fast_timers
@@ -202,7 +192,7 @@ paths:
         controller._health_failure_threshold = 2
 
         # Use real MediaMTX service
-        controller._api_port = 9997
+        controller._api_port = real_mediamtx_service["api_port"]
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         
         with caplog.at_level("INFO"):
@@ -221,35 +211,42 @@ paths:
 
     @pytest.mark.asyncio
     async def test_health_check_backoff_calculation(
-        self, controller_fast_timers, real_mediamtx_server_failure
+        self, controller_fast_timers, real_mediamtx_service
     ):
-        """Test exponential backoff calculation with configurable parameters using real HTTP integration."""
+        """Test exponential backoff calculation with configurable parameters using real MediaMTX service."""
         controller = controller_fast_timers
         
-        # Configure controller to use failure server port
-        controller._api_port = 9998
+        # Test backoff calculation by temporarily using an invalid port
+        # This simulates a real failure scenario without mocking
+        original_port = controller._api_port
+        controller._api_port = 9998  # Invalid port to trigger connection failures
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
 
-        # Use failure server to trigger backoff
+        # Use failure scenario to trigger backoff
         await controller.start()
         await asyncio.sleep(0.2)  # Let some checks run
         await controller.stop()
 
         # Verify backoff behavior was triggered
-        assert controller._health_state["failure_count"] > 0
+        assert controller._health_state["failure_count"] > 0, "Should have detected connection failures"
+
+        # Restore original port
+        controller._api_port = original_port
+        controller._base_url = f"http://{controller._host}:{controller._api_port}"
 
     @pytest.mark.asyncio
     async def test_health_state_transition_logging(
-        self, controller_fast_timers, real_mediamtx_server_failure, real_mediamtx_server, caplog
+        self, controller_fast_timers, real_mediamtx_service, caplog
     ):
-        """Test health state transitions are logged with context using real HTTP integration."""
+        """Test health state transitions are logged with context using real MediaMTX service."""
         controller = controller_fast_timers
         
-        # Configure controller to use failure server port
-        controller._api_port = 9998
+        # Test failure scenario by temporarily using an invalid port
+        original_port = controller._api_port
+        controller._api_port = 9998  # Invalid port to trigger connection failures
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
 
-        # Start with failure server to trigger degradation
+        # Start with failure scenario to trigger degradation
         with caplog.at_level("INFO"):
             await controller.start()
             await asyncio.sleep(0.2)  # Let health checks run
@@ -262,10 +259,14 @@ paths:
         degraded_logs = [msg for msg in log_messages if "DEGRADED" in msg or "failure" in msg.lower()]
         assert len(degraded_logs) > 0, "Should log health degradation"
 
+        # Restore original port
+        controller._api_port = original_port
+        controller._base_url = f"http://{controller._host}:{controller._api_port}"
+
     @pytest.mark.asyncio
     async def test_configurable_recovery_confirmation_threshold(self):
-        """Test recovery confirmation threshold is configurable, not hardcoded."""
-        # Test with different recovery confirmation thresholds
+        """Test configurable recovery confirmation threshold parameter."""
+        # Test different recovery confirmation thresholds
         controller1 = MediaMTXController(
             host="localhost",
             api_port=9997,
@@ -275,7 +276,7 @@ paths:
             config_path="/tmp/config.yml",
             recordings_path="/tmp/recordings",
             snapshots_path="/tmp/snapshots",
-            health_recovery_confirmation_threshold=1,  # Immediate recovery (old behavior)
+            health_recovery_confirmation_threshold=1,  # Single success required
         )
 
         controller2 = MediaMTXController(
@@ -287,27 +288,27 @@ paths:
             config_path="/tmp/config.yml",
             recordings_path="/tmp/recordings",
             snapshots_path="/tmp/snapshots",
-            health_recovery_confirmation_threshold=5,  # Conservative recovery
+            health_recovery_confirmation_threshold=5,  # Five successes required
         )
 
-        # Verify different controllers use their configured values
+        # Verify different thresholds are set correctly
         assert controller1._health_recovery_confirmation_threshold == 1
         assert controller2._health_recovery_confirmation_threshold == 5
 
-        # Verify initial state includes recovery confirmation tracking
+        # Verify health state includes recovery tracking
         assert "consecutive_successes_during_recovery" in controller1._health_state
         assert "consecutive_successes_during_recovery" in controller2._health_state
 
     @pytest.mark.asyncio
     async def test_health_check_success_resets_failure_count(
-        self, controller_fast_timers, real_mediamtx_server_failure, real_mediamtx_server
+        self, controller_fast_timers, real_mediamtx_service
     ):
         """Test health check success tracking with real MediaMTX service."""
         controller = controller_fast_timers
         controller._health_failure_threshold = 2
 
         # Use real MediaMTX service
-        controller._api_port = 9997
+        controller._api_port = real_mediamtx_service["api_port"]
         controller._base_url = f"http://{controller._host}:{controller._api_port}"
         
         await controller.start()
@@ -320,7 +321,7 @@ paths:
 
     @pytest.mark.asyncio
     async def test_health_monitor_cleanup_on_stop(
-        self, controller_fast_timers, real_mediamtx_server
+        self, controller_fast_timers, real_mediamtx_service
     ):
         """Test health monitoring task is properly cancelled on stop with real MediaMTX service."""
         controller = controller_fast_timers
@@ -338,12 +339,15 @@ paths:
 
     @pytest.mark.asyncio
     async def test_health_check_correlation_id_propagation(
-        self, controller_fast_timers, real_mediamtx_server
+        self, controller_fast_timers, real_mediamtx_service
     ):
         """Test correlation IDs are set for health check operations with real MediaMTX service."""
         controller = controller_fast_timers
 
         # Use real MediaMTX service for correlation ID testing
+        controller._api_port = real_mediamtx_service["api_port"]
+        controller._base_url = f"http://{controller._host}:{controller._api_port}"
+        
         await controller.start()
         await asyncio.sleep(0.2)  # Let health checks run
         await controller.stop()
@@ -384,13 +388,42 @@ paths:
         assert controller_no_jitter._backoff_jitter_range == (1.0, 1.0)
         assert controller_wide_jitter._backoff_jitter_range == (0.5, 1.5)
 
+    @pytest.mark.asyncio
+    async def test_real_mediamtx_service_integration(
+        self, controller_fast_timers, real_mediamtx_service
+    ):
+        """Test real MediaMTX service integration and health monitoring."""
+        controller = controller_fast_timers
+
+        # Use real MediaMTX service
+        controller._api_port = real_mediamtx_service["api_port"]
+        controller._base_url = f"http://{controller._host}:{controller._api_port}"
+        
+        await controller.start()
+        await asyncio.sleep(0.5)  # Let health checks run
+        
+        # Verify real service integration
+        health_status = await controller.health_check()
+        assert health_status["status"] == "healthy", "Real MediaMTX service should be healthy"
+        assert "version" in health_status, "Should include MediaMTX version"
+        assert "uptime" in health_status, "Should include MediaMTX uptime"
+        assert health_status["api_port"] == real_mediamtx_service["api_port"]
+        
+        await controller.stop()
+
+        # Verify health monitoring worked
+        assert controller._health_state["total_checks"] > 0
+        assert controller._health_state["success_count"] > 0
+
 
 # Test configuration expectations:
-# - Use real aiohttp TestServer for authentic HTTP integration
+# - Use real systemd-managed MediaMTX service for authentic integration testing
 # - Use fast timers (0.1s intervals) for test speed
-# - Test both circuit breaker activation and recovery with real HTTP
+# - Test both circuit breaker activation and recovery with real service
 # - Use caplog fixture to verify logging behavior
-# - Test both success and failure scenarios with real HTTP servers
+# - Test both success and failure scenarios with real service integration
 # - Verify configurable parameters are respected, not hardcoded values
 # - Test proper task cleanup on controller stop
 # - Validate real MediaMTX health monitoring behavior
+# - Test failure scenarios through real connection failures (invalid ports)
+# - Ensure proper requirements traceability and real system validation

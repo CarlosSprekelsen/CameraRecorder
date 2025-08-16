@@ -25,13 +25,25 @@ class TestConfigurationComponentIntegration:
     """Requirement-driven integration validations."""
 
     @pytest.mark.asyncio
-    async def test_stream_creation_uses_configured_endpoints_on_connect(self):
+    async def test_stream_creation_uses_configured_endpoints_on_connect(self, temp_test_dir):
         """
         Req: S5-STREAM-ADD-001
         On camera CONNECTED, service must create MediaMTX path using configured host/ports.
         Verifies real orchestration with external HTTP boundary patched.
         """
+        import tempfile
+        import os
+        
+        # Create temporary directories for recordings and snapshots
+        recordings_dir = os.path.join(temp_test_dir, "recordings")
+        snapshots_dir = os.path.join(temp_test_dir, "snapshots")
+        os.makedirs(recordings_dir, exist_ok=True)
+        os.makedirs(snapshots_dir, exist_ok=True)
+        
+        # Create configuration with temporary directories
         cfg = ConfigManager().load_config()
+        cfg.mediamtx.recordings_path = recordings_dir
+        cfg.mediamtx.snapshots_path = snapshots_dir
         svc = ServiceManager(cfg)
 
         # Patch only external HTTP client
@@ -89,12 +101,24 @@ class TestConfigurationComponentIntegration:
             await svc.stop()
 
     @pytest.mark.asyncio
-    async def test_resilience_on_stream_creation_failure(self):
+    async def test_resilience_on_stream_creation_failure(self, temp_test_dir):
         """
         Req: S5-RES-002
         If MediaMTX path creation fails, service remains operational and does not crash.
         """
+        import tempfile
+        import os
+        
+        # Create temporary directories for recordings and snapshots
+        recordings_dir = os.path.join(temp_test_dir, "recordings")
+        snapshots_dir = os.path.join(temp_test_dir, "snapshots")
+        os.makedirs(recordings_dir, exist_ok=True)
+        os.makedirs(snapshots_dir, exist_ok=True)
+        
+        # Create configuration with temporary directories
         cfg = ConfigManager().load_config()
+        cfg.mediamtx.recordings_path = recordings_dir
+        cfg.mediamtx.snapshots_path = snapshots_dir
         svc = ServiceManager(cfg)
 
         with pytest.MonkeyPatch.context() as mp:

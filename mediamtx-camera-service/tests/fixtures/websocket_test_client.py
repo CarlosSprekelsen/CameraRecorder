@@ -1,8 +1,11 @@
 """
-Real WebSocket test client for testing.
+WebSocket test client fixture for MediaMTX Camera Service.
 
-This module provides real WebSocket client functionality for testing,
-replacing mocked WebSocket connections with actual communication.
+Requirements Traceability:
+- REQ-UTIL-016: WebSocket test client shall provide real WebSocket communication testing
+
+Story Coverage: All WebSocket test stories
+IV&V Control Point: WebSocket test infrastructure validation
 """
 
 import asyncio
