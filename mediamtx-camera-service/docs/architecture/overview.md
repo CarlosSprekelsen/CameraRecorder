@@ -268,10 +268,25 @@ ffmpeg -f v4l2 -i {device_path} -c:v libx264 -pix_fmt yuv420p -preset ultrafast 
 
 ### Path Lifecycle Management
 1. **Creation**: Path created when camera detected
-2. **Verification**: Path status verified via REST API
-3. **Monitoring**: FFmpeg process health monitored
-4. **Cleanup**: Path deleted when camera disconnected
-5. **Recovery**: Automatic restart on FFmpeg process failure
+2. **Configuration**: Path configured with `runOnDemand` FFmpeg command
+3. **On-Demand Activation**: FFmpeg process starts only when stream accessed
+4. **Monitoring**: FFmpeg process health monitored during active periods
+5. **Cleanup**: Path deleted when camera disconnected
+6. **Recovery**: Automatic restart on FFmpeg process failure
+
+### On-Demand Stream Activation
+The system implements power-efficient on-demand stream activation:
+
+- **Initial State**: Paths created but FFmpeg processes not running (`source: null`, `ready: false`)
+- **Activation Trigger**: First access to stream (recording, snapshot, or streaming request)
+- **Process Start**: MediaMTX starts FFmpeg process via `runOnDemand` configuration
+- **Stream Ready**: FFmpeg publishes stream to MediaMTX (`source: {...}`, `ready: true`)
+- **Power Efficiency**: No unnecessary processes running when not needed
+
+**Configuration Impact**:
+- `auto_start_streams: true` creates MediaMTX paths on camera detection
+- FFmpeg processes start on-demand when operations are requested
+- Provides optimal balance of responsiveness and power efficiency
 
 ## Non-Functional Requirements
 

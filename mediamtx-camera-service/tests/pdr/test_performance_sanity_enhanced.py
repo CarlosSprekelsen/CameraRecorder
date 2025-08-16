@@ -514,99 +514,99 @@ class EnhancedPerformanceSanityValidator:
 
 # Pytest test fixtures and test functions
 
-@pytest.fixture
-async def enhanced_performance_validator():
-    """Fixture for enhanced performance sanity validator."""
-    validator = EnhancedPerformanceSanityValidator()
-    await validator.setup_real_performance_environment()
-    yield validator
-    await validator.cleanup_real_environment()
-
-
 @pytest.mark.pdr
 @pytest.mark.asyncio
-async def test_service_connection_reliability_enhanced(enhanced_performance_validator):
-    """Enhanced service connection reliability test."""
-    result = await enhanced_performance_validator.test_service_connection_reliability()
-    assert result.success, f"Service connection failed: {result.error_message}"
-    assert result.meets_budget, f"Service connection {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
-
-
-@pytest.mark.pdr
-@pytest.mark.asyncio
-async def test_camera_list_refresh_reliability_enhanced(enhanced_performance_validator):
-    """Enhanced camera list refresh reliability test."""
-    result = await enhanced_performance_validator.test_camera_list_refresh_reliability()
-    assert result.success, f"Camera list refresh failed: {result.error_message}"
-    assert result.meets_budget, f"Camera list refresh {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
-
-
-@pytest.mark.pdr
-@pytest.mark.asyncio
-async def test_health_check_reliability_enhanced(enhanced_performance_validator):
-    """Enhanced health check reliability test."""
-    result = await enhanced_performance_validator.test_health_check_reliability()
-    assert result.success, f"Health check failed: {result.error_message}"
-    assert result.meets_budget, f"Health check {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
-
-
-@pytest.mark.pdr
-@pytest.mark.asyncio
-async def test_api_responsiveness_reliability_enhanced(enhanced_performance_validator):
-    """Enhanced API responsiveness reliability test."""
-    result = await enhanced_performance_validator.test_api_responsiveness_reliability()
-    assert result.success, f"API responsiveness failed: {result.error_message}"
-    assert result.meets_budget, f"API responsiveness {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
-
-
-@pytest.mark.pdr
-@pytest.mark.asyncio
-async def test_websocket_connection_reliability_enhanced(enhanced_performance_validator):
-    """Enhanced WebSocket connection reliability test."""
-    result = await enhanced_performance_validator.test_websocket_connection_reliability()
-    assert result.success, f"WebSocket connection failed: {result.error_message}"
-    assert result.meets_budget, f"WebSocket connection {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
-
-
-@pytest.mark.pdr
-@pytest.mark.asyncio
-async def test_comprehensive_enhanced_performance_validation(enhanced_performance_validator):
-    """Comprehensive enhanced performance validation test."""
-    # Run all enhanced performance tests
-    await enhanced_performance_validator.test_service_connection_reliability()
-    await enhanced_performance_validator.test_camera_list_refresh_reliability()
-    await enhanced_performance_validator.test_health_check_reliability()
-    await enhanced_performance_validator.test_api_responsiveness_reliability()
-    await enhanced_performance_validator.test_websocket_connection_reliability()
+class TestEnhancedPerformanceSanity:
+    """PDR-level enhanced performance sanity tests."""
     
-    # Generate comprehensive report
-    report = enhanced_performance_validator.generate_enhanced_performance_report()
+    def setup_method(self):
+        """Set up validator for each test method."""
+        self.validator = EnhancedPerformanceSanityValidator()
     
-    # Validate PDR acceptance criteria
-    success_rate = report["test_summary"]["success_rate"]
-    budget_compliance_rate = report["test_summary"]["budget_compliance_rate"]
+    async def teardown_method(self):
+        """Clean up after each test method."""
+        if hasattr(self, 'validator'):
+            await self.validator.cleanup_real_environment()
     
-    print(f"Enhanced Performance Test Results:")
-    print(f"  Success Rate: {success_rate:.1f}%")
-    print(f"  Budget Compliance Rate: {budget_compliance_rate:.1f}%")
-    print(f"  Total Operations: {report['test_summary']['total_operations']}")
-    print(f"  Overall Mean Response Time: {report['overall_statistics']['mean_response_time_ms']:.1f}ms")
-    
-    # PDR acceptance criteria: 80% success rate, 80% budget compliance
-    assert success_rate >= 80.0, f"Success rate {success_rate}% below PDR threshold of 80%"
-    assert budget_compliance_rate >= 80.0, f"Budget compliance rate {budget_compliance_rate}% below PDR threshold of 80%"
-    
-    # Log detailed results
-    for result in report["operation_results"]:
-        status = "✅" if result["success"] and result["meets_budget"] else "❌"
-        print(f"  {result['operation']}: {status} ({result['response_time_ms']:.1f}ms)")
-        if result["retry_count"] > 0:
-            print(f"    Retries: {result['retry_count']}")
-        if result["baseline_deviation"] > 0:
-            print(f"    Baseline deviation: {result['baseline_deviation']:.2f}σ")
-    
-    # Check for performance regressions
-    if report["performance_regressions"]:
-        print(f"  Performance Regressions Detected: {len(report['performance_regressions'])}")
-        for regression in report["performance_regressions"]:
-            print(f"    {regression['operation']}: {regression['baseline_deviation']:.2f}σ deviation")
+    async def test_service_connection_reliability_enhanced(self):
+        """Enhanced service connection reliability test."""
+        await self.validator.setup_real_performance_environment()
+        result = await self.validator.test_service_connection_reliability()
+        assert result.success, f"Service connection failed: {result.error_message}"
+        assert result.meets_budget, f"Service connection {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
+        print(f"✅ Enhanced Service Connection: {result.response_time_ms:.1f}ms (budget: {result.budget_target_ms:.1f}ms)")
+
+    async def test_camera_list_refresh_reliability_enhanced(self):
+        """Enhanced camera list refresh reliability test."""
+        await self.validator.setup_real_performance_environment()
+        result = await self.validator.test_camera_list_refresh_reliability()
+        assert result.success, f"Camera list refresh failed: {result.error_message}"
+        assert result.meets_budget, f"Camera list refresh {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
+        print(f"✅ Enhanced Camera List Refresh: {result.response_time_ms:.1f}ms (budget: {result.budget_target_ms:.1f}ms)")
+
+    async def test_health_check_reliability_enhanced(self):
+        """Enhanced health check reliability test."""
+        await self.validator.setup_real_performance_environment()
+        result = await self.validator.test_health_check_reliability()
+        assert result.success, f"Health check failed: {result.error_message}"
+        assert result.meets_budget, f"Health check {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
+        print(f"✅ Enhanced Health Check: {result.response_time_ms:.1f}ms (budget: {result.budget_target_ms:.1f}ms)")
+
+    async def test_api_responsiveness_reliability_enhanced(self):
+        """Enhanced API responsiveness reliability test."""
+        await self.validator.setup_real_performance_environment()
+        result = await self.validator.test_api_responsiveness_reliability()
+        assert result.success, f"API responsiveness failed: {result.error_message}"
+        assert result.meets_budget, f"API responsiveness {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
+        print(f"✅ Enhanced API Responsiveness: {result.response_time_ms:.1f}ms (budget: {result.budget_target_ms:.1f}ms)")
+
+    async def test_websocket_connection_reliability_enhanced(self):
+        """Enhanced WebSocket connection reliability test."""
+        await self.validator.setup_real_performance_environment()
+        result = await self.validator.test_websocket_connection_reliability()
+        assert result.success, f"WebSocket connection failed: {result.error_message}"
+        assert result.meets_budget, f"WebSocket connection {result.response_time_ms}ms exceeds budget {result.budget_target_ms}ms"
+        print(f"✅ Enhanced WebSocket Connection: {result.response_time_ms:.1f}ms (budget: {result.budget_target_ms:.1f}ms)")
+
+    async def test_comprehensive_enhanced_performance_validation(self):
+        """Comprehensive enhanced performance validation test."""
+        await self.validator.setup_real_performance_environment()
+        
+        # Run all enhanced performance tests
+        await self.validator.test_service_connection_reliability()
+        await self.validator.test_camera_list_refresh_reliability()
+        await self.validator.test_health_check_reliability()
+        await self.validator.test_api_responsiveness_reliability()
+        await self.validator.test_websocket_connection_reliability()
+        
+        # Generate comprehensive report
+        report = self.validator.generate_enhanced_performance_report()
+        
+        # Validate PDR acceptance criteria
+        success_rate = report["test_summary"]["success_rate"]
+        budget_compliance_rate = report["test_summary"]["budget_compliance_rate"]
+        
+        print(f"Enhanced Performance Test Results:")
+        print(f"  Success Rate: {success_rate:.1f}%")
+        print(f"  Budget Compliance Rate: {budget_compliance_rate:.1f}%")
+        print(f"  Total Operations: {report['test_summary']['total_operations']}")
+        print(f"  Overall Mean Response Time: {report['overall_statistics']['mean_response_time_ms']:.1f}ms")
+        
+        # PDR acceptance criteria: 80% success rate, 80% budget compliance
+        assert success_rate >= 80.0, f"Success rate {success_rate}% below PDR threshold of 80%"
+        assert budget_compliance_rate >= 80.0, f"Budget compliance rate {budget_compliance_rate}% below PDR threshold of 80%"
+        
+        # Log detailed results
+        for result in report["operation_results"]:
+            status = "✅" if result["success"] and result["meets_budget"] else "❌"
+            print(f"  {result['operation']}: {status} ({result['response_time_ms']:.1f}ms)")
+            if result["retry_count"] > 0:
+                print(f"    Retries: {result['retry_count']}")
+            if result["baseline_deviation"] > 0:
+                print(f"    Baseline deviation: {result['baseline_deviation']:.2f}σ")
+        
+        # Check for performance regressions
+        if report["performance_regressions"]:
+            print(f"  Performance Regressions Detected: {len(report['performance_regressions'])}")
+            for regression in report["performance_regressions"]:
+                print(f"    {regression['operation']}: {regression['baseline_deviation']:.2f}σ deviation")

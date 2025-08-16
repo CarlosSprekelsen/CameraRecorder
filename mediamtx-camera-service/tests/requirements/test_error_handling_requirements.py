@@ -27,7 +27,7 @@ from src.camera_service.config import ConfigManager, Config, ServerConfig, Media
 from src.camera_service.service_manager import ServiceManager
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.mediamtx_wrapper.controller import MediaMTXController
-from src.logging_config import setup_logging
+from src.camera_service.logging_config import setup_logging
 
 
 @dataclass

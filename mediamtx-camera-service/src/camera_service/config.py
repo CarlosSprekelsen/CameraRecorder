@@ -3,6 +3,24 @@ Configuration management for MediaMTX Camera Service.
 
 Provides configuration loading, validation, environment variable overrides,
 and hot reload functionality with comprehensive error handling and fallback behavior.
+
+Key Features:
+- YAML file loading with Config.from_file() method
+- Dictionary-based configuration with Config.from_dict() method
+- Environment variable overrides
+- Hot reload capability
+- Comprehensive validation and error handling
+- Graceful fallback to default values
+
+Usage Examples:
+    # Load from YAML file
+    config = Config.from_file("config.yml")
+    
+    # Create from dictionary
+    config = Config.from_dict({"server": {"port": 8002}})
+    
+    # Standard instantiation
+    config = Config()
 """
 
 import os
@@ -236,6 +254,62 @@ class Config:
                 "recording": _to_dict(self.recording),
                 "snapshots": _to_dict(self.snapshots),
             }
+
+    @classmethod
+    def from_file(cls, file_path: str) -> 'Config':
+        """
+        Load configuration from YAML file with comprehensive error handling.
+        
+        Args:
+            file_path: Path to YAML configuration file
+            
+        Returns:
+            Config object loaded from file
+            
+        Raises:
+            FileNotFoundError: If configuration file does not exist
+            yaml.YAMLError: If YAML file is malformed
+            ValueError: If configuration validation fails
+        """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Configuration file not found: {file_path}")
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+            
+            if config_data is None:
+                # Empty or invalid YAML file
+                raise ValueError(f"Configuration file is empty or invalid: {file_path}")
+            
+            # Create config instance and update from loaded data
+            config = cls()
+            config.update_from_dict(config_data)
+            
+            return config
+            
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML configuration in {file_path}: {e}")
+        except Exception as e:
+            if "configuration" in str(e).lower() or "invalid" in str(e).lower():
+                raise
+            else:
+                raise ValueError(f"Error loading configuration from {file_path}: {e}")
+
+    @classmethod
+    def from_dict(cls, config_data: Dict[str, Any]) -> 'Config':
+        """
+        Create configuration from dictionary data.
+        
+        Args:
+            config_data: Dictionary containing configuration data
+            
+        Returns:
+            Config object created from dictionary
+        """
+        config = cls()
+        config.update_from_dict(config_data)
+        return config
 
 
 class ConfigManager:

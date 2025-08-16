@@ -4,6 +4,25 @@ and configurable rotation per architecture overview AD-8.
 
 Provides JSON structured logging for production with correlation ID tracking,
 human-readable console format for development, and configurable log rotation.
+
+Key Features:
+- setup_logging(): Full configuration-based logging setup
+- setup_logging_simple(): Convenience function for simple logging setup
+- Correlation ID tracking across request boundaries
+- Structured JSON logging for production
+- Human-readable console logging for development
+- Configurable log rotation and file handling
+
+Usage Examples:
+    # Full configuration-based setup
+    config = LoggingConfig(file_enabled=True, file_path="/var/log/app.log")
+    setup_logging(config)
+    
+    # Simple setup with file path
+    setup_logging_simple(log_path="/var/log/app.log", level="INFO")
+    
+    # Console-only logging
+    setup_logging_simple(level="DEBUG")
 """
 
 import json
@@ -282,6 +301,28 @@ def get_correlation_filter() -> Optional[CorrelationIdFilter]:
             if isinstance(filter_obj, CorrelationIdFilter):
                 return filter_obj
     return None
+
+
+def setup_logging_simple(log_path: Optional[str] = None, level: str = "INFO") -> None:
+    """
+    Simple logging setup with minimal configuration.
+    
+    Args:
+        log_path: Optional path for log file. If None, only console logging is used.
+        level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        
+    This is a convenience function for simple logging setup without full configuration.
+    """
+    # Create basic logging config
+    logging_config = LoggingConfig(
+        level=level,
+        file_enabled=log_path is not None,
+        file_path=log_path or "",
+        console_enabled=True
+    )
+    
+    # Setup logging with the config
+    setup_logging(logging_config)
 
 
 def set_correlation_id(correlation_id: str) -> bool:

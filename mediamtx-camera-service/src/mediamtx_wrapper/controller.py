@@ -617,7 +617,7 @@ class MediaMTXController:
             start_time = time.time()
             start_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            # Verify stream is active and ready in MediaMTX
+            # Verify stream is active and ready in MediaMTX, trigger on-demand activation if needed
             async with self._session.get(f"{self._base_url}/v3/paths/list") as response:
                 if response.status != 200:
                     error_msg = f"Failed to get MediaMTX active paths: HTTP {response.status}"
@@ -631,13 +631,13 @@ class MediaMTXController:
                     raise ValueError(error_msg)
                 
                 paths_data = await response.json()
-                stream_active = any(
-                    path["name"] == stream_name and path.get("ready", False) 
-                    for path in paths_data.get("items", [])
+                stream_path = next(
+                    (path for path in paths_data.get("items", []) if path["name"] == stream_name), 
+                    None
                 )
                 
-                if not stream_active:
-                    error_msg = f"Stream {stream_name} is not active and ready in MediaMTX"
+                if not stream_path:
+                    error_msg = f"Stream {stream_name} not found in MediaMTX"
                     self._logger.error(
                         error_msg,
                         extra={
@@ -646,6 +646,83 @@ class MediaMTXController:
                         },
                     )
                     raise ValueError(error_msg)
+                
+                # Check if stream is ready, if not trigger on-demand activation
+                if not stream_path.get("ready", False):
+                    self._logger.info(
+                        f"Stream {stream_name} not ready, triggering on-demand activation",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                        },
+                    )
+                    
+                    # Trigger on-demand activation by accessing the stream
+                    # This will cause MediaMTX to start the FFmpeg process via runOnDemand
+                    rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
+                    
+                    # Use a simple HTTP request to trigger the stream (MediaMTX will handle RTSP internally)
+                    try:
+                        # Try to access the stream to trigger on-demand activation
+                        # We'll use a short timeout since we just want to trigger the activation
+                        async with self._session.get(f"http://{self._host}:{self._rtsp_port}/{stream_name}", timeout=1) as trigger_response:
+                            # We don't care about the response, just triggering the activation
+                            pass
+                    except Exception as e:
+                        # Ignore errors from the trigger request - the important thing is that it was attempted
+                        self._logger.debug(
+                            f"Trigger request for {stream_name} completed (expected to fail): {e}",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "stream_name": stream_name,
+                            },
+                        )
+                    
+                    # Wait for the stream to become ready (with timeout)
+                    max_wait_time = 10  # seconds
+                    wait_interval = 0.5  # seconds
+                    waited_time = 0
+                    
+                    while waited_time < max_wait_time:
+                        await asyncio.sleep(wait_interval)
+                        waited_time += wait_interval
+                        
+                        # Check if stream is now ready
+                        async with self._session.get(f"{self._base_url}/v3/paths/list") as check_response:
+                            if check_response.status == 200:
+                                check_paths = await check_response.json()
+                                check_stream = next(
+                                    (path for path in check_paths.get("items", []) if path["name"] == stream_name), 
+                                    None
+                                )
+                                if check_stream and check_stream.get("ready", False):
+                                    self._logger.info(
+                                        f"Stream {stream_name} became ready after on-demand activation",
+                                        extra={
+                                            "correlation_id": correlation_id,
+                                            "stream_name": stream_name,
+                                        },
+                                    )
+                                    break
+                    
+                    # Final check - if still not ready, raise error
+                    async with self._session.get(f"{self._base_url}/v3/paths/list") as final_response:
+                        if final_response.status == 200:
+                            final_paths = await final_response.json()
+                            final_stream = next(
+                                (path for path in final_paths.get("items", []) if path["name"] == stream_name), 
+                                None
+                            )
+                            if not final_stream or not final_stream.get("ready", False):
+                                error_msg = f"Stream {stream_name} failed to become ready after on-demand activation"
+                                self._logger.error(
+                                    error_msg,
+                                    extra={
+                                        "correlation_id": correlation_id,
+                                        "stream_name": stream_name,
+                                    },
+                                )
+                                raise ValueError(error_msg)
 
             # Start external FFmpeg recording process
             rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
