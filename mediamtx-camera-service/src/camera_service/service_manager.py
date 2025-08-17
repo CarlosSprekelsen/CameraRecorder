@@ -9,6 +9,7 @@ WebSocket server, camera discovery, MediaMTX integration, and health monitoring.
 
 import asyncio
 import logging
+import os
 import re
 import uuid
 from typing import Optional, Dict, Any
@@ -22,6 +23,7 @@ from camera_discovery.hybrid_monitor import (
     CameraEventHandler,
 )
 from websocket_server.server import WebSocketJsonRpcServer
+from health_server import HealthServer
 from .logging_config import set_correlation_id, get_correlation_id
 
 
@@ -139,6 +141,7 @@ class ServiceManager(CameraEventHandler):
         self._camera_monitor = camera_monitor
         self._mediamtx_controller = mediamtx_controller
         self._health_monitor: Optional[HealthMonitor] = None
+        self._health_server: Optional[Any] = None
         self._path_manager: Optional[MediaMTXPathManager] = None
 
     @property
@@ -183,6 +186,9 @@ class ServiceManager(CameraEventHandler):
 
             # Start Health & Monitoring
             await self._start_health_monitor()
+
+            # Start Health Server
+            await self._start_health_server()
 
             # Start WebSocket JSON-RPC Server
             await self._start_websocket_server()
@@ -229,6 +235,7 @@ class ServiceManager(CameraEventHandler):
         try:
             # Stop components in reverse order
             await self._stop_websocket_server()
+            await self._stop_health_server()
             await self._stop_health_monitor()
             await self._stop_camera_monitor()
             await self._stop_path_manager()
@@ -950,6 +957,56 @@ class ServiceManager(CameraEventHandler):
             )
             raise
 
+    async def _start_health_server(self) -> None:
+        """Start the health server component."""
+        correlation_id = get_correlation_id()
+        self._logger.debug(
+            "Starting health server", extra={"correlation_id": correlation_id}
+        )
+
+        try:
+            # Get health server configuration from config
+            # Default to port 8003 and host 0.0.0.0 if not configured
+            health_port = 8003
+            health_host = "0.0.0.0"
+            
+            # Try to get configuration from config file if available
+            try:
+                # Check if we can access the config file directly
+                config_file = "/opt/camera-service/config/camera-service.yaml"
+                if os.path.exists(config_file):
+                    with open(config_file, 'r') as f:
+                        import yaml
+                        config_data = yaml.safe_load(f)
+                        if config_data and 'security' in config_data and 'health' in config_data['security']:
+                            health_config = config_data['security']['health']
+                            health_port = health_config.get('port', 8003)
+                            health_host = health_config.get('bind_address', '0.0.0.0')
+            except Exception as e:
+                self._logger.warning(f"Could not load health config from file, using defaults: {e}")
+            
+            self._health_server = HealthServer(host=health_host, port=health_port)
+            
+            # Set component references for health checks
+            if self._mediamtx_controller:
+                self._health_server.set_mediamtx_controller(self._mediamtx_controller)
+            if self._camera_monitor:
+                self._health_server.set_camera_monitor(self._camera_monitor)
+            self._health_server.set_service_manager(self)
+            
+            await self._health_server.start()
+            self._logger.info(
+                f"Health server started on {health_host}:{health_port}",
+                extra={"correlation_id": correlation_id}
+            )
+
+        except Exception as e:
+            self._logger.error(
+                f"Failed to start health server: {e}",
+                extra={"correlation_id": correlation_id},
+            )
+            raise
+
     async def _start_websocket_server(self) -> None:
         """Start the WebSocket JSON-RPC server component."""
         correlation_id = get_correlation_id()
@@ -1026,6 +1083,26 @@ class ServiceManager(CameraEventHandler):
             except Exception as e:
                 self._logger.error(
                     f"Error stopping WebSocket server: {e}",
+                    extra={"correlation_id": correlation_id},
+                )
+
+    async def _stop_health_server(self) -> None:
+        """Stop the health server component."""
+        if self._health_server:
+            correlation_id = get_correlation_id()
+            self._logger.debug(
+                "Stopping health server",
+                extra={"correlation_id": correlation_id},
+            )
+            try:
+                await self._health_server.stop()
+                self._logger.info(
+                    "Health server stopped",
+                    extra={"correlation_id": correlation_id},
+                )
+            except Exception as e:
+                self._logger.error(
+                    f"Error stopping health server: {e}",
                     extra={"correlation_id": correlation_id},
                 )
             finally:

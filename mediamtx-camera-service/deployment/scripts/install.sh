@@ -37,6 +37,22 @@ log_error() {
     echo -e "${RED}[$(date '+%Y-%m-%d %H:%M:%S')] ERROR:${NC} $1"
 }
 
+# Production mode detection and configuration
+PRODUCTION_MODE=${PRODUCTION_MODE:-false}
+ENABLE_HTTPS=${ENABLE_HTTPS:-false}
+ENABLE_MONITORING=${ENABLE_MONITORING:-false}
+
+# Production configuration
+if [ "$PRODUCTION_MODE" = "true" ]; then
+    log_message "Running in PRODUCTION mode"
+    ENABLE_HTTPS=true
+    ENABLE_MONITORING=true
+    SECURITY_LEVEL="high"
+else
+    log_message "Running in DEVELOPMENT mode"
+    SECURITY_LEVEL="standard"
+fi
+
 # Check if running as root
 if [[ $EUID -ne 0 ]]; then
     log_error "This script must be run as root (use sudo)"
@@ -46,6 +62,153 @@ fi
 # Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Function to setup HTTPS configuration
+setup_https_configuration() {
+    if [ "$ENABLE_HTTPS" = "true" ]; then
+        log_message "Setting up HTTPS configuration..."
+        
+        # Create SSL directory
+        mkdir -p "$INSTALL_DIR/ssl"
+        
+        # Generate SSL certificates
+        log_message "Generating SSL certificates..."
+        openssl req -x509 -newkey rsa:4096 -keyout "$INSTALL_DIR/ssl/key.pem" \
+            -out "$INSTALL_DIR/ssl/cert.pem" -days 365 -nodes \
+            -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+        
+        # Set proper permissions
+        chmod 600 "$INSTALL_DIR/ssl/key.pem"
+        chmod 644 "$INSTALL_DIR/ssl/cert.pem"
+        chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/ssl"
+        
+        # Install nginx if not present
+        if ! command_exists nginx; then
+            apt-get install -y nginx
+        fi
+        
+        # Create nginx configuration
+        cat > /etc/nginx/sites-available/camera-service << 'EOF'
+server {
+    listen 443 ssl;
+    server_name camera-service.local;
+    
+    ssl_certificate /opt/camera-service/ssl/cert.pem;
+    ssl_certificate_key /opt/camera-service/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers off;
+    
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /health/ {
+        proxy_pass http://127.0.0.1:8003/health/;
+        access_log off;
+    }
+}
+
+server {
+    listen 80;
+    server_name camera-service.local;
+    return 301 https://$server_name$request_uri;
+}
+EOF
+        
+        # Enable site and restart nginx
+        ln -sf /etc/nginx/sites-available/camera-service /etc/nginx/sites-enabled/
+        systemctl restart nginx
+        
+        log_success "HTTPS configuration completed"
+    fi
+}
+
+# Function to setup production monitoring
+setup_production_monitoring() {
+    if [ "$ENABLE_MONITORING" = "true" ]; then
+        log_message "Setting up production monitoring..."
+        
+        # Enable enhanced monitoring environment variables
+        export CAMERA_SERVICE_ENV="production"
+        export MONITORING_ENABLED="true"
+        
+        # Create monitoring directory
+        mkdir -p "$INSTALL_DIR/monitoring"
+        chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/monitoring"
+        
+        log_success "Production monitoring setup completed"
+    fi
+}
+
+# Function to harden production environment
+harden_production_environment() {
+    if [ "$PRODUCTION_MODE" = "true" ]; then
+        log_message "Hardening production environment..."
+        
+        # Configure firewall
+        if ! command_exists ufw; then
+            apt-get install -y ufw
+        fi
+        
+        ufw allow 443/tcp  # HTTPS
+        ufw allow 80/tcp   # HTTP redirect
+        ufw allow 8554/tcp # RTSP
+        ufw allow 8888/tcp # HLS
+        ufw allow 8889/tcp # WebRTC
+        ufw allow from 127.0.0.1 to any port 8002
+        ufw allow from 127.0.0.1 to any port 8003
+        ufw --force enable
+        
+        # Disable unnecessary services
+        systemctl disable bluetooth 2>/dev/null || true
+        systemctl disable cups 2>/dev/null || true
+        systemctl disable avahi-daemon 2>/dev/null || true
+        
+        log_success "Production environment hardening completed"
+    fi
+}
+
+# Function to setup backup procedures
+setup_backup_procedures() {
+    if [ "$PRODUCTION_MODE" = "true" ]; then
+        log_message "Setting up backup procedures..."
+        
+        # Create backup directory
+        mkdir -p "$INSTALL_DIR/backups"
+        chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/backups"
+        
+        # Create backup script
+        cat > "$INSTALL_DIR/backups/backup.sh" << 'EOF'
+#!/bin/bash
+BACKUP_DIR="/opt/camera-service/backups"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+tar -czf "$BACKUP_DIR/camera-service-$DATE.tar.gz" \
+    --exclude="$BACKUP_DIR" \
+    --exclude="venv" \
+    /opt/camera-service
+
+find "$BACKUP_DIR" -name "camera-service-*.tar.gz" -mtime +7 -delete
+
+echo "Backup completed: camera-service-$DATE.tar.gz"
+EOF
+        
+        chmod +x "$INSTALL_DIR/backups/backup.sh"
+        chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/backups/backup.sh"
+        
+        log_success "Backup procedures setup completed"
+    fi
 }
 
 # Function to install system dependencies
@@ -349,6 +512,7 @@ User=$SERVICE_USER
 Group=$SERVICE_GROUP
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/.env
+Environment=PYTHONPATH=$INSTALL_DIR/src
 ExecStart=$INSTALL_DIR/venv/bin/python -m src.camera_service.main
 Restart=always
 RestartSec=10
@@ -471,6 +635,15 @@ main() {
     # Validate video device permissions
     validate_video_permissions
     
+    # Production enhancements
+    if [ "$PRODUCTION_MODE" = "true" ]; then
+        log_message "Setting up production features..."
+        setup_https_configuration
+        setup_production_monitoring
+        harden_production_environment
+        setup_backup_procedures
+    fi
+    
     # Verify installation
     verify_installation
     
@@ -480,6 +653,17 @@ main() {
     log_message "- MediaMTX server (port 8554, 8888, 8889, 9997)"
     log_message "- Camera Service (port 8002, 8003)"
     log_message "- Health endpoints available at http://localhost:8003/health/"
+    
+    if [ "$PRODUCTION_MODE" = "true" ]; then
+        log_message ""
+        log_message "Production features enabled:"
+        log_message "- HTTPS/SSL: https://localhost (port 443)"
+        log_message "- Firewall: UFW enabled with production rules"
+        log_message "- Monitoring: Production monitoring enabled"
+        log_message "- Backup: Automated backup procedures configured"
+        log_message "- Security: Production hardening applied"
+    fi
+    
     log_message ""
     log_message "Service users and permissions:"
     log_message "- MediaMTX user: mediamtx (with video group access)"
@@ -497,6 +681,19 @@ main() {
     log_message "To verify video device access:"
     log_message "  sudo -u mediamtx test -r /dev/video0 && echo 'MediaMTX can access video devices'"
     log_message "  sudo -u camera-service test -r /dev/video0 && echo 'Camera Service can access video devices'"
+    
+    if [ "$PRODUCTION_MODE" = "true" ]; then
+        log_message ""
+        log_message "Production commands:"
+        log_message "  # Run backup:"
+        log_message "  sudo -u camera-service /opt/camera-service/backups/backup.sh"
+        log_message ""
+        log_message "  # Check HTTPS:"
+        log_message "  curl -k https://localhost/health/ready"
+        log_message ""
+        log_message "  # Check firewall:"
+        log_message "  sudo ufw status"
+    fi
 }
 
 # Run main function

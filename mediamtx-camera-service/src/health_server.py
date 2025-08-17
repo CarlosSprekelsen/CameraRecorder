@@ -131,10 +131,15 @@ class HealthServer:
             # Determine overall status
             status = self._determine_overall_status(components)
             
+            # Convert HealthComponent objects to dictionaries for JSON serialization
+            components_dict = {}
+            for name, component in components.items():
+                components_dict[name] = component.__dict__
+            
             response = HealthResponse(
                 status=status,
                 timestamp=datetime.now(timezone.utc).isoformat(),
-                components=components
+                components=components_dict
             )
             
             return web.json_response(response.__dict__, status=200)
@@ -269,7 +274,8 @@ class HealthServer:
         try:
             # Check if camera monitor is running
             if hasattr(self.camera_monitor, 'is_running'):
-                is_running = self.camera_monitor.is_running()
+                # is_running is a property, not a method
+                is_running = self.camera_monitor.is_running
             else:
                 # Fallback: check if monitor exists
                 is_running = self.camera_monitor is not None
@@ -277,8 +283,17 @@ class HealthServer:
             if is_running:
                 # Get camera count if available
                 camera_count = 0
-                if hasattr(self.camera_monitor, 'get_camera_count'):
-                    camera_count = self.camera_monitor.get_camera_count()
+                if hasattr(self.camera_monitor, 'get_connected_cameras'):
+                    try:
+                        # get_connected_cameras is async, but we're in a sync context
+                        # For now, use the known_devices directly
+                        if hasattr(self.camera_monitor, '_known_devices'):
+                            camera_count = len(self.camera_monitor._known_devices)
+                        else:
+                            camera_count = 0
+                    except Exception as e:
+                        self.logger.warning(f"Could not get camera count: {e}")
+                        camera_count = 0
                 
                 return HealthComponent(
                     status="healthy",
@@ -311,7 +326,8 @@ class HealthServer:
         try:
             # Check if service manager is running
             if hasattr(self.service_manager, 'is_running'):
-                is_running = self.service_manager.is_running()
+                # is_running is a property, not a method
+                is_running = self.service_manager.is_running
             else:
                 # Fallback: check if service manager exists
                 is_running = self.service_manager is not None

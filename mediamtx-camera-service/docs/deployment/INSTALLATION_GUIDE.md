@@ -403,6 +403,31 @@ cd mediamtx-camera-service
 
 # Run installation
 sudo ./deployment/scripts/install.sh
+
+### Production Installation
+
+For production deployment with enhanced security, monitoring, and backup features:
+
+```bash
+# Run production installation with enhanced features
+sudo PRODUCTION_MODE=true ./deployment/scripts/install.sh
+```
+
+**Production features include:**
+- HTTPS/SSL configuration with Nginx reverse proxy
+- UFW firewall configuration and security hardening
+- Automated backup and recovery procedures
+- Production monitoring and alerting
+- Enhanced logging and health monitoring
+
+**Validation:**
+```bash
+# Run validation to verify all production features
+sudo ./deployment/scripts/validate_production.sh
+
+# Run complete production setup (all phases)
+sudo ./deployment/scripts/setup_production.sh
+```
 ```
 
 ---

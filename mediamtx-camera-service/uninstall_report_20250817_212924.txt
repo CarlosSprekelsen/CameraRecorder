@@ -1,0 +1,23 @@
+MediaMTX Camera Service Uninstall Report
+========================================
+Date: Sun Aug 17 09:29:24 PM UTC 2025
+System: Linux dtslabvm 5.15.0-151-generic #161-Ubuntu SMP Tue Jul 22 14:25:40 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+Uninstallation Summary:
+----------------------
+Service stopped and disabled: camera-service
+Service file removed: /etc/systemd/system/camera-service.service
+Installation directory removed: /opt/camera-service
+MediaMTX directory removed: /opt/mediamtx
+Data directories removed: /var/recordings, /var/snapshots
+
+Validation Results:
+------------------
+✅ No service residue
+✅ No service file residue
+✅ No installation directory residue
+✅ No recordings directory residue
+✅ No snapshots directory residue
+
+Residues found: 0
+Status: ✅ UNINSTALLATION COMPLETE
