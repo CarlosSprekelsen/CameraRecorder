@@ -255,25 +255,65 @@ exit
 
 ---
 
-### **🚪 ORR (Operational Readiness Review) - 🚀 READY TO BEGIN**
-**Target**: After E5 Completion  
+### **🚪 ORR (Operational Readiness Review) - GATE PLANNED**
+**Target**: After E6 Completion  
 **Authority**: IV&V Assessment → Project Manager Final Acceptance  
 **Scope**: Final acceptance testing and production deployment authorization  
 **Reference**: `docs/development/systems_engineering_gates.md/orr_script.md` (to be created)  
 **Evidence**: `evidence/orr/` (to be created)  
-**Prerequisites**: E5 completion with 97% validation success rate ✅
-**Authorization**: Ready to begin ORR preparation
+**Prerequisites**: E6 completion with file management infrastructure validation
+**Authorization**: Pending E6 completion for final acceptance
 
 **ORR Entry Criteria:**
-- ✅ E5 production readiness validation complete (97% success rate)
-- ✅ Deployment automation and operations validated
-- ✅ Performance and security requirements met
-- ✅ Installation documentation validated
-- ✅ Production environment ready for deployment
+- E6 file management infrastructure validation complete
+- Deployment automation and operations validated
+- Performance and security requirements met
+- Installation documentation validated
+- Production environment ready for deployment
 
 ---
 
-### E6: Production Deployment & Final Acceptance - PENDING ORR
+### E6: Server Recording and Snapshot File Management Infrastructure - 📋 PLANNED
+
+- **S6: File Management Implementation**  
+    - Status: 📋 Sprint 7 Planned (Week 7)
+    - Duration: 4 days
+    - Stories:
+        - **S6.1: Create Server File Download Requirements**
+            - JSON-RPC file listing API requirements
+            - HTTP file download endpoint requirements
+            - Nginx routing updates for file endpoints
+            - Requirements baseline documentation
+        - **S6.2: Recording and Snapshot File Management API**
+            - JSON-RPC `list_recordings` and `list_snapshots` methods
+            - File metadata support and pagination
+            - Error handling and API documentation
+            - Authentication and security integration
+        - **S6.3: HTTP File Download Endpoints**
+            - `/files/recordings/` and `/files/snapshots/` endpoints
+            - MIME type detection and Content-Disposition headers
+            - File access logging and security audit trail
+            - 404 handling and error responses
+        - **S6.4: Update Existing Nginx Configuration**
+            - File download location blocks in nginx
+            - SSL/HTTPS support for file endpoints
+            - Existing routing preservation (WebSocket, health)
+            - Configuration validation and testing
+        - **S6.5: Update Existing Installation Procedures**
+            - Installation script updates for file endpoints
+            - Directory permissions and validation
+            - Production validation script updates
+            - Installation documentation updates
+    - Deliverables:
+        - Complete server file management API methods
+        - HTTP file download endpoints operational
+        - Updated nginx configuration with file routing
+        - Enhanced installation and validation procedures
+        - Preserved existing server functionality
+
+---
+
+### E7: Production Deployment & Final Acceptance - PENDING ORR
 
 - **S14: Production Deployment**  
     - Status: ⬜ Pending  
@@ -344,10 +384,16 @@ exit
 - **Status:** 🚀 Authorized to begin after CDR completion
 - **Stories:** S12.1-S12.3 (Production Deployment Pipeline, Operations Infrastructure, Production Environment)
 
-### Sprint 7: Deployment IV&V - 📋 PLANNED
-- **Duration:** 3 days (Week 7)
-- **Goal:** Complete S13 Deployment IV&V Control Point
+### Sprint 7: Epic E6 File Management - 📋 PLANNED
+- **Duration:** 4 days (Week 7)
+- **Goal:** Complete E6 Server Recording and Snapshot File Management Infrastructure
 - **Status:** Planned for after Sprint 6 completion
+- **Stories:** S6.1-S6.5 (Requirements, API, HTTP Endpoints, Nginx, Installation)
+
+### Sprint 8: Deployment IV&V - 📋 PLANNED
+- **Duration:** 3 days (Week 8)
+- **Goal:** Complete S13 Deployment IV&V Control Point
+- **Status:** Planned for after Sprint 7 completion
 - **Stories:** S13.1-S13.2 (Deployment Validation, Operations Validation)
 
 ---
@@ -370,7 +416,8 @@ exit
 
 ### 📋 Planned Epics
 - **E4: Future Extensibility** - Planning only
-- **E5: Deployment & Operations Strategy** - Pending E3 completion
+- **E5: Deployment & Operations Strategy** - 🚀 Authorized to Begin (Sprint 6)
+- **E6: Server Recording and Snapshot File Management Infrastructure** - 📋 Planned (Week 7)
 
 ### 🎯 Project Milestones
 - **Sprint 2 Security IV&V:** ✅ COMPLETE
@@ -384,8 +431,9 @@ exit
 - **Sprint 5 CDR Validation:** ✅ COMPLETE (Week 5)
 - **Production Deployment Authorization:** ✅ AUTHORIZED
 - **Sprint 6 Deployment Automation:** 🚀 AUTHORIZED (Week 6)
-- **Sprint 7 Deployment IV&V:** 📋 PLANNED (Week 7)
-- **ORR Authorization:** 📋 PENDING E5 COMPLETION
+- **Sprint 7 Epic E6 File Management:** 📋 PLANNED (Week 7)
+- **Sprint 8 Deployment IV&V:** 📋 PLANNED (Week 8)
+- **ORR Authorization:** 📋 PENDING E6 COMPLETION
 - **Production Deployment:** 📋 PENDING ORR COMPLETION
 
 ### **Gate Dependencies**
@@ -420,12 +468,13 @@ exit
    - Consider caching strategies for improved performance
    - Implement performance monitoring for authentication
 
-### Next Actions (E5 Phase)
+### Next Actions (E5 and E6 Phases)
 1. **Begin E5 Deployment Automation** - Production deployment pipeline (Sprint 6)
 2. **Implement Production Environment** - HTTPS, monitoring, scaling (Sprint 6)
-3. **Complete Deployment IV&V** - Production readiness validation (Sprint 7)
-4. **Conduct ORR** - Operational readiness review (Week 7)
-5. **Execute Production Deployment** - Final deployment and acceptance (E6)
+3. **Begin E6 File Management** - Server recording and snapshot file management (Sprint 7)
+4. **Complete Deployment IV&V** - Production readiness validation (Sprint 8)
+5. **Conduct ORR** - Operational readiness review (Week 8)
+6. **Execute Production Deployment** - Final deployment and acceptance (E6)
 
 ### Success Criteria
 - ✅ All client examples functional and tested
@@ -437,6 +486,7 @@ exit
 - ✅ Operations procedures documented and tested
 - 📋 Production deployment automation implemented
 - 📋 Production environment configured and validated
+- 📋 Server file management infrastructure implemented
 - 📋 ORR completed and production deployment executed
 
 ### Quality Gates
@@ -447,4 +497,4 @@ exit
 
 ---
 
-**Project Status: CDR (Critical Design Review) successfully completed with production deployment authorization. E5 Deployment & Operations Strategy authorized to begin for production deployment automation. Project includes complete production deployment pipeline with ORR (Operational Readiness Review) and final acceptance phases. Maintaining high quality standards and professional integrity throughout development.**
+**Project Status: CDR (Critical Design Review) successfully completed with production deployment authorization. E5 Deployment & Operations Strategy authorized to begin for production deployment automation. E6 Server File Management Infrastructure planned for Week 7. Project includes complete production deployment pipeline with ORR (Operational Readiness Review) and final acceptance phases. Maintaining high quality standards and professional integrity throughout development.**
