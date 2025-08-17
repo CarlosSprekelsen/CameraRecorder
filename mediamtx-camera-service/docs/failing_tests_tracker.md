@@ -81,17 +81,19 @@ For each failing test, we will:
 | 1 | `test_server_notifications.py` | `test_notification_correlation_id_handling` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007 | **REDESIGNED** - Now uses real WebSocket communication | Tests real correlation ID propagation through WebSocket |
 | 2 | `test_server_notifications.py` | `test_recording_status_notification_field_filtering_with_real_client` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-005 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket field filtering without MediaMTX |
 | 3 | `test_server_notifications.py` | `test_broadcast_notification_to_real_clients` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-007 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket broadcasting without MediaMTX |
-| 4 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
+| 4 | `test_server_notifications.py` | `test_send_notification_to_specific_real_client` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-007 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket targeted notifications without MediaMTX |
+| 5 | `test_hybrid_monitor_enhanced.py` | `test_camera_status_monitoring_adaptive_polling_interval` | 🔴 **DELETED** | ✅ **COMPLETED** | REQ-CAM-004 | **DELETED** - Tests non-existent adaptive polling functionality | Tests features that don't exist in implementation |
+| 6 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
 
 ## Progress Summary
 
 - **Total Failing Tests**: 54
-- **Analyzed**: 3
-- **Fixed**: 2
+- **Analyzed**: 4
+- **Fixed**: 3
 - **Redesigned**: 1
 - **Deleted**: 0
 - **Skipped**: 0
-- **Remaining**: 51
+- **Remaining**: 50
 
 ## Requirements Coverage Status
 
