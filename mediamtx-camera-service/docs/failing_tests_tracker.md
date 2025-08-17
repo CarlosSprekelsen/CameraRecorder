@@ -79,17 +79,18 @@ For each failing test, we will:
 | # | Test File | Test Method | Status | Decision | Requirements Impact | Action Required | Notes |
 |---|-----------|-------------|--------|----------|-------------------|-----------------|-------|
 | 1 | `test_server_notifications.py` | `test_notification_correlation_id_handling` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007 | **REDESIGNED** - Now uses real WebSocket communication | Tests real correlation ID propagation through WebSocket |
-| 2 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
+| 2 | `test_server_notifications.py` | `test_recording_status_notification_field_filtering_with_real_client` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-005 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket field filtering without MediaMTX |
+| 3 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
 
 ## Progress Summary
 
 - **Total Failing Tests**: 54
-- **Analyzed**: 1
-- **Fixed**: 0
+- **Analyzed**: 2
+- **Fixed**: 1
 - **Redesigned**: 1
 - **Deleted**: 0
 - **Skipped**: 0
-- **Remaining**: 53
+- **Remaining**: 52
 
 ## Requirements Coverage Status
 
@@ -123,6 +124,7 @@ For each failing test, we will:
 | Date | Test | Action | Authorized By | Requirements Impact | Reason |
 |------|------|--------|---------------|-------------------|--------|
 | 2025-08-17 | `test_notification_correlation_id_handling` | REDESIGN | User | REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007 | Converted from mock-based to real WebSocket communication |
+| 2025-08-17 | `test_recording_status_notification_field_filtering_with_real_client` | FIX | User | REQ-WS-005 | Removed MediaMTX dependencies for WebSocket field filtering test |
 
 ---
 

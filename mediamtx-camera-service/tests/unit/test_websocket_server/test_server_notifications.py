@@ -221,30 +221,66 @@ class TestServerNotifications:
             await server.stop()
 
     @pytest.mark.asyncio
-    async def test_recording_status_notification_field_filtering_with_real_client(self, connected_real_client, server):
-        """Verify recording_status_update notifications only include API-specified fields with real WebSocket client."""
-        # Test input with extra fields that should be filtered out
-        input_params = {
-            "device": "/dev/video0",
-            "status": "STARTED",
-            "filename": "camera0_recording.mp4",
-            "duration": 3600,
-            # Fields that should be filtered out:
-            "session_internal_id": "session-abc-123",
-            "file_path": "/opt/recordings/camera0_recording.mp4",
-            "process_id": 12345,
-            "encoding_settings": {"bitrate": "2M"},
-            "correlation_id": "req-xyz-789",
-        }
-
-        # Send notification via real WebSocket server
-        await server.notify_recording_status_update(input_params)
-
-        # Wait for notification to be received
+    async def test_recording_status_notification_field_filtering_with_real_client(self):
+        """
+        Verify recording_status_update notifications only include API-specified fields with real WebSocket client.
+        
+        Requirements: REQ-WS-005
+        Scenario: Real WebSocket field filtering validation
+        Expected: Only API-specified fields are included in notification
+        Edge Cases: Field filtering, API compliance
+        """
+        # Create WebSocket server WITHOUT MediaMTX dependencies for this test
+        # This test only validates WebSocket field filtering, not MediaMTX operations
+        server = WebSocketJsonRpcServer(
+            host="localhost", 
+            port=8002, 
+            websocket_path="/ws", 
+            max_connections=100,
+            mediamtx_controller=None  # No MediaMTX controller needed for field filtering test
+        )
+        
+        # Create real WebSocket client
+        client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        
         try:
-            notification_response = await connected_real_client.wait_for_notification("recording_status_update", timeout=5.0)
+            # Start server and connect client
+            await server.start()
+            await client.connect()
+            
+            # Wait for connection to be established
+            await asyncio.sleep(0.1)
+            
+            # Test input with extra fields that should be filtered out
+            input_params = {
+                "device": "/dev/video0",
+                "status": "STARTED",
+                "filename": "camera0_recording.mp4",
+                "duration": 3600,
+                # Fields that should be filtered out:
+                "session_internal_id": "session-abc-123",
+                "file_path": "/opt/recordings/camera0_recording.mp4",
+                "process_id": 12345,
+                "encoding_settings": {"bitrate": "2M"},
+                "correlation_id": "req-xyz-789",
+            }
+
+            # Send notification via real WebSocket server
+            await server.notify_recording_status_update(input_params)
+
+            # Wait for notification to be received
+            await asyncio.sleep(0.1)
+            
+            # Get real messages received by WebSocket client
+            received_messages = client.get_received_messages()
+            
+            # Verify real notification was delivered
+            assert len(received_messages) > 0, "Real WebSocket client should receive notification"
             
             # Get the notification data
+            notification_response = received_messages[0]
+            assert notification_response.result is not None, "Notification should have result"
+            
             filtered_params = notification_response.result
             assert filtered_params is not None, "Notification should have params"
 
@@ -269,8 +305,10 @@ class TestServerNotifications:
             assert filtered_params["filename"] == "camera0_recording.mp4"
             assert filtered_params["duration"] == 3600
 
-        except asyncio.TimeoutError:
-            pytest.fail("Notification not received within timeout period")
+        finally:
+            # Clean up real WebSocket connection
+            await client.disconnect()
+            await server.stop()
 
     def test_notification_required_field_validation(self, server):
         """Test validation of required fields in notifications."""
