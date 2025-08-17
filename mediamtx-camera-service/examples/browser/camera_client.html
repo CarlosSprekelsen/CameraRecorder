@@ -764,7 +764,7 @@
             async takeSnapshot(devicePath) {
                 try {
                     this.log(`Taking snapshot from ${devicePath}...`, 'info');
-                    const result = await this.sendRequest('take_snapshot', { device_path: devicePath });
+                    const result = await this.sendRequest('take_snapshot', { device: devicePath });
                     
                     if (result.success) {
                         this.log(`Snapshot saved: ${result.filename}`, 'success');
@@ -783,7 +783,7 @@
                 try {
                     this.log(`Starting recording from ${devicePath}...`, 'info');
                     const result = await this.sendRequest('start_recording', { 
-                        device_path: devicePath,
+                        device: devicePath,
                         duration: 30 // 30 seconds
                     });
                     
@@ -805,7 +805,7 @@
             async stopRecording(devicePath) {
                 try {
                     this.log(`Stopping recording from ${devicePath}...`, 'info');
-                    const result = await this.sendRequest('stop_recording', { device_path: devicePath });
+                    const result = await this.sendRequest('stop_recording', { device: devicePath });
                     
                     if (result.success) {
                         this.recordings.delete(devicePath);

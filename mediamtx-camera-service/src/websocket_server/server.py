@@ -17,6 +17,7 @@ import json
 import logging
 import time
 import uuid
+import psutil
 from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
 from collections import defaultdict
@@ -1228,7 +1229,51 @@ class WebSocketJsonRpcServer:
         Returns:
             Dict containing performance metrics
         """
-        return self.get_performance_metrics()
+        # Get base performance metrics
+        base_metrics = self.get_performance_metrics()
+        
+        # Add enhanced monitoring data
+        enhanced_metrics = {
+            **base_metrics,
+            "enhanced_monitoring": {
+                "server_info": {
+                    "host": self._host,
+                    "port": self._port,
+                    "websocket_path": self._websocket_path,
+                    "max_connections": self._max_connections,
+                    "current_connections": len(self._clients)
+                },
+                "method_performance": {},
+                "resource_usage": {
+                    "memory_mb": psutil.Process().memory_info().rss / 1024 / 1024,
+                    "cpu_percent": psutil.Process().cpu_percent(),
+                    "thread_count": psutil.Process().num_threads()
+                },
+                "connection_stats": {
+                    "total_connections": len(self._clients),
+                    "authenticated_connections": len([c for c in self._clients.values() if c.authenticated]),
+                    "average_connection_time": self._calculate_average_connection_time()
+                }
+            }
+        }
+        
+        # Add detailed method performance statistics
+        for method_name, method_metrics in base_metrics.get("methods", {}).items():
+            enhanced_metrics["enhanced_monitoring"]["method_performance"][method_name] = {
+                **method_metrics,
+                "performance_status": "good" if method_metrics.get("avg_ms", 0) < 100 else "warning" if method_metrics.get("avg_ms", 0) < 200 else "poor"
+            }
+        
+        return enhanced_metrics
+    
+    def _calculate_average_connection_time(self) -> float:
+        """Calculate average connection time for active connections."""
+        if not self._clients:
+            return 0.0
+        
+        current_time = time.time()
+        total_time = sum(current_time - client.connected_at for client in self._clients.values())
+        return total_time / len(self._clients)
 
     async def _method_get_camera_list(
         self, params: Optional[Dict[str, Any]] = None

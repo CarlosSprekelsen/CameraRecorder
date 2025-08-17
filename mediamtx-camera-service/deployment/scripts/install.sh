@@ -82,6 +82,20 @@ create_service_user() {
     else
         log_message "Service user already exists: $SERVICE_USER"
     fi
+    
+    # Ensure video group exists and add service user to it
+    if ! getent group video >/dev/null 2>&1; then
+        log_warning "Video group does not exist. Creating video group..."
+        groupadd video
+    fi
+    
+    # Add camera-service user to video group for device access
+    if ! groups "$SERVICE_USER" | grep -q video; then
+        usermod -a -G video "$SERVICE_USER"
+        log_success "Added $SERVICE_USER to video group"
+    else
+        log_message "$SERVICE_USER already in video group"
+    fi
 }
 
 # Function to install MediaMTX
@@ -110,6 +124,14 @@ install_mediamtx() {
     # Create MediaMTX user
     if ! id "mediamtx" &>/dev/null; then
         useradd -r -s /bin/false -d "$MEDIAMTX_DIR" mediamtx
+    fi
+    
+    # Add mediamtx user to video group for device access
+    if ! groups mediamtx | grep -q video; then
+        usermod -a -G video mediamtx
+        log_success "Added mediamtx user to video group"
+    else
+        log_message "mediamtx user already in video group"
     fi
     
     # Set ownership
@@ -346,6 +368,52 @@ EOF
     log_success "Camera Service installed and started"
 }
 
+# Function to validate video device permissions
+validate_video_permissions() {
+    log_message "Validating video device permissions..."
+    
+    # Check if video devices exist
+    if ! ls /dev/video* >/dev/null 2>&1; then
+        log_warning "No video devices found at /dev/video*"
+        return 0
+    fi
+    
+    # Check video group exists
+    if ! getent group video >/dev/null 2>&1; then
+        log_error "Video group does not exist"
+        return 1
+    fi
+    
+    # Check mediamtx user can access video devices
+    if ! sudo -u mediamtx test -r /dev/video0 2>/dev/null; then
+        log_error "MediaMTX user cannot access video devices"
+        log_message "Adding mediamtx user to video group..."
+        usermod -a -G video mediamtx
+    else
+        log_success "MediaMTX user can access video devices"
+    fi
+    
+    # Check camera-service user can access video devices
+    if ! sudo -u camera-service test -r /dev/video0 2>/dev/null; then
+        log_error "Camera service user cannot access video devices"
+        log_message "Adding camera-service user to video group..."
+        usermod -a -G video camera-service
+    else
+        log_success "Camera service user can access video devices"
+    fi
+    
+    # Verify video device permissions
+    VIDEO_PERMS=$(ls -l /dev/video0 | awk '{print $1}')
+    if [[ "$VIDEO_PERMS" == "crw-rw----+" ]]; then
+        log_success "Video device permissions are correct: $VIDEO_PERMS"
+    else
+        log_warning "Video device permissions may need adjustment: $VIDEO_PERMS"
+        log_message "Expected: crw-rw----+, Found: $VIDEO_PERMS"
+    fi
+    
+    log_success "Video device permissions validation completed"
+}
+
 # Function to verify installation
 verify_installation() {
     log_message "Verifying installation..."
@@ -400,6 +468,9 @@ main() {
     # Install Camera Service
     install_camera_service
     
+    # Validate video device permissions
+    validate_video_permissions
+    
     # Verify installation
     verify_installation
     
@@ -410,6 +481,11 @@ main() {
     log_message "- Camera Service (port 8002, 8003)"
     log_message "- Health endpoints available at http://localhost:8003/health/"
     log_message ""
+    log_message "Service users and permissions:"
+    log_message "- MediaMTX user: mediamtx (with video group access)"
+    log_message "- Camera Service user: camera-service (with video group access)"
+    log_message "- Video devices: accessible by both service users"
+    log_message ""
     log_message "To check service status:"
     log_message "  systemctl status mediamtx"
     log_message "  systemctl status camera-service"
@@ -417,6 +493,10 @@ main() {
     log_message "To view logs:"
     log_message "  journalctl -u mediamtx -f"
     log_message "  journalctl -u camera-service -f"
+    log_message ""
+    log_message "To verify video device access:"
+    log_message "  sudo -u mediamtx test -r /dev/video0 && echo 'MediaMTX can access video devices'"
+    log_message "  sudo -u camera-service test -r /dev/video0 && echo 'Camera Service can access video devices'"
 }
 
 # Run main function

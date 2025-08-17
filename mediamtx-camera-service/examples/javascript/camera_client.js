@@ -494,19 +494,18 @@ class CameraClient {
      * @throws {CameraNotFoundError} If camera not found
      */
     async getCameraStatus(devicePath) {
-        const result = await this._sendRequest('get_camera_status', { device_path: devicePath });
+        const result = await this._sendRequest('get_camera_status', { device: devicePath });
         
-        if (!result.found) {
+        if (!result) {
             throw new CameraNotFoundError(`Camera not found: ${devicePath}`);
         }
         
-        const cameraData = result.camera;
         return new CameraInfo(
-            cameraData.device_path,
-            cameraData.name,
-            cameraData.capabilities || [],
-            cameraData.status,
-            cameraData.stream_url
+            result.device || devicePath,
+            result.name || '',
+            result.capabilities || [],
+            result.status || '',
+            result.stream_url
         );
     }
 
@@ -520,9 +519,9 @@ class CameraClient {
      * @throws {MediaMTXError} If snapshot fails
      */
     async takeSnapshot(devicePath, customFilename = null) {
-        const params = { device_path: devicePath };
+        const params = { device: devicePath };
         if (customFilename) {
-            params.custom_filename = customFilename;
+            params.filename = customFilename;
         }
         
         const result = await this._sendRequest('take_snapshot', params);
@@ -550,12 +549,12 @@ class CameraClient {
      * @throws {MediaMTXError} If recording fails
      */
     async startRecording(devicePath, duration = null, customFilename = null) {
-        const params = { device_path: devicePath };
+        const params = { device: devicePath };
         if (duration) {
             params.duration = duration;
         }
         if (customFilename) {
-            params.custom_filename = customFilename;
+            params.filename = customFilename;
         }
         
         const result = await this._sendRequest('start_recording', params);
@@ -589,7 +588,7 @@ class CameraClient {
      * @throws {MediaMTXError} If stop recording fails
      */
     async stopRecording(devicePath) {
-        const result = await this._sendRequest('stop_recording', { device_path: devicePath });
+        const result = await this._sendRequest('stop_recording', { device: devicePath });
         
         if (!result.success) {
             const error = result.error || 'Unknown error';

@@ -406,18 +406,17 @@ class CameraClient:
         Raises:
             CameraNotFoundError: If camera not found
         """
-        result = await self._send_request("get_camera_status", {"device_path": device_path})
+        result = await self._send_request("get_camera_status", {"device": device_path})
         
-        if not result.get("found"):
+        if not result:
             raise CameraNotFoundError(f"Camera not found: {device_path}")
         
-        camera_data = result["camera"]
         return CameraInfo(
-            device_path=camera_data["device"],
-            name=camera_data["name"],
-            capabilities=camera_data.get("capabilities", []),
-            status=camera_data["status"],
-            stream_url=camera_data.get("stream_url")
+            device_path=result.get("device", device_path),
+            name=result.get("name", ""),
+            capabilities=result.get("capabilities", []),
+            status=result.get("status", ""),
+            stream_url=result.get("stream_url")
         )
 
     async def take_snapshot(
@@ -439,9 +438,9 @@ class CameraClient:
             CameraNotFoundError: If camera not found
             MediaMTXError: If snapshot fails
         """
-        params = {"device_path": device_path}
+        params = {"device": device_path}
         if custom_filename:
-            params["custom_filename"] = custom_filename
+            params["filename"] = custom_filename
         
         result = await self._send_request("take_snapshot", params)
         
@@ -475,11 +474,11 @@ class CameraClient:
             CameraNotFoundError: If camera not found
             MediaMTXError: If recording fails
         """
-        params = {"device_path": device_path}
+        params = {"device": device_path}
         if duration:
             params["duration"] = duration
         if custom_filename:
-            params["custom_filename"] = custom_filename
+            params["filename"] = custom_filename
         
         result = await self._send_request("start_recording", params)
         
@@ -513,7 +512,7 @@ class CameraClient:
             CameraNotFoundError: If camera not found
             MediaMTXError: If stop recording fails
         """
-        result = await self._send_request("stop_recording", {"device_path": device_path})
+        result = await self._send_request("stop_recording", {"device": device_path})
         
         if not result.get("success"):
             error = result.get("error", "Unknown error")
