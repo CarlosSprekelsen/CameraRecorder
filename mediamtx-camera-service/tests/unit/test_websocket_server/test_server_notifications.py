@@ -407,18 +407,70 @@ class TestServerNotifications:
             mock_broadcast.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_notification_correlation_id_handling(self, server, mock_client):
-        """Test correlation ID inclusion in notifications."""
-        server._clients["test-client-123"] = mock_client
-
-        # Test notification with correlation ID in params
-        await server.broadcast_notification(
-            method="test_notification",
-            params={"device": "/dev/video0", "correlation_id": "test-correlation-123"},
-        )
-
-        # Verify notification was sent (correlation ID handling tested in logging layer)
-        mock_client.websocket.send.assert_called_once()
+    async def test_notification_correlation_id_handling(self, server):
+        """
+        Test correlation ID inclusion in notifications using real WebSocket communication.
+        
+        Requirements: REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007
+        Scenario: Real WebSocket client receives notification with correlation ID
+        Expected: Notification delivered successfully with correlation ID preserved
+        Edge Cases: Real-time delivery, connection stability, correlation ID propagation
+        """
+        # Start the real WebSocket server
+        await server.start()
+        
+        # Create real WebSocket client for testing
+        client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        
+        try:
+            # Connect real WebSocket client
+            await client.connect()
+            
+            # Wait for connection to be established
+            await asyncio.sleep(0.1)
+            
+            # Verify client is connected to server
+            client_ids = list(server._clients.keys())
+            assert len(client_ids) > 0, "Real WebSocket client should be connected"
+            
+            # Test notification with correlation ID using real WebSocket communication
+            test_correlation_id = "test-correlation-123"
+            await server.broadcast_notification(
+                method="camera_status_update",
+                params={
+                    "device": "/dev/video0", 
+                    "status": "CONNECTED",
+                    "name": "Test Camera",
+                    "correlation_id": test_correlation_id
+                },
+            )
+            
+            # Wait for real notification delivery
+            await asyncio.sleep(0.1)
+            
+            # Get real messages received by WebSocket client
+            received_messages = client.get_received_messages()
+            
+            # Verify real notification was delivered
+            assert len(received_messages) > 0, "Real WebSocket client should receive notification"
+            
+            # Verify correlation ID is preserved in real notification
+            notification_response = received_messages[0]
+            assert notification_response.result is not None, "Notification should contain result"
+            
+            # The result contains the params from the notification
+            notification_params = notification_response.result
+            assert "correlation_id" in notification_params, "Notification should contain correlation_id"
+            assert notification_params["correlation_id"] == test_correlation_id, "Correlation ID should be preserved"
+            
+            # Verify real WebSocket communication worked
+            assert notification_params["device"] == "/dev/video0", "Device should be preserved"
+            assert notification_params["status"] == "CONNECTED", "Status should be preserved"
+            
+        finally:
+            # Clean up real WebSocket connection
+            await client.disconnect()
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_targeted_notification_broadcast(self, server):
