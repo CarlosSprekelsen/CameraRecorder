@@ -142,6 +142,7 @@ class SnapshotConfig:
     cleanup_interval: int = 3600
     max_age: int = 86400
     max_count: int = 1000
+    cleanup_after_days: int = 7
 
 
 @dataclass

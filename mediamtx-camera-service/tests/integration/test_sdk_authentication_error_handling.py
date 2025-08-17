@@ -42,7 +42,7 @@ class TestSDKAuthenticationErrorHandling:
         """Test client configuration."""
         return {
             "host": "localhost",
-            "port": 8080,
+            "port": 8002,
             "use_ssl": False,
             "auth_type": "jwt",
             "auth_token": "invalid_token",

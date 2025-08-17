@@ -67,7 +67,7 @@ def generate_jwt_token(user_id: str, role: str, secret_key: str, expiry_hours: i
         role: User role (admin, operator, viewer)
         secret_key: Secret key for signing
         expiry_hours: Token expiry in hours (default: 24)
-    
+        
     Returns:
         JWT token string
     """
@@ -134,8 +134,8 @@ python3 -c "
 import jwt
 import time
 import sys
-
-payload = {
+    
+    payload = {
     'user_id': '$USER_ID',
     'role': '$ROLE',
     'iat': int(time.time()),
@@ -163,7 +163,7 @@ def validate_jwt_token(token: str, secret_key: str) -> Optional[Dict[str, Any]]:
     Args:
         token: JWT token string
         secret_key: Secret key for verification
-    
+        
     Returns:
         Token payload if valid, None if invalid
     """
@@ -317,14 +317,14 @@ def refresh_jwt_token(current_token: str, secret_key: str, expiry_hours: int = 2
         else:
             print(f"Token still valid for {expires_in} seconds")
             return None
-            
+    
     except jwt.InvalidTokenError:
         print("Invalid token for refresh")
         return None
     except Exception as e:
         print(f"Token refresh error: {e}")
-        return None
-
+            return None
+        
 # Example usage
 secret_key = "your-secret-key"
 current_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -603,7 +603,7 @@ def test_token_generation():
     # Test role validation
     if validate_user_role(payload, "admin"):
         print("✅ Admin role validation successful")
-    else:
+else:
         print("❌ Admin role validation failed")
 
 if __name__ == "__main__":
@@ -647,11 +647,11 @@ async def main():
     client = CameraClient(
         host="localhost",
         port=8080,
-        auth_type="jwt",
+            auth_type="jwt",
         auth_token=token
-    )
-    
-    try:
+        )
+        
+        try:
         await client.connect()
         cameras = await client.get_camera_list()
         print(f"Found {len(cameras)} cameras")

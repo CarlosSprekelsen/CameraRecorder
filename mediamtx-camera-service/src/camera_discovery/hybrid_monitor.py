@@ -17,7 +17,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple, Any, Union
 
-from src.common.types import CameraDevice
+from common.types import CameraDevice
 
 # Optional dependency for udev monitoring
 try:

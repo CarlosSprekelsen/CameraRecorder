@@ -6,15 +6,9 @@ A command-line interface for controlling cameras through the MediaMTX Camera Ser
 Supports JWT and API key authentication with comprehensive camera operations.
 
 Usage:
-    # Development environment (port 8080)
     python camera_cli.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token list
     python camera_cli.py --host localhost --port 8080 --auth-type api_key --key your_api_key snapshot /dev/video0
     python camera_cli.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token record /dev/video0 --duration 30
-    
-    # Production environment (port 8002)
-    python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list
-    python camera_cli.py --host localhost --port 8002 --auth-type api_key --key your_api_key snapshot /dev/video0
-    python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token record /dev/video0 --duration 30
 """
 
 import asyncio
@@ -55,17 +49,12 @@ class CameraCLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  # Development environment (port 8080)
   %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token list
   %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token status /dev/video0
   %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token snapshot /dev/video0
   %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token record /dev/video0 --duration 30
-  
-  # Production environment (port 8002)
-  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token list
-  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token status /dev/video0
-  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token snapshot /dev/video0
-  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token record /dev/video0 --duration 30
+  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token stop /dev/video0
+  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token monitor
             """
         )
 

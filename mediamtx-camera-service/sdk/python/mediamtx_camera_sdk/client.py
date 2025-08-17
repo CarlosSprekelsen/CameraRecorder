@@ -34,7 +34,7 @@ class CameraClient:
     def __init__(
         self,
         host: str = "localhost",
-        port: int = 8080,
+        port: int = 8002,
         use_ssl: bool = False,
         auth_type: str = "jwt",
         auth_token: Optional[str] = None,

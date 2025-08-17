@@ -69,45 +69,10 @@ sudo journalctl -u camera-service -f
 └─────────────────┘                  └─────────────────┘
 `
 
-## Port Configuration
-
-The service uses different ports for development and production environments:
-
-### Development Environment
-- **WebSocket Server**: Port 8080
-- **Configuration**: `config/development.yaml`
-- **Client Examples**: Use port 8080 by default
-- **Usage**: For local development and testing
-
-### Production Environment  
-- **WebSocket Server**: Port 8002
-- **Configuration**: `config/default.yaml`
-- **Client Examples**: Use `--port 8002` flag for production
-- **Usage**: For deployed services and systemd installation
-
-### MediaMTX Ports (Both Environments)
-- **RTSP**: Port 8554
-- **WebRTC**: Port 8889  
-- **HLS**: Port 8888
-- **API**: Port 9997
-
-### Client Connection Examples
-```bash
-# Development
-python3 examples/python/camera_client.py --host localhost --port 8080
-
-# Production  
-python3 examples/python/camera_client.py --host localhost --port 8002
-```
-
 ## API Examples
 
 ### Connect to WebSocket
 ```javascript
-// Development
-const ws = new WebSocket('ws://localhost:8080/ws');
-
-// Production
 const ws = new WebSocket('ws://localhost:8002/ws');
 ```
 

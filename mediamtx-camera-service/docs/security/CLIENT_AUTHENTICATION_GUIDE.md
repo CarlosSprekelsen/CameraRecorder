@@ -76,20 +76,20 @@ import asyncio
 from examples.python.camera_client import CameraClient
 
 async def main():
-    # Create client with JWT authentication
-    client = CameraClient(
-        host="localhost",
-        port=8080,
-        auth_type="jwt",
+# Create client with JWT authentication
+client = CameraClient(
+    host="localhost",
+    port=8080,
+    auth_type="jwt",
         auth_token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    )
-    
+)
+
     try:
         # Connect and authenticate automatically
-        await client.connect()
+await client.connect()
         
         # Use the client
-        cameras = await client.get_camera_list()
+cameras = await client.get_camera_list()
         print(f"Found {len(cameras)} cameras")
         
     finally:
@@ -105,20 +105,20 @@ import asyncio
 from examples.python.camera_client import CameraClient
 
 async def main():
-    # Create client with API key authentication
-    client = CameraClient(
-        host="localhost",
-        port=8080,
-        auth_type="api_key",
+# Create client with API key authentication
+client = CameraClient(
+    host="localhost",
+    port=8080,
+    auth_type="api_key",
         api_key="camera_service_sk_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-    )
-    
+)
+
     try:
         # Connect and authenticate automatically
-        await client.connect()
+await client.connect()
         
         # Use the client
-        cameras = await client.get_camera_list()
+cameras = await client.get_camera_list()
         print(f"Found {len(cameras)} cameras")
         
     finally:
@@ -135,20 +135,20 @@ asyncio.run(main())
 import { CameraClient } from './examples/javascript/camera_client.js';
 
 async function main() {
-    // Create client with JWT authentication
-    const client = new CameraClient({
-        host: 'localhost',
-        port: 8080,
-        authType: 'jwt',
+// Create client with JWT authentication
+const client = new CameraClient({
+    host: 'localhost',
+    port: 8080,
+    authType: 'jwt',
         authToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-    });
-    
+});
+
     try {
         // Connect and authenticate automatically
-        await client.connect();
+await client.connect();
         
         // Use the client
-        const cameras = await client.getCameraList();
+const cameras = await client.getCameraList();
         console.log(`Found ${cameras.length} cameras`);
         
     } finally {
@@ -165,20 +165,20 @@ main().catch(console.error);
 import { CameraClient } from './examples/javascript/camera_client.js';
 
 async function main() {
-    // Create client with API key authentication
-    const client = new CameraClient({
-        host: 'localhost',
-        port: 8080,
-        authType: 'api_key',
+// Create client with API key authentication
+const client = new CameraClient({
+    host: 'localhost',
+    port: 8080,
+    authType: 'api_key',
         apiKey: 'camera_service_sk_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
-    });
-    
+});
+
     try {
         // Connect and authenticate automatically
-        await client.connect();
+await client.connect();
         
         // Use the client
-        const cameras = await client.getCameraList();
+const cameras = await client.getCameraList();
         console.log(`Found ${cameras.length} cameras`);
         
     } finally {
@@ -571,17 +571,17 @@ main();
    ```
 
 2. **Set Appropriate Expiry**
-   ```python
+```python
    # Set reasonable expiry time
    exp = int(time.time()) + (24 * 60 * 60)  # 24 hours
    ```
 
 3. **Validate Token Claims**
-   ```python
+```python
    # Always validate token claims
    if payload.get('exp', 0) < time.time():
        raise AuthenticationError("Token expired")
-   ```
+```
 
 ### API Key Security
 
@@ -617,7 +617,7 @@ main();
    ```bash
    # Restrict access to authentication endpoints
    # Use firewall rules to limit connections
-   ```
+```
 
 ## Troubleshooting
 

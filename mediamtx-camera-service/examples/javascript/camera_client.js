@@ -15,13 +15,8 @@
  * - Retry logic and connection recovery
  * 
  * Usage:
- *   # Development environment (port 8080)
  *   node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_jwt_token
  *   node camera_client.js --host localhost --port 8080 --auth-type api_key --key your_api_key
- *   
- *   # Production environment (port 8002)
- *   node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_jwt_token
- *   node camera_client.js --host localhost --port 8002 --auth-type api_key --key your_api_key
  */
 
 const WebSocket = require('ws');
@@ -245,7 +240,7 @@ class CameraClient {
         });
 
         this.websocket.on('close', (code, reason) => {
-            this.logger.warn(`WebSocket connection closed: ${code} - ${reason}`);
+            this.logger.warning(`WebSocket connection closed: ${code} - ${reason}`);
             this.connected = false;
             if (this.onConnectionLost) {
                 this.onConnectionLost();
@@ -369,7 +364,7 @@ class CameraClient {
                 this._handleNotification(data);
             }
             else {
-                this.logger.warn(`Unknown message format: ${JSON.stringify(data)}`);
+                this.logger.warning(`Unknown message format: ${JSON.stringify(data)}`);
             }
             
         } catch (error) {
@@ -494,7 +489,7 @@ class CameraClient {
      * @throws {CameraNotFoundError} If camera not found
      */
     async getCameraStatus(devicePath) {
-        const result = await this._sendRequest('get_camera_status', { device: devicePath });
+        const result = await this._sendRequest('get_camera_status', { device_path: devicePath });
         
         if (!result.found) {
             throw new CameraNotFoundError(`Camera not found: ${devicePath}`);
@@ -520,7 +515,7 @@ class CameraClient {
      * @throws {MediaMTXError} If snapshot fails
      */
     async takeSnapshot(devicePath, customFilename = null) {
-        const params = { device: devicePath };
+        const params = { device_path: devicePath };
         if (customFilename) {
             params.custom_filename = customFilename;
         }
@@ -550,7 +545,7 @@ class CameraClient {
      * @throws {MediaMTXError} If recording fails
      */
     async startRecording(devicePath, duration = null, customFilename = null) {
-        const params = { device: devicePath };
+        const params = { device_path: devicePath };
         if (duration) {
             params.duration = duration;
         }
@@ -589,7 +584,7 @@ class CameraClient {
      * @throws {MediaMTXError} If stop recording fails
      */
     async stopRecording(devicePath) {
-        const result = await this._sendRequest('stop_recording', { device: devicePath });
+        const result = await this._sendRequest('stop_recording', { device_path: devicePath });
         
         if (!result.success) {
             const error = result.error || 'Unknown error';

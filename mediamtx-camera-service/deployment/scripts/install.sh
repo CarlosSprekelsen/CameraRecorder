@@ -327,7 +327,6 @@ User=$SERVICE_USER
 Group=$SERVICE_GROUP
 WorkingDirectory=$INSTALL_DIR
 EnvironmentFile=$INSTALL_DIR/.env
-Environment=PYTHONPATH=$INSTALL_DIR/src
 ExecStart=$INSTALL_DIR/venv/bin/python -m src.camera_service.main
 Restart=always
 RestartSec=10

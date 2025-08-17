@@ -50,7 +50,7 @@ export class CameraClient {
 
     constructor(config: ClientConfig = {}) {
         this.host = config.host || 'localhost';
-        this.port = config.port || 8080;
+        this.port = config.port || 8002;
         this.useSsl = config.useSsl || false;
         this.authType = config.authType || 'jwt';
         this.authToken = config.authToken;

@@ -37,7 +37,7 @@ class TestClientExamplesReal:
         """Test client configuration."""
         return {
             "host": "localhost",
-            "port": 8080,
+            "port": 8002,
             "use_ssl": False,
             "auth_type": "jwt",
             "auth_token": "invalid_token",  # Will fail auth but we can test real behavior
@@ -67,7 +67,7 @@ class TestClientExamplesReal:
         # Test JWT authentication
         client = CameraClient(**client_config)
         assert client.host == "localhost"
-        assert client.port == 8080
+        assert client.port == 8002
         assert client.auth_type == "jwt"
         assert client.auth_token == "invalid_token"
         assert not client.authenticated
@@ -189,11 +189,11 @@ class TestClientExamplesReal:
         # Test with minimal configuration
         minimal_config = {
             "host": "localhost",
-            "port": 8080
+            "port": 8002
         }
         client = CameraClient(**minimal_config)
         assert client.host == "localhost"
-        assert client.port == 8080
+        assert client.port == 8002
         assert client.auth_type == "jwt"  # Default value
         assert client.auth_token is None
         assert client.api_key is None
@@ -213,12 +213,12 @@ class TestClientExamplesReal:
         """Test that client generates correct URLs."""
         # Test WebSocket URL generation
         ws_url = client._get_ws_url()
-        assert ws_url == "ws://localhost:8080/ws"
+        assert ws_url == "ws://localhost:8002/ws"
         
         # Test with SSL
         client.use_ssl = True
         ws_url_ssl = client._get_ws_url()
-        assert ws_url_ssl == "wss://localhost:8080/ws"
+        assert ws_url_ssl == "wss://localhost:8002/ws"
         
         # Test with different host/port
         client.host = "example.com"

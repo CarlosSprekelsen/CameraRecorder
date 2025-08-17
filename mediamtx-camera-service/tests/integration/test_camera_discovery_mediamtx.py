@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from camera_service.config import Config
 from camera_service.service_manager import ServiceManager
@@ -171,6 +171,22 @@ async def test_service_manager_integration():
     """Test full service manager integration."""
     logger.info("=== Testing Service Manager Integration ===")
     
+    # Check if port 8002 is already in use (real server running)
+    import socket
+    port_in_use = False
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex(('localhost', 8002))
+            port_in_use = (result == 0)
+    except Exception:
+        pass
+    
+    if port_in_use:
+        logger.info("Port 8002 is in use - assuming real server is running")
+        logger.info("Skipping service manager start to avoid conflicts")
+        return
+    
     config = Config()
     service_manager = ServiceManager(config)
     
@@ -216,9 +232,88 @@ async def test_service_manager_integration():
     finally:
         await service_manager.stop()
 
+async def test_running_server_camera_detection():
+    """Test camera detection via the running server's WebSocket API."""
+    logger.info("=== Testing Running Server Camera Detection ===")
+    
+    # Check if port 8002 is in use
+    import socket
+    port_in_use = False
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex(('localhost', 8002))
+            port_in_use = (result == 0)
+    except Exception:
+        pass
+    
+    if not port_in_use:
+        logger.info("Port 8002 not in use - skipping running server test")
+        return
+    
+    # Test WebSocket connection to running server
+    import websockets
+    import jwt
+    import time
+    
+    # Generate valid JWT token
+    jwt_secret = "dev-secret-change-me"
+    payload = {
+        "user_id": "test_user",
+        "role": "admin",
+        "iat": int(time.time()),
+        "exp": int(time.time()) + (24 * 3600)
+    }
+    token = jwt.encode(payload, jwt_secret, algorithm="HS256")
+    
+    try:
+        async with websockets.connect("ws://localhost:8002/ws") as websocket:
+            logger.info("Connected to running server")
+            
+            # Authenticate
+            auth_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "authenticate",
+                "params": {"token": token, "auth_type": "jwt"}
+            }
+            await websocket.send(json.dumps(auth_request))
+            auth_response = await websocket.recv()
+            auth_data = json.loads(auth_response)
+            logger.info(f"Authentication response: {auth_data}")
+            
+            if auth_data.get("result", {}).get("authenticated"):
+                # Get camera list
+                camera_request = {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "get_camera_list",
+                    "params": {}
+                }
+                await websocket.send(json.dumps(camera_request))
+                camera_response = await websocket.recv()
+                camera_data = json.loads(camera_response)
+                logger.info(f"Running server camera list: {json.dumps(camera_data, indent=2)}")
+                
+                cameras = camera_data.get("result", {}).get("cameras", [])
+                logger.info(f"Running server detected {len(cameras)} cameras")
+                
+                for camera in cameras:
+                    device_path = camera.get("device", "unknown")
+                    status = camera.get("status", "unknown")
+                    logger.info(f"  - {device_path}: {status}")
+            else:
+                logger.error("Authentication failed with running server")
+                
+    except Exception as e:
+        logger.error(f"Error testing running server: {e}")
+
 async def main():
     """Main test function."""
     logger.info("Starting camera discovery and MediaMTX integration tests...")
+    
+    # Test 0: Running server camera detection
+    await test_running_server_camera_detection()
     
     # Test 1: Camera discovery
     connected_cameras = await test_camera_discovery()

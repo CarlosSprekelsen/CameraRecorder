@@ -40,16 +40,16 @@ This directory contains a JavaScript/Node.js client example for the MediaMTX Cam
 
 ```bash
 # Connect with JWT authentication
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_jwt_token
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_jwt_token
 
 # Connect with API key authentication
-node camera_client.js --host localhost --port 8080 --auth-type api_key --key your_api_key
+node camera_client.js --host localhost --port 8002 --auth-type api_key --key your_api_key
 ```
 
 ### Command Line Options
 
 - `--host`: Server hostname (default: localhost)
-- `--port`: Server port (default: 8080)
+- `--port`: Server port (default: 8002)
 - `--auth-type`: Authentication type: `jwt` or `api_key` (default: jwt)
 - `--token`: JWT token for authentication
 - `--key`: API key for authentication
@@ -60,19 +60,19 @@ node camera_client.js --host localhost --port 8080 --auth-type api_key --key you
 
 ```bash
 # List all cameras
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_token --list-cameras
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_token --list-cameras
 
 # Get camera status
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_token --camera /dev/video0 --status
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_token --camera /dev/video0 --status
 
 # Take a snapshot
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_token --camera /dev/video0 --snapshot
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_token --camera /dev/video0 --snapshot
 
 # Start recording
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_token --camera /dev/video0 --start-recording
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_token --camera /dev/video0 --start-recording
 
 # Stop recording
-node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_token --camera /dev/video0 --stop-recording
+node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_token --camera /dev/video0 --stop-recording
 ```
 
 ## Programmatic Usage
@@ -83,7 +83,7 @@ const CameraClient = require('./camera_client.js');
 async function main() {
     const client = new CameraClient({
         host: 'localhost',
-        port: 8080,
+        port: 8002,
         authType: 'jwt',
         authToken: 'your_jwt_token',
         useSsl: false,
