@@ -80,17 +80,18 @@ For each failing test, we will:
 |---|-----------|-------------|--------|----------|-------------------|-----------------|-------|
 | 1 | `test_server_notifications.py` | `test_notification_correlation_id_handling` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007 | **REDESIGNED** - Now uses real WebSocket communication | Tests real correlation ID propagation through WebSocket |
 | 2 | `test_server_notifications.py` | `test_recording_status_notification_field_filtering_with_real_client` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-005 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket field filtering without MediaMTX |
-| 3 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
+| 3 | `test_server_notifications.py` | `test_broadcast_notification_to_real_clients` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-007 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket broadcasting without MediaMTX |
+| 4 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
 
 ## Progress Summary
 
 - **Total Failing Tests**: 54
-- **Analyzed**: 2
-- **Fixed**: 1
+- **Analyzed**: 3
+- **Fixed**: 2
 - **Redesigned**: 1
 - **Deleted**: 0
 - **Skipped**: 0
-- **Remaining**: 52
+- **Remaining**: 51
 
 ## Requirements Coverage Status
 

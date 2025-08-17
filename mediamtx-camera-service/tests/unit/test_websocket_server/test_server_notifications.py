@@ -328,18 +328,54 @@ class TestServerNotifications:
             mock_broadcast.assert_not_called()  # Should not broadcast invalid notification
 
     @pytest.mark.asyncio
-    async def test_broadcast_notification_to_real_clients(self, connected_real_client, server):
-        """Test broadcasting notifications to connected real clients."""
-        # Test broadcasting notification
-        await server.broadcast_notification(
-            method="test_notification", params={"key": "value", "device": "/dev/video0"}
+    async def test_broadcast_notification_to_real_clients(self):
+        """
+        Test broadcasting notifications to connected real clients.
+        
+        Requirements: REQ-WS-004, REQ-WS-007
+        Scenario: Real WebSocket broadcasting validation
+        Expected: Notification delivered successfully to all connected clients
+        Edge Cases: Real-time delivery, connection stability
+        """
+        # Create WebSocket server WITHOUT MediaMTX dependencies for this test
+        # This test only validates WebSocket broadcasting, not MediaMTX operations
+        server = WebSocketJsonRpcServer(
+            host="localhost", 
+            port=8002, 
+            websocket_path="/ws", 
+            max_connections=100,
+            mediamtx_controller=None  # No MediaMTX controller needed for broadcasting test
         )
-
-        # Wait for notification to be received
+        
+        # Create real WebSocket client
+        client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        
         try:
-            notification_response = await connected_real_client.wait_for_notification("test_notification", timeout=5.0)
+            # Start server and connect client
+            await server.start()
+            await client.connect()
+            
+            # Wait for connection to be established
+            await asyncio.sleep(0.1)
+            
+            # Test broadcasting notification
+            await server.broadcast_notification(
+                method="test_notification", params={"key": "value", "device": "/dev/video0"}
+            )
+
+            # Wait for notification to be received
+            await asyncio.sleep(0.1)
+            
+            # Get real messages received by WebSocket client
+            received_messages = client.get_received_messages()
+            
+            # Verify real notification was delivered
+            assert len(received_messages) > 0, "Real WebSocket client should receive notification"
             
             # Get the notification data
+            notification_response = received_messages[0]
+            assert notification_response.result is not None, "Notification should have result"
+            
             notification_params = notification_response.result
             assert notification_params is not None, "Notification should have params"
             
@@ -347,8 +383,10 @@ class TestServerNotifications:
             assert notification_params["key"] == "value"
             assert notification_params["device"] == "/dev/video0"
 
-        except asyncio.TimeoutError:
-            pytest.fail("Notification not received within timeout period")
+        finally:
+            # Clean up real WebSocket connection
+            await client.disconnect()
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_notification_client_cleanup_on_real_connection_failure(self, server):
