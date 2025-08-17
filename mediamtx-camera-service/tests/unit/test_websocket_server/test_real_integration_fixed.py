@@ -111,8 +111,15 @@ paths:
         Scenario: Real camera status integration
         Expected: Successful integration with real camera monitor
         """
+        # Await the fixtures to get the actual objects
+        server = await websocket_server
+        monitor = await anext(camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        server._camera_monitor = monitor
+        
         # Test get_camera_status method
-        result = await websocket_server._method_get_camera_status({"device": "/dev/video0"})
+        result = await server._method_get_camera_status({"device": "/dev/video0"})
         
         # Verify basic structure
         assert result["device"] == "/dev/video0"
@@ -140,8 +147,11 @@ paths:
         Scenario: Real camera list integration
         Expected: Successful integration with real camera monitor
         """
+        # Await the websocket_server fixture to get the actual server object
+        server = await websocket_server
+        
         # Test get_camera_list method
-        result = await websocket_server._method_get_camera_list()
+        result = await server._method_get_camera_list()
         
         # Verify basic structure
         assert "cameras" in result
@@ -160,39 +170,10 @@ paths:
             assert "fps" in camera
             assert "capabilities" in camera
 
-    @pytest.mark.asyncio
-    async def test_mediamtx_integration_with_mock(self, websocket_server):
-        """
-        Test MediaMTX integration with mocked controller to avoid real service dependency.
-        
-        Requirements: REQ-WS-001, REQ-WS-003
-        Scenario: MediaMTX integration with mocked controller
-        Expected: Successful integration with mocked MediaMTX controller
-        """
-        # Mock MediaMTX controller methods
-        mock_controller = Mock()
-        mock_controller.get_stream_status = AsyncMock(return_value={
-            'status': 'active',
-            'bytes_sent': 1024,
-            'readers': 1
-        })
-        
-        # Replace the real controller with mock
-        websocket_server._mediamtx_controller = mock_controller
-        
-        # Test get_camera_status method
-        result = await websocket_server._method_get_camera_status({"device": "/dev/video0"})
-        
-        # Verify MediaMTX integration worked
-        assert result["device"] == "/dev/video0"
-        assert "streams" in result
-        assert "metrics" in result
-        
-        # Verify MediaMTX controller was called
-        mock_controller.get_stream_status.assert_called_once()
+
 
     @pytest.mark.asyncio
-    async def test_error_handling_with_invalid_device(self, websocket_server):
+    async def test_error_handling_with_invalid_device(self, websocket_server, camera_monitor):
         """
         Test error handling with invalid device.
         
@@ -200,8 +181,15 @@ paths:
         Scenario: Error handling with invalid device
         Expected: Graceful error handling
         """
+        # Await the fixtures to get the actual objects
+        server = await websocket_server
+        monitor = await anext(camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        server._camera_monitor = monitor
+        
         # Test with invalid device
-        result = await websocket_server._method_get_camera_status({"device": "/invalid/device"})
+        result = await server._method_get_camera_status({"device": "/invalid/device"})
         
         # Verify graceful handling
         assert result["device"] == "/invalid/device"
@@ -219,15 +207,19 @@ paths:
         Scenario: Missing device parameter
         Expected: Proper error handling
         """
+        # Await the websocket_server fixture to get the actual server object
+        server = await websocket_server
+        
         # Test with missing device parameter
         with pytest.raises(ValueError, match="device parameter is required"):
-            await websocket_server._method_get_camera_status({})
+            await server._method_get_camera_status({})
         
         # Test with None parameters
         with pytest.raises(ValueError, match="device parameter is required"):
-            await websocket_server._method_get_camera_status(None)
+            await server._method_get_camera_status(None)
 
-    def test_stream_name_generation(self, websocket_server):
+    @pytest.mark.asyncio
+    async def test_stream_name_generation(self, websocket_server):
         """
         Test stream name generation functionality.
         
@@ -235,12 +227,15 @@ paths:
         Scenario: Stream name generation
         Expected: Proper stream name generation
         """
+        # Await the websocket_server fixture to get the actual server object
+        server = await websocket_server
+        
         # Test standard device paths
-        assert websocket_server._get_stream_name_from_device_path("/dev/video0") == "camera0"
-        assert websocket_server._get_stream_name_from_device_path("/dev/video1") == "camera1"
-        assert websocket_server._get_stream_name_from_device_path("/dev/video99") == "camera99"
+        assert server._get_stream_name_from_device_path("/dev/video0") == "camera0"
+        assert server._get_stream_name_from_device_path("/dev/video1") == "camera1"
+        assert server._get_stream_name_from_device_path("/dev/video99") == "camera99"
         
         # Test edge cases
-        assert websocket_server._get_stream_name_from_device_path("") == "camera_unknown"
-        assert websocket_server._get_stream_name_from_device_path(None) == "camera_unknown"
-        assert websocket_server._get_stream_name_from_device_path("/invalid/path") != "camera_unknown"
+        assert server._get_stream_name_from_device_path("") == "camera_unknown"
+        assert server._get_stream_name_from_device_path(None) == "camera_unknown"
+        assert server._get_stream_name_from_device_path("/invalid/path") != "camera_unknown"

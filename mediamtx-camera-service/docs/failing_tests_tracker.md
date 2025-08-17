@@ -90,17 +90,23 @@ For each failing test, we will:
 | 10 | `test_controller_stream_operations_real.py` | `test_invalid_stream_recording_error` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-002, REQ-MEDIA-009, REQ-MTX-009 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
 | 11 | `test_controller_stream_operations_real.py` | `test_invalid_format_error` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-009, REQ-MTX-009 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
 | 12 | `test_controller_stream_operations_real.py` | `test_full_recording_lifecycle_integration` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-002, REQ-MEDIA-005, REQ-MTX-001 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
-| 13 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
+| 13 | `test_real_integration_fixed.py` | `test_real_camera_status_integration` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-001 | **FIXED** - Fixed async fixture usage | Tests real WebSocket server integration |
+| 14 | `test_real_integration_fixed.py` | `test_real_camera_list_integration` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-002 | **FIXED** - Fixed async fixture usage | Tests real WebSocket server integration |
+| 15 | `test_real_integration_fixed.py` | `test_mediamtx_integration_with_mock` | 🔴 **DELETED** | ✅ **COMPLETED** | REQ-WS-001, REQ-WS-003 | **DELETED** - Uses mocks, requirements already covered | Tests mock behavior, not real system behavior |
+| 16 | `test_real_integration_fixed.py` | `test_error_handling_with_invalid_device` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-ERROR-004 | **FIXED** - Fixed async fixture usage | Tests real error handling |
+| 17 | `test_real_integration_fixed.py` | `test_missing_device_parameter_handling` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-ERROR-004 | **FIXED** - Fixed async fixture usage | Tests real error handling |
+| 18 | `test_real_integration_fixed.py` | `test_stream_name_generation` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-001 | **FIXED** - Fixed async fixture usage | Tests real stream name generation |
+| 19 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
 
 ## Progress Summary
 
 - **Total Failing Tests**: 54
-- **Analyzed**: 11
-- **Fixed**: 9
+- **Analyzed**: 18
+- **Fixed**: 15
 - **Redesigned**: 1
-- **Deleted**: 1
+- **Deleted**: 2
 - **Skipped**: 0
-- **Remaining**: 43
+- **Remaining**: 36
 
 ## Requirements Coverage Status
 
@@ -142,6 +148,13 @@ For each failing test, we will:
 | 2025-08-17 | `test_recording_session_management_f1_2_5` | FIX | User | F1.2.5, REQ-MEDIA-002 | Updated expected error message to match actual system behavior |
 | 2025-08-17 | `test_invalid_stream_recording_error` | FIX | User | REQ-MEDIA-002, REQ-MEDIA-009, REQ-MTX-009 | Updated expected error message to match actual system behavior |
 | 2025-08-17 | `test_invalid_format_error` | FIX | User | REQ-MEDIA-009, REQ-MTX-009 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_full_recording_lifecycle_integration` | FIX | User | REQ-MEDIA-002, REQ-MEDIA-005, REQ-MTX-001 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_real_camera_status_integration` | FIX | User | REQ-WS-001 | Fixed async fixture usage for real WebSocket integration |
+| 2025-08-17 | `test_real_camera_list_integration` | FIX | User | REQ-WS-002 | Fixed async fixture usage for real WebSocket integration |
+| 2025-08-17 | `test_mediamtx_integration_with_mock` | DELETE | User | REQ-WS-001, REQ-WS-003 | Uses mocks, requirements already covered by real integration tests |
+| 2025-08-17 | `test_error_handling_with_invalid_device` | FIX | User | REQ-ERROR-004 | Fixed async fixture usage for real error handling |
+| 2025-08-17 | `test_missing_device_parameter_handling` | FIX | User | REQ-ERROR-004 | Fixed async fixture usage for real error handling |
+| 2025-08-17 | `test_stream_name_generation` | FIX | User | REQ-WS-001 | Fixed async fixture usage for real stream name generation |
 
 ---
 
