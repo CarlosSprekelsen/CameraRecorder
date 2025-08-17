@@ -414,33 +414,71 @@ class TestServerNotifications:
         await server.stop()
 
     @pytest.mark.asyncio
-    async def test_send_notification_to_specific_real_client(self, connected_real_client, server):
-        """Test sending notification to specific real client."""
-        # Get the client ID from the connected client
-        client_id = list(server._clients.keys())[0] if server._clients else None
-        assert client_id is not None, "No real client connected"
-
-        # Send notification to specific client
-        result = await server.send_notification_to_client(
-            client_id=client_id,
-            method="camera_connected",
-            params={"device": "/dev/video0", "status": "CONNECTED"},
+    async def test_send_notification_to_specific_real_client(self):
+        """
+        Test sending notification to specific real client.
+        
+        Requirements: REQ-WS-004, REQ-WS-007
+        Scenario: Real WebSocket targeted notification validation
+        Expected: Notification delivered successfully to specific client
+        Edge Cases: Client identification, targeted delivery
+        """
+        # Create WebSocket server WITHOUT MediaMTX dependencies for this test
+        # This test only validates WebSocket targeted notifications, not MediaMTX operations
+        server = WebSocketJsonRpcServer(
+            host="localhost", 
+            port=8002, 
+            websocket_path="/ws", 
+            max_connections=100,
+            mediamtx_controller=None  # No MediaMTX controller needed for targeted notification test
         )
-
-        # Verify notification was sent successfully
-        assert result is True
-
-        # Wait for notification to be received
+        
+        # Create real WebSocket client
+        client = WebSocketTestClient("ws://127.0.0.1:8002/ws")
+        
         try:
-            notification_response = await connected_real_client.wait_for_notification("camera_connected", timeout=5.0)
+            # Start server and connect client
+            await server.start()
+            await client.connect()
+            
+            # Wait for connection to be established
+            await asyncio.sleep(0.1)
+            
+            # Get the client ID from the connected client
+            client_id = list(server._clients.keys())[0] if server._clients else None
+            assert client_id is not None, "No real client connected"
+
+            # Send notification to specific client
+            result = await server.send_notification_to_client(
+                client_id=client_id,
+                method="camera_connected",
+                params={"device": "/dev/video0", "status": "CONNECTED"},
+            )
+
+            # Verify notification was sent successfully
+            assert result is True
+
+            # Wait for notification to be received
+            await asyncio.sleep(0.1)
+            
+            # Get real messages received by WebSocket client
+            received_messages = client.get_received_messages()
+            
+            # Verify real notification was delivered
+            assert len(received_messages) > 0, "Real WebSocket client should receive notification"
             
             # Get the notification data
+            notification_response = received_messages[0]
+            assert notification_response.result is not None, "Notification should have result"
+            
             notification_params = notification_response.result
             assert notification_params is not None, "Notification should have params"
             assert notification_params["device"] == "/dev/video0"
 
-        except asyncio.TimeoutError:
-            pytest.fail("Notification not received within timeout period")
+        finally:
+            # Clean up real WebSocket connection
+            await client.disconnect()
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_notification_to_nonexistent_client(self, server):
