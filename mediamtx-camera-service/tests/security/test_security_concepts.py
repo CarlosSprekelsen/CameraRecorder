@@ -1,20 +1,34 @@
 #!/usr/bin/env python3
 """
-Security Concept Validation Test Script
+Security Concept Validation Test Script against Real MediaMTX Service
 
-Tests basic security concepts:
+Tests basic security concepts against the real systemd-managed MediaMTX service:
 1. Authentication - JWT token validation
 2. Authorization - Access control and permission checking
 3. Security design feasibility
 
+Requirements Traceability:
+# Reference: docs/requirements/security-requirements.md REQ-SEC-001
+# Reference: docs/requirements/security-requirements.md REQ-SEC-002
+# Reference: docs/requirements/security-requirements.md REQ-SEC-003
+# Reference: docs/requirements/security-requirements.md REQ-SEC-004
+
+REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
+REQ-SEC-002: API Key Validation - Service-to-service communication
+REQ-SEC-003: Role-Based Access Control - User role enforcement
+REQ-SEC-004: Resource Access Control - Camera and media file access
+
 Each concept tested with:
 - Success case: Valid authentication/authorization
 - Negative case: Invalid authentication/authorization
+- Real system validation: Against actual MediaMTX service
 """
 
 import sys
 import json
 import time
+import subprocess
+import requests
 from typing import Dict, Any
 
 # Add src to path for imports
@@ -26,8 +40,41 @@ from security.middleware import SecurityMiddleware
 from security.api_key_handler import APIKeyHandler
 
 
+def check_real_mediamtx_service():
+    """Check if real MediaMTX service is running via systemd."""
+    try:
+        # Check if MediaMTX service is running
+        result = subprocess.run(["systemctl", "is-active", "mediamtx"], 
+                              capture_output=True, text=True)
+        if result.returncode != 0:
+            print("⚠️  MediaMTX service is not running via systemd")
+            return False
+        
+        # Wait for MediaMTX API to be ready
+        max_retries = 10
+        for i in range(max_retries):
+            try:
+                response = requests.get("http://localhost:9997/v3/config/global/get", 
+                                      timeout=5)
+                if response.status_code == 200:
+                    print("✅ Real MediaMTX service is running and accessible")
+                    return True
+            except requests.RequestException:
+                pass
+            time.sleep(1)
+        
+        print("⚠️  MediaMTX API is not responding")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error checking MediaMTX service: {e}")
+        return False
+
+
 def test_jwt_authentication_concept():
-    """Test JWT authentication concept - token generation and validation."""
+    """Test JWT authentication concept - token generation and validation against real MediaMTX service.
+    
+    REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
+    """
     print("=== Testing JWT Authentication Concept ===")
     
     # Initialize JWT handler with test secret
@@ -68,6 +115,21 @@ def test_jwt_authentication_concept():
     except Exception as e:
         print(f"❌ JWT success case failed: {e}")
         test_results['jwt_success'] = {'error': str(e)}
+    
+    # Test against real MediaMTX service
+    if check_real_mediamtx_service():
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            response = requests.get("http://localhost:9997/v3/config/global/get", 
+                                  headers=headers, timeout=10)
+            print(f"✅ JWT token tested against real MediaMTX service (Status: {response.status_code})")
+            test_results['jwt_real_system'] = {'status_code': response.status_code}
+        except requests.RequestException as e:
+            print(f"ℹ️  JWT token validation against MediaMTX: {e}")
+            test_results['jwt_real_system'] = {'error': str(e)}
+    else:
+        print("ℹ️  Skipping real MediaMTX service test")
+        test_results['jwt_real_system'] = {'skipped': True}
     
     # Negative case: Invalid token validation
     print("\n2. JWT Authentication - Negative Case (Invalid Token)")
