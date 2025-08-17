@@ -285,5 +285,10 @@ async def cmd_ping(client: CameraClient, args) -> int:
         return 1
 
 
+def cli_main():
+    """Synchronous wrapper for the async main function."""
+    return asyncio.run(main())
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(cli_main())

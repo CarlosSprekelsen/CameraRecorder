@@ -327,8 +327,11 @@ export class CameraClient {
     public async getCameraList(): Promise<CameraInfo[]> {
         const response = await this.sendRequest('get_camera_list');
         
-        return response.map((cameraData: any) => ({
-            devicePath: cameraData.device_path || '',
+        // Server returns {cameras: [...], total: X, connected: Y}
+        const camerasData = response.cameras || [];
+        
+        return camerasData.map((cameraData: any) => ({
+            devicePath: cameraData.device || '',
             name: cameraData.name || '',
             capabilities: cameraData.capabilities || [],
             status: cameraData.status || '',
@@ -344,7 +347,7 @@ export class CameraClient {
         }
         
         return {
-            devicePath: response.device_path || devicePath,
+            devicePath: response.device || devicePath,
             name: response.name || '',
             capabilities: response.capabilities || [],
             status: response.status || '',

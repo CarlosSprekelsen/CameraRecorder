@@ -124,9 +124,11 @@ class CameraClient:
                 error_msg = response.get("error", "Authentication failed")
                 raise AuthenticationError(f"Authentication failed: {error_msg}")
                 
+        except AuthenticationError:
+            # Re-raise AuthenticationError as-is
+            raise
         except Exception as e:
-            if isinstance(e, AuthenticationError):
-                raise
+            # Convert other exceptions to AuthenticationError
             raise AuthenticationError(f"Authentication error: {e}")
 
     async def connect(self) -> None:
@@ -170,6 +172,9 @@ class CameraClient:
                 
                 return
                 
+            except AuthenticationError:
+                # Re-raise AuthenticationError as-is
+                raise
             except Exception as e:
                 self.logger.error(f"Connection attempt {attempt + 1} failed: {e}")
                 if attempt < self.max_retries - 1:
@@ -226,7 +231,23 @@ class CameraClient:
             future = self.pending_requests.pop(request_id)
             if not future.done():
                 if "error" in response:
-                    future.set_exception(CameraServiceError(response["error"].get("message", "Unknown error")))
+                    error = response["error"]
+                    error_code = error.get("code", 0)
+                    error_message = error.get("message", "Unknown error")
+                    
+                    # Map error codes to specific exception types
+                    if error_code == -32001:
+                        # Authentication error
+                        future.set_exception(AuthenticationError(error_message))
+                    elif error_code == -32004:
+                        # Camera not found
+                        future.set_exception(CameraNotFoundError(error_message))
+                    elif error_code == -32000:
+                        # Connection error
+                        future.set_exception(ConnectionError(error_message))
+                    else:
+                        # Generic service error
+                        future.set_exception(CameraServiceError(error_message))
                 else:
                     future.set_result(response["result"])
 
@@ -328,10 +349,13 @@ class CameraClient:
         """
         response = await self._send_request("get_camera_list")
         
+        # Server returns {"cameras": [...], "total": X, "connected": Y}
+        cameras_data = response.get("cameras", [])
+        
         cameras = []
-        for camera_data in response:
+        for camera_data in cameras_data:
             camera = CameraInfo(
-                device_path=camera_data.get("device_path", ""),
+                device_path=camera_data.get("device", ""),
                 name=camera_data.get("name", ""),
                 capabilities=camera_data.get("capabilities", []),
                 status=camera_data.get("status", ""),
@@ -361,7 +385,7 @@ class CameraClient:
             raise CameraNotFoundError(f"Camera not found: {device_path}")
         
         return CameraInfo(
-            device_path=response.get("device_path", device_path),
+            device_path=response.get("device", device_path),
             name=response.get("name", ""),
             capabilities=response.get("capabilities", []),
             status=response.get("status", ""),

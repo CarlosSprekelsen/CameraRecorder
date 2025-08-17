@@ -378,7 +378,7 @@ class CameraClient:
         cameras = []
         for camera_data in result.get("cameras", []):
             camera = CameraInfo(
-                device_path=camera_data["device_path"],
+                device_path=camera_data["device"],
                 name=camera_data["name"],
                 capabilities=camera_data.get("capabilities", []),
                 status=camera_data["status"],
@@ -408,7 +408,7 @@ class CameraClient:
         
         camera_data = result["camera"]
         return CameraInfo(
-            device_path=camera_data["device_path"],
+            device_path=camera_data["device"],
             name=camera_data["name"],
             capabilities=camera_data.get("capabilities", []),
             status=camera_data["status"],

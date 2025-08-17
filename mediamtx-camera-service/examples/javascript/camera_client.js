@@ -240,7 +240,7 @@ class CameraClient {
         });
 
         this.websocket.on('close', (code, reason) => {
-            this.logger.warning(`WebSocket connection closed: ${code} - ${reason}`);
+            this.logger.warn(`WebSocket connection closed: ${code} - ${reason}`);
             this.connected = false;
             if (this.onConnectionLost) {
                 this.onConnectionLost();
@@ -364,7 +364,7 @@ class CameraClient {
                 this._handleNotification(data);
             }
             else {
-                this.logger.warning(`Unknown message format: ${JSON.stringify(data)}`);
+                this.logger.warn(`Unknown message format: ${JSON.stringify(data)}`);
             }
             
         } catch (error) {
@@ -469,7 +469,7 @@ class CameraClient {
         const cameras = [];
         for (const cameraData of result.cameras || []) {
             const camera = new CameraInfo(
-                cameraData.device_path,
+                cameraData.device,
                 cameraData.name,
                 cameraData.capabilities || [],
                 cameraData.status,

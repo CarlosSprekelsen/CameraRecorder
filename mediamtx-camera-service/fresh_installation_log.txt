@@ -1,0 +1,32 @@
+Installation Return Code: 1
+STDOUT:
+[0;34m[2025-08-17 15:53:26][0m Starting MediaMTX Camera Service installation...
+[0;34m[2025-08-17 15:53:26][0m ================================================
+[0;34m[2025-08-17 15:53:26][0m Installing system dependencies...
+Hit:1 http://ae.archive.ubuntu.com/ubuntu jammy InRelease
+Hit:2 http://ae.archive.ubuntu.com/ubuntu jammy-updates InRelease
+Hit:3 http://security.ubuntu.com/ubuntu jammy-security InRelease
+Hit:4 http://ae.archive.ubuntu.com/ubuntu jammy-backports InRelease
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+v4l-utils is already the newest version (1.22.1-2build1).
+curl is already the newest version (7.81.0-1ubuntu1.20).
+git is already the newest version (1:2.34.1-1ubuntu1.15).
+python3 is already the newest version (3.10.6-1~22.04.1).
+systemd is already the newest version (249.11-0ubuntu3.16).
+systemd-sysv is already the newest version (249.11-0ubuntu3.16).
+wget is already the newest version (1.21.2-2ubuntu1.1).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+python3-pip is already the newest version (22.0.2+dfsg-1ubuntu0.6).
+python3-venv is already the newest version (3.10.6-1~22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 2 not upgraded.
+[0;32m[2025-08-17 15:53:30] SUCCESS:[0m System dependencies installed
+[0;34m[2025-08-17 15:53:30][0m Creating service user...
+[0;34m[2025-08-17 15:53:30][0m Service user already exists: camera-service
+[0;34m[2025-08-17 15:53:30][0m Installing MediaMTX server...
+
+STDERR:
+cp: cannot create regular file '/opt/mediamtx/mediamtx': Text file busy
+

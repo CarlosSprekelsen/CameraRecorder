@@ -75,7 +75,7 @@ This roadmap defines the current development status, completed work, and priorit
 
 ---
 ### **🚪 PDR (Preliminary Design Review) - ✅ COMPLETE**
-**Status**: ✅ **COMPLETE - DDR READY**  
+**Status**: ✅ **COMPLETE**  
 **Authority**: IV&V Technical Assessment → Project Manager Decision  
 **Scope**: Design implementability validation and interface contract verification  
 **Reference**: `docs/systems-engineering-gates/pdr-preliminary-design-review.md`  
@@ -92,7 +92,7 @@ This roadmap defines the current development status, completed work, and priorit
 - ✅ Build pipeline: No-mock CI integration operational
 - ⚠️ Integration edge cases identified with resolution paths
 
-**Conditions for DDR (Detailed Design Review):**
+**Conditions for CDR (Critical Design Review):**
 1. **Camera Disconnect Handling** (High Priority)
    - Fix camera event processing to properly update status on disconnect
    - Ensure camera state consistency across all components

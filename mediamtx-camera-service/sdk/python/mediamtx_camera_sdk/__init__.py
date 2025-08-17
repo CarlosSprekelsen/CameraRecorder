@@ -15,8 +15,10 @@ from .exceptions import (
     ConnectionError,
     CameraNotFoundError,
     MediaMTXError,
+    TimeoutError,
+    ValidationError,
 )
-from .models import CameraInfo, RecordingInfo
+from .models import CameraInfo, RecordingInfo, SnapshotInfo
 
 __all__ = [
     "CameraClient",
@@ -25,6 +27,9 @@ __all__ = [
     "ConnectionError",
     "CameraNotFoundError",
     "MediaMTXError",
+    "TimeoutError",
+    "ValidationError",
     "CameraInfo",
     "RecordingInfo",
+    "SnapshotInfo",
 ]

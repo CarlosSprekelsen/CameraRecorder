@@ -57,7 +57,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "mediamtx-camera-cli=mediamtx_camera_sdk.cli:main",
+            "mediamtx-camera-cli=mediamtx_camera_sdk.cli:cli_main",
         ],
     },
     include_package_data=True,
