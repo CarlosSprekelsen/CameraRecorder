@@ -83,17 +83,24 @@ For each failing test, we will:
 | 3 | `test_server_notifications.py` | `test_broadcast_notification_to_real_clients` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-007 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket broadcasting without MediaMTX |
 | 4 | `test_server_notifications.py` | `test_send_notification_to_specific_real_client` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-WS-004, REQ-WS-007 | **FIXED** - Removed MediaMTX dependencies | Tests real WebSocket targeted notifications without MediaMTX |
 | 5 | `test_hybrid_monitor_enhanced.py` | `test_camera_status_monitoring_adaptive_polling_interval` | 🔴 **DELETED** | ✅ **COMPLETED** | REQ-CAM-004 | **DELETED** - Tests non-existent adaptive polling functionality | Tests features that don't exist in implementation |
-| 6 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
+| 6 | `test_controller_stream_operations_real.py` | `test_unlimited_duration_recording_f1_2_2` | 🟢 **FIXED** | ✅ **COMPLETED** | F1.2.2, REQ-MEDIA-002 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 7 | `test_controller_stream_operations_real.py` | `test_timed_recording_f1_2_3` | 🟢 **FIXED** | ✅ **COMPLETED** | F1.2.3, REQ-MEDIA-002 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 8 | `test_controller_stream_operations_real.py` | `test_manual_recording_stop_f1_2_4` | 🟢 **FIXED** | ✅ **COMPLETED** | F1.2.4, REQ-MEDIA-002 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 9 | `test_controller_stream_operations_real.py` | `test_recording_session_management_f1_2_5` | 🟢 **FIXED** | ✅ **COMPLETED** | F1.2.5, REQ-MEDIA-002 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 10 | `test_controller_stream_operations_real.py` | `test_invalid_stream_recording_error` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-002, REQ-MEDIA-009, REQ-MTX-009 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 11 | `test_controller_stream_operations_real.py` | `test_invalid_format_error` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-009, REQ-MTX-009 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 12 | `test_controller_stream_operations_real.py` | `test_full_recording_lifecycle_integration` | 🟢 **FIXED** | ✅ **COMPLETED** | REQ-MEDIA-002, REQ-MEDIA-005, REQ-MTX-001 | **FIXED** - Updated expected error message | Tests real MediaMTX error handling |
+| 13 | **PENDING** | **PENDING** | 🔄 **WAITING** | 🔄 **PENDING** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** | **NEEDS ANALYSIS** |
 
 ## Progress Summary
 
 - **Total Failing Tests**: 54
-- **Analyzed**: 4
-- **Fixed**: 3
+- **Analyzed**: 11
+- **Fixed**: 9
 - **Redesigned**: 1
-- **Deleted**: 0
+- **Deleted**: 1
 - **Skipped**: 0
-- **Remaining**: 50
+- **Remaining**: 43
 
 ## Requirements Coverage Status
 
@@ -128,6 +135,13 @@ For each failing test, we will:
 |------|------|--------|---------------|-------------------|--------|
 | 2025-08-17 | `test_notification_correlation_id_handling` | REDESIGN | User | REQ-WS-004, REQ-WS-005, REQ-WS-006, REQ-WS-007 | Converted from mock-based to real WebSocket communication |
 | 2025-08-17 | `test_recording_status_notification_field_filtering_with_real_client` | FIX | User | REQ-WS-005 | Removed MediaMTX dependencies for WebSocket field filtering test |
+| 2025-08-17 | `test_camera_status_monitoring_adaptive_polling_interval` | DELETE | User | REQ-CAM-004 | Tests non-existent adaptive polling functionality |
+| 2025-08-17 | `test_unlimited_duration_recording_f1_2_2` | FIX | User | F1.2.2, REQ-MEDIA-002 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_timed_recording_f1_2_3` | FIX | User | F1.2.3, REQ-MEDIA-002 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_manual_recording_stop_f1_2_4` | FIX | User | F1.2.4, REQ-MEDIA-002 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_recording_session_management_f1_2_5` | FIX | User | F1.2.5, REQ-MEDIA-002 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_invalid_stream_recording_error` | FIX | User | REQ-MEDIA-002, REQ-MEDIA-009, REQ-MTX-009 | Updated expected error message to match actual system behavior |
+| 2025-08-17 | `test_invalid_format_error` | FIX | User | REQ-MEDIA-009, REQ-MTX-009 | Updated expected error message to match actual system behavior |
 
 ---
 

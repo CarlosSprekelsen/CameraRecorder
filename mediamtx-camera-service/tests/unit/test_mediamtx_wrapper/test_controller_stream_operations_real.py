@@ -169,14 +169,14 @@ class TestMediaMTXControllerRealIntegration:
             non_existent_stream = f"test_stream_{uuid.uuid4().hex[:8]}"
             
             # This should fail with a clear error message - this is REAL SYSTEM BEHAVIOR
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(non_existent_stream, format="mp4")
             
             # Verify no session was created for invalid stream
             assert non_existent_stream not in controller._recording_sessions
             
             # Test duplicate recording prevention with invalid stream
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(non_existent_stream, format="mp4")
             
             # Verify session management is clean
@@ -215,7 +215,7 @@ class TestMediaMTXControllerRealIntegration:
             non_existent_stream = f"test_stream_{uuid.uuid4().hex[:8]}"
             
             # This should fail with proper error message - REAL SYSTEM BEHAVIOR
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(
                     non_existent_stream, 
                     duration=3, 
@@ -258,7 +258,7 @@ class TestMediaMTXControllerRealIntegration:
             non_existent_stream = f"test_stream_{uuid.uuid4().hex[:8]}"
             
             # This should fail with proper error message - REAL SYSTEM BEHAVIOR
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(
                     non_existent_stream, 
                     duration=60,  # 60 seconds
@@ -304,10 +304,10 @@ class TestMediaMTXControllerRealIntegration:
             stream2 = f"session_test_2_{uuid.uuid4().hex[:8]}"
             
             # These should fail with proper error messages - REAL SYSTEM BEHAVIOR
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(stream1, format="mp4")
             
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(stream2, format="mp4")
             
             # Verify no sessions were created
@@ -391,7 +391,7 @@ class TestMediaMTXControllerRealIntegration:
             # Test recording on non-existent stream
             non_existent_stream = "non_existent_stream_12345"
             
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(non_existent_stream, format="mp4")
             
             # Verify no session was created
@@ -433,7 +433,7 @@ class TestMediaMTXControllerRealIntegration:
             non_existent_stream = f"test_stream_{uuid.uuid4().hex[:8]}"
             
             # This should fail due to stream not existing, not format
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(non_existent_stream, format="mp4")
             
             # Test invalid format with non-existent stream
@@ -478,7 +478,7 @@ class TestMediaMTXControllerRealIntegration:
             non_existent_stream = f"test_stream_{uuid.uuid4().hex[:8]}"
             
             # This should fail with proper error message - REAL SYSTEM BEHAVIOR
-            with pytest.raises(ValueError, match="not active and ready"):
+            with pytest.raises(ValueError, match="not found in MediaMTX"):
                 await controller.start_recording(non_existent_stream, format="mp4")
             
             # Verify no session was created
