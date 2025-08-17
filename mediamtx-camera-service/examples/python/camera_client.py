@@ -15,8 +15,13 @@ Features:
 - Retry logic and connection recovery
 
 Usage:
+    # Development environment (port 8080)
     python camera_client.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token
     python camera_client.py --host localhost --port 8080 --auth-type api_key --key your_api_key
+    
+    # Production environment (port 8002)
+    python camera_client.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token
+    python camera_client.py --host localhost --port 8002 --auth-type api_key --key your_api_key
 """
 
 import asyncio

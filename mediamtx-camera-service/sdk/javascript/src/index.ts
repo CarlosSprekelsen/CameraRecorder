@@ -21,3 +21,17 @@ export type {
     ClientConfig,
     AuthType
 } from './types';
+
+// CommonJS compatibility for Node.js v12
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        CameraClient: require('./client').CameraClient,
+        CameraServiceError: require('./exceptions').CameraServiceError,
+        AuthenticationError: require('./exceptions').AuthenticationError,
+        ConnectionError: require('./exceptions').ConnectionError,
+        CameraNotFoundError: require('./exceptions').CameraNotFoundError,
+        MediaMTXError: require('./exceptions').MediaMTXError,
+        TimeoutError: require('./exceptions').TimeoutError,
+        ValidationError: require('./exceptions').ValidationError
+    };
+}

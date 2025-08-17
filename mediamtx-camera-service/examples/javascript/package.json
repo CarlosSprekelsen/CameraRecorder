@@ -1,16 +1,36 @@
 {
-  "name": "javascript",
+  "name": "mediamtx-camera-client-example",
   "version": "1.0.0",
-  "description": "",
+  "description": "MediaMTX Camera Service JavaScript/Node.js Client Example",
   "main": "camera_client.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node camera_client.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "echo \"No linter configured\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "mediamtx",
+    "camera",
+    "websocket",
+    "json-rpc",
+    "client",
+    "example"
+  ],
+  "author": "MediaMTX Camera Service Team",
+  "license": "MIT",
   "dependencies": {
-    "uuid": "^8.3.2",
-    "ws": "^8.18.3"
-  }
+    "ws": "^7.5.9",
+    "uuid": "^8.3.2"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mediamtx/camera-service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mediamtx/camera-service/issues"
+  },
+  "homepage": "https://github.com/mediamtx/camera-service#readme"
 }

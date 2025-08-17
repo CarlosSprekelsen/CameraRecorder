@@ -20,6 +20,12 @@ The MediaMTX Camera Service JavaScript SDK provides a high-level interface for i
 - **TypeScript Support**: Full type definitions for better development experience
 - **Cross-platform**: Works in Node.js and browser environments
 
+## Requirements
+
+- Node.js >= 12.0.0 (tested with v12.22.9)
+- npm or yarn package manager
+- TypeScript >= 4.0.0 (for development)
+
 ## Installation
 
 ### From Source
