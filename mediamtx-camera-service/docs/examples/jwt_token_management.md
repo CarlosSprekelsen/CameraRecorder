@@ -1,893 +1,697 @@
-# JWT Token Management Examples - MediaMTX Camera Service
+# JWT Token Management Guide
+
+**Version:** 1.0  
+**Status:** Production Ready  
+**Epic:** E3 Client API & SDK Ecosystem  
 
 ## Overview
 
-This guide provides comprehensive examples for managing JWT tokens with the MediaMTX Camera Service, including token generation, validation, refresh, and security best practices.
+This guide provides comprehensive information about JWT token management for the MediaMTX Camera Service, including token generation, validation, refresh, and best practices.
+
+## JWT Token Structure
+
+### Token Components
+
+JWT tokens consist of three parts separated by dots:
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlcjEyMyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTY0MDk5NTIwMCwiZXhwIjoxNjQxMDgxNjAwfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+1. **Header**: Algorithm and token type
+2. **Payload**: Claims (user data)
+3. **Signature**: Verification signature
+
+### Header
+
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+### Payload Claims
+
+```json
+{
+  "user_id": "user123",
+  "role": "admin",
+  "iat": 1640995200,
+  "exp": 1641081600
+}
+```
+
+| Claim | Description | Required | Example |
+|-------|-------------|----------|---------|
+| `user_id` | Unique user identifier | Yes | `"user123"` |
+| `role` | User role/permissions | Yes | `"admin"`, `"operator"`, `"viewer"` |
+| `iat` | Issued at timestamp | Yes | `1640995200` |
+| `exp` | Expiration timestamp | Yes | `1641081600` |
 
 ## Token Generation
 
-### Basic JWT Token Generation
+### Python Token Generation
 
 ```python
 import jwt
-import datetime
-import secrets
+import time
+import os
 
-def generate_jwt_token(user_id, user_name, role, secret_key, expiration_hours=24):
+def generate_jwt_token(user_id: str, role: str, secret_key: str, expiry_hours: int = 24) -> str:
     """
-    Generate a JWT token for camera service authentication.
+    Generate a JWT token for MediaMTX Camera Service authentication.
     
     Args:
         user_id: Unique user identifier
-        user_name: User display name
-        role: User role (admin, user, etc.)
+        role: User role (admin, operator, viewer)
         secret_key: Secret key for signing
-        expiration_hours: Token expiration in hours
-        
+        expiry_hours: Token expiry in hours (default: 24)
+    
     Returns:
         JWT token string
     """
     payload = {
-        'sub': user_id,
-        'name': user_name,
-        'role': role,
-        'iat': datetime.datetime.utcnow(),
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=expiration_hours),
-        'jti': secrets.token_urlsafe(16)  # JWT ID for uniqueness
+        "user_id": user_id,
+        "role": role,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + (expiry_hours * 60 * 60)
     }
     
-    token = jwt.encode(payload, secret_key, algorithm='HS256')
+    token = jwt.encode(payload, secret_key, algorithm="HS256")
     return token
 
-# Usage example
-secret_key = "your-secret-key-here"
-token = generate_jwt_token(
-    user_id="user123",
-    user_name="John Doe",
-    role="admin",
-    secret_key=secret_key,
-    expiration_hours=24
-)
+# Example usage
+secret_key = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "dev-secret-change-me")
+token = generate_jwt_token("user123", "admin", secret_key, 24)
 print(f"Generated JWT token: {token}")
 ```
 
-### Advanced Token Generation with Claims
+### Node.js Token Generation
 
-```python
+```javascript
+const jwt = require('jsonwebtoken');
+
+function generateJwtToken(userId, role, secretKey, expiryHours = 24) {
+    /**
+     * Generate a JWT token for MediaMTX Camera Service authentication.
+     * 
+     * @param {string} userId - Unique user identifier
+     * @param {string} role - User role (admin, operator, viewer)
+     * @param {string} secretKey - Secret key for signing
+     * @param {number} expiryHours - Token expiry in hours (default: 24)
+     * @returns {string} JWT token string
+     */
+    const payload = {
+        user_id: userId,
+        role: role,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (expiryHours * 60 * 60)
+    };
+    
+    const token = jwt.sign(payload, secretKey, { algorithm: 'HS256' });
+    return token;
+}
+
+// Example usage
+const secretKey = process.env.CAMERA_SERVICE_JWT_SECRET || 'dev-secret-change-me';
+const token = generateJwtToken('user123', 'admin', secretKey, 24);
+console.log(`Generated JWT token: ${token}`);
+```
+
+### Command Line Token Generation
+
+```bash
+#!/bin/bash
+# Generate JWT token using Python
+
+USER_ID="user123"
+ROLE="admin"
+SECRET_KEY="your-secret-key"
+EXPIRY_HOURS=24
+
+python3 -c "
 import jwt
-import datetime
-import secrets
-from typing import Dict, Any, Optional
+import time
+import sys
 
-def generate_advanced_jwt_token(
-    user_id: str,
-    user_name: str,
-    role: str,
-    secret_key: str,
-    expiration_hours: int = 24,
-    additional_claims: Optional[Dict[str, Any]] = None,
-    issuer: str = "camera-service",
-    audience: str = "camera-clients"
-) -> str:
-    """
-    Generate an advanced JWT token with additional claims and metadata.
-    
-    Args:
-        user_id: Unique user identifier
-        user_name: User display name
-        role: User role
-        secret_key: Secret key for signing
-        expiration_hours: Token expiration in hours
-        additional_claims: Additional custom claims
-        issuer: Token issuer
-        audience: Token audience
-        
-    Returns:
-        JWT token string
-    """
-    now = datetime.datetime.utcnow()
-    
-    payload = {
-        # Standard JWT claims
-        'sub': user_id,
-        'name': user_name,
-        'role': role,
-        'iat': now,
-        'exp': now + datetime.timedelta(hours=expiration_hours),
-        'jti': secrets.token_urlsafe(16),
-        'iss': issuer,
-        'aud': audience,
-        
-        # Custom claims
-        'permissions': get_permissions_for_role(role),
-        'camera_access': get_camera_access_for_role(role),
-        'session_id': secrets.token_urlsafe(16)
-    }
-    
-    # Add additional claims if provided
-    if additional_claims:
-        payload.update(additional_claims)
-    
-    token = jwt.encode(payload, secret_key, algorithm='HS256')
-    return token
+payload = {
+    'user_id': '$USER_ID',
+    'role': '$ROLE',
+    'iat': int(time.time()),
+    'exp': int(time.time()) + ($EXPIRY_HOURS * 60 * 60)
+}
 
-def get_permissions_for_role(role: str) -> list:
-    """Get permissions for a given role."""
-    permissions = {
-        'admin': ['camera:read', 'camera:write', 'camera:delete', 'system:admin'],
-        'user': ['camera:read', 'camera:write'],
-        'viewer': ['camera:read']
-    }
-    return permissions.get(role, [])
-
-def get_camera_access_for_role(role: str) -> list:
-    """Get camera access for a given role."""
-    access = {
-        'admin': ['*'],  # All cameras
-        'user': ['camera1', 'camera2'],
-        'viewer': ['camera1']
-    }
-    return access.get(role, [])
-
-# Usage example
-token = generate_advanced_jwt_token(
-    user_id="user123",
-    user_name="John Doe",
-    role="admin",
-    secret_key="your-secret-key",
-    additional_claims={
-        'department': 'IT',
-        'location': 'HQ'
-    }
-)
-print(f"Advanced JWT token: {token}")
+token = jwt.encode(payload, '$SECRET_KEY', algorithm='HS256')
+print(token)
+"
 ```
 
 ## Token Validation
 
-### Basic Token Validation
+### Python Token Validation
 
 ```python
 import jwt
-from datetime import datetime
-from typing import Dict, Any, Optional
+import time
+from typing import Optional, Dict, Any
 
 def validate_jwt_token(token: str, secret_key: str) -> Optional[Dict[str, Any]]:
     """
-    Validate a JWT token and return the payload if valid.
+    Validate a JWT token and extract claims.
     
     Args:
         token: JWT token string
         secret_key: Secret key for verification
-        
+    
     Returns:
         Token payload if valid, None if invalid
     """
     try:
-        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
-        return payload
-    except jwt.ExpiredSignatureError:
-        print("❌ Token has expired")
-        return None
-    except jwt.InvalidTokenError as e:
-        print(f"❌ Invalid token: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Token validation error: {e}")
-        return None
-
-# Usage example
-payload = validate_jwt_token(token, secret_key)
-if payload:
-    print(f"✅ Token valid for user: {payload['sub']}")
-    print(f"   Role: {payload['role']}")
-    print(f"   Expires: {datetime.fromtimestamp(payload['exp'])}")
-```
-
-### Advanced Token Validation with Custom Checks
-
-```python
-import jwt
-from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
-
-def validate_advanced_jwt_token(
-    token: str,
-    secret_key: str,
-    required_role: Optional[str] = None,
-    required_permissions: Optional[list] = None
-) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
-    """
-    Advanced JWT token validation with role and permission checks.
-    
-    Args:
-        token: JWT token string
-        secret_key: Secret key for verification
-        required_role: Required role for access
-        required_permissions: Required permissions for access
+        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
         
-    Returns:
-        Tuple of (is_valid, payload, error_message)
-    """
-    try:
-        # Decode token
-        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+        # Validate required claims
+        required_fields = ["user_id", "role", "iat", "exp"]
+        for field in required_fields:
+            if field not in payload:
+                print(f"Missing required field: {field}")
+                return None
+        
+        # Validate role
+        valid_roles = ["viewer", "operator", "admin"]
+        if payload["role"] not in valid_roles:
+            print(f"Invalid role: {payload['role']}")
+            return None
         
         # Check expiration
-        if datetime.fromtimestamp(payload['exp']) < datetime.utcnow():
-            return False, None, "Token has expired"
+        current_time = int(time.time())
+        if payload["exp"] < current_time:
+            print("Token has expired")
+            return None
         
-        # Check required role
-        if required_role and payload.get('role') != required_role:
-            return False, None, f"Required role '{required_role}' not found"
-        
-        # Check required permissions
-        if required_permissions:
-            user_permissions = payload.get('permissions', [])
-            missing_permissions = [perm for perm in required_permissions if perm not in user_permissions]
-            if missing_permissions:
-                return False, None, f"Missing permissions: {missing_permissions}"
-        
-        return True, payload, None
+        return payload
         
     except jwt.ExpiredSignatureError:
-        return False, None, "Token has expired"
+        print("Token has expired")
+        return None
     except jwt.InvalidTokenError as e:
-        return False, None, f"Invalid token: {e}"
+        print(f"Invalid token: {e}")
+        return None
     except Exception as e:
-        return False, None, f"Token validation error: {e}"
+        print(f"Token validation error: {e}")
+        return None
 
-# Usage examples
-# Basic validation
-is_valid, payload, error = validate_advanced_jwt_token(token, secret_key)
-if is_valid:
-    print(f"✅ Token valid: {payload['sub']}")
-else:
-    print(f"❌ Token invalid: {error}")
+# Example usage
+secret_key = "your-secret-key"
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
-# Role-based validation
-is_valid, payload, error = validate_advanced_jwt_token(
-    token, secret_key, required_role="admin"
-)
-if is_valid:
-    print("✅ Admin access granted")
+payload = validate_jwt_token(token, secret_key)
+if payload:
+    print(f"Valid token for user: {payload['user_id']}")
+    print(f"Role: {payload['role']}")
+    print(f"Expires at: {payload['exp']}")
 else:
-    print(f"❌ Admin access denied: {error}")
+    print("Invalid token")
+```
 
-# Permission-based validation
-is_valid, payload, error = validate_advanced_jwt_token(
-    token, secret_key, required_permissions=["camera:read", "camera:write"]
-)
-if is_valid:
-    print("✅ Required permissions granted")
-else:
-    print(f"❌ Insufficient permissions: {error}")
+### Node.js Token Validation
+
+```javascript
+const jwt = require('jsonwebtoken');
+
+function validateJwtToken(token, secretKey) {
+    /**
+     * Validate a JWT token and extract claims.
+     * 
+     * @param {string} token - JWT token string
+     * @param {string} secretKey - Secret key for verification
+     * @returns {object|null} Token payload if valid, null if invalid
+     */
+    try {
+        const payload = jwt.verify(token, secretKey, { algorithms: ['HS256'] });
+        
+        // Validate required claims
+        const requiredFields = ['user_id', 'role', 'iat', 'exp'];
+        for (const field of requiredFields) {
+            if (!(field in payload)) {
+                console.log(`Missing required field: ${field}`);
+                return null;
+            }
+        }
+        
+        // Validate role
+        const validRoles = ['viewer', 'operator', 'admin'];
+        if (!validRoles.includes(payload.role)) {
+            console.log(`Invalid role: ${payload.role}`);
+            return null;
+        }
+        
+        return payload;
+        
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            console.log('Token has expired');
+        } else if (error.name === 'JsonWebTokenError') {
+            console.log(`Invalid token: ${error.message}`);
+        } else {
+            console.log(`Token validation error: ${error.message}`);
+        }
+        return null;
+    }
+}
+
+// Example usage
+const secretKey = 'your-secret-key';
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const payload = validateJwtToken(token, secretKey);
+if (payload) {
+    console.log(`Valid token for user: ${payload.user_id}`);
+    console.log(`Role: ${payload.role}`);
+    console.log(`Expires at: ${payload.exp}`);
+} else {
+    console.log('Invalid token');
+}
 ```
 
 ## Token Refresh
 
-### Automatic Token Refresh
+### Python Token Refresh
 
 ```python
 import jwt
-import datetime
-import asyncio
+import time
 from typing import Optional
 
-class JWTTokenManager:
-    """Manages JWT token lifecycle including refresh."""
+def refresh_jwt_token(current_token: str, secret_key: str, expiry_hours: int = 24) -> Optional[str]:
+    """
+    Refresh a JWT token before expiration.
     
-    def __init__(self, secret_key: str, refresh_threshold_minutes: int = 60):
-        self.secret_key = secret_key
-        self.refresh_threshold_minutes = refresh_threshold_minutes
-        self.current_token = None
-        self.token_payload = None
+    Args:
+        current_token: Current JWT token
+        secret_key: Secret key for signing
+        expiry_hours: New token expiry in hours
     
-    def set_token(self, token: str) -> bool:
-        """Set the current token and validate it."""
-        try:
-            payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
-            self.current_token = token
-            self.token_payload = payload
-            return True
-        except jwt.InvalidTokenError:
-            return False
-    
-    def is_token_expired(self) -> bool:
-        """Check if current token is expired."""
-        if not self.token_payload:
-            return True
-        
-        return datetime.fromtimestamp(self.token_payload['exp']) < datetime.utcnow()
-    
-    def is_token_expiring_soon(self) -> bool:
-        """Check if token expires within the refresh threshold."""
-        if not self.token_payload:
-            return True
-        
-        exp_time = datetime.fromtimestamp(self.token_payload['exp'])
-        threshold_time = datetime.utcnow() + datetime.timedelta(minutes=self.refresh_threshold_minutes)
-        
-        return exp_time < threshold_time
-    
-    def refresh_token(self) -> Optional[str]:
-        """Refresh the current token if it's expiring soon."""
-        if not self.token_payload:
-            return None
-        
-        if not self.is_token_expiring_soon():
-            return self.current_token
-        
-        try:
-            # Create new token with same claims but new expiration
-            new_payload = self.token_payload.copy()
-            new_payload['iat'] = datetime.datetime.utcnow()
-            new_payload['exp'] = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-            new_payload['jti'] = secrets.token_urlsafe(16)  # New JWT ID
-            
-            new_token = jwt.encode(new_payload, self.secret_key, algorithm='HS256')
-            
-            # Update current token
-            self.current_token = new_token
-            self.token_payload = new_payload
-            
-            return new_token
-            
-        except Exception as e:
-            print(f"Token refresh failed: {e}")
-            return None
-    
-    def get_valid_token(self) -> Optional[str]:
-        """Get a valid token, refreshing if necessary."""
-        if self.is_token_expired():
-            return None
-        
-        if self.is_token_expiring_soon():
-            return self.refresh_token()
-        
-        return self.current_token
-
-# Usage example
-token_manager = JWTTokenManager(secret_key, refresh_threshold_minutes=60)
-token_manager.set_token(token)
-
-# Get valid token (refreshes if needed)
-valid_token = token_manager.get_valid_token()
-if valid_token:
-    print(f"✅ Valid token: {valid_token[:50]}...")
-else:
-    print("❌ No valid token available")
-```
-
-### Async Token Refresh with Client Integration
-
-```python
-import asyncio
-import jwt
-import datetime
-from typing import Optional
-
-class AsyncJWTTokenManager:
-    """Async JWT token manager with automatic refresh."""
-    
-    def __init__(self, client, secret_key: str, refresh_threshold_minutes: int = 60):
-        self.client = client
-        self.secret_key = secret_key
-        self.refresh_threshold_minutes = refresh_threshold_minutes
-        self.current_token = None
-        self.token_payload = None
-        self._refresh_task = None
-    
-    async def set_token(self, token: str) -> bool:
-        """Set the current token and validate it."""
-        try:
-            payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
-            self.current_token = token
-            self.token_payload = payload
-            return True
-        except jwt.InvalidTokenError:
-            return False
-    
-    async def refresh_token_from_server(self) -> Optional[str]:
-        """Request a new token from the server."""
-        try:
-            # This would be a server endpoint for token refresh
-            new_token = await self.client.refresh_token()
-            
-            if new_token:
-                # Validate the new token
-                payload = jwt.decode(new_token, self.secret_key, algorithms=['HS256'])
-                self.current_token = new_token
-                self.token_payload = payload
-                return new_token
-            
-        except Exception as e:
-            print(f"Server token refresh failed: {e}")
-        
-        return None
-    
-    async def ensure_valid_token(self) -> Optional[str]:
-        """Ensure we have a valid token, refreshing if necessary."""
-        if self.is_token_expired():
-            return await self.refresh_token_from_server()
-        
-        if self.is_token_expiring_soon():
-            return await self.refresh_token_from_server()
-        
-        return self.current_token
-    
-    def is_token_expired(self) -> bool:
-        """Check if current token is expired."""
-        if not self.token_payload:
-            return True
-        
-        return datetime.fromtimestamp(self.token_payload['exp']) < datetime.utcnow()
-    
-    def is_token_expiring_soon(self) -> bool:
-        """Check if token expires within the refresh threshold."""
-        if not self.token_payload:
-            return True
-        
-        exp_time = datetime.fromtimestamp(self.token_payload['exp'])
-        threshold_time = datetime.utcnow() + datetime.timedelta(minutes=self.refresh_threshold_minutes)
-        
-        return exp_time < threshold_time
-    
-    async def start_auto_refresh(self):
-        """Start automatic token refresh in background."""
-        async def auto_refresh_loop():
-            while True:
-                try:
-                    if self.is_token_expiring_soon():
-                        await self.refresh_token_from_server()
-                    
-                    # Check every 5 minutes
-                    await asyncio.sleep(300)
-                    
-                except Exception as e:
-                    print(f"Auto refresh error: {e}")
-                    await asyncio.sleep(60)  # Wait before retry
-        
-        self._refresh_task = asyncio.create_task(auto_refresh_loop())
-    
-    async def stop_auto_refresh(self):
-        """Stop automatic token refresh."""
-        if self._refresh_task:
-            self._refresh_task.cancel()
-            try:
-                await self._refresh_task
-            except asyncio.CancelledError:
-                pass
-
-# Usage example
-async def main():
-    # Create token manager
-    token_manager = AsyncJWTTokenManager(client, secret_key)
-    await token_manager.set_token(token)
-    
-    # Start auto refresh
-    await token_manager.start_auto_refresh()
-    
+    Returns:
+        New JWT token if refresh needed, None if current token is still valid
+    """
     try:
-        # Use token manager with client
-        valid_token = await token_manager.ensure_valid_token()
-        if valid_token:
-            # Update client with new token
-            client.auth_token = valid_token
-            print("✅ Client updated with valid token")
+        # Decode current token without verification to extract claims
+        payload = jwt.decode(current_token, options={"verify_signature": False})
         
-        # Continue with camera operations...
+        # Check if token expires soon (within 1 hour)
+        current_time = int(time.time())
+        expires_in = payload["exp"] - current_time
         
-    finally:
-        await token_manager.stop_auto_refresh()
+        if expires_in < 3600:  # Less than 1 hour remaining
+            # Generate new token with same claims but new expiry
+            new_payload = {
+                "user_id": payload["user_id"],
+                "role": payload["role"],
+                "iat": current_time,
+                "exp": current_time + (expiry_hours * 60 * 60)
+            }
+            
+            new_token = jwt.encode(new_payload, secret_key, algorithm="HS256")
+            return new_token
+        else:
+            print(f"Token still valid for {expires_in} seconds")
+            return None
+            
+    except jwt.InvalidTokenError:
+        print("Invalid token for refresh")
+        return None
+    except Exception as e:
+        print(f"Token refresh error: {e}")
+        return None
 
-# Run the example
-# asyncio.run(main())
+# Example usage
+secret_key = "your-secret-key"
+current_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+new_token = refresh_jwt_token(current_token, secret_key, 24)
+if new_token:
+    print(f"New token generated: {new_token}")
+else:
+    print("Token refresh not needed")
 ```
 
-## Token Security
+### Node.js Token Refresh
 
-### Secure Token Storage
+```javascript
+const jwt = require('jsonwebtoken');
+
+function refreshJwtToken(currentToken, secretKey, expiryHours = 24) {
+    /**
+     * Refresh a JWT token before expiration.
+     * 
+     * @param {string} currentToken - Current JWT token
+     * @param {string} secretKey - Secret key for signing
+     * @param {number} expiryHours - New token expiry in hours
+     * @returns {string|null} New JWT token if refresh needed, null if current token is still valid
+     */
+    try {
+        // Decode current token without verification to extract claims
+        const payload = jwt.decode(currentToken, { complete: false });
+        
+        // Check if token expires soon (within 1 hour)
+        const currentTime = Math.floor(Date.now() / 1000);
+        const expiresIn = payload.exp - currentTime;
+        
+        if (expiresIn < 3600) { // Less than 1 hour remaining
+            // Generate new token with same claims but new expiry
+            const newPayload = {
+                user_id: payload.user_id,
+                role: payload.role,
+                iat: currentTime,
+                exp: currentTime + (expiryHours * 60 * 60)
+            };
+            
+            const newToken = jwt.sign(newPayload, secretKey, { algorithm: 'HS256' });
+            return newToken;
+        } else {
+            console.log(`Token still valid for ${expiresIn} seconds`);
+            return null;
+        }
+        
+    } catch (error) {
+        console.log(`Token refresh error: ${error.message}`);
+        return null;
+    }
+}
+
+// Example usage
+const secretKey = 'your-secret-key';
+const currentToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const newToken = refreshJwtToken(currentToken, secretKey, 24);
+if (newToken) {
+    console.log(`New token generated: ${newToken}`);
+} else {
+    console.log('Token refresh not needed');
+}
+```
+
+## Role-Based Access Control
+
+### Role Hierarchy
+
+```
+viewer (1) < operator (2) < admin (3)
+```
+
+### Role Permissions
+
+| Role | Permissions |
+|------|-------------|
+| **viewer** | Read-only access to camera status and streams |
+| **operator** | Viewer permissions + camera control (snapshots, recording) |
+| **admin** | Full access to all features |
+
+### Role Validation
+
+```python
+def validate_user_role(token_payload: Dict[str, Any], required_role: str) -> bool:
+    """
+    Validate if user has required role for operation.
+    
+    Args:
+        token_payload: JWT token payload
+        required_role: Required role for operation
+    
+    Returns:
+        True if user has required role, False otherwise
+    """
+    role_hierarchy = {
+        "viewer": 1,
+        "operator": 2,
+        "admin": 3
+    }
+    
+    user_role = token_payload.get("role", "viewer")
+    user_level = role_hierarchy.get(user_role, 0)
+    required_level = role_hierarchy.get(required_role, 0)
+    
+    return user_level >= required_level
+
+# Example usage
+payload = {
+    "user_id": "user123",
+    "role": "operator",
+    "iat": 1640995200,
+    "exp": 1641081600
+}
+
+# Check if user can perform admin operations
+if validate_user_role(payload, "admin"):
+    print("User can perform admin operations")
+else:
+    print("User cannot perform admin operations")
+
+# Check if user can perform operator operations
+if validate_user_role(payload, "operator"):
+    print("User can perform operator operations")
+else:
+    print("User cannot perform operator operations")
+```
+
+## Token Security Best Practices
+
+### 1. Secure Secret Key Generation
+
+```bash
+# Generate secure secret key
+openssl rand -base64 32
+
+# Or using Python
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### 2. Environment Variable Storage
 
 ```python
 import os
-import keyring
-import json
-from typing import Optional
 
-class SecureTokenStorage:
-    """Secure token storage using environment variables and keyring."""
-    
-    def __init__(self, service_name: str = "camera-service"):
-        self.service_name = service_name
-    
-    def store_token_env(self, token: str, env_var: str = "CAMERA_SERVICE_JWT_TOKEN"):
-        """Store token in environment variable."""
-        os.environ[env_var] = token
-        print(f"✅ Token stored in environment variable: {env_var}")
-    
-    def get_token_env(self, env_var: str = "CAMERA_SERVICE_JWT_TOKEN") -> Optional[str]:
-        """Get token from environment variable."""
-        return os.environ.get(env_var)
-    
-    def store_token_keyring(self, token: str, username: str = "default"):
-        """Store token securely using keyring."""
-        try:
-            keyring.set_password(self.service_name, username, token)
-            print(f"✅ Token stored securely for user: {username}")
-        except Exception as e:
-            print(f"❌ Failed to store token securely: {e}")
-    
-    def get_token_keyring(self, username: str = "default") -> Optional[str]:
-        """Get token from keyring."""
-        try:
-            return keyring.get_password(self.service_name, username)
-        except Exception as e:
-            print(f"❌ Failed to retrieve token: {e}")
-            return None
-    
-    def store_token_file(self, token: str, filepath: str = "~/.camera_service_token"):
-        """Store token in file with restricted permissions."""
-        import stat
-        
-        filepath = os.path.expanduser(filepath)
-        
-        try:
-            with open(filepath, 'w') as f:
-                f.write(token)
-            
-            # Set restrictive permissions (owner read/write only)
-            os.chmod(filepath, stat.S_IRUSR | stat.S_IWUSR)
-            print(f"✅ Token stored in file: {filepath}")
-            
-        except Exception as e:
-            print(f"❌ Failed to store token in file: {e}")
-    
-    def get_token_file(self, filepath: str = "~/.camera_service_token") -> Optional[str]:
-        """Get token from file."""
-        filepath = os.path.expanduser(filepath)
-        
-        try:
-            if os.path.exists(filepath):
-                with open(filepath, 'r') as f:
-                    return f.read().strip()
-        except Exception as e:
-            print(f"❌ Failed to read token from file: {e}")
-        
-        return None
-    
-    def clear_token(self, username: str = "default"):
-        """Clear stored token."""
-        try:
-            # Clear from keyring
-            keyring.delete_password(self.service_name, username)
-            
-            # Clear from environment
-            if "CAMERA_SERVICE_JWT_TOKEN" in os.environ:
-                del os.environ["CAMERA_SERVICE_JWT_TOKEN"]
-            
-            # Clear from file
-            filepath = os.path.expanduser("~/.camera_service_token")
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            
-            print("✅ Token cleared from all storage locations")
-            
-        except Exception as e:
-            print(f"❌ Failed to clear token: {e}")
-
-# Usage example
-storage = SecureTokenStorage()
-
-# Store token securely
-storage.store_token_keyring(token, "john.doe")
-storage.store_token_env(token)
-storage.store_token_file(token)
-
-# Retrieve token
-retrieved_token = storage.get_token_keyring("john.doe")
-if retrieved_token:
-    print("✅ Token retrieved from secure storage")
+# Store secret key in environment variable
+secret_key = os.environ.get("CAMERA_SERVICE_JWT_SECRET")
+if not secret_key:
+    raise ValueError("CAMERA_SERVICE_JWT_SECRET environment variable not set")
 ```
 
-### Token Validation and Security Checks
+### 3. Token Expiration Management
+
+```python
+import time
+from datetime import datetime, timedelta
+
+def create_token_with_expiry(user_id: str, role: str, secret_key: str, 
+                           expiry_hours: int = 24) -> str:
+    """Create token with explicit expiry time."""
+    now = datetime.utcnow()
+    expiry = now + timedelta(hours=expiry_hours)
+    
+    payload = {
+        "user_id": user_id,
+        "role": role,
+        "iat": int(now.timestamp()),
+        "exp": int(expiry.timestamp())
+    }
+    
+    return jwt.encode(payload, secret_key, algorithm="HS256")
+
+def is_token_expiring_soon(token: str, hours_threshold: int = 1) -> bool:
+    """Check if token expires within specified hours."""
+    try:
+        payload = jwt.decode(token, options={"verify_signature": False})
+        current_time = int(time.time())
+        expires_in = payload["exp"] - current_time
+        return expires_in < (hours_threshold * 3600)
+    except:
+        return True
+```
+
+### 4. Token Rotation
+
+```python
+class TokenManager:
+    def __init__(self, secret_key: str):
+        self.secret_key = secret_key
+        self.current_token = None
+    
+    def get_valid_token(self, user_id: str, role: str) -> str:
+        """Get a valid token, refreshing if necessary."""
+        if not self.current_token:
+            self.current_token = self.generate_token(user_id, role)
+            return self.current_token
+        
+        # Check if current token needs refresh
+        if is_token_expiring_soon(self.current_token):
+            self.current_token = self.generate_token(user_id, role)
+        
+        return self.current_token
+    
+    def generate_token(self, user_id: str, role: str) -> str:
+        """Generate a new token."""
+        return create_token_with_expiry(user_id, role, self.secret_key, 24)
+
+# Example usage
+token_manager = TokenManager("your-secret-key")
+token = token_manager.get_valid_token("user123", "admin")
+```
+
+## Error Handling
+
+### Common JWT Errors
 
 ```python
 import jwt
-import hashlib
-import secrets
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
 
-class JWTSecurityValidator:
-    """Comprehensive JWT security validation."""
-    
-    def __init__(self, secret_key: str):
-        self.secret_key = secret_key
-        self.blacklisted_tokens = set()
-        self.token_usage_count = {}
-    
-    def validate_token_security(self, token: str) -> Dict[str, Any]:
-        """
-        Comprehensive token security validation.
+def handle_jwt_errors(token: str, secret_key: str):
+    """Handle common JWT errors with proper error messages."""
+    try:
+        payload = jwt.decode(token, secret_key, algorithms=["HS256"])
+        return {"valid": True, "payload": payload}
         
-        Returns:
-            Dictionary with validation results
-        """
-        result = {
-            'valid': False,
-            'errors': [],
-            'warnings': [],
-            'payload': None
-        }
+    except jwt.ExpiredSignatureError:
+        return {"valid": False, "error": "Token has expired"}
         
-        try:
-            # Decode token
-            payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
-            result['payload'] = payload
-            
-            # Check if token is blacklisted
-            token_hash = hashlib.sha256(token.encode()).hexdigest()
-            if token_hash in self.blacklisted_tokens:
-                result['errors'].append("Token is blacklisted")
-                return result
-            
-            # Check expiration
-            if datetime.fromtimestamp(payload['exp']) < datetime.utcnow():
-                result['errors'].append("Token has expired")
-                return result
-            
-            # Check issued at time (not issued in the future)
-            if datetime.fromtimestamp(payload['iat']) > datetime.utcnow():
-                result['errors'].append("Token issued in the future")
-                return result
-            
-            # Check token age (not too old)
-            max_age = timedelta(days=30)
-            if datetime.fromtimestamp(payload['iat']) < datetime.utcnow() - max_age:
-                result['warnings'].append("Token is very old")
-            
-            # Check required claims
-            required_claims = ['sub', 'iat', 'exp']
-            for claim in required_claims:
-                if claim not in payload:
-                    result['errors'].append(f"Missing required claim: {claim}")
-            
-            # Check for suspicious patterns
-            if self._check_suspicious_patterns(payload):
-                result['warnings'].append("Suspicious token patterns detected")
-            
-            # Track token usage
-            self._track_token_usage(token_hash)
-            
-            if not result['errors']:
-                result['valid'] = True
-            
-        except jwt.InvalidTokenError as e:
-            result['errors'].append(f"Invalid token: {e}")
-        except Exception as e:
-            result['errors'].append(f"Validation error: {e}")
+    except jwt.InvalidTokenError as e:
+        return {"valid": False, "error": f"Invalid token: {e}"}
         
-        return result
-    
-    def _check_suspicious_patterns(self, payload: Dict[str, Any]) -> bool:
-        """Check for suspicious patterns in token payload."""
-        suspicious = False
+    except jwt.InvalidSignatureError:
+        return {"valid": False, "error": "Invalid token signature"}
         
-        # Check for excessive permissions
-        if 'permissions' in payload and len(payload['permissions']) > 10:
-            suspicious = True
+    except jwt.DecodeError:
+        return {"valid": False, "error": "Token could not be decoded"}
         
-        # Check for unusual roles
-        unusual_roles = ['superadmin', 'root', 'master']
-        if payload.get('role') in unusual_roles:
-            suspicious = True
-        
-        # Check for missing standard claims
-        if 'jti' not in payload:
-            suspicious = True
-        
-        return suspicious
-    
-    def _track_token_usage(self, token_hash: str):
-        """Track token usage for security monitoring."""
-        if token_hash not in self.token_usage_count:
-            self.token_usage_count[token_hash] = 0
-        
-        self.token_usage_count[token_hash] += 1
-        
-        # Alert if token is used excessively
-        if self.token_usage_count[token_hash] > 1000:
-            print(f"⚠️ Warning: Token used {self.token_usage_count[token_hash]} times")
-    
-    def blacklist_token(self, token: str):
-        """Add token to blacklist."""
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        self.blacklisted_tokens.add(token_hash)
-        print(f"✅ Token blacklisted")
-    
-    def get_token_usage_stats(self) -> Dict[str, int]:
-        """Get token usage statistics."""
-        return self.token_usage_count.copy()
+    except Exception as e:
+        return {"valid": False, "error": f"Unexpected error: {e}"}
 
-# Usage example
-validator = JWTSecurityValidator(secret_key)
-
-# Validate token security
-result = validator.validate_token_security(token)
-
-if result['valid']:
-    print("✅ Token is secure and valid")
-    if result['warnings']:
-        print(f"⚠️ Warnings: {result['warnings']}")
+# Example usage
+result = handle_jwt_errors(token, secret_key)
+if result["valid"]:
+    print("Token is valid")
+    print(f"User: {result['payload']['user_id']}")
 else:
-    print(f"❌ Token validation failed: {result['errors']}")
+    print(f"Token error: {result['error']}")
+```
 
-# Get usage statistics
-stats = validator.get_token_usage_stats()
-print(f"Token usage statistics: {stats}")
+## Testing JWT Tokens
+
+### Test Token Generation
+
+```python
+def test_token_generation():
+    """Test JWT token generation and validation."""
+    secret_key = "test-secret-key"
+    user_id = "test_user"
+    role = "admin"
+    
+    # Generate token
+    token = generate_jwt_token(user_id, role, secret_key, 1)
+    print(f"Generated token: {token}")
+    
+    # Validate token
+    payload = validate_jwt_token(token, secret_key)
+    if payload:
+        print("✅ Token validation successful")
+        print(f"User ID: {payload['user_id']}")
+        print(f"Role: {payload['role']}")
+    else:
+        print("❌ Token validation failed")
+    
+    # Test role validation
+    if validate_user_role(payload, "admin"):
+        print("✅ Admin role validation successful")
+    else:
+        print("❌ Admin role validation failed")
+
+if __name__ == "__main__":
+    test_token_generation()
+```
+
+### Token Decoding (Debug)
+
+```bash
+# Decode JWT token header
+echo "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" | base64 -d | jq .
+
+# Decode JWT token payload
+echo "eyJ1c2VyX2lkIjoidXNlcjEyMyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTY0MDk5NTIwMCwiZXhwIjoxNjQxMDgxNjAwfQ" | base64 -d | jq .
+
+# Full token decode (without signature verification)
+python3 -c "
+import jwt
+token = 'your-jwt-token-here'
+payload = jwt.decode(token, options={'verify_signature': False})
+print('Token payload:')
+for key, value in payload.items():
+    print(f'  {key}: {value}')
+"
 ```
 
 ## Integration Examples
 
-### Client Integration with Token Management
+### With Camera Client
 
 ```python
 import asyncio
 from examples.python.camera_client import CameraClient
 
-class AuthenticatedCameraClient:
-    """Camera client with integrated JWT token management."""
-    
-    def __init__(self, host: str, port: int, secret_key: str):
-        self.host = host
-        self.port = port
-        self.secret_key = secret_key
-        self.client = None
-        self.token_manager = JWTTokenManager(secret_key)
-        self.storage = SecureTokenStorage()
-    
-    async def authenticate(self, username: str) -> bool:
-        """Authenticate using stored token or generate new one."""
-        # Try to get stored token
-        stored_token = self.storage.get_token_keyring(username)
-        
-        if stored_token:
-            # Validate stored token
-            if self.token_manager.set_token(stored_token):
-                print(f"✅ Using stored token for {username}")
-                return True
-        
-        # Generate new token (in real app, this would be from auth server)
-        new_token = generate_jwt_token(
-            user_id=username,
-            user_name=username,
-            role="user",
-            secret_key=self.secret_key
-        )
-        
-        if self.token_manager.set_token(new_token):
-            # Store new token
-            self.storage.store_token_keyring(new_token, username)
-            print(f"✅ Generated and stored new token for {username}")
-            return True
-        
-        return False
-    
-    async def connect(self) -> bool:
-        """Connect to camera service with valid token."""
-        valid_token = self.token_manager.get_valid_token()
-        if not valid_token:
-            print("❌ No valid token available")
-            return False
-        
-        # Create client with token
-        self.client = CameraClient(
-            host=self.host,
-            port=self.port,
-            auth_type="jwt",
-            auth_token=valid_token
-        )
-        
-        try:
-            await self.client.connect()
-            print("✅ Connected to camera service")
-            return True
-        except Exception as e:
-            print(f"❌ Connection failed: {e}")
-            return False
-    
-    async def ensure_connection(self) -> bool:
-        """Ensure we have a valid connection, refreshing token if needed."""
-        if not self.client or not self.client.connected:
-            return await self.connect()
-        
-        # Check if token needs refresh
-        valid_token = self.token_manager.get_valid_token()
-        if not valid_token:
-            print("🔄 Token expired, reconnecting...")
-            await self.client.disconnect()
-            return await self.connect()
-        
-        return True
-    
-    async def camera_operation(self, operation, *args, **kwargs):
-        """Perform camera operation with automatic token management."""
-        if not await self.ensure_connection():
-            return None
-        
-        try:
-            if operation == "list":
-                return await self.client.get_camera_list()
-            elif operation == "snapshot":
-                return await self.client.take_snapshot(*args, **kwargs)
-            elif operation == "record":
-                return await self.client.start_recording(*args, **kwargs)
-            else:
-                raise ValueError(f"Unknown operation: {operation}")
-        except Exception as e:
-            print(f"❌ Operation failed: {e}")
-            return None
-
-# Usage example
 async def main():
-    auth_client = AuthenticatedCameraClient("localhost", 8080, secret_key)
+    # Generate JWT token
+    secret_key = "your-secret-key"
+    token = generate_jwt_token("user123", "admin", secret_key, 24)
     
-    # Authenticate
-    if not await auth_client.authenticate("john.doe"):
-        print("❌ Authentication failed")
-        return
+    # Create client with JWT authentication
+    client = CameraClient(
+        host="localhost",
+        port=8080,
+        auth_type="jwt",
+        auth_token=token
+    )
     
-    # Connect
-    if not await auth_client.connect():
-        print("❌ Connection failed")
-        return
-    
-    # Perform operations
-    cameras = await auth_client.camera_operation("list")
-    if cameras:
-        print(f"📹 Found {len(cameras)} cameras")
-    
-    # Token will be automatically refreshed as needed
+    try:
+        await client.connect()
+        cameras = await client.get_camera_list()
+        print(f"Found {len(cameras)} cameras")
+    finally:
+        await client.disconnect()
 
-# Run the example
-# asyncio.run(main())
+asyncio.run(main())
 ```
 
-## Best Practices Summary
+### With SDK
 
-### 1. Token Generation
-- Use strong secret keys
-- Include all required claims
-- Set appropriate expiration times
-- Generate unique JWT IDs
+```python
+import asyncio
+from mediamtx_camera_sdk import CameraClient
 
-### 2. Token Validation
-- Always validate token signature
-- Check expiration times
-- Verify required claims
-- Implement role-based access control
+async def main():
+    # Generate JWT token
+    secret_key = "your-secret-key"
+    token = generate_jwt_token("user123", "admin", secret_key, 24)
+    
+    # Use SDK with JWT authentication
+    client = CameraClient(
+        host="localhost",
+        port=8080,
+        auth_type="jwt",
+        auth_token=token
+    )
+    
+    await client.connect()
+    cameras = await client.get_camera_list()
+    await client.disconnect()
 
-### 3. Token Refresh
-- Monitor token expiration
-- Implement automatic refresh
-- Handle refresh failures gracefully
-- Use secure refresh endpoints
+asyncio.run(main())
+```
 
-### 4. Token Security
-- Store tokens securely
-- Implement token blacklisting
-- Monitor token usage
-- Use HTTPS for all communications
+## Support
 
-### 5. Error Handling
-- Handle all JWT exceptions
-- Provide clear error messages
-- Implement retry logic
-- Log security events
+For additional support and questions:
 
----
-
-**Version:** 1.0  
-**Last Updated:** 2025-08-06  
-**Compatibility:** Python 3.8+, PyJWT, keyring 
+- **Documentation**: See `docs/security/CLIENT_AUTHENTICATION_GUIDE.md`
+- **Examples**: Check `examples/` directory for working examples
+- **Issues**: Report problems via GitHub Issues
+- **Email**: Contact team@mediamtx-camera-service.com 

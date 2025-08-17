@@ -513,24 +513,15 @@
                     
                     this.websocket = new WebSocket(wsUrl);
                     
+                    // Store authentication details
+                    this.authType = authType;
+                    this.authToken = authToken;
+                    
                     // Set up WebSocket event handlers
                     this.websocket.onopen = () => this.onWebSocketOpen();
                     this.websocket.onmessage = (event) => this.onWebSocketMessage(event);
                     this.websocket.onclose = () => this.onWebSocketClose();
                     this.websocket.onerror = (error) => this.onWebSocketError(error);
-                    
-                    // Add authentication headers
-                    if (authType === 'jwt') {
-                        this.websocket.onopen = () => {
-                            // Send authentication in first message
-                            this.sendRequest('authenticate', { token: authToken });
-                        };
-                    } else {
-                        // For API key, we'll send it in headers (if supported by browser)
-                        this.websocket.onopen = () => {
-                            this.sendRequest('authenticate', { api_key: authToken });
-                        };
-                    }
                     
                 } catch (error) {
                     this.log(`Connection failed: ${error.message}`, 'error');
@@ -539,14 +530,32 @@
                 }
             }
 
-            onWebSocketOpen() {
+            async onWebSocketOpen() {
                 this.connected = true;
                 this.updateConnectionStatus('connected');
                 this.log('Connected to camera service', 'success');
-                this.showNotification('Connected successfully', 'success');
                 
-                // Load camera list
-                this.loadCameras();
+                // Authenticate if token provided
+                if (this.authToken) {
+                    try {
+                        await this.authenticate();
+                        this.log('Authentication successful', 'success');
+                        this.showNotification('Connected and authenticated successfully', 'success');
+                        
+                        // Load camera list after authentication
+                        this.loadCameras();
+                    } catch (error) {
+                        this.log(`Authentication failed: ${error.message}`, 'error');
+                        this.showNotification('Authentication failed', 'error');
+                        this.disconnect();
+                    }
+                } else {
+                    this.log('Connected without authentication', 'warning');
+                    this.showNotification('Connected without authentication', 'warning');
+                    
+                    // Load camera list
+                    this.loadCameras();
+                }
             }
 
             onWebSocketMessage(event) {
@@ -579,6 +588,26 @@
 
             onWebSocketError(error) {
                 this.log(`WebSocket error: ${error.message}`, 'error');
+            }
+
+            async authenticate() {
+                if (!this.connected || !this.authToken) {
+                    throw new Error('Not connected or no authentication token');
+                }
+
+                const params = {
+                    token: this.authToken,
+                    auth_type: this.authType
+                };
+
+                const response = await this.sendRequest('authenticate', params);
+                
+                if (response.authenticated) {
+                    this.authenticated = true;
+                    return response;
+                } else {
+                    throw new Error(response.error || 'Authentication failed');
+                }
             }
 
             disconnect() {

@@ -205,6 +205,11 @@ class CameraClient {
                 this.connected = true;
                 this.logger.info('Connected to camera service');
                 
+                // Authenticate if token provided
+                if (this.authToken || this.apiKey) {
+                    await this._authenticate();
+                }
+                
                 // Test connection with ping
                 await this.ping();
                 this.logger.info('Connection test successful');
@@ -269,6 +274,53 @@ class CameraClient {
                 reject(error);
             });
         });
+    }
+
+    /**
+     * Authenticate with the camera service using JWT or API key
+     * 
+     * @returns {Promise<void>}
+     * @throws {AuthenticationError} If authentication fails
+     */
+    async _authenticate() {
+        if (!this.connected) {
+            throw new ConnectionError('Not connected to camera service');
+        }
+
+        // Determine token to use
+        let token = null;
+        let authType = 'auto';
+
+        if (this.authType === 'jwt' && this.authToken) {
+            token = this.authToken;
+            authType = 'jwt';
+        } else if (this.authType === 'api_key' && this.apiKey) {
+            token = this.apiKey;
+            authType = 'api_key';
+        } else {
+            throw new AuthenticationError('No authentication token provided');
+        }
+
+        try {
+            // Send authentication request
+            const response = await this._sendRequest('authenticate', {
+                token: token,
+                auth_type: authType
+            });
+
+            if (response.authenticated) {
+                this.authenticated = true;
+                this.logger.info(`Authenticated successfully with role: ${response.role || 'unknown'}`);
+            } else {
+                const errorMsg = response.error || 'Authentication failed';
+                throw new AuthenticationError(`Authentication failed: ${errorMsg}`);
+            }
+        } catch (error) {
+            if (error instanceof AuthenticationError) {
+                throw error;
+            }
+            throw new AuthenticationError(`Authentication error: ${error.message}`);
+        }
     }
 
     /**

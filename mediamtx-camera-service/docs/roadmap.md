@@ -166,30 +166,23 @@ This roadmap defines the current development status, completed work, and priorit
         - E3 COMPLETION with full evidence package
 
 ---
-### **🚪 DDR (Detailed Design Review) - 🚀 READY TO BEGIN**
-**Status**: 🚀 **READY TO BEGIN**  
-**Authority**: PDR Completion → Project Manager Authorization  
-**Scope**: Detailed component design and implementation planning  
-**Reference**: `docs/systems-engineering-gates/ddr-detailed-design-review.md`  
-**Evidence**: `evidence/ddr-actual/` (to be created)  
-**Prerequisites**: PDR conditions resolved (4 specific tasks identified)
-**Authorization**: Pending resolution of PDR conditions for proceeding
-
-**DDR Entry Criteria:**
-- Camera disconnect handling improvements implemented
-- Recording stream availability validation added
-- Configuration loading methods implemented
-- API key performance optimization completed
-- 100% test pass rate in no-mock validation achieved
-
----
 ### **🚪 CDR (Critical Design Review) - GATE PLANNED**
-**Target**: After DDR Completion  
+**Target**: After E3 Completion  
 **Authority**: IV&V Assessment → Project Manager Production Authorization  
 **Scope**: Production readiness and deployment authorization  
-**Reference**: `docs/systems-engineering-gates/cdr-critical-design-review.md` ✅ EXISTS  
-**Evidence**: `evidence/camera-service-cdr/`  
-**STOP**: Production deployment requires CDR authorization
+**Reference**: `docs/development/systems_engineering_gates.md/cdr_scope_definition_guide.md` ✅ EXISTS  
+**Evidence**: `evidence/cdr/` (to be created)  
+**Prerequisites**: E3 completion with full client ecosystem validation
+**Authorization**: Pending E3 completion for production authorization
+
+**CDR Entry Criteria:**
+- E3 Client API & SDK Ecosystem complete
+- All client examples validated and functional
+- SDK packages tested and documented
+- API documentation complete and accurate
+- 100% test pass rate in no-mock validation achieved
+- Production deployment readiness validated
+
 ---
 
 ### E4: Future Extensibility - PLANNING ONLY

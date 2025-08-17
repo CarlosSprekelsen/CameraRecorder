@@ -1,80 +1,26 @@
-#!/usr/bin/env python3
 """
-MediaMTX Camera Service Python Client Example
+MediaMTX Camera Service Python SDK Client.
 
-This example demonstrates how to connect to the MediaMTX Camera Service
-using WebSocket JSON-RPC 2.0 protocol with authentication support.
-
-Features:
-- JWT and API Key authentication
-- WebSocket connection management
-- Camera discovery and control
-- Snapshot and recording operations
-- Real-time status notifications
-- Comprehensive error handling
-- Retry logic and connection recovery
-
-Usage:
-    python camera_client.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token
-    python camera_client.py --host localhost --port 8080 --auth-type api_key --key your_api_key
+This module provides the main CameraClient class for interacting with the MediaMTX Camera Service.
 """
 
 import asyncio
 import json
 import logging
 import uuid
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass
-import argparse
+from typing import Dict, Any, Optional, List, Callable
 import websockets
 from websockets.exceptions import ConnectionClosed
 import ssl
 
-
-@dataclass
-class CameraInfo:
-    """Camera device information."""
-    device_path: str
-    name: str
-    capabilities: List[str]
-    status: str
-    stream_url: Optional[str] = None
-
-
-@dataclass
-class RecordingInfo:
-    """Recording session information."""
-    device_path: str
-    recording_id: str
-    filename: str
-    start_time: float
-    duration: Optional[float] = None
-    status: str = "active"
-
-
-class CameraServiceError(Exception):
-    """Base exception for camera service errors."""
-    pass
-
-
-class AuthenticationError(CameraServiceError):
-    """Authentication failed."""
-    pass
-
-
-class ConnectionError(CameraServiceError):
-    """Connection failed."""
-    pass
-
-
-class CameraNotFoundError(CameraServiceError):
-    """Camera device not found."""
-    pass
-
-
-class MediaMTXError(CameraServiceError):
-    """MediaMTX operation failed."""
-    pass
+from .exceptions import (
+    CameraServiceError,
+    AuthenticationError,
+    ConnectionError,
+    CameraNotFoundError,
+    MediaMTXError,
+)
+from .models import CameraInfo, RecordingInfo, SnapshotInfo
 
 
 class CameraClient:
@@ -129,20 +75,12 @@ class CameraClient:
         self.pending_requests: Dict[int, asyncio.Future] = {}
         
         # Event handlers
-        self.on_camera_status_update = None
-        self.on_recording_status_update = None
-        self.on_connection_lost = None
+        self.on_camera_status_update: Optional[Callable[[CameraInfo], None]] = None
+        self.on_recording_status_update: Optional[Callable[[RecordingInfo], None]] = None
+        self.on_connection_lost: Optional[Callable[[], None]] = None
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
-        self._setup_logging()
-
-    def _setup_logging(self):
-        """Setup logging configuration."""
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
 
     def _get_ws_url(self) -> str:
         """Get WebSocket URL."""
@@ -190,17 +128,6 @@ class CameraClient:
             if isinstance(e, AuthenticationError):
                 raise
             raise AuthenticationError(f"Authentication error: {e}")
-
-    def _get_auth_headers(self) -> Dict[str, str]:
-        """Get authentication headers."""
-        headers = {}
-        
-        if self.auth_type == "jwt" and self.auth_token:
-            headers["Authorization"] = f"Bearer {self.auth_token}"
-        elif self.auth_type == "api_key" and self.api_key:
-            headers["X-API-Key"] = self.api_key
-        
-        return headers
 
     async def connect(self) -> None:
         """
@@ -301,7 +228,7 @@ class CameraClient:
                 if "error" in response:
                     future.set_exception(CameraServiceError(response["error"].get("message", "Unknown error")))
                 else:
-                    future.set_result(response.get("result"))
+                    future.set_result(response["result"])
 
     async def _handle_notification(self, notification: Dict[str, Any]) -> None:
         """Handle JSON-RPC notification."""
@@ -309,9 +236,24 @@ class CameraClient:
         params = notification.get("params", {})
         
         if method == "camera_status_update" and self.on_camera_status_update:
-            await self.on_camera_status_update(params)
+            camera_info = CameraInfo(
+                device_path=params.get("device_path", ""),
+                name=params.get("name", ""),
+                capabilities=params.get("capabilities", []),
+                status=params.get("status", ""),
+                stream_url=params.get("stream_url")
+            )
+            await self.on_camera_status_update(camera_info)
         elif method == "recording_status_update" and self.on_recording_status_update:
-            await self.on_recording_status_update(params)
+            recording_info = RecordingInfo(
+                device_path=params.get("device_path", ""),
+                recording_id=params.get("recording_id", ""),
+                filename=params.get("filename", ""),
+                start_time=params.get("start_time", 0),
+                duration=params.get("duration"),
+                status=params.get("status", "active")
+            )
+            await self.on_recording_status_update(recording_info)
         else:
             self.logger.info(f"Received notification: {method}")
 
@@ -327,6 +269,7 @@ class CameraClient:
             Response result
             
         Raises:
+            ConnectionError: If not connected
             CameraServiceError: If request fails
         """
         if not self.connected:
@@ -337,8 +280,8 @@ class CameraClient:
         
         request = {
             "jsonrpc": "2.0",
-            "method": method,
             "id": request_id,
+            "method": method,
             "params": params or {}
         }
         
@@ -347,9 +290,13 @@ class CameraClient:
         self.pending_requests[request_id] = future
         
         try:
+            # Send request
             await self.websocket.send(json.dumps(request))
+            
+            # Wait for response with timeout
             result = await asyncio.wait_for(future, timeout=30.0)
             return result
+            
         except asyncio.TimeoutError:
             self.pending_requests.pop(request_id, None)
             raise CameraServiceError(f"Request timeout: {method}")
@@ -359,10 +306,13 @@ class CameraClient:
 
     async def ping(self) -> str:
         """
-        Send ping request to test connection.
+        Test connection with ping.
         
         Returns:
-            Pong response
+            "pong" response
+            
+        Raises:
+            CameraServiceError: If ping fails
         """
         return await self._send_request("ping")
 
@@ -372,16 +322,19 @@ class CameraClient:
         
         Returns:
             List of camera information
+            
+        Raises:
+            CameraServiceError: If request fails
         """
-        result = await self._send_request("get_camera_list")
+        response = await self._send_request("get_camera_list")
         
         cameras = []
-        for camera_data in result.get("cameras", []):
+        for camera_data in response:
             camera = CameraInfo(
-                device_path=camera_data["device_path"],
-                name=camera_data["name"],
+                device_path=camera_data.get("device_path", ""),
+                name=camera_data.get("name", ""),
                 capabilities=camera_data.get("capabilities", []),
-                status=camera_data["status"],
+                status=camera_data.get("status", ""),
                 stream_url=camera_data.get("stream_url")
             )
             cameras.append(camera)
@@ -390,7 +343,7 @@ class CameraClient:
 
     async def get_camera_status(self, device_path: str) -> CameraInfo:
         """
-        Get status of specific camera.
+        Get camera status.
         
         Args:
             device_path: Camera device path
@@ -399,205 +352,127 @@ class CameraClient:
             Camera information
             
         Raises:
+            CameraServiceError: If request fails
             CameraNotFoundError: If camera not found
         """
-        result = await self._send_request("get_camera_status", {"device_path": device_path})
+        response = await self._send_request("get_camera_status", {"device": device_path})
         
-        if not result.get("found"):
+        if not response:
             raise CameraNotFoundError(f"Camera not found: {device_path}")
         
-        camera_data = result["camera"]
         return CameraInfo(
-            device_path=camera_data["device_path"],
-            name=camera_data["name"],
-            capabilities=camera_data.get("capabilities", []),
-            status=camera_data["status"],
-            stream_url=camera_data.get("stream_url")
+            device_path=response.get("device_path", device_path),
+            name=response.get("name", ""),
+            capabilities=response.get("capabilities", []),
+            status=response.get("status", ""),
+            stream_url=response.get("stream_url")
         )
 
-    async def take_snapshot(
-        self,
-        device_path: str,
-        custom_filename: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def take_snapshot(self, device_path: str, filename: Optional[str] = None) -> SnapshotInfo:
         """
-        Take a snapshot from camera.
+        Take camera snapshot.
         
         Args:
             device_path: Camera device path
-            custom_filename: Optional custom filename
+            filename: Optional custom filename
             
         Returns:
             Snapshot information
             
         Raises:
+            CameraServiceError: If request fails
             CameraNotFoundError: If camera not found
-            MediaMTXError: If snapshot fails
         """
-        params = {"device_path": device_path}
-        if custom_filename:
-            params["custom_filename"] = custom_filename
+        params = {"device": device_path}
+        if filename:
+            params["filename"] = filename
         
-        result = await self._send_request("take_snapshot", params)
+        response = await self._send_request("take_snapshot", params)
         
-        if not result.get("success"):
-            error = result.get("error", "Unknown error")
-            if "not found" in error.lower():
-                raise CameraNotFoundError(f"Camera not found: {device_path}")
-            else:
-                raise MediaMTXError(f"Snapshot failed: {error}")
-        
-        return result
+        return SnapshotInfo(
+            device_path=device_path,
+            filename=response.get("filename", ""),
+            timestamp=response.get("timestamp", 0),
+            size_bytes=response.get("size_bytes")
+        )
 
-    async def start_recording(
-        self,
-        device_path: str,
-        duration: Optional[int] = None,
-        custom_filename: Optional[str] = None
-    ) -> RecordingInfo:
+    async def start_recording(self, device_path: str, filename: Optional[str] = None) -> RecordingInfo:
         """
-        Start recording from camera.
+        Start camera recording.
         
         Args:
             device_path: Camera device path
-            duration: Recording duration in seconds (optional)
-            custom_filename: Optional custom filename
+            filename: Optional custom filename
             
         Returns:
             Recording information
             
         Raises:
+            CameraServiceError: If request fails
             CameraNotFoundError: If camera not found
-            MediaMTXError: If recording fails
         """
-        params = {"device_path": device_path}
-        if duration:
-            params["duration"] = duration
-        if custom_filename:
-            params["custom_filename"] = custom_filename
+        params = {"device": device_path}
+        if filename:
+            params["filename"] = filename
         
-        result = await self._send_request("start_recording", params)
+        response = await self._send_request("start_recording", params)
         
-        if not result.get("success"):
-            error = result.get("error", "Unknown error")
-            if "not found" in error.lower():
-                raise CameraNotFoundError(f"Camera not found: {device_path}")
-            else:
-                raise MediaMTXError(f"Recording failed: {error}")
-        
-        recording_data = result["recording"]
         return RecordingInfo(
-            device_path=recording_data["device_path"],
-            recording_id=recording_data["recording_id"],
-            filename=recording_data["filename"],
-            start_time=recording_data["start_time"],
-            status=recording_data["status"]
+            device_path=device_path,
+            recording_id=response.get("recording_id", ""),
+            filename=response.get("filename", ""),
+            start_time=response.get("start_time", 0),
+            status="active"
         )
 
-    async def stop_recording(self, device_path: str) -> Dict[str, Any]:
+    async def stop_recording(self, device_path: str) -> RecordingInfo:
         """
-        Stop recording from camera.
+        Stop camera recording.
         
         Args:
             device_path: Camera device path
             
         Returns:
-            Recording stop information
+            Recording information
             
         Raises:
+            CameraServiceError: If request fails
             CameraNotFoundError: If camera not found
-            MediaMTXError: If stop recording fails
         """
-        result = await self._send_request("stop_recording", {"device_path": device_path})
+        response = await self._send_request("stop_recording", {"device": device_path})
         
-        if not result.get("success"):
-            error = result.get("error", "Unknown error")
-            if "not found" in error.lower():
-                raise CameraNotFoundError(f"Camera not found: {device_path}")
-            else:
-                raise MediaMTXError(f"Stop recording failed: {error}")
+        return RecordingInfo(
+            device_path=device_path,
+            recording_id=response.get("recording_id", ""),
+            filename=response.get("filename", ""),
+            start_time=response.get("start_time", 0),
+            duration=response.get("duration"),
+            status="stopped"
+        )
+
+    async def get_recording_status(self, device_path: str) -> Optional[RecordingInfo]:
+        """
+        Get recording status.
         
-        return result
-
-    def set_camera_status_callback(self, callback):
-        """Set callback for camera status updates."""
-        self.on_camera_status_update = callback
-
-    def set_recording_status_callback(self, callback):
-        """Set callback for recording status updates."""
-        self.on_recording_status_update = callback
-
-    def set_connection_lost_callback(self, callback):
-        """Set callback for connection lost events."""
-        self.on_connection_lost = callback
-
-
-async def main():
-    """Example usage of the camera client."""
-    parser = argparse.ArgumentParser(description="MediaMTX Camera Service Python Client")
-    parser.add_argument("--host", default="localhost", help="Server hostname")
-    parser.add_argument("--port", type=int, default=8080, help="Server port")
-    parser.add_argument("--ssl", action="store_true", help="Use SSL/TLS")
-    parser.add_argument("--auth-type", choices=["jwt", "api_key"], default="jwt", help="Authentication type")
-    parser.add_argument("--token", help="JWT token")
-    parser.add_argument("--key", help="API key")
-    
-    args = parser.parse_args()
-    
-    # Create client
-    client = CameraClient(
-        host=args.host,
-        port=args.port,
-        use_ssl=args.ssl,
-        auth_type=args.auth_type,
-        auth_token=args.token,
-        api_key=args.key
-    )
-    
-    try:
-        # Connect to service
-        await client.connect()
-        print("✅ Connected to camera service")
-        
-        # Test ping
-        pong = await client.ping()
-        print(f"✅ Ping response: {pong}")
-        
-        # Get camera list
-        cameras = await client.get_camera_list()
-        print(f"✅ Found {len(cameras)} cameras:")
-        for camera in cameras:
-            print(f"  - {camera.name} ({camera.device_path}) - {camera.status}")
-        
-        if cameras:
-            # Get status of first camera
-            camera = cameras[0]
-            status = await client.get_camera_status(camera.device_path)
-            print(f"✅ Camera status: {status.status}")
+        Args:
+            device_path: Camera device path
             
-            # Take snapshot
-            snapshot = await client.take_snapshot(camera.device_path)
-            print(f"✅ Snapshot taken: {snapshot['filename']}")
+        Returns:
+            Recording information or None if not recording
             
-            # Start recording
-            recording = await client.start_recording(camera.device_path, duration=10)
-            print(f"✅ Recording started: {recording.filename}")
-            
-            # Wait a bit
-            await asyncio.sleep(5)
-            
-            # Stop recording
-            stop_result = await client.stop_recording(camera.device_path)
-            print(f"✅ Recording stopped: {stop_result['filename']}")
+        Raises:
+            CameraServiceError: If request fails
+        """
+        response = await self._send_request("get_recording_status", {"device": device_path})
         
-    except CameraServiceError as e:
-        print(f"❌ Camera service error: {e}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-    finally:
-        await client.disconnect()
-        print("✅ Disconnected")
-
-
-if __name__ == "__main__":
-    asyncio.run(main()) 
+        if not response:
+            return None
+        
+        return RecordingInfo(
+            device_path=device_path,
+            recording_id=response.get("recording_id", ""),
+            filename=response.get("filename", ""),
+            start_time=response.get("start_time", 0),
+            duration=response.get("duration"),
+            status=response.get("status", "active")
+        )
