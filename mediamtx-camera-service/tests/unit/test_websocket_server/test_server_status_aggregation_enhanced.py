@@ -176,13 +176,20 @@ paths:
         Expected: Successful integration with real MediaMTX service and capability metadata
         Edge Cases: Real stream status queries, actual metrics retrieval, capability validation
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Use real camera monitor to get actual connected cameras
-        connected_cameras = await real_camera_monitor.get_connected_cameras()
+        connected_cameras = await camera_monitor.get_connected_cameras()
         
         # Get real capability metadata from actual camera detection
         if connected_cameras:
             device_path = list(connected_cameras.keys())[0]
-            real_capability_metadata = real_camera_monitor.get_effective_capability_metadata(device_path)
+            real_capability_metadata = camera_monitor.get_effective_capability_metadata(device_path)
         else:
             # If no real cameras, create a test camera device
             real_capability_metadata = {
@@ -194,6 +201,9 @@ paths:
                 "consecutive_successes": 1,
             }
 
+        # Await the MediaMTX controller fixture
+        mediamtx_controller = await anext(real_mediamtx_controller)
+        
         # Create real test stream in MediaMTX using proper API
         from src.mediamtx_wrapper.controller import StreamConfig
         stream_config = StreamConfig(
@@ -201,13 +211,13 @@ paths:
             source="/dev/video0",
             record=True
         )
-        stream_info = await real_mediamtx_controller.create_stream(stream_config)
+        stream_info = await mediamtx_controller.create_stream(stream_config)
         
         # Get real MediaMTX stream status
-        real_stream_status = await real_mediamtx_controller.get_stream_status("camera0")
+        real_stream_status = await mediamtx_controller.get_stream_status("camera0")
 
         # Test get_camera_status method
-        result = await server._method_get_camera_status({"device": "/dev/video0"})
+        result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
 
         # Verify real capability data is used, not defaults
         assert result["resolution"] == "1280x720"  # From capability detection
@@ -233,7 +243,7 @@ paths:
         assert "streams" in result
         
         # Clean up test stream
-        await real_mediamtx_controller.delete_stream("camera0")
+        await mediamtx_controller.delete_stream("camera0")
 
     @pytest.mark.asyncio
     async def test_get_camera_status_mediamtx_connection_failure_graceful_handling(
@@ -247,8 +257,15 @@ paths:
         Expected: Graceful error handling without crashing, fallback to basic camera info
         Edge Cases: Network failures, service unavailability, connection timeouts
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test with a non-existent stream to simulate MediaMTX connection failure
-        result = await server._method_get_camera_status({"device": "/dev/video0"})
+        result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
 
         # Verify basic camera info is still returned even with MediaMTX failure
         assert result["status"] in ["CONNECTED", "DISCONNECTED"]  # Real camera status
@@ -277,8 +294,15 @@ paths:
         Expected: Graceful fallback to architecture defaults
         Edge Cases: Missing capability detection support, detection timeouts
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test with a device that doesn't exist to trigger fallback
-        result = await server._method_get_camera_status({"device": "/dev/video999"})
+        result = await actual_server._method_get_camera_status({"device": "/dev/video999"})
 
         # Verify architecture defaults are used when capability detection fails
         assert result["resolution"] == "1920x1080"  # Architecture default
@@ -302,8 +326,15 @@ paths:
         Expected: Real capability data integration in camera list
         Edge Cases: Different validation statuses, mixed capability data, capability conflicts
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor with the awaited monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test get_camera_list method with real camera monitor
-        result = await server._method_get_camera_list()
+        result = await actual_server._method_get_camera_list()
 
         # Verify real camera list structure
         assert "cameras" in result
@@ -342,6 +373,15 @@ paths:
         Expected: Accurate stream status reporting with real MediaMTX integration
         Edge Cases: Stream creation, deletion, active/inactive states, error conditions
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        mediamtx_controller = await anext(real_mediamtx_controller)
+        
+        # Update the server's components
+        actual_server._camera_monitor = camera_monitor
+        actual_server._mediamtx_controller = mediamtx_controller
+        
         # Create multiple test streams to test status queries
         from src.mediamtx_wrapper.controller import StreamConfig
         
@@ -354,7 +394,7 @@ paths:
         try:
             # Create streams
             for stream_config in streams_to_create:
-                stream_info = await real_mediamtx_controller.create_stream(stream_config)
+                stream_info = await mediamtx_controller.create_stream(stream_config)
                 created_streams.append(stream_config.name)
                 
                 # Wait for stream to be active
@@ -362,7 +402,7 @@ paths:
             
             # Test status queries for each stream
             for stream_name in created_streams:
-                result = await server._method_get_camera_status({"device": f"/dev/video{stream_name[-1]}"})
+                result = await actual_server._method_get_camera_status({"device": f"/dev/video{stream_name[-1]}"})
                 
                 # Verify stream status is properly reported
                 assert "streams" in result
@@ -384,7 +424,7 @@ paths:
             # Clean up test streams
             for stream_name in created_streams:
                 try:
-                    await real_mediamtx_controller.delete_stream(stream_name)
+                    await mediamtx_controller.delete_stream(stream_name)
                 except Exception:
                     pass  # Ignore cleanup errors
 
@@ -400,9 +440,16 @@ paths:
         Expected: Graceful handling without system crash, fallback to basic camera info
         Edge Cases: Service down, network unreachable, API timeout
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test with MediaMTX controller that simulates service unavailability
-        with patch.object(server, '_mediamtx_controller', None):
-            result = await server._method_get_camera_status({"device": "/dev/video0"})
+        with patch.object(actual_server, '_mediamtx_controller', None):
+            result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
             
             # Verify system continues to function without MediaMTX
             assert result["status"] in ["CONNECTED", "DISCONNECTED"]
@@ -427,6 +474,13 @@ paths:
         Expected: Proper handling of provisional vs confirmed capability data
         Edge Cases: Inconsistent capability data, validation failures, data conflicts
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test with different capability metadata scenarios
         test_scenarios = [
             {
@@ -466,9 +520,9 @@ paths:
         
         for scenario in test_scenarios:
             # Mock capability metadata for this scenario
-            with patch.object(real_camera_monitor, 'get_effective_capability_metadata', 
+            with patch.object(camera_monitor, 'get_effective_capability_metadata', 
                             return_value=scenario["metadata"]):
-                result = await server._method_get_camera_status({"device": "/dev/video0"})
+                result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
                 
                 # Verify capability data is properly integrated
                 assert result["resolution"] == scenario["metadata"]["resolution"]
@@ -488,6 +542,13 @@ paths:
         Expected: Proper error handling and graceful degradation
         Edge Cases: Exception propagation, error recovery, system stability
         """
+        # Await the fixtures to get the actual objects
+        actual_server = await server
+        camera_monitor = await anext(real_camera_monitor)
+        
+        # Update the server's camera monitor
+        actual_server._camera_monitor = camera_monitor
+        
         # Test with various error conditions
         error_scenarios = [
             {
@@ -510,17 +571,17 @@ paths:
         for scenario in error_scenarios:
             # Test that errors don't crash the system
             if scenario["mock_method"] == 'get_connected_cameras':
-                with patch.object(real_camera_monitor, scenario["mock_method"], 
+                with patch.object(camera_monitor, scenario["mock_method"], 
                                 side_effect=scenario["exception"]):
-                    result = await server._method_get_camera_status({"device": "/dev/video0"})
+                    result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
             elif scenario["mock_method"] == 'get_effective_capability_metadata':
-                with patch.object(real_camera_monitor, scenario["mock_method"], 
+                with patch.object(camera_monitor, scenario["mock_method"], 
                                 side_effect=scenario["exception"]):
-                    result = await server._method_get_camera_status({"device": "/dev/video0"})
+                    result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
             elif scenario["mock_method"] == 'get_stream_status':
-                with patch.object(server._mediamtx_controller, scenario["mock_method"], 
+                with patch.object(actual_server._mediamtx_controller, scenario["mock_method"], 
                                 side_effect=scenario["exception"]):
-                    result = await server._method_get_camera_status({"device": "/dev/video0"})
+                    result = await actual_server._method_get_camera_status({"device": "/dev/video0"})
             
             # Verify system continues to function despite errors
             assert result["device"] == "/dev/video0"
