@@ -5,10 +5,15 @@ MediaMTX Camera Service CLI Tool
 A command-line interface for controlling cameras through the MediaMTX Camera Service.
 Supports JWT and API key authentication with comprehensive camera operations.
 
+IMPORTANT: Port Configuration
+- Production/Default: Port 8002 (config/default.yaml)
+- Development: Port 8080 (config/development.yaml)
+- Use --port argument to specify the correct port for your environment
+
 Usage:
-    python camera_cli.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token list
-    python camera_cli.py --host localhost --port 8080 --auth-type api_key --key your_api_key snapshot /dev/video0
-    python camera_cli.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token record /dev/video0 --duration 30
+    python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list
+    python camera_cli.py --host localhost --port 8002 --auth-type api_key --key your_api_key snapshot /dev/video0
+    python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token record /dev/video0 --duration 30
 """
 
 import asyncio
@@ -49,18 +54,18 @@ class CameraCLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token list
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token status /dev/video0
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token snapshot /dev/video0
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token record /dev/video0 --duration 30
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token stop /dev/video0
-  %(prog)s --host localhost --port 8080 --auth-type jwt --token your_token monitor
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token list
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token status /dev/video0
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token snapshot /dev/video0
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token record /dev/video0 --duration 30
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token stop /dev/video0
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token monitor
             """
         )
 
         # Connection arguments
         parser.add_argument('--host', default='localhost', help='Server hostname')
-        parser.add_argument('--port', type=int, default=8080, help='Server port')
+        parser.add_argument('--port', type=int, default=8002, help='Server port')  # Changed from 8080 to 8002
         parser.add_argument('--ssl', action='store_true', help='Use SSL/TLS')
         parser.add_argument('--auth-type', choices=['jwt', 'api_key'], default='jwt', help='Authentication type')
         parser.add_argument('--token', help='JWT token')

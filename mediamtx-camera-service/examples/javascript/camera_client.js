@@ -5,6 +5,11 @@
  * This example demonstrates how to connect to the MediaMTX Camera Service
  * using WebSocket JSON-RPC 2.0 protocol with authentication support.
  * 
+ * IMPORTANT: Port Configuration
+ * - Production/Default: Port 8002 (config/default.yaml)
+ * - Development: Port 8080 (config/development.yaml)
+ * - Use --port argument to specify the correct port for your environment
+ * 
  * Features:
  * - JWT and API Key authentication
  * - WebSocket connection management
@@ -15,8 +20,8 @@
  * - Retry logic and connection recovery
  * 
  * Usage:
- *   node camera_client.js --host localhost --port 8080 --auth-type jwt --token your_jwt_token
- *   node camera_client.js --host localhost --port 8080 --auth-type api_key --key your_api_key
+ *   node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_jwt_token
+ *   node camera_client.js --host localhost --port 8002 --auth-type api_key --key your_api_key
  */
 
 const WebSocket = require('ws');
@@ -122,7 +127,7 @@ class CameraClient {
      */
     constructor(options = {}) {
         this.host = options.host || 'localhost';
-        this.port = options.port || 8080;
+        this.port = options.port || 8002;  // Changed from 8080 to 8002 (production default)
         this.useSsl = options.useSsl || false;
         this.authType = options.authType || 'jwt';
         this.authToken = options.authToken;
@@ -633,6 +638,27 @@ async function main() {
     // Parse command line arguments
     const args = process.argv.slice(2);
     const options = {};
+    
+    // Check for help argument first
+    if (args.includes('--help') || args.includes('-h')) {
+        console.log(`
+MediaMTX Camera Service JavaScript Client
+
+Usage:
+  node camera_client.js --host localhost --port 8002 --auth-type jwt --token your_jwt_token
+  node camera_client.js --host localhost --port 8002 --auth-type api_key --key your_api_key
+
+Options:
+  --host HOST           Server hostname (default: localhost)
+  --port PORT           Server port (default: 8002)
+  --ssl                 Use SSL/TLS
+  --auth-type TYPE      Authentication type (jwt or api_key)
+  --token TOKEN         JWT token
+  --key KEY             API key
+  --help, -h            Show this help message
+        `);
+        return;
+    }
     
     for (let i = 0; i < args.length; i += 2) {
         const key = args[i];

@@ -5,6 +5,11 @@ MediaMTX Camera Service Python Client Example
 This example demonstrates how to connect to the MediaMTX Camera Service
 using WebSocket JSON-RPC 2.0 protocol with authentication support.
 
+IMPORTANT: Port Configuration
+- Production/Default: Port 8002 (config/default.yaml)
+- Development: Port 8080 (config/development.yaml)
+- Use --port argument to specify the correct port for your environment
+
 Features:
 - JWT and API Key authentication
 - WebSocket connection management
@@ -15,8 +20,8 @@ Features:
 - Retry logic and connection recovery
 
 Usage:
-    python camera_client.py --host localhost --port 8080 --auth-type jwt --token your_jwt_token
-    python camera_client.py --host localhost --port 8080 --auth-type api_key --key your_api_key
+    python camera_client.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token
+    python camera_client.py --host localhost --port 8002 --auth-type api_key --key your_api_key
 """
 
 import asyncio
@@ -88,7 +93,7 @@ class CameraClient:
     def __init__(
         self,
         host: str = "localhost",
-        port: int = 8080,
+        port: int = 8002,  # Changed from 8080 to 8002 (production default)
         use_ssl: bool = False,
         auth_type: str = "jwt",
         auth_token: Optional[str] = None,
@@ -536,7 +541,7 @@ async def main():
     """Example usage of the camera client."""
     parser = argparse.ArgumentParser(description="MediaMTX Camera Service Python Client")
     parser.add_argument("--host", default="localhost", help="Server hostname")
-    parser.add_argument("--port", type=int, default=8080, help="Server port")
+    parser.add_argument("--port", type=int, default=8002, help="Server port") # Changed default to 8002
     parser.add_argument("--ssl", action="store_true", help="Use SSL/TLS")
     parser.add_argument("--auth-type", choices=["jwt", "api_key"], default="jwt", help="Authentication type")
     parser.add_argument("--token", help="JWT token")
