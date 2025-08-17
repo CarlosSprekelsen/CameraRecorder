@@ -617,112 +617,38 @@ class MediaMTXController:
             start_time = time.time()
             start_time_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            # Verify stream is active and ready in MediaMTX, trigger on-demand activation if needed
-            async with self._session.get(f"{self._base_url}/v3/paths/list") as response:
-                if response.status != 200:
-                    error_msg = f"Failed to get MediaMTX active paths: HTTP {response.status}"
-                    self._logger.error(
-                        error_msg,
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                        },
-                    )
-                    raise ValueError(error_msg)
-                
-                paths_data = await response.json()
-                stream_path = next(
-                    (path for path in paths_data.get("items", []) if path["name"] == stream_name), 
-                    None
+            # Enhanced stream readiness validation before recording
+            self._logger.info(
+                f"Validating stream readiness before recording: {stream_name}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                },
+            )
+            
+            # Check stream readiness with timeout and on-demand activation
+            stream_ready = await self.check_stream_readiness(stream_name, timeout=10.0)
+            
+            if not stream_ready:
+                error_msg = f"Stream {stream_name} is not ready for recording after validation"
+                self._logger.error(
+                    error_msg,
+                    extra={
+                        "correlation_id": correlation_id,
+                        "stream_name": stream_name,
+                        "stream_ready": False,
+                    },
                 )
-                
-                if not stream_path:
-                    error_msg = f"Stream {stream_name} not found in MediaMTX"
-                    self._logger.error(
-                        error_msg,
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                        },
-                    )
-                    raise ValueError(error_msg)
-                
-                # Check if stream is ready, if not trigger on-demand activation
-                if not stream_path.get("ready", False):
-                    self._logger.info(
-                        f"Stream {stream_name} not ready, triggering on-demand activation",
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                        },
-                    )
-                    
-                    # Trigger on-demand activation by accessing the stream
-                    # This will cause MediaMTX to start the FFmpeg process via runOnDemand
-                    rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
-                    
-                    # Use a simple HTTP request to trigger the stream (MediaMTX will handle RTSP internally)
-                    try:
-                        # Try to access the stream to trigger on-demand activation
-                        # We'll use a short timeout since we just want to trigger the activation
-                        async with self._session.get(f"http://{self._host}:{self._rtsp_port}/{stream_name}", timeout=1) as trigger_response:
-                            # We don't care about the response, just triggering the activation
-                            pass
-                    except Exception as e:
-                        # Ignore errors from the trigger request - the important thing is that it was attempted
-                        self._logger.debug(
-                            f"Trigger request for {stream_name} completed (expected to fail): {e}",
-                            extra={
-                                "correlation_id": correlation_id,
-                                "stream_name": stream_name,
-                            },
-                        )
-                    
-                    # Wait for the stream to become ready (with timeout)
-                    max_wait_time = 10  # seconds
-                    wait_interval = 0.5  # seconds
-                    waited_time = 0
-                    
-                    while waited_time < max_wait_time:
-                        await asyncio.sleep(wait_interval)
-                        waited_time += wait_interval
-                        
-                        # Check if stream is now ready
-                        async with self._session.get(f"{self._base_url}/v3/paths/list") as check_response:
-                            if check_response.status == 200:
-                                check_paths = await check_response.json()
-                                check_stream = next(
-                                    (path for path in check_paths.get("items", []) if path["name"] == stream_name), 
-                                    None
-                                )
-                                if check_stream and check_stream.get("ready", False):
-                                    self._logger.info(
-                                        f"Stream {stream_name} became ready after on-demand activation",
-                                        extra={
-                                            "correlation_id": correlation_id,
-                                            "stream_name": stream_name,
-                                        },
-                                    )
-                                    break
-                    
-                    # Final check - if still not ready, raise error
-                    async with self._session.get(f"{self._base_url}/v3/paths/list") as final_response:
-                        if final_response.status == 200:
-                            final_paths = await final_response.json()
-                            final_stream = next(
-                                (path for path in final_paths.get("items", []) if path["name"] == stream_name), 
-                                None
-                            )
-                            if not final_stream or not final_stream.get("ready", False):
-                                error_msg = f"Stream {stream_name} failed to become ready after on-demand activation"
-                                self._logger.error(
-                                    error_msg,
-                                    extra={
-                                        "correlation_id": correlation_id,
-                                        "stream_name": stream_name,
-                                    },
-                                )
-                                raise ValueError(error_msg)
+                raise ValueError(error_msg)
+            
+            self._logger.info(
+                f"Stream {stream_name} validated as ready for recording",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "stream_ready": True,
+                },
+            )
 
             # Start external FFmpeg recording process
             rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
@@ -1797,3 +1723,208 @@ class MediaMTXController:
         """Async context manager exit."""
         # Clean up any resources if needed
         pass
+
+    async def check_stream_readiness(self, stream_name: str, timeout: float = 10.0) -> bool:
+        """
+        Check if a stream is ready for recording operations with enhanced validation.
+        
+        Args:
+            stream_name: Name of the stream to check
+            timeout: Maximum time to wait for stream readiness in seconds
+            
+        Returns:
+            True if stream is ready, False otherwise
+            
+        Raises:
+            ConnectionError: If MediaMTX is unreachable
+            ValueError: If stream does not exist
+        """
+        if not self._session:
+            raise ConnectionError("MediaMTX controller not started")
+
+        if not stream_name:
+            raise ValueError("Stream name is required")
+
+        correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
+        set_correlation_id(correlation_id)
+
+        self._logger.debug(
+            f"Checking stream readiness: {stream_name}",
+            extra={"correlation_id": correlation_id, "stream_name": stream_name},
+        )
+
+        try:
+            # Get current stream status from MediaMTX
+            async with self._session.get(f"{self._base_url}/v3/paths/list") as response:
+                if response.status != 200:
+                    error_msg = f"Failed to get MediaMTX active paths: HTTP {response.status}"
+                    self._logger.error(
+                        error_msg,
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                        },
+                    )
+                    raise ConnectionError(error_msg)
+                
+                paths_data = await response.json()
+                stream_path = next(
+                    (path for path in paths_data.get("items", []) if path["name"] == stream_name), 
+                    None
+                )
+                
+                if not stream_path:
+                    error_msg = f"Stream {stream_name} not found in MediaMTX"
+                    self._logger.error(
+                        error_msg,
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                        },
+                    )
+                    raise ValueError(error_msg)
+                
+                # Check if stream is ready
+                is_ready = stream_path.get("ready", False)
+                
+                if is_ready:
+                    self._logger.debug(
+                        f"Stream {stream_name} is ready for recording",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                            "stream_ready": True,
+                        },
+                    )
+                    return True
+                
+                # Stream is not ready, attempt on-demand activation
+                self._logger.info(
+                    f"Stream {stream_name} not ready, attempting on-demand activation",
+                    extra={
+                        "correlation_id": correlation_id,
+                        "stream_name": stream_name,
+                        "stream_ready": False,
+                    },
+                )
+                
+                # Trigger on-demand activation
+                await self._trigger_stream_activation(stream_name, correlation_id)
+                
+                # Wait for stream to become ready
+                return await self._wait_for_stream_readiness(stream_name, timeout, correlation_id)
+                
+        except aiohttp.ClientError as e:
+            error_msg = f"MediaMTX unreachable during stream readiness check for {stream_name}: {e}"
+            self._logger.error(
+                error_msg,
+                extra={"correlation_id": correlation_id, "stream_name": stream_name},
+            )
+            raise ConnectionError(error_msg)
+
+    async def _trigger_stream_activation(self, stream_name: str, correlation_id: str) -> None:
+        """
+        Trigger on-demand activation for a stream.
+        
+        Args:
+            stream_name: Name of the stream to activate
+            correlation_id: Correlation ID for logging
+        """
+        try:
+            # Try to access the stream to trigger on-demand activation
+            # We'll use a short timeout since we just want to trigger the activation
+            async with self._session.get(
+                f"http://{self._host}:{self._rtsp_port}/{stream_name}", 
+                timeout=1
+            ) as trigger_response:
+                # We don't care about the response, just triggering the activation
+                pass
+        except Exception as e:
+            # Ignore errors from the trigger request - the important thing is that it was attempted
+            self._logger.debug(
+                f"Trigger request for {stream_name} completed (expected to fail): {e}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                },
+            )
+
+    async def _wait_for_stream_readiness(self, stream_name: str, timeout: float, correlation_id: str) -> bool:
+        """
+        Wait for a stream to become ready with timeout.
+        
+        Args:
+            stream_name: Name of the stream to wait for
+            timeout: Maximum time to wait in seconds
+            correlation_id: Correlation ID for logging
+            
+        Returns:
+            True if stream became ready, False if timeout exceeded
+        """
+        wait_interval = 0.5  # seconds
+        waited_time = 0
+        
+        while waited_time < timeout:
+            await asyncio.sleep(wait_interval)
+            waited_time += wait_interval
+            
+            try:
+                # Check if stream is now ready
+                async with self._session.get(f"{self._base_url}/v3/paths/list") as check_response:
+                    if check_response.status == 200:
+                        check_paths = await check_response.json()
+                        check_stream = next(
+                            (path for path in check_paths.get("items", []) if path["name"] == stream_name), 
+                            None
+                        )
+                        if check_stream and check_stream.get("ready", False):
+                            self._logger.info(
+                                f"Stream {stream_name} became ready after on-demand activation",
+                                extra={
+                                    "correlation_id": correlation_id,
+                                    "stream_name": stream_name,
+                                    "wait_time": waited_time,
+                                    "stream_ready": True,
+                                },
+                            )
+                            return True
+                        
+                        # Log progress for long waits
+                        if waited_time >= 5.0 and waited_time % 2.0 < wait_interval:
+                            self._logger.debug(
+                                f"Still waiting for stream {stream_name} to become ready...",
+                                extra={
+                                    "correlation_id": correlation_id,
+                                    "stream_name": stream_name,
+                                    "wait_time": waited_time,
+                                    "timeout": timeout,
+                                },
+                            )
+                    else:
+                        self._logger.warning(
+                            f"Failed to check stream status: HTTP {check_response.status}",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "stream_name": stream_name,
+                            },
+                        )
+            except Exception as e:
+                self._logger.warning(
+                    f"Error checking stream readiness: {e}",
+                    extra={
+                        "correlation_id": correlation_id,
+                        "stream_name": stream_name,
+                    },
+                )
+        
+        # Timeout exceeded
+        self._logger.warning(
+            f"Stream {stream_name} did not become ready within {timeout} seconds",
+            extra={
+                "correlation_id": correlation_id,
+                "stream_name": stream_name,
+                "timeout": timeout,
+                "stream_ready": False,
+            },
+        )
+        return False

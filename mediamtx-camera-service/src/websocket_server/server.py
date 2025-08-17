@@ -1906,10 +1906,11 @@ class WebSocketJsonRpcServer:
 
     async def notify_camera_status_update(self, params: Dict[str, Any]) -> None:
         """
-        Broadcast camera_status_update notification with strict API compliance.
+        Broadcast camera_status_update notification with strict API compliance and enhanced disconnect handling.
 
         Filters notification parameters to only include API-specified fields:
         device, status, name, resolution, fps, streams (per docs/api/json-rpc-methods.md)
+        Ensures proper handling of disconnect events and state consistency.
 
         Args:
             params: Dictionary containing camera status fields
@@ -1927,6 +1928,19 @@ class WebSocketJsonRpcServer:
                 )
                 return
 
+        # Enhanced disconnect event handling
+        is_disconnect_event = params.get("status") == "DISCONNECTED"
+        device_path = params.get("device", "unknown")
+        
+        if is_disconnect_event:
+            self._logger.debug(
+                f"Processing camera disconnect notification for device: {device_path}",
+                extra={
+                    "device_path": device_path,
+                    "event_type": "camera_disconnect",
+                },
+            )
+
         # STRICT API COMPLIANCE: Filter to only allowed fields per specification
         allowed_fields = {"device", "status", "name", "resolution", "fps", "streams"}
         filtered_params = {k: v for k, v in params.items() if k in allowed_fields}
@@ -1939,16 +1953,34 @@ class WebSocketJsonRpcServer:
             )
 
         try:
+            # Enhanced notification with disconnect-specific handling
             await self.broadcast_notification(
                 method="camera_status_update", params=filtered_params
             )
 
-            self._logger.info(
-                f"Broadcasted camera status update for device: {params.get('device')}"
-            )
+            # Enhanced logging for disconnect events
+            if is_disconnect_event:
+                self._logger.info(
+                    f"Successfully broadcasted camera disconnect notification for device: {device_path}",
+                    extra={
+                        "device_path": device_path,
+                        "notification_type": "disconnect",
+                        "clients_notified": len(self._clients),
+                    },
+                )
+            else:
+                self._logger.info(
+                    f"Broadcasted camera status update for device: {device_path}"
+                )
 
         except Exception as e:
-            self._logger.error(f"Failed to broadcast camera status update: {e}")
+            self._logger.error(
+                f"Failed to broadcast camera status update: {e}",
+                extra={
+                    "device_path": device_path,
+                    "is_disconnect_event": is_disconnect_event,
+                },
+            )
 
     async def notify_recording_status_update(self, params: Dict[str, Any]) -> None:
         """
