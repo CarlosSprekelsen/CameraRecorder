@@ -367,9 +367,77 @@ validate_backup_recovery() {
     fi
 }
 
-# Phase 7: Integration and System Validation
+# Phase 7: File Management API Validation (Epic E6)
+validate_file_management_api() {
+    log_message "=== Phase 7: File Management API Validation (Epic E6) ==="
+    
+    # Test 1: Check if health server is running
+    if check_port "8003"; then
+        log_success "Health server is listening on port 8003"
+    else
+        log_error "Health server is not listening on port 8003"
+    fi
+    
+    # Test 2: Check if file directories exist
+    if [ -d "/opt/camera-service/recordings" ]; then
+        log_success "Recordings directory exists"
+    else
+        log_warning "Recordings directory missing"
+    fi
+    
+    if [ -d "/opt/camera-service/snapshots" ]; then
+        log_success "Snapshots directory exists"
+    else
+        log_warning "Snapshots directory missing"
+    fi
+    
+    # Test 3: Test file download endpoints
+    if command_exists curl; then
+        # Test recordings endpoint
+        if curl -s -I http://localhost:8003/files/recordings/ >/dev/null 2>&1; then
+            log_success "Recordings download endpoint is accessible"
+        else
+            log_error "Recordings download endpoint is not accessible"
+        fi
+        
+        # Test snapshots endpoint
+        if curl -s -I http://localhost:8003/files/snapshots/ >/dev/null 2>&1; then
+            log_success "Snapshots download endpoint is accessible"
+        else
+            log_error "Snapshots download endpoint is not accessible"
+        fi
+        
+        # Test SSL endpoints through nginx
+        if curl -s -k -I https://localhost/files/recordings/ >/dev/null 2>&1; then
+            log_success "SSL recordings endpoint is accessible"
+        else
+            log_error "SSL recordings endpoint is not accessible"
+        fi
+        
+        if curl -s -k -I https://localhost/files/snapshots/ >/dev/null 2>&1; then
+            log_success "SSL snapshots endpoint is accessible"
+        else
+            log_error "SSL snapshots endpoint is not accessible"
+        fi
+    else
+        log_warning "curl not available for file endpoint testing"
+    fi
+    
+    # Test 4: Check nginx configuration
+    if command_exists nginx; then
+        if nginx -t >/dev/null 2>&1; then
+            log_success "Nginx configuration is valid"
+        else
+            log_error "Nginx configuration is invalid"
+        fi
+    else
+        log_warning "nginx not available for configuration testing"
+    fi
+}
+
+# Phase 8: Integration and System Validation
 validate_integration() {
-    log_message "=== Phase 7: Integration and System Validation ==="
+    log_message "=== Phase 8: Integration and System Validation ==="
     
     # Test 1: Check if all services can communicate
     if check_service "mediamtx" && check_service "camera-service"; then
@@ -449,6 +517,7 @@ main() {
     validate_security_hardening
     validate_monitoring_operations
     validate_backup_recovery
+    validate_file_management_api
     validate_integration
     
     # Generate final report

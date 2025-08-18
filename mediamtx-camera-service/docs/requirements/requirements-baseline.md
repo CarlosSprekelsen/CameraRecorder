@@ -51,6 +51,11 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-FUNC-005 | Service | MediaMTX integration | Critical | Architecture | ✅ Implemented |
 | REQ-FUNC-006 | File | Metadata management | High | Client Requirements | ✅ Implemented |
 | REQ-FUNC-007 | File | Storage configuration | High | Client Requirements | ✅ Implemented |
+| REQ-FUNC-008 | File | JSON-RPC list_recordings method | Critical | Epic E6 | 📋 Planned |
+| REQ-FUNC-009 | File | JSON-RPC list_snapshots method | Critical | Epic E6 | 📋 Planned |
+| REQ-FUNC-010 | File | HTTP recording file download endpoint | Critical | Epic E6 | 📋 Planned |
+| REQ-FUNC-011 | File | HTTP snapshot file download endpoint | Critical | Epic E6 | 📋 Planned |
+| REQ-FUNC-012 | File | Nginx routing for file endpoints | Critical | Epic E6 | 📋 Planned |
 
 ### 2.2 Non-Functional Requirements
 
@@ -88,7 +93,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 | Real-time camera control | REQ-FUNC-001, REQ-FUNC-002 | REQ-PERF-001, REQ-PERF-002 | REQ-TECH-002, REQ-TECH-003 |
 | Multi-user support | REQ-FUNC-003 | REQ-PERF-003, REQ-PERF-006 | REQ-TECH-001, REQ-TECH-004 |
 | Secure operations | REQ-FUNC-004 | REQ-SEC-001, REQ-SEC-002 | REQ-TECH-005 |
-| Reliable file management | REQ-FUNC-006, REQ-FUNC-007 | REQ-PERF-004, REQ-PERF-005 | REQ-TECH-001 |
+| Reliable file management | REQ-FUNC-006, REQ-FUNC-007, REQ-FUNC-008, REQ-FUNC-009, REQ-FUNC-010, REQ-FUNC-011, REQ-FUNC-012 | REQ-PERF-004, REQ-PERF-005 | REQ-TECH-001 |
 
 ### 3.2 Requirements to Test Mapping
 
@@ -98,93 +103,137 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-PERF-002 | Performance | `tests/performance/test_camera_discovery.py` | ⚠️ In Progress |
 | REQ-PERF-003 | Performance | `tests/performance/test_concurrent_connections.py` | ⚠️ In Progress |
 | REQ-SEC-001 | Security | `tests/security/test_authentication.py` | ⚠️ In Progress |
-| REQ-FUNC-001 | Integration | `tests/integration/test_photo_capture.py` | ✅ Complete |
 
 ---
 
-## 4. Requirements Status Tracking
+## 4. Epic E6 File Management Requirements Details
 
-### 4.1 Implementation Status
+### 4.1 REQ-FUNC-008: JSON-RPC list_recordings Method
+**Description:** Server shall provide JSON-RPC method `list_recordings` to enumerate available recording files in `/opt/camera-service/recordings` directory.
 
-#### ✅ Implemented Requirements
-- **REQ-FUNC-001 through REQ-FUNC-007:** Core functional requirements implemented
-- **REQ-TECH-001 through REQ-TECH-003:** Core technical requirements implemented
+**Parameters:** 
+- `limit` (optional): Maximum number of files to return (default: 100)
+- `offset` (optional): Number of files to skip for pagination (default: 0)
 
-#### ⚠️ Validating Requirements
-- **REQ-PERF-001 through REQ-PERF-006:** Performance requirements under validation
-- **REQ-SEC-001 through REQ-SEC-004:** Security requirements under validation
-- **REQ-TECH-004 through REQ-TECH-005:** Deployment and operations requirements under validation
+**Response:**
+```json
+{
+  "files": [
+    {
+      "filename": "camera0_2025-01-15_14-30-00.mp4",
+      "size": 1048576,
+      "timestamp": "2025-01-15T14:30:00Z",
+      "duration": 30.5,
+      "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+    }
+  ],
+  "total_count": 150,
+  "has_more": true
+}
+```
 
-#### ❌ Pending Requirements
-- **REQ-REL-*:** Reliability requirements (to be defined)
-- **REQ-USE-*:** Usability requirements (to be defined)
+**Error Handling:**
+- Directory not accessible: Return error with code -32001
+- Permission denied: Return error with code -32002
+- Invalid parameters: Return error with code -32602
 
-### 4.2 Validation Status
+### 4.2 REQ-FUNC-009: JSON-RPC list_snapshots Method
+**Description:** Server shall provide JSON-RPC method `list_snapshots` to enumerate available snapshot files in `/opt/camera-service/snapshots` directory.
 
-#### CDR Phase Validation
-- **Phase 1:** Performance validation - ⚠️ In Progress
-- **Phase 2:** Security validation - ❌ Pending
-- **Phase 3:** Deployment validation - ❌ Pending
-- **Phase 4:** Documentation validation - ❌ Pending
-- **Phase 5:** Integration validation - ❌ Pending
+**Parameters:**
+- `limit` (optional): Maximum number of files to return (default: 100)
+- `offset` (optional): Number of files to skip for pagination (default: 0)
+
+**Response:**
+```json
+{
+  "files": [
+    {
+      "filename": "camera0_2025-01-15_14-30-00.jpg",
+      "size": 524288,
+      "timestamp": "2025-01-15T14:30:00Z",
+      "download_url": "/files/snapshots/camera0_2025-01-15_14-30-00.jpg"
+    }
+  ],
+  "total_count": 75,
+  "has_more": false
+}
+```
+
+**Error Handling:**
+- Directory not accessible: Return error with code -32001
+- Permission denied: Return error with code -32002
+- Invalid parameters: Return error with code -32602
+
+### 4.3 REQ-FUNC-010: HTTP Recording File Download Endpoint
+**Description:** Server shall provide HTTP endpoint `/files/recordings/{filename}` for downloading recording files.
+
+**Features:**
+- MIME type detection for video files (mp4, avi, mov, etc.)
+- Content-Disposition header for proper file downloads
+- 404 response for non-existent files
+- File access logging for security audit trail
+- Support for range requests for large files
+
+**Response Headers:**
+```
+Content-Type: video/mp4
+Content-Disposition: attachment; filename="camera0_2025-01-15_14-30-00.mp4"
+Content-Length: 1048576
+Accept-Ranges: bytes
+```
+
+### 4.4 REQ-FUNC-011: HTTP Snapshot File Download Endpoint
+**Description:** Server shall provide HTTP endpoint `/files/snapshots/{filename}` for downloading snapshot files.
+
+**Features:**
+- MIME type detection for image files (jpg, png, bmp, etc.)
+- Content-Disposition header for proper file downloads
+- 404 response for non-existent files
+- File access logging for security audit trail
+
+**Response Headers:**
+```
+Content-Type: image/jpeg
+Content-Disposition: attachment; filename="camera0_2025-01-15_14-30-00.jpg"
+Content-Length: 524288
+```
+
+### 4.5 REQ-FUNC-012: Nginx Routing for File Endpoints
+**Description:** Server nginx configuration shall include location blocks for file download endpoints while preserving existing functionality.
+
+**Configuration Requirements:**
+- `/files/recordings/` location block pointing to server file handler
+- `/files/snapshots/` location block pointing to server file handler
+- Preserve existing WebSocket routing on port 8002
+- Preserve existing health endpoint routing on port 8003
+- Maintain SSL/HTTPS functionality for all endpoints
+
+**Security Considerations:**
+- Prevent directory traversal attacks
+- Implement proper file access controls
+- Log all file download requests
 
 ---
 
-## 5. Requirements Change Management
+## 5. Requirements Validation Status
 
-### 5.1 Change Control Process
-1. **Change Request:** Submit change request with justification
-2. **Impact Analysis:** Assess impact on existing requirements and implementation
-3. **Approval:** Project Manager approval for requirement changes
-4. **Implementation:** Update requirements and related documents
-5. **Validation:** Re-validate affected requirements
+### 5.1 Epic E6 Requirements Status
+- **REQ-FUNC-008:** 📋 Planned - Implementation pending
+- **REQ-FUNC-009:** 📋 Planned - Implementation pending  
+- **REQ-FUNC-010:** 📋 Planned - Implementation pending
+- **REQ-FUNC-011:** 📋 Planned - Implementation pending
+- **REQ-FUNC-012:** 📋 Planned - Implementation pending
 
-### 5.2 Version Control
-- **Major Version:** Significant requirement changes affecting multiple areas
-- **Minor Version:** Requirement clarifications or additions
-- **Patch Version:** Documentation updates or corrections
-
-### 5.3 Requirements Baselines
-- **Baseline 1.0:** Initial requirements baseline (current)
-- **Baseline 2.0:** Post-CDR requirements baseline (planned)
-- **Baseline 3.0:** Production requirements baseline (planned)
+### 5.2 Validation Criteria
+- All file management API methods shall be tested with real file system operations
+- File download endpoints shall be validated with various file formats and sizes
+- Nginx configuration shall be tested for proper routing and SSL functionality
+- Performance impact on existing server operations shall be measured
+- Security validation shall include directory traversal prevention testing
 
 ---
 
-## 6. Requirements Quality Assurance
-
-### 6.1 Requirements Quality Criteria
-- **Completeness:** All requirements are defined and traceable
-- **Consistency:** Requirements do not conflict with each other
-- **Clarity:** Requirements are unambiguous and testable
-- **Traceability:** Requirements are traceable to business needs and tests
-
-### 6.2 Requirements Review Process
-- **Peer Review:** Requirements reviewed by technical team
-- **Stakeholder Review:** Requirements reviewed by stakeholders
-- **Validation Review:** Requirements validated through testing
-- **Final Approval:** Requirements approved by Project Manager
-
----
-
-## 7. Requirements Documentation Standards
-
-### 7.1 Document Structure
-- **Executive Summary:** High-level overview and status
-- **Requirements List:** Detailed requirements with traceability
-- **Status Tracking:** Current implementation and validation status
-- **Change Management:** Process for managing requirement changes
-
-### 7.2 Requirements Format
-- **REQ-ID:** Unique identifier for each requirement
-- **Category:** Functional, non-functional, or technical
-- **Description:** Clear, testable requirement description
-- **Priority:** Critical, high, medium, or low
-- **Source:** Origin of the requirement
-- **Status:** Implementation and validation status
-
----
-
-**Requirements Baseline Status: ✅ MASTER REQUIREMENTS REGISTER ESTABLISHED**
-
-The requirements baseline document serves as the master requirements register, providing a single source of truth for all project requirements with clear traceability to business needs, client requirements, and technical specifications.
+**Document Status:** Updated for Epic E6 file management requirements
+**Last Updated:** 2025-01-15
+**Next Review:** After Epic E6 completion

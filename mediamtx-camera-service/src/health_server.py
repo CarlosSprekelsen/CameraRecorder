@@ -6,6 +6,8 @@ as specified in Architecture Decision AD-6.
 """
 
 import logging
+import os
+import mimetypes
 from datetime import datetime, timezone
 from typing import Dict
 from dataclasses import dataclass
@@ -89,6 +91,10 @@ class HealthServer:
         self.app.router.add_get("/health/cameras", self._handle_cameras_health)
         self.app.router.add_get("/health/mediamtx", self._handle_mediamtx_health)
         self.app.router.add_get("/health/ready", self._handle_readiness)
+        
+        # File download endpoints (Epic E6)
+        self.app.router.add_get("/files/recordings/{filename:.*}", self._handle_recording_download)
+        self.app.router.add_get("/files/snapshots/{filename:.*}", self._handle_snapshot_download)
         
         # Start server
         self.runner = web.AppRunner(self.app)
@@ -373,4 +379,135 @@ class HealthServer:
     @property
     def is_running(self) -> bool:
         """Check if health server is running."""
-        return self._started 
+        return self._started
+
+    async def _handle_recording_download(self, request: web.Request) -> web.Response:
+        """
+        Handle recording file download requests.
+        
+        Requirements: REQ-FUNC-010
+        Epic E6: Server Recording and Snapshot File Management Infrastructure
+        
+        Args:
+            request: aiohttp request object
+            
+        Returns:
+            File response or 404 error
+        """
+        try:
+            filename = request.match_info['filename']
+            
+            # Security: Prevent directory traversal
+            if '..' in filename or filename.startswith('/'):
+                self.logger.warning(f"Directory traversal attempt detected: {filename}")
+                return web.Response(status=400, text="Invalid filename")
+            
+            # Construct file path
+            file_path = os.path.join("/opt/camera-service/recordings", filename)
+            
+            # Check if file exists and is accessible
+            if not os.path.exists(file_path):
+                self.logger.warning(f"Recording file not found: {filename}")
+                return web.Response(status=404, text="File not found")
+            
+            if not os.path.isfile(file_path):
+                self.logger.warning(f"Path is not a file: {filename}")
+                return web.Response(status=404, text="File not found")
+            
+            if not os.access(file_path, os.R_OK):
+                self.logger.error(f"Permission denied accessing recording file: {filename}")
+                return web.Response(status=403, text="Permission denied")
+            
+            # Get file info
+            file_size = os.path.getsize(file_path)
+            
+            # Determine MIME type
+            mime_type, _ = mimetypes.guess_type(filename)
+            if not mime_type:
+                # Default to video/mp4 for recordings
+                mime_type = "video/mp4"
+            
+            # Log file access for security audit
+            self.logger.info(f"Recording file download: {filename} (size: {file_size})")
+            
+            # Create response with proper headers
+            response = web.FileResponse(
+                path=file_path,
+                headers={
+                    'Content-Type': mime_type,
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'Content-Length': str(file_size),
+                    'Accept-Ranges': 'bytes'
+                }
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error serving recording file {filename}: {e}")
+            return web.Response(status=500, text="Internal server error")
+
+    async def _handle_snapshot_download(self, request: web.Request) -> web.Response:
+        """
+        Handle snapshot file download requests.
+        
+        Requirements: REQ-FUNC-011
+        Epic E6: Server Recording and Snapshot File Management Infrastructure
+        
+        Args:
+            request: aiohttp request object
+            
+        Returns:
+            File response or 404 error
+        """
+        try:
+            filename = request.match_info['filename']
+            
+            # Security: Prevent directory traversal
+            if '..' in filename or filename.startswith('/'):
+                self.logger.warning(f"Directory traversal attempt detected: {filename}")
+                return web.Response(status=400, text="Invalid filename")
+            
+            # Construct file path
+            file_path = os.path.join("/opt/camera-service/snapshots", filename)
+            
+            # Check if file exists and is accessible
+            if not os.path.exists(file_path):
+                self.logger.warning(f"Snapshot file not found: {filename}")
+                return web.Response(status=404, text="File not found")
+            
+            if not os.path.isfile(file_path):
+                self.logger.warning(f"Path is not a file: {filename}")
+                return web.Response(status=404, text="File not found")
+            
+            if not os.access(file_path, os.R_OK):
+                self.logger.error(f"Permission denied accessing snapshot file: {filename}")
+                return web.Response(status=403, text="Permission denied")
+            
+            # Get file info
+            file_size = os.path.getsize(file_path)
+            
+            # Determine MIME type
+            mime_type, _ = mimetypes.guess_type(filename)
+            if not mime_type:
+                # Default to image/jpeg for snapshots
+                mime_type = "image/jpeg"
+            
+            # Log file access for security audit
+            self.logger.info(f"Snapshot file download: {filename} (size: {file_size})")
+            
+            # Create response with proper headers
+            response = web.FileResponse(
+                path=file_path,
+                headers={
+                    'Content-Type': mime_type,
+                    'Content-Disposition': f'attachment; filename="{filename}"',
+                    'Content-Length': str(file_size)
+                }
+            )
+            
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error serving snapshot file {filename}: {e}")
+            return web.Response(status=500, text="Internal server error") 

@@ -18,6 +18,9 @@ import logging
 import time
 import uuid
 import psutil
+import os
+import stat
+from datetime import datetime
 from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
 from collections import defaultdict
@@ -1110,6 +1113,9 @@ class WebSocketJsonRpcServer:
         self.register_method("get_metrics", self._method_get_metrics, version="1.0")
         self.register_method("get_status", self._method_get_status, version="1.0")
         self.register_method("get_server_info", self._method_get_server_info, version="1.0")
+        # File management methods (Epic E6)
+        self.register_method("list_recordings", self._method_list_recordings, version="1.0")
+        self.register_method("list_snapshots", self._method_list_snapshots, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
@@ -2095,3 +2101,208 @@ class WebSocketJsonRpcServer:
     def is_running(self) -> bool:
         """Check if the server is currently running."""
         return self._running
+
+    async def _method_list_recordings(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        List available recording files in the recordings directory.
+        
+        Requirements: REQ-FUNC-008
+        Epic E6: Server Recording and Snapshot File Management Infrastructure
+        
+        Args:
+            params: Optional parameters containing:
+                - limit: Maximum number of files to return (default: 100)
+                - offset: Number of files to skip for pagination (default: 0)
+        
+        Returns:
+            Dictionary containing file list with metadata and pagination info
+        """
+        try:
+            # Parse parameters with defaults
+            limit = params.get("limit", 100) if params else 100
+            offset = params.get("offset", 0) if params else 0
+            
+            # Validate parameters
+            if not isinstance(limit, int) or limit < 1 or limit > 1000:
+                raise ValueError("Invalid limit parameter: must be integer between 1 and 1000")
+            if not isinstance(offset, int) or offset < 0:
+                raise ValueError("Invalid offset parameter: must be non-negative integer")
+            
+            # Define recordings directory path
+            recordings_dir = "/opt/camera-service/recordings"
+            
+            # Check if directory exists and is accessible
+            if not os.path.exists(recordings_dir):
+                self._logger.warning(f"Recordings directory does not exist: {recordings_dir}")
+                return {
+                    "files": [],
+                    "total_count": 0,
+                    "has_more": False
+                }
+            
+            if not os.access(recordings_dir, os.R_OK):
+                self._logger.error(f"Permission denied accessing recordings directory: {recordings_dir}")
+                raise PermissionError("Permission denied accessing recordings directory")
+            
+            # Get list of files in directory
+            try:
+                files = []
+                for filename in os.listdir(recordings_dir):
+                    file_path = os.path.join(recordings_dir, filename)
+                    
+                    # Skip directories and non-files
+                    if not os.path.isfile(file_path):
+                        continue
+                    
+                    # Get file stats
+                    try:
+                        stat_info = os.stat(file_path)
+                        file_size = stat_info.st_size
+                        file_time = datetime.fromtimestamp(stat_info.st_mtime)
+                        
+                        # Determine if it's a video file
+                        is_video = filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv'))
+                        
+                        file_info = {
+                            "filename": filename,
+                            "size": file_size,
+                            "timestamp": file_time.isoformat() + "Z",
+                            "download_url": f"/files/recordings/{filename}"
+                        }
+                        
+                        # Add duration for video files (placeholder - would need video metadata extraction)
+                        if is_video:
+                            file_info["duration"] = None  # TODO: Extract actual duration from video file
+                        
+                        files.append(file_info)
+                        
+                    except OSError as e:
+                        self._logger.warning(f"Error accessing file {filename}: {e}")
+                        continue
+                
+                # Sort files by timestamp (newest first)
+                files.sort(key=lambda x: x["timestamp"], reverse=True)
+                
+                # Apply pagination
+                total_count = len(files)
+                start_idx = offset
+                end_idx = min(start_idx + limit, total_count)
+                paginated_files = files[start_idx:end_idx]
+                
+                return {
+                    "files": paginated_files,
+                    "total_count": total_count,
+                    "has_more": end_idx < total_count
+                }
+                
+            except OSError as e:
+                self._logger.error(f"Error reading recordings directory: {e}")
+                raise OSError(f"Error reading recordings directory: {e}")
+                
+        except (ValueError, PermissionError, OSError) as e:
+            self._logger.error(f"Error in list_recordings: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in list_recordings: {e}")
+            raise
+
+    async def _method_list_snapshots(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        List available snapshot files in the snapshots directory.
+        
+        Requirements: REQ-FUNC-009
+        Epic E6: Server Recording and Snapshot File Management Infrastructure
+        
+        Args:
+            params: Optional parameters containing:
+                - limit: Maximum number of files to return (default: 100)
+                - offset: Number of files to skip for pagination (default: 0)
+        
+        Returns:
+            Dictionary containing file list with metadata and pagination info
+        """
+        try:
+            # Parse parameters with defaults
+            limit = params.get("limit", 100) if params else 100
+            offset = params.get("offset", 0) if params else 0
+            
+            # Validate parameters
+            if not isinstance(limit, int) or limit < 1 or limit > 1000:
+                raise ValueError("Invalid limit parameter: must be integer between 1 and 1000")
+            if not isinstance(offset, int) or offset < 0:
+                raise ValueError("Invalid offset parameter: must be non-negative integer")
+            
+            # Define snapshots directory path
+            snapshots_dir = "/opt/camera-service/snapshots"
+            
+            # Check if directory exists and is accessible
+            if not os.path.exists(snapshots_dir):
+                self._logger.warning(f"Snapshots directory does not exist: {snapshots_dir}")
+                return {
+                    "files": [],
+                    "total_count": 0,
+                    "has_more": False
+                }
+            
+            if not os.access(snapshots_dir, os.R_OK):
+                self._logger.error(f"Permission denied accessing snapshots directory: {snapshots_dir}")
+                raise PermissionError("Permission denied accessing snapshots directory")
+            
+            # Get list of files in directory
+            try:
+                files = []
+                for filename in os.listdir(snapshots_dir):
+                    file_path = os.path.join(snapshots_dir, filename)
+                    
+                    # Skip directories and non-files
+                    if not os.path.isfile(file_path):
+                        continue
+                    
+                    # Get file stats
+                    try:
+                        stat_info = os.stat(file_path)
+                        file_size = stat_info.st_size
+                        file_time = datetime.fromtimestamp(stat_info.st_mtime)
+                        
+                        file_info = {
+                            "filename": filename,
+                            "size": file_size,
+                            "timestamp": file_time.isoformat() + "Z",
+                            "download_url": f"/files/snapshots/{filename}"
+                        }
+                        
+                        files.append(file_info)
+                        
+                    except OSError as e:
+                        self._logger.warning(f"Error accessing file {filename}: {e}")
+                        continue
+                
+                # Sort files by timestamp (newest first)
+                files.sort(key=lambda x: x["timestamp"], reverse=True)
+                
+                # Apply pagination
+                total_count = len(files)
+                start_idx = offset
+                end_idx = min(start_idx + limit, total_count)
+                paginated_files = files[start_idx:end_idx]
+                
+                return {
+                    "files": paginated_files,
+                    "total_count": total_count,
+                    "has_more": end_idx < total_count
+                }
+                
+            except OSError as e:
+                self._logger.error(f"Error reading snapshots directory: {e}")
+                raise OSError(f"Error reading snapshots directory: {e}")
+                
+        except (ValueError, PermissionError, OSError) as e:
+            self._logger.error(f"Error in list_snapshots: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in list_snapshots: {e}")
+            raise

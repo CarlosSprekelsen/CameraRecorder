@@ -117,6 +117,34 @@ server {
         proxy_pass http://127.0.0.1:8003/health/;
         access_log off;
     }
+    
+    # File download endpoints (Epic E6)
+    location /files/recordings/ {
+        proxy_pass http://127.0.0.1:8003/files/recordings/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Enable large file downloads
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_connect_timeout 60s;
+        
+        # Security headers
+        add_header X-Content-Type-Options nosniff always;
+    }
+    
+    location /files/snapshots/ {
+        proxy_pass http://127.0.0.1:8003/files/snapshots/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Security headers
+        add_header X-Content-Type-Options nosniff always;
+    }
 }
 
 server {

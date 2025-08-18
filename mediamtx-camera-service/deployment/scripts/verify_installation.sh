@@ -217,6 +217,82 @@ verify_network() {
     fi
 }
 
+# Function to verify file management API (Epic E6)
+verify_file_management_api() {
+    print_title "Verifying File Management API (Epic E6)"
+    
+    # Check if health server is running on port 8003
+    if netstat -tlnp 2>/dev/null | grep -q ":8003 "; then
+        print_success "Health server is listening on port 8003"
+    else
+        print_error "Health server is not listening on port 8003"
+        return 1
+    fi
+    
+    # Test health endpoint
+    print_status "Testing health endpoint..."
+    if curl -s http://localhost:8003/health/system >/dev/null 2>&1; then
+        print_success "Health endpoint is responding"
+    else
+        print_error "Health endpoint is not responding"
+        return 1
+    fi
+    
+    # Test file download endpoints
+    print_status "Testing file download endpoints..."
+    
+    # Test recordings endpoint
+    if curl -s -I http://localhost:8003/files/recordings/ >/dev/null 2>&1; then
+        print_success "Recordings download endpoint is accessible"
+    else
+        print_warning "Recordings download endpoint is not accessible"
+    fi
+    
+    # Test snapshots endpoint
+    if curl -s -I http://localhost:8003/files/snapshots/ >/dev/null 2>&1; then
+        print_success "Snapshots download endpoint is accessible"
+    else
+        print_warning "Snapshots download endpoint is not accessible"
+    fi
+    
+    # Check if directories exist and are accessible
+    print_status "Checking file directories..."
+    if [[ -d "$RECORDINGS_DIR" ]]; then
+        print_success "Recordings directory exists: $RECORDINGS_DIR"
+    else
+        print_warning "Recordings directory missing: $RECORDINGS_DIR"
+    fi
+    
+    if [[ -d "$SNAPSHOTS_DIR" ]]; then
+        print_success "Snapshots directory exists: $SNAPSHOTS_DIR"
+    else
+        print_warning "Snapshots directory missing: $SNAPSHOTS_DIR"
+    fi
+    
+    # Test nginx configuration
+    print_status "Testing nginx configuration..."
+    if nginx -t >/dev/null 2>&1; then
+        print_success "Nginx configuration is valid"
+    else
+        print_error "Nginx configuration is invalid"
+        return 1
+    fi
+    
+    # Test SSL file endpoints through nginx
+    print_status "Testing SSL file endpoints..."
+    if curl -s -k -I https://localhost/files/recordings/ >/dev/null 2>&1; then
+        print_success "SSL recordings endpoint is accessible"
+    else
+        print_warning "SSL recordings endpoint is not accessible"
+    fi
+    
+    if curl -s -k -I https://localhost/files/snapshots/ >/dev/null 2>&1; then
+        print_success "SSL snapshots endpoint is accessible"
+    else
+        print_warning "SSL snapshots endpoint is not accessible"
+    fi
+}
+
 # Function to verify logs
 verify_logs() {
     print_title "Verifying Log Files"
@@ -260,6 +336,7 @@ display_summary() {
     echo "Port Status:"
     echo "  - RTSP (8554): $(netstat -tlnp 2>/dev/null | grep -q ':8554 ' && echo 'LISTENING' || echo 'NOT LISTENING')"
     echo "  - WebSocket (8002): $(netstat -tlnp 2>/dev/null | grep -q ':8002 ' && echo 'LISTENING' || echo 'NOT LISTENING')"
+    echo "  - Health Server (8003): $(netstat -tlnp 2>/dev/null | grep -q ':8003 ' && echo 'LISTENING' || echo 'NOT LISTENING')"
     echo "  - MediaMTX API (9997): $(netstat -tlnp 2>/dev/null | grep -q ':9997 ' && echo 'LISTENING' || echo 'NOT LISTENING')"
     echo
     echo "Camera Devices: $(ls /dev/video* 2>/dev/null | wc -l)"
@@ -270,6 +347,8 @@ display_summary() {
     echo "  - Check service status: sudo systemctl status $SERVICE_NAME mediamtx"
     echo "  - Test WebSocket: curl -H 'Connection: Upgrade' -H 'Upgrade: websocket' http://localhost:8002/ws"
     echo "  - Test MediaMTX API: curl http://localhost:9997/v3/config/global/get"
+    echo "  - Test file download: curl -I https://localhost/files/recordings/"
+    echo "  - Test file download: curl -I https://localhost/files/snapshots/"
     echo
 }
 
@@ -286,6 +365,7 @@ main() {
     verify_camera_service
     verify_dependencies
     verify_network
+    verify_file_management_api
     verify_logs
     
     # Display summary
