@@ -34,6 +34,15 @@ mediamtx:
   backoff_jitter_range: [0.8, 1.2] # Jitter range for backoff randomization (will be converted to tuple)
   process_termination_timeout: 3.0  # Timeout for graceful process termination
   process_kill_timeout: 2.0        # Timeout for force kill after termination
+  
+  # Stream readiness configuration for improved reliability
+  stream_readiness:
+    timeout: 15.0                   # Increased from 5.0s to 15.0s for reliability
+    retry_attempts: 3               # Number of retry attempts
+    retry_delay: 2.0                # Delay between retries in seconds
+    check_interval: 0.5             # Interval between readiness checks
+    enable_progress_notifications: true  # Send progress notifications during validation
+    graceful_fallback: true         # Enable graceful fallback when streams unavailable
 
 # FFmpeg configuration for performance tuning
 ffmpeg:

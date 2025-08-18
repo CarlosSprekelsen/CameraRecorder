@@ -852,6 +852,11 @@ class ServiceManager(CameraEventHandler):
                     "recording": self._config.ffmpeg.recording
                 }
             
+            # Get stream readiness configuration from config
+            stream_readiness_config = None
+            if hasattr(mediamtx_config, 'stream_readiness') and mediamtx_config.stream_readiness:
+                stream_readiness_config = mediamtx_config.stream_readiness
+            
             self._mediamtx_controller = MediaMTXController(
                 host=mediamtx_config.host,
                 api_port=mediamtx_config.api_port,
@@ -872,6 +877,10 @@ class ServiceManager(CameraEventHandler):
                 process_kill_timeout=mediamtx_config.process_kill_timeout,
                 ffmpeg_config=ffmpeg_config,
             )
+            
+            # Set stream readiness configuration if available
+            if stream_readiness_config:
+                self._mediamtx_controller._stream_readiness_config = stream_readiness_config
             await self._mediamtx_controller.start()
 
             # Verify MediaMTX health after startup

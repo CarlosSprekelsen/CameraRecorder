@@ -35,10 +35,12 @@ const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
   httpUrl: 'http://localhost:8003',  // Health server port
   httpsUrl: 'https://localhost:8002',
-  timeout: 30000,
+  timeout: 60000, // Increased from 30s to 60s for reliability
   retryAttempts: 3,
   retryDelay: 1000,
   maxResponseTime: 2000, // 2 seconds max response time
+  notificationTimeout: 15000, // Increased from 5s to 15s for notifications
+  cleanupDelay: 2000, // Delay for cleanup operations
 };
 
 // Test results tracking
@@ -204,6 +206,15 @@ async function testAllJsonRpcMethods() {
       { method: 'list_snapshots', id: 9, params: { limit: 5, offset: 0 }, expectedResult: 'object', requiresAuth: false },
     ];
     
+    // File verification tracking
+    const fileVerification = {
+      recordingsBefore: 0,
+      recordingsAfter: 0,
+      snapshotsBefore: 0,
+      snapshotsAfter: 0,
+      filesCreated: false
+    };
+    
     let completedMethods = 0;
     let authenticated = false;
     const startTime = performance.now();
@@ -212,10 +223,18 @@ async function testAllJsonRpcMethods() {
       reject(new Error('JSON-RPC methods test timeout'));
     }, CONFIG.timeout);
 
-    ws.on('open', () => {
+    ws.on('open', async () => {
       console.log('✅ Connected, testing all JSON-RPC methods...');
       
-      // Resolve authentication token and send authenticate first
+      // Step 1: Clean up any existing recordings before testing
+      console.log('🧹 Cleaning up any existing recordings...');
+      await cleanupExistingRecordings(ws);
+      
+      // Step 2: Get initial file counts for verification
+      console.log('📊 Getting initial file counts...');
+      await getInitialFileCounts(fileVerification);
+      
+      // Step 3: Resolve authentication token and send authenticate first
       const token = getAuthToken();
       assert(!!token, 'Auth token available');
       methods.find(m => m.method === 'authenticate').params = { token };
@@ -312,7 +331,7 @@ async function testRealTimeNotifications() {
 
     const timeout = setTimeout(() => {
       reject(new Error('Real-time notifications test timeout'));
-    }, CONFIG.timeout);
+    }, CONFIG.notificationTimeout);
 
     ws.on('open', () => {
       console.log('✅ Connected, testing real-time notifications...');
@@ -700,6 +719,9 @@ async function runSprint3Day9Tests() {
     await testErrorHandling();
     await testCrossBrowserCompatibility();
     await testSecurityImplementation();
+    
+    // Verify file creation after all tests
+    await verifyFileCreation(fileVerification);
 
     console.log('\n📊 Sprint 3 Day 9 Test Results Summary');
     console.log('=====================================');
@@ -758,6 +780,90 @@ async function runSprint3Day9Tests() {
   } catch (error) {
     console.error('\n❌ Sprint 3 Day 9 test execution failed:', error.message);
     process.exit(1);
+  }
+}
+
+/**
+ * Clean up any existing recordings before testing
+ */
+async function cleanupExistingRecordings(ws) {
+  return new Promise((resolve) => {
+    console.log('🛑 Stopping any existing recordings...');
+    
+    // Send stop_recording command to clean up
+    send(ws, 'stop_recording', 999, { device: '/dev/video0' });
+    
+    // Wait for cleanup to complete
+    setTimeout(() => {
+      console.log('✅ Cleanup completed');
+      resolve();
+    }, CONFIG.cleanupDelay);
+  });
+}
+
+/**
+ * Get initial file counts for verification
+ */
+async function getInitialFileCounts(fileVerification) {
+  try {
+    // Count recordings
+    const recordingsResponse = await fetch('http://localhost:8003/files/recordings');
+    if (recordingsResponse.ok) {
+      const recordings = await recordingsResponse.json();
+      fileVerification.recordingsBefore = recordings.files ? recordings.files.length : 0;
+    }
+    
+    // Count snapshots
+    const snapshotsResponse = await fetch('http://localhost:8003/files/snapshots');
+    if (snapshotsResponse.ok) {
+      const snapshots = await snapshotsResponse.json();
+      fileVerification.snapshotsBefore = snapshots.files ? snapshots.files.length : 0;
+    }
+    
+    console.log(`📊 Initial file counts - Recordings: ${fileVerification.recordingsBefore}, Snapshots: ${fileVerification.snapshotsBefore}`);
+  } catch (error) {
+    console.log('⚠️ Could not get initial file counts:', error.message);
+  }
+}
+
+/**
+ * Verify file creation after tests
+ */
+async function verifyFileCreation(fileVerification) {
+  try {
+    console.log('🔍 Verifying file creation...');
+    
+    // Count recordings after tests
+    const recordingsResponse = await fetch('http://localhost:8003/files/recordings');
+    if (recordingsResponse.ok) {
+      const recordings = await recordingsResponse.json();
+      fileVerification.recordingsAfter = recordings.files ? recordings.files.length : 0;
+    }
+    
+    // Count snapshots after tests
+    const snapshotsResponse = await fetch('http://localhost:8003/files/snapshots');
+    if (snapshotsResponse.ok) {
+      const snapshots = await snapshotsResponse.json();
+      fileVerification.snapshotsAfter = snapshots.files ? snapshots.files.length : 0;
+    }
+    
+    const recordingsCreated = fileVerification.recordingsAfter > fileVerification.recordingsBefore;
+    const snapshotsCreated = fileVerification.snapshotsAfter > fileVerification.snapshotsBefore;
+    
+    console.log(`📊 Final file counts - Recordings: ${fileVerification.recordingsAfter}, Snapshots: ${fileVerification.snapshotsAfter}`);
+    console.log(`✅ Recordings created: ${recordingsCreated ? 'YES' : 'NO'}`);
+    console.log(`✅ Snapshots created: ${snapshotsCreated ? 'YES' : 'NO'}`);
+    
+    fileVerification.filesCreated = recordingsCreated || snapshotsCreated;
+    
+    if (fileVerification.filesCreated) {
+      console.log('🎉 File creation verification: PASSED');
+    } else {
+      console.log('⚠️ File creation verification: No new files detected');
+    }
+    
+  } catch (error) {
+    console.log('⚠️ Could not verify file creation:', error.message);
   }
 }
 

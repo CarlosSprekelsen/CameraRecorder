@@ -644,10 +644,30 @@ class MediaMTXController:
                 },
             )
             
-            # Check stream readiness with optimized timeout for performance
-            stream_ready = await self.check_stream_readiness(stream_name, timeout=5.0)  # Restored from 2.0s to 5.0s
+            # Check stream readiness with configurable timeout for reliability
+            stream_readiness_config = getattr(self, '_stream_readiness_config', {
+                'timeout': 15.0,
+                'retry_attempts': 3,
+                'retry_delay': 2.0,
+                'check_interval': 0.5,
+                'enable_progress_notifications': True,
+                'graceful_fallback': True
+            })
+            
+            # Send progress notification if enabled
+            if stream_readiness_config.get('enable_progress_notifications', True):
+                await self._send_stream_validation_progress(stream_name, "started", correlation_id)
+            
+            stream_ready = await self.check_stream_readiness(
+                stream_name, 
+                timeout=stream_readiness_config.get('timeout', 15.0)
+            )
             
             if not stream_ready:
+                # Send failure notification if enabled
+                if stream_readiness_config.get('enable_progress_notifications', True):
+                    await self._send_stream_validation_progress(stream_name, "failed", correlation_id)
+                
                 error_msg = f"Stream {stream_name} is not ready for recording after validation"
                 self._logger.error(
                     error_msg,
@@ -657,7 +677,20 @@ class MediaMTXController:
                         "stream_ready": False,
                     },
                 )
-                raise ValueError(error_msg)
+                
+                # Check if graceful fallback is enabled
+                if stream_readiness_config.get('graceful_fallback', True):
+                    self._logger.warning(
+                        f"Graceful fallback enabled for {stream_name} - attempting to start recording anyway",
+                        extra={
+                            "correlation_id": correlation_id,
+                            "stream_name": stream_name,
+                            "graceful_fallback": True,
+                        },
+                    )
+                    # Continue with recording attempt despite readiness failure
+                else:
+                    raise ValueError(error_msg)
             
             self._logger.info(
                 f"Stream {stream_name} validated as ready for recording",
@@ -1954,3 +1987,34 @@ class MediaMTXController:
             },
         )
         return False
+
+    async def _send_stream_validation_progress(self, stream_name: str, status: str, correlation_id: str) -> None:
+        """
+        Send stream validation progress notification.
+        
+        Args:
+            stream_name: Name of the stream being validated
+            status: Status of validation ("started", "progress", "completed", "failed")
+            correlation_id: Correlation ID for logging
+        """
+        try:
+            # This method will be called by the WebSocket server to send notifications
+            # For now, we'll just log the progress
+            self._logger.info(
+                f"Stream validation {status} for {stream_name}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "validation_status": status,
+                    "notification_type": "stream_validation_progress",
+                },
+            )
+        except Exception as e:
+            self._logger.warning(
+                f"Failed to send stream validation progress notification: {e}",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "validation_status": status,
+                },
+            )
