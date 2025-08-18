@@ -59,7 +59,7 @@ class TestServerNotifications:
             received_messages = real_websocket_client.get_received_messages()
             
             # Verify we can connect to the real server
-            assert real_websocket_client.is_connected(), "Should be connected to real WebSocket server"
+            assert real_websocket_client.connected, "Should be connected to real WebSocket server"
             
             # If we received any notifications, validate their structure
             if received_messages:
@@ -104,7 +104,7 @@ class TestServerNotifications:
             await real_websocket_client.connect()
             
             # Verify connection is established
-            assert real_websocket_client.is_connected(), "Should be connected to real WebSocket server"
+            assert real_websocket_client.connected, "Should be connected to real WebSocket server"
             
             # Send a simple ping or test message to verify communication
             # Note: We can't send notifications to the real server from tests,
