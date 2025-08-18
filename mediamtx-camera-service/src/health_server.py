@@ -97,6 +97,9 @@ class HealthServer:
         self.app.router.add_get("/health/mediamtx", self._handle_mediamtx_health)
         self.app.router.add_get("/health/ready", self._handle_readiness)
         
+        # HTTP polling fallback endpoint for WebSocket clients
+        self.app.router.add_get("/api/cameras", self._handle_api_cameras)
+        
         # File download endpoints (Epic E6)
         self.app.router.add_get("/files/recordings/{filename:.*}", self._handle_recording_download)
         self.app.router.add_get("/files/snapshots/{filename:.*}", self._handle_snapshot_download)
@@ -385,6 +388,61 @@ class HealthServer:
     def is_running(self) -> bool:
         """Check if health server is running."""
         return self._started
+
+    async def _handle_api_cameras(self, request: web.Request) -> web.Response:
+        """
+        Handle API cameras endpoint for HTTP polling fallback.
+        
+        Requirements: REQ-FUNC-012
+        Epic E6: Server Recording and Snapshot File Management Infrastructure
+        
+        Args:
+            request: aiohttp request object
+            
+        Returns:
+            JSON response with camera status
+        """
+        try:
+            # Get camera status from camera monitor
+            if self.camera_monitor and hasattr(self.camera_monitor, 'get_connected_cameras'):
+                try:
+                    # get_connected_cameras is async, but we're in a sync context
+                    # For now, use the known_devices directly
+                    if hasattr(self.camera_monitor, '_known_devices'):
+                        cameras = self.camera_monitor._known_devices
+                    else:
+                        cameras = []
+                except Exception as e:
+                    self.logger.warning(f"Could not get camera status from monitor: {e}")
+                    cameras = []
+            else:
+                cameras = []
+            
+            # Prepare response
+            response_data = {
+                "status": "healthy", # Assuming this endpoint is for monitoring, not readiness
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "cameras": [
+                    {
+                        "name": cam.name,
+                        "status": "connected",
+                        "last_seen": cam.last_seen.isoformat() if hasattr(cam, 'last_seen') else "N/A",
+                        "ip": cam.ip,
+                        "port": cam.port
+                    }
+                    for cam in cameras
+                ]
+            }
+            
+            return web.json_response(response_data, status=200)
+            
+        except Exception as e:
+            self.logger.error(f"Error in API cameras endpoint: {e}")
+            return web.json_response({
+                "status": "unhealthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "error": str(e)
+            }, status=500)
 
     async def _handle_recording_download(self, request: web.Request) -> web.Response:
         """

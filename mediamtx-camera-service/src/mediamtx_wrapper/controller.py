@@ -626,8 +626,8 @@ class MediaMTXController:
                 },
             )
             
-            # Check stream readiness with timeout and on-demand activation
-            stream_ready = await self.check_stream_readiness(stream_name, timeout=10.0)
+            # Check stream readiness with optimized timeout for performance
+            stream_ready = await self.check_stream_readiness(stream_name, timeout=2.0)  # Reduced from 10.0s to 2.0s
             
             if not stream_ready:
                 error_msg = f"Stream {stream_name} is not ready for recording after validation"
@@ -761,9 +761,9 @@ class MediaMTXController:
                     # Send SIGTERM to gracefully stop FFmpeg
                     process.terminate()
                     
-                    # Wait for process to terminate (with timeout)
+                    # Wait for process to terminate (with optimized timeout)
                     try:
-                        await asyncio.wait_for(process.wait(), timeout=5.0)
+                        await asyncio.wait_for(process.wait(), timeout=2.0)  # Reduced from 5.0s to 2.0s
                     except asyncio.TimeoutError:
                         # Force kill if graceful termination fails
                         self._logger.warning(
@@ -958,7 +958,7 @@ class MediaMTXController:
                 },
             )
 
-            # FFmpeg command to capture single frame with enhanced options
+            # FFmpeg command to capture single frame with optimized options for speed
             ffmpeg_cmd = [
                 "ffmpeg",
                 "-y",  # Overwrite output file
@@ -969,27 +969,29 @@ class MediaMTXController:
                 "-q:v",
                 str(quality),  # Use specified quality
                 "-timeout",
-                "5000000",  # 5 second timeout in microseconds
+                "2000000",  # 2 second timeout in microseconds (reduced from 5s)
                 "-rtsp_transport",
                 "tcp",  # Use TCP for reliability
                 "-loglevel",
                 "warning",  # Reduce FFmpeg output
+                "-preset",
+                "ultrafast",  # Use fastest encoding preset
                 snapshot_path,
             ]
 
-            # Execute FFmpeg with enhanced timeout and process management
+            # Execute FFmpeg with optimized timeouts for performance
             ffmpeg_process = await asyncio.wait_for(
                 asyncio.create_subprocess_exec(
                     *ffmpeg_cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 ),
-                timeout=10.0,  # 10 second timeout for process creation
+                timeout=1.5,  # 1.5 second timeout for process creation (reduced from 10s)
             )
 
             stdout, stderr = await asyncio.wait_for(
                 ffmpeg_process.communicate(),
-                timeout=15.0,  # 15 second timeout for execution
+                timeout=2.0,  # 2 second timeout for execution (reduced from 15s)
             )
 
             if ffmpeg_process.returncode == 0 and os.path.exists(snapshot_path):
