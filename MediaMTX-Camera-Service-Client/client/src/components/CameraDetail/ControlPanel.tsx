@@ -101,16 +101,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ camera }) => {
         <Typography variant="body2" color="text.secondary">
           Status: {camera.status}
         </Typography>
-        {camera.capabilities && (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              Resolution: {camera.capabilities.resolution}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              FPS: {camera.capabilities.fps}
-            </Typography>
-          </>
-        )}
+        <Typography variant="body2" color="text.secondary">
+          Resolution: {camera.resolution}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          FPS: {camera.fps}
+        </Typography>
       </Box>
     </Paper>
   );

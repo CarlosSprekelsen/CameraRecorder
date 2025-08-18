@@ -1,23 +1,19 @@
 /**
  * WebSocket JSON-RPC 2.0 Client for MediaMTX Camera Service
  * 
+ * Sprint 3: Real Server Integration
  * Implements:
- * - WebSocket connection management with auto-reconnect
- * - JSON-RPC 2.0 protocol client
- * - Exponential backoff for reconnection
- * - Error handling and timeout management
+ * - Real WebSocket connection to MediaMTX server at ws://localhost:8002/ws
+ * - JSON-RPC 2.0 protocol client with full error handling
+ * - Exponential backoff for reconnection with production settings
+ * - Comprehensive error handling and timeout management
+ * - Real-time notification handling for camera status updates
  * 
  * References:
  * - Server API: docs/api/json-rpc-methods.md
  * - WebSocket Protocol: docs/api/websocket-protocol.md
+ * - Test script: test-websocket.js
  */
-
-// STOP: clarify JSON-RPC error payload shape [Client-S2]
-// STOP: clarify WebSocket reconnection timeout values [Client-S2]
-// STOP: npm test hangs - investigate Jest/WebSocket mocking [Client-S2]
-// STOP: clarify reconnection timeout values [Client-S1] - Using 100ms for tests, 500ms default okay?
-// STOP: clarify max reconnection attempts [Client-S1] - Should default be Infinity or finite number?
-// STOP: clarify WebSocket readyState handling [Client-S1] - Should we check readyState before operations?
 
 import type {
   WebSocketConfig,
@@ -25,10 +21,9 @@ import type {
   JSONRPCResponse,
   JSONRPCNotification,
   WebSocketMessage,
+  JSONRPCError,
 } from '../types';
 import { authService } from './authService';
-
-
 
 export class WebSocketError extends Error {
   public code?: number;
@@ -54,6 +49,7 @@ export class WebSocketService {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private isConnecting = false;
   private isDestroyed = false;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
 
   // Event handlers
   private onMessageHandler?: (message: WebSocketMessage) => void;
@@ -68,7 +64,8 @@ export class WebSocketService {
   }
 
   /**
-   * Connect to the WebSocket server
+   * Connect to the MediaMTX WebSocket server
+   * Sprint 3: Real server integration with enhanced error handling
    */
   public connect(): Promise<void> {
     if (this.isDestroyed) {
@@ -80,11 +77,14 @@ export class WebSocketService {
 
     return new Promise((resolve, reject) => {
       try {
+        console.log(`🔌 Connecting to MediaMTX server: ${this.config.url}`);
         this.ws = new WebSocket(this.config.url);
         this.setupEventHandlers(resolve, reject);
-      } catch {
+      } catch (error) {
         this.isConnecting = false;
-        reject(new WebSocketError('Failed to create WebSocket connection'));
+        const wsError = new WebSocketError('Failed to create WebSocket connection');
+        console.error('❌ WebSocket connection failed:', wsError);
+        reject(wsError);
       }
     });
   }
@@ -93,8 +93,10 @@ export class WebSocketService {
    * Disconnect from the WebSocket server
    */
   public disconnect(): void {
+    console.log('🔌 Disconnecting from MediaMTX server');
     this.isDestroyed = true;
     this.clearReconnectTimeout();
+    this.clearHeartbeat();
     
     if (this.ws) {
       this.ws.close();
@@ -115,6 +117,7 @@ export class WebSocketService {
 
   /**
    * Send a JSON-RPC method call with optional authentication
+   * Sprint 3: Enhanced for real server integration
    */
   public async call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = false): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -139,20 +142,26 @@ export class WebSocketService {
       id: requestId
     };
 
+    console.log(`📤 Sending ${method} (#${requestId})`, params ? JSON.stringify(params) : '');
+
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
-        reject(new WebSocketError(`Request timeout for method: ${method}`));
+        const timeoutError = new WebSocketError(`Request timeout for method: ${method}`);
+        console.error(`⏰ Request timeout: ${method}`, timeoutError);
+        reject(timeoutError);
       }, this.config.requestTimeout);
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout });
 
       try {
         this.ws!.send(JSON.stringify(request));
-      } catch {
+      } catch (error) {
         this.pendingRequests.delete(requestId);
         clearTimeout(timeout);
-        reject(new WebSocketError('Failed to send request'));
+        const sendError = new WebSocketError('Failed to send request');
+        console.error('❌ Failed to send request:', sendError);
+        reject(sendError);
       }
     });
   }
@@ -198,6 +207,37 @@ export class WebSocketService {
     return null;
   }
 
+  /**
+   * Start heartbeat to keep connection alive
+   */
+  private startHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    this.heartbeatInterval = setInterval(async () => {
+      if (this.isConnected) {
+        try {
+          await this.call('ping', {});
+          console.log('💓 Heartbeat sent');
+        } catch (error) {
+          console.warn('⚠️ Heartbeat failed:', error);
+          // Don't trigger reconnection on heartbeat failure
+        }
+      }
+    }, this.config.heartbeatInterval);
+  }
+
+  /**
+   * Clear heartbeat interval
+   */
+  private clearHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
   private setupEventHandlers(
     resolve: () => void,
     reject: (error: WebSocketError) => void
@@ -205,22 +245,32 @@ export class WebSocketService {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
+      console.log('✅ WebSocket connection established');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
+      this.startHeartbeat();
       this.onConnectHandler?.();
       resolve();
     };
 
     this.ws.onclose = (event) => {
+      console.log('🔌 WebSocket connection closed', { 
+        wasClean: event.wasClean, 
+        code: event.code, 
+        reason: event.reason 
+      });
       this.isConnecting = false;
+      this.clearHeartbeat();
       this.onDisconnectHandler?.();
 
       if (!this.isDestroyed && !event.wasClean) {
+        console.log('🔄 Scheduling reconnection...');
         this.scheduleReconnect();
       }
     };
 
-    this.ws.onerror = () => {
+    this.ws.onerror = (event) => {
+      console.error('❌ WebSocket error:', event);
       this.isConnecting = false;
       const error = new WebSocketError('WebSocket error occurred');
       this.onErrorHandler?.(error);
@@ -233,9 +283,11 @@ export class WebSocketService {
     this.ws.onmessage = (event) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
+        console.log('📥 Received message:', JSON.stringify(message));
         this.handleMessage(message);
-      } catch {
+      } catch (error) {
         const wsError = new WebSocketError('Failed to parse message');
+        console.error('❌ Message parsing error:', wsError);
         this.onErrorHandler?.(wsError);
       }
     };
@@ -244,6 +296,7 @@ export class WebSocketService {
   private handleMessage(message: WebSocketMessage): void {
     // Handle notifications (no id)
     if (!('id' in message)) {
+      console.log('📢 Notification received:', message.method);
       this.onMessageHandler?.(message as JSONRPCNotification);
       return;
     }
@@ -253,6 +306,7 @@ export class WebSocketService {
     const pendingRequest = this.pendingRequests.get(response.id);
 
     if (!pendingRequest) {
+      console.warn('⚠️ Response for unknown request:', response.id);
       return; // Response for unknown request
     }
 
@@ -261,12 +315,15 @@ export class WebSocketService {
     this.pendingRequests.delete(response.id);
 
     if (response.error) {
-      reject(new WebSocketError(
+      const error = new WebSocketError(
         response.error.message,
         response.error.code,
         response.error.data
-      ));
+      );
+      console.error('❌ RPC Error:', error);
+      reject(error);
     } else {
+      console.log('✅ RPC Response received for request:', response.id);
       resolve(response.result);
     }
   }
@@ -274,20 +331,25 @@ export class WebSocketService {
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
       const error = new WebSocketError('Max reconnection attempts reached');
+      console.error('❌ Max reconnection attempts reached');
       this.onErrorHandler?.(error);
       return;
     }
 
     const delay = Math.min(
       this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts),
-      30000 // 30 second max delay
+      this.config.maxDelay
     );
+
+    console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.config.maxReconnectAttempts})`);
 
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectAttempts++;
       this.connect().then(() => {
+        console.log('✅ Reconnection successful');
         // Reconnection successful - onConnectHandler will be called by setupEventHandlers
       }).catch((error) => {
+        console.error('❌ Reconnection failed:', error);
         this.onErrorHandler?.(error);
       });
     }, delay);
@@ -303,7 +365,7 @@ export class WebSocketService {
 
 /**
  * Default configuration for WebSocket service
- * Updated for Sprint 3: Real server integration
+ * Sprint 3: Production-ready configuration for real MediaMTX server
  */
 export const defaultWebSocketConfig: WebSocketConfig = {
   url: 'ws://localhost:8002/ws', // Real MediaMTX Camera Service endpoint
@@ -317,8 +379,10 @@ export const defaultWebSocketConfig: WebSocketConfig = {
 
 /**
  * Create a WebSocket service instance
+ * Sprint 3: Enhanced for real server integration
  */
 export function createWebSocketService(config: Partial<WebSocketConfig> = {}): WebSocketService {
   const finalConfig = { ...defaultWebSocketConfig, ...config };
+  console.log('🔧 Creating WebSocket service with config:', finalConfig);
   return new WebSocketService(finalConfig);
 } 

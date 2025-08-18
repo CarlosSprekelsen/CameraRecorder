@@ -1,5 +1,6 @@
 /**
  * Connection state management store
+ * Sprint 3: Enhanced for real server integration
  * Handles WebSocket connection status and reconnection logic
  */
 
@@ -7,6 +8,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ConnectionStatus } from '../types';
 import type { WebSocketService } from '../services/websocket';
+import { createWebSocketService, defaultWebSocketConfig } from '../services/websocket';
 
 /**
  * Connection store state interface
@@ -31,6 +33,11 @@ interface ConnectionState {
   
   // WebSocket service reference
   wsService: WebSocketService | null;
+  
+  // Connection health
+  isHealthy: boolean;
+  lastHeartbeat: Date | null;
+  connectionUptime: number | null;
 }
 
 /**
@@ -38,7 +45,7 @@ interface ConnectionState {
  */
 interface ConnectionActions {
   // Connection management
-  connect: (url: string) => Promise<void>;
+  connect: (url?: string) => Promise<void>;
   disconnect: () => void;
   reconnect: () => Promise<void>;
   
@@ -57,10 +64,19 @@ interface ConnectionActions {
   
   // Service management
   setWebSocketService: (service: WebSocketService | null) => void;
+  initializeWebSocketService: (url?: string) => void;
   
   // Timestamps
   setLastConnected: (date: Date) => void;
   setLastDisconnected: (date: Date) => void;
+  
+  // Health monitoring
+  setHealthy: (isHealthy: boolean) => void;
+  setLastHeartbeat: (date: Date) => void;
+  setConnectionUptime: (uptime: number) => void;
+  
+  // Connection testing
+  testConnection: () => Promise<boolean>;
 }
 
 /**
@@ -70,6 +86,7 @@ type ConnectionStore = ConnectionState & ConnectionActions;
 
 /**
  * Create connection store
+ * Sprint 3: Enhanced for real server integration
  */
 export const useConnectionStore = create<ConnectionStore>()(
   devtools(
@@ -82,12 +99,15 @@ export const useConnectionStore = create<ConnectionStore>()(
       lastConnected: null,
       lastDisconnected: null,
       reconnectAttempts: 0,
-      maxReconnectAttempts: 5,
+      maxReconnectAttempts: defaultWebSocketConfig.maxReconnectAttempts,
       error: null,
       wsService: null,
+      isHealthy: false,
+      lastHeartbeat: null,
+      connectionUptime: null,
 
       // Connection management
-      connect: async (url: string) => {
+      connect: async (url = defaultWebSocketConfig.url) => {
         try {
           set({ 
             isConnecting: true, 
@@ -98,25 +118,62 @@ export const useConnectionStore = create<ConnectionStore>()(
 
           const { wsService } = get();
           if (!wsService) {
+            // Initialize WebSocket service if not available
+            get().initializeWebSocketService(url);
+            const { wsService: newService } = get();
+            if (!newService) {
+              throw new Error('Failed to initialize WebSocket service');
+            }
+          }
+
+          const { wsService: service } = get();
+          if (!service) {
             throw new Error('WebSocket service not available');
           }
 
-          await wsService.connect();
-          
-          set({ 
-            isConnecting: false,
-            status: 'connected',
-            lastConnected: new Date(),
-            reconnectAttempts: 0
+          // Set up event handlers if not already set
+          service.onConnect(() => {
+            set({ 
+              isConnecting: false,
+              status: 'connected',
+              lastConnected: new Date(),
+              reconnectAttempts: 0,
+              isHealthy: true,
+              error: null
+            });
           });
+
+          service.onDisconnect(() => {
+            set({ 
+              status: 'disconnected',
+              isConnecting: false,
+              isReconnecting: false,
+              lastDisconnected: new Date(),
+              isHealthy: false
+            });
+          });
+
+          service.onError((error) => {
+            set({ 
+              error: error.message,
+              isConnecting: false,
+              isConnected: false,
+              isHealthy: false,
+              status: 'error'
+            });
+          });
+
+          await service.connect();
           
         } catch (error) {
           set({ 
             isConnecting: false,
             status: 'error',
             error: error instanceof Error ? error.message : 'Failed to connect',
-            lastDisconnected: new Date()
+            lastDisconnected: new Date(),
+            isHealthy: false
           });
+          throw error;
         }
       },
 
@@ -131,7 +188,9 @@ export const useConnectionStore = create<ConnectionStore>()(
           isConnecting: false,
           isReconnecting: false,
           lastDisconnected: new Date(),
-          reconnectAttempts: 0
+          reconnectAttempts: 0,
+          isHealthy: false,
+          wsService: null
         });
       },
 
@@ -208,6 +267,14 @@ export const useConnectionStore = create<ConnectionStore>()(
         set({ wsService: service });
       },
 
+      initializeWebSocketService: (url = defaultWebSocketConfig.url) => {
+        const wsService = createWebSocketService({
+          ...defaultWebSocketConfig,
+          url
+        });
+        set({ wsService, url });
+      },
+
       // Timestamps
       setLastConnected: (date: Date) => {
         set({ lastConnected: date });
@@ -215,6 +282,37 @@ export const useConnectionStore = create<ConnectionStore>()(
 
       setLastDisconnected: (date: Date) => {
         set({ lastDisconnected: date });
+      },
+
+      // Health monitoring
+      setHealthy: (isHealthy: boolean) => {
+        set({ isHealthy });
+      },
+
+      setLastHeartbeat: (date: Date) => {
+        set({ lastHeartbeat: date });
+      },
+
+      setConnectionUptime: (uptime: number) => {
+        set({ connectionUptime: uptime });
+      },
+
+      // Connection testing
+      testConnection: async (): Promise<boolean> => {
+        try {
+          const { wsService } = get();
+          if (!wsService || !wsService.isConnected) {
+            return false;
+          }
+
+          // Test with ping
+          await wsService.call('ping', {});
+          set({ isHealthy: true, lastHeartbeat: new Date() });
+          return true;
+        } catch (error) {
+          set({ isHealthy: false });
+          return false;
+        }
       },
     }),
     {

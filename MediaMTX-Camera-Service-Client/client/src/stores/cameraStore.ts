@@ -1,12 +1,14 @@
 /**
  * Camera state management store
+ * Sprint 3: Enhanced for real server integration
  * Handles camera list, selected camera, and camera operations
  * 
  * Sprint 3 Updates:
- * - Real server integration
- * - Improved error handling
- * - Better loading states
- * - Real-time camera status updates
+ * - Real server integration with MediaMTX Camera Service
+ * - Improved error handling and recovery
+ * - Better loading states and user feedback
+ * - Real-time camera status updates via WebSocket notifications
+ * - Enhanced connection state management
  */
 
 import { create } from 'zustand';
@@ -17,8 +19,10 @@ import type {
   RecordingResponse,
   SnapshotResponse,
   ServerInfo,
+  CameraStatusNotification,
+  RecordingStatusNotification,
 } from '../types';
-import { RPC_METHODS } from '../types';
+import { RPC_METHODS, NOTIFICATION_METHODS } from '../types';
 import { createWebSocketService, type WebSocketService } from '../services/websocket';
 
 /**
@@ -46,6 +50,10 @@ interface CameraState {
   
   // Connection state
   isConnected: boolean;
+  
+  // Real-time update tracking
+  lastUpdate: Date | null;
+  updateCount: number;
 }
 
 /**
@@ -79,6 +87,10 @@ interface CameraActions {
   addRecording: (device: string, recording: RecordingResponse) => void;
   removeRecording: (device: string) => void;
   setConnectionStatus: (isConnected: boolean) => void;
+  
+  // Real-time updates
+  handleNotification: (notification: CameraStatusNotification | RecordingStatusNotification) => void;
+  incrementUpdateCount: () => void;
 }
 
 /**
@@ -88,6 +100,7 @@ type CameraStore = CameraState & CameraActions;
 
 /**
  * Create camera store
+ * Sprint 3: Enhanced for real server integration
  */
 export const useCameraStore = create<CameraStore>()(
   devtools(
@@ -103,15 +116,20 @@ export const useCameraStore = create<CameraStore>()(
       activeRecordings: new Map(),
       wsService: null,
       isConnected: false,
+      lastUpdate: null,
+      updateCount: 0,
 
       // Initialization
       initialize: async (wsUrl = 'ws://localhost:8002/ws') => {
         try {
           set({ isLoading: true, isConnecting: true, error: null });
           
+          console.log('🚀 Initializing camera store with real server integration');
+          
           // For testing without server, use mock data
           if (process.env.NODE_ENV === 'development' && !wsUrl.includes('localhost:8002')) {
-            // Mock data for testing
+            console.log('🧪 Using mock data for development testing');
+            // Mock data for testing - matches real server response format
             setTimeout(() => {
               set({
                 cameras: [
@@ -119,22 +137,32 @@ export const useCameraStore = create<CameraStore>()(
                     device: '/dev/video0',
                     name: 'Test Camera 1',
                     status: 'CONNECTED',
+                    resolution: '1920x1080',
+                    fps: 30,
+                    streams: {
+                      rtsp: 'rtsp://localhost:8554/camera0',
+                      webrtc: 'http://localhost:8889/camera0/webrtc',
+                      hls: 'http://localhost:8888/camera0'
+                    },
                     capabilities: {
-                      resolutions: ['1920x1080', '1280x720'],
-                      fps: 30,
-                      validation_status: 'confirmed',
-                      formats: ['MJPEG', 'YUYV']
+                      formats: ['YUYV', 'MJPEG'],
+                      resolutions: ['1920x1080', '1280x720']
                     }
                   },
                   {
                     device: '/dev/video1', 
                     name: 'Test Camera 2',
                     status: 'CONNECTED',
+                    resolution: '1280x720',
+                    fps: 25,
+                    streams: {
+                      rtsp: 'rtsp://localhost:8554/camera1',
+                      webrtc: 'http://localhost:8889/camera1/webrtc',
+                      hls: 'http://localhost:8888/camera1'
+                    },
                     capabilities: {
-                      resolutions: ['1280x720', '640x480'],
-                      fps: 25,
-                      validation_status: 'confirmed',
-                      formats: ['MJPEG', 'YUYV']
+                      formats: ['MJPEG', 'YUYV'],
+                      resolutions: ['1280x720', '640x480']
                     }
                   }
                 ],
@@ -147,6 +175,7 @@ export const useCameraStore = create<CameraStore>()(
             return;
           }
           
+          console.log('🔌 Creating WebSocket service for real server connection');
           const wsService = createWebSocketService({
             url: wsUrl,
             maxReconnectAttempts: 10,
@@ -157,15 +186,18 @@ export const useCameraStore = create<CameraStore>()(
 
           // Set up connection event handlers
           wsService.onConnect(() => {
+            console.log('✅ WebSocket connected to MediaMTX server');
             set({ isConnected: true, isConnecting: false });
             get().clearError();
           });
 
           wsService.onDisconnect(() => {
+            console.log('🔌 WebSocket disconnected from MediaMTX server');
             set({ isConnected: false, isConnecting: false });
           });
 
           wsService.onError((error) => {
+            console.error('❌ WebSocket error:', error);
             set({ 
               error: error.message,
               isConnecting: false,
@@ -174,38 +206,28 @@ export const useCameraStore = create<CameraStore>()(
           });
 
           // Connect to WebSocket
+          console.log('🔌 Connecting to MediaMTX server...');
           await wsService.connect();
           
           // Set up message handler for real-time updates
           wsService.onMessage((message) => {
             if ('method' in message) {
-              switch (message.method) {
-                case 'camera_status_update': {
-                  const { device, status } = message.params as { device: string; status: CameraStatus };
-                  get().updateCameraStatus(device, status);
-                  break;
-                }
-                case 'recording_status_update': {
-                  const recordingUpdate = message.params as { device: string; recording: RecordingResponse };
-                  get().addRecording(recordingUpdate.device, recordingUpdate.recording);
-                  break;
-                }
-                case 'recording_completed': {
-                  const completedDevice = (message.params as { device: string }).device;
-                  get().removeRecording(completedDevice);
-                  break;
-                }
-              }
+              console.log('📢 Received notification:', message.method);
+              get().handleNotification(message as CameraStatusNotification | RecordingStatusNotification);
             }
           });
 
           set({ wsService });
           
           // Load initial data
+          console.log('📋 Loading initial camera data...');
           await get().refreshCameras();
           await get().getServerInfo();
           
+          console.log('✅ Camera store initialization complete');
+          
         } catch (error) {
+          console.error('❌ Camera store initialization failed:', error);
           set({ 
             error: error instanceof Error ? error.message : 'Failed to initialize camera store',
             isLoading: false,
@@ -218,6 +240,7 @@ export const useCameraStore = create<CameraStore>()(
       },
 
       disconnect: () => {
+        console.log('🔌 Disconnecting camera store');
         const { wsService } = get();
         if (wsService) {
           wsService.disconnect();
@@ -243,15 +266,18 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
+          console.log('📋 Refreshing camera list from MediaMTX server');
           const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as {
             cameras: CameraDevice[];
             total: number;
             connected: number;
           };
 
+          console.log(`📊 Found ${result.cameras.length} cameras (${result.connected} connected)`);
           set({ cameras: result.cameras });
           
         } catch (error) {
+          console.error('❌ Failed to refresh cameras:', error);
           set({ 
             error: error instanceof Error ? error.message : 'Failed to refresh cameras',
             cameras: [] // Clear cameras on error
@@ -262,6 +288,7 @@ export const useCameraStore = create<CameraStore>()(
       },
 
       selectCamera: (device: string | null) => {
+        console.log('📷 Selected camera:', device);
         set({ selectedCamera: device });
       },
 
@@ -277,6 +304,7 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
+          console.log(`📷 Getting status for camera: ${device}`);
           const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }) as CameraDevice;
           
           // Update camera in list if it exists
@@ -289,6 +317,7 @@ export const useCameraStore = create<CameraStore>()(
           return result;
           
         } catch (error) {
+          console.error(`❌ Failed to get status for camera ${device}:`, error);
           set({ 
             error: error instanceof Error ? error.message : `Failed to get status for camera ${device}` 
           });
@@ -309,6 +338,7 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
+          console.log(`🎬 Starting recording for camera ${device} (duration: ${duration}s, format: ${format})`);
           const result = await wsService.call(RPC_METHODS.START_RECORDING, {
             device,
             duration,
@@ -321,11 +351,13 @@ export const useCameraStore = create<CameraStore>()(
               newRecordings.set(device, result);
               return { activeRecordings: newRecordings };
             });
+            console.log(`✅ Recording started for camera ${device}`);
           }
 
           return result;
           
         } catch (error) {
+          console.error(`❌ Failed to start recording for camera ${device}:`, error);
           set({ 
             error: error instanceof Error ? error.message : `Failed to start recording for camera ${device}` 
           });
@@ -345,6 +377,7 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
+          console.log(`⏹️ Stopping recording for camera ${device}`);
           const result = await wsService.call(RPC_METHODS.STOP_RECORDING, { device }, true) as RecordingResponse; // Require authentication for protected operations
 
           if (result.success) {
@@ -353,11 +386,13 @@ export const useCameraStore = create<CameraStore>()(
               newRecordings.delete(device);
               return { activeRecordings: newRecordings };
             });
+            console.log(`✅ Recording stopped for camera ${device}`);
           }
 
           return result;
           
         } catch (error) {
+          console.error(`❌ Failed to stop recording for camera ${device}:`, error);
           set({ 
             error: error instanceof Error ? error.message : `Failed to stop recording for camera ${device}` 
           });
@@ -378,15 +413,18 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
+          console.log(`📸 Taking snapshot for camera ${device} (format: ${format}, quality: ${quality})`);
           const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, {
             device,
             format,
             quality,
           }, true) as SnapshotResponse; // Require authentication for protected operations
 
+          console.log(`✅ Snapshot taken for camera ${device}`);
           return result;
           
         } catch (error) {
+          console.error(`❌ Failed to take snapshot for camera ${device}:`, error);
           set({ 
             error: error instanceof Error ? error.message : `Failed to take snapshot for camera ${device}` 
           });
@@ -407,14 +445,15 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
-          // Server info not implemented in current API - using ping for health check
-          const result = await wsService.call(RPC_METHODS.PING, {}) as string;
-                      set({ serverInfo: { version: '1.0', uptime: 0, cameras_connected: 0, total_recordings: 0, total_snapshots: 0 } });
+          console.log('ℹ️ Getting server information');
+          const result = await wsService.call('get_server_info', {}) as ServerInfo;
+          set({ serverInfo: result });
           return result;
           
         } catch (error) {
+          console.error('❌ Failed to get server info:', error);
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to get server info' 
+            error: error instanceof Error ? error.message : 'Failed to get server information' 
           });
           return null;
         }
@@ -425,20 +464,19 @@ export const useCameraStore = create<CameraStore>()(
           const { wsService } = get();
           
           if (!wsService) {
-            throw new Error('WebSocket service not initialized');
+            return false;
           }
 
           if (!wsService.isConnected) {
-            throw new Error('WebSocket not connected');
+            return false;
           }
 
-          const result = await wsService.call(RPC_METHODS.PING, {});
+          console.log('🏓 Pinging server');
+          const result = await wsService.call('ping', {});
           return result === 'pong';
           
         } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : 'Failed to ping server' 
-          });
+          console.error('❌ Server ping failed:', error);
           return false;
         }
       },
@@ -453,33 +491,71 @@ export const useCameraStore = create<CameraStore>()(
       },
 
       updateCameraStatus: (device: string, status: CameraStatus) => {
+        console.log(`📷 Camera status update: ${device} -> ${status}`);
         set((state) => ({
           cameras: state.cameras.map(camera => 
-            camera.device === device 
-              ? { ...camera, status }
-              : camera
-          )
+            camera.device === device ? { ...camera, status } : camera
+          ),
+          lastUpdate: new Date(),
+          updateCount: state.updateCount + 1
         }));
       },
 
       addRecording: (device: string, recording: RecordingResponse) => {
+        console.log(`🎬 Adding recording for camera ${device}`);
         set((state) => {
           const newRecordings = new Map(state.activeRecordings);
           newRecordings.set(device, recording);
-          return { activeRecordings: newRecordings };
+          return { 
+            activeRecordings: newRecordings,
+            lastUpdate: new Date(),
+            updateCount: state.updateCount + 1
+          };
         });
       },
 
       removeRecording: (device: string) => {
+        console.log(`🎬 Removing recording for camera ${device}`);
         set((state) => {
           const newRecordings = new Map(state.activeRecordings);
           newRecordings.delete(device);
-          return { activeRecordings: newRecordings };
+          return { 
+            activeRecordings: newRecordings,
+            lastUpdate: new Date(),
+            updateCount: state.updateCount + 1
+          };
         });
       },
 
       setConnectionStatus: (isConnected: boolean) => {
         set({ isConnected });
+      },
+
+      // Real-time updates
+      handleNotification: (notification: CameraStatusNotification | RecordingStatusNotification) => {
+        console.log('📢 Handling notification:', notification.method);
+        
+        switch (notification.method) {
+          case NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE: {
+            const { device, status } = notification.params as { device: string; status: CameraStatus };
+            get().updateCameraStatus(device, status);
+            break;
+          }
+          case NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE: {
+            const recordingUpdate = notification.params as { device: string; recording: RecordingResponse };
+            get().addRecording(recordingUpdate.device, recordingUpdate.recording);
+            break;
+          }
+          default:
+            console.warn('⚠️ Unknown notification method:', notification.method);
+        }
+      },
+
+      incrementUpdateCount: () => {
+        set((state) => ({ 
+          updateCount: state.updateCount + 1,
+          lastUpdate: new Date()
+        }));
       },
     }),
     {

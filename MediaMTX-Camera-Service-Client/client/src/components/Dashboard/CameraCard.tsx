@@ -146,17 +146,27 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
           />
         </Box>
 
-        {camera.capabilities && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              Resolution: {camera.capabilities.resolution}
-            </Typography>
-            <br />
-            <Typography variant="caption" color="text.secondary">
-              FPS: {camera.capabilities.fps}
-            </Typography>
-          </Box>
-        )}
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Resolution: {camera.resolution}
+          </Typography>
+          <br />
+          <Typography variant="caption" color="text.secondary">
+            FPS: {camera.fps}
+          </Typography>
+          {camera.capabilities && (
+            <>
+              <br />
+              <Typography variant="caption" color="text.secondary">
+                Formats: {camera.capabilities.formats?.join(', ')}
+              </Typography>
+              <br />
+              <Typography variant="caption" color="text.secondary">
+                Supported Resolutions: {camera.capabilities.resolutions?.join(', ')}
+              </Typography>
+            </>
+          )}
+        </Box>
 
         {/* Recording Status */}
         {isRecording && (

@@ -61,18 +61,16 @@ const StatusDisplay: React.FC<StatusDisplayProps> = ({ camera }) => {
             <Typography variant="body2" color="text.secondary">
               Status: {camera.status}
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Resolution: {camera.resolution}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              FPS: {camera.fps}
+            </Typography>
             {camera.capabilities && (
-              <>
-                <Typography variant="body2" color="text.secondary">
-                  Resolution: {camera.capabilities.resolution}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  FPS: {camera.capabilities.fps}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Formats: {camera.capabilities.formats?.join(', ')}
-                </Typography>
-              </>
+              <Typography variant="body2" color="text.secondary">
+                Formats: {camera.capabilities.formats?.join(', ')}
+              </Typography>
             )}
           </Box>
         </Box>
