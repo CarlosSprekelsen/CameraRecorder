@@ -248,17 +248,34 @@ The system uses MediaMTX as a media server with FFmpeg as the camera capture and
 
 ### FFmpeg Command Template
 ```bash
-ffmpeg -f v4l2 -i {device_path} -c:v libx264 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:{rtsp_port}/{path_name}
+ffmpeg -f v4l2 -i {device_path} -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:{rtsp_port}/{path_name}
 ```
 
 **Parameters**:
 - `-f v4l2`: Video4Linux2 input format
 - `-i {device_path}`: Camera device path (e.g., /dev/video0)
 - `-c:v libx264`: H.264 video codec
-- `-pix_fmt yuv420p`: Widely compatible pixel format
+- `-profile:v baseline`: Constrained Baseline Profile for STANAG 4406 compliance
+- `-level 3.0`: H.264 Level 3.0 (supports up to 720p resolution)
+- `-pix_fmt yuv420p`: Widely compatible pixel format (4:2:0)
 - `-preset ultrafast`: Minimal encoding latency
 - `-b:v 600k`: Balanced quality/bandwidth
 - `-f rtsp`: RTSP output format
+
+### STANAG 4406 H.264 Compliance
+The system is configured for STANAG 4406 (MIL-STD-188-110B) H.264 compatibility:
+
+- **Profile:** Constrained Baseline Profile (CBP) - ensures maximum compatibility
+- **Level:** 3.0 - supports up to 720p resolution and 30fps
+- **Pixel Format:** 4:2:0 (yuv420p) - widely supported across military/government systems
+- **Bitrate:** 600kbps - configurable for different bandwidth requirements
+- **Compatibility:** Meets military/government video standards for RTSP streaming
+
+**STANAG 4406 Benefits:**
+- Maximum compatibility with legacy military/government systems
+- Reduced computational requirements (baseline profile)
+- Standardized video format for interoperability
+- Future-proof for H.265 upgrade when stakeholder systems are ready
 
 ### Dynamic vs. Static Configuration
 - **Dynamic Configuration**: Paths created via MediaMTX REST API on camera detection

@@ -359,11 +359,16 @@ class ServiceManager(CameraEventHandler):
                 # Extract camera ID from device path (e.g., "/dev/video0" -> "0")
                 camera_id = device_path.split("/")[-1].replace("video", "")
                 
-                # Create MediaMTX path with FFmpeg publishing
+                # Create MediaMTX path with FFmpeg publishing and STANAG 4406 compliance
                 stream_created = await self._path_manager.create_camera_path(
                     camera_id=camera_id,
                     device_path=device_path,
-                    rtsp_port=self._config.mediamtx.rtsp_port
+                    rtsp_port=self._config.mediamtx.rtsp_port,
+                    video_profile=getattr(self._config.mediamtx, 'codec', {}).get('video_profile', 'baseline'),
+                    video_level=getattr(self._config.mediamtx, 'codec', {}).get('video_level', '3.0'),
+                    pixel_format=getattr(self._config.mediamtx, 'codec', {}).get('pixel_format', 'yuv420p'),
+                    bitrate=getattr(self._config.mediamtx, 'codec', {}).get('bitrate', '600k'),
+                    preset=getattr(self._config.mediamtx, 'codec', {}).get('preset', 'ultrafast')
                 )
 
                 if stream_created:
