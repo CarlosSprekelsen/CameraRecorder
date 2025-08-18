@@ -25,6 +25,8 @@ export type {
   FileInfo,
   FileListResponse,
   FileListParams,
+  FileType,
+  FileItem,
   CameraStatusUpdateParams,
   RecordingStatusUpdateParams,
   // Legacy types (deprecated)

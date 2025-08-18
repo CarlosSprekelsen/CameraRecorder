@@ -27,7 +27,7 @@ MediaMTX Camera Service Client
 All AI-assisted work must use this header:
 ```
 Your role: [Developer/IV&V/Project Manager]
-Ground rules: docs/development/project-ground-rules.md
+Ground rules [MANDATORY]: docs/development/client-project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Task: [specific request]
 ```
@@ -77,21 +77,103 @@ Task: [specific request]
 
 ---
 
-### **🚪 SDR (System Design Review) - GATE REQUIRED**
-**Status**: ⚠️ **RETROACTIVE EXECUTION REQUIRED**  
+### **🚪 SDR (System Design Review) - FOUNDATION VALIDATION GATE**
+**Status**: ✅ **COMPLETED**  
+**Purpose**: Validate foundation is solid before serious development  
 **Authority**: Project Manager  
-**Scope**: Requirements baseline and architecture validation  
-**Reference**: `docs/client-systems-engineering-gates.md` - SDR section  
+**Duration**: 3-4 days  
 **Evidence**: `evidence/client-sdr/`  
-**STOP**: Sprint 3 continuation requires SDR completion
+**Result**: All exit criteria met, foundation validated
+
+#### **SDR Assessment Areas & Tasks**
+
+##### **SDR-1: Requirements Completeness Assessment**
+**Role**: IV&V  
+**Duration**: 1 day  
+**Priority**: Critical
+
+**Tasks**:
+- SDR-1.1: Validate client requirements document completeness and consistency
+- SDR-1.2: Verify MVP scope definition aligns with server capabilities
+- SDR-1.3: Check requirement-to-story traceability for all planned features
+- SDR-1.4: Validate non-functional requirements (performance, compatibility) are testable
+- SDR-1.5: Confirm acceptance criteria coverage ≥90% for all MVP features
+
+**Deliverable**: `evidence/client-sdr/01_requirements_completeness.md`
+
+##### **SDR-2: Architecture Feasibility Assessment**
+**Role**: Developer  
+**Duration**: 1 day  
+**Priority**: Critical
+
+**Tasks**:
+- SDR-2.1: Validate React component architecture can support real-time updates
+- SDR-2.2: Verify WebSocket JSON-RPC integration pattern is implementable
+- SDR-2.3: Confirm state management (Zustand) can handle concurrent camera operations
+- SDR-2.4: Validate PWA architecture supports offline-first requirements
+- SDR-2.5: Verify Material-UI can provide responsive mobile-first design
+
+**Deliverable**: `evidence/client-sdr/02_architecture_feasibility.md`
+
+##### **SDR-3: Technology Stack Validation**
+**Role**: Developer  
+**Duration**: 1 day  
+**Priority**: Critical
+
+**Tasks**:
+- SDR-3.1: Execute production build successfully (`npm run build`)
+- SDR-3.2: Validate TypeScript compilation with strict mode (0 errors)
+- SDR-3.3: Execute linting and code quality checks (`npm run lint`)
+- SDR-3.4: Verify PWA manifest and service worker configuration
+- SDR-3.5: Test basic Jest test framework functionality (`npm test`)
+
+**Deliverable**: `evidence/client-sdr/03_technology_validation.md`
+
+##### **SDR-4: Interface Contract Validation**
+**Role**: IV&V  
+**Duration**: 1 day  
+**Priority**: Critical
+
+**Tasks**:
+- SDR-4.1: Validate TypeScript types match server API exactly
+- SDR-4.2: Verify JSON-RPC method signatures are complete and correct
+- SDR-4.3: Test basic WebSocket connection to server (`ws://localhost:8002/ws`)
+- SDR-4.4: Validate error handling patterns for server communication
+- SDR-4.5: Confirm API contract tests can be automated
+
+**Deliverable**: `evidence/client-sdr/04_interface_contracts.md`
+
+#### **SDR Exit Criteria**
+- ✅ Requirements baseline approved and traceable
+- ✅ Architecture design validated as implementable  
+- ✅ Technology stack operational with 0 critical issues
+- ✅ Interface contracts verified against server
+- ✅ Foundation ready for implementation phase
+
+#### **SDR Completion Summary**
+**Date**: August 18, 2025  
+**Status**: ✅ **COMPLETED**  
+**Authority**: Project Manager  
+**Evidence**: All artifacts in `evidence/client-sdr/`
+
+**Key Achievements**:
+- ✅ All critical STOP comments resolved
+- ✅ Environment upgraded to Node.js v24.6.0
+- ✅ All dependencies updated to latest versions
+- ✅ WebSocket API contracts verified against real server
+- ✅ Architecture validated with working proof-of-concept
+- ✅ Technology stack operational and ready for development
+
+**Recommendation**: ✅ **PROCEED** - Sprint 3 can begin immediately
 
 ---
 
-### **Sprint 3: Server Integration** 🟢 **IN PROGRESS**
+### **Sprint 3: Server Integration** 🟢 **READY TO START**
 **Duration**: 1 week  
-**Start Date**: August 7, 2025  
-**Current Date**: August 10, 2025  
+**Start Date**: August 18, 2025  
+**Current Date**: August 18, 2025  
 **Focus**: Real server integration, camera operations, and real-time updates
+**Prerequisites**: ✅ SDR completed and approved
 
 #### **Sprint Completion Framework**
 - **Developer**: Implement and test features per requirements
@@ -99,22 +181,64 @@ Task: [specific request]
 - **Project Manager**: Review evidence and authorize next sprint
 - **Evidence Required**: Complete execution logs in `evidence/client-sprint-3/`
 
-#### **Sprint 3 Progress** (Day 3 of 5)
-**Status**: 🟢 **ON TRACK** - Server integration complete, real-time updates in progress
+#### **Sprint 3 Task Allocations by Role**
 
-##### **✅ COMPLETED**
-- ✅ **Real Server Integration**: Connected to MediaMTX server at `ws://localhost:8002/ws`
-- ✅ **Camera List Implementation**: Real `get_camera_list` integration working
-- ✅ **Enhanced State Management**: Connection tracking and error handling
-- ✅ **UI Improvements**: Dashboard displays real camera data with live status
+##### **Developer Tasks** (Days 1-5)
+**Priority**: Critical  
+**Focus**: Core functionality implementation
 
-##### **🟡 IN PROGRESS**
-- 🟡 **Real-time Updates**: Camera status change listeners and notification handling
-- 🟡 **Dashboard Polish**: Status indicators and responsive updates
+**Day 1-2: Real Server Integration**
+- S3.1.1: Implement real WebSocket connection to MediaMTX server
+- S3.1.2: Integrate `get_camera_list` API with real server response
+- S3.1.3: Implement `get_camera_status` for individual camera details
+- S3.1.4: Add connection state management and error handling
 
-##### **⬜ REMAINING** (Days 4-5)
-- ⬜ **Camera Operations**: Snapshot and recording controls implementation
-- ⬜ **Error Handling**: Comprehensive error recovery and user feedback
+**Day 3-4: Camera Operations**
+- S3.2.1: Implement `take_snapshot` with format/quality options
+- S3.2.2: Implement `start_recording` with duration controls
+- S3.2.3: Implement `stop_recording` with status feedback
+- S3.2.4: Add file download functionality via HTTPS endpoints
+
+**Day 5: Real-time Updates**
+- S3.3.1: Implement WebSocket notification handling
+- S3.3.2: Add real-time camera status updates
+- S3.3.3: Implement recording progress indicators
+- S3.3.4: Add error recovery and reconnection logic
+
+##### **IV&V Tasks** (Days 3-5)
+**Priority**: High  
+**Focus**: Quality assurance and validation
+
+**Day 3-4: Integration Testing**
+- S3.4.1: Test all API methods against real server
+- S3.4.2: Validate WebSocket connection stability
+- S3.4.3: Test error handling and recovery scenarios
+- S3.4.4: Verify real-time update functionality
+
+**Day 5: Quality Validation**
+- S3.5.1: Execute test suite with real server integration
+- S3.5.2: Validate performance under real camera operations
+- S3.5.3: Test cross-browser compatibility
+- S3.5.4: Verify PWA functionality with real data
+
+##### **Project Manager Tasks** (Days 1, 3, 5)
+**Priority**: Medium  
+**Focus**: Progress tracking and decision support
+
+**Day 1: Sprint Kickoff**
+- S3.6.1: Review SDR completion and Sprint 3 readiness
+- S3.6.2: Validate task allocations and resource availability
+- S3.6.3: Establish daily progress tracking mechanisms
+
+**Day 3: Mid-Sprint Review**
+- S3.7.1: Review Developer progress on server integration
+- S3.7.2: Assess IV&V testing preparation status
+- S3.7.3: Identify any blocking issues or scope adjustments
+
+**Day 5: Sprint Completion**
+- S3.8.1: Review all Sprint 3 deliverables
+- S3.8.2: Validate evidence collection for PDR preparation
+- S3.8.3: Authorize Sprint 3 completion and PDR initiation
 
 #### **Quality Gate Thresholds**
 - **PWA Lighthouse Score**: >90 (Performance, Accessibility, Best Practices, SEO)
@@ -130,13 +254,93 @@ Task: [specific request]
 
 ---
 
-### **🚪 PDR (Preliminary Design Review) - GATE PLANNED**
+### **🚪 PDR (Preliminary Design Review) - IMPLEMENTATION VALIDATION GATE**
 **Target**: End of Sprint 3 (MVP Implementation Complete)  
+**Purpose**: Validate core functionality works end-to-end  
 **Authority**: IV&V Technical Assessment → Project Manager Decision  
-**Scope**: Core implementation and server integration validation  
-**Reference**: `docs/client-systems-engineering-gates.md` - PDR section  
+**Duration**: 1 week  
 **Evidence**: `evidence/client-pdr/`  
 **STOP**: Phase 2 authorization requires PDR completion
+
+#### **PDR Assessment Areas & Tasks**
+
+##### **PDR-1: MVP Functionality Validation**
+**Role**: IV&V  
+**Duration**: 2 days  
+**Priority**: Critical
+
+**Tasks**:
+- PDR-1.1: Execute complete camera discovery workflow (end-to-end test)
+- PDR-1.2: Validate real-time camera status updates with physical camera connect/disconnect
+- PDR-1.3: Test snapshot capture operations with multiple format/quality combinations
+- PDR-1.4: Validate video recording operations (unlimited and timed duration)
+- PDR-1.5: Verify file browsing and download functionality for recordings/snapshots
+- PDR-1.6: Test error handling and recovery for all camera operations
+
+**Deliverable**: `evidence/client-pdr/01_mvp_functionality.md`
+
+##### **PDR-2: Server Integration Validation**
+**Role**: Developer  
+**Duration**: 1 day  
+**Priority**: Critical
+
+**Tasks**:
+- PDR-2.1: Validate WebSocket connection stability under network interruption
+- PDR-2.2: Test all JSON-RPC method calls against real MediaMTX server
+- PDR-2.3: Verify real-time notification handling and state synchronization
+- PDR-2.4: Test polling fallback mechanism when WebSocket fails
+- PDR-2.5: Validate API error handling and user feedback mechanisms
+
+**Deliverable**: `evidence/client-pdr/02_server_integration.md`
+
+##### **PDR-3: Component Integration Testing**
+**Role**: IV&V  
+**Duration**: 1.5 days  
+**Priority**: High
+
+**Tasks**:
+- PDR-3.1: Execute unit tests for all critical components (>80% coverage)
+- PDR-3.2: Test state management consistency across component interactions
+- PDR-3.3: Validate props and data flow between parent/child components
+- PDR-3.4: Test event handling and user interaction workflows
+- PDR-3.5: Verify component lifecycle and cleanup (memory leaks prevention)
+
+**Deliverable**: `evidence/client-pdr/03_component_integration.md`
+
+##### **PDR-4: Performance Baseline Measurement**
+**Role**: Developer  
+**Duration**: 1 day  
+**Priority**: High
+
+**Tasks**:
+- PDR-4.1: Execute bundle analysis and optimization assessment (`npm run build && analyze`)
+- PDR-4.2: Conduct Lighthouse performance audit (target >80 for all metrics)
+- PDR-4.3: Measure WebSocket connection timing (target <1 second)
+- PDR-4.4: Profile memory usage during extended camera operations
+- PDR-4.5: Test mobile device performance with real camera operations
+
+**Deliverable**: `evidence/client-pdr/04_performance_baseline.md`
+
+##### **PDR-5: Quality Metrics Validation**
+**Role**: IV&V  
+**Duration**: 0.5 days  
+**Priority**: Medium
+
+**Tasks**:
+- PDR-5.1: Execute test coverage report (`npm test -- --coverage`)
+- PDR-5.2: Validate code quality metrics (`npm run lint`)
+- PDR-5.3: Verify TypeScript compilation strictness (`npm run type-check`)
+- PDR-5.4: Review code for critical component quality
+- PDR-5.5: Validate PWA manifest and service worker functionality
+
+**Deliverable**: `evidence/client-pdr/05_quality_metrics.md`
+
+#### **PDR Exit Criteria**
+- ✅ All MVP features implemented and working end-to-end
+- ✅ Server integration stable and reliable
+- ✅ Unit test coverage >80% for critical components
+- ✅ Basic performance targets met (Lighthouse >80)
+- ✅ Code quality standards maintained
 
 ---
 
@@ -174,18 +378,30 @@ Task: [specific request]
 - Production deployment preparation
 
 #### **Sprint 4: Testing & Validation**
-- **Unit Testing**: Component and service testing
-- **Integration Testing**: API and state management testing
-- **E2E Testing**: Full user workflow testing
-- **Performance Testing**: Load testing and optimization
+**Duration**: 1 week  
+**Focus**: Build comprehensive test suite
 
-#### **Sprint 5: Optimization & Compliance**
+**Tasks**:
+- **Unit Testing**: Component and service testing with >90% coverage
+- **Integration Testing**: API and state management testing
+- **E2E Testing**: Full user workflow testing with Cypress
+- **Performance Testing**: Load testing and bundle optimization
+
+#### **Sprint 5: Optimization & Compliance**  
+**Duration**: 1 week  
+**Focus**: Cross-platform and accessibility validation
+
+**Tasks**:
 - **Performance Optimization**: Bundle size and load time optimization
 - **Accessibility Testing**: WCAG compliance and screen reader testing
 - **Cross-Platform Testing**: Multi-browser and mobile device validation
 - **Security Assessment**: Vulnerability scanning and security review
 
 #### **Sprint 6: Production Preparation**
+**Duration**: 1 week  
+**Focus**: Production deployment readiness
+
+**Tasks**:
 - **Documentation**: User guides and technical documentation
 - **Deployment Pipeline**: CI/CD setup and production configuration
 - **Monitoring Setup**: Analytics and error tracking
@@ -193,13 +409,113 @@ Task: [specific request]
 
 ---
 
-### **🚪 CDR (Critical Design Review) - GATE PLANNED**
+### **🚪 CDR (Critical Design Review) - PRODUCTION READINESS GATE**
 **Target**: End of Phase 2 (Testing & Polish Complete)  
+**Purpose**: Validate ready for production users  
 **Authority**: IV&V Assessment → Project Manager Production Authorization  
-**Scope**: Production readiness and deployment authorization  
-**Reference**: `docs/client-systems-engineering-gates.md` - CDR section  
+**Duration**: 2 weeks  
 **Evidence**: `evidence/client-cdr/`  
 **STOP**: Production deployment requires CDR authorization
+
+#### **CDR Assessment Areas & Tasks**
+
+##### **CDR-1: Production Functionality Validation**
+**Role**: IV&V  
+**Duration**: 3 days  
+**Priority**: Critical
+
+**Tasks**:
+- CDR-1.1: Execute comprehensive user workflow testing (all happy paths)
+- CDR-1.2: Test error condition handling and recovery under production load
+- CDR-1.3: Validate performance under realistic user scenarios (multiple cameras)
+- CDR-1.4: Test PWA offline functionality and network interruption scenarios
+- CDR-1.5: Verify production configuration compatibility
+- CDR-1.6: Execute stress testing with extended recording sessions
+
+**Deliverable**: `evidence/client-cdr/01_production_functionality.md`
+
+##### **CDR-2: Cross-Platform Validation**
+**Role**: IV&V  
+**Duration**: 2 days  
+**Priority**: Critical
+
+**Tasks**:
+- CDR-2.1: Test Chrome desktop and mobile browser compatibility
+- CDR-2.2: Test Safari desktop and mobile browser compatibility  
+- CDR-2.3: Test Firefox desktop browser compatibility
+- CDR-2.4: Validate PWA installation on iOS and Android devices
+- CDR-2.5: Test responsive design across all target screen sizes
+- CDR-2.6: Verify touch interface usability on mobile devices
+
+**Deliverable**: `evidence/client-cdr/02_cross_platform.md`
+
+##### **CDR-3: Security Assessment**
+**Role**: Developer  
+**Duration**: 2 days  
+**Priority**: High
+
+**Tasks**:
+- CDR-3.1: Execute vulnerability scanning (`npm audit`, security scanners)
+- CDR-3.2: Validate secure WebSocket communication (WSS in production)
+- CDR-3.3: Review data handling security and user privacy protection
+- CDR-3.4: Audit client-side security best practices implementation
+- CDR-3.5: Verify authentication/authorization readiness (if applicable)
+- CDR-3.6: Test security headers and CSP implementation
+
+**Deliverable**: `evidence/client-cdr/03_security_assessment.md`
+
+##### **CDR-4: Performance Compliance Validation**
+**Role**: Developer  
+**Duration**: 2 days  
+**Priority**: High
+
+**Tasks**:
+- CDR-4.1: Execute Lighthouse audit with production build (target >90 all categories)
+- CDR-4.2: Validate bundle size meets targets (<2MB total, <500KB main chunk)
+- CDR-4.3: Test WebSocket connection performance under load (target <1s)
+- CDR-4.4: Profile memory usage during extended operations
+- CDR-4.5: Validate mobile device performance targets
+- CDR-4.6: Test performance degradation scenarios and optimization
+
+**Deliverable**: `evidence/client-cdr/04_performance_compliance.md`
+
+##### **CDR-5: Accessibility Compliance**
+**Role**: IV&V  
+**Duration**: 1.5 days  
+**Priority**: Medium
+
+**Tasks**:
+- CDR-5.1: Execute WCAG 2.1 AA compliance testing
+- CDR-5.2: Test screen reader compatibility (NVDA, VoiceOver)
+- CDR-5.3: Validate keyboard navigation and focus management
+- CDR-5.4: Test color contrast and visual accessibility
+- CDR-5.5: Verify ARIA labels and semantic markup
+- CDR-5.6: Test accessibility across all supported browsers
+
+**Deliverable**: `evidence/client-cdr/05_accessibility_compliance.md`
+
+##### **CDR-6: Documentation & Deployment Readiness**
+**Role**: Project Manager  
+**Duration**: 1.5 days  
+**Priority**: Medium
+
+**Tasks**:
+- CDR-6.1: Review user guide completeness and accuracy
+- CDR-6.2: Validate technical documentation completeness
+- CDR-6.3: Test deployment procedures in staging environment
+- CDR-6.4: Verify monitoring and analytics setup
+- CDR-6.5: Validate rollback procedures and disaster recovery
+- CDR-6.6: Review production support procedures
+
+**Deliverable**: `evidence/client-cdr/06_deployment_readiness.md`
+
+#### **CDR Exit Criteria**
+- ✅ All production functionality validated under realistic load
+- ✅ Cross-platform compatibility verified across all targets
+- ✅ Security assessment complete with no critical vulnerabilities
+- ✅ Performance targets met (Lighthouse >90, bundle <2MB)
+- ✅ Accessibility compliance (WCAG 2.1 AA) achieved
+- ✅ Production deployment procedures validated
 
 ---
 
@@ -213,6 +529,16 @@ Task: [specific request]
 - Monitoring and analytics activation
 - User feedback collection
 - Post-deployment support
+
+#### **Sprint 7: Production Deployment**
+**Duration**: 1 week  
+**Focus**: Live deployment and monitoring
+
+**Tasks**:
+- **Deployment Execution**: Deploy to production infrastructure
+- **Monitoring Activation**: Enable analytics and error tracking
+- **User Feedback**: Collect initial user feedback and usage metrics
+- **Support Setup**: Establish production support procedures
 
 ## **Production Readiness Validation**
 
@@ -367,6 +693,8 @@ Build and deploy React Progressive Web Application providing comprehensive camer
 - Camera discovery and real-time status monitoring
 - Snapshot capture with format/quality options
 - Video recording (unlimited and timed duration)
+- **File browsing for snapshots and recordings**
+- **File download capabilities via HTTPS**
 - Real-time WebSocket updates with polling fallback
 - PWA with responsive design
 
@@ -444,17 +772,35 @@ Build and deploy React Progressive Web Application providing comprehensive camer
 - Recording files downloadable immediately after session completion
 - Robust error handling for recording failures and storage issues
 
-##### **S7.6: Progressive Web Application Features**
+##### **S7.6: File Browsing and Management**
+**Priority**: High  
+**Estimated Effort**: 1.5 days
+
+**Tasks**:
+- S7.6.1: Implement file listing using `list_recordings` and `list_snapshots` APIs
+- S7.6.2: Create file browser interface with metadata display (filename, size, timestamp)
+- S7.6.3: Add pagination controls (25 items per page default)
+- S7.6.4: Implement file download functionality via HTTPS endpoints
+- S7.6.5: Create file preview capabilities for supported formats
+- S7.6.6: Add file management operations (basic organization)
+
+**Acceptance Criteria**:
+- File browser displays all recordings and snapshots with metadata
+- Pagination works smoothly with configurable page sizes
+- File downloads function correctly via direct HTTPS links
+- File preview works for images and provides info for videos
+
+##### **S7.7: Progressive Web Application Features**
 **Priority**: Medium  
 **Estimated Effort**: 1 day
 
 **Tasks**:
-- S7.6.1: Configure PWA manifest with app metadata and icons
-- S7.6.2: Implement service worker for offline functionality
-- S7.6.3: Add install prompt and standalone app experience
-- S7.6.4: Create offline status detection and user feedback
-- S7.6.5: Implement basic caching strategy for critical app resources
-- S7.6.6: Add PWA installation instructions and browser compatibility
+- S7.7.1: Configure PWA manifest with app metadata and icons
+- S7.7.2: Implement service worker for offline functionality
+- S7.7.3: Add install prompt and standalone app experience
+- S7.7.4: Create offline status detection and user feedback
+- S7.7.5: Implement basic caching strategy for critical app resources
+- S7.7.6: Add PWA installation instructions and browser compatibility
 
 **Acceptance Criteria**:
 - App installable on mobile and desktop platforms
@@ -462,17 +808,17 @@ Build and deploy React Progressive Web Application providing comprehensive camer
 - Clear offline status indication and graceful degradation
 - Native app-like experience when installed
 
-##### **S7.7: Responsive Design and User Experience**
+##### **S7.8: Responsive Design and User Experience**
 **Priority**: Medium  
 **Estimated Effort**: 1.5 days
 
 **Tasks**:
-- S7.7.1: Create mobile-first responsive layout design
-- S7.7.2: Implement touch-friendly interface controls for mobile devices
-- S7.7.3: Build desktop-optimized layout with keyboard navigation
-- S7.7.4: Add loading states and progress indicators for all operations
-- S7.7.5: Implement consistent error messaging and user feedback
-- S7.7.6: Create accessibility features (ARIA labels, keyboard support)
+- S7.8.1: Create mobile-first responsive layout design
+- S7.8.2: Implement touch-friendly interface controls for mobile devices
+- S7.8.3: Build desktop-optimized layout with keyboard navigation
+- S7.8.4: Add loading states and progress indicators for all operations
+- S7.8.5: Implement consistent error messaging and user feedback
+- S7.8.6: Create accessibility features (ARIA labels, keyboard support)
 
 **Acceptance Criteria**:
 - Functional interface across mobile, tablet, and desktop viewports
@@ -483,12 +829,12 @@ Build and deploy React Progressive Web Application providing comprehensive camer
 #### **Epic Dependencies**
 
 **Input Dependencies**:
-- REQ-FUNC-008: Server static file serving operational at /opt/camera-service/web/
-- REQ-FUNC-009: Nginx configuration supporting client routing
-- REQ-FUNC-010: File download endpoints functional at /files/recordings/ and /files/snapshots/
-- REQ-FUNC-011: Updated installation procedures supporting client deployment
-- REQ-FUNC-004: WebSocket JSON-RPC API available at /api/ws
-- REQ-FUNC-005: Camera service backend operational with test cameras available
+- ✅ Server static file serving operational at `/opt/camera-service/web/`
+- ✅ Nginx configuration supporting client routing
+- ✅ File download endpoints functional at `/files/recordings/` and `/files/snapshots/`
+- ✅ Updated installation procedures supporting client deployment
+- ✅ WebSocket JSON-RPC API available at `/api/ws`
+- ✅ Camera service backend operational with test cameras available
 
 **Output Dependencies**:
 - Deployed React PWA accessible at https://camera-service.local/
@@ -517,19 +863,13 @@ Build and deploy React Progressive Web Application providing comprehensive camer
 - PWA audit scores meeting production standards
 - Performance benchmarks for real-time operations
 
-#### **STOP Comments Requiring Resolution**
-- **Polling Fallback**: Should fallback polling interval be 5s or 10s during WebSocket failures?
-- **Error UI Patterns**: What specific error messaging patterns should be used for camera operation failures?
-- **Offline Capabilities**: Which operations should remain functional during network interruptions?
-- **Mobile Performance**: What are acceptable performance targets for real-time updates on mobile devices?
-- **Server Requirements**: REQ-FUNC-008 through REQ-FUNC-011 must be added to requirements baseline before implementation
-
 #### **Epic Deliverable**
 React PWA Client Package comprising:
 - Production-ready React application with all MVP Phase 1 features
 - PWA functionality with offline capabilities and install prompts
 - Responsive design optimized for mobile and desktop use
 - Real-time camera operations with WebSocket communication
+- File browsing and download capabilities
 - Complete test suite validating all critical functionality
 - Deployed application accessible at https://camera-service.local/
 
@@ -537,7 +877,7 @@ React PWA Client Package comprising:
 
 ---
 
-**Client Roadmap**: Version 2.1 - Added Epic E7 Tracking  
+**Client Roadmap**: Version 3.0 - Complete Assessment Framework  
 **Status**: Sprint 3 In Progress - SDR Retroactive Required  
-**Next Action**: Execute retroactive SDR, complete Sprint 3, prepare for PDR  
-**Estimated Timeline**: 4-5 weeks remaining for MVP completion and CDR authorization
+**Next Action**: Execute retroactive SDR (3-4 days), complete Sprint 3, prepare for PDR  
+**Estimated Timeline**: 6-8 weeks for complete MVP through CDR authorization

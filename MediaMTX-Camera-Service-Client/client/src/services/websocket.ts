@@ -26,6 +26,7 @@ import type {
   JSONRPCNotification,
   WebSocketMessage,
 } from '../types';
+import { authService } from './authService';
 
 
 
@@ -113,18 +114,28 @@ export class WebSocketService {
   }
 
   /**
-   * Send a JSON-RPC method call
+   * Send a JSON-RPC method call with optional authentication
    */
-  public async call(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  public async call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = false): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new WebSocketError('WebSocket not connected');
+    }
+
+    // Add authentication token if required and available
+    let finalParams = params;
+    if (requireAuth) {
+      try {
+        finalParams = authService.includeAuth(params);
+      } catch (error) {
+        throw new WebSocketError(`Authentication required: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
 
     const requestId = ++this.requestId;
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
       method,
-      params,
+      params: finalParams,
       id: requestId
     };
 
@@ -268,8 +279,8 @@ export class WebSocketService {
     }
 
     const delay = Math.min(
-      this.config.baseDelay * Math.pow(2, this.reconnectAttempts),
-      this.config.maxDelay
+      this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts),
+      30000 // 30 second max delay
     );
 
     this.reconnectTimeout = setTimeout(() => {
@@ -297,9 +308,11 @@ export class WebSocketService {
 export const defaultWebSocketConfig: WebSocketConfig = {
   url: 'ws://localhost:8002/ws', // Real MediaMTX Camera Service endpoint
   maxReconnectAttempts: 10, // Finite attempts for production
+  reconnectInterval: 1000, // 1 second base delay
+  requestTimeout: 15000, // 15 second timeout for real server calls
+  heartbeatInterval: 30000, // 30 second heartbeat
   baseDelay: 1000, // 1 second base delay
   maxDelay: 30000, // 30 second max delay
-  requestTimeout: 15000 // 15 second timeout for real server calls
 };
 
 /**

@@ -7,6 +7,7 @@
 export { useCameraStore } from './cameraStore';
 export { useConnectionStore } from './connectionStore';
 export { useUIStore, initializeUIStore } from './uiStore';
+export { useFileStore } from './fileStore';
 
 // TODO: Fix store initialization in Sprint 3
 // Temporarily disabled to complete Sprint 2 

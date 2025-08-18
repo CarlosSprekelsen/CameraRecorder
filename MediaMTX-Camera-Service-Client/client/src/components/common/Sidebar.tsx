@@ -15,6 +15,7 @@ import {
   Dashboard as DashboardIcon,
   Settings as SettingsIcon,
   Videocam as CameraIcon,
+  Folder as FolderIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -87,6 +88,22 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
                 primary="No cameras connected"
                 secondary="Connect a camera to get started"
               />
+            </ListItemButton>
+          </ListItem>
+        </List>
+        
+        <Divider />
+        
+        <List>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => handleNavigation('/files')}
+              selected={isActive('/files')}
+            >
+              <ListItemIcon>
+                <FolderIcon />
+              </ListItemIcon>
+              <ListItemText primary="File Manager" />
             </ListItemButton>
           </ListItem>
         </List>

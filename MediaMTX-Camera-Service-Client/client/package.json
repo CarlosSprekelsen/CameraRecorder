@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -16,7 +20,9 @@
     "test:integration:mock": "USE_MOCK_SERVER=true jest --testPathPattern=integration",
     "test:performance": "jest --testPathPattern=performance",
     "test:ci": "jest --ci --coverage --testResultsProcessor=jest-sonar-reporter",
-    "test:ci:integration": "jest --ci --testPathPattern=integration --testResultsProcessor=jest-sonar-reporter"
+    "test:ci:integration": "jest --ci --testPathPattern=integration --testResultsProcessor=jest-sonar-reporter",
+    "validate": "npm run lint && npm run build && npm test",
+    "setup": "npm install && npm run validate"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -27,6 +33,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.7.1",
+    "ws": "^8.18.3",
     "zustand": "^5.0.7"
   },
   "devDependencies": {
@@ -47,7 +54,7 @@
     "jest": "^30.0.5",
     "jest-junit": "^16.0.0",
     "jest-sonar-reporter": "^2.0.0",
-    "jest-watch-typeahead": "^2.2.2",
+    "jest-watch-typeahead": "^3.0.0",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.1",
     "typescript": "~5.8.3",

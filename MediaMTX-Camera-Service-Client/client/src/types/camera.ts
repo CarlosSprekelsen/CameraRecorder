@@ -40,6 +40,8 @@ export type RecordingStatus = 'STARTED' | 'STOPPED' | 'ERROR';
 export interface CameraCapabilities {
   formats: VideoFormat[];
   resolutions: string[];
+  resolution?: string; // Current resolution
+  fps?: number; // Current FPS
 }
 
 /**
@@ -102,10 +104,13 @@ export interface RecordingSession {
 
 /**
  * Recording start parameters
+ * Aligned with server start_recording method parameters
  */
 export interface StartRecordingParams {
   device: string;
-  duration?: number; // Optional - omit for unlimited recording
+  duration_seconds?: number; // 1-3600 seconds
+  duration_minutes?: number; // 1-1440 minutes  
+  duration_hours?: number; // 1-24 hours
   format?: RecordingFormat;
 }
 
@@ -164,6 +169,44 @@ export interface FileListResponse {
 export interface FileListParams {
   limit?: number;
   offset?: number;
+}
+
+/**
+ * Authentication parameters
+ * Aligned with server authenticate method
+ */
+export interface AuthenticateParams {
+  token: string;
+}
+
+/**
+ * Authentication response
+ * Aligned with server authenticate response
+ */
+export interface AuthenticateResponse {
+  authenticated: boolean;
+  role?: string;
+  user_id?: string;
+  auth_method?: string;
+}
+
+/**
+ * File type for file operations
+ */
+export type FileType = 'recordings' | 'snapshots';
+
+/**
+ * File item for file management
+ * Aligned with server file list responses
+ */
+export interface FileItem {
+  filename: string;
+  file_size: number;
+  created_at: string;
+  modified_time: string;
+  download_url: string;
+  duration?: number; // Only for recordings
+  format?: string; // File format extension
 }
 
 /**

@@ -6,6 +6,7 @@ import { theme } from './theme';
 import AppShell from './components/common/AppShell';
 import Dashboard from './components/Dashboard/Dashboard';
 import CameraDetail from './components/CameraDetail/CameraDetail';
+import FileManager from './components/FileManager/FileManager';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 const App: React.FC = () => {
@@ -18,6 +19,7 @@ const App: React.FC = () => {
             <Route path="/" element={<AppShell />}>
               <Route index element={<Dashboard />} />
               <Route path="camera/:deviceId" element={<CameraDetail />} />
+              <Route path="files" element={<FileManager />} />
               {/* TODO: Add Settings route when implemented */}
               <Route path="settings" element={<div>Settings (Coming Soon)</div>} />
             </Route>

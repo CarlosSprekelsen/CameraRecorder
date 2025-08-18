@@ -120,7 +120,7 @@ export const useCameraStore = create<CameraStore>()(
                     name: 'Test Camera 1',
                     status: 'CONNECTED',
                     capabilities: {
-                      resolution: '1920x1080',
+                      resolutions: ['1920x1080', '1280x720'],
                       fps: 30,
                       validation_status: 'confirmed',
                       formats: ['MJPEG', 'YUYV']
@@ -131,7 +131,7 @@ export const useCameraStore = create<CameraStore>()(
                     name: 'Test Camera 2',
                     status: 'CONNECTED',
                     capabilities: {
-                      resolution: '1280x720',
+                      resolutions: ['1280x720', '640x480'],
                       fps: 25,
                       validation_status: 'confirmed',
                       formats: ['MJPEG', 'YUYV']
@@ -150,7 +150,7 @@ export const useCameraStore = create<CameraStore>()(
           const wsService = createWebSocketService({
             url: wsUrl,
             maxReconnectAttempts: 10,
-            baseDelay: 1000,
+            reconnectInterval: 1000,
             maxDelay: 30000,
             requestTimeout: 15000,
           });
@@ -313,7 +313,7 @@ export const useCameraStore = create<CameraStore>()(
             device,
             duration,
             format,
-          }) as RecordingResponse;
+          }, true) as RecordingResponse; // Require authentication for protected operations
 
           if (result.success) {
             set((state) => {
@@ -345,7 +345,7 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
-          const result = await wsService.call(RPC_METHODS.STOP_RECORDING, { device }) as RecordingResponse;
+          const result = await wsService.call(RPC_METHODS.STOP_RECORDING, { device }, true) as RecordingResponse; // Require authentication for protected operations
 
           if (result.success) {
             set((state) => {
@@ -382,7 +382,7 @@ export const useCameraStore = create<CameraStore>()(
             device,
             format,
             quality,
-          }) as SnapshotResponse;
+          }, true) as SnapshotResponse; // Require authentication for protected operations
 
           return result;
           
@@ -407,8 +407,9 @@ export const useCameraStore = create<CameraStore>()(
             throw new Error('WebSocket not connected');
           }
 
-          const result = await wsService.call(RPC_METHODS.GET_SERVER_INFO, {}) as ServerInfo;
-          set({ serverInfo: result });
+          // Server info not implemented in current API - using ping for health check
+          const result = await wsService.call(RPC_METHODS.PING, {}) as string;
+                      set({ serverInfo: { version: '1.0', uptime: 0, cameras_connected: 0, total_recordings: 0, total_snapshots: 0 } });
           return result;
           
         } catch (error) {

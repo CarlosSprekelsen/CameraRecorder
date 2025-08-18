@@ -24,7 +24,7 @@ Returns: `Camera`
 ### take_snapshot(device: string, filename?: string)
 Returns: `{ device, filename, status, timestamp, file_size, file_path }`
 
-### start_recording(device: string, duration?: number, format?: string)
+### start_recording(device: string, duration_seconds?: number, duration_minutes?: number, duration_hours?: number, format?: string)
 Returns: `{ device, session_id, filename, status, start_time, duration, format }`
 
 ### stop_recording(device: string)
@@ -35,6 +35,9 @@ Returns: `{ files: FileInfo[], total, limit, offset }`
 
 ### list_snapshots(limit?: number, offset?: number)
 Returns: `{ files: FileInfo[], total, limit, offset }`
+
+### authenticate(token: string)
+Returns: `{ authenticated: boolean, role?: string }`
 
 ## HTTP Endpoints
 
@@ -57,13 +60,17 @@ Headers: `Authorization: Bearer {token}`
 ```
 
 ## Error Codes
-- -1000: Camera not found
-- -1001: Camera not available  
-- -1002: Recording in progress
-- -1003: MediaMTX error
-- -32001: Camera not found/disconnected
+- -32700: Parse error (Invalid JSON)
+- -32600: Invalid Request  
+- -32601: Method not found
+- -32602: Invalid params
+- -32603: Internal error
+- -32001: Camera not found or disconnected
 - -32002: Recording already in progress
-- -32003: MediaMTX service unavailable
+- -32003: MediaMTX service unavailable  
+- -32004: Authentication required or token expired
+- -32005: Insufficient storage space
+- -32006: Camera capability not supported
 
 ## Type Definitions
 ```typescript

@@ -49,7 +49,7 @@ export type WebSocketMessage = JSONRPCResponse | JSONRPCNotification;
 
 /**
  * Common error codes used by the MediaMTX Camera Service
- * Aligned with server error codes
+ * Aligned with server error codes exactly
  */
 export const ERROR_CODES = {
   // Standard JSON-RPC 2.0 error codes
@@ -59,13 +59,7 @@ export const ERROR_CODES = {
   INVALID_PARAMS: -32602,
   INTERNAL_ERROR: -32603,
   
-  // Custom service error codes
-  CAMERA_NOT_FOUND: -1000,
-  CAMERA_NOT_AVAILABLE: -1001,
-  RECORDING_IN_PROGRESS: -1002,
-  MEDIAMTX_ERROR: -1003,
-  
-  // Extended service error codes
+  // Service-specific error codes (aligned with server)
   CAMERA_NOT_FOUND_OR_DISCONNECTED: -32001,
   RECORDING_ALREADY_IN_PROGRESS: -32002,
   MEDIAMTX_SERVICE_UNAVAILABLE: -32003,
@@ -88,6 +82,9 @@ export const RPC_METHODS = {
   PING: 'ping',
   GET_CAMERA_LIST: 'get_camera_list',
   GET_CAMERA_STATUS: 'get_camera_status',
+  
+  // Authentication method
+  AUTHENTICATE: 'authenticate',
   
   // Camera control methods
   TAKE_SNAPSHOT: 'take_snapshot',
@@ -166,6 +163,8 @@ export interface WebSocketConfig {
   maxReconnectAttempts: number;
   requestTimeout: number;
   heartbeatInterval: number;
+  baseDelay: number;
+  maxDelay: number;
 }
 
 /**

@@ -32,6 +32,8 @@ The client applications will provide camera control functionality by communicati
 - `take_snapshot` - Capture still images
 - `start_recording` - Begin video recording
 - `stop_recording` - End video recording
+- `list_recordings` - Enumerate available recording files with metadata
+- `list_snapshots` - Enumerate available snapshot files with metadata
 - Real-time notifications for camera and recording status updates
 
 ---
@@ -98,6 +100,62 @@ The client applications will provide camera control functionality by communicati
 
 #### F3.2: Recording Controls and Security Enforcement
 - **F3.2.1:** The application SHALL provide intuitive recording start/stop controls
+
+### F4: File Browsing Interface Requirements (NEW)
+
+#### F4.1: File List Display
+- **F4.1.1:** The application SHALL display paginated list of available recordings and snapshots
+- **F4.1.2:** The application SHALL show file metadata (filename, size, timestamp, duration for videos)
+- **F4.1.3:** The application SHALL implement pagination controls with configurable limits (10, 20, 50 files per page)
+- **F4.1.4:** The application SHALL provide file filtering and sorting options (date, size, name, duration)
+- **F4.1.5:** The application SHALL update file lists in real-time when new files are created
+
+#### F4.2: File Metadata Display
+- **F4.2.1:** The application SHALL display primary metadata fields prominently (filename, size, date, duration)
+- **F4.2.2:** The application SHALL provide expandable secondary metadata fields (path, format, resolution, frame rate)
+- **F4.2.3:** The application SHALL format file sizes in human-readable format (KB, MB, GB)
+- **F4.2.4:** The application SHALL format timestamps in user's local timezone (YYYY-MM-DD HH:MM:SS)
+- **F4.2.5:** The application SHALL display duration for video files in MM:SS format
+
+### F5: File Download Functionality Requirements (NEW)
+
+#### F5.1: Secure Download
+- **F5.1.1:** The application SHALL support secure HTTPS download via `/files/recordings/` and `/files/snapshots/` endpoints
+- **F5.1.2:** The application SHALL require authentication for all file download requests
+- **F5.1.3:** The application SHALL use existing WebSocket authentication session for download authorization
+- **F5.1.4:** The application SHALL handle authentication failures gracefully
+
+#### F5.2: Download Management
+- **F5.2.1:** The application SHALL provide progress indication for large file downloads
+- **F5.2.2:** The application SHALL integrate with browser download mechanism with proper filename preservation
+- **F5.2.3:** The application SHALL handle download failures and network timeout errors (30-minute timeout)
+- **F5.2.4:** The application SHALL support bulk download operations for up to 10 files simultaneously
+- **F5.2.5:** The application SHALL provide download queue management and progress tracking
+
+### F6: File Management UI Requirements (MVP SCOPE)
+
+#### F6.1: Basic File Interface (MVP - Sprint 3)
+- **F6.1.1:** The application SHALL provide separate tabs/sections for recordings and snapshots
+- **F6.1.2:** The application SHALL display file metadata prominently (filename, size, date, duration)
+- **F6.1.3:** The application SHALL implement basic pagination controls (25 items per page default)
+- **F6.1.4:** The application SHALL ensure responsive design for mobile file browsing
+- **F6.1.5:** The application SHALL provide file download functionality via HTTPS endpoints
+
+#### F6.2: Advanced File Management (Phase 4 - Deferred)
+- **F6.2.1:** The application SHALL offer file preview capabilities where supported (images, video thumbnails)
+- **F6.2.2:** The application SHALL provide file metadata detailed view with expandable sections
+- **F6.2.3:** The application SHALL implement search and filter functionality for file discovery
+- **F6.2.4:** The application SHALL support bulk download operations for up to 10 selected files
+- **F6.2.5:** The application SHALL support bulk delete operations for up to 10 selected files
+- **F6.2.6:** The application SHALL provide clear progress indication for bulk operations
+- **F6.2.7:** The application SHALL confirm bulk delete operations with user before execution
+- **F6.2.8:** The application SHALL handle partial failures gracefully in bulk operations
+
+#### F6.3: Caching and Performance (Phase 4 - Deferred)
+- **F6.3.1:** The application SHALL implement 5-minute client-side cache for file metadata
+- **F6.3.2:** The application SHALL invalidate cache when new files are created or deleted
+- **F6.3.3:** The application SHALL provide offline file list viewing capability
+- **F6.3.4:** The application SHALL optimize performance for large file lists with advanced pagination
 - **F3.2.2:** The application SHALL display recording duration selector interface
 - **F3.2.3:** The application SHALL show recording progress and elapsed time
 - **F3.2.4:** The application SHALL provide emergency stop functionality
@@ -106,8 +164,13 @@ The client applications will provide camera control functionality by communicati
   - Token Transport: The JWT SHALL be provided via JSON-RPC `authenticate` method prior to using protected methods.
     - `authenticate` request: `{ jsonrpc: "2.0", method: "authenticate", params: { token: string } }`
     - On success, the server SHALL associate the client connection with the authenticated user and role for the session.
-  - Error Handling: Missing, invalid, or expired tokens SHALL result in JSON-RPC error with code -32003 (authorization) and a meaningful message.
+  - Error Handling: Missing, invalid, or expired tokens SHALL result in JSON-RPC error with code -32004 (authentication required) and a meaningful message.
 - **F3.2.6:** The application SHALL handle token expiration by re-authenticating before retrying protected operations.
+- **F3.2.7:** The application SHALL implement client-side JWT authentication service with:
+  - Token validation and expiry checking
+  - Automatic token refresh before expiry
+  - Role-based permission checking
+  - Integration with WebSocket service for protected operations
 
 #### F3.3: Settings Management
 - **F3.3.1:** The application SHALL provide settings interface for:
@@ -134,6 +197,8 @@ The client applications will provide camera control functionality by communicati
 - **W2.1:** Integration with browser download mechanism
 - **W2.2:** File naming preservation in downloads
 - **W2.3:** Large file download handling with progress indication
+- **W2.4:** File browsing interface with pagination and sorting
+- **W2.5:** HTTPS file download via `/files/recordings/` and `/files/snapshots/` endpoints
 
 ### Android Application
 
@@ -229,20 +294,33 @@ The client applications will provide camera control functionality by communicati
 1. Service connection and authentication
 2. Camera list and selection
 3. Basic photo capture
-4. Basic video recording (unlimited duration)
-5. File saving with metadata
+4. Basic video recording (unlimited and timed duration)
+5. File browsing interface for snapshots and recordings (basic)
+6. File download capabilities via HTTPS endpoints
+7. Basic file metadata display
+8. Real-time WebSocket updates with polling fallback
+9. PWA with responsive design
 
 ### Phase 2: Enhanced Features
-1. Timed recording functionality
-2. Settings and configuration management
-3. Recording progress and status indicators
-4. Enhanced error handling and recovery
+1. Settings and configuration management
+2. Recording progress and status indicators
+3. Enhanced error handling and recovery
+4. Basic file management improvements
 
 ### Phase 3: Advanced Features
 1. Camera preview integration
 2. Background recording (Android)
-3. PWA installation (Web)
-4. Advanced file management
+3. Advanced file management capabilities
+4. Cloud storage integration
+
+### Phase 4: Advanced File Management (Deferred)
+1. File preview capabilities (images, video thumbnails)
+2. Advanced file metadata display with expandable sections
+3. Search and filter functionality for file discovery
+4. Bulk download operations (up to 10 files)
+5. Bulk delete operations with confirmation
+6. Advanced caching and performance optimization
+7. Offline file list viewing capability
 
 ---
 
@@ -327,5 +405,5 @@ The client applications are considered successful when:
 
 ---
 
-**Document Status:** Ready for architecture review and development planning  
-**Next Steps:** Architecture validation and Epic creation in project roadmap
+**Document Status:** Updated with MVP file management requirements  
+**Next Steps:** Client development team assignment and Phase 1A implementation

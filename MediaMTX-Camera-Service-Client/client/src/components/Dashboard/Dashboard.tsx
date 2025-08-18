@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
             Server Information
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Version: {serverInfo.version} | Status: {serverInfo.status}
+            Version: {serverInfo.version} | Connected: {serverInfo.cameras_connected}
           </Typography>
         </Paper>
       )}
