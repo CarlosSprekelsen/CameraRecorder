@@ -63,7 +63,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     
     try {
       const result = await takeSnapshot(camera.device);
-      if (result?.success) {
+      if (result?.status === 'completed') {
         console.log('Snapshot taken successfully:', result);
         // TODO: Show success notification
       } else {
@@ -85,7 +85,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     try {
       if (isRecording) {
         const result = await stopRecording(camera.device);
-        if (result?.success) {
+        if (result?.status === 'STOPPED') {
           console.log('Recording stopped successfully:', result);
           // TODO: Show success notification
         } else {
@@ -94,7 +94,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
         }
       } else {
         const result = await startRecording(camera.device);
-        if (result?.success) {
+        if (result?.status === 'STARTED') {
           console.log('Recording started successfully:', result);
           // TODO: Show success notification
         } else {

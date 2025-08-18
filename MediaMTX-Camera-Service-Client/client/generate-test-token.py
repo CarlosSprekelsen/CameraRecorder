@@ -9,8 +9,14 @@ from security.jwt_handler import JWTHandler
 def generate_test_token():
     """Generate a valid JWT token for testing"""
     try:
-        # Create JWT handler with default secret
-        jwt_handler = JWTHandler()
+        # Get the actual JWT secret from environment
+        jwt_secret = os.getenv("JWT_SECRET_KEY")
+        if not jwt_secret:
+            print("JWT_SECRET_KEY environment variable not found")
+            return None
+        
+        # Create JWT handler with the actual secret
+        jwt_handler = JWTHandler(secret_key=jwt_secret)
         
         # Generate token for operator role (can take snapshots)
         token = jwt_handler.generate_token("test_user", "operator", expiry_hours=24)

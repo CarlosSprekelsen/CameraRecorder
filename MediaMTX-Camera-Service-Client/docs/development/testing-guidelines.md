@@ -92,6 +92,69 @@ date: "2025-08-05"
 
 **Task**: Create performance validation procedures that measure end-to-end performance from client action to server response completion.
 
+## Authentication Testing and Troubleshooting
+
+**Objective**: Ensure proper authentication setup for all client-server integration tests
+
+### Authentication Requirements
+**Critical Issue**: All protected methods (take_snapshot, start_recording, stop_recording) require valid JWT authentication.
+
+### JWT Token Generation
+**Server Environment**: The MediaMTX Camera Service uses a JWT secret stored in the server environment:
+- Environment file: `/opt/camera-service/.env`
+- JWT Secret: `JWT_SECRET_KEY=KSwO7o7yBsPnG3UrIYhLkMKIEXgc7rcvYGDti5qpmMg=`
+
+### Authentication Process
+1. **Generate Valid Token**: Use the correct JWT secret to generate tokens
+2. **Authenticate**: Call the `authenticate` method with the token
+3. **Use Protected Methods**: After successful authentication, protected methods become available
+
+### Common Authentication Issues
+**Problem**: "Authentication required - call authenticate or provide auth_token"
+**Root Cause**: 
+- Invalid JWT token (wrong secret, expired, malformed)
+- Missing authentication call before using protected methods
+- Token not properly passed in request parameters
+
+**Solution**:
+1. Use the correct JWT secret from server environment
+2. Generate token with proper payload structure:
+   ```javascript
+   const payload = {
+     user_id: 'test_user',
+     role: 'operator', // or 'viewer', 'admin'
+     iat: Math.floor(Date.now() / 1000),
+     exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+   };
+   ```
+3. Call authenticate method before using protected methods
+4. Ensure token is passed as `token` parameter in authenticate request
+
+### Testing Authentication
+**Required Test Sequence**:
+1. Connect to WebSocket server
+2. Generate valid JWT token with correct secret
+3. Call `authenticate` method with token
+4. Verify authentication success
+5. Test protected methods (take_snapshot, start_recording, stop_recording)
+
+### Role-Based Access Control
+- **viewer**: Can view camera status and take snapshots
+- **operator**: Can take snapshots, start/stop recordings
+- **admin**: Full access to all operations
+
+### Authentication Test Example
+```javascript
+// Generate valid token
+const token = jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256' });
+
+// Authenticate
+const authResult = await sendRequest(ws, 'authenticate', { token });
+
+// Use protected methods after successful authentication
+const snapshotResult = await sendRequest(ws, 'take_snapshot', { device: '/dev/video0' });
+```
+
 ## CI/CD Integration Testing
 
 **Objective**: Establish automated testing pipeline with real server integration

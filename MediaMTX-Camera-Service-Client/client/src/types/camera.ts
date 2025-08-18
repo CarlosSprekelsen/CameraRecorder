@@ -128,18 +128,23 @@ export interface StopRecordingParams {
 export interface SnapshotResult {
   device: string;
   filename: string;
-  status: 'completed' | 'error';
+  status: 'completed' | 'FAILED';
   timestamp: string;
   file_size: number;
-  file_path: string;
+  format?: SnapshotFormat;
+  quality?: number;
+  error?: string; // Present when status is 'FAILED'
 }
 
 /**
  * Snapshot capture parameters
+ * Aligned with server take_snapshot method parameters
  */
 export interface TakeSnapshotParams {
   device: string;
-  filename?: string;
+  format?: SnapshotFormat; // 'jpg' or 'png', defaults to 'jpg'
+  quality?: number; // 1-100, defaults to 85
+  filename?: string; // Optional custom filename
 }
 
 /**
