@@ -51,11 +51,11 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-FUNC-005 | Service | MediaMTX integration | Critical | Architecture | ✅ Implemented |
 | REQ-FUNC-006 | File | Metadata management | High | Client Requirements | ✅ Implemented |
 | REQ-FUNC-007 | File | Storage configuration | High | Client Requirements | ✅ Implemented |
-| REQ-FUNC-008 | File | JSON-RPC list_recordings method | Critical | Epic E6 | 📋 Planned |
-| REQ-FUNC-009 | File | JSON-RPC list_snapshots method | Critical | Epic E6 | 📋 Planned |
-| REQ-FUNC-010 | File | HTTP recording file download endpoint | Critical | Epic E6 | 📋 Planned |
-| REQ-FUNC-011 | File | HTTP snapshot file download endpoint | Critical | Epic E6 | 📋 Planned |
-| REQ-FUNC-012 | File | Nginx routing for file endpoints | Critical | Epic E6 | 📋 Planned |
+| REQ-FUNC-008 | File | JSON-RPC list_recordings method | Critical | Epic E6 | ✅ Implemented |
+| REQ-FUNC-009 | File | JSON-RPC list_snapshots method | Critical | Epic E6 | ✅ Implemented |
+| REQ-FUNC-010 | File | HTTP recording file download endpoint | Critical | Epic E6 | ✅ Implemented |
+| REQ-FUNC-011 | File | HTTP snapshot file download endpoint | Critical | Epic E6 | ✅ Implemented |
+| REQ-FUNC-012 | File | Nginx routing for file endpoints | Critical | Epic E6 | ✅ Implemented |
 
 ### 2.2 Non-Functional Requirements
 
@@ -219,11 +219,11 @@ Content-Length: 524288
 ## 5. Requirements Validation Status
 
 ### 5.1 Epic E6 Requirements Status
-- **REQ-FUNC-008:** 📋 Planned - Implementation pending
-- **REQ-FUNC-009:** 📋 Planned - Implementation pending  
-- **REQ-FUNC-010:** 📋 Planned - Implementation pending
-- **REQ-FUNC-011:** 📋 Planned - Implementation pending
-- **REQ-FUNC-012:** 📋 Planned - Implementation pending
+- **REQ-FUNC-008:** ✅ Implemented - JSON-RPC list_recordings method operational
+- **REQ-FUNC-009:** ✅ Implemented - JSON-RPC list_snapshots method operational  
+- **REQ-FUNC-010:** ✅ Implemented - HTTP recording file download endpoint operational
+- **REQ-FUNC-011:** ✅ Implemented - HTTP snapshot file download endpoint operational
+- **REQ-FUNC-012:** ✅ Implemented - Nginx routing for file endpoints operational
 
 ### 5.2 Validation Criteria
 - All file management API methods shall be tested with real file system operations
@@ -234,6 +234,6 @@ Content-Length: 524288
 
 ---
 
-**Document Status:** Updated for Epic E6 file management requirements
+**Document Status:** Updated for Epic E6 file management requirements (COMPLETED)
 **Last Updated:** 2025-01-15
-**Next Review:** After Epic E6 completion
+**Next Review:** Epic E6 completed successfully
