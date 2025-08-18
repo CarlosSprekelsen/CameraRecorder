@@ -1,13 +1,15 @@
 /**
  * WebSocket JSON-RPC 2.0 Client for MediaMTX Camera Service
  * 
- * Sprint 3: Real Server Integration
+ * Sprint 3: Real Server Integration with Enhanced Connection Management
  * Implements:
  * - Real WebSocket connection to MediaMTX server at ws://localhost:8002/ws
  * - JSON-RPC 2.0 protocol client with full error handling
  * - Exponential backoff for reconnection with production settings
  * - Comprehensive error handling and timeout management
  * - Real-time notification handling for camera status updates
+ * - Integration with connection store for state management
+ * - Performance metrics tracking and health monitoring
  * 
  * References:
  * - Server API: docs/api/json-rpc-methods.md
@@ -50,12 +52,16 @@ export class WebSocketService {
   private isConnecting = false;
   private isDestroyed = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private metricsInterval: NodeJS.Timeout | null = null;
 
   // Event handlers
   private onMessageHandler?: (message: WebSocketMessage) => void;
   private onConnectHandler?: () => void;
   private onDisconnectHandler?: () => void;
   private onErrorHandler?: (error: WebSocketError) => void;
+
+  // Connection store integration
+  private connectionStore: any = null;
 
   private config: WebSocketConfig;
 
@@ -64,8 +70,15 @@ export class WebSocketService {
   }
 
   /**
+   * Set connection store reference for integration
+   */
+  public setConnectionStore(store: any): void {
+    this.connectionStore = store;
+  }
+
+  /**
    * Connect to the MediaMTX WebSocket server
-   * Sprint 3: Real server integration with enhanced error handling
+   * Sprint 3: Real server integration with enhanced error handling and metrics
    */
   public connect(): Promise<void> {
     if (this.isDestroyed) {
@@ -84,6 +97,13 @@ export class WebSocketService {
         this.isConnecting = false;
         const wsError = new WebSocketError('Failed to create WebSocket connection');
         console.error('❌ WebSocket connection failed:', wsError);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(wsError.message, wsError.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
         reject(wsError);
       }
     });
@@ -97,6 +117,7 @@ export class WebSocketService {
     this.isDestroyed = true;
     this.clearReconnectTimeout();
     this.clearHeartbeat();
+    this.clearMetricsInterval();
     
     if (this.ws) {
       this.ws.close();
@@ -113,15 +134,28 @@ export class WebSocketService {
       reject(new WebSocketError('Connection closed'));
     }
     this.pendingRequests.clear();
+
+    // Update connection store
+    if (this.connectionStore) {
+      this.connectionStore.setLastDisconnected(new Date());
+    }
   }
 
   /**
    * Send a JSON-RPC method call with optional authentication
-   * Sprint 3: Enhanced for real server integration
+   * Sprint 3: Enhanced for real server integration with metrics tracking
    */
   public async call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = false): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new WebSocketError('WebSocket not connected');
+      const error = new WebSocketError('WebSocket not connected');
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError(error.message, error.code);
+        this.connectionStore.incrementErrorCount();
+      }
+      
+      throw error;
     }
 
     // Add authentication token if required and available
@@ -130,7 +164,15 @@ export class WebSocketService {
       try {
         finalParams = authService.includeAuth(params);
       } catch (error) {
-        throw new WebSocketError(`Authentication required: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const authError = new WebSocketError(`Authentication required: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(authError.message, authError.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
+        throw authError;
       }
     }
 
@@ -145,10 +187,19 @@ export class WebSocketService {
     console.log(`📤 Sending ${method} (#${requestId})`, params ? JSON.stringify(params) : '');
 
     return new Promise((resolve, reject) => {
+      const startTime = performance.now();
+      
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
         const timeoutError = new WebSocketError(`Request timeout for method: ${method}`);
         console.error(`⏰ Request timeout: ${method}`, timeoutError);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(timeoutError.message, timeoutError.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
         reject(timeoutError);
       }, this.config.requestTimeout);
 
@@ -156,11 +207,23 @@ export class WebSocketService {
 
       try {
         this.ws!.send(JSON.stringify(request));
+        
+        // Update metrics
+        if (this.connectionStore) {
+          this.connectionStore.incrementMessageCount();
+        }
       } catch (error) {
         this.pendingRequests.delete(requestId);
         clearTimeout(timeout);
         const sendError = new WebSocketError('Failed to send request');
         console.error('❌ Failed to send request:', sendError);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(sendError.message, sendError.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
         reject(sendError);
       }
     });
@@ -218,10 +281,26 @@ export class WebSocketService {
     this.heartbeatInterval = setInterval(async () => {
       if (this.isConnected) {
         try {
+          const startTime = performance.now();
           await this.call('ping', {});
+          const responseTime = performance.now() - startTime;
+          
           console.log('💓 Heartbeat sent');
+          
+          // Update connection store with heartbeat metrics
+          if (this.connectionStore) {
+            this.connectionStore.setLastHeartbeat(new Date());
+            this.connectionStore.updateResponseTime(responseTime);
+            this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.getState().healthScore + 5));
+          }
         } catch (error) {
           console.warn('⚠️ Heartbeat failed:', error);
+          
+          // Update connection store with heartbeat failure
+          if (this.connectionStore) {
+            this.connectionStore.updateHealthScore(Math.max(0, this.connectionStore.getState().healthScore - 10));
+          }
+          
           // Don't trigger reconnection on heartbeat failure
         }
       }
@@ -238,6 +317,36 @@ export class WebSocketService {
     }
   }
 
+  /**
+   * Start metrics collection interval
+   */
+  private startMetricsCollection(): void {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+    }
+
+    this.metricsInterval = setInterval(() => {
+      if (this.isConnected && this.connectionStore) {
+        // Update connection uptime
+        const { lastConnected } = this.connectionStore.getState();
+        if (lastConnected) {
+          const uptime = Date.now() - lastConnected.getTime();
+          this.connectionStore.setConnectionUptime(uptime);
+        }
+      }
+    }, 5000); // Update every 5 seconds
+  }
+
+  /**
+   * Clear metrics collection interval
+   */
+  private clearMetricsInterval(): void {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+      this.metricsInterval = null;
+    }
+  }
+
   private setupEventHandlers(
     resolve: () => void,
     reject: (error: WebSocketError) => void
@@ -249,6 +358,15 @@ export class WebSocketService {
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
+      this.startMetricsCollection();
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setLastConnected(new Date());
+        this.connectionStore.updateHealthScore(100);
+        this.connectionStore.updateConnectionQuality('excellent');
+      }
+      
       this.onConnectHandler?.();
       resolve();
     };
@@ -261,6 +379,15 @@ export class WebSocketService {
       });
       this.isConnecting = false;
       this.clearHeartbeat();
+      this.clearMetricsInterval();
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setLastDisconnected(new Date());
+        this.connectionStore.updateHealthScore(0);
+        this.connectionStore.updateConnectionQuality('unstable');
+      }
+      
       this.onDisconnectHandler?.();
 
       if (!this.isDestroyed && !event.wasClean) {
@@ -273,6 +400,14 @@ export class WebSocketService {
       console.error('❌ WebSocket error:', event);
       this.isConnecting = false;
       const error = new WebSocketError('WebSocket error occurred');
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError(error.message, error.code);
+        this.connectionStore.incrementErrorCount();
+        this.connectionStore.updateConnectionQuality('poor');
+      }
+      
       this.onErrorHandler?.(error);
       // Don't reject if we're already connected
       if (this.isConnecting) {
@@ -288,6 +423,13 @@ export class WebSocketService {
       } catch (error) {
         const wsError = new WebSocketError('Failed to parse message');
         console.error('❌ Message parsing error:', wsError);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(wsError.message, wsError.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
         this.onErrorHandler?.(wsError);
       }
     };
@@ -321,9 +463,22 @@ export class WebSocketService {
         response.error.data
       );
       console.error('❌ RPC Error:', error);
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError(error.message, error.code);
+        this.connectionStore.incrementErrorCount();
+      }
+      
       reject(error);
     } else {
       console.log('✅ RPC Response received for request:', response.id);
+      
+      // Update connection store with successful response
+      if (this.connectionStore) {
+        this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.getState().healthScore + 2));
+      }
+      
       resolve(response.result);
     }
   }
@@ -332,6 +487,13 @@ export class WebSocketService {
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
       const error = new WebSocketError('Max reconnection attempts reached');
       console.error('❌ Max reconnection attempts reached');
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError(error.message, error.code);
+        this.connectionStore.updateConnectionQuality('unstable');
+      }
+      
       this.onErrorHandler?.(error);
       return;
     }
@@ -350,6 +512,13 @@ export class WebSocketService {
         // Reconnection successful - onConnectHandler will be called by setupEventHandlers
       }).catch((error) => {
         console.error('❌ Reconnection failed:', error);
+        
+        // Update connection store
+        if (this.connectionStore) {
+          this.connectionStore.setError(error.message, error.code);
+          this.connectionStore.incrementErrorCount();
+        }
+        
         this.onErrorHandler?.(error);
       });
     }, delay);
@@ -379,10 +548,21 @@ export const defaultWebSocketConfig: WebSocketConfig = {
 
 /**
  * Create a WebSocket service instance
- * Sprint 3: Enhanced for real server integration
+ * Sprint 3: Enhanced for real server integration with connection store integration
  */
 export function createWebSocketService(config: Partial<WebSocketConfig> = {}): WebSocketService {
   const finalConfig = { ...defaultWebSocketConfig, ...config };
   console.log('🔧 Creating WebSocket service with config:', finalConfig);
-  return new WebSocketService(finalConfig);
+  const service = new WebSocketService(finalConfig);
+  
+  // Integrate with connection store if available
+  try {
+    const { useConnectionStore } = require('../stores/connectionStore');
+    const store = useConnectionStore.getState();
+    service.setConnectionStore(store);
+  } catch (error) {
+    console.warn('⚠️ Connection store not available for WebSocket service integration');
+  }
+  
+  return service;
 } 

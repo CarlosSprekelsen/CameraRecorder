@@ -19,7 +19,9 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Stack
+  Stack,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import { 
   CameraAlt, 
@@ -121,6 +123,25 @@ const CameraDetail: React.FC = () => {
     }
   };
 
+  const handleRefreshCameraStatus = async () => {
+    if (!deviceId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const updatedCamera = await getCameraStatus(deviceId);
+      if (updatedCamera) {
+        console.log('Camera status refreshed:', updatedCamera);
+        // TODO: Show success notification
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh camera status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isRecording = activeRecordings.has(deviceId || '');
 
   if (!deviceId) {
@@ -170,9 +191,20 @@ const CameraDetail: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Camera Status
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Camera Status
+                </Typography>
+                <Tooltip title="Refresh camera status">
+                  <IconButton 
+                    onClick={handleRefreshCameraStatus}
+                    disabled={isLoading || !isConnected}
+                    size="small"
+                  >
+                    <Refresh />
+                  </IconButton>
+                </Tooltip>
+              </Box>
               <Stack spacing={2}>
                 <Box>
                   <Typography variant="body2" color="text.secondary">

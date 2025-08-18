@@ -126,54 +126,8 @@ export const useCameraStore = create<CameraStore>()(
           
           console.log('🚀 Initializing camera store with real server integration');
           
-          // For testing without server, use mock data
-          if (process.env.NODE_ENV === 'development' && !wsUrl.includes('localhost:8002')) {
-            console.log('🧪 Using mock data for development testing');
-            // Mock data for testing - matches real server response format
-            setTimeout(() => {
-              set({
-                cameras: [
-                  {
-                    device: '/dev/video0',
-                    name: 'Test Camera 1',
-                    status: 'CONNECTED',
-                    resolution: '1920x1080',
-                    fps: 30,
-                    streams: {
-                      rtsp: 'rtsp://localhost:8554/camera0',
-                      webrtc: 'http://localhost:8889/camera0/webrtc',
-                      hls: 'http://localhost:8888/camera0'
-                    },
-                    capabilities: {
-                      formats: ['YUYV', 'MJPEG'],
-                      resolutions: ['1920x1080', '1280x720']
-                    }
-                  },
-                  {
-                    device: '/dev/video1', 
-                    name: 'Test Camera 2',
-                    status: 'CONNECTED',
-                    resolution: '1280x720',
-                    fps: 25,
-                    streams: {
-                      rtsp: 'rtsp://localhost:8554/camera1',
-                      webrtc: 'http://localhost:8889/camera1/webrtc',
-                      hls: 'http://localhost:8888/camera1'
-                    },
-                    capabilities: {
-                      formats: ['MJPEG', 'YUYV'],
-                      resolutions: ['1280x720', '640x480']
-                    }
-                  }
-                ],
-                isConnected: true,
-                isConnecting: false,
-                isLoading: false,
-                error: null
-              });
-            }, 1000);
-            return;
-          }
+          // Real server integration - no mock data
+          console.log('🔌 Connecting to real MediaMTX server for camera list integration');
           
           console.log('🔌 Creating WebSocket service for real server connection');
           const wsService = createWebSocketService({

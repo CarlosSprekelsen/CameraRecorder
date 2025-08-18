@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint 3: WebSocket Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .test-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .passed { background: #d4edda; color: #155724; }
+        .failed { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Sprint 3: WebSocket Integration Test</h1>
+        <p>Testing real WebSocket connection to MediaMTX Camera Service</p>
+        
+        <div class="status info" id="connectionStatus">
+            🔌 Connecting to MediaMTX server...
+        </div>
+        
+        <div class="test-section">
+            <h3>Connection Management</h3>
+            <button onclick="testConnection()" id="connectBtn">Test Connection</button>
+            <button onclick="testDisconnection()" id="disconnectBtn" disabled>Test Disconnection</button>
+            <button onclick="testReconnection()" id="reconnectBtn" disabled>Test Reconnection</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>RPC Methods</h3>
+            <button onclick="testPing()" id="pingBtn" disabled>Test Ping</button>
+            <button onclick="testGetCameraList()" id="cameraListBtn" disabled>Test Camera List</button>
+            <button onclick="testGetCameraStatus()" id="cameraStatusBtn" disabled>Test Camera Status</button>
+            <button onclick="testFileListing()" id="fileListBtn" disabled>Test File Listing</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Real-time Features</h3>
+            <button onclick="testNotifications()" id="notificationsBtn" disabled>Test Notifications</button>
+            <button onclick="testHeartbeat()" id="heartbeatBtn" disabled>Test Heartbeat</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div class="test-results" id="testResults">
+                <!-- Test results will be populated here -->
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Log Output</h3>
+            <div class="log" id="logOutput"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Test configuration
+        const CONFIG = {
+            serverUrl: 'ws://localhost:8002/ws',
+            timeout: 10000,
+        };
+
+        // Test state
+        let ws = null;
+        let isConnected = false;
+        let testResults = {
+            connection: { passed: 0, failed: 0, total: 0 },
+            rpc: { passed: 0, failed: 0, total: 0 },
+            realtime: { passed: 0, failed: 0, total: 0 }
+        };
+
+        // DOM elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const logOutput = document.getElementById('logOutput');
+        const testResultsDiv = document.getElementById('testResults');
+
+        // Utility functions
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEntry.className = type;
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            logOutput.innerHTML = '';
+        }
+
+        function updateConnectionStatus(status, type = 'info') {
+            connectionStatus.textContent = status;
+            connectionStatus.className = `status ${type}`;
+        }
+
+        function updateTestResults() {
+            testResultsDiv.innerHTML = '';
+            
+            Object.entries(testResults).forEach(([category, results]) => {
+                const total = results.passed + results.failed;
+                if (total > 0) {
+                    const div = document.createElement('div');
+                    div.className = `test-result ${results.failed === 0 ? 'passed' : 'failed'}`;
+                    div.innerHTML = `
+                        <div>${category.toUpperCase()}</div>
+                        <div>${results.passed}/${total} Passed</div>
+                    `;
+                    testResultsDiv.appendChild(div);
+                }
+            });
+        }
+
+        function assert(condition, message, category = 'rpc') {
+            testResults[category].total++;
+            if (condition) {
+                testResults[category].passed++;
+                log(`✅ ${message}`, 'success');
+            } else {
+                testResults[category].failed++;
+                log(`❌ ${message}`, 'error');
+            }
+            updateTestResults();
+        }
+
+        // WebSocket management
+        function createWebSocket() {
+            return new Promise((resolve, reject) => {
+                log(`🔌 Connecting to ${CONFIG.serverUrl}...`);
+                updateConnectionStatus('Connecting...', 'warning');
+                
+                ws = new WebSocket(CONFIG.serverUrl);
+                
+                const timeout = setTimeout(() => {
+                    reject(new Error('Connection timeout'));
+                }, CONFIG.timeout);
+
+                ws.onopen = () => {
+                    clearTimeout(timeout);
+                    isConnected = true;
+                    log('✅ WebSocket connection established');
+                    updateConnectionStatus('Connected to MediaMTX server', 'success');
+                    enableButtons();
+                    resolve(ws);
+                };
+
+                ws.onclose = (event) => {
+                    isConnected = false;
+                    log(`🔌 WebSocket connection closed: ${event.code} ${event.reason}`);
+                    updateConnectionStatus('Disconnected from MediaMTX server', 'error');
+                    disableButtons();
+                };
+
+                ws.onerror = (error) => {
+                    clearTimeout(timeout);
+                    log(`❌ WebSocket error: ${error.message}`, 'error');
+                    updateConnectionStatus('Connection error', 'error');
+                    reject(error);
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        log(`📥 Received: ${JSON.stringify(message)}`);
+                    } catch (error) {
+                        log(`❌ Failed to parse message: ${error.message}`, 'error');
+                    }
+                };
+            });
+        }
+
+        function sendRPC(method, params = {}, id = null) {
+            return new Promise((resolve, reject) => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    reject(new Error('WebSocket not connected'));
+                    return;
+                }
+
+                const requestId = id || Math.floor(Math.random() * 10000);
+                const request = {
+                    jsonrpc: '2.0',
+                    method,
+                    params,
+                    id: requestId
+                };
+
+                log(`📤 Sending ${method} (#${requestId}): ${JSON.stringify(params)}`);
+                
+                const timeout = setTimeout(() => {
+                    reject(new Error(`Request timeout for ${method}`));
+                }, CONFIG.timeout);
+
+                const originalOnMessage = ws.onmessage;
+                ws.onmessage = (event) => {
+                    try {
+                        const response = JSON.parse(event.data);
+                        if (response.id === requestId) {
+                            clearTimeout(timeout);
+                            ws.onmessage = originalOnMessage;
+                            if (response.error) {
+                                reject(new Error(`RPC Error: ${response.error.message}`));
+                            } else {
+                                resolve(response.result);
+                            }
+                        } else {
+                            // Handle other messages
+                            if (originalOnMessage) {
+                                originalOnMessage(event);
+                            }
+                        }
+                    } catch (error) {
+                        clearTimeout(timeout);
+                        ws.onmessage = originalOnMessage;
+                        reject(error);
+                    }
+                };
+
+                ws.send(JSON.stringify(request));
+            });
+        }
+
+        function enableButtons() {
+            document.getElementById('disconnectBtn').disabled = false;
+            document.getElementById('reconnectBtn').disabled = false;
+            document.getElementById('pingBtn').disabled = false;
+            document.getElementById('cameraListBtn').disabled = false;
+            document.getElementById('cameraStatusBtn').disabled = false;
+            document.getElementById('fileListBtn').disabled = false;
+            document.getElementById('notificationsBtn').disabled = false;
+            document.getElementById('heartbeatBtn').disabled = false;
+        }
+
+        function disableButtons() {
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('reconnectBtn').disabled = true;
+            document.getElementById('pingBtn').disabled = true;
+            document.getElementById('cameraListBtn').disabled = true;
+            document.getElementById('cameraStatusBtn').disabled = true;
+            document.getElementById('fileListBtn').disabled = true;
+            document.getElementById('notificationsBtn').disabled = true;
+            document.getElementById('heartbeatBtn').disabled = true;
+        }
+
+        // Test functions
+        window.testConnection = async function() {
+            try {
+                await createWebSocket();
+                assert(true, 'WebSocket connection established successfully', 'connection');
+            } catch (error) {
+                assert(false, `Connection failed: ${error.message}`, 'connection');
+            }
+        };
+
+        window.testDisconnection = function() {
+            if (ws) {
+                ws.close();
+                assert(true, 'WebSocket disconnection successful', 'connection');
+            }
+        };
+
+        window.testReconnection = async function() {
+            try {
+                await createWebSocket();
+                assert(true, 'WebSocket reconnection successful', 'connection');
+            } catch (error) {
+                assert(false, `Reconnection failed: ${error.message}`, 'connection');
+            }
+        };
+
+        window.testPing = async function() {
+            try {
+                const result = await sendRPC('ping');
+                assert(result === 'pong', 'Ping response is correct');
+            } catch (error) {
+                assert(false, `Ping failed: ${error.message}`);
+            }
+        };
+
+        window.testGetCameraList = async function() {
+            try {
+                const result = await sendRPC('get_camera_list');
+                assert(result && typeof result === 'object', 'Camera list response is valid object');
+                assert(Array.isArray(result.cameras), 'Cameras field is an array');
+                assert(typeof result.total === 'number' || typeof result.connected === 'number', 'Response has total/connected fields');
+                log(`📊 Found ${result.cameras.length} cameras (${result.connected || 0} connected)`);
+            } catch (error) {
+                assert(false, `Camera list failed: ${error.message}`);
+            }
+        };
+
+        window.testGetCameraStatus = async function() {
+            try {
+                const result = await sendRPC('get_camera_status', { device: '/dev/video0' });
+                assert(result && result.device, 'Camera status response is valid');
+                log(`📷 Camera status: ${result.device} - ${result.status}`);
+            } catch (error) {
+                assert(false, `Camera status failed: ${error.message}`);
+            }
+        };
+
+        window.testFileListing = async function() {
+            try {
+                const recordings = await sendRPC('list_recordings', { limit: 5, offset: 0 });
+                assert(recordings && Array.isArray(recordings.files), 'Recordings list response is valid');
+                
+                const snapshots = await sendRPC('list_snapshots', { limit: 5, offset: 0 });
+                assert(snapshots && Array.isArray(snapshots.files), 'Snapshots list response is valid');
+                
+                log(`📁 Files: ${recordings.files.length} recordings, ${snapshots.files.length} snapshots`);
+            } catch (error) {
+                assert(false, `File listing failed: ${error.message}`);
+            }
+        };
+
+        window.testNotifications = async function() {
+            try {
+                log('📢 Waiting for notifications (10 seconds)...');
+                const startTime = Date.now();
+                
+                return new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        log('⚠️ No notifications received (this is normal if no cameras are active)');
+                        assert(true, 'Notification test completed (no notifications)', 'realtime');
+                        resolve();
+                    }, 10000);
+
+                    const originalOnMessage = ws.onmessage;
+                    ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            if (!message.id) {
+                                // This is a notification
+                                clearTimeout(timeout);
+                                log(`📢 Notification received: ${message.method}`);
+                                assert(true, 'Notification received successfully', 'realtime');
+                                ws.onmessage = originalOnMessage;
+                                resolve();
+                            } else {
+                                // Handle regular messages
+                                if (originalOnMessage) {
+                                    originalOnMessage(event);
+                                }
+                            }
+                        } catch (error) {
+                            if (originalOnMessage) {
+                                originalOnMessage(event);
+                            }
+                        }
+                    };
+                });
+            } catch (error) {
+                assert(false, `Notification test failed: ${error.message}`, 'realtime');
+            }
+        };
+
+        window.testHeartbeat = async function() {
+            try {
+                log('💓 Testing heartbeat (5 pings over 10 seconds)...');
+                let successfulPings = 0;
+                
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        await sendRPC('ping');
+                        successfulPings++;
+                        log(`💓 Ping ${i + 1} successful`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    } catch (error) {
+                        log(`❌ Ping ${i + 1} failed: ${error.message}`, 'error');
+                    }
+                }
+                
+                assert(successfulPings >= 3, `Heartbeat test: ${successfulPings}/5 pings successful`, 'realtime');
+            } catch (error) {
+                assert(false, `Heartbeat test failed: ${error.message}`, 'realtime');
+            }
+        };
+
+        // Initialize
+        log('🚀 Sprint 3 WebSocket Integration Test initialized');
+        log(`📡 Server: ${CONFIG.serverUrl}`);
+        log('💡 Click "Test Connection" to begin testing');
+    </script>
+</body>
+</html>

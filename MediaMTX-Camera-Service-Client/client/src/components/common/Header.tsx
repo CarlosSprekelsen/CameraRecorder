@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import { useCameraStore } from '../../stores/cameraStore';
+import { useConnectionStore } from '../../stores/connectionStore';
 import ConnectionStatus from './ConnectionStatus';
 
 interface HeaderProps {
@@ -19,7 +20,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { isConnected, isConnecting, refreshCameras } = useCameraStore();
+  const { refreshCameras } = useCameraStore();
+  const { status, isConnecting } = useConnectionStore();
 
   return (
     <AppBar
@@ -48,9 +50,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <ConnectionStatus 
-            isConnected={isConnected}
-            isConnecting={isConnecting}
-            onRefresh={refreshCameras}
+            onRefresh={status === 'connected' ? refreshCameras : undefined}
+            compact={isMobile}
           />
         </Box>
       </Toolbar>
