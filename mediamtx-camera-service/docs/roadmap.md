@@ -474,8 +474,12 @@ This roadmap defines the current development status, completed work, and priorit
 - **E3: Client API & SDK Ecosystem** - ✅ Complete
 - **E5: Deployment & Operations Strategy** - ✅ Complete
 
-### 🔄 Partially Complete Epics
-- **E6: Server Recording and Snapshot File Management Infrastructure** - 🔄 Server Complete, SDK/Docs Pending
+### ✅ Completed Epics
+- **E1: Robust Real-Time Camera Service Core** - Complete
+- **E2: Security and Production Hardening** - Complete
+- **E3: Client API & SDK Ecosystem** - ✅ Complete
+- **E5: Deployment & Operations Strategy** - ✅ Complete
+- **E6: Server Recording and Snapshot File Management Infrastructure** - ✅ Complete
 
 ### 📋 PDR Conditions Resolution (Required for DDR)
 - **Camera Disconnect Handling** (High Priority) - Fix camera event processing
