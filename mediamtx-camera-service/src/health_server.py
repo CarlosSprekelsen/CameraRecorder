@@ -404,34 +404,29 @@ class HealthServer:
         """
         try:
             # Get camera status from camera monitor
-            if self.camera_monitor and hasattr(self.camera_monitor, 'get_connected_cameras'):
+            cameras = []
+            if self.camera_monitor and hasattr(self.camera_monitor, '_known_devices'):
                 try:
-                    # get_connected_cameras is async, but we're in a sync context
-                    # For now, use the known_devices directly
-                    if hasattr(self.camera_monitor, '_known_devices'):
-                        cameras = self.camera_monitor._known_devices
-                    else:
-                        cameras = []
+                    # Convert camera devices to simple format
+                    for device_path, device_info in self.camera_monitor._known_devices.items():
+                        if hasattr(device_info, 'status') and device_info.status == "CONNECTED":
+                            cameras.append({
+                                "device": device_path,
+                                "status": "CONNECTED",
+                                "name": getattr(device_info, 'name', f"Camera {device_path}"),
+                                "resolution": getattr(device_info, 'resolution', "unknown"),
+                                "fps": getattr(device_info, 'fps', 30)
+                            })
                 except Exception as e:
                     self.logger.warning(f"Could not get camera status from monitor: {e}")
-                    cameras = []
-            else:
-                cameras = []
             
             # Prepare response
             response_data = {
-                "status": "healthy", # Assuming this endpoint is for monitoring, not readiness
+                "status": "healthy",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "cameras": [
-                    {
-                        "name": cam.name,
-                        "status": "connected",
-                        "last_seen": cam.last_seen.isoformat() if hasattr(cam, 'last_seen') else "N/A",
-                        "ip": cam.ip,
-                        "port": cam.port
-                    }
-                    for cam in cameras
-                ]
+                "cameras": cameras,
+                "total": len(cameras),
+                "connected": len(cameras)
             }
             
             return web.json_response(response_data, status=200)
@@ -441,7 +436,10 @@ class HealthServer:
             return web.json_response({
                 "status": "unhealthy",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "error": str(e)
+                "error": str(e),
+                "cameras": [],
+                "total": 0,
+                "connected": 0
             }, status=500)
 
     async def _handle_recording_download(self, request: web.Request) -> web.Response:
