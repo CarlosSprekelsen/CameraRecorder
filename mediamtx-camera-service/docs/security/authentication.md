@@ -33,7 +33,7 @@ API key authentication is designed for service-to-service communication and prov
 ```yaml
 security:
   jwt:
-    secret_key: "${JWT_SECRET_KEY}"
+            secret_key: "${CAMERA_SERVICE_JWT_SECRET}"
     expiry_hours: 24
     algorithm: "HS256"
   api_keys:
@@ -46,7 +46,7 @@ security:
 ### Environment Variables
 
 **JWT Configuration:**
-- `JWT_SECRET_KEY`: Secret key for JWT signing (required)
+- `CAMERA_SERVICE_JWT_SECRET`: Secret key for JWT signing (required)
 - `JWT_EXPIRY_HOURS`: Token expiry in hours (default: 24)
 
 **API Key Configuration:**

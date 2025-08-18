@@ -10,9 +10,9 @@ def generate_test_token():
     """Generate a valid JWT token for testing"""
     try:
         # Get the actual JWT secret from environment
-        jwt_secret = os.getenv("JWT_SECRET_KEY")
+        jwt_secret = os.getenv("CAMERA_SERVICE_JWT_SECRET")
         if not jwt_secret:
-            print("JWT_SECRET_KEY environment variable not found")
+            print("CAMERA_SERVICE_JWT_SECRET environment variable not found")
             return None
         
         # Create JWT handler with the actual secret

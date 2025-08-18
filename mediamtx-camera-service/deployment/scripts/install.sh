@@ -421,9 +421,9 @@ install_camera_service() {
     
     # Create required directories with proper permissions
     log_message "Creating required directories..."
-    mkdir -p /var/recordings /var/snapshots
-    chown "$SERVICE_USER:$SERVICE_GROUP" /var/recordings /var/snapshots
-    chmod 755 /var/recordings /var/snapshots
+    mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
+    chmod 755 "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
     log_success "Required directories created with proper permissions"
     
     # Create camera service configuration
@@ -437,7 +437,7 @@ server:
 
 security:
   jwt:
-    secret_key: "\${JWT_SECRET_KEY}"
+            secret_key: "\${CAMERA_SERVICE_JWT_SECRET}"
     expiry_hours: 24
     algorithm: "HS256"
   
@@ -464,8 +464,8 @@ mediamtx:
   webrtc_port: 8889
   hls_port: 8888
   config_path: "/etc/mediamtx/mediamtx.yml"
-  recordings_path: "/var/recordings"
-  snapshots_path: "/var/snapshots"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
 
 cameras:
   discovery_enabled: true
@@ -497,7 +497,7 @@ EOF
     
     # Generate JWT secret
     JWT_SECRET=$(openssl rand -hex 32)
-    echo "JWT_SECRET_KEY=$JWT_SECRET" > "$INSTALL_DIR/.env"
+    echo "CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET" > "$INSTALL_DIR/.env"
     
     # Create API keys file
     cat > "$INSTALL_DIR/security/api-keys.json" << EOF

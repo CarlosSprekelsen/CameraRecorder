@@ -102,7 +102,7 @@ date: "2025-08-05"
 ### JWT Token Generation
 **Server Environment**: The MediaMTX Camera Service uses a JWT secret stored in the server environment:
 - Environment file: `/opt/camera-service/.env`
-- JWT Secret: `JWT_SECRET_KEY=KSwO7o7yBsPnG3UrIYhLkMKIEXgc7rcvYGDti5qpmMg=`
+- JWT Secret: `CAMERA_SERVICE_JWT_SECRET=d0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7`
 
 ### Authentication Process
 1. **Generate Valid Token**: Use the correct JWT secret to generate tokens

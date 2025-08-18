@@ -41,16 +41,20 @@ class HealthServer:
     as specified in Architecture Decision AD-6.
     """
     
-    def __init__(self, host: str = "0.0.0.0", port: int = 8003):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8003, recordings_path: str = None, snapshots_path: str = None):
         """
         Initialize health server.
         
         Args:
             host: Host address to bind to
             port: Port to listen on
+            recordings_path: Path to recordings directory
+            snapshots_path: Path to snapshots directory
         """
         self.host = host
         self.port = port
+        self.recordings_path = recordings_path or "/opt/camera-service/recordings"
+        self.snapshots_path = snapshots_path or "/opt/camera-service/snapshots"
         self.logger = logging.getLogger(f"{__name__}.HealthServer")
         
         # Service references (set by service manager)
@@ -63,7 +67,8 @@ class HealthServer:
         self.runner = None
         self._started = False
         
-        self.logger.info("Health server initialized on %s:%d", host, port)
+        self.logger.info("Health server initialized on %s:%d with recordings_path=%s, snapshots_path=%s", 
+                        host, port, self.recordings_path, self.snapshots_path)
     
     def set_mediamtx_controller(self, controller) -> None:
         """Set MediaMTX controller reference."""
@@ -403,7 +408,7 @@ class HealthServer:
                 return web.Response(status=400, text="Invalid filename")
             
             # Construct file path
-            file_path = os.path.join("/opt/camera-service/recordings", filename)
+            file_path = os.path.join(self.recordings_path, filename)
             
             # Check if file exists and is accessible
             if not os.path.exists(file_path):
@@ -469,7 +474,7 @@ class HealthServer:
                 return web.Response(status=400, text="Invalid filename")
             
             # Construct file path
-            file_path = os.path.join("/opt/camera-service/snapshots", filename)
+            file_path = os.path.join(self.snapshots_path, filename)
             
             # Check if file exists and is accessible
             if not os.path.exists(file_path):

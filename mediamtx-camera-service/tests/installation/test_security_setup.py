@@ -351,7 +351,7 @@ class TestSecurityConfigurationValidation:
             result = subprocess.run([
                 'python3', '-c',
                 'import os; ' +
-                'secret_key = os.environ.get("JWT_SECRET_KEY", "default_key"); ' +
+                'secret_key = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "default_key"); ' +
                 'secure = secret_key != "default_key" and len(secret_key) >= 32; ' +
                 'print("Environment variable security working")'
             ], capture_output=True, text=True)

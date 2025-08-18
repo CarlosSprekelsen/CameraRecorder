@@ -58,6 +58,12 @@ interface CameraState {
   // WebSocket service
   wsService: WebSocketService | null;
   
+  // Real-time update state
+  realTimeUpdatesEnabled: boolean;
+  recordingProgress: Map<string, number>; // device -> progress percentage
+  lastRecordingUpdate: Date | null;
+  notificationCount: number;
+  
   // Actions
   setWebSocketService: (service: WebSocketService) => void;
   
@@ -94,6 +100,13 @@ interface CameraState {
   
   // Notification handling
   handleNotification: (notification: any) => void;
+  
+  // Real-time update management
+  enableRealTimeUpdates: () => void;
+  disableRealTimeUpdates: () => void;
+  updateRecordingProgress: (device: string, progress: number) => void;
+  getRecordingProgress: (device: string) => number;
+  clearRecordingProgress: (device: string) => void;
 }
 
 export const useCameraStore = create<CameraState>((set, get) => ({
@@ -109,6 +122,12 @@ export const useCameraStore = create<CameraState>((set, get) => ({
   lastUpdate: null,
   updateCount: 0,
   wsService: null,
+  
+  // Real-time update state
+  realTimeUpdatesEnabled: true,
+  recordingProgress: new Map(),
+  lastRecordingUpdate: null,
+  notificationCount: 0,
 
   // WebSocket service management
   setWebSocketService: (service: WebSocketService) => {
@@ -475,6 +494,13 @@ export const useCameraStore = create<CameraState>((set, get) => ({
   handleNotification: (notification: any) => {
     console.log('📡 Handling notification:', notification);
     
+    if (!get().realTimeUpdatesEnabled) {
+      return;
+    }
+    
+    // Update notification count
+    set(state => ({ notificationCount: state.notificationCount + 1 }));
+    
     if (notification.method === NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE) {
       const statusUpdate = notification.params as CameraStatusUpdateParams;
       get().updateCameraStatus(statusUpdate.device, statusUpdate.status as CameraStatus);
@@ -493,12 +519,55 @@ export const useCameraStore = create<CameraState>((set, get) => ({
           format: 'mp4'
         };
         get().addRecording(recordingUpdate.device, recording);
+        
+        // Initialize recording progress
+        get().updateRecordingProgress(recordingUpdate.device, 0);
       } else if (recordingUpdate.status === 'STOPPED') {
         // Remove from active recordings
         get().removeRecording(recordingUpdate.device);
+        
+        // Clear recording progress
+        get().clearRecordingProgress(recordingUpdate.device);
+      } else if (recordingUpdate.status === 'RECORDING') {
+        // Update recording progress based on duration
+        const progress = Math.min(100, (recordingUpdate.duration / 60) * 100); // Assuming 1 minute = 100%
+        get().updateRecordingProgress(recordingUpdate.device, progress);
       }
     } else {
       console.warn('⚠️ Unknown notification method:', notification.method);
     }
+  },
+
+  // Real-time update management
+  enableRealTimeUpdates: () => {
+    set({ realTimeUpdatesEnabled: true });
+    console.log('🔄 Camera store real-time updates enabled');
+  },
+
+  disableRealTimeUpdates: () => {
+    set({ realTimeUpdatesEnabled: false });
+    console.log('⏸️ Camera store real-time updates disabled');
+  },
+
+  updateRecordingProgress: (device: string, progress: number) => {
+    const { recordingProgress } = get();
+    const newProgress = new Map(recordingProgress);
+    newProgress.set(device, Math.max(0, Math.min(100, progress)));
+    set({ 
+      recordingProgress: newProgress,
+      lastRecordingUpdate: new Date()
+    });
+  },
+
+  getRecordingProgress: (device: string) => {
+    const { recordingProgress } = get();
+    return recordingProgress.get(device) || 0;
+  },
+
+  clearRecordingProgress: (device: string) => {
+    const { recordingProgress } = get();
+    const newProgress = new Map(recordingProgress);
+    newProgress.delete(device);
+    set({ recordingProgress: newProgress });
   },
 })); 

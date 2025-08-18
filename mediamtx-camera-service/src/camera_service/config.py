@@ -69,8 +69,8 @@ class MediaMTXConfig:
     webrtc_port: int = 8889
     hls_port: int = 8888
     config_path: str = "/etc/mediamtx/mediamtx.yml"
-    recordings_path: str = "/recordings"
-    snapshots_path: str = "/snapshots"
+    recordings_path: str = "/opt/camera-service/recordings"
+    snapshots_path: str = "/opt/camera-service/snapshots"
     
     # Health monitoring configuration
     health_check_interval: int = 30

@@ -12,7 +12,7 @@ const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
   device: '/dev/video0',
   timeout: 10000,
-  jwtSecret: 'KSwO7o7yBsPnG3UrIYhLkMKIEXgc7rcvYGDti5qpmMg='
+  jwtSecret: 'd0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7'
 };
 
 function generateValidToken() {

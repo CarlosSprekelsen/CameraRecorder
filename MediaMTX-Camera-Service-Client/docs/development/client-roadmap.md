@@ -340,7 +340,7 @@ Task: [specific request]
 - ✅ Server integration stable and reliable
 - ✅ Unit test coverage >80% for critical components
 - ✅ Basic performance targets met (Lighthouse >80)
-- ✅ Code quality standards maintained
+- ✅ Code quality standards maintained (validate AGAINST CODING GUIDELINES)
 
 ---
 

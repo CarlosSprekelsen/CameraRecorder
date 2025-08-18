@@ -195,7 +195,10 @@ export const useFileStore = create<FileStore>()(
 
         try {
           // Construct download URL based on file type
-          const baseUrl = window.location.origin;
+          // File downloads are served by the health server on port 8003
+          const baseUrl = window.location.protocol === 'https:' 
+            ? 'https://localhost:8003' 
+            : 'http://localhost:8003';
           const downloadUrl = `${baseUrl}/files/${fileType}/${encodeURIComponent(filename)}`;
 
           // Create a temporary anchor element to trigger download

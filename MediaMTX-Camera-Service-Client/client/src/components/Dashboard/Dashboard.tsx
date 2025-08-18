@@ -3,6 +3,7 @@ import { Box, Typography, Paper, Alert, CircularProgress } from '@mui/material';
 import { useCameraStore } from '../../stores/cameraStore';
 import CameraGrid from './CameraGrid';
 import ConnectionStatus from '../common/ConnectionStatus';
+import RealTimeStatus from '../common/RealTimeStatus';
 
 const Dashboard: React.FC = () => {
   const {
@@ -55,6 +56,13 @@ const Dashboard: React.FC = () => {
           isConnected={isConnected}
           isConnecting={isConnecting}
           onRefresh={handleRefresh}
+        />
+        
+        {/* Real-time Status */}
+        <RealTimeStatus 
+          showDetails={true}
+          showRecordingProgress={true}
+          showConnectionMetrics={true}
         />
       </Box>
 

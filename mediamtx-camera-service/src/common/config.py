@@ -17,7 +17,7 @@ class SecurityConfig:
     """Security configuration settings."""
     
     jwt: Dict[str, Any] = field(default_factory=lambda: {
-        "secret_key": "${JWT_SECRET_KEY}",
+        "secret_key": "${CAMERA_SERVICE_JWT_SECRET}",
         "expiry_hours": 24,
         "algorithm": "HS256"
     })
@@ -220,7 +220,7 @@ class ConfigManager:
         if "jwt" not in security:
             security["jwt"] = {}
         
-        jwt_secret = os.getenv("JWT_SECRET_KEY")
+        jwt_secret = os.getenv("CAMERA_SERVICE_JWT_SECRET")
         if jwt_secret:
             security["jwt"]["secret_key"] = jwt_secret
         

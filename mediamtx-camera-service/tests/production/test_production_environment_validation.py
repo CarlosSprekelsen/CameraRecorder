@@ -201,7 +201,7 @@ class TestSecurityBoundaryValidation:
     @pytest.fixture
     def jwt_secret(self):
         """Get JWT secret for testing."""
-        return os.getenv("JWT_SECRET_KEY", "test-secret-key")
+        return os.getenv("CAMERA_SERVICE_JWT_SECRET", "test-secret-key")
 
     @pytest.fixture
     def api_keys_file(self):

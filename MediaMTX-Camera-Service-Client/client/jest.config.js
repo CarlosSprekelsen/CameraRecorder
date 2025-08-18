@@ -5,7 +5,7 @@
  * Following "Real Integration First" approach
  */
 
-module.exports = {
+export default {
   // Test environment
   testEnvironment: 'jsdom',
   
@@ -32,7 +32,8 @@ module.exports = {
     '!src/**/*.test.{ts,tsx}',
     '!src/**/*.spec.{ts,tsx}',
     '!src/index.tsx',
-    '!src/vite-env.d.ts'
+    '!src/vite-env.d.ts',
+    '!src/main.tsx'
   ],
   
   // Coverage thresholds (from testing guidelines)
@@ -58,7 +59,7 @@ module.exports = {
   ],
   
   // Module name mapping
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1',
     '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1'
@@ -89,73 +90,8 @@ module.exports = {
     }
   },
   
-  // Environment variables for testing
-  setupFiles: [
-    '<rootDir>/tests/setup-env.ts'
-  ],
-  
-  // Test runner options
-  runner: 'jest-runner',
-  
-  // Watch plugins
-  watchPlugins: [
-    'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname'
-  ],
-  
-  // Test results processor
-  testResultsProcessor: 'jest-sonar-reporter',
-  
-  // Performance testing support
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: 'test-results',
-      outputName: 'junit.xml',
-      classNameTemplate: '{classname}',
-      titleTemplate: '{title}',
-      ancestorSeparator: ' › ',
-      usePathForSuiteName: true
-    }]
-  ],
-  
-  // Integration test configuration
-  projects: [
-    {
-      displayName: 'unit',
-      testMatch: [
-        '<rootDir>/tests/unit/**/*.test.{ts,tsx}',
-        '<rootDir>/src/**/*.test.{ts,tsx}'
-      ],
-      testTimeout: 5000,
-      setupFilesAfterEnv: [
-        '<rootDir>/tests/setup-unit.ts'
-      ]
-    },
-    {
-      displayName: 'integration',
-      testMatch: [
-        '<rootDir>/tests/integration/**/*.test.{ts,tsx}'
-      ],
-      testTimeout: 30000,
-      setupFilesAfterEnv: [
-        '<rootDir>/tests/setup-integration.ts'
-      ],
-      // Integration tests require real server
-      testEnvironmentOptions: {
-        url: 'http://localhost:8002'
-      }
-    }
-  ],
-  
   // Performance monitoring
   verbose: true,
-  
-  // Bail on first failure (for CI)
-  bail: process.env.CI ? 1 : 0,
-  
-  // Force exit (for CI)
-  forceExit: process.env.CI ? true : false,
   
   // Clear mocks between tests
   clearMocks: true,
@@ -164,16 +100,5 @@ module.exports = {
   restoreMocks: true,
   
   // Reset modules between tests
-  resetModules: true,
-  
-  // Collect coverage from all projects
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.test.{ts,tsx}',
-    '!src/**/*.spec.{ts,tsx}',
-    '!src/index.tsx',
-    '!src/vite-env.d.ts',
-    '!src/main.tsx'
-  ]
+  resetModules: true
 };

@@ -188,6 +188,7 @@ class WebSocketJsonRpcServer:
         max_connections: int,
         mediamtx_controller=None,
         camera_monitor=None,
+        config=None,
     ):
         """
         Initialize WebSocket JSON-RPC server.
@@ -206,6 +207,7 @@ class WebSocketJsonRpcServer:
         self._max_connections = max_connections
         self._mediamtx_controller = mediamtx_controller
         self._camera_monitor = camera_monitor
+        self._config = config
 
         self._logger = logging.getLogger(__name__)
         self._server: Optional[Any] = None  # WebSocket server instance
@@ -2131,7 +2133,7 @@ class WebSocketJsonRpcServer:
                 raise ValueError("Invalid offset parameter: must be non-negative integer")
             
             # Define recordings directory path
-            recordings_dir = "/opt/camera-service/recordings"
+            recordings_dir = self._config.mediamtx.recordings_path
             
             # Check if directory exists and is accessible
             if not os.path.exists(recordings_dir):
@@ -2237,7 +2239,7 @@ class WebSocketJsonRpcServer:
                 raise ValueError("Invalid offset parameter: must be non-negative integer")
             
             # Define snapshots directory path
-            snapshots_dir = "/opt/camera-service/snapshots"
+            snapshots_dir = self._config.mediamtx.snapshots_path
             
             # Check if directory exists and is accessible
             if not os.path.exists(snapshots_dir):

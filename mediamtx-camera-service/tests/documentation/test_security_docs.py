@@ -182,7 +182,7 @@ class TestSecurityConfigurationValidation:
         jwt_config = {
             "security": {
                 "jwt": {
-                    "secret_key": "${JWT_SECRET_KEY}",
+                    "secret_key": "${CAMERA_SERVICE_JWT_SECRET}",
                     "expiry_hours": 24,
                     "algorithm": "HS256"
                 }

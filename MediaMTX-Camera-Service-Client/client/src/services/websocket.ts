@@ -10,6 +10,7 @@
  * - Real-time notification handling for camera status updates
  * - Integration with connection store for state management
  * - Performance metrics tracking and health monitoring
+ * - Enhanced notification handling and real-time updates
  * 
  * References:
  * - Server API: docs/api/json-rpc-methods.md
@@ -24,8 +25,12 @@ import type {
   JSONRPCNotification,
   WebSocketMessage,
   JSONRPCError,
+  NotificationMessage,
+  CameraStatusNotification,
+  RecordingStatusNotification,
 } from '../types';
 import { authService } from './authService';
+import { NOTIFICATION_METHODS } from '../types';
 
 export class WebSocketError extends Error {
   public code?: number;
@@ -60,8 +65,19 @@ export class WebSocketService {
   private onDisconnectHandler?: () => void;
   private onErrorHandler?: (error: WebSocketError) => void;
 
+  // Enhanced notification handlers
+  private onCameraStatusUpdateHandler?: (notification: CameraStatusNotification) => void;
+  private onRecordingStatusUpdateHandler?: (notification: RecordingStatusNotification) => void;
+  private onNotificationHandler?: (notification: NotificationMessage) => void;
+
   // Connection store integration
   private connectionStore: any = null;
+  private cameraStore: any = null;
+
+  // Performance tracking
+  private notificationCount = 0;
+  private lastNotificationTime = 0;
+  private notificationLatency: number[] = [];
 
   private config: WebSocketConfig;
 
@@ -74,6 +90,28 @@ export class WebSocketService {
    */
   public setConnectionStore(store: any): void {
     this.connectionStore = store;
+  }
+
+  /**
+   * Set camera store reference for integration
+   */
+  public setCameraStore(store: any): void {
+    this.cameraStore = store;
+  }
+
+  /**
+   * Enhanced notification event handlers
+   */
+  public onCameraStatusUpdate(handler: (notification: CameraStatusNotification) => void): void {
+    this.onCameraStatusUpdateHandler = handler;
+  }
+
+  public onRecordingStatusUpdate(handler: (notification: RecordingStatusNotification) => void): void {
+    this.onRecordingStatusUpdateHandler = handler;
+  }
+
+  public onNotification(handler: (notification: NotificationMessage) => void): void {
+    this.onNotificationHandler = handler;
   }
 
   /**
@@ -260,6 +298,19 @@ export class WebSocketService {
   }
 
   /**
+   * Get notification performance metrics
+   */
+  public getNotificationMetrics() {
+    return {
+      count: this.notificationCount,
+      averageLatency: this.notificationLatency.length > 0 
+        ? this.notificationLatency.reduce((a, b) => a + b, 0) / this.notificationLatency.length 
+        : 0,
+      lastNotificationTime: this.lastNotificationTime
+    };
+  }
+
+  /**
    * Test-only accessor for WebSocket instance
    * Only available in test environment
    */
@@ -418,8 +469,9 @@ export class WebSocketService {
     this.ws.onmessage = (event) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
+        const receiveTime = performance.now();
         console.log('📥 Received message:', JSON.stringify(message));
-        this.handleMessage(message);
+        this.handleMessage(message, receiveTime);
       } catch (error) {
         const wsError = new WebSocketError('Failed to parse message');
         console.error('❌ Message parsing error:', wsError);
@@ -435,11 +487,13 @@ export class WebSocketService {
     };
   }
 
-  private handleMessage(message: WebSocketMessage): void {
+  /**
+   * Enhanced message handling with notification processing
+   */
+  private handleMessage(message: WebSocketMessage, receiveTime: number): void {
     // Handle notifications (no id)
     if (!('id' in message)) {
-      console.log('📢 Notification received:', message.method);
-      this.onMessageHandler?.(message as JSONRPCNotification);
+      this.handleNotification(message as JSONRPCNotification, receiveTime);
       return;
     }
 
@@ -480,6 +534,87 @@ export class WebSocketService {
       }
       
       resolve(response.result);
+    }
+  }
+
+  /**
+   * Enhanced notification handling with real-time updates
+   */
+  private handleNotification(notification: JSONRPCNotification, receiveTime: number): void {
+    console.log('📢 Notification received:', notification.method);
+    
+    // Update notification metrics
+    this.notificationCount++;
+    this.lastNotificationTime = receiveTime;
+    
+    // Calculate notification latency (if we have a reference time)
+    if (this.lastNotificationTime > 0) {
+      const latency = receiveTime - this.lastNotificationTime;
+      this.notificationLatency.push(latency);
+      
+      // Keep only last 100 latency measurements for performance
+      if (this.notificationLatency.length > 100) {
+        this.notificationLatency.shift();
+      }
+    }
+
+    // Handle specific notification types
+    switch (notification.method) {
+      case NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE:
+        this.handleCameraStatusUpdate(notification as CameraStatusNotification);
+        break;
+        
+      case NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE:
+        this.handleRecordingStatusUpdate(notification as RecordingStatusNotification);
+        break;
+        
+      default:
+        console.warn('⚠️ Unknown notification method:', notification.method);
+        break;
+    }
+
+    // Call general notification handler
+    this.onNotificationHandler?.(notification as NotificationMessage);
+    
+    // Call legacy message handler for backward compatibility
+    this.onMessageHandler?.(notification);
+  }
+
+  /**
+   * Handle camera status update notifications
+   */
+  private handleCameraStatusUpdate(notification: CameraStatusNotification): void {
+    console.log('📹 Camera status update:', notification.params);
+    
+    // Call specific handler
+    this.onCameraStatusUpdateHandler?.(notification);
+    
+    // Update camera store if available
+    if (this.cameraStore && this.cameraStore.handleNotification) {
+      try {
+        this.cameraStore.handleNotification(notification);
+      } catch (error) {
+        console.error('❌ Error updating camera store:', error);
+      }
+    }
+  }
+
+  /**
+   * Handle recording status update notifications
+   */
+  private handleRecordingStatusUpdate(notification: RecordingStatusNotification): void {
+    console.log('🎥 Recording status update:', notification.params);
+    
+    // Call specific handler
+    this.onRecordingStatusUpdateHandler?.(notification);
+    
+    // Update camera store if available
+    if (this.cameraStore && this.cameraStore.handleNotification) {
+      try {
+        this.cameraStore.handleNotification(notification);
+      } catch (error) {
+        console.error('❌ Error updating camera store:', error);
+      }
     }
   }
 
@@ -562,6 +697,15 @@ export function createWebSocketService(config: Partial<WebSocketConfig> = {}): W
     service.setConnectionStore(store);
   } catch (error) {
     console.warn('⚠️ Connection store not available for WebSocket service integration');
+  }
+  
+  // Integrate with camera store if available
+  try {
+    const { useCameraStore } = require('../stores/cameraStore');
+    const store = useCameraStore.getState();
+    service.setCameraStore(store);
+  } catch (error) {
+    console.warn('⚠️ Camera store not available for WebSocket service integration');
   }
   
   return service;

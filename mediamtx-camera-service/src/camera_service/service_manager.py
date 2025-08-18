@@ -990,7 +990,12 @@ class ServiceManager(CameraEventHandler):
             except Exception as e:
                 self._logger.warning(f"Could not load health config from file, using defaults: {e}")
             
-            self._health_server = HealthServer(host=health_host, port=health_port)
+            self._health_server = HealthServer(
+                host=health_host, 
+                port=health_port,
+                recordings_path=self._config.mediamtx.recordings_path,
+                snapshots_path=self._config.mediamtx.snapshots_path
+            )
             
             # Set component references for health checks
             if self._mediamtx_controller:
@@ -1036,6 +1041,7 @@ class ServiceManager(CameraEventHandler):
                     max_connections=self._config.server.max_connections,
                     mediamtx_controller=self._mediamtx_controller,
                     camera_monitor=self._camera_monitor,
+                    config=self._config,
                 )
             # Provide service manager reference for API methods that require it
             if hasattr(self._websocket_server, "set_service_manager"):
