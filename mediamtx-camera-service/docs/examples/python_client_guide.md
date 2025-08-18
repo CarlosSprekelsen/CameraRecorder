@@ -498,6 +498,111 @@ client = CameraClient(
 
 ## Examples
 
+### File Management
+
+The Python client supports comprehensive file management operations for recordings and snapshots.
+
+#### Listing Files
+
+```python
+# List recordings with pagination
+recordings = await client.list_recordings(limit=10, offset=0)
+print(f"Found {len(recordings['files'])} recordings (total: {recordings['total']})")
+
+for recording in recordings['files']:
+    print(f"📹 {recording['filename']}")
+    print(f"   Size: {recording['file_size']} bytes")
+    print(f"   Modified: {recording['modified_time']}")
+    print(f"   Download: {recording['download_url']}")
+
+# List snapshots with pagination
+snapshots = await client.list_snapshots(limit=10, offset=0)
+print(f"Found {len(snapshots['files'])} snapshots (total: {snapshots['total']})")
+
+for snapshot in snapshots['files']:
+    print(f"📸 {snapshot['filename']}")
+    print(f"   Size: {snapshot['file_size']} bytes")
+    print(f"   Modified: {snapshot['modified_time']}")
+    print(f"   Download: {snapshot['download_url']}")
+```
+
+#### Downloading Files
+
+```python
+# Download a recording file
+try:
+    local_path = await client.download_file(
+        file_type='recordings',
+        filename='camera0_2025-01-15_14-30-00.mp4',
+        local_path='./downloads/recording.mp4'
+    )
+    print(f"✅ Recording downloaded: {local_path}")
+except Exception as e:
+    print(f"❌ Download failed: {e}")
+
+# Download a snapshot file
+try:
+    local_path = await client.download_file(
+        file_type='snapshots',
+        filename='snapshot_2025-01-15_14-30-00.jpg'
+    )
+    print(f"✅ Snapshot downloaded: {local_path}")
+except Exception as e:
+    print(f"❌ Download failed: {e}")
+```
+
+#### Complete File Management Example
+
+```python
+async def file_management_demo():
+    """Demonstrate file management operations."""
+    client = CameraClient(
+        host="localhost",
+        port=8080,
+        auth_type="jwt",
+        auth_token="your_token"
+    )
+    
+    try:
+        await client.connect()
+        
+        # List recent recordings
+        recordings = await client.list_recordings(limit=5)
+        print(f"📹 Recent recordings: {len(recordings['files'])}")
+        
+        # List recent snapshots
+        snapshots = await client.list_snapshots(limit=5)
+        print(f"📸 Recent snapshots: {len(snapshots['files'])}")
+        
+        # Download the most recent snapshot
+        if snapshots['files']:
+            latest_snapshot = snapshots['files'][0]
+            local_path = await client.download_file(
+                'snapshots',
+                latest_snapshot['filename'],
+                f"./downloads/{latest_snapshot['filename']}"
+            )
+            print(f"✅ Downloaded: {local_path}")
+        
+        # Download the most recent recording
+        if recordings['files']:
+            latest_recording = recordings['files'][0]
+            local_path = await client.download_file(
+                'recordings',
+                latest_recording['filename'],
+                f"./downloads/{latest_recording['filename']}"
+            )
+            print(f"✅ Downloaded: {local_path}")
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
+    finally:
+        await client.disconnect()
+
+# Run the demo
+asyncio.run(file_management_demo())
+```
+
 ### Complete Working Example
 
 ```python
@@ -567,6 +672,27 @@ async def camera_monitor():
             # Stop recording
             stop_result = await client.stop_recording(camera.device_path)
             print(f"⏹️ Recording stopped: {stop_result['filename']}")
+            
+            # List recordings
+            recordings = await client.list_recordings(limit=5)
+            print(f"📹 Found {len(recordings.get('files', []))} recordings:")
+            for recording in recordings.get('files', [])[:3]:
+                print(f"  - {recording['filename']} ({recording['file_size']} bytes)")
+            
+            # List snapshots
+            snapshots = await client.list_snapshots(limit=5)
+            print(f"📸 Found {len(snapshots.get('files', []))} snapshots:")
+            for snapshot in snapshots.get('files', [])[:3]:
+                print(f"  - {snapshot['filename']} ({snapshot['file_size']} bytes)")
+            
+            # Download a snapshot if available
+            if snapshots.get('files'):
+                snapshot_file = snapshots['files'][0]['filename']
+                try:
+                    local_path = await client.download_file('snapshots', snapshot_file)
+                    print(f"✅ Downloaded snapshot: {local_path}")
+                except Exception as e:
+                    print(f"⚠️ Download failed: {e}")
         
         # Keep monitoring
         print("👀 Monitoring cameras (press Ctrl+C to stop)...")
@@ -598,6 +724,9 @@ if __name__ == "__main__":
 - `take_snapshot(device_path, custom_filename)` - Take snapshot
 - `start_recording(device_path, duration, custom_filename)` - Start recording
 - `stop_recording(device_path)` - Stop recording
+- `list_recordings(limit, offset)` - List available recording files
+- `list_snapshots(limit, offset)` - List available snapshot files
+- `download_file(file_type, filename, local_path)` - Download a file from the server
 
 #### Event Handlers
 

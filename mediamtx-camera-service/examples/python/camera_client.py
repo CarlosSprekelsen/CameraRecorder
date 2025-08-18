@@ -523,6 +523,111 @@ class CameraClient:
         
         return result
 
+    async def list_recordings(self, limit: Optional[int] = None, offset: Optional[int] = None) -> Dict[str, Any]:
+        """
+        List available recording files.
+        
+        Args:
+            limit: Maximum number of files to return (optional)
+            offset: Number of files to skip (optional)
+            
+        Returns:
+            Dictionary containing recordings list and metadata
+            
+        Raises:
+            MediaMTXError: If listing fails
+        """
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        
+        result = await self._send_request("list_recordings", params)
+        
+        if not result:
+            raise MediaMTXError("Failed to list recordings")
+        
+        return result
+
+    async def list_snapshots(self, limit: Optional[int] = None, offset: Optional[int] = None) -> Dict[str, Any]:
+        """
+        List available snapshot files.
+        
+        Args:
+            limit: Maximum number of files to return (optional)
+            offset: Number of files to skip (optional)
+            
+        Returns:
+            Dictionary containing snapshots list and metadata
+            
+        Raises:
+            MediaMTXError: If listing fails
+        """
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+        
+        result = await self._send_request("list_snapshots", params)
+        
+        if not result:
+            raise MediaMTXError("Failed to list snapshots")
+        
+        return result
+
+    async def download_file(self, file_type: str, filename: str, local_path: Optional[str] = None) -> str:
+        """
+        Download a file from the server.
+        
+        Args:
+            file_type: Type of file ('recordings' or 'snapshots')
+            filename: Name of the file to download
+            local_path: Local path to save the file (optional, uses filename if not provided)
+            
+        Returns:
+            Path to the downloaded file
+            
+        Raises:
+            MediaMTXError: If download fails
+        """
+        if file_type not in ["recordings", "snapshots"]:
+            raise MediaMTXError("Invalid file type. Must be 'recordings' or 'snapshots'")
+        
+        if not local_path:
+            local_path = filename
+        
+        # Construct download URL
+        protocol = "https" if self.use_ssl else "http"
+        download_url = f"{protocol}://{self.host}:{self.port}/files/{file_type}/{filename}"
+        
+        # Get authentication headers
+        headers = self._get_auth_headers()
+        
+        try:
+            import aiohttp
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(download_url, headers=headers) as response:
+                    if response.status == 404:
+                        raise MediaMTXError(f"File not found: {filename}")
+                    elif response.status != 200:
+                        raise MediaMTXError(f"Download failed with status {response.status}")
+                    
+                    # Save file
+                    with open(local_path, 'wb') as f:
+                        async for chunk in response.content.iter_chunked(8192):
+                            f.write(chunk)
+                    
+                    self.logger.info(f"Downloaded {file_type} file: {filename} -> {local_path}")
+                    return local_path
+                    
+        except ImportError:
+            raise MediaMTXError("aiohttp is required for file downloads. Install with: pip install aiohttp")
+        except Exception as e:
+            raise MediaMTXError(f"Download failed: {e}")
+
     def set_camera_status_callback(self, callback):
         """Set callback for camera status updates."""
         self.on_camera_status_update = callback
@@ -593,6 +698,27 @@ async def main():
             # Stop recording
             stop_result = await client.stop_recording(camera.device_path)
             print(f"✅ Recording stopped: {stop_result['filename']}")
+            
+            # List recordings
+            recordings = await client.list_recordings(limit=5)
+            print(f"✅ Found {len(recordings.get('files', []))} recordings:")
+            for recording in recordings.get('files', [])[:3]:  # Show first 3
+                print(f"  - {recording['filename']} ({recording['file_size']} bytes)")
+            
+            # List snapshots
+            snapshots = await client.list_snapshots(limit=5)
+            print(f"✅ Found {len(snapshots.get('files', []))} snapshots:")
+            for snapshot in snapshots.get('files', [])[:3]:  # Show first 3
+                print(f"  - {snapshot['filename']} ({snapshot['file_size']} bytes)")
+            
+            # Download a snapshot if available
+            if snapshots.get('files'):
+                snapshot_file = snapshots['files'][0]['filename']
+                try:
+                    local_path = await client.download_file('snapshots', snapshot_file)
+                    print(f"✅ Downloaded snapshot: {local_path}")
+                except MediaMTXError as e:
+                    print(f"⚠️ Download failed: {e}")
         
     except CameraServiceError as e:
         print(f"❌ Camera service error: {e}")

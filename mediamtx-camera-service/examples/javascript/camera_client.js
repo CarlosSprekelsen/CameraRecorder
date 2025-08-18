@@ -603,6 +603,129 @@ class CameraClient {
     }
 
     /**
+     * List available recording files
+     * 
+     * @param {number} limit - Maximum number of files to return (optional)
+     * @param {number} offset - Number of files to skip (optional)
+     * @returns {Promise<Object>} Dictionary containing recordings list and metadata
+     * @throws {MediaMTXError} If listing fails
+     */
+    async listRecordings(limit = null, offset = null) {
+        const params = {};
+        if (limit !== null) {
+            params.limit = limit;
+        }
+        if (offset !== null) {
+            params.offset = offset;
+        }
+        
+        const result = await this._sendRequest('list_recordings', params);
+        
+        if (!result) {
+            throw new MediaMTXError('Failed to list recordings');
+        }
+        
+        return result;
+    }
+
+    /**
+     * List available snapshot files
+     * 
+     * @param {number} limit - Maximum number of files to return (optional)
+     * @param {number} offset - Number of files to skip (optional)
+     * @returns {Promise<Object>} Dictionary containing snapshots list and metadata
+     * @throws {MediaMTXError} If listing fails
+     */
+    async listSnapshots(limit = null, offset = null) {
+        const params = {};
+        if (limit !== null) {
+            params.limit = limit;
+        }
+        if (offset !== null) {
+            params.offset = offset;
+        }
+        
+        const result = await this._sendRequest('list_snapshots', params);
+        
+        if (!result) {
+            throw new MediaMTXError('Failed to list snapshots');
+        }
+        
+        return result;
+    }
+
+    /**
+     * Download a file from the server
+     * 
+     * @param {string} fileType - Type of file ('recordings' or 'snapshots')
+     * @param {string} filename - Name of the file to download
+     * @param {string} localPath - Local path to save the file (optional, uses filename if not provided)
+     * @returns {Promise<string>} Path to the downloaded file
+     * @throws {MediaMTXError} If download fails
+     */
+    async downloadFile(fileType, filename, localPath = null) {
+        if (!['recordings', 'snapshots'].includes(fileType)) {
+            throw new MediaMTXError("Invalid file type. Must be 'recordings' or 'snapshots'");
+        }
+        
+        if (!localPath) {
+            localPath = filename;
+        }
+        
+        // Construct download URL
+        const protocol = this.useSsl ? 'https' : 'http';
+        const downloadUrl = `${protocol}://${this.host}:${this.port}/files/${fileType}/${filename}`;
+        
+        // Get authentication headers
+        const headers = this._getAuthHeaders();
+        
+        try {
+            const https = require('https');
+            const http = require('http');
+            const fs = require('fs');
+            
+            const client = this.useSsl ? https : http;
+            
+            return new Promise((resolve, reject) => {
+                const request = client.get(downloadUrl, { headers }, (response) => {
+                    if (response.statusCode === 404) {
+                        reject(new MediaMTXError(`File not found: ${filename}`));
+                        return;
+                    }
+                    
+                    if (response.statusCode !== 200) {
+                        reject(new MediaMTXError(`Download failed with status ${response.statusCode}`));
+                        return;
+                    }
+                    
+                    const fileStream = fs.createWriteStream(localPath);
+                    response.pipe(fileStream);
+                    
+                    fileStream.on('finish', () => {
+                        fileStream.close();
+                        console.log(`Downloaded ${fileType} file: ${filename} -> ${localPath}`);
+                        resolve(localPath);
+                    });
+                    
+                    fileStream.on('error', (err) => {
+                        fs.unlink(localPath, () => {}); // Delete the file if it exists
+                        reject(new MediaMTXError(`Download failed: ${err.message}`));
+                    });
+                });
+                
+                request.on('error', (err) => {
+                    reject(new MediaMTXError(`Download failed: ${err.message}`));
+                });
+                
+                request.end();
+            });
+            
+        } catch (error) {
+            throw new MediaMTXError(`Download failed: ${error.message}`);
+        }
+    }
+
+    /**
      * Set callback for camera status updates
      * 
      * @param {Function} callback - Callback function
@@ -725,6 +848,35 @@ Options:
             // Stop recording
             const stopResult = await client.stopRecording(camera.devicePath);
             console.log(`✅ Recording stopped: ${stopResult.filename}`);
+            
+            // List recordings
+            const recordings = await client.listRecordings(5);
+            console.log(`✅ Found ${recordings.files ? recordings.files.length : 0} recordings:`);
+            if (recordings.files) {
+                recordings.files.slice(0, 3).forEach(recording => {
+                    console.log(`  - ${recording.filename} (${recording.file_size} bytes)`);
+                });
+            }
+            
+            // List snapshots
+            const snapshots = await client.listSnapshots(5);
+            console.log(`✅ Found ${snapshots.files ? snapshots.files.length : 0} snapshots:`);
+            if (snapshots.files) {
+                snapshots.files.slice(0, 3).forEach(snapshot => {
+                    console.log(`  - ${snapshot.filename} (${snapshot.file_size} bytes)`);
+                });
+            }
+            
+            // Download a snapshot if available
+            if (snapshots.files && snapshots.files.length > 0) {
+                const snapshotFile = snapshots.files[0].filename;
+                try {
+                    const localPath = await client.downloadFile('snapshots', snapshotFile);
+                    console.log(`✅ Downloaded snapshot: ${localPath}`);
+                } catch (error) {
+                    console.log(`⚠️ Download failed: ${error.message}`);
+                }
+            }
         }
         
     } catch (error) {

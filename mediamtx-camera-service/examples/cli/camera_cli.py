@@ -59,6 +59,10 @@ Examples:
   %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token snapshot /dev/video0
   %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token record /dev/video0 --duration 30
   %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token stop /dev/video0
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token list-recordings --limit 10
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token list-snapshots --format json
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token download-recording recording.mp4 --output ./downloads/
+  %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token download-snapshot snapshot.jpg
   %(prog)s --host localhost --port 8002 --auth-type jwt --token your_token monitor
             """
         )
@@ -74,11 +78,14 @@ Examples:
 
         # Command and arguments
         parser.add_argument('command', help='Command to execute')
-        parser.add_argument('device_path', nargs='?', help='Camera device path')
+        parser.add_argument('device_path', nargs='?', help='Camera device path or filename for file operations')
         parser.add_argument('--duration', type=int, help='Recording duration in seconds')
         parser.add_argument('--filename', help='Custom filename for snapshot or recording')
         parser.add_argument('--format', choices=['table', 'json', 'csv'], default='table', help='Output format')
         parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
+        parser.add_argument('--limit', type=int, help='Limit number of files to list')
+        parser.add_argument('--offset', type=int, help='Offset for file listing pagination')
+        parser.add_argument('--output', help='Output path for file download')
 
         return parser
 
@@ -154,6 +161,14 @@ Examples:
                 return await self._cmd_ping(args)
             elif command == 'monitor':
                 return await self._cmd_monitor(args)
+            elif command == 'list-recordings':
+                return await self._cmd_list_recordings(args)
+            elif command == 'list-snapshots':
+                return await self._cmd_list_snapshots(args)
+            elif command == 'download-recording':
+                return await self._cmd_download_recording(args)
+            elif command == 'download-snapshot':
+                return await self._cmd_download_snapshot(args)
             else:
                 print(f"❌ Unknown command: {command}", file=sys.stderr)
                 self.parser.print_help()
@@ -359,6 +374,142 @@ Examples:
             
         except Exception as e:
             print(f"❌ Ping failed: {e}", file=sys.stderr)
+            return 1
+
+    async def _cmd_list_recordings(self, args) -> int:
+        """List available recording files."""
+        try:
+            if args.verbose:
+                print("📋 Listing recordings...")
+            
+            result = await self.client.list_recordings(
+                limit=args.limit,
+                offset=args.offset
+            )
+            
+            if args.format == 'json':
+                print(json.dumps(result, indent=2))
+            elif args.format == 'csv':
+                print("filename,file_size,modified_time,download_url")
+                for file_info in result.get('files', []):
+                    print(f"{file_info['filename']},{file_info['file_size']},{file_info['modified_time']},{file_info['download_url']}")
+            else:
+                files = result.get('files', [])
+                total = result.get('total', 0)
+                
+                if not files:
+                    print("📹 No recordings available")
+                    return 0
+                
+                print(f"📹 Found {len(files)} recording(s) (total: {total}):")
+                print()
+                
+                for i, file_info in enumerate(files, 1):
+                    print(f"{i}. {file_info['filename']}")
+                    print(f"   Size: {file_info['file_size']} bytes")
+                    print(f"   Modified: {file_info['modified_time']}")
+                    print(f"   Download: {file_info['download_url']}")
+                    print()
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Failed to list recordings: {e}", file=sys.stderr)
+            return 1
+
+    async def _cmd_list_snapshots(self, args) -> int:
+        """List available snapshot files."""
+        try:
+            if args.verbose:
+                print("📋 Listing snapshots...")
+            
+            result = await self.client.list_snapshots(
+                limit=args.limit,
+                offset=args.offset
+            )
+            
+            if args.format == 'json':
+                print(json.dumps(result, indent=2))
+            elif args.format == 'csv':
+                print("filename,file_size,modified_time,download_url")
+                for file_info in result.get('files', []):
+                    print(f"{file_info['filename']},{file_info['file_size']},{file_info['modified_time']},{file_info['download_url']}")
+            else:
+                files = result.get('files', [])
+                total = result.get('total', 0)
+                
+                if not files:
+                    print("📸 No snapshots available")
+                    return 0
+                
+                print(f"📸 Found {len(files)} snapshot(s) (total: {total}):")
+                print()
+                
+                for i, file_info in enumerate(files, 1):
+                    print(f"{i}. {file_info['filename']}")
+                    print(f"   Size: {file_info['file_size']} bytes")
+                    print(f"   Modified: {file_info['modified_time']}")
+                    print(f"   Download: {file_info['download_url']}")
+                    print()
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Failed to list snapshots: {e}", file=sys.stderr)
+            return 1
+
+    async def _cmd_download_recording(self, args) -> int:
+        """Download a recording file."""
+        if not args.device_path:
+            print("❌ Error: Filename required for download-recording command", file=sys.stderr)
+            return 1
+        
+        try:
+            if args.verbose:
+                print(f"⬇️ Downloading recording: {args.device_path}...")
+            
+            local_path = await self.client.download_file(
+                'recordings',
+                args.device_path,
+                args.output
+            )
+            
+            if args.format == 'json':
+                print(json.dumps({'filename': args.device_path, 'local_path': local_path}, indent=2))
+            else:
+                print(f"✅ Recording downloaded: {local_path}")
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Download failed: {e}", file=sys.stderr)
+            return 1
+
+    async def _cmd_download_snapshot(self, args) -> int:
+        """Download a snapshot file."""
+        if not args.device_path:
+            print("❌ Error: Filename required for download-snapshot command", file=sys.stderr)
+            return 1
+        
+        try:
+            if args.verbose:
+                print(f"⬇️ Downloading snapshot: {args.device_path}...")
+            
+            local_path = await self.client.download_file(
+                'snapshots',
+                args.device_path,
+                args.output
+            )
+            
+            if args.format == 'json':
+                print(json.dumps({'filename': args.device_path, 'local_path': local_path}, indent=2))
+            else:
+                print(f"✅ Snapshot downloaded: {local_path}")
+            
+            return 0
+            
+        except Exception as e:
+            print(f"❌ Download failed: {e}", file=sys.stderr)
             return 1
 
     async def _cmd_monitor(self, args) -> int:

@@ -271,6 +271,146 @@ Stop active recording for the specified camera.
 }
 ```
 
+## File Management Methods
+
+### list_recordings
+List available recording files with metadata and pagination support.
+
+**Parameters:**
+- limit: number - Maximum number of files to return (optional)
+- offset: number - Number of files to skip for pagination (optional)
+
+**Returns:** Object containing recordings list, metadata, and pagination information
+
+**Status:** ✅ Implemented
+
+**Implementation:** Scans recordings directory, provides file metadata, and supports pagination for large file collections.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "list_recordings",
+  "params": {
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 7
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "files": [
+      {
+        "filename": "camera0_2025-01-15_14-30-00.mp4",
+        "file_size": 1073741824,
+        "modified_time": "2025-01-15T14:30:00Z",
+        "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+      }
+    ],
+    "total": 25,
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 7
+}
+```
+
+### list_snapshots
+List available snapshot files with metadata and pagination support.
+
+**Parameters:**
+- limit: number - Maximum number of files to return (optional)
+- offset: number - Number of files to skip for pagination (optional)
+
+**Returns:** Object containing snapshots list, metadata, and pagination information
+
+**Status:** ✅ Implemented
+
+**Implementation:** Scans snapshots directory, provides file metadata, and supports pagination for large file collections.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "list_snapshots",
+  "params": {
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 8
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "files": [
+      {
+        "filename": "snapshot_2025-01-15_14-30-00.jpg",
+        "file_size": 204800,
+        "modified_time": "2025-01-15T14:30:00Z",
+        "download_url": "/files/snapshots/snapshot_2025-01-15_14-30-00.jpg"
+      }
+    ],
+    "total": 15,
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 8
+}
+```
+
+## HTTP File Download Endpoints
+
+### GET /files/recordings/{filename}
+Download a recording file via HTTP.
+
+**Parameters:**
+- filename: string - Name of the recording file to download
+
+**Headers:**
+- Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
+
+**Returns:** File content with appropriate Content-Type and Content-Disposition headers
+
+**Status:** ✅ Implemented
+
+**Implementation:** Serves recording files with proper MIME type detection, security validation, and access logging.
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer your_jwt_token" \
+     http://localhost:8002/files/recordings/camera0_2025-01-15_14-30-00.mp4 \
+     -o recording.mp4
+```
+
+### GET /files/snapshots/{filename}
+Download a snapshot file via HTTP.
+
+**Parameters:**
+- filename: string - Name of the snapshot file to download
+
+**Headers:**
+- Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
+
+**Returns:** File content with appropriate Content-Type and Content-Disposition headers
+
+**Status:** ✅ Implemented
+
+**Implementation:** Serves snapshot files with proper MIME type detection, security validation, and access logging.
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer your_jwt_token" \
+     http://localhost:8002/files/snapshots/snapshot_2025-01-15_14-30-00.jpg \
+     -o snapshot.jpg
+```
+
 ## Notifications
 
 The server sends real-time notifications for camera events.

@@ -203,6 +203,109 @@ python camera_cli.py --host localhost --port 8080 --auth-type jwt --token your_j
 ✅ Ping response: pong
 ```
 
+### List Recordings
+
+List available recording files:
+
+```bash
+# List all recordings
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-recordings
+
+# List with limit
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-recordings --limit 10
+
+# List with pagination
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-recordings --limit 5 --offset 10
+
+# JSON output
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-recordings --format json
+```
+
+**Output Example:**
+```
+📹 Found 3 recording(s) (total: 25):
+
+1. camera0_2025-01-15_14-30-00.mp4
+   Size: 1073741824 bytes
+   Modified: 2025-01-15T14:30:00Z
+   Download: /files/recordings/camera0_2025-01-15_14-30-00.mp4
+
+2. camera0_2025-01-15_15-00-00.mp4
+   Size: 2147483648 bytes
+   Modified: 2025-01-15T15:00:00Z
+   Download: /files/recordings/camera0_2025-01-15_15-00-00.mp4
+```
+
+### List Snapshots
+
+List available snapshot files:
+
+```bash
+# List all snapshots
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-snapshots
+
+# List with limit
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-snapshots --limit 10
+
+# JSON output
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token list-snapshots --format json
+```
+
+**Output Example:**
+```
+📸 Found 5 snapshot(s) (total: 15):
+
+1. snapshot_2025-01-15_14-30-00.jpg
+   Size: 204800 bytes
+   Modified: 2025-01-15T14:30:00Z
+   Download: /files/snapshots/snapshot_2025-01-15_14-30-00.jpg
+
+2. snapshot_2025-01-15_15-00-00.jpg
+   Size: 245760 bytes
+   Modified: 2025-01-15T15:00:00Z
+   Download: /files/snapshots/snapshot_2025-01-15_15-00-00.jpg
+```
+
+### Download Recording
+
+Download a recording file:
+
+```bash
+# Download recording
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-recording camera0_2025-01-15_14-30-00.mp4
+
+# Download to specific path
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-recording camera0_2025-01-15_14-30-00.mp4 --output ./downloads/recording.mp4
+
+# Verbose output
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-recording camera0_2025-01-15_14-30-00.mp4 --verbose
+```
+
+**Output Example:**
+```
+✅ Recording downloaded: ./downloads/camera0_2025-01-15_14-30-00.mp4
+```
+
+### Download Snapshot
+
+Download a snapshot file:
+
+```bash
+# Download snapshot
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-snapshot snapshot_2025-01-15_14-30-00.jpg
+
+# Download to specific path
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-snapshot snapshot_2025-01-15_14-30-00.jpg --output ./downloads/snapshot.jpg
+
+# Verbose output
+python camera_cli.py --host localhost --port 8002 --auth-type jwt --token your_jwt_token download-snapshot snapshot_2025-01-15_14-30-00.jpg --verbose
+```
+
+**Output Example:**
+```
+✅ Snapshot downloaded: ./downloads/snapshot_2025-01-15_14-30-00.jpg
+```
+
 ### Monitor Cameras
 
 Monitor cameras in real-time:
@@ -334,6 +437,66 @@ else
     echo "❌ No cameras available"
     exit 1
 fi
+```
+
+#### File Management Script
+
+```bash
+#!/bin/bash
+# File management script
+
+HOST="localhost"
+PORT="8002"
+TOKEN="your_jwt_token"
+
+echo "Listing recent recordings..."
+python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" list-recordings --limit 5
+
+echo "Listing recent snapshots..."
+python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" list-snapshots --limit 5
+
+# Download the most recent snapshot
+LATEST_SNAPSHOT=$(python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" list-snapshots --format json | jq -r '.files[0].filename')
+
+if [ "$LATEST_SNAPSHOT" != "null" ] && [ "$LATEST_SNAPSHOT" != "" ]; then
+    echo "Downloading latest snapshot: $LATEST_SNAPSHOT"
+    python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" download-snapshot "$LATEST_SNAPSHOT" --output "./downloads/$LATEST_SNAPSHOT"
+else
+    echo "No snapshots available"
+fi
+```
+
+#### Batch Download Script
+
+```bash
+#!/bin/bash
+# Download all recent files
+
+HOST="localhost"
+PORT="8002"
+TOKEN="your_jwt_token"
+
+mkdir -p downloads
+
+echo "Downloading recent snapshots..."
+SNAPSHOTS=$(python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" list-snapshots --limit 10 --format json | jq -r '.files[].filename')
+
+for snapshot in $SNAPSHOTS; do
+    if [ "$snapshot" != "null" ] && [ "$snapshot" != "" ]; then
+        echo "Downloading snapshot: $snapshot"
+        python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" download-snapshot "$snapshot" --output "./downloads/$snapshot"
+    fi
+done
+
+echo "Downloading recent recordings..."
+RECORDINGS=$(python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" list-recordings --limit 5 --format json | jq -r '.files[].filename')
+
+for recording in $RECORDINGS; do
+    if [ "$recording" != "null" ] && [ "$recording" != "" ]; then
+        echo "Downloading recording: $recording"
+        python camera_cli.py --host "$HOST" --port "$PORT" --auth-type jwt --token "$TOKEN" download-recording "$recording" --output "./downloads/$recording"
+    fi
+done
 ```
 
 ### Environment Variables
