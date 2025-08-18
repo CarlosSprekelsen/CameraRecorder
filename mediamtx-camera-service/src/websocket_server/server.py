@@ -956,18 +956,16 @@ class WebSocketJsonRpcServer:
 
         # Send notification to each target client (robust open/closed checks)
         failed_clients = []
-        print(f"DEBUG SERVER: Sending to {len(clients_to_notify)} clients")
+        self._logger.debug(f"Sending notification to {len(clients_to_notify)} clients")
         for client in clients_to_notify:
             try:
-                print(f"DEBUG SERVER: Sending notification to client {client.client_id}")
                 if _is_ws_connected(client.websocket):
                     await client.websocket.send(notification_json)
-                    print(f"DEBUG SERVER: Successfully sent notification to client {client.client_id}")
+                    self._logger.debug(f"Successfully sent notification to client {client.client_id}")
                 else:
-                    print(f"DEBUG SERVER: Client {client.client_id} websocket not connected")
+                    self._logger.debug(f"Client {client.client_id} websocket not connected")
                     failed_clients.append(client.client_id)
             except Exception as e:
-                print(f"DEBUG SERVER: Failed to send notification to client {client.client_id}: {e}")
                 self._logger.warning(
                     f"Failed to send notification to client {client.client_id}: {e}"
                 )

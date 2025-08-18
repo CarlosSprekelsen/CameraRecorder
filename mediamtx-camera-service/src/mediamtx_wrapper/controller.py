@@ -56,6 +56,7 @@ class MediaMTXController:
         backoff_jitter_range: tuple = (0.8, 1.2),
         process_termination_timeout: float = 3.0,
         process_kill_timeout: float = 2.0,
+        ffmpeg_config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize MediaMTX controller.
@@ -78,6 +79,7 @@ class MediaMTXController:
             backoff_jitter_range: Jitter range for backoff randomization (default: (0.8, 1.2))
             process_termination_timeout: Timeout for graceful process termination (default: 3.0)
             process_kill_timeout: Timeout for force kill after termination (default: 2.0)
+            ffmpeg_config: FFmpeg configuration settings (default: None)
         """
         self._host = host
         self._api_port = api_port
@@ -98,10 +100,26 @@ class MediaMTXController:
         )
         self._backoff_base_multiplier = backoff_base_multiplier
         self._backoff_jitter_range = backoff_jitter_range
-
-        # Configurable process management parameters
         self._process_termination_timeout = process_termination_timeout
         self._process_kill_timeout = process_kill_timeout
+
+        # FFmpeg configuration with defaults
+        self._ffmpeg_config = ffmpeg_config or {
+            "snapshot": {
+                "process_creation_timeout": 5.0,
+                "execution_timeout": 8.0,
+                "internal_timeout": 5000000,
+                "retry_attempts": 2,
+                "retry_delay": 1.0
+            },
+            "recording": {
+                "process_creation_timeout": 10.0,
+                "execution_timeout": 15.0,
+                "internal_timeout": 10000000,
+                "retry_attempts": 3,
+                "retry_delay": 2.0
+            }
+        }
 
         self._logger = logging.getLogger(__name__)
         self._base_url = f"http://{self._host}:{self._api_port}"
@@ -627,7 +645,7 @@ class MediaMTXController:
             )
             
             # Check stream readiness with optimized timeout for performance
-            stream_ready = await self.check_stream_readiness(stream_name, timeout=2.0)  # Reduced from 10.0s to 2.0s
+            stream_ready = await self.check_stream_readiness(stream_name, timeout=5.0)  # Restored from 2.0s to 5.0s
             
             if not stream_ready:
                 error_msg = f"Stream {stream_name} is not ready for recording after validation"
@@ -763,7 +781,7 @@ class MediaMTXController:
                     
                     # Wait for process to terminate (with optimized timeout)
                     try:
-                        await asyncio.wait_for(process.wait(), timeout=2.0)  # Reduced from 5.0s to 2.0s
+                        await asyncio.wait_for(process.wait(), timeout=5.0)  # Restored from 2.0s to 5.0s
                     except asyncio.TimeoutError:
                         # Force kill if graceful termination fails
                         self._logger.warning(
@@ -958,6 +976,12 @@ class MediaMTXController:
                 },
             )
 
+            # Get FFmpeg configuration for snapshots
+            snapshot_config = self._ffmpeg_config.get("snapshot", {})
+            process_creation_timeout = snapshot_config.get("process_creation_timeout", 5.0)
+            execution_timeout = snapshot_config.get("execution_timeout", 8.0)
+            internal_timeout = snapshot_config.get("internal_timeout", 5000000)
+
             # FFmpeg command to capture single frame with optimized options for speed
             ffmpeg_cmd = [
                 "ffmpeg",
@@ -969,7 +993,7 @@ class MediaMTXController:
                 "-q:v",
                 str(quality),  # Use specified quality
                 "-timeout",
-                "2000000",  # 2 second timeout in microseconds (reduced from 5s)
+                str(internal_timeout),  # Configurable timeout in microseconds
                 "-rtsp_transport",
                 "tcp",  # Use TCP for reliability
                 "-loglevel",
@@ -979,19 +1003,19 @@ class MediaMTXController:
                 snapshot_path,
             ]
 
-            # Execute FFmpeg with optimized timeouts for performance
+            # Execute FFmpeg with configurable timeouts for reliability
             ffmpeg_process = await asyncio.wait_for(
                 asyncio.create_subprocess_exec(
                     *ffmpeg_cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 ),
-                timeout=1.5,  # 1.5 second timeout for process creation (reduced from 10s)
+                timeout=process_creation_timeout,  # Configurable timeout for process creation
             )
 
             stdout, stderr = await asyncio.wait_for(
                 ffmpeg_process.communicate(),
-                timeout=2.0,  # 2 second timeout for execution (reduced from 15s)
+                timeout=execution_timeout,  # Configurable timeout for execution
             )
 
             if ffmpeg_process.returncode == 0 and os.path.exists(snapshot_path):

@@ -35,6 +35,50 @@ mediamtx:
   process_termination_timeout: 3.0  # Timeout for graceful process termination
   process_kill_timeout: 2.0        # Timeout for force kill after termination
 
+# FFmpeg configuration for performance tuning
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 5.0    # seconds
+    execution_timeout: 8.0           # seconds
+    internal_timeout: 5000000        # microseconds
+    retry_attempts: 2
+    retry_delay: 1.0                 # seconds
+  
+  recording:
+    process_creation_timeout: 10.0   # seconds
+    execution_timeout: 15.0          # seconds
+    internal_timeout: 10000000       # microseconds
+    retry_attempts: 3
+    retry_delay: 2.0                 # seconds
+
+# Notification configuration for real-time updates
+notifications:
+  websocket:
+    delivery_timeout: 5.0            # seconds
+    retry_attempts: 3
+    retry_delay: 1.0                 # seconds
+    max_queue_size: 1000
+    cleanup_interval: 30             # seconds
+  
+  real_time:
+    camera_status_interval: 1.0      # seconds
+    recording_progress_interval: 0.5 # seconds
+    connection_health_check: 10.0    # seconds
+
+# Performance tuning configuration
+performance:
+  response_time_targets:
+    snapshot_capture: 2.0            # seconds
+    recording_start: 2.0             # seconds
+    recording_stop: 2.0              # seconds
+    file_listing: 1.0                # seconds
+  
+  optimization:
+    enable_caching: true
+    cache_ttl: 300                   # seconds
+    max_concurrent_operations: 5
+    connection_pool_size: 10
+
 camera:
   poll_interval: 0.1
   detection_timeout: 2.0

@@ -15,13 +15,21 @@ def generate_test_token():
         
         # Try to read from .env file first (same as service)
         try:
+            # Try direct read first
             with open(env_file_path, 'r') as f:
                 for line in f:
                     if line.startswith('CAMERA_SERVICE_JWT_SECRET='):
                         jwt_secret = line.split('=', 1)[1].strip()
                         break
         except (FileNotFoundError, PermissionError):
-            pass
+            # If direct read fails, try with sudo
+            try:
+                import subprocess
+                result = subprocess.run(['sudo', 'grep', '^CAMERA_SERVICE_JWT_SECRET=', env_file_path], 
+                                      capture_output=True, text=True, check=True)
+                jwt_secret = result.stdout.strip().split('=', 1)[1]
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
         
         # Fallback to environment variable
         if not jwt_secret:

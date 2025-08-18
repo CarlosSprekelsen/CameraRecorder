@@ -843,6 +843,15 @@ class ServiceManager(CameraEventHandler):
 
             # Unpack MediaMTXConfig into individual parameters
             mediamtx_config = self._config.mediamtx
+            
+            # Get FFmpeg configuration from config
+            ffmpeg_config = None
+            if hasattr(self._config, 'ffmpeg') and self._config.ffmpeg:
+                ffmpeg_config = {
+                    "snapshot": self._config.ffmpeg.snapshot,
+                    "recording": self._config.ffmpeg.recording
+                }
+            
             self._mediamtx_controller = MediaMTXController(
                 host=mediamtx_config.host,
                 api_port=mediamtx_config.api_port,
@@ -861,6 +870,7 @@ class ServiceManager(CameraEventHandler):
                 backoff_jitter_range=mediamtx_config.backoff_jitter_range,
                 process_termination_timeout=mediamtx_config.process_termination_timeout,
                 process_kill_timeout=mediamtx_config.process_kill_timeout,
+                ffmpeg_config=ffmpeg_config,
             )
             await self._mediamtx_controller.start()
 

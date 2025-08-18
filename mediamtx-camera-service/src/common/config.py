@@ -122,6 +122,65 @@ class SnapshotsConfig:
 
 
 @dataclass
+class FFmpegConfig:
+    """FFmpeg configuration settings for performance tuning."""
+    
+    snapshot: Dict[str, Any] = field(default_factory=lambda: {
+        "process_creation_timeout": 5.0,
+        "execution_timeout": 8.0,
+        "internal_timeout": 5000000,
+        "retry_attempts": 2,
+        "retry_delay": 1.0
+    })
+    
+    recording: Dict[str, Any] = field(default_factory=lambda: {
+        "process_creation_timeout": 10.0,
+        "execution_timeout": 15.0,
+        "internal_timeout": 10000000,
+        "retry_attempts": 3,
+        "retry_delay": 2.0
+    })
+
+
+@dataclass
+class NotificationConfig:
+    """Notification configuration settings for real-time updates."""
+    
+    websocket: Dict[str, Any] = field(default_factory=lambda: {
+        "delivery_timeout": 5.0,
+        "retry_attempts": 3,
+        "retry_delay": 1.0,
+        "max_queue_size": 1000,
+        "cleanup_interval": 30
+    })
+    
+    real_time: Dict[str, Any] = field(default_factory=lambda: {
+        "camera_status_interval": 1.0,
+        "recording_progress_interval": 0.5,
+        "connection_health_check": 10.0
+    })
+
+
+@dataclass
+class PerformanceConfig:
+    """Performance tuning configuration settings."""
+    
+    response_time_targets: Dict[str, float] = field(default_factory=lambda: {
+        "snapshot_capture": 2.0,
+        "recording_start": 2.0,
+        "recording_stop": 2.0,
+        "file_listing": 1.0
+    })
+    
+    optimization: Dict[str, Any] = field(default_factory=lambda: {
+        "enable_caching": True,
+        "cache_ttl": 300,
+        "max_concurrent_operations": 5,
+        "connection_pool_size": 10
+    })
+
+
+@dataclass
 class Config:
     """Main configuration class."""
     
@@ -132,6 +191,9 @@ class Config:
     recording: RecordingConfig = field(default_factory=RecordingConfig)
     snapshots: SnapshotsConfig = field(default_factory=SnapshotsConfig)
     security: SecurityConfig = field(default_factory=SecurityConfig)
+    ffmpeg: FFmpegConfig = field(default_factory=FFmpegConfig)
+    notifications: NotificationConfig = field(default_factory=NotificationConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
 
 
 class ConfigManager:
