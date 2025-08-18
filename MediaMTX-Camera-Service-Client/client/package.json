@@ -10,7 +10,13 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=unit --testPathIgnorePatterns=integration",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:integration:mock": "USE_MOCK_SERVER=true jest --testPathPattern=integration",
+    "test:performance": "jest --testPathPattern=performance",
+    "test:ci": "jest --ci --coverage --testResultsProcessor=jest-sonar-reporter",
+    "test:ci:integration": "jest --ci --testPathPattern=integration --testResultsProcessor=jest-sonar-reporter"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,6 +45,9 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "jest": "^30.0.5",
+    "jest-junit": "^16.0.0",
+    "jest-sonar-reporter": "^2.0.0",
+    "jest-watch-typeahead": "^2.2.2",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.1",
     "typescript": "~5.8.3",

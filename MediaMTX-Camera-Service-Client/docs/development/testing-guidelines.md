@@ -1,40 +1,200 @@
 ---
-title: "Testing Guidelines"
-description: "Folder structure, naming, mocking, and coverage targets for tests."
+title: "Unified Testing Strategy - Client & Server Integration"
+description: "Real Integration First testing approach with comprehensive client-server integration"
 date: "2025-08-05"
 ---
 
-# Testing Guidelines
+# Unified Testing Strategy - Client & Server Integration
 
-## Folder structure
+## Testing Philosophy
+**"Real Integration First"** - Test against actual services whenever possible, use mocks only when external systems are truly unavailable.
+
+## Test Environment Setup Requirements
+
+### Development Testing Environment
+**Objective**: Configure development environment for real server integration testing
+
+**Prerequisites**: 
+- MediaMTX Camera Service running via systemd (production deployment method)
+- Client development server capability
+- Network connectivity between client and server components
+
+**Procedure**:
+1. Verify server service status and accessibility
+2. Configure client to connect to running server instance
+3. Validate WebSocket connectivity between components
+4. Establish test data state management procedures
+
+## Test Categories and Coverage Requirements
+
+### 1. Unit Tests (Component Level)
+**Objective**: Test individual components in isolation
+**Server Requirements**: Mock external dependencies only (MediaMTX, file system)
+**Client Requirements**: Mock WebSocket service, test component logic
+**Success Criteria**: 80%+ coverage for critical business logic
+
+### 2. Integration Tests (Service Level) 
+**Objective**: Test component interaction with real services
+**Server Requirements**: Use real WebSocket, real MediaMTX, real file operations
+**Client Requirements**: Connect to real WebSocket server instance
+**Test Data Strategy**: Configure test cameras or video device simulation
+**Performance Validation**: Verify API response times meet documented targets
+
+### 3. End-to-End Tests (User Workflow)
+**Objective**: Validate complete user scenarios
+**Environment Requirements**: Real server, real client, real browser automation
+**Scope**: Complete camera operations workflows
+**Target Environment**: Production-like staging environment
+
+## Client WebSocket Integration Testing
+
+**Objective**: Create integration tests that validate WebSocket communication against running server
+
+**Requirements**:
+- Server availability validation before test execution
+- WebSocket connection establishment verification
+- JSON-RPC method call validation with expected response structures
+- Error handling validation for connection failures
+
+**Success Criteria**:
+- All documented JSON-RPC methods return expected data structures
+- Connection resilience tested (disconnect/reconnect scenarios)
+- Performance targets validated (connection time, response times)
+
+## Mock Service Fallback Strategy
+
+**Objective**: Implement fallback testing for environments without server access
+
+**Requirements**:
+- Mock service configuration for CI/offline scenarios
+- Environment variable controls for mock activation
+- Mock response accuracy validation against real server responses
+
+**Implementation Scope**:
+- Enable mocking only when real server unavailable
+- Use environment flags to control mock activation
+- Ensure mock responses match real server behavior
+
+## Performance Testing Integration
+
+**Objective**: Validate performance requirements across client-server integration
+
+### Server Performance Baseline
+- Status methods: <50ms (documented server guarantee)
+- Control methods: <100ms (documented server guarantee)
+- WebSocket notifications: <20ms (documented server guarantee)
+
+### Client Performance Requirements
+- Initial load: <3s
+- WebSocket connection: <1s  
+- Bundle size: <2MB
+- Memory usage: <50MB sustained
+
+**Task**: Create performance validation procedures that measure end-to-end performance from client action to server response completion.
+
+## CI/CD Integration Testing
+
+**Objective**: Establish automated testing pipeline with real server integration
+
+### Pipeline Requirements
+- Server service startup verification
+- Service availability validation (health check endpoints)
+- Client integration test execution against running server
+- End-to-end workflow validation
+
+**Implementation Steps**:
+1. Define service startup and readiness verification procedures
+2. Configure network connectivity validation between components
+3. Establish test execution sequencing (server first, then client tests)
+4. Define cleanup and teardown procedures
+
+## Quality Gates for Integration Testing
+
+**Objective**: Define acceptance criteria for integration test success
+
+### Integration Test Requirements
+- All JSON-RPC methods functional and returning correct data structures
+- WebSocket connection resilience validated (disconnect/reconnect scenarios)
+- Real-time notifications working with correct timing
+- Error handling validated across all failure scenarios
+- Performance targets met for all operations
+
+### Mock Usage Guidelines
+**Permitted Mocking**:
+- External APIs beyond project control
+- File system operations in unit tests only
+- Time/date functions for deterministic testing
+
+**Prohibited Mocking**:
+- WebSocket communication between client and server
+- JSON-RPC protocol implementation
+- Client-server data flow integration
+
+## Test Data Management Procedures
+
+**Objective**: Establish consistent test data setup and cleanup
+
+### Server Test Data Requirements
+- Reference existing server test infrastructure and fixtures
+- Utilize established camera simulation capabilities
+- Maintain test file organization standards
+
+### Client Test Data Requirements  
+- Connect to established server test environment
+- Implement state initialization procedures
+- Define test isolation and cleanup requirements
+
+## Documentation Testing Integration
+
+**Objective**: Ensure all API documentation examples are validated against running implementation
+
+### API Documentation Validation Requirements
+- Server API documentation verified against actual implementation behavior
+- Client API examples tested with real server responses  
+- All code samples in documentation must be executable and tested
+
+### Integration Documentation Validation
+- Client-server integration guides tested end-to-end
+- Deployment procedures validated in staging environment
+- Troubleshooting guides verified with real failure scenarios
+
+**Implementation Procedure**:
+1. Identify all documentation containing API examples
+2. Create validation tests that execute documented examples
+3. Establish documentation update procedures when API changes
+4. Define review process for documentation accuracy
+
+## Folder Structure
 ```
 tests/
   unit/         # isolated component and utility tests
-  integration/  # API interaction tests (MSW, hooks)
+  integration/  # API interaction tests (real server)
   e2e/          # end-to-end flows (Cypress)
+  fixtures/     # test data and utilities
 ```
 
-## Naming conventions
-- **Unit / Integration**: `*.test.ts`, `*.test.tsx` or `*.spec.ts[x]`.
-- **E2E**: `*.e2e.ts` or place under `tests/e2e/`.
+## Naming Conventions
+- **Unit / Integration**: `*.test.ts`, `*.test.tsx` or `*.spec.ts[x]`
+- **E2E**: `*.e2e.ts` or place under `tests/e2e/`
+- **Integration**: Must include `integration` in filename
 
-## Mocking strategies
-- **HTTP**: MSW (Mock Service Worker).
-- **WebSockets**: use `socket.io-mock`, or Jest event-emitter stubs.
-- **Other**: Supply fixtures in `tests/fixtures/`.
-
-## Coverage targets & thresholds
+## Coverage Targets & Thresholds
 - **Unit**: ≥ 80%
 - **Integration**: ≥ 70%
 - **E2E**: smoke tests covering critical flows
-- Configure in `jest.config.js`:
-  ```js
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
-  }
-  ```
+- **Performance**: All targets validated
+
+## Environment Variables
+```bash
+# Real server integration
+TEST_WEBSOCKET_URL=ws://localhost:8002/ws
+TEST_API_URL=http://localhost:8002
+
+# Mock fallback
+USE_MOCK_SERVER=true  # Only when real server unavailable
+```
+
+---
+
+**Status**: Approved for Implementation  
+**Alignment**: Fully aligned with server testing principles

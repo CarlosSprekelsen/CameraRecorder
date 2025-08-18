@@ -1,6 +1,7 @@
 /**
  * Central export point for all type definitions
  * Import types using: import { CameraDevice, JSONRPCRequest } from '@/types'
+ * Aligned with MediaMTX Camera Service API specification
  */
 
 // Camera types
@@ -16,13 +17,22 @@ export type {
   CameraMetrics,
   CameraDevice,
   CameraListResponse,
+  RecordingSession,
+  StartRecordingParams,
+  StopRecordingParams,
+  SnapshotResult,
+  TakeSnapshotParams,
+  FileInfo,
+  FileListResponse,
+  FileListParams,
+  CameraStatusUpdateParams,
+  RecordingStatusUpdateParams,
+  // Legacy types (deprecated)
   RecordingRequest,
   RecordingResponse,
   SnapshotRequest,
   SnapshotResponse,
   ServerInfo,
-  CameraStatusUpdateParams,
-  RecordingStatusUpdateParams,
 } from './camera';
 
 // RPC types
@@ -47,6 +57,7 @@ export {
   ERROR_CODES,
   RPC_METHODS,
   NOTIFICATION_METHODS,
+  PERFORMANCE_TARGETS,
   isNotification,
   isResponse,
   isErrorResponse,

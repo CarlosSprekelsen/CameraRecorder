@@ -1,6 +1,7 @@
 /**
  * JSON-RPC 2.0 type definitions
- * Based on JSON-RPC 2.0 specification and MediaMTX Camera Service API
+ * Aligned with MediaMTX Camera Service API specification
+ * Server API Reference: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
  */
 
 /**
@@ -48,20 +49,29 @@ export type WebSocketMessage = JSONRPCResponse | JSONRPCNotification;
 
 /**
  * Common error codes used by the MediaMTX Camera Service
+ * Aligned with server error codes
  */
 export const ERROR_CODES = {
-  // Camera-specific errors
-  CAMERA_NOT_FOUND: -1000,
-  CAMERA_ALREADY_CONNECTED: -1001,
-  CAMERA_CONNECTION_FAILED: -1002,
-  MEDIAMTX_ERROR: -1003,
-  
-  // JSON-RPC standard errors
+  // Standard JSON-RPC 2.0 error codes
   PARSE_ERROR: -32700,
   INVALID_REQUEST: -32600,
   METHOD_NOT_FOUND: -32601,
   INVALID_PARAMS: -32602,
   INTERNAL_ERROR: -32603,
+  
+  // Custom service error codes
+  CAMERA_NOT_FOUND: -1000,
+  CAMERA_NOT_AVAILABLE: -1001,
+  RECORDING_IN_PROGRESS: -1002,
+  MEDIAMTX_ERROR: -1003,
+  
+  // Extended service error codes
+  CAMERA_NOT_FOUND_OR_DISCONNECTED: -32001,
+  RECORDING_ALREADY_IN_PROGRESS: -32002,
+  MEDIAMTX_SERVICE_UNAVAILABLE: -32003,
+  AUTHENTICATION_REQUIRED: -32004,
+  INSUFFICIENT_STORAGE_SPACE: -32005,
+  CAMERA_CAPABILITY_NOT_SUPPORTED: -32006,
 } as const;
 
 /**
@@ -71,22 +81,22 @@ export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 
 /**
  * Available JSON-RPC methods
+ * Aligned with server API methods
  */
 export const RPC_METHODS = {
-  // Camera operations
+  // Core methods
+  PING: 'ping',
   GET_CAMERA_LIST: 'get_camera_list',
   GET_CAMERA_STATUS: 'get_camera_status',
   
-  // Recording operations
+  // Camera control methods
+  TAKE_SNAPSHOT: 'take_snapshot',
   START_RECORDING: 'start_recording',
   STOP_RECORDING: 'stop_recording',
   
-  // Snapshot operations
-  TAKE_SNAPSHOT: 'take_snapshot',
-  
-  // Utility operations
-  PING: 'ping',
-  GET_SERVER_INFO: 'get_server_info',
+  // File management methods
+  LIST_RECORDINGS: 'list_recordings',
+  LIST_SNAPSHOTS: 'list_snapshots',
 } as const;
 
 /**
@@ -96,6 +106,7 @@ export type RPCMethod = typeof RPC_METHODS[keyof typeof RPC_METHODS];
 
 /**
  * Available notification methods
+ * Aligned with server notification methods
  */
 export const NOTIFICATION_METHODS = {
   CAMERA_STATUS_UPDATE: 'camera_status_update',
@@ -110,44 +121,51 @@ export type NotificationMethod = typeof NOTIFICATION_METHODS[keyof typeof NOTIFI
 /**
  * Camera status update notification
  */
-export interface CameraStatusNotification extends JSONRPCNotification {
-  method: typeof NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE;
+export interface CameraStatusNotification {
+  jsonrpc: '2.0';
+  method: 'camera_status_update';
   params: {
     device: string;
     status: string;
-    capabilities?: Record<string, unknown>;
-    streams?: Record<string, unknown>;
+    name: string;
+    resolution: string;
+    fps: number;
+    streams: {
+      rtsp: string;
+      webrtc: string;
+      hls: string;
+    };
   };
 }
 
 /**
  * Recording status update notification
  */
-export interface RecordingStatusNotification extends JSONRPCNotification {
-  method: typeof NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE;
+export interface RecordingStatusNotification {
+  jsonrpc: '2.0';
+  method: 'recording_status_update';
   params: {
     device: string;
-    session_id: string;
     status: string;
-    progress?: number;
-    duration?: number;
+    filename: string;
+    duration: number;
   };
 }
 
 /**
- * Union type for all notification types
+ * Union type for all notification messages
  */
 export type NotificationMessage = CameraStatusNotification | RecordingStatusNotification;
 
 /**
- * WebSocket configuration for RPC connection
+ * WebSocket configuration
  */
 export interface WebSocketConfig {
   url: string;
+  reconnectInterval: number;
   maxReconnectAttempts: number;
-  baseDelay: number;
-  maxDelay: number;
   requestTimeout: number;
+  heartbeatInterval: number;
 }
 
 /**
@@ -162,7 +180,7 @@ export interface RPCCallOptions {
  * Type guard to check if a message is a notification
  */
 export function isNotification(message: WebSocketMessage): message is JSONRPCNotification {
-  return !('id' in message);
+  return 'method' in message && !('id' in message);
 }
 
 /**
@@ -173,8 +191,21 @@ export function isResponse(message: WebSocketMessage): message is JSONRPCRespons
 }
 
 /**
- * Type guard to check if a response contains an error
+ * Type guard to check if a response is an error response
  */
-export function isErrorResponse(response: JSONRPCResponse): boolean {
+export function isErrorResponse(response: JSONRPCResponse): response is JSONRPCResponse & { error: JSONRPCError } {
   return 'error' in response && response.error !== undefined;
 }
+
+/**
+ * Performance targets (from server documentation)
+ */
+export const PERFORMANCE_TARGETS = {
+  STATUS_METHODS: 50, // <50ms response time
+  CONTROL_METHODS: 100, // <100ms response time
+  WEBSOCKET_NOTIFICATIONS: 20, // <20ms delivery latency
+  CLIENT_INITIAL_LOAD: 3000, // <3s initial load
+  CLIENT_WEBSOCKET_CONNECTION: 1000, // <1s connection time
+  CLIENT_BUNDLE_SIZE: 2 * 1024 * 1024, // <2MB bundle size
+  CLIENT_MEMORY_USAGE: 50 * 1024 * 1024, // <50MB memory usage
+} as const;
