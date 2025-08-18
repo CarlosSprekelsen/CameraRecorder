@@ -104,6 +104,39 @@ date: "2025-08-05"
 - Environment file: `/opt/camera-service/.env`
 - JWT Secret: `CAMERA_SERVICE_JWT_SECRET=d0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7`
 
+### ⚠️ CRITICAL: Authentication After Server Reinstall
+**Important**: The JWT secret changes on every server reinstall, requiring environment variable setup for testing.
+
+**Problem**: After reinstalling the MediaMTX Camera Service, authentication fails because:
+1. **New JWT Secret**: Each reinstall generates a new `CAMERA_SERVICE_JWT_SECRET`
+2. **Environment Mismatch**: The test environment doesn't have access to the new secret
+3. **Authentication Failure**: Tests fail with "Invalid authentication token" errors
+
+**Solution**: Use the provided environment setup script after each reinstall:
+
+```bash
+# Step 1: Set up environment variables after reinstall
+./MediaMTX-Camera-Service-Client/client/set-test-env.sh
+
+# Step 2: Run tests with correct environment
+source .test_env && node MediaMTX-Camera-Service-Client/client/test-sprint-3-day-9-integration.js
+```
+
+**What the script does**:
+- Reads the new JWT secret from `/opt/camera-service/.env` (requires sudo)
+- Exports `CAMERA_SERVICE_JWT_SECRET` environment variable
+- Creates `.test_env` file for future test runs
+- Provides clear instructions for running tests
+
+**Manual Alternative**:
+```bash
+# Extract JWT secret manually
+JWT_SECRET=$(sudo grep "^CAMERA_SERVICE_JWT_SECRET=" /opt/camera-service/.env | cut -d'=' -f2)
+
+# Run tests with environment variable
+CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node MediaMTX-Camera-Service-Client/client/test-sprint-3-day-9-integration.js
+```
+
 ### Authentication Process
 1. **Generate Valid Token**: Use the correct JWT secret to generate tokens
 2. **Authenticate**: Call the `authenticate` method with the token
@@ -252,6 +285,10 @@ tests/
 # Real server integration
 TEST_WEBSOCKET_URL=ws://localhost:8002/ws
 TEST_API_URL=http://localhost:8002
+TEST_HTTP_FALLBACK_URL=http://localhost:8003
+
+# Authentication (set after reinstall)
+CAMERA_SERVICE_JWT_SECRET=<extracted_from_server_env>
 
 # Mock fallback
 USE_MOCK_SERVER=true  # Only when real server unavailable

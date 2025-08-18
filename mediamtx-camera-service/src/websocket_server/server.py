@@ -1774,6 +1774,17 @@ class WebSocketJsonRpcServer:
                 "format": format_type,
             }
 
+            # Send recording status update notification
+            try:
+                await self.notify_recording_status_update({
+                    "device": device_path,
+                    "status": "STARTED",
+                    "filename": recording_result.get("filename"),
+                    "duration": effective_duration,
+                })
+            except Exception as e:
+                self._logger.warning(f"Failed to send recording start notification: {e}")
+
             # Schedule auto-stop if timed recording requested
             if effective_duration and effective_duration > 0:
                 async def _auto_stop():
@@ -1839,7 +1850,7 @@ class WebSocketJsonRpcServer:
 
             recording_result = await mediamtx_controller.stop_recording(stream_name=stream_name)
 
-            return {
+            response = {
                 "device": device_path,
                 "session_id": recording_result.get("session_id"),
                 "filename": recording_result.get("filename"),
@@ -1850,6 +1861,19 @@ class WebSocketJsonRpcServer:
                 "duration": recording_result.get("duration"),
                 "file_size": recording_result.get("file_size", 0),
             }
+
+            # Send recording status update notification
+            try:
+                await self.notify_recording_status_update({
+                    "device": device_path,
+                    "status": "STOPPED",
+                    "filename": recording_result.get("filename"),
+                    "duration": recording_result.get("duration"),
+                })
+            except Exception as e:
+                self._logger.warning(f"Failed to send recording stop notification: {e}")
+
+            return response
 
         except Exception as e:
             self._logger.error(f"Error stopping recording for {device_path}: {e}")
