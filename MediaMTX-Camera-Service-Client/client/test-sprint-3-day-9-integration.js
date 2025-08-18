@@ -33,7 +33,7 @@ import { fileURLToPath } from 'url';
 // Test configuration
 const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
-  httpUrl: 'http://localhost:8002',
+  httpUrl: 'http://localhost:8003',  // Health server port
   httpsUrl: 'https://localhost:8002',
   timeout: 30000,
   retryAttempts: 3,
