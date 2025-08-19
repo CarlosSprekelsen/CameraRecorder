@@ -269,6 +269,58 @@ tests/
   fixtures/     # test data and utilities
 ```
 
+## Naming Conventions
+
+### File Naming
+- **Test files:** `test_<module_name>.js` or `test_<behavior_area>.js`
+- **Use snake_case** throughout (no CamelCase or kebab-case)
+- **Descriptive names** that clearly indicate what is being tested
+
+**Examples:**
+- `test_websocket_connection.js` - Tests WebSocket connection behavior
+- `test_camera_operations.js` - Tests camera operations functionality
+- `test_authentication_flow.js` - Tests authentication behavior
+- `test_ui_components.js` - Tests UI component behavior
+
+### Test Function Naming
+- **Format:** `test_<behavior>_<scenario>()`
+- **Be descriptive** about what behavior is being validated
+- **Include success/failure scenario** in the name when relevant
+
+**Examples:**
+- `test_websocket_connection_successful_establishment()`
+- `test_camera_snapshot_with_valid_authentication()`
+- `test_ui_component_rendering_with_props()`
+
+### Directory Structure
+```
+tests/
+├── unit/                    # Isolated component tests (React components, utilities)
+│   ├── test_components/     # React component tests
+│   ├── test_utils/          # Utility function tests
+│   └── test_hooks/          # Custom React hooks tests
+├── integration/             # Real server integration tests
+│   ├── test_websocket/      # WebSocket communication tests
+│   ├── test_camera_ops/     # Camera operations tests
+│   └── test_authentication/ # Auth flow tests
+├── e2e/                     # End-to-end user workflows
+├── fixtures/                # Test data and utilities
+└── performance/             # Performance validation tests
+```
+
+### Test Categorization
+- **Unit**: `test_*.js` - Isolated component/utility tests
+- **Integration**: `test_*.js` - Real server interaction tests  
+- **E2E**: `test_*.js` - Complete user workflow tests
+- **Performance**: `test_*.js` - Performance validation tests
+
+### Directory-Based Organization
+Instead of filename prefixes, use directory structure to categorize:
+- `tests/unit/` = Unit tests
+- `tests/integration/` = Integration tests
+- `tests/e2e/` = End-to-end tests
+- `tests/performance/` = Performance tests
+
 ## ⚠️ CRITICAL TEST EXECUTION CONTEXT
 
 ### **REQUIRED EXECUTION DIRECTORY**

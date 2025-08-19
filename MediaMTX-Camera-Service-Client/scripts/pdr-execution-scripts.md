@@ -1,38 +1,14 @@
 # PDR (Preliminary Design Review): Implementation Validation Execution Scripts
 
+## Project Documentation & Structure Reference
+**Ground Rules**: `docs/development/client-project-ground-rules.md`  
+**Test Guidelines**: `docs/development/testing-guidelines.md`  
+**Existing Test Scripts**: `client/tests/run-validation-tests.sh`  
+**Sprint 3 Evidence**: `evidence/client-sprint-3/` (11 completed validation files)  
+**Working Tests**: `evidence/client-sprint-3/test-websocket-integration.js`, `evidence/client-sprint-3/test-file-download.js`
+
 ## PDR Objective
 Validate that the MediaMTX Camera Service Client MVP implementation meets all functional and non-functional requirements, demonstrates real server integration, and is ready for production deployment.
-
-## ⚠️ CRITICAL PDR EXECUTION REQUIREMENTS
-
-### **REQUIRED CONTEXT BEFORE EXECUTION**
-1. **Server Status**: MediaMTX Camera Service MUST be running (`sudo systemctl status camera-service`)
-2. **Test Directory**: All PDR tests MUST be executed from `client/tests/integration/` directory
-3. **Client Development**: UI/UX tests require client dev server running (`cd client && npm run dev`)
-4. **Authentication**: Valid JWT token required - use `client/generate-test-token.py` after server reinstall
-5. **File Structure**: Tests expect `client/src/components/` not `src/components/`
-
-### **COMMON EXECUTION ERRORS TO AVOID**
-- ❌ Running tests from project root instead of `client/tests/integration/`
-- ❌ Missing client dev server for UI/UX validation
-- ❌ Using expired/invalid JWT tokens after server reinstall
-- ❌ Creating test artifacts in wrong locations (use proper test directory structure)
-- ❌ Testing UI components without running `npm run dev` first
-
-### **CORRECT EXECUTION SEQUENCE**
-```bash
-# 1. Verify server status
-sudo systemctl status camera-service
-
-# 2. Generate valid JWT token (if needed)
-cd client && python3 generate-test-token.py
-
-# 3. Start client dev server (for UI/UX tests)
-cd client && npm run dev
-
-# 4. Execute PDR tests from correct directory
-cd client/tests/integration && node test-with-valid-token.js
-```
 
 ## Global PDR Acceptance Thresholds
 ```
@@ -96,11 +72,6 @@ Ground rules: docs/development/client-project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 
 Task: Validate user interface usability and user experience
-
-**⚠️ REQUIRED PREREQUISITE**: Client development server MUST be running
-```bash
-cd client && npm run dev
-```
 
 Execute exactly:
 1. Test responsive design across different screen sizes
