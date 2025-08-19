@@ -3,6 +3,8 @@
  * 
  * Supports unified testing strategy with real server integration
  * Following "Real Integration First" approach
+ * 
+ * CRITICAL: All paths relative to client/ directory only
  */
 
 export default {
@@ -20,7 +22,7 @@ export default {
     '<rootDir>/tests/setup.ts'
   ],
   
-  // Module name mapping for React 19 compatibility
+  // Module name mapping for React 18 compatibility
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1',
@@ -31,7 +33,7 @@ export default {
     '^react-dom$': 'react-dom'
   },
   
-  // Test file patterns
+  // Test file patterns - ALL relative to client/
   testMatch: [
     '<rootDir>/tests/**/*.test.{ts,tsx}',
     '<rootDir>/tests/**/*.spec.{ts,tsx}',
@@ -82,22 +84,6 @@ export default {
     'html'
   ],
   
-  // Setup files
-  setupFilesAfterEnv: [
-    '<rootDir>/tests/setup.ts'
-  ],
-  
-  // Module name mapping
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1',
-    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/fixtures/fileMock.js',
-    '^react-dom/client$': 'react-dom/client',
-    '^react-dom$': 'react-dom'
-  },
-  
   // Transform configuration
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -136,7 +122,7 @@ export default {
   // Reset modules between tests
   resetModules: true,
   
-  // Module resolution - ensure we use client's node_modules
+  // Module resolution - ensure we use client's node_modules ONLY
   moduleDirectories: ['<rootDir>/node_modules', 'src'],
   
   // Test environment variables
