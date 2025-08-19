@@ -291,11 +291,6 @@ const componentPath = 'src/components/Dashboard/Dashboard.tsx';  # ✅ Correct
 const componentPath = 'client/src/components/Dashboard/Dashboard.tsx';  # ❌ Wrong
 ```
 
-## Naming Conventions
-- **Integration Tests**: `test-*.js` (e.g., `test-websocket.js`, `test-camera-operations.js`)
-- **Unit Tests**: `test-*.js` or `*.test.js` 
-- **E2E Tests**: `test-*.js` or place under `tests/e2e/`
-- **Integration**: Must include `integration` in filename or be in integration directory
 
 ## Coverage Targets & Thresholds
 - **Unit**: ≥ 80%
