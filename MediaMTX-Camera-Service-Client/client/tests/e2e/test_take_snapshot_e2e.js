@@ -4,6 +4,11 @@ const path = require('path');
 const crypto = require('crypto');
 
 /**
+ * E2E Test Suite for Take Snapshot Functionality
+ * Tests complete workflow from WebSocket connection to file generation
+ */
+
+/**
  * Generate JWT token using crypto (no external dependencies)
  * @param {Object} payload - Token payload
  * @param {string} secret - JWT secret
@@ -222,4 +227,38 @@ function sendRequest(ws, method, params = {}) {
   });
 }
 
-testTakeSnapshotEndToEnd().catch(console.error);
+/**
+ * Jest test suite for E2E snapshot functionality
+ */
+describe('Take Snapshot E2E Tests', () => {
+  let ws;
+
+  beforeAll(async () => {
+    // Setup WebSocket connection
+    ws = new WebSocket('ws://localhost:8002/ws');
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    console.log('✅ WebSocket connected for E2E test suite');
+  });
+
+  afterAll(async () => {
+    if (ws) {
+      ws.close();
+    }
+  });
+
+  test('should complete end-to-end snapshot workflow', async () => {
+    await expect(testTakeSnapshotEndToEnd()).resolves.not.toThrow();
+  }, 30000);
+
+  test('should validate snapshot file system operations', async () => {
+    const files = await getSnapshotFiles();
+    expect(Array.isArray(files)).toBe(true);
+  });
+
+  test('should handle parameter validation correctly', async () => {
+    await expect(testParameterValidation(ws)).resolves.not.toThrow();
+  }, 15000);
+});

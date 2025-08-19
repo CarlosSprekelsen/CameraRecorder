@@ -52,7 +52,7 @@ jest.setTimeout(30000); // 30 seconds for integration tests
  */
 async function validateServerAvailability(): Promise<boolean> {
   const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
-  const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
+  const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8003/health/system';
   
   try {
     // Check WebSocket endpoint
@@ -110,7 +110,7 @@ async function checkWebSocketAvailability(url: string): Promise<boolean> {
  */
 async function checkApiAvailability(url: string): Promise<boolean> {
   try {
-    const response = await fetch(`${url}/health`);
+    const response = await fetch(url);
     return response.ok;
   } catch {
     return false;

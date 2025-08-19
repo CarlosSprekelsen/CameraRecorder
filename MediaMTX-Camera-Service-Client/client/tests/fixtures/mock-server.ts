@@ -147,8 +147,8 @@ export const MOCK_RESPONSES = {
  * Mock error responses
  */
 export const MOCK_ERRORS = {
-  [ERROR_CODES.CAMERA_NOT_FOUND]: {
-    code: ERROR_CODES.CAMERA_NOT_FOUND,
+  [ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED]: {
+    code: ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED,
     message: 'Camera not found'
   },
   [ERROR_CODES.METHOD_NOT_FOUND]: {
@@ -166,12 +166,12 @@ export const MOCK_ERRORS = {
  */
 export class MockWebSocketService {
   private requestId = 0;
-  private isConnected = false;
+  private _isConnected = false;
   private messageHandlers: ((message: any) => void)[] = [];
   private notificationInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.isConnected = true;
+    this._isConnected = true;
     this.startNotificationSimulation();
   }
 
@@ -181,14 +181,14 @@ export class MockWebSocketService {
   async connect(): Promise<void> {
     // Simulate connection delay
     await new Promise(resolve => setTimeout(resolve, 10));
-    this.isConnected = true;
+    this._isConnected = true;
   }
 
   /**
    * Simulate WebSocket disconnection
    */
   disconnect(): void {
-    this.isConnected = false;
+    this._isConnected = false;
     if (this.notificationInterval) {
       clearInterval(this.notificationInterval);
       this.notificationInterval = null;
@@ -199,14 +199,14 @@ export class MockWebSocketService {
    * Check connection status
    */
   isConnected(): boolean {
-    return this.isConnected;
+    return this._isConnected;
   }
 
   /**
    * Simulate JSON-RPC call
    */
   async call(method: string, params: any = {}): Promise<any> {
-    if (!this.isConnected) {
+    if (!this._isConnected) {
       throw new Error('WebSocket is not connected');
     }
 
@@ -249,7 +249,7 @@ export class MockWebSocketService {
    */
   private startNotificationSimulation(): void {
     this.notificationInterval = setInterval(() => {
-      if (!this.isConnected) return;
+      if (!this._isConnected) return;
 
       // Simulate camera status update
       const cameraNotification: MockNotification = {

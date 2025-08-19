@@ -35,6 +35,7 @@ interface ConnectionState {
   status: ConnectionStatus;
   isConnecting: boolean;
   isReconnecting: boolean;
+  isConnected: boolean;
   
   // Connection info
   url: string | null;
@@ -192,6 +193,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       status: 'disconnected',
       isConnecting: false,
       isReconnecting: false,
+      isConnected: false,
       url: null,
       lastConnected: null,
       lastDisconnected: null,
@@ -255,6 +257,7 @@ export const useConnectionStore = create<ConnectionStore>()(
             const now = new Date();
             set({ 
               isConnecting: false,
+              isConnected: true,
               status: 'connected',
               lastConnected: now,
               reconnectAttempts: 0,
@@ -280,6 +283,7 @@ export const useConnectionStore = create<ConnectionStore>()(
               status: 'disconnected',
               isConnecting: false,
               isReconnecting: false,
+              isConnected: false,
               lastDisconnected: now,
               isHealthy: false,
               healthScore: 0,

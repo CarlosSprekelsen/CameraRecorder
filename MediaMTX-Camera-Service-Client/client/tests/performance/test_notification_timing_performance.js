@@ -1,15 +1,13 @@
-#!/usr/bin/env node
-
 /**
- * Notification Timing Test
+ * Notification Timing Performance Test
  * 
  * Measures the complete loop from sending recording command to receiving notification feedback.
  * This helps understand the user feedback delay and identify intermittent notification issues.
  */
 
-import WebSocket from 'ws';
-import { performance } from 'perf_hooks';
-import crypto from 'crypto';
+const WebSocket = require('ws');
+const { performance } = require('perf_hooks');
+const crypto = require('crypto');
 
 /**
  * Generate JWT token using crypto (since we don't have jwt library)
@@ -260,13 +258,44 @@ async function main() {
   });
 }
 
-// Run the test
-main()
-  .then(results => {
-    console.log('\n🎉 Notification timing analysis completed');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('\n❌ Test failed:', error);
-    process.exit(1);
+/**
+ * Jest test suite for notification timing performance
+ */
+describe('Notification Timing Performance Tests', () => {
+  let ws;
+
+  beforeAll(async () => {
+    // Setup WebSocket connection
+    ws = new WebSocket(CONFIG.serverUrl);
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    console.log('✅ WebSocket connected for performance test suite');
   });
+
+  afterAll(async () => {
+    if (ws) {
+      ws.close();
+    }
+  });
+
+  test('should complete notification timing analysis', async () => {
+    const results = await main();
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBeGreaterThan(0);
+  }, 60000);
+
+  test('should meet performance targets from guidelines', async () => {
+    const results = await main();
+    const successfulTests = results.filter(r => r.success);
+    
+    if (successfulTests.length > 0) {
+      const startDelays = successfulTests.map(r => r.startCommandToNotification);
+      const avgStartDelay = startDelays.reduce((a, b) => a + b, 0) / startDelays.length;
+      
+      // Performance target: <100ms (p95 under load)
+      expect(avgStartDelay).toBeLessThan(100);
+    }
+  }, 60000);
+});

@@ -31,6 +31,8 @@ describe('WebSocket Integration Tests', () => {
       maxReconnectAttempts: 3,
       requestTimeout: 5000,
       heartbeatInterval: 30000,
+      baseDelay: 1000,
+      maxDelay: 30000,
     });
     
     await wsService.connect();
@@ -50,19 +52,19 @@ describe('WebSocket Integration Tests', () => {
       
       const connectionTime = performance.now() - startTime;
       expect(connectionTime).toBeLessThan(PERFORMANCE_TARGETS.CLIENT_WEBSOCKET_CONNECTION);
-      expect(wsService.isConnected()).toBe(true);
+      expect(wsService.isConnected).toBe(true);
     });
 
     it('should handle connection resilience (disconnect/reconnect)', async () => {
-      expect(wsService.isConnected()).toBe(true);
+      expect(wsService.isConnected).toBe(true);
       
       // Simulate network interruption
       wsService.disconnect();
-      expect(wsService.isConnected()).toBe(false);
+      expect(wsService.isConnected).toBe(false);
       
       // Reconnect
       await wsService.connect();
-      expect(wsService.isConnected()).toBe(true);
+      expect(wsService.isConnected).toBe(true);
     });
   });
 
@@ -80,7 +82,7 @@ describe('WebSocket Integration Tests', () => {
     it('should get camera list with correct structure', async () => {
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
+      const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as any;
       
       const responseTime = performance.now() - startTime;
       
@@ -101,8 +103,7 @@ describe('WebSocket Integration Tests', () => {
       const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
       
       if (cameraList.cameras.length === 0) {
-        console.warn('No cameras available for status test');
-        return;
+        fail('No cameras available for status test - cannot validate core functionality');
       }
 
       const testDevice = cameraList.cameras[0].device;
@@ -213,8 +214,7 @@ describe('WebSocket Integration Tests', () => {
       const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
       
       if (cameraList.cameras.length === 0) {
-        console.warn('No cameras available for control method test');
-        return;
+        fail('No cameras available for control method test - cannot validate core functionality');
       }
 
       const testDevice = cameraList.cameras[0].device;

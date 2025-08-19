@@ -59,6 +59,10 @@ tests/
 └── fixtures/      # Shared test utilities
 ```
 
+## ⚠️ IV&V Testing Protocol
+**ALWAYS run tests from `client/` directory**: `cd client && npm test`  
+**NEVER run from root** - conflicting dependencies cause failures
+
 ## Naming Convention
 - **Files**: `test_<what>_<type>.{ts,js}` using snake_case
 - **Functions**: `test_<behavior>_<scenario>()`

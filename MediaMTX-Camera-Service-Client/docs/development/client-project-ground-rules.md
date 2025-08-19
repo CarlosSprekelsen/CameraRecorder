@@ -43,6 +43,8 @@ MediaMTX-Camera-Service-Client/
 - **Coverage**: 80%+ for critical business logic
 - **Performance**: Validate against documented targets
 
+
+
 ## 5. Decision Priority  
 1. **Server Implementation** (authoritative)
 2. **Existing Ground Truth** (docs above)

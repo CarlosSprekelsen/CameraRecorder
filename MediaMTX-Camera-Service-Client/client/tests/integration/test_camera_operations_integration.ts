@@ -62,8 +62,7 @@ describe('Camera Operations Integration', () => {
 
     it('should get individual camera status', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for status test');
-        return;
+        fail('No cameras available for status test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras[0];
@@ -79,14 +78,12 @@ describe('Camera Operations Integration', () => {
   describe('Snapshot Operations', () => {
     it('should take snapshot with default settings', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for snapshot test');
-        return;
+        fail('No cameras available for snapshot test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
       if (!testCamera) {
-        console.warn('No connected cameras available for snapshot test');
-        return;
+        fail('No connected cameras available for snapshot test - cannot validate core functionality');
       }
 
       await act(async () => {
@@ -103,14 +100,12 @@ describe('Camera Operations Integration', () => {
 
     it('should take snapshot with PNG format', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for PNG snapshot test');
-        return;
+        fail('No cameras available for PNG snapshot test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
       if (!testCamera) {
-        console.warn('No connected cameras available for PNG snapshot test');
-        return;
+        fail('No connected cameras available for PNG snapshot test - cannot validate core functionality');
       }
 
       await act(async () => {
@@ -139,14 +134,12 @@ describe('Camera Operations Integration', () => {
   describe('Recording Operations', () => {
     it('should start and stop recording', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for recording test');
-        return;
+        fail('No cameras available for recording test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
       if (!testCamera) {
-        console.warn('No connected cameras available for recording test');
-        return;
+        fail('No connected cameras available for recording test - cannot validate core functionality');
       }
 
       let recordingSession: any;
@@ -179,14 +172,12 @@ describe('Camera Operations Integration', () => {
 
     it('should start unlimited recording', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for unlimited recording test');
-        return;
+        fail('No cameras available for unlimited recording test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
       if (!testCamera) {
-        console.warn('No connected cameras available for unlimited recording test');
-        return;
+        fail('No connected cameras available for unlimited recording test - cannot validate core functionality');
       }
 
       let recordingSession: any;
@@ -324,8 +315,7 @@ describe('Camera Operations Integration', () => {
   describe('Performance Validation', () => {
     it('should meet performance targets for camera operations', async () => {
       if (cameraStore.cameras.length === 0) {
-        console.warn('No cameras available for performance test');
-        return;
+        fail('No cameras available for performance test - cannot validate core functionality');
       }
 
       const testCamera = cameraStore.cameras[0];

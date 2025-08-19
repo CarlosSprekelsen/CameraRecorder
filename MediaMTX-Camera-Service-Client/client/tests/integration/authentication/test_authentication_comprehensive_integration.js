@@ -18,8 +18,8 @@
  * - Valid JWT secret configured
  */
 
-import WebSocket from 'ws';
-import jwt from 'jsonwebtoken';
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 
 // Test configuration
 const CONFIG = {
@@ -365,72 +365,79 @@ async function testRoleBasedAccess(ws) {
 }
 
 /**
- * Main test execution
+ * Jest test suite for comprehensive authentication
  */
-async function runTests() {
-  console.log('🔐 Comprehensive Authentication Test');
-  console.log('==================================');
-  console.log(`Server: ${CONFIG.serverUrl}`);
-  console.log(`Timeout: ${CONFIG.timeout}ms`);
-  console.log('');
-  
-  const ws = new WebSocket(CONFIG.serverUrl);
-  
-  return new Promise((resolve, reject) => {
-    ws.on('open', async () => {
-      console.log('✅ WebSocket connected');
-      
-      try {
-        // Run all test suites
-        await testValidToken(ws);
-        await testInvalidToken(ws);
-        await testExpiredToken(ws);
-        await testMalformedToken(ws);
-        await testProtectedMethodAccess(ws);
-        await testUnauthenticatedAccess();
-        await testRoleBasedAccess(ws);
-        
-        // Summary
-        console.log('\n📊 Test Summary');
-        console.log('==============');
-        console.log(`Total Tests: ${testResults.total}`);
-        console.log(`Passed: ${testResults.passed}`);
-        console.log(`Failed: ${testResults.failed}`);
-        console.log(`Success Rate: ${Math.round((testResults.passed / testResults.total) * 100)}%`);
-        
-        console.log('\n🔐 Authentication Scenario Coverage');
-        console.log('==================================');
-        Object.entries(testResults.authScenarios).forEach(([scenario, tested]) => {
-          console.log(`${tested ? '✅' : '❌'} ${scenario}`);
-        });
-        
-        if (testResults.failed === 0) {
-          console.log('\n🎉 All authentication tests passed! Security is properly implemented.');
-        } else {
-          console.log('\n❌ Some authentication tests failed. Please check the errors above.');
-        }
-        
-        ws.close();
-        resolve();
-        
-      } catch (error) {
-        console.error('❌ Authentication test suite failed:', error.message);
-        ws.close();
-        reject(error);
-      }
-    });
-    
-    ws.on('error', (error) => {
-      console.error('❌ WebSocket connection failed:', error.message);
-      reject(error);
-    });
-  });
-}
+describe('Authentication Integration Tests', () => {
+  let ws;
 
-// Run the tests
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runTests().catch(error => {
-    console.error('❌ Test execution failed:', error);
-    process.exit(1);
+  beforeAll(async () => {
+    // Setup WebSocket connection
+    ws = new WebSocket(CONFIG.serverUrl);
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    console.log('✅ WebSocket connected for authentication test suite');
   });
-}
+
+  afterAll(async () => {
+    if (ws) {
+      ws.close();
+    }
+  });
+
+  describe('Valid Token Tests', () => {
+    test('should authenticate with valid token', async () => {
+      await expect(testValidToken(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Invalid Token Tests', () => {
+    test('should reject invalid token', async () => {
+      await expect(testInvalidToken(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Expired Token Tests', () => {
+    test('should reject expired token', async () => {
+      await expect(testExpiredToken(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Malformed Token Tests', () => {
+    test('should reject malformed token', async () => {
+      await expect(testMalformedToken(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Protected Method Access Tests', () => {
+    test('should require authentication for protected methods', async () => {
+      await expect(testProtectedMethodAccess(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Unauthenticated Access Tests', () => {
+    test('should block unauthenticated access', async () => {
+      await expect(testUnauthenticatedAccess()).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Role-Based Access Tests', () => {
+    test('should handle role-based access control', async () => {
+      await expect(testRoleBasedAccess(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Test Results Summary', () => {
+    test('should have successful authentication test results', () => {
+      expect(testResults.total).toBeGreaterThan(0);
+      expect(testResults.passed).toBeGreaterThan(0);
+      expect(testResults.failed).toBe(0);
+    });
+
+    test('should have authentication scenario coverage', () => {
+      const testedScenarios = Object.values(testResults.authScenarios).filter(Boolean);
+      expect(testedScenarios.length).toBeGreaterThan(0);
+    });
+  });
+});

@@ -323,7 +323,7 @@ Task: [specific request]
 **Deliverable**: `evidence/client-pdr/01_mvp_functionality.md`
 
 ##### **PDR-2: Server Integration Validation**
-**Role**: Developer  
+**Role**: IV&V   
 **Duration**: 1 day  
 **Priority**: Critical
 

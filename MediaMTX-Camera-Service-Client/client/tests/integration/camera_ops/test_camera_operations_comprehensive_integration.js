@@ -1,7 +1,5 @@
-#!/usr/bin/env node
-
 /**
- * Comprehensive Camera Operations Test
+ * Comprehensive Camera Operations Integration Test
  * 
  * This test validates all camera operations against the real MediaMTX Camera Service server
  * following the actual server API specification.
@@ -11,8 +9,6 @@
  * - start_recording(device, duration?, format?) - Only device, duration, format parameters
  * - stop_recording(device) - Only device parameter
  * 
- * Usage: node test-camera-operations-comprehensive.js
- * 
  * Prerequisites:
  * - MediaMTX Camera Service running on localhost:8002
  * - WebSocket endpoint available at ws://localhost:8002/ws
@@ -20,8 +16,8 @@
  * - Valid JWT authentication
  */
 
-import WebSocket from 'ws';
-import jwt from 'jsonwebtoken';
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 
 // Test configuration
 const CONFIG = {
@@ -324,71 +320,67 @@ async function testErrorHandling(ws) {
 }
 
 /**
- * Main test execution
+ * Jest test suite for comprehensive camera operations
  */
-async function runTests() {
-  console.log('🎯 Comprehensive Camera Operations Test');
-  console.log('=====================================');
-  console.log(`Server: ${CONFIG.serverUrl}`);
-  console.log(`Device: ${CONFIG.device}`);
-  console.log(`Timeout: ${CONFIG.timeout}ms`);
-  console.log('');
-  
-  const ws = new WebSocket(CONFIG.serverUrl);
-  
-  return new Promise((resolve, reject) => {
-    ws.on('open', async () => {
-      console.log('✅ WebSocket connected');
-      
-      try {
-        // Run all test suites
-        await testBasicAPI(ws);
-        await testAuthentication(ws);
-        await testTakeSnapshot(ws);
-        await testRecordingOperations(ws);
-        await testErrorHandling(ws);
-        
-        // Summary
-        console.log('\n📊 Test Summary');
-        console.log('==============');
-        console.log(`Total Tests: ${testResults.total}`);
-        console.log(`Passed: ${testResults.passed}`);
-        console.log(`Failed: ${testResults.failed}`);
-        console.log(`Success Rate: ${Math.round((testResults.passed / testResults.total) * 100)}%`);
-        
-        console.log('\n🔧 API Method Coverage');
-        console.log('====================');
-        Object.entries(testResults.apiMethods).forEach(([method, tested]) => {
-          console.log(`${tested ? '✅' : '❌'} ${method}`);
-        });
-        
-        if (testResults.failed === 0) {
-          console.log('\n🎉 All tests passed! Camera operations are working correctly.');
-        } else {
-          console.log('\n❌ Some tests failed. Please check the errors above.');
-        }
-        
-        ws.close();
-        resolve();
-        
-      } catch (error) {
-        console.error('❌ Test suite failed:', error.message);
-        ws.close();
-        reject(error);
-      }
-    });
-    
-    ws.on('error', (error) => {
-      console.error('❌ WebSocket connection failed:', error.message);
-      reject(error);
-    });
-  });
-}
+describe('Camera Operations Integration Tests', () => {
+  let ws;
 
-// Run the tests
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runTests().catch(error => {
-    console.error('❌ Test execution failed:', error);
-    process.exit(1);
+  beforeAll(async () => {
+    // Setup WebSocket connection
+    ws = new WebSocket(CONFIG.serverUrl);
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    console.log('✅ WebSocket connected for test suite');
   });
-}
+
+  afterAll(async () => {
+    if (ws) {
+      ws.close();
+    }
+  });
+
+  describe('Basic API Tests', () => {
+    test('should test basic API functionality', async () => {
+      await expect(testBasicAPI(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Authentication Tests', () => {
+    test('should test authentication functionality', async () => {
+      await expect(testAuthentication(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Take Snapshot Tests', () => {
+    test('should test take snapshot functionality', async () => {
+      await expect(testTakeSnapshot(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Recording Operations Tests', () => {
+    test('should test recording operations', async () => {
+      await expect(testRecordingOperations(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Error Handling Tests', () => {
+    test('should test error handling', async () => {
+      await expect(testErrorHandling(ws)).resolves.not.toThrow();
+    }, CONFIG.timeout);
+  });
+
+  describe('Test Results Summary', () => {
+    test('should have successful test results', () => {
+      expect(testResults.total).toBeGreaterThan(0);
+      expect(testResults.passed).toBeGreaterThan(0);
+      expect(testResults.failed).toBe(0);
+    });
+
+    test('should have API method coverage', () => {
+      const testedMethods = Object.values(testResults.apiMethods).filter(Boolean);
+      expect(testedMethods.length).toBeGreaterThan(0);
+    });
+  });
+});

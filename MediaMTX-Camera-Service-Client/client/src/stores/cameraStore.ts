@@ -26,9 +26,9 @@ import type {
   FileListResponse,
   FileListParams,
   FileItem,
-  CameraStatusUpdateParams,
-  RecordingStatusUpdateParams,
+
   ServerInfo,
+  RecordingStatus,
 } from '../types';
 import { RPC_METHODS, NOTIFICATION_METHODS } from '../types';
 import type { WebSocketService } from '../services/websocket';

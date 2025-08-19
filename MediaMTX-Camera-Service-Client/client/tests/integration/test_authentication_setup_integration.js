@@ -1,12 +1,10 @@
-#!/usr/bin/env node
-
 /**
- * Test Installation Fix
+ * Authentication Setup Integration Test
  * Verifies that the JWT authentication works with the correct environment variable name
  */
 
-import WebSocket from 'ws';
-import jwt from 'jsonwebtoken';
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 
 const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
@@ -125,8 +123,42 @@ async function testInstallationFix() {
   });
 }
 
-// Run test
-testInstallationFix().catch(error => {
-  console.error('❌ Installation fix test failed:', error);
-  process.exit(1);
+/**
+ * Jest test suite for authentication setup
+ */
+describe('Authentication Setup Integration Tests', () => {
+  let ws;
+
+  beforeAll(async () => {
+    // Setup WebSocket connection
+    ws = new WebSocket(CONFIG.serverUrl);
+    await new Promise((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    console.log('✅ WebSocket connected for authentication setup test suite');
+  });
+
+  afterAll(async () => {
+    if (ws) {
+      ws.close();
+    }
+  });
+
+  test('should verify installation fix with correct environment variable', async () => {
+    await expect(testInstallationFix()).resolves.not.toThrow();
+  }, CONFIG.timeout);
+
+  test('should generate valid JWT token', () => {
+    const token = generateValidToken();
+    expect(token).toBeDefined();
+    expect(typeof token).toBe('string');
+    expect(token.split('.').length).toBe(3); // JWT has 3 parts
+  });
+
+  test('should authenticate successfully', async () => {
+    const token = generateValidToken();
+    const authResult = await sendRequest(ws, 'authenticate', { token });
+    expect(authResult.authenticated).toBe(true);
+  }, CONFIG.timeout);
 });

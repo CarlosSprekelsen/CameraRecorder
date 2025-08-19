@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useConnectionStore } from '../../stores/connectionStore';
 import { useCameraStore } from '../../stores/cameraStore';
-import { RecordingStatusUpdateParams } from '../../types/camera';
+
 
 interface RealTimeStatusProps {
   showDetails?: boolean;
@@ -69,11 +69,8 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
     }
   }, [notificationCount, cameraNotificationCount]);
 
-  const handleRecordingStatusUpdate = useCallback((notification: RecordingStatusUpdateParams) => {
-    console.log('📹 Recording status update:', notification);
-    setLastNotification(new Date());
-    setNotificationCount(prev => prev + 1);
-  }, []);
+  // Note: handleRecordingStatusUpdate is handled by the connection store
+  // This callback is not needed in this component
 
   const getConnectionStatusColor = () => {
     switch (status) {

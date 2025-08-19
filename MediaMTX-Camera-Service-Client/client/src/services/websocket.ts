@@ -217,7 +217,7 @@ export class WebSocketService {
    * Send a JSON-RPC method call with optional authentication
    * Sprint 3: Enhanced for real server integration with metrics tracking
    */
-  public async call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = false): Promise<unknown> {
+  public async call(method: string, params: Record<string, unknown> | object = {}, requireAuth: boolean = false): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       const error = new WebSocketError('WebSocket not connected');
       
@@ -231,10 +231,10 @@ export class WebSocketService {
     }
 
     // Add authentication token if required and available
-    let finalParams = params;
+    let finalParams = params as Record<string, unknown>;
     if (requireAuth) {
       try {
-        finalParams = authService.includeAuth(params);
+        finalParams = authService.includeAuth(params as Record<string, unknown>);
       } catch (error) {
         const authError = new WebSocketError(`Authentication required: ${error instanceof Error ? error.message : 'Unknown error'}`);
         

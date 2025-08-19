@@ -15,6 +15,11 @@ export default {
     customExportConditions: ['node', 'node-addons']
   },
   
+  // React 18 compatibility
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts'
+  ],
+  
   // Module name mapping for React 19 compatibility
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -34,6 +39,9 @@ export default {
     '<rootDir>/tests/**/test_*_integration.js',
     '<rootDir>/tests/**/test_*_e2e.js',
     '<rootDir>/tests/**/test_*_performance.js',
+    '<rootDir>/tests/**/test_*_validation.ts',
+    '<rootDir>/tests/**/test_*.{ts,tsx}',
+    '<rootDir>/tests/**/test_*.js',
     '<rootDir>/src/**/*.test.{ts,tsx}',
     '<rootDir>/src/**/*.spec.{ts,tsx}'
   ],
@@ -93,10 +101,16 @@ export default {
   // Transform configuration
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.test.json'
+      tsconfig: '<rootDir>/tsconfig.test.json',
+      useESM: false
     }],
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
+  
+  // Transform ignore patterns for ES modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(ws|buffer)/)'
+  ],
   
   // Module file extensions
   moduleFileExtensions: [
@@ -122,8 +136,8 @@ export default {
   // Reset modules between tests
   resetModules: true,
   
-  // Module resolution
-  moduleDirectories: ['node_modules', 'src'],
+  // Module resolution - ensure we use client's node_modules
+  moduleDirectories: ['<rootDir>/node_modules', 'src'],
   
   // Test environment variables
   testEnvironmentOptions: {
