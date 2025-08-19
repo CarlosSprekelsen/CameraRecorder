@@ -12,7 +12,7 @@ const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
   device: '/dev/video0',
   timeout: 10000,
-  jwtSecret: 'd0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7'
+  jwtSecret: process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53'
 };
 
 function generateValidToken() {

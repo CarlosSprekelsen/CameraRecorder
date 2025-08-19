@@ -269,6 +269,28 @@ tests/
   fixtures/     # test data and utilities
 ```
 
+## ⚠️ CRITICAL TEST EXECUTION CONTEXT
+
+### **REQUIRED EXECUTION DIRECTORY**
+- **Integration Tests**: MUST be executed from `client/tests/integration/` directory
+- **Component Paths**: Tests expect `client/src/components/` not `src/components/`
+- **File References**: Use relative paths from test execution directory
+
+### **COMMON EXECUTION ERRORS**
+- ❌ Running integration tests from project root
+- ❌ Incorrect component path references (`src/` vs `client/src/`)
+- ❌ Creating test artifacts outside proper test directory structure
+
+### **CORRECT TEST EXECUTION**
+```bash
+# Execute from correct directory
+cd client/tests/integration && node test-with-valid-token.js
+
+# Component paths in tests should reference from client root
+const componentPath = 'src/components/Dashboard/Dashboard.tsx';  # ✅ Correct
+const componentPath = 'client/src/components/Dashboard/Dashboard.tsx';  # ❌ Wrong
+```
+
 ## Naming Conventions
 - **Unit / Integration**: `*.test.ts`, `*.test.tsx` or `*.spec.ts[x]`
 - **E2E**: `*.e2e.ts` or place under `tests/e2e/`

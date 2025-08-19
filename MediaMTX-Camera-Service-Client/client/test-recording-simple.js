@@ -6,13 +6,34 @@
  */
 
 import WebSocket from 'ws';
+import crypto from 'crypto';
 
 const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
   device: '/dev/video0',
   timeout: 10000,
-  authToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF91c2VyIiwicm9sZSI6Im9wZXJhdG9yIiwiaWF0IjoxNzU1NTM3MzQ4LCJleHAiOjE3NTU2MjM3NDh9.28vtGjOIBFbkNw7mhRKuflTHtGQ-oub_UzVXi2I4in0'
+  jwtSecret: process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53'
 };
+
+/**
+ * Generate JWT token using crypto
+ */
+function generateJWTToken(payload, secret) {
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT'
+  };
+  
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64url');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
 
 function sendRequest(ws, method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -69,8 +90,15 @@ async function testRecording() {
       try {
         // Authenticate first
         console.log('\n🔐 Authenticating...');
+        const payload = {
+          user_id: 'test_user',
+          role: 'operator',
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 3600
+        };
+        const token = generateJWTToken(payload, CONFIG.jwtSecret);
         const authResult = await sendRequest(ws, 'authenticate', {
-          token: CONFIG.authToken
+          token: token
         });
         console.log('✅ Authentication successful');
         

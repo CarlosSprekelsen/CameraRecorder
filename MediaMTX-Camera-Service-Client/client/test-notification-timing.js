@@ -9,6 +9,27 @@
 
 import WebSocket from 'ws';
 import { performance } from 'perf_hooks';
+import crypto from 'crypto';
+
+/**
+ * Generate JWT token using crypto (since we don't have jwt library)
+ */
+function generateJWTToken(payload, secret) {
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT'
+  };
+  
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64url');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
 
 const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
@@ -18,7 +39,7 @@ const CONFIG = {
 
 let ws = null;
 let requestId = 0;
-let notificationReceived = false;exit
+let notificationReceived = false;
 
 let notificationData = null;
 
@@ -134,12 +155,9 @@ async function main() {
       
       try {
         // Authenticate first - use the current JWT secret
-        const jwtSecret = process.env.CAMERA_SERVICE_JWT_SECRET;
-        if (!jwtSecret) {
-          throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable not set');
-        }
+        const jwtSecret = process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53';
         
-        // Generate a simple token for testing (in production, use proper JWT library)
+        // Generate a proper JWT token for testing
         const payload = {
           user_id: 'test_user',
           role: 'operator',
@@ -147,8 +165,8 @@ async function main() {
           exp: Math.floor(Date.now() / 1000) + 3600
         };
         
-        // Use the current valid token
-        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF91c2VyIiwicm9sZSI6Im9wZXJhdG9yIiwiaWF0IjoxNzU1NTQ5OTgxLCJleHAiOjE3NTU2MzYzODF9.Hg34OB0F-KkKy8UHf8w48YTetjqf3XcrMuL8gxcCH8U';
+        // Generate token using crypto (since we don't have jwt library)
+        const token = generateJWTToken(payload, jwtSecret);
         
         send('authenticate', { token });
         

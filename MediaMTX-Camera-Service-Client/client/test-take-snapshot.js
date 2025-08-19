@@ -1,4 +1,19 @@
-const WebSocket = require('ws');
+import WebSocket from 'ws';
+import jwt from 'jsonwebtoken';
+
+// JWT configuration
+const JWT_SECRET = process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53';
+
+function generateValidToken() {
+  const payload = {
+    user_id: 'test_user',
+    role: 'operator',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+  };
+  
+  return jwt.sign(payload, JWT_SECRET, { algorithm: 'HS256' });
+}
 
 async function testTakeSnapshot() {
   console.log('Testing take_snapshot with format/quality options...');
@@ -10,6 +25,16 @@ async function testTakeSnapshot() {
       console.log('✅ WebSocket connected');
       
       try {
+        // Step 1: Authenticate first
+        console.log('🔐 Authenticating...');
+        const token = generateValidToken();
+        const authResult = await sendRequest(ws, 'authenticate', { token });
+        
+        if (!authResult.authenticated) {
+          throw new Error('Authentication failed');
+        }
+        console.log('✅ Authentication successful');
+        
         // Test 1: Basic snapshot with default format/quality
         console.log('\n📸 Test 1: Basic snapshot (default jpg, quality 85)');
         const test1 = await sendRequest(ws, 'take_snapshot', {

@@ -21,13 +21,29 @@
  */
 
 import WebSocket from 'ws';
+import jwt from 'jsonwebtoken';
 
 // Test configuration
 const CONFIG = {
   serverUrl: 'ws://localhost:8002/ws',
   timeout: 30000,
   device: '/dev/video0',
+  jwtSecret: process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53'
 };
+
+/**
+ * Generate a valid JWT token for authentication
+ */
+function generateValidToken() {
+  const payload = {
+    user_id: 'test_user',
+    role: 'operator',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+  };
+  
+  return jwt.sign(payload, CONFIG.jwtSecret, { algorithm: 'HS256' });
+}
 
 // Test results tracking
 const testResults = {
@@ -108,7 +124,7 @@ function assert(condition, message) {
 /**
  * Test 1: Basic start_recording functionality
  */
-async function testStartRecording() {
+async function testStartRecording(ws) {
   console.log('\n🎬 Test 1: Basic start_recording functionality');
   
   try {
@@ -136,7 +152,7 @@ async function testStartRecording() {
 /**
  * Test 2: Duration controls - unlimited recording
  */
-async function testUnlimitedRecording() {
+async function testUnlimitedRecording(ws) {
   console.log('\n🎬 Test 2: Unlimited recording (no duration)');
   
   try {
@@ -162,7 +178,7 @@ async function testUnlimitedRecording() {
 /**
  * Test 3: Duration controls - timed recording with minutes
  */
-async function testTimedRecording() {
+async function testTimedRecording(ws) {
   console.log('\n🎬 Test 3: Timed recording with minutes');
   
   try {
@@ -188,7 +204,7 @@ async function testTimedRecording() {
 /**
  * Test 4: stop_recording functionality
  */
-async function testStopRecording(sessionId) {
+async function testStopRecording(ws, sessionId) {
   console.log('\n⏹️ Test 4: stop_recording functionality');
   
   try {
@@ -215,7 +231,7 @@ async function testStopRecording(sessionId) {
 /**
  * Test 5: Error handling - invalid device
  */
-async function testErrorHandling() {
+async function testErrorHandling(ws) {
   console.log('\n❌ Test 5: Error handling - invalid device');
   
   try {
@@ -236,7 +252,7 @@ async function testErrorHandling() {
 /**
  * Test 6: Session management - multiple recordings
  */
-async function testSessionManagement() {
+async function testSessionManagement(ws) {
   console.log('\n📋 Test 6: Session management - multiple recordings');
   
   try {
@@ -296,21 +312,31 @@ async function runTests() {
       console.log('✅ WebSocket connected');
       
       try {
+        // Step 1: Authenticate first
+        console.log('🔐 Authenticating...');
+        const token = generateValidToken();
+        const authResult = await sendRequest(ws, 'authenticate', { token });
+        
+        if (!authResult.authenticated) {
+          throw new Error('Authentication failed');
+        }
+        console.log('✅ Authentication successful');
+        
         // Run all tests
-        const recording1 = await testStartRecording();
+        const recording1 = await testStartRecording(ws);
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-        await testStopRecording(recording1.session_id);
+        await testStopRecording(ws, recording1.session_id);
         
-        await testUnlimitedRecording();
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-        await sendRequest(ws, 'stop_recording', { device: CONFIG.device });
-        
-        await testTimedRecording();
+        await testUnlimitedRecording(ws);
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
         await sendRequest(ws, 'stop_recording', { device: CONFIG.device });
         
-        await testErrorHandling();
-        await testSessionManagement();
+        await testTimedRecording(ws);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        await sendRequest(ws, 'stop_recording', { device: CONFIG.device });
+        
+        await testErrorHandling(ws);
+        await testSessionManagement(ws);
         
         // Print results
         console.log('\n📊 Test Results:');
