@@ -15,6 +15,42 @@ import { useCameraStore } from '../../../src/stores/cameraStore';
 jest.mock('../../../src/stores/cameraStore');
 const mockUseCameraStore = useCameraStore as jest.MockedFunction<typeof useCameraStore>;
 
+// Mock WebSocket service
+jest.mock('../../../src/services/websocket', () => ({
+  createWebSocketService: jest.fn(() => ({
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    call: jest.fn(),
+    onConnect: jest.fn(),
+    onDisconnect: jest.fn(),
+    onError: jest.fn(),
+    onMessage: jest.fn(),
+    addEventListener: jest.fn(),
+    send: jest.fn()
+  }))
+}));
+
+// Mock WebSocket global
+class MockWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  
+  readyState = MockWebSocket.CONNECTING;
+  onopen = null;
+  onclose = null;
+  onmessage = null;
+  onerror = null;
+  
+  send = jest.fn();
+  close = jest.fn();
+  addEventListener = jest.fn();
+  removeEventListener = jest.fn();
+}
+
+global.WebSocket = MockWebSocket;
+
 // Mock camera data
 const mockCamera = {
   device: 'test-camera-1',

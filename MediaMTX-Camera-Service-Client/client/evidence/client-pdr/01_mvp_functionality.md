@@ -61,7 +61,7 @@
 
 #### Critical Design Failures
 
-1. **WebSocket Environment Mismatch** (Multiple tests)
+1. **WebSocket Environment Mismatch** (Multiple tests)exitt
    ```
    Error: ws does not work in the browser. Browser clients must use the native WebSocket object
    ```

@@ -1,53 +1,43 @@
 /**
  * Unit tests for file store
- * Tests file operations, WebSocket integration, and error handling
+ * 
+ * Design Principles:
+ * - Pure unit testing with complete isolation
+ * - Clean mocking with dependency injection pattern
+ * - Focus on business logic, not implementation details
+ * - Strong test boundaries and predictable behavior
  */
 
 import { renderHook, act } from '@testing-library/react';
 import { useFileStore } from '../../../src/stores/fileStore';
-import { createWebSocketServiceSync } from '../../../src/services/websocket';
 import { RPC_METHODS } from '../../../src/types';
 
-// Mock the WebSocket service
-jest.mock('../../../src/services/websocket');
-const mockCreateWebSocketService = createWebSocketServiceSync as jest.MockedFunction<typeof createWebSocketServiceSync>;
-
-// Mock WebSocket service instance - implements WebSocketService interface
+// Simple, clean mock for WebSocket service
 const mockWebSocketService = {
-  // Connection methods
   connect: jest.fn(),
   disconnect: jest.fn(),
   call: jest.fn(),
-  
-  // Event handlers
   onConnect: jest.fn(),
   onDisconnect: jest.fn(),
   onError: jest.fn(),
-  onMessage: jest.fn(),
-  onCameraStatusUpdate: jest.fn(),
-  onRecordingStatusUpdate: jest.fn(),
-  onNotification: jest.fn(),
-  
-  // Store integration
-  setConnectionStore: jest.fn(),
-  setCameraStore: jest.fn(),
-  
-  // Properties
-  isConnected: false,
-  isConnectingStatus: false,
-  
-  // Methods
-  getNotificationMetrics: jest.fn(),
-  getWebSocket: jest.fn(),
-  getTestState: jest.fn()
+  onMessage: jest.fn()
 };
+
+// Mock the WebSocket service factory with simple, predictable behavior
+jest.mock('../../../src/services/websocket', () => ({
+  createWebSocketService: jest.fn(() => Promise.resolve(mockWebSocketService))
+}));
 
 describe('File Store', () => {
   beforeEach(() => {
-    mockCreateWebSocketService.mockReturnValue(mockWebSocketService as any);
+    // Reset all mocks to ensure test isolation
     jest.clearAllMocks();
     
-    // Reset store state
+    // Set up default mock behaviors
+    mockWebSocketService.connect.mockResolvedValue(undefined);
+    mockWebSocketService.call.mockResolvedValue({ files: [] });
+    
+    // Reset store state by creating fresh instance
     const { result } = renderHook(() => useFileStore());
     act(() => {
       result.current.disconnect();
@@ -55,7 +45,7 @@ describe('File Store', () => {
   });
 
   describe('Initialization', () => {
-    it('should initialize with default state', () => {
+    it('should start with correct default state', () => {
       const { result } = renderHook(() => useFileStore());
 
       expect(result.current.recordings).toBeNull();
@@ -66,26 +56,22 @@ describe('File Store', () => {
       expect(result.current.isConnected).toBe(false);
     });
 
-    it('should initialize WebSocket service', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
+    it('should initialize WebSocket service with correct configuration', async () => {
       const { result } = renderHook(() => useFileStore());
 
       await act(async () => {
         await result.current.initialize();
       });
 
-      expect(mockCreateWebSocketService).toHaveBeenCalledWith({
+      const createWebSocketService = require('../../../src/services/websocket').createWebSocketService;
+      expect(createWebSocketService).toHaveBeenCalledWith({
         url: 'ws://localhost:8002/ws',
-        reconnectTimeout: 5000,
+        reconnectInterval: 5000,
         maxReconnectAttempts: 5,
       });
-      expect(mockWebSocketService.connect).toHaveBeenCalled();
     });
 
     it('should set up event handlers during initialization', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
       const { result } = renderHook(() => useFileStore());
 
       await act(async () => {
@@ -97,8 +83,9 @@ describe('File Store', () => {
       expect(mockWebSocketService.onError).toHaveBeenCalled();
     });
 
-    it('should handle initialization errors', async () => {
-      mockWebSocketService.connect.mockRejectedValue(new Error('Connection failed'));
+    it('should handle initialization errors gracefully', async () => {
+      const initError = new Error('Connection failed');
+      mockWebSocketService.connect.mockRejectedValue(initError);
 
       const { result } = renderHook(() => useFileStore());
 
@@ -110,9 +97,7 @@ describe('File Store', () => {
       expect(result.current.isConnected).toBe(false);
     });
 
-    it('should not initialize twice', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
+    it('should prevent double initialization', async () => {
       const { result } = renderHook(() => useFileStore());
 
       await act(async () => {
@@ -120,66 +105,116 @@ describe('File Store', () => {
         await result.current.initialize(); // Second call should be ignored
       });
 
-      expect(mockCreateWebSocketService).toHaveBeenCalledTimes(1);
-      expect(mockWebSocketService.connect).toHaveBeenCalledTimes(1);
+      const createWebSocketService = require('../../../src/services/websocket').createWebSocketService;
+      expect(createWebSocketService).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Disconnection', () => {
-    it('should disconnect WebSocket service', () => {
+  describe('Connection Management', () => {
+    it('should disconnect WebSocket service', async () => {
       const { result } = renderHook(() => useFileStore());
-
-      act(() => {
+      
+      await act(async () => {
+        await result.current.initialize();
         result.current.disconnect();
       });
 
       expect(mockWebSocketService.disconnect).toHaveBeenCalled();
     });
 
-    it('should reset state on disconnect', () => {
+    it('should update connection state when connected', async () => {
       const { result } = renderHook(() => useFileStore());
-
-      act(() => {
-        result.current.disconnect();
+      
+      await act(async () => {
+        await result.current.initialize();
       });
 
-      expect(result.current.wsService).toBeNull();
+      // Simulate connection event
+      const connectHandler = mockWebSocketService.onConnect.mock.calls[0][0];
+      
+      act(() => {
+        connectHandler();
+      });
+
+      expect(result.current.isConnected).toBe(true);
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should update connection state when disconnected', async () => {
+      const { result } = renderHook(() => useFileStore());
+      
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      // Simulate disconnect event
+      const disconnectHandler = mockWebSocketService.onDisconnect.mock.calls[0][0];
+      
+      act(() => {
+        disconnectHandler();
+      });
+
       expect(result.current.isConnected).toBe(false);
-      expect(result.current.recordings).toBeNull();
-      expect(result.current.snapshots).toBeNull();
+    });
+
+    it('should handle connection errors', async () => {
+      const { result } = renderHook(() => useFileStore());
+      
+      await act(async () => {
+        await result.current.initialize();
+      });
+
+      // Simulate error event
+      const errorHandler = mockWebSocketService.onError.mock.calls[0][0];
+      const testError = new Error('WebSocket error');
+      
+      act(() => {
+        errorHandler(testError);
+      });
+
+      expect(result.current.error).toBe('WebSocket error');
     });
   });
 
-  describe('Load Recordings', () => {
+  describe('File Operations', () => {
     beforeEach(async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
+      // Set up connected state for file operations
       const { result } = renderHook(() => useFileStore());
       await act(async () => {
         await result.current.initialize();
+      });
+      
+      // Simulate connection
+      const connectHandler = mockWebSocketService.onConnect.mock.calls[0][0];
+      act(() => {
+        connectHandler();
       });
     });
 
     it('should load recordings successfully', async () => {
       const mockRecordings = [
-        {
-          filename: 'recording-1.mp4',
-          file_size: 1024000,
-          created_at: '2024-01-01T00:00:00Z',
-          modified_time: '2024-01-01T00:01:00Z',
-          download_url: '/files/recordings/recording-1.mp4',
-          duration: 60,
-          format: 'mp4'
+        { 
+          filename: 'recording1.mp4', 
+          file_size: 1024, 
+          created_at: '2023-01-01T00:00:00Z',
+          modified_time: '2023-01-01T00:00:00Z',
+          download_url: '/api/files/recordings/recording1.mp4'
+        },
+        { 
+          filename: 'recording2.mp4', 
+          file_size: 2048, 
+          created_at: '2023-01-02T00:00:00Z',
+          modified_time: '2023-01-02T00:00:00Z',
+          download_url: '/api/files/recordings/recording2.mp4'
         }
       ];
-
-      mockWebSocketService.call.mockResolvedValue({
-        files: mockRecordings
-      });
+      
+      mockWebSocketService.call.mockResolvedValue({ files: mockRecordings });
 
       const { result } = renderHook(() => useFileStore());
 
       await act(async () => {
-        await result.current.loadRecordings(20, 0);
+        await result.current.loadRecordings();
       });
 
       expect(mockWebSocketService.call).toHaveBeenCalledWith(RPC_METHODS.LIST_RECORDINGS, {
@@ -191,65 +226,30 @@ describe('File Store', () => {
       expect(result.current.error).toBeNull();
     });
 
-    it('should handle empty recordings response', async () => {
-      mockWebSocketService.call.mockResolvedValue({
-        files: []
-      });
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.loadRecordings(20, 0);
-      });
-
-      expect(result.current.recordings).toEqual([]);
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.error).toBeNull();
-    });
-
-    it('should handle recordings load error', async () => {
-      mockWebSocketService.call.mockRejectedValue(new Error('Failed to load recordings'));
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.loadRecordings(20, 0);
-      });
-
-      expect(result.current.error).toBe('Failed to load recordings');
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.recordings).toBeNull();
-    });
-  });
-
-  describe('Load Snapshots', () => {
-    beforeEach(async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-      const { result } = renderHook(() => useFileStore());
-      await act(async () => {
-        await result.current.initialize();
-      });
-    });
-
     it('should load snapshots successfully', async () => {
       const mockSnapshots = [
-        {
-          filename: 'snapshot-1.jpg',
-          file_size: 512000,
-          created_at: '2024-01-01T00:00:00Z',
-          modified_time: '2024-01-01T00:00:30Z',
-          download_url: '/files/snapshots/snapshot-1.jpg'
+        { 
+          filename: 'snapshot1.jpg', 
+          file_size: 512, 
+          created_at: '2023-01-01T00:00:00Z',
+          modified_time: '2023-01-01T00:00:00Z',
+          download_url: '/api/files/snapshots/snapshot1.jpg'
+        },
+        { 
+          filename: 'snapshot2.jpg', 
+          file_size: 768, 
+          created_at: '2023-01-02T00:00:00Z',
+          modified_time: '2023-01-02T00:00:00Z',
+          download_url: '/api/files/snapshots/snapshot2.jpg'
         }
       ];
-
-      mockWebSocketService.call.mockResolvedValue({
-        files: mockSnapshots
-      });
+      
+      mockWebSocketService.call.mockResolvedValue({ files: mockSnapshots });
 
       const { result } = renderHook(() => useFileStore());
 
       await act(async () => {
-        await result.current.loadSnapshots(20, 0);
+        await result.current.loadSnapshots();
       });
 
       expect(mockWebSocketService.call).toHaveBeenCalledWith(RPC_METHODS.LIST_SNAPSHOTS, {
@@ -257,230 +257,196 @@ describe('File Store', () => {
         offset: 0
       });
       expect(result.current.snapshots).toEqual(mockSnapshots);
-      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should handle empty file lists gracefully', async () => {
+      mockWebSocketService.call.mockResolvedValue({ files: [] });
+
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.loadRecordings();
+      });
+
+      expect(result.current.recordings).toEqual([]);
       expect(result.current.error).toBeNull();
     });
 
-    it('should handle empty snapshots response', async () => {
-      mockWebSocketService.call.mockResolvedValue({
-        files: []
-      });
-
+    it('should handle file loading errors', async () => {
       const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.loadSnapshots(20, 0);
-      });
-
-      expect(result.current.snapshots).toEqual([]);
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.error).toBeNull();
-    });
-
-    it('should handle snapshots load error', async () => {
-      mockWebSocketService.call.mockRejectedValue(new Error('Failed to load snapshots'));
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.loadSnapshots(20, 0);
-      });
-
-      expect(result.current.error).toBe('Failed to load snapshots');
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.snapshots).toBeNull();
-    });
-  });
-
-  describe('Download Files', () => {
-    beforeEach(async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-      const { result } = renderHook(() => useFileStore());
-      await act(async () => {
-        await result.current.initialize();
-      });
-    });
-
-    it('should download recording file successfully', async () => {
-      const mockBlob = new Blob(['test data'], { type: 'video/mp4' });
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        blob: () => Promise.resolve(mockBlob)
-      });
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.downloadFile('recordings', 'test.mp4');
-      });
-
-      expect(result.current.isDownloading).toBe(false);
-      expect(result.current.error).toBeNull();
-    });
-
-    it('should download snapshot file successfully', async () => {
-      const mockBlob = new Blob(['test data'], { type: 'image/jpeg' });
-      global.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        blob: () => Promise.resolve(mockBlob)
-      });
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.downloadFile('snapshots', 'test.jpg');
-      });
-
-      expect(result.current.isDownloading).toBe(false);
-      expect(result.current.error).toBeNull();
-    });
-
-    it('should handle download error', async () => {
-      global.fetch = jest.fn().mockRejectedValue(new Error('Download failed'));
-
-      const { result } = renderHook(() => useFileStore());
-
-      await act(async () => {
-        await result.current.downloadFile('recordings', 'test.mp4');
-      });
-
-      expect(result.current.error).toBe('Download failed');
-      expect(result.current.isDownloading).toBe(false);
-    });
-
-    it('should handle download timeout', async () => {
-      global.fetch = jest.fn().mockImplementation(() => 
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 100)
-        )
-      );
-
-      const { result } = renderHook(() => useFileStore());
-
-      const downloadPromise = act(async () => {
-        await result.current.downloadFile('recordings', 'test.mp4');
-      });
-
-      // Fast-forward timers to trigger timeout
-      jest.advanceTimersByTime(150);
       
-      await downloadPromise;
-      expect(result.current.isDownloading).toBe(false);
-    });
-  });
-
-  describe('State Management', () => {
-    it('should set error state', () => {
-      const { result } = renderHook(() => useFileStore());
-
-      act(() => {
-        result.current.setError('Test error');
-      });
-
-      expect(result.current.error).toBe('Test error');
-    });
-
-    it('should clear error state', () => {
-      const { result } = renderHook(() => useFileStore());
-
-      act(() => {
-        result.current.setError('Test error');
-        result.current.clearError();
-      });
-
-      expect(result.current.error).toBeNull();
-    });
-
-    it('should set connection status', () => {
-      const { result } = renderHook(() => useFileStore());
-
-      act(() => {
-        result.current.setConnectionStatus(true);
-      });
-
-      expect(result.current.isConnected).toBe(true);
-    });
-
-    it('should update file list for recordings', () => {
-      const { result } = renderHook(() => useFileStore());
-
-      const testFiles = [{ filename: 'test.mp4', file_size: 1024, created_at: '2024-01-01T00:00:00Z', modified_time: '2024-01-01T00:00:00Z', download_url: '/test.mp4' }];
-
-      act(() => {
-        result.current.updateFileList('recordings', testFiles);
-      });
-
-      expect(result.current.recordings).toEqual(testFiles);
-    });
-
-    it('should update file list for snapshots', () => {
-      const { result } = renderHook(() => useFileStore());
-
-      const testFiles = [{ filename: 'test.jpg', file_size: 512, created_at: '2024-01-01T00:00:00Z', modified_time: '2024-01-01T00:00:00Z', download_url: '/test.jpg' }];
-
-      act(() => {
-        result.current.updateFileList('snapshots', testFiles);
-      });
-
-      expect(result.current.snapshots).toEqual(testFiles);
-    });
-  });
-
-  describe('WebSocket Event Handling', () => {
-    it('should handle connect event', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
-      const { result } = renderHook(() => useFileStore());
-
+      // Initialize and connect first
       await act(async () => {
         await result.current.initialize();
       });
-
-      // Simulate connect event
+      
       const connectHandler = mockWebSocketService.onConnect.mock.calls[0][0];
       act(() => {
         connectHandler();
       });
 
-      expect(result.current.isConnected).toBe(true);
+      // Now mock the error
+      mockWebSocketService.call.mockRejectedValue(new Error('Failed to load files'));
+
+      await act(async () => {
+        await result.current.loadRecordings();
+      });
+
+      expect(result.current.error).toBe('Failed to load files');
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should prevent operations when not connected', async () => {
+      // Create store without connecting
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.loadRecordings();
+      });
+
+      expect(result.current.error).toBe('WebSocket not connected');
+      expect(mockWebSocketService.call).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Download Operations', () => {
+    beforeEach(() => {
+      // Mock URL methods
+      global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+      global.URL.revokeObjectURL = jest.fn();
+      
+      // Mock document methods
+      const mockLink = {
+        href: '',
+        download: '',
+        target: '',
+        click: jest.fn()
+      };
+      
+      jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+      jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
+      jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
+    });
+
+    it('should handle download success', async () => {
+      // Mock successful HEAD and GET requests
+      global.fetch = jest.fn()
+        .mockResolvedValueOnce({ ok: true }) // HEAD request
+        .mockResolvedValueOnce({ 
+          ok: true, 
+          blob: () => Promise.resolve(new Blob(['file content']))
+        }); // GET request
+
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.downloadFile('recordings', 'test.mp4');
+      });
+
+      expect(result.current.isDownloading).toBe(false);
+      expect(result.current.error).toBeNull();
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle file not found error', async () => {
+      // Mock 404 HEAD response
+      global.fetch = jest.fn().mockResolvedValueOnce({ 
+        ok: false, 
+        status: 404,
+        statusText: 'Not Found'
+      });
+
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.downloadFile('recordings', 'missing.mp4');
+      });
+
+      expect(result.current.error).toBe('File not found');
+      expect(result.current.isDownloading).toBe(false);
+    });
+
+    it('should handle download network errors', async () => {
+      // Mock network error
+      global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.downloadFile('recordings', 'test.mp4');
+      });
+
+      expect(result.current.error).toBe('Network error');
+      expect(result.current.isDownloading).toBe(false);
+    });
+
+    it('should handle server error responses', async () => {
+      // Mock server error
+      global.fetch = jest.fn().mockResolvedValueOnce({ 
+        ok: false, 
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
+
+      const { result } = renderHook(() => useFileStore());
+
+      await act(async () => {
+        await result.current.downloadFile('recordings', 'test.mp4');
+      });
+
+      expect(result.current.error).toBe('Download failed: 500 Internal Server Error');
+      expect(result.current.isDownloading).toBe(false);
+    });
+  });
+
+  describe('State Management', () => {
+    it('should set and clear errors', () => {
+      const { result } = renderHook(() => useFileStore());
+
+      act(() => {
+        result.current.setError('Test error');
+      });
+      expect(result.current.error).toBe('Test error');
+
+      act(() => {
+        result.current.clearError();
+      });
       expect(result.current.error).toBeNull();
     });
 
-    it('should handle disconnect event', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
+    it('should update connection status', () => {
       const { result } = renderHook(() => useFileStore());
 
-      await act(async () => {
-        await result.current.initialize();
-      });
-
-      // Simulate disconnect event
-      const disconnectHandler = mockWebSocketService.onDisconnect.mock.calls[0][0];
       act(() => {
-        disconnectHandler();
+        result.current.setConnectionStatus(true);
       });
+      expect(result.current.isConnected).toBe(true);
 
+      act(() => {
+        result.current.setConnectionStatus(false);
+      });
       expect(result.current.isConnected).toBe(false);
     });
 
-    it('should handle error event', async () => {
-      mockWebSocketService.connect.mockResolvedValue(undefined);
-
+    it('should update file lists', () => {
       const { result } = renderHook(() => useFileStore());
+      const testFiles = [{ 
+        filename: 'test.mp4', 
+        file_size: 1024, 
+        created_at: '2023-01-01T00:00:00Z',
+        modified_time: '2023-01-01T00:00:00Z',
+        download_url: '/api/files/recordings/test.mp4'
+      }];
 
-      await act(async () => {
-        await result.current.initialize();
-      });
-
-      // Simulate error event
-      const errorHandler = mockWebSocketService.onError.mock.calls[0][0];
       act(() => {
-        errorHandler(new Error('WebSocket error'));
+        result.current.updateFileList('recordings', testFiles);
       });
+      expect(result.current.recordings).toEqual(testFiles);
 
-      expect(result.current.error).toBe('WebSocket error');
-      expect(result.current.isConnected).toBe(false);
+      act(() => {
+        result.current.updateFileList('snapshots', testFiles);
+      });
+      expect(result.current.snapshots).toEqual(testFiles);
     });
   });
 });

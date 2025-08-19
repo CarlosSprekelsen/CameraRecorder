@@ -447,3 +447,50 @@ const tester = new RealTimeUpdateTester();
 tester.runTests().catch(console.error);
 
 export default RealTimeUpdateTester;
+
+// Add Jest test functions for performance testing
+describe('Realtime Updates Performance Tests', () => {
+  let tester;
+
+  beforeAll(() => {
+    tester = new RealTimeUpdateTester();
+  });
+
+  afterAll(() => {
+    if (tester) {
+      tester.cleanup();
+    }
+  });
+
+  test('should test realtime updates performance', async () => {
+    await expect(tester.runTests()).resolves.not.toThrow();
+  }, 60000);
+
+  test('should validate WebSocket connection', async () => {
+    await expect(tester.testWebSocketConnection()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate notification handling', async () => {
+    await expect(tester.testNotificationHandling()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate camera status updates', async () => {
+    await expect(tester.testCameraStatusUpdates()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate recording progress', async () => {
+    await expect(tester.testRecordingProgress()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate error recovery', async () => {
+    await expect(tester.testErrorRecovery()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate state synchronization', async () => {
+    await expect(tester.testStateSynchronization()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate performance optimization', async () => {
+    await expect(tester.testPerformanceOptimization()).resolves.not.toThrow();
+  }, 15000);
+});

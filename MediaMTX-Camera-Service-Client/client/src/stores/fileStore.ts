@@ -201,9 +201,30 @@ export const useFileStore = create<FileStore>()(
             : 'http://localhost:8003';
           const downloadUrl = `${baseUrl}/files/${fileType}/${encodeURIComponent(filename)}`;
 
-          // Create a temporary anchor element to trigger download
+          // First check if file exists by making a HEAD request
+          const headResponse = await fetch(downloadUrl, { method: 'HEAD' });
+          
+          if (!headResponse.ok) {
+            if (headResponse.status === 404) {
+              throw new Error('File not found');
+            } else {
+              throw new Error(`Download failed: ${headResponse.status} ${headResponse.statusText}`);
+            }
+          }
+
+          // File exists, proceed with download
+          const response = await fetch(downloadUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+          }
+
+          // Create blob and download
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
           const link = document.createElement('a');
-          link.href = downloadUrl;
+          link.href = url;
           link.download = filename;
           link.target = '_blank';
           
@@ -211,13 +232,13 @@ export const useFileStore = create<FileStore>()(
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-
-          // TODO: Add progress tracking for large files
-          // TODO: Add authentication headers if required
+          
+          // Clean up blob URL
+          window.URL.revokeObjectURL(url);
           
         } catch (error) {
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to download file' 
+            error: error instanceof Error ? error.message : 'Download failed' 
           });
         } finally {
           set({ isDownloading: false });

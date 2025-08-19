@@ -463,3 +463,46 @@ const tester = new RealTimeImplementationTester();
 tester.runTests().catch(console.error);
 
 export default RealTimeImplementationTester;
+
+// Add Jest test functions for integration testing
+describe('Realtime Features Integration Tests', () => {
+  let tester;
+
+  beforeAll(() => {
+    tester = new RealTimeImplementationTester();
+  });
+
+  afterAll(() => {
+    if (tester) {
+      tester.cleanup();
+    }
+  });
+
+  test('should test realtime features', async () => {
+    await expect(tester.runTests()).resolves.not.toThrow();
+  }, 30000);
+
+  test('should validate WebSocket service', async () => {
+    await expect(tester.testWebSocketService()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate notification handling', async () => {
+    await expect(tester.testNotificationHandling()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate state management', async () => {
+    await expect(tester.testStateManagement()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate error recovery', async () => {
+    await expect(tester.testErrorRecovery()).resolves.not.toThrow();
+  }, 10000);
+
+  test('should validate performance optimization', async () => {
+    await expect(tester.testPerformanceOptimization()).resolves.not.toThrow();
+  }, 15000);
+
+  test('should validate component integration', async () => {
+    await expect(tester.testComponentIntegration()).resolves.not.toThrow();
+  }, 10000);
+});
