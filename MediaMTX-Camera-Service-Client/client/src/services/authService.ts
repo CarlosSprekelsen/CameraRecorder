@@ -44,7 +44,7 @@ export class AuthService {
   
   private tokenRefreshTimer?: NodeJS.Timeout;
   private readonly tokenRefreshThreshold = 5 * 60 * 1000; // 5 minutes before expiry
-  private readonly maxTokenAge = 24 * 60 * 60 * 1000; // 24 hours max
+
 
   /**
    * Login with JWT token
@@ -81,7 +81,7 @@ export class AuthService {
    * @param params Original JSON-RPC parameters
    * @returns Parameters with authentication token included
    */
-  includeAuth(params: any = {}): any {
+  includeAuth(params: Record<string, unknown> = {}): Record<string, unknown> {
     if (!this.authState.authenticated || !this.authState.token) {
       throw new Error('Not authenticated. Call login() first.');
     }
@@ -129,7 +129,7 @@ export class AuthService {
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
       method: RPC_METHODS.AUTHENTICATE,
-      params: authParams as Record<string, unknown>,
+      params: authParams as unknown as Record<string, unknown>,
       id: Date.now()
     };
 
@@ -257,9 +257,9 @@ export class AuthService {
   /**
    * Decode JWT payload without verification (for expiry checking)
    * @param token JWT token string
-   * @returns any Decoded payload
+   * @returns Decoded payload
    */
-  private decodeJWTPayload(token: string): any {
+  private decodeJWTPayload(token: string): { exp?: number; iat?: number; user_id?: string; role?: string } {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {

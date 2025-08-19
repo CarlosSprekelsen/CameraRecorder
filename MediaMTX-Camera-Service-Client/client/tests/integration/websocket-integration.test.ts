@@ -271,9 +271,10 @@ describe('WebSocket Integration Tests', () => {
  * Check if MediaMTX Camera Service is available
  */
 async function checkServerAvailability(): Promise<boolean> {
+  const testWebSocketUrl = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
   try {
     // Try to connect to WebSocket endpoint
-    const ws = new WebSocket(TEST_WEBSOCKET_URL);
+    const ws = new WebSocket(testWebSocketUrl);
     
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {

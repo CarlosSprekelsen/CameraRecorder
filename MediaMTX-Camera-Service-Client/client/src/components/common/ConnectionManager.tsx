@@ -21,7 +21,6 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
     error,
     autoReconnect,
     connect,
-    disconnect,
     forceReconnect,
     setAutoReconnect,
     clearError
@@ -47,10 +46,6 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
 
   const handleConnect = () => {
     connect().catch(console.error);
-  };
-
-  const handleDisconnect = () => {
-    disconnect();
   };
 
   const handleForceReconnect = () => {
@@ -155,7 +150,7 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
           <Button 
             variant="outlined" 
             onClick={handleToggleAutoReconnect}
-            color={autoReconnect ? 'success' : 'default'}
+            color={autoReconnect ? 'success' : 'primary'}
           >
             Auto-reconnect {autoReconnect ? 'ON' : 'OFF'}
           </Button>
@@ -205,7 +200,7 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
           <Button 
             variant="outlined" 
             onClick={handleToggleAutoReconnect}
-            color={autoReconnect ? 'success' : 'default'}
+            color={autoReconnect ? 'success' : 'primary'}
           >
             Auto-reconnect {autoReconnect ? 'ON' : 'OFF'}
           </Button>

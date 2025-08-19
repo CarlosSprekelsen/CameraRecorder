@@ -1,6 +1,12 @@
 import WebSocket from 'ws';
+import { generateValidToken, generateInvalidToken, generateExpiredToken, validateTestEnvironment } from './auth-utils.js';
 
 console.log('Testing Security and Data Protection...');
+
+// Validate test environment first
+if (!validateTestEnvironment()) {
+    process.exit(1);
+}
 
 let testResults = {
     authentication: false,
@@ -26,7 +32,7 @@ async function testAuthentication() {
                 params: {
                     device: "/dev/video0",
                     filename: "test.jpg",
-                    auth_token: "invalid_token_123"
+                    auth_token: generateInvalidToken()
                 },
                 id: 1
             };
@@ -71,8 +77,8 @@ async function testAuthorization() {
         const ws = new WebSocket('ws://localhost:8002');
         
         ws.on('open', function open() {
-            // Test with valid token but unauthorized operation
-            const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF91c2VyIiwicm9sZSI6Im9wZXJhdG9yIiwiaWF0IjoxNzU1NTUyNDgwLCJleHAiOjE3NTU2Mzg4ODB9.9jY7U8hz_jLh8wOjJ4Z_DONv-i-4BtmFl0ki8Ic7WWc';
+            // Test with valid token
+            const validToken = generateValidToken('test_user', 'operator');
             
             const authRequest = {
                 jsonrpc: "2.0",
@@ -99,7 +105,7 @@ async function testAuthorization() {
                     console.log('✅ Test 2: Authorization properly enforces permissions');
                     testResults.authorization = true;
                 } else {
-                    console.log('❌ Test 2: Authorization not properly enforced');
+                    console.log('❌ Test 2: Authorization test inconclusive');
                 }
                 
                 ws.close();

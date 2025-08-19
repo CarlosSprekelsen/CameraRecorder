@@ -10,7 +10,6 @@ const Dashboard: React.FC = () => {
     cameras,
     isLoading,
     isRefreshing,
-    isConnecting,
     isConnected,
     error,
     serverInfo,
@@ -53,8 +52,6 @@ const Dashboard: React.FC = () => {
         </Typography>
         
         <ConnectionStatus 
-          isConnected={isConnected}
-          isConnecting={isConnecting}
           onRefresh={handleRefresh}
         />
         

@@ -182,6 +182,27 @@ class PerformanceConfig:
         "file_listing": 1.0
     })
     
+    # Multi-tier snapshot capture configuration for optimal user experience
+    snapshot_tiers: Dict[str, float] = field(default_factory=lambda: {
+        # Tier 1: Immediate RTSP capture (when stream is already ready)
+        "tier1_rtsp_ready_check_timeout": 1.0,    # seconds - Quick check if RTSP stream is ready
+        
+        # Tier 2: Quick stream activation (when RTSP needs to be started)
+        "tier2_activation_timeout": 3.0,          # seconds - Time to wait for stream activation
+        "tier2_activation_trigger_timeout": 1.0,  # seconds - Timeout for triggering activation
+        
+        # Tier 3: Direct camera capture (fallback when RTSP activation fails)
+        "tier3_direct_capture_timeout": 5.0,      # seconds - Timeout for direct camera capture
+        
+        # Overall snapshot operation timeout
+        "total_operation_timeout": 10.0,          # seconds - Maximum total time for snapshot operation
+        
+        # User experience thresholds
+        "immediate_response_threshold": 0.5,      # seconds - Consider response "immediate" if under this
+        "acceptable_response_threshold": 2.0,     # seconds - Consider response "acceptable" if under this
+        "slow_response_threshold": 5.0            # seconds - Consider response "slow" if over this
+    })
+    
     optimization: Dict[str, Any] = field(default_factory=lambda: {
         "enable_caching": True,
         "cache_ttl": 300,

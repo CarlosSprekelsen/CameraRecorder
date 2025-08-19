@@ -170,7 +170,7 @@ describe('FileManager Component', () => {
 
   describe('File Download', () => {
     it('should call downloadFile when download button is clicked', async () => {
-      mockStore.downloadFile.mockResolvedValue();
+      mockStore.downloadFile.mockResolvedValue(undefined);
 
       renderWithProviders(<FileManager />);
 
@@ -183,7 +183,7 @@ describe('FileManager Component', () => {
     });
 
     it('should call downloadFile with correct file type for snapshots', async () => {
-      mockStore.downloadFile.mockResolvedValue();
+      mockStore.downloadFile.mockResolvedValue(undefined);
 
       renderWithProviders(<FileManager />);
 

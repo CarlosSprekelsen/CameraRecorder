@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { refreshCameras } = useCameraStore();
-  const { status, isConnecting } = useConnectionStore();
+  const { status } = useConnectionStore();
 
   return (
     <AppBar

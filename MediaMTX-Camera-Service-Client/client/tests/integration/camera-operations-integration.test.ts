@@ -8,15 +8,13 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCameraStore } from '../../src/stores/cameraStore';
 import { useFileStore } from '../../src/stores/fileStore';
-import { RPC_METHODS, ERROR_CODES } from '../../src/types';
+import { createWebSocketServiceSync } from '../../src/services/websocket';
 
-// Test configuration
-const TEST_DEVICE = 'test-camera-1';
-const TEST_WS_URL = process.env.TEST_WS_URL || 'ws://localhost:8002/ws';
+const TEST_WS_URL = 'ws://localhost:8002/ws';
 
 describe('Camera Operations Integration', () => {
-  let cameraStore: ReturnType<typeof useCameraStore>;
-  let fileStore: ReturnType<typeof useFileStore>;
+  let cameraStore: any;
+  let fileStore: any;
 
   beforeAll(async () => {
     // Initialize stores

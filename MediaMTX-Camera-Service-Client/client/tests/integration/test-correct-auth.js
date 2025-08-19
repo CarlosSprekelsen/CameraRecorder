@@ -1,6 +1,16 @@
 import WebSocket from 'ws';
+import { generateValidToken, validateTestEnvironment } from './auth-utils.js';
 
 console.log('Testing camera operations with correct authentication...');
+
+// Validate test environment first
+if (!validateTestEnvironment()) {
+    process.exit(1);
+}
+
+// Generate valid token using current server secret
+const validToken = generateValidToken('test_user', 'operator');
+console.log('🔐 Generated valid JWT token using current server secret');
 
 const ws = new WebSocket('ws://localhost:8002');
 
@@ -49,9 +59,9 @@ ws.on('message', function message(data) {
                     jsonrpc: "2.0",
                     method: "take_snapshot",
                     params: {
-                        camera_id: camera.device,
-                        resolution: "640x480",
-                        auth_token: "admin_token_123" // Test token
+                        device: camera.device,
+                        filename: "test_snapshot.jpg",
+                        auth_token: validToken
                     },
                     id: 2
                 };
@@ -71,10 +81,9 @@ ws.on('message', function message(data) {
                 jsonrpc: "2.0",
                 method: "start_recording",
                 params: {
-                    camera_id: "/dev/video0",
+                    device: "/dev/video0",
                     duration: 5,
-                    resolution: "640x480",
-                    auth_token: "admin_token_123"
+                    auth_token: validToken
                 },
                 id: 3
             };
@@ -91,20 +100,20 @@ ws.on('message', function message(data) {
             // Test 4: Get file list for download
             const fileListRequest = {
                 jsonrpc: "2.0",
-                method: "get_files",
+                method: "list_snapshots",
                 params: {
-                    auth_token: "admin_token_123"
+                    auth_token: validToken
                 },
                 id: 4
             };
             
             ws.send(JSON.stringify(fileListRequest));
-            console.log('📡 Test 4: Sent file list request');
+            console.log('📡 Test 4: Sent snapshots list request');
             
         } else if (response.result && response.id === 4) {
             // File list response
-            console.log('✅ Test 4: File list received successfully');
-            console.log('📁 Files available:', response.result.files.length);
+            console.log('✅ Test 4: Snapshots list received successfully');
+            console.log('📁 Snapshots available:', response.result.snapshots ? response.result.snapshots.length : 0);
             testResults.fileDownload = true;
             
             // Complete all tests
@@ -133,8 +142,8 @@ ws.on('message', function message(data) {
                     jsonrpc: "2.0",
                     method: "take_snapshot",
                     params: {
-                        camera_id: camera.device,
-                        resolution: "640x480"
+                        device: camera.device,
+                        filename: "test_snapshot_noauth.jpg"
                     },
                     id: 5
                 };
@@ -142,27 +151,6 @@ ws.on('message', function message(data) {
                 ws.send(JSON.stringify(snapshotRequest));
                 console.log('📡 Test 5: Sent snapshot request without auth');
             }
-        } else if (response.result && response.id === 5) {
-            // Snapshot without auth worked
-            console.log('✅ Test 5: Snapshot taken successfully without auth');
-            console.log('📸 Snapshot file:', response.result.filename);
-            testResults.snapshot = true;
-            
-            // Complete tests
-            setTimeout(() => {
-                ws.close();
-                console.log('\n🎯 TEST RESULTS SUMMARY:');
-                console.log('Connection:', testResults.connection ? '✅ PASS' : '❌ FAIL');
-                console.log('Camera List:', testResults.cameraList ? '✅ PASS' : '❌ FAIL');
-                console.log('Snapshot:', testResults.snapshot ? '✅ PASS' : '❌ FAIL');
-                console.log('Recording:', testResults.recording ? '✅ PASS' : '❌ FAIL');
-                console.log('File Download:', testResults.fileDownload ? '✅ PASS' : '❌ FAIL');
-                
-                const coreTestsPassed = testResults.connection && testResults.cameraList && testResults.snapshot;
-                console.log('\n🎉 OVERALL RESULT:', coreTestsPassed ? '✅ CORE TESTS PASSED' : '❌ CORE TESTS FAILED');
-                
-                process.exit(coreTestsPassed ? 0 : 1);
-            }, 1000);
         }
         
     } catch (error) {

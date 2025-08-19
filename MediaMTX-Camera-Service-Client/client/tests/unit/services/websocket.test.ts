@@ -8,7 +8,7 @@
  * - PWA service worker compatibility
  */
 
-import { WebSocketService, createWebSocketService, WebSocketError } from '../../../src/services/websocket';
+import { WebSocketService, createWebSocketServiceSync, WebSocketError } from '../../../src/services/websocket';
 
 // Mock WebSocket global
 class MockWebSocket {
@@ -62,7 +62,7 @@ describe('WebSocketService', () => {
     jest.clearAllMocks();
     jest.clearAllTimers();
     
-    service = createWebSocketService({
+    service = createWebSocketServiceSync({
       url: 'ws://localhost:8002/ws',
       maxReconnectAttempts: 3,
       baseDelay: 100,
@@ -269,7 +269,7 @@ describe('WebSocketService', () => {
       const originalWebSocket = global.WebSocket;
       
       // Test that WebSocket service can be instantiated
-      const swService = createWebSocketService({
+      const swService = createWebSocketServiceSync({
         url: 'ws://localhost:8002/ws'
       });
       
@@ -282,13 +282,13 @@ describe('WebSocketService', () => {
 
   describe('Configuration', () => {
     it('should use default configuration', () => {
-      const defaultService = createWebSocketService();
+      const defaultService = createWebSocketServiceSync();
       
       expect(defaultService).toBeInstanceOf(WebSocketService);
     });
 
     it('should merge custom configuration with defaults', () => {
-      const customService = createWebSocketService({
+      const customService = createWebSocketServiceSync({
         url: 'ws://custom-server:8002/ws',
         requestTimeout: 15000
       });

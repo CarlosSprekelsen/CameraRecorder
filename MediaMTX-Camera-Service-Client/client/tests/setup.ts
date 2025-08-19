@@ -5,7 +5,11 @@
  * - WebSocket mocking
  * - Service worker compatibility
  * - Timer mocking
+ * - DOM testing utilities
  */
+
+// Import jest-dom matchers
+import '@testing-library/jest-dom';
 
 // Mock WebSocket for tests
 class MockWebSocket {
@@ -64,4 +68,13 @@ global.console = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
-}; 
+};
+
+// Ensure React DOM is properly set up for tests
+if (typeof window === 'undefined') {
+  global.window = {} as any;
+}
+
+if (typeof document === 'undefined') {
+  global.document = {} as any;
+} 

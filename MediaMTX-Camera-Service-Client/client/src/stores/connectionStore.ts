@@ -25,7 +25,7 @@ import type {
   CameraStatusNotification, 
   RecordingStatusNotification 
 } from '../types';
-import { NOTIFICATION_METHODS } from '../types';
+
 
 /**
  * Enhanced connection state interface
@@ -73,14 +73,6 @@ interface ConnectionState {
   connectionQuality: 'excellent' | 'good' | 'poor' | 'unstable';
   latency: number | null;
   packetLoss: number | null;
-
-  // Real-time update state
-  realTimeUpdatesEnabled: boolean;
-  lastNotificationTime: Date | null;
-  notificationCount: number;
-  averageNotificationLatency: number;
-  stateSyncEnabled: boolean;
-  componentSyncStatus: Map<string, boolean>;
 
   // Real-time update state
   realTimeUpdatesEnabled: boolean;
@@ -152,16 +144,19 @@ interface ConnectionActions {
   setStateSyncEnabled: (enabled: boolean) => void;
   updateComponentSyncStatus: (componentId: string, synced: boolean) => void;
   
+  // Real-time notification handlers
+  handleRealTimeNotification: (notification: NotificationMessage) => void;
+  handleCameraStatusUpdate: (notification: CameraStatusNotification) => void;
+  handleRecordingStatusUpdate: (notification: RecordingStatusNotification) => void;
+  
+  // State synchronization
+  synchronizeStateAcrossComponents: (notification: NotificationMessage) => void;
+  triggerCameraComponentUpdates: (notification: CameraStatusNotification) => void;
+  triggerRecordingComponentUpdates: (notification: RecordingStatusNotification) => void;
+  
   // Connection testing
   testConnection: () => Promise<boolean>;
   performHealthCheck: () => Promise<boolean>;
-  
-  // Real-time update management
-  enableRealTimeUpdates: () => void;
-  disableRealTimeUpdates: () => void;
-  updateNotificationMetrics: (latency: number) => void;
-  setStateSyncEnabled: (enabled: boolean) => void;
-  updateComponentSyncStatus: (componentId: string, synced: boolean) => void;
   
   // Utility methods
   getConnectionSummary: () => {
@@ -219,14 +214,6 @@ export const useConnectionStore = create<ConnectionStore>()(
       connectionQuality: 'unstable',
       latency: null,
       packetLoss: null,
-
-      // Real-time update state
-      realTimeUpdatesEnabled: true,
-      lastNotificationTime: null,
-      notificationCount: 0,
-      averageNotificationLatency: 0,
-      stateSyncEnabled: true,
-      componentSyncStatus: new Map(),
 
       // Real-time update state
       realTimeUpdatesEnabled: true,
@@ -513,8 +500,8 @@ export const useConnectionStore = create<ConnectionStore>()(
         set({ wsService: service });
       },
 
-      initializeWebSocketService: (url = defaultWebSocketConfig.url) => {
-        const wsService = createWebSocketService({
+      initializeWebSocketService: async (url = defaultWebSocketConfig.url) => {
+        const wsService = await createWebSocketService({
           ...defaultWebSocketConfig,
           url
         });
@@ -740,7 +727,7 @@ export const useConnectionStore = create<ConnectionStore>()(
           });
           
           return true;
-        } catch (error) {
+        } catch {
           set({ isHealthy: false });
           get().incrementErrorCount();
           return false;
@@ -800,14 +787,14 @@ export const useConnectionStore = create<ConnectionStore>()(
         }, 30000); // Check every 30 seconds
         
         // Store interval reference for cleanup
-        (get() as any).healthInterval = healthInterval;
+        (get() as { healthInterval?: NodeJS.Timeout }).healthInterval = healthInterval;
       },
 
       stopHealthMonitoring: () => {
-        const interval = (get() as any).healthInterval;
+        const interval = (get() as { healthInterval?: NodeJS.Timeout }).healthInterval;
         if (interval) {
           clearInterval(interval);
-          (get() as any).healthInterval = null;
+          (get() as { healthInterval?: NodeJS.Timeout }).healthInterval = undefined;
         }
       },
     }),

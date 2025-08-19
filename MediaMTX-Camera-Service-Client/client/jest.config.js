@@ -9,6 +9,23 @@ export default {
   // Test environment
   testEnvironment: 'jsdom',
   
+  // Test environment options
+  testEnvironmentOptions: {
+    url: 'http://localhost:3000',
+    customExportConditions: ['node', 'node-addons']
+  },
+  
+  // Module name mapping for React 19 compatibility
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@tests/(.*)$': '<rootDir>/tests/$1',
+    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/fixtures/fileMock.js',
+    '^react-dom/client$': 'react-dom/client',
+    '^react-dom$': 'react-dom'
+  },
+  
   // Test file patterns
   testMatch: [
     '<rootDir>/tests/**/*.test.{ts,tsx}',
@@ -62,12 +79,18 @@ export default {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@tests/(.*)$': '<rootDir>/tests/$1',
-    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1'
+    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/fixtures/fileMock.js',
+    '^react-dom/client$': 'react-dom/client',
+    '^react-dom$': 'react-dom'
   },
   
   // Transform configuration
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.test.json'
+    }],
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
   
@@ -83,13 +106,6 @@ export default {
   // Test timeout configuration
   testTimeout: 30000, // 30 seconds for integration tests
   
-  // Global test configuration
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.json'
-    }
-  },
-  
   // Performance monitoring
   verbose: true,
   
@@ -100,5 +116,13 @@ export default {
   restoreMocks: true,
   
   // Reset modules between tests
-  resetModules: true
+  resetModules: true,
+  
+  // Module resolution
+  moduleDirectories: ['node_modules', 'src'],
+  
+  // Test environment variables
+  testEnvironmentOptions: {
+    url: 'http://localhost:3000'
+  }
 };

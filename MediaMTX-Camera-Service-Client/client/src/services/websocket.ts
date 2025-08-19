@@ -24,13 +24,47 @@ import type {
   JSONRPCResponse,
   JSONRPCNotification,
   WebSocketMessage,
-  JSONRPCError,
   NotificationMessage,
   CameraStatusNotification,
   RecordingStatusNotification,
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS } from '../types';
+
+// Store interface types for better type safety
+// These interfaces match the actual store state objects returned by getState()
+interface ConnectionStoreInterface {
+  // Error handling
+  setError: (message: string, code?: number) => void;
+  incrementErrorCount: () => void;
+  
+  // Connection timestamps
+  setLastConnected: (date: Date) => void;
+  setLastDisconnected: (date: Date) => void;
+  
+  // Health monitoring
+  setLastHeartbeat: (date: Date) => void;
+  updateHealthScore: (score: number) => void;
+  updateConnectionQuality: (quality: 'excellent' | 'good' | 'poor' | 'unstable') => void;
+  
+  // Performance metrics
+  incrementMessageCount: () => void;
+  updateResponseTime: (time: number) => void;
+  setConnectionUptime: (uptime: number) => void;
+  
+  // Direct state properties (from getState())
+  healthScore: number;
+  lastConnected: Date | null;
+}
+
+interface CameraStoreInterface {
+  handleNotification: (notification: unknown) => void;
+  updateCameraStatus?: (device: string, status: import('../types/camera').CameraStatus) => void;
+  addRecording?: (device: string, recording: import('../types/camera').RecordingSession) => void;
+  removeRecording?: (device: string) => void;
+  updateRecordingProgress?: (device: string, progress: number) => void;
+  clearRecordingProgress?: (device: string) => void;
+}
 
 export class WebSocketError extends Error {
   public code?: number;
@@ -71,8 +105,8 @@ export class WebSocketService {
   private onNotificationHandler?: (notification: NotificationMessage) => void;
 
   // Connection store integration
-  private connectionStore: any = null;
-  private cameraStore: any = null;
+  private connectionStore: ConnectionStoreInterface | null = null;
+  private cameraStore: CameraStoreInterface | null = null;
 
   // Performance tracking
   private notificationCount = 0;
@@ -88,14 +122,14 @@ export class WebSocketService {
   /**
    * Set connection store reference for integration
    */
-  public setConnectionStore(store: any): void {
+  public setConnectionStore(store: ConnectionStoreInterface): void {
     this.connectionStore = store;
   }
 
   /**
    * Set camera store reference for integration
    */
-  public setCameraStore(store: any): void {
+  public setCameraStore(store: CameraStoreInterface): void {
     this.cameraStore = store;
   }
 
@@ -225,8 +259,6 @@ export class WebSocketService {
     console.log(`📤 Sending ${method} (#${requestId})`, params ? JSON.stringify(params) : '');
 
     return new Promise((resolve, reject) => {
-      const startTime = performance.now();
-      
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId);
         const timeoutError = new WebSocketError(`Request timeout for method: ${method}`);
@@ -250,7 +282,7 @@ export class WebSocketService {
         if (this.connectionStore) {
           this.connectionStore.incrementMessageCount();
         }
-      } catch (error) {
+      } catch {
         this.pendingRequests.delete(requestId);
         clearTimeout(timeout);
         const sendError = new WebSocketError('Failed to send request');
@@ -322,6 +354,25 @@ export class WebSocketService {
   }
 
   /**
+   * Test-only accessor for internal state
+   * Only available in test environment
+   */
+  public getTestState() {
+    if (process.env.NODE_ENV === 'test') {
+      return {
+        ws: this.ws,
+        isConnecting: this.isConnecting,
+        isDestroyed: this.isDestroyed,
+        reconnectAttempts: this.reconnectAttempts,
+        pendingRequests: this.pendingRequests,
+        connectionStore: this.connectionStore,
+        cameraStore: this.cameraStore
+      };
+    }
+    return null;
+  }
+
+  /**
    * Start heartbeat to keep connection alive
    */
   private startHeartbeat(): void {
@@ -338,18 +389,18 @@ export class WebSocketService {
           
           console.log('💓 Heartbeat sent');
           
-          // Update connection store with heartbeat metrics
-          if (this.connectionStore) {
-            this.connectionStore.setLastHeartbeat(new Date());
-            this.connectionStore.updateResponseTime(responseTime);
-            this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.getState().healthScore + 5));
-          }
+                  // Update connection store with heartbeat metrics
+        if (this.connectionStore) {
+          this.connectionStore.setLastHeartbeat(new Date());
+          this.connectionStore.updateResponseTime(responseTime);
+          this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.healthScore + 5));
+        }
         } catch (error) {
           console.warn('⚠️ Heartbeat failed:', error);
           
           // Update connection store with heartbeat failure
           if (this.connectionStore) {
-            this.connectionStore.updateHealthScore(Math.max(0, this.connectionStore.getState().healthScore - 10));
+            this.connectionStore.updateHealthScore(Math.max(0, this.connectionStore.healthScore - 10));
           }
           
           // Don't trigger reconnection on heartbeat failure
@@ -379,7 +430,7 @@ export class WebSocketService {
     this.metricsInterval = setInterval(() => {
       if (this.isConnected && this.connectionStore) {
         // Update connection uptime
-        const { lastConnected } = this.connectionStore.getState();
+        const { lastConnected } = this.connectionStore;
         if (lastConnected) {
           const uptime = Date.now() - lastConnected.getTime();
           this.connectionStore.setConnectionUptime(uptime);
@@ -530,7 +581,7 @@ export class WebSocketService {
       
       // Update connection store with successful response
       if (this.connectionStore) {
-        this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.getState().healthScore + 2));
+        this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.healthScore + 2));
       }
       
       resolve(response.result);
@@ -685,28 +736,40 @@ export const defaultWebSocketConfig: WebSocketConfig = {
  * Create a WebSocket service instance
  * Sprint 3: Enhanced for real server integration with connection store integration
  */
-export function createWebSocketService(config: Partial<WebSocketConfig> = {}): WebSocketService {
+export async function createWebSocketService(config: Partial<WebSocketConfig> = {}): Promise<WebSocketService> {
   const finalConfig = { ...defaultWebSocketConfig, ...config };
   console.log('🔧 Creating WebSocket service with config:', finalConfig);
   const service = new WebSocketService(finalConfig);
   
-  // Integrate with connection store if available
-  try {
-    const { useConnectionStore } = require('../stores/connectionStore');
-    const store = useConnectionStore.getState();
-    service.setConnectionStore(store);
-  } catch (error) {
-    console.warn('⚠️ Connection store not available for WebSocket service integration');
-  }
-  
-  // Integrate with camera store if available
-  try {
-    const { useCameraStore } = require('../stores/cameraStore');
-    const store = useCameraStore.getState();
-    service.setCameraStore(store);
-  } catch (error) {
-    console.warn('⚠️ Camera store not available for WebSocket service integration');
+  // Integrate with connection store if available (only in non-test environment)
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      const { useConnectionStore } = await import('../stores/connectionStore');
+      const store = useConnectionStore.getState();
+      service.setConnectionStore(store);
+    } catch {
+      console.warn('⚠️ Connection store not available for WebSocket service integration');
+    }
+    
+    // Integrate with camera store if available
+    try {
+      const { useCameraStore } = await import('../stores/cameraStore');
+      const store = useCameraStore.getState();
+      service.setCameraStore(store);
+    } catch {
+      console.warn('⚠️ Camera store not available for WebSocket service integration');
+    }
   }
   
   return service;
+}
+
+/**
+ * Create a WebSocket service instance synchronously (for testing)
+ * This version skips store integration to avoid async operations in tests
+ */
+export function createWebSocketServiceSync(config: Partial<WebSocketConfig> = {}): WebSocketService {
+  const finalConfig = { ...defaultWebSocketConfig, ...config };
+  console.log('🔧 Creating WebSocket service synchronously with config:', finalConfig);
+  return new WebSocketService(finalConfig);
 } 

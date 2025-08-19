@@ -3,15 +3,12 @@ import { useParams, Navigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
-  Paper, 
-  Grid, 
   Card, 
   CardContent, 
   Button, 
   Alert,
   CircularProgress,
   Chip,
-  Divider,
   FormControl,
   InputLabel,
   Select,
@@ -23,12 +20,12 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material';
+
 import { 
   CameraAlt, 
   Videocam, 
   Stop, 
   Refresh,
-  Download,
   Info
 } from '@mui/icons-material';
 import { useCameraStore } from '../../stores/cameraStore';
@@ -37,24 +34,24 @@ import type { SnapshotFormat, RecordingFormat } from '../../types';
 const CameraDetail: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [snapshotFormat, setSnapshotFormat] = useState<SnapshotFormat>('jpg');
   const [snapshotQuality, setSnapshotQuality] = useState<number>(80);
   const [recordingFormat, setRecordingFormat] = useState<RecordingFormat>('mp4');
   const [recordingDuration, setRecordingDuration] = useState<number | undefined>(undefined);
   const [isUnlimitedRecording, setIsUnlimitedRecording] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
 
   const {
     cameras,
-    selectedCamera,
-    activeRecordings,
-    getCameraStatus,
+    error,
+    selectCamera,
+    takeSnapshot,
     startRecording,
     stopRecording,
-    takeSnapshot,
-    selectCamera,
-    isConnected
+    getCameraStatus,
+    activeRecordings,
+    isConnected,
   } = useCameraStore();
 
   const camera = cameras.find(c => c.device === deviceId);
@@ -69,7 +66,7 @@ const CameraDetail: React.FC = () => {
     if (!deviceId) return;
     
     setIsLoading(true);
-    setError(null);
+    setLocalError(null);
     
     try {
       const result = await takeSnapshot(deviceId, snapshotFormat, snapshotQuality);
@@ -78,7 +75,7 @@ const CameraDetail: React.FC = () => {
         // TODO: Show success notification
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to take snapshot');
+      setLocalError(err instanceof Error ? err.message : 'Failed to take snapshot');
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +85,7 @@ const CameraDetail: React.FC = () => {
     if (!deviceId) return;
     
     setIsLoading(true);
-    setError(null);
+    setLocalError(null);
     
     try {
       const duration = isUnlimitedRecording ? undefined : recordingDuration;
@@ -98,7 +95,7 @@ const CameraDetail: React.FC = () => {
         // TODO: Show success notification
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start recording');
+      setLocalError(err instanceof Error ? err.message : 'Failed to start recording');
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +105,7 @@ const CameraDetail: React.FC = () => {
     if (!deviceId) return;
     
     setIsLoading(true);
-    setError(null);
+    setLocalError(null);
     
     try {
       const result = await stopRecording(deviceId);
@@ -117,7 +114,7 @@ const CameraDetail: React.FC = () => {
         // TODO: Show success notification
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop recording');
+      setLocalError(err instanceof Error ? err.message : 'Failed to stop recording');
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +124,7 @@ const CameraDetail: React.FC = () => {
     if (!deviceId) return;
     
     setIsLoading(true);
-    setError(null);
+    setLocalError(null);
     
     try {
       const updatedCamera = await getCameraStatus(deviceId);
@@ -136,7 +133,7 @@ const CameraDetail: React.FC = () => {
         // TODO: Show success notification
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh camera status');
+      setLocalError(err instanceof Error ? err.message : 'Failed to refresh camera status');
     } finally {
       setIsLoading(false);
     }
@@ -180,15 +177,15 @@ const CameraDetail: React.FC = () => {
         </Stack>
       </Box>
 
-      {error && (
+      {(error || localError) && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {error || localError}
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Camera Status */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -237,10 +234,10 @@ const CameraDetail: React.FC = () => {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Recording Status */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -263,10 +260,10 @@ const CameraDetail: React.FC = () => {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Snapshot Controls */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -306,10 +303,10 @@ const CameraDetail: React.FC = () => {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Recording Controls */}
-        <Grid item xs={12} md={6}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -375,11 +372,11 @@ const CameraDetail: React.FC = () => {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Stream URLs */}
         {camera.streams && (
-          <Grid item xs={12}>
+          <Box sx={{ flex: '1 1 100%', minWidth: 0 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -398,9 +395,9 @@ const CameraDetail: React.FC = () => {
                 </Stack>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         )}
-      </Grid>
+      </Box>
     </Box>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Grid } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import type { CameraDevice } from '../../types';
 import CameraCard from './CameraCard';
 
@@ -22,13 +22,13 @@ const CameraGrid: React.FC<CameraGridProps> = ({ cameras }) => {
   }
 
   return (
-    <Grid container spacing={3}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
       {cameras.map((camera) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={camera.device}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 0 }} key={camera.device}>
           <CameraCard camera={camera} />
-        </Grid>
+        </Box>
       ))}
-    </Grid>
+    </Box>
   );
 };
 

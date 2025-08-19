@@ -87,7 +87,7 @@ export const useFileStore = create<FileStore>()(
         }
 
         try {
-          const newWsService = createWebSocketService({
+          const newWsService = await createWebSocketService({
             url: wsUrl,
             reconnectInterval: 5000,
             maxReconnectAttempts: 5,
@@ -149,7 +149,7 @@ export const useFileStore = create<FileStore>()(
           });
 
           const normalized = normalizeFileListResponse(response);
-          set({ recordings: normalized.files });
+          set({ recordings: normalized.files as FileItem[] });
 
         } catch (error) {
           set({ 
@@ -178,7 +178,7 @@ export const useFileStore = create<FileStore>()(
           });
 
           const normalized = normalizeFileListResponse(response);
-          set({ snapshots: normalized.files });
+          set({ snapshots: normalized.files as FileItem[] });
 
         } catch (error) {
           set({ 

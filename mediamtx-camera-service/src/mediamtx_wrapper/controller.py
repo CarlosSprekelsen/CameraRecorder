@@ -565,6 +565,60 @@ class MediaMTXController:
             )
             raise ConnectionError(error_msg)
 
+    async def _cleanup_orphaned_recording_sessions(self) -> None:
+        """
+        Clean up orphaned recording sessions where FFmpeg processes have died.
+        This prevents "Recording already active" errors when processes have terminated unexpectedly.
+        """
+        orphaned_sessions = []
+        
+        for stream_name, session in self._recording_sessions.items():
+            process = session.get("process")
+            if process and process.returncode is not None:
+                # Process has terminated
+                orphaned_sessions.append(stream_name)
+                self._logger.warning(
+                    f"Found orphaned recording session for {stream_name} - process terminated with code {process.returncode}",
+                    extra={"stream_name": stream_name, "return_code": process.returncode}
+                )
+        
+        # Remove orphaned sessions
+        for stream_name in orphaned_sessions:
+            del self._recording_sessions[stream_name]
+            self._logger.info(f"Cleaned up orphaned recording session for {stream_name}")
+
+    async def _is_stream_actually_recording(self, stream_name: str) -> bool:
+        """
+        Check if a stream is actually recording by verifying the FFmpeg process is still alive.
+        
+        Args:
+            stream_name: Name of the stream to check
+            
+        Returns:
+            True if the stream is actively recording, False otherwise
+        """
+        if stream_name not in self._recording_sessions:
+            return False
+            
+        session = self._recording_sessions[stream_name]
+        process = session.get("process")
+        
+        if not process:
+            return False
+            
+        # Check if process is still running
+        if process.returncode is None:
+            # Process is still running
+            return True
+        else:
+            # Process has terminated - clean up the session
+            self._logger.warning(
+                f"Recording session for {stream_name} exists but process has terminated (return code: {process.returncode})",
+                extra={"stream_name": stream_name, "return_code": process.returncode}
+            )
+            del self._recording_sessions[stream_name]
+            return False
+
     async def start_recording(
         self, stream_name: str, duration: Optional[int] = None, format: str = "mp4"
     ) -> Dict[str, Any]:
@@ -589,7 +643,11 @@ class MediaMTXController:
         if not stream_name:
             raise ValueError("Stream name is required")
 
-        if stream_name in self._recording_sessions:
+        # Clean up any orphaned recording sessions before checking
+        await self._cleanup_orphaned_recording_sessions()
+
+        # Check if stream is actually recording
+        if await self._is_stream_actually_recording(stream_name):
             raise ValueError(f"Recording already active for stream: {stream_name}")
 
         correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
@@ -933,20 +991,97 @@ class MediaMTXController:
         self, stream_name: str, filename: Optional[str] = None, format: str = "jpg", quality: int = 85
     ) -> Dict[str, Any]:
         """
-        Capture a snapshot from the specified stream using FFmpeg with enhanced process management.
+        Capture a snapshot from the specified stream using optimized multi-tier approach.
+        
+        **Multi-Tier Strategy for Optimal User Experience:**
+        
+        This method implements a sophisticated multi-tier approach to ensure fast, reliable
+        snapshot capture while maintaining power efficiency through on-demand stream activation.
+        
+        **Tier 1 - Immediate RTSP Capture (Fastest Path):**
+        - Check if RTSP stream is already active and ready
+        - If ready, capture immediately using FFmpeg from RTSP stream
+        - Expected response time: < 0.5 seconds (immediate)
+        - Use case: Stream already running (e.g., during recording or active viewing)
+        
+        **Tier 2 - Quick Stream Activation (Balanced Path):**
+        - If RTSP stream not ready, trigger on-demand activation
+        - Wait for FFmpeg process to start and stream to become ready
+        - Capture from RTSP once activated
+        - Expected response time: 1-3 seconds (acceptable)
+        - Use case: First snapshot after idle period, power-efficient operation
+        
+        **Tier 3 - Direct Camera Capture (Fallback Path):**
+        - If RTSP activation fails, capture directly from camera device
+        - Bypass MediaMTX entirely, use FFmpeg with v4l2 input
+        - Expected response time: 2-5 seconds (slower but reliable)
+        - Use case: MediaMTX issues, network problems, emergency capture
+        
+        **Tier 4 - Error Handling (Last Resort):**
+        - If all methods fail, return detailed error information
+        - Include timing data and methods attempted for debugging
+        - Expected response time: < 10 seconds (with error details)
+        
+        **Configuration-Driven Performance Tuning:**
+        All timeouts and thresholds are configurable via performance.snapshot_tiers:
+        - tier1_rtsp_ready_check_timeout: Quick RTSP readiness check (default: 1.0s)
+        - tier2_activation_timeout: Stream activation wait time (default: 3.0s)
+        - tier2_activation_trigger_timeout: Activation trigger timeout (default: 1.0s)
+        - tier3_direct_capture_timeout: Direct camera capture timeout (default: 5.0s)
+        - total_operation_timeout: Maximum total operation time (default: 10.0s)
+        - immediate_response_threshold: Consider "immediate" if under (default: 0.5s)
+        - acceptable_response_threshold: Consider "acceptable" if under (default: 2.0s)
+        - slow_response_threshold: Consider "slow" if over (default: 5.0s)
+        
+        **User Experience Optimization:**
+        - Prioritizes speed when possible (Tier 1)
+        - Balances power efficiency with responsiveness (Tier 2)
+        - Provides reliable fallback for edge cases (Tier 3)
+        - Offers detailed feedback for troubleshooting (Tier 4)
+        
+        **Performance Characteristics:**
+        - Best case (Tier 1): < 0.5 seconds - immediate response
+        - Typical case (Tier 2): 1-3 seconds - acceptable for photo capture
+        - Fallback case (Tier 3): 2-5 seconds - slower but reliable
+        - Error case (Tier 4): < 10 seconds - with detailed error information
+        
+        **Power Efficiency:**
+        - No unnecessary FFmpeg processes when streams are idle
+        - On-demand activation only when needed
+        - Automatic cleanup of failed activation attempts
+        - Maintains battery life for mobile/embedded deployments
 
         Args:
-            stream_name: Name of the stream to capture
-            filename: Custom filename (None for auto-generated)
-            format: Image format (jpg, png)
-            quality: Image quality (1-100)
+            stream_name: Name of the stream to capture from (e.g., "camera0")
+            filename: Optional filename for the snapshot (auto-generated if not provided)
+            format: Image format ("jpg" or "png")
+            quality: Image quality (1-100 for jpg, ignored for png)
 
         Returns:
-            Dict containing snapshot information
+            Dict containing snapshot capture information with the following structure:
+            {
+                "stream_name": str,           # Stream name (e.g., "camera0")
+                "filename": str,              # Generated filename
+                "status": str,                # "completed", "failed", or "timeout"
+                "timestamp": str,             # ISO timestamp of capture
+                "file_size": int,             # File size in bytes (0 if failed)
+                "file_path": str,             # Full path to snapshot file
+                "capture_method": str,        # "rtsp", "direct_camera", or "failed"
+                "capture_time": float,        # Total capture time in seconds
+                "tier_used": int,             # Which tier was successful (1, 2, 3, or 4)
+                "user_experience": str,       # "immediate", "acceptable", "slow", or "failed"
+                "error": str,                 # Error message if failed
+                "capture_methods_tried": list # List of methods attempted
+            }
 
         Raises:
-            ValueError: If stream does not exist
             ConnectionError: If MediaMTX is unreachable
+            ValueError: If stream name is invalid or directory not writable
+
+        Example:
+            >>> result = await controller.take_snapshot("camera0", format="jpg", quality=85)
+            >>> print(f"Snapshot captured in {result['capture_time']:.2f}s using {result['capture_method']}")
+            Snapshot captured in 0.3s using rtsp
         """
         if not self._session:
             raise ConnectionError("MediaMTX controller not started")
@@ -957,200 +1092,399 @@ class MediaMTXController:
         correlation_id = get_correlation_id() or str(uuid.uuid4())[:8]
         set_correlation_id(correlation_id)
 
-        ffmpeg_process = None
+        # Get performance configuration for timeouts and thresholds
+        performance_config = getattr(self, '_performance_config', {})
+        snapshot_tiers_config = performance_config.get('snapshot_tiers', {
+            'tier1_rtsp_ready_check_timeout': 1.0,
+            'tier2_activation_timeout': 3.0,
+            'tier2_activation_trigger_timeout': 1.0,
+            'tier3_direct_capture_timeout': 5.0,
+            'total_operation_timeout': 10.0,
+            'immediate_response_threshold': 0.5,
+            'acceptable_response_threshold': 2.0,
+            'slow_response_threshold': 5.0
+        })
 
+        # Generate filename if not provided
+        if not filename:
+            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"{stream_name}_snapshot_{timestamp}.{format}"
+
+        # Validate snapshots directory
         try:
-            # Generate filename if not provided
-            if not filename:
-                timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-                filename = f"{stream_name}_snapshot_{timestamp}.{format}"
-
-            # Validate snapshots directory with enhanced error handling
-            try:
-                os.makedirs(self._snapshots_path, exist_ok=True)
-                # Test write permissions
-                test_file = os.path.join(
-                    self._snapshots_path, f".write_test_{uuid.uuid4().hex[:8]}"
-                )
-                with open(test_file, "w") as f:
-                    f.write("test")
-                os.remove(test_file)
-            except (PermissionError, OSError) as e:
-                error_msg = (
-                    f"Cannot write to snapshots directory {self._snapshots_path}: {e}"
-                )
-                self._logger.error(
-                    error_msg,
-                    extra={
-                        "correlation_id": correlation_id,
-                        "stream_name": stream_name,
-                    },
-                )
-                return {
-                    "stream_name": stream_name,
-                    "filename": filename,
-                    "status": "failed",
-                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "file_size": 0,
-                    "error": error_msg,
-                }
-
-            snapshot_path = os.path.join(self._snapshots_path, filename)
-
-            # Use FFmpeg to capture snapshot from RTSP stream
-            rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
-
-            self._logger.info(
-                f"Capturing snapshot from {rtsp_url} to {snapshot_path}",
-                extra={
-                    "correlation_id": correlation_id,
-                    "stream_name": stream_name,
-                    "source_file": filename,
-                },
+            os.makedirs(self._snapshots_path, exist_ok=True)
+            test_file = os.path.join(
+                self._snapshots_path, f".write_test_{uuid.uuid4().hex[:8]}"
             )
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.remove(test_file)
+        except (PermissionError, OSError) as e:
+            error_msg = f"Cannot write to snapshots directory {self._snapshots_path}: {e}"
+            self._logger.error(error_msg, extra={"correlation_id": correlation_id, "stream_name": stream_name})
+            return {
+                "stream_name": stream_name,
+                "filename": filename,
+                "status": "failed",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": error_msg,
+                "tier_used": 0,
+                "user_experience": "failed"
+            }
 
-            # Get FFmpeg configuration for snapshots
+        snapshot_path = os.path.join(self._snapshots_path, filename)
+        start_time = time.time()
+        capture_methods_tried = []
+
+        # Tier 1: Check if RTSP stream is immediately ready
+        tier1_timeout = snapshot_tiers_config.get('tier1_rtsp_ready_check_timeout', 1.0)
+        self._logger.info(f"Tier 1: Checking RTSP stream readiness for {stream_name} (timeout: {tier1_timeout}s)", 
+                         extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
+        
+        capture_methods_tried.append("rtsp_immediate")
+        stream_ready = await self.check_stream_readiness(stream_name, timeout=tier1_timeout)
+        
+        if stream_ready:
+            # Fast path: RTSP stream is ready, capture immediately
+            self._logger.info(f"Tier 1: RTSP stream ready, capturing immediately for {stream_name}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
+            
+            result = await self._capture_snapshot_from_rtsp(stream_name, snapshot_path, filename, format, quality, correlation_id)
+            capture_time = time.time() - start_time
+            
+            # Determine user experience based on response time
+            user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
+            
+            return {
+                **result,
+                "capture_time": capture_time,
+                "tier_used": 1,
+                "user_experience": user_experience,
+                "capture_methods_tried": capture_methods_tried
+            }
+
+        # Tier 2: RTSP stream not ready, attempt quick activation
+        tier2_activation_timeout = snapshot_tiers_config.get('tier2_activation_timeout', 3.0)
+        tier2_trigger_timeout = snapshot_tiers_config.get('tier2_activation_trigger_timeout', 1.0)
+        
+        self._logger.info(f"Tier 2: RTSP stream not ready, attempting quick activation for {stream_name} (timeout: {tier2_activation_timeout}s)", 
+                         extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 2})
+        
+        capture_methods_tried.append("rtsp_activation")
+        
+        # Trigger on-demand activation with configurable timeout
+        await self._trigger_stream_activation(stream_name, correlation_id)
+        
+        # Wait for stream to become ready with user-friendly timeout
+        stream_ready = await self._wait_for_stream_readiness(stream_name, tier2_activation_timeout, correlation_id)
+        
+        if stream_ready:
+            # Success: Stream activated, capture from RTSP
+            activation_time = time.time() - start_time
+            self._logger.info(f"Tier 2: RTSP stream activated in {activation_time:.2f}s for {stream_name}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "activation_time": activation_time, "tier": 2})
+            
+            result = await self._capture_snapshot_from_rtsp(stream_name, snapshot_path, filename, format, quality, correlation_id)
+            capture_time = time.time() - start_time
+            
+            # Determine user experience based on response time
+            user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
+            
+            return {
+                **result,
+                "capture_time": capture_time,
+                "tier_used": 2,
+                "user_experience": user_experience,
+                "capture_methods_tried": capture_methods_tried
+            }
+
+        # Tier 3: RTSP activation failed, attempt direct camera capture
+        tier3_timeout = snapshot_tiers_config.get('tier3_direct_capture_timeout', 5.0)
+        self._logger.info(f"Tier 3: RTSP activation failed, attempting direct camera capture for {stream_name} (timeout: {tier3_timeout}s)", 
+                         extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 3})
+        
+        # Extract device path from stream name (e.g., "camera0" -> "/dev/video0")
+        device_path = f"/dev/video{stream_name.replace('camera', '')}"
+        capture_methods_tried.append("direct_camera")
+        
+        direct_result = await self._capture_snapshot_direct(device_path, snapshot_path, filename, format, quality, correlation_id)
+        
+        if direct_result["status"] == "completed":
+            # Success: Direct camera capture worked
+            capture_time = time.time() - start_time
+            self._logger.info(f"Tier 3: Direct camera capture successful in {capture_time:.2f}s for {stream_name}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "capture_time": capture_time, "tier": 3})
+            
+            # Determine user experience based on response time
+            user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
+            
+            return {
+                **direct_result,
+                "capture_time": capture_time,
+                "tier_used": 3,
+                "user_experience": user_experience,
+                "capture_methods_tried": capture_methods_tried
+            }
+
+        # Tier 4: All methods failed
+        total_time = time.time() - start_time
+        total_timeout = snapshot_tiers_config.get('total_operation_timeout', 10.0)
+        
+        error_msg = f"All snapshot capture methods failed for {stream_name} after {total_time:.2f}s"
+        self._logger.error(error_msg, extra={"correlation_id": correlation_id, "stream_name": stream_name, "total_time": total_time, "tier": 4})
+        
+        return {
+            "stream_name": stream_name,
+            "filename": filename,
+            "status": "failed",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "file_size": 0,
+            "error": error_msg,
+            "capture_time": total_time,
+            "tier_used": 4,
+            "user_experience": "failed",
+            "capture_methods_tried": capture_methods_tried
+        }
+
+    def _determine_user_experience(self, capture_time: float, snapshot_tiers_config: Dict[str, float]) -> str:
+        """
+        Determine user experience rating based on capture time and configured thresholds.
+        
+        Args:
+            capture_time: Total capture time in seconds
+            snapshot_tiers_config: Configuration dictionary with thresholds
+            
+        Returns:
+            User experience rating: "immediate", "acceptable", "slow", or "failed"
+        """
+        immediate_threshold = snapshot_tiers_config.get('immediate_response_threshold', 0.5)
+        acceptable_threshold = snapshot_tiers_config.get('acceptable_response_threshold', 2.0)
+        slow_threshold = snapshot_tiers_config.get('slow_response_threshold', 5.0)
+        
+        if capture_time <= immediate_threshold:
+            return "immediate"
+        elif capture_time <= acceptable_threshold:
+            return "acceptable"
+        elif capture_time <= slow_threshold:
+            return "slow"
+        else:
+            return "slow"  # Anything over slow threshold is still "slow", not "failed"
+
+    async def _capture_snapshot_from_rtsp(
+        self, stream_name: str, snapshot_path: str, filename: str, format: str, quality: int, correlation_id: str
+    ) -> Dict[str, Any]:
+        """
+        Capture snapshot from RTSP stream using FFmpeg with configurable timeouts.
+        
+        Args:
+            stream_name: Name of the stream
+            snapshot_path: Full path for the snapshot file
+            filename: Filename for the snapshot
+            format: Image format
+            quality: Image quality
+            correlation_id: Correlation ID for logging
+            
+        Returns:
+            Dict containing snapshot capture result
+        """
+        ffmpeg_process = None
+        
+        try:
+            rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
+            
+            self._logger.info(f"Capturing snapshot from RTSP: {rtsp_url}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name})
+
+            # Get FFmpeg configuration for snapshots with configurable timeouts
             snapshot_config = self._ffmpeg_config.get("snapshot", {})
             process_creation_timeout = snapshot_config.get("process_creation_timeout", 5.0)
             execution_timeout = snapshot_config.get("execution_timeout", 8.0)
             internal_timeout = snapshot_config.get("internal_timeout", 5000000)
 
-            # FFmpeg command to capture single frame with optimized options for speed
+            # FFmpeg command optimized for speed
             ffmpeg_cmd = [
                 "ffmpeg",
                 "-y",  # Overwrite output file
-                "-i",
-                rtsp_url,  # Input RTSP stream
-                "-vframes",
-                "1",  # Capture only 1 frame
-                "-q:v",
-                str(quality),  # Use specified quality
-                "-timeout",
-                str(internal_timeout),  # Configurable timeout in microseconds
-                "-rtsp_transport",
-                "tcp",  # Use TCP for reliability
-                "-loglevel",
-                "warning",  # Reduce FFmpeg output
-                "-preset",
-                "ultrafast",  # Use fastest encoding preset
+                "-i", rtsp_url,
+                "-vframes", "1",  # Capture only 1 frame
+                "-q:v", str(quality),
+                "-timeout", str(internal_timeout),
+                "-rtsp_transport", "tcp",
+                "-loglevel", "warning",
+                "-preset", "ultrafast",
                 snapshot_path,
             ]
 
-            # Execute FFmpeg with configurable timeouts for reliability
+            # Execute FFmpeg with configurable timeouts
             ffmpeg_process = await asyncio.wait_for(
-                asyncio.create_subprocess_exec(
-                    *ffmpeg_cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                ),
-                timeout=process_creation_timeout,  # Configurable timeout for process creation
+                asyncio.create_subprocess_exec(*ffmpeg_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE),
+                timeout=process_creation_timeout
             )
 
             stdout, stderr = await asyncio.wait_for(
                 ffmpeg_process.communicate(),
-                timeout=execution_timeout,  # Configurable timeout for execution
+                timeout=execution_timeout
             )
 
             if ffmpeg_process.returncode == 0 and os.path.exists(snapshot_path):
-                try:
-                    file_size = os.path.getsize(snapshot_path)
-                    self._logger.info(
-                        f"Successfully captured snapshot for stream {stream_name}: {filename} ({file_size} bytes)",
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                            "source_file": filename,
-                        },
-                    )
-                    return {
-                        "stream_name": stream_name,
-                        "filename": filename,
-                        "status": "completed",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "file_size": file_size,
-                        "file_path": snapshot_path,
-                    }
-                except OSError as e:
-                    self._logger.warning(
-                        f"Could not get file size for snapshot {snapshot_path}: {e}",
-                        extra={
-                            "correlation_id": correlation_id,
-                            "stream_name": stream_name,
-                        },
-                    )
-                    return {
-                        "stream_name": stream_name,
-                        "filename": filename,
-                        "status": "completed",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "file_size": 0,
-                        "file_path": snapshot_path,
-                        "warning": f"Could not determine file size: {e}",
-                    }
+                file_size = os.path.getsize(snapshot_path)
+                self._logger.info(f"RTSP snapshot captured successfully: {filename} ({file_size} bytes)", 
+                                 extra={"correlation_id": correlation_id, "stream_name": stream_name})
+                return {
+                    "stream_name": stream_name,
+                    "filename": filename,
+                    "status": "completed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": file_size,
+                    "file_path": snapshot_path,
+                    "capture_method": "rtsp"
+                }
             else:
-                # FFmpeg failed - log error and return failure
-                error_msg = (
-                    stderr.decode()
-                    if stderr
-                    else f"FFmpeg exit code: {ffmpeg_process.returncode}"
-                )
-                self._logger.error(
-                    f"FFmpeg snapshot failed for {stream_name}: {error_msg}",
-                    extra={
-                        "correlation_id": correlation_id,
-                        "stream_name": stream_name,
-                    },
-                )
+                error_msg = stderr.decode() if stderr else f"FFmpeg exit code: {ffmpeg_process.returncode}"
+                self._logger.error(f"RTSP snapshot failed: {error_msg}", 
+                                  extra={"correlation_id": correlation_id, "stream_name": stream_name})
                 return {
                     "stream_name": stream_name,
                     "filename": filename,
                     "status": "failed",
                     "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "file_size": 0,
-                    "error": f"FFmpeg capture failed: {error_msg}",
+                    "error": f"RTSP capture failed: {error_msg}",
+                    "capture_method": "rtsp"
                 }
 
         except asyncio.TimeoutError:
-            # Enhanced timeout handling with robust process cleanup
-            cleanup_context = await self._cleanup_ffmpeg_process(
-                ffmpeg_process, stream_name, correlation_id
-            )
-
-            timeout_error = (
-                f"Snapshot capture timeout for {stream_name} ({cleanup_context})"
-            )
-            self._logger.error(
-                timeout_error,
-                extra={"correlation_id": correlation_id, "stream_name": stream_name},
-            )
+            cleanup_context = await self._cleanup_ffmpeg_process(ffmpeg_process, stream_name, correlation_id)
+            timeout_error = f"RTSP snapshot timeout for {stream_name} ({cleanup_context})"
+            self._logger.error(timeout_error, extra={"correlation_id": correlation_id, "stream_name": stream_name})
             return {
                 "stream_name": stream_name,
-                "filename": filename or f"{stream_name}_snapshot_timeout.jpg",
+                "filename": filename,
                 "status": "failed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
                 "error": timeout_error,
+                "capture_method": "rtsp"
             }
         except Exception as e:
-            # Enhanced error handling with process cleanup
-            cleanup_context = await self._cleanup_ffmpeg_process(
-                ffmpeg_process, stream_name, correlation_id
-            )
-
-            error_msg = (
-                f"Failed to capture snapshot for {stream_name} ({cleanup_context}): {e}"
-            )
-            self._logger.error(
-                error_msg,
-                extra={"correlation_id": correlation_id, "stream_name": stream_name},
-            )
+            cleanup_context = await self._cleanup_ffmpeg_process(ffmpeg_process, stream_name, correlation_id)
+            error_msg = f"RTSP snapshot error for {stream_name} ({cleanup_context}): {e}"
+            self._logger.error(error_msg, extra={"correlation_id": correlation_id, "stream_name": stream_name})
             return {
                 "stream_name": stream_name,
-                "filename": filename or f"{stream_name}_snapshot_failed.jpg",
+                "filename": filename,
                 "status": "failed",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
                 "error": error_msg,
+                "capture_method": "rtsp"
+            }
+
+    async def _capture_snapshot_direct(
+        self, device_path: str, snapshot_path: str, filename: str, format: str, quality: int, correlation_id: str
+    ) -> Dict[str, Any]:
+        """
+        Capture snapshot directly from camera device using FFmpeg with configurable timeouts.
+        
+        Args:
+            device_path: Camera device path (e.g., "/dev/video0")
+            snapshot_path: Full path for the snapshot file
+            filename: Filename for the snapshot
+            format: Image format
+            quality: Image quality
+            correlation_id: Correlation ID for logging
+            
+        Returns:
+            Dict containing snapshot capture result
+        """
+        ffmpeg_process = None
+        
+        try:
+            self._logger.info(f"Capturing snapshot directly from camera: {device_path}", 
+                             extra={"correlation_id": correlation_id, "device_path": device_path})
+
+            # Get FFmpeg configuration for snapshots with configurable timeouts
+            snapshot_config = self._ffmpeg_config.get("snapshot", {})
+            process_creation_timeout = snapshot_config.get("process_creation_timeout", 5.0)
+            execution_timeout = snapshot_config.get("execution_timeout", 8.0)
+
+            # FFmpeg command for direct camera capture
+            ffmpeg_cmd = [
+                "ffmpeg",
+                "-y",  # Overwrite output file
+                "-f", "v4l2",  # Video4Linux2 input
+                "-i", device_path,
+                "-vframes", "1",  # Capture only 1 frame
+                "-q:v", str(quality),
+                "-loglevel", "warning",
+                "-preset", "ultrafast",
+                snapshot_path,
+            ]
+
+            # Execute FFmpeg with configurable timeouts
+            ffmpeg_process = await asyncio.wait_for(
+                asyncio.create_subprocess_exec(*ffmpeg_cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE),
+                timeout=process_creation_timeout
+            )
+
+            stdout, stderr = await asyncio.wait_for(
+                ffmpeg_process.communicate(),
+                timeout=execution_timeout
+            )
+
+            if ffmpeg_process.returncode == 0 and os.path.exists(snapshot_path):
+                file_size = os.path.getsize(snapshot_path)
+                self._logger.info(f"Direct camera snapshot captured successfully: {filename} ({file_size} bytes)", 
+                                 extra={"correlation_id": correlation_id, "device_path": device_path})
+                return {
+                    "stream_name": device_path,  # Use device path as stream name for direct capture
+                    "filename": filename,
+                    "status": "completed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": file_size,
+                    "file_path": snapshot_path,
+                    "capture_method": "direct_camera"
+                }
+            else:
+                error_msg = stderr.decode() if stderr else f"FFmpeg exit code: {ffmpeg_process.returncode}"
+                self._logger.error(f"Direct camera snapshot failed: {error_msg}", 
+                                  extra={"correlation_id": correlation_id, "device_path": device_path})
+                return {
+                    "stream_name": device_path,
+                    "filename": filename,
+                    "status": "failed",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "file_size": 0,
+                    "error": f"Direct camera capture failed: {error_msg}",
+                    "capture_method": "direct_camera"
+                }
+
+        except asyncio.TimeoutError:
+            cleanup_context = await self._cleanup_ffmpeg_process(ffmpeg_process, device_path, correlation_id)
+            timeout_error = f"Direct camera snapshot timeout for {device_path} ({cleanup_context})"
+            self._logger.error(timeout_error, extra={"correlation_id": correlation_id, "device_path": device_path})
+            return {
+                "stream_name": device_path,
+                "filename": filename,
+                "status": "failed",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": timeout_error,
+                "capture_method": "direct_camera"
+            }
+        except Exception as e:
+            cleanup_context = await self._cleanup_ffmpeg_process(ffmpeg_process, device_path, correlation_id)
+            error_msg = f"Direct camera snapshot error for {device_path} ({cleanup_context}): {e}"
+            self._logger.error(error_msg, extra={"correlation_id": correlation_id, "device_path": device_path})
+            return {
+                "stream_name": device_path,
+                "filename": filename,
+                "status": "failed",
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "file_size": 0,
+                "error": error_msg,
+                "capture_method": "direct_camera"
             }
 
     async def _cleanup_ffmpeg_process(

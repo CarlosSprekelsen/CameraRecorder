@@ -32,7 +32,7 @@ export type SnapshotFormat = 'jpg' | 'png';
 /**
  * Recording status
  */
-export type RecordingStatus = 'STARTED' | 'STOPPED' | 'ERROR';
+export type RecordingStatus = 'STARTED' | 'RECORDING' | 'STOPPED' | 'ERROR';
 
 /**
  * Camera device capabilities

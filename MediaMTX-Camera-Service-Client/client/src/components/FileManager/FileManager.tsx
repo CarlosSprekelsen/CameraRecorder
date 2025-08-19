@@ -15,22 +15,14 @@ import {
   Tab,
   Button,
   IconButton,
-  Chip,
   CircularProgress,
   Alert,
   Pagination,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Stack
 } from '@mui/material';
 import {
   Download,
   Refresh,
-  Search,
-  Sort,
   VideoFile,
   Image
 } from '@mui/icons-material';
@@ -63,9 +55,7 @@ const FileManager: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [sortBy, setSortBy] = useState<'date' | 'size' | 'name'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [searchTerm, setSearchTerm] = useState('');
+
 
   const {
     recordings,
@@ -90,7 +80,7 @@ const FileManager: React.FC = () => {
     }
   }, [tabValue, page, limit, loadRecordings, loadSnapshots]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setPage(1); // Reset to first page when switching tabs
   };
@@ -209,7 +199,7 @@ const FileManager: React.FC = () => {
             <Pagination
               count={Math.ceil((currentFiles?.length || 0) / limit)}
               page={page}
-              onChange={(event, value) => setPage(value)}
+              onChange={(_event, value) => setPage(value)}
               disabled={isLoading}
             />
           </Box>

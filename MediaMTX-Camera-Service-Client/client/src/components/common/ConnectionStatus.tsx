@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import {
   WifiOff as WifiOffIcon,
-  Wifi as WifiIcon,
   Refresh as RefreshIcon,
   HourglassEmpty as ConnectingIcon,
   Error as ErrorIcon,
@@ -22,7 +21,6 @@ import {
   SignalCellular4Bar as ExcellentIcon,
   SignalCellular3Bar as GoodIcon,
   SignalCellular2Bar as PoorIcon,
-  SignalCellular0Bar as UnstableIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Settings as SettingsIcon,
@@ -59,12 +57,10 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     healthScore,
     connectionQuality,
     latency,
-    responseTime,
     messageCount,
     errorCount,
     connectionUptime,
-    autoReconnect,
-    showConnectionAlerts
+    autoReconnect
   } = useConnectionStore();
 
   const handleRefresh = () => {
@@ -406,7 +402,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 variant="outlined"
                 startIcon={<SettingsIcon />}
                 onClick={handleToggleAutoReconnect}
-                color={autoReconnect ? 'success' : 'default'}
+                color={autoReconnect ? 'success' : 'primary'}
               >
                 Auto-reconnect {autoReconnect ? 'ON' : 'OFF'}
               </Button>

@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
   LinearProgress, 
   Chip, 
   Alert, 
-  IconButton, 
-  Tooltip,
   Paper
 } from '@mui/material';
 import { 
@@ -21,6 +19,7 @@ import {
 } from '@mui/icons-material';
 import { useConnectionStore } from '../../stores/connectionStore';
 import { useCameraStore } from '../../stores/cameraStore';
+import { RecordingStatusUpdateParams } from '../../types/camera';
 
 interface RealTimeStatusProps {
   showDetails?: boolean;
@@ -33,7 +32,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   showRecordingProgress = true,
   showConnectionMetrics = false
 }) => {
-  const {
+    const {
     status,
     isConnected,
     isConnecting,
@@ -69,6 +68,12 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
       setLastUpdate(new Date());
     }
   }, [notificationCount, cameraNotificationCount]);
+
+  const handleRecordingStatusUpdate = useCallback((notification: RecordingStatusUpdateParams) => {
+    console.log('📹 Recording status update:', notification);
+    setLastNotification(new Date());
+    setNotificationCount(prev => prev + 1);
+  }, []);
 
   const getConnectionStatusColor = () => {
     switch (status) {
@@ -210,7 +215,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Recording Progress
           </Typography>
-          {Array.from(activeRecordings.entries()).map(([device, recording]) => {
+          {Array.from(activeRecordings.entries()).map(([device, _recording]) => {
             const progress = recordingProgress.get(device) || 0;
             return (
               <Box key={device} sx={{ mb: 1 }}>
