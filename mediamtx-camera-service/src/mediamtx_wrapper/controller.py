@@ -998,24 +998,24 @@ class MediaMTXController:
         This method implements a sophisticated multi-tier approach to ensure fast, reliable
         snapshot capture while maintaining power efficiency through on-demand stream activation.
         
-        **Tier 1 - Immediate RTSP Capture (Fastest Path):**
+        **Tier 1 - USB Direct Capture (Fastest Path for USB Container):**
+        - Capture directly from USB camera device using v4l2
+        - Bypass MediaMTX entirely for maximum speed
+        - Expected response time: < 0.3 seconds (immediate)
+        - Use case: USB container with direct device access (optimized for containerized deployment)
+        
+        **Tier 2 - RTSP Immediate Capture (Fallback for Active Streams):**
         - Check if RTSP stream is already active and ready
         - If ready, capture immediately using FFmpeg from RTSP stream
         - Expected response time: < 0.5 seconds (immediate)
         - Use case: Stream already running (e.g., during recording or active viewing)
         
-        **Tier 2 - Quick Stream Activation (Balanced Path):**
+        **Tier 3 - RTSP Stream Activation (Legacy Path):**
         - If RTSP stream not ready, trigger on-demand activation
         - Wait for FFmpeg process to start and stream to become ready
         - Capture from RTSP once activated
         - Expected response time: 1-3 seconds (acceptable)
         - Use case: First snapshot after idle period, power-efficient operation
-        
-        **Tier 3 - Direct Camera Capture (Fallback Path):**
-        - If RTSP activation fails, capture directly from camera device
-        - Bypass MediaMTX entirely, use FFmpeg with v4l2 input
-        - Expected response time: 2-5 seconds (slower but reliable)
-        - Use case: MediaMTX issues, network problems, emergency capture
         
         **Tier 4 - Error Handling (Last Resort):**
         - If all methods fail, return detailed error information
@@ -1137,53 +1137,54 @@ class MediaMTXController:
         start_time = time.time()
         capture_methods_tried = []
 
-        # Tier 1: Check if RTSP stream is immediately ready
-        tier1_timeout = snapshot_tiers_config.get('tier1_rtsp_ready_check_timeout', 1.0)
-        self._logger.info(f"Tier 1: Checking RTSP stream readiness for {stream_name} (timeout: {tier1_timeout}s)", 
+        # Tier 1: USB Direct Capture (Fastest for USB Container)
+        tier1_timeout = snapshot_tiers_config.get('tier1_usb_direct_timeout', 0.5)
+        self._logger.info(f"Tier 1: Attempting USB direct capture for {stream_name} (timeout: {tier1_timeout}s)", 
                          extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
         
+        capture_methods_tried.append("usb_direct")
+        
+        # Extract device path from stream name (e.g., "camera0" -> "/dev/video0")
+        device_path = f"/dev/video{stream_name.replace('camera', '')}"
+        
+        try:
+            result = await self._capture_snapshot_direct(device_path, snapshot_path, filename, format, quality, correlation_id)
+            capture_time = time.time() - start_time
+            
+            if result["status"] == "completed":
+                # Success: USB direct capture worked
+                self._logger.info(f"Tier 1: USB direct capture successful for {stream_name} in {capture_time:.3f}s", 
+                                 extra={"correlation_id": correlation_id, "stream_name": stream_name, "capture_time": capture_time, "tier": 1})
+                
+                # Determine user experience based on response time
+                user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
+                
+                return {
+                    **result,
+                    "capture_time": capture_time,
+                    "tier_used": 1,
+                    "user_experience": user_experience,
+                    "capture_methods_tried": capture_methods_tried
+                }
+            else:
+                self._logger.warning(f"Tier 1: USB direct capture failed for {stream_name}: {result.get('error', 'Unknown error')}", 
+                                   extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
+        except Exception as e:
+            self._logger.warning(f"Tier 1: USB direct capture exception for {stream_name}: {e}", 
+                               extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
+
+        # Tier 2: Check if RTSP stream is immediately ready
+        tier2_timeout = snapshot_tiers_config.get('tier2_rtsp_ready_check_timeout', 1.0)
+        self._logger.info(f"Tier 2: Checking RTSP stream readiness for {stream_name} (timeout: {tier2_timeout}s)", 
+                         extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 2})
+        
         capture_methods_tried.append("rtsp_immediate")
-        stream_ready = await self.check_stream_readiness(stream_name, timeout=tier1_timeout)
+        stream_ready = await self.check_stream_readiness(stream_name, timeout=tier2_timeout)
         
         if stream_ready:
             # Fast path: RTSP stream is ready, capture immediately
-            self._logger.info(f"Tier 1: RTSP stream ready, capturing immediately for {stream_name}", 
-                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 1})
-            
-            result = await self._capture_snapshot_from_rtsp(stream_name, snapshot_path, filename, format, quality, correlation_id)
-            capture_time = time.time() - start_time
-            
-            # Determine user experience based on response time
-            user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
-            
-            return {
-                **result,
-                "capture_time": capture_time,
-                "tier_used": 1,
-                "user_experience": user_experience,
-                "capture_methods_tried": capture_methods_tried
-            }
-
-        # Tier 2: RTSP stream not ready, attempt quick activation
-        tier2_activation_timeout = snapshot_tiers_config.get('tier2_activation_timeout', 3.0)
-        tier2_trigger_timeout = snapshot_tiers_config.get('tier2_activation_trigger_timeout', 1.0)
-        
-        self._logger.info(f"Tier 2: RTSP stream not ready, attempting quick activation for {stream_name} (timeout: {tier2_activation_timeout}s)", 
-                         extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 2})
-        
-        capture_methods_tried.append("rtsp_activation")
-        
-        # Trigger on-demand activation with configurable timeout
-        await self._trigger_stream_activation(stream_name, correlation_id)
-        
-        # Wait for stream to become ready with user-friendly timeout
-        stream_ready = await self._wait_for_stream_readiness(stream_name, tier2_activation_timeout, correlation_id)
-        
-        if stream_ready:
-            # Success: Stream activated, capture from RTSP
-            activation_time = time.time() - start_time
-            self._logger.info(f"Tier 2: RTSP stream activated in {activation_time:.2f}s for {stream_name}", 
-                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "activation_time": activation_time, "tier": 2})
+            self._logger.info(f"Tier 2: RTSP stream ready, capturing immediately for {stream_name}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 2})
             
             result = await self._capture_snapshot_from_rtsp(stream_name, snapshot_path, filename, format, quality, correlation_id)
             capture_time = time.time() - start_time
@@ -1199,33 +1200,42 @@ class MediaMTXController:
                 "capture_methods_tried": capture_methods_tried
             }
 
-        # Tier 3: RTSP activation failed, attempt direct camera capture
-        tier3_timeout = snapshot_tiers_config.get('tier3_direct_capture_timeout', 5.0)
-        self._logger.info(f"Tier 3: RTSP activation failed, attempting direct camera capture for {stream_name} (timeout: {tier3_timeout}s)", 
+        # Tier 3: RTSP stream not ready, attempt quick activation
+        tier3_activation_timeout = snapshot_tiers_config.get('tier3_activation_timeout', 3.0)
+        tier3_trigger_timeout = snapshot_tiers_config.get('tier3_activation_trigger_timeout', 1.0)
+        
+        self._logger.info(f"Tier 3: RTSP stream not ready, attempting quick activation for {stream_name} (timeout: {tier3_activation_timeout}s)", 
                          extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 3})
         
-        # Extract device path from stream name (e.g., "camera0" -> "/dev/video0")
-        device_path = f"/dev/video{stream_name.replace('camera', '')}"
-        capture_methods_tried.append("direct_camera")
+        capture_methods_tried.append("rtsp_activation")
         
-        direct_result = await self._capture_snapshot_direct(device_path, snapshot_path, filename, format, quality, correlation_id)
+        # Trigger on-demand activation with configurable timeout
+        await self._trigger_stream_activation(stream_name, correlation_id)
         
-        if direct_result["status"] == "completed":
-            # Success: Direct camera capture worked
+        # Wait for stream to become ready with user-friendly timeout
+        stream_ready = await self._wait_for_stream_readiness(stream_name, tier3_activation_timeout, correlation_id)
+        
+        if stream_ready:
+            # Success: Stream activated, capture from RTSP
+            activation_time = time.time() - start_time
+            self._logger.info(f"Tier 3: RTSP stream activated in {activation_time:.2f}s for {stream_name}", 
+                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "activation_time": activation_time, "tier": 3})
+            
+            result = await self._capture_snapshot_from_rtsp(stream_name, snapshot_path, filename, format, quality, correlation_id)
             capture_time = time.time() - start_time
-            self._logger.info(f"Tier 3: Direct camera capture successful in {capture_time:.2f}s for {stream_name}", 
-                             extra={"correlation_id": correlation_id, "stream_name": stream_name, "capture_time": capture_time, "tier": 3})
             
             # Determine user experience based on response time
             user_experience = self._determine_user_experience(capture_time, snapshot_tiers_config)
             
             return {
-                **direct_result,
+                **result,
                 "capture_time": capture_time,
                 "tier_used": 3,
                 "user_experience": user_experience,
                 "capture_methods_tried": capture_methods_tried
             }
+
+
 
         # Tier 4: All methods failed
         total_time = time.time() - start_time

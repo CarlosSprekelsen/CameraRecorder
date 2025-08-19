@@ -59,6 +59,11 @@ tests/
 └── fixtures/      # Shared test utilities
 ```
 
+## Naming Convention
+- **Files**: `test_<what>_<type>.{ts,js}` using snake_case
+- **Functions**: `test_<behavior>_<scenario>()`
+- **Examples**: `test_camera_detail_component.ts`, `test_websocket_integration.ts`, `test_auth_flow_e2e.js`
+
 ---
 
 **Status**: Core strategy for test-driven development with real integration focus

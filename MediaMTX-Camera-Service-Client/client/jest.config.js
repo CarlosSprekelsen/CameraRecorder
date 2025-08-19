@@ -30,6 +30,10 @@ export default {
   testMatch: [
     '<rootDir>/tests/**/*.test.{ts,tsx}',
     '<rootDir>/tests/**/*.spec.{ts,tsx}',
+    '<rootDir>/tests/**/test_*_unit.js',
+    '<rootDir>/tests/**/test_*_integration.js',
+    '<rootDir>/tests/**/test_*_e2e.js',
+    '<rootDir>/tests/**/test_*_performance.js',
     '<rootDir>/src/**/*.test.{ts,tsx}',
     '<rootDir>/src/**/*.spec.{ts,tsx}'
   ],

@@ -98,10 +98,20 @@ async def validate_multi_tier_snapshot():
         # Check if this was a successful capture or expected failure
         if result['status'] == 'completed':
             print(f"✅ Snapshot capture successful!")
+            if result['tier_used'] == 1:
+                print(f"🚀 USB direct capture optimized for containerized deployment!")
         else:
             print(f"⚠️ Snapshot capture failed (expected in test environment without camera hardware)")
             print(f"   Error: {result.get('error', 'Unknown error')}")
             print(f"   Methods tried: {result.get('capture_methods_tried', [])}")
+            
+            # Check if USB direct capture was attempted first
+            if result.get('capture_methods_tried', []):
+                first_method = result['capture_methods_tried'][0]
+                if first_method == 'usb_direct':
+                    print(f"✅ USB direct capture attempted first (optimized for USB container)")
+                else:
+                    print(f"⚠️ Expected 'usb_direct' as first method, got: {first_method}")
         
         # Check if snapshot file was created
         snapshot_path = os.path.join(temp_snapshots, "validation_test.jpg")

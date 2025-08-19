@@ -154,8 +154,11 @@ async function main() {
       console.log('✅ Connected to WebSocket server');
       
       try {
-        // Authenticate first - use the current JWT secret
-        const jwtSecret = process.env.CAMERA_SERVICE_JWT_SECRET || 'a436cccea2e4afb6d7c38b189fbdb6cd62e1671c279e7d729704e133d4e7ab53';
+        // Authenticate first - use environment variable only
+        const jwtSecret = process.env.CAMERA_SERVICE_JWT_SECRET;
+        if (!jwtSecret) {
+          throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable not set. Run: ./set-test-env.sh');
+        }
         
         // Generate a proper JWT token for testing
         const payload = {

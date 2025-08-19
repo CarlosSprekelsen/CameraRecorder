@@ -148,40 +148,40 @@ class SnapshotPerformanceTuner:
         """Get configuration sets for different environments."""
         base_configs = {
             "development": {
-                "tier1_rtsp_ready_check_timeout": 0.5,
-                "tier2_activation_timeout": 2.0,
-                "tier2_activation_trigger_timeout": 1.0,
-                "tier3_direct_capture_timeout": 3.0,
+                "tier1_usb_direct_timeout": 0.3,
+                "tier2_rtsp_ready_check_timeout": 0.5,
+                "tier3_activation_timeout": 2.0,
+                "tier3_activation_trigger_timeout": 1.0,
                 "total_operation_timeout": 8.0,
                 "immediate_response_threshold": 0.3,
                 "acceptable_response_threshold": 1.5,
                 "slow_response_threshold": 3.0
             },
             "production": {
-                "tier1_rtsp_ready_check_timeout": 1.0,
-                "tier2_activation_timeout": 3.0,
-                "tier2_activation_trigger_timeout": 1.0,
-                "tier3_direct_capture_timeout": 5.0,
+                "tier1_usb_direct_timeout": 0.5,
+                "tier2_rtsp_ready_check_timeout": 1.0,
+                "tier3_activation_timeout": 3.0,
+                "tier3_activation_trigger_timeout": 1.0,
                 "total_operation_timeout": 10.0,
                 "immediate_response_threshold": 0.5,
                 "acceptable_response_threshold": 2.0,
                 "slow_response_threshold": 5.0
             },
             "high-performance": {
-                "tier1_rtsp_ready_check_timeout": 0.2,
-                "tier2_activation_timeout": 1.5,
-                "tier2_activation_trigger_timeout": 0.5,
-                "tier3_direct_capture_timeout": 2.0,
+                "tier1_usb_direct_timeout": 0.2,
+                "tier2_rtsp_ready_check_timeout": 0.2,
+                "tier3_activation_timeout": 1.5,
+                "tier3_activation_trigger_timeout": 0.5,
                 "total_operation_timeout": 5.0,
                 "immediate_response_threshold": 0.2,
                 "acceptable_response_threshold": 1.0,
                 "slow_response_threshold": 2.0
             },
             "embedded": {
-                "tier1_rtsp_ready_check_timeout": 2.0,
-                "tier2_activation_timeout": 5.0,
-                "tier2_activation_trigger_timeout": 2.0,
-                "tier3_direct_capture_timeout": 8.0,
+                "tier1_usb_direct_timeout": 1.0,
+                "tier2_rtsp_ready_check_timeout": 2.0,
+                "tier3_activation_timeout": 5.0,
+                "tier3_activation_trigger_timeout": 2.0,
                 "total_operation_timeout": 15.0,
                 "immediate_response_threshold": 1.0,
                 "acceptable_response_threshold": 3.0,
@@ -203,9 +203,9 @@ class SnapshotPerformanceTuner:
         # Fast variations
         fast_config = base_config.copy()
         fast_config.update({
-            "tier1_rtsp_ready_check_timeout": base_config["tier1_rtsp_ready_check_timeout"] * 0.5,
-            "tier2_activation_timeout": base_config["tier2_activation_timeout"] * 0.7,
-            "tier3_direct_capture_timeout": base_config["tier3_direct_capture_timeout"] * 0.7,
+            "tier1_usb_direct_timeout": base_config["tier1_usb_direct_timeout"] * 0.5,
+            "tier2_rtsp_ready_check_timeout": base_config["tier2_rtsp_ready_check_timeout"] * 0.5,
+            "tier3_activation_timeout": base_config["tier3_activation_timeout"] * 0.7,
             "immediate_response_threshold": base_config["immediate_response_threshold"] * 0.5
         })
         variations["fast"] = fast_config
@@ -213,9 +213,9 @@ class SnapshotPerformanceTuner:
         # Conservative variations
         conservative_config = base_config.copy()
         conservative_config.update({
-            "tier1_rtsp_ready_check_timeout": base_config["tier1_rtsp_ready_check_timeout"] * 1.5,
-            "tier2_activation_timeout": base_config["tier2_activation_timeout"] * 1.3,
-            "tier3_direct_capture_timeout": base_config["tier3_direct_capture_timeout"] * 1.3,
+            "tier1_usb_direct_timeout": base_config["tier1_usb_direct_timeout"] * 1.5,
+            "tier2_rtsp_ready_check_timeout": base_config["tier2_rtsp_ready_check_timeout"] * 1.5,
+            "tier3_activation_timeout": base_config["tier3_activation_timeout"] * 1.3,
             "immediate_response_threshold": base_config["immediate_response_threshold"] * 1.5
         })
         variations["conservative"] = conservative_config
@@ -223,7 +223,7 @@ class SnapshotPerformanceTuner:
         # Balanced variations
         balanced_config = base_config.copy()
         balanced_config.update({
-            "tier2_activation_timeout": base_config["tier2_activation_timeout"] * 0.9,
+            "tier3_activation_timeout": base_config["tier3_activation_timeout"] * 0.9,
             "acceptable_response_threshold": base_config["acceptable_response_threshold"] * 0.8
         })
         variations["balanced"] = balanced_config

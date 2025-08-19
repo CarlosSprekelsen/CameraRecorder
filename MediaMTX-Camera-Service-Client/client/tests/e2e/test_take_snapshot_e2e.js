@@ -1,6 +1,27 @@
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+
+/**
+ * Generate JWT token using crypto (no external dependencies)
+ * @param {Object} payload - Token payload
+ * @param {string} secret - JWT secret
+ * @returns {string} JWT token
+ */
+function generateJWTToken(payload, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  
+  // Encode header and payload
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  // Create signature
+  const data = `${encodedHeader}.${encodedPayload}`;
+  const signature = crypto.createHmac('sha256', secret).update(data).digest('base64url');
+  
+  return `${data}.${signature}`;
+}
 
 async function testTakeSnapshotEndToEnd() {
   console.log('🧪 Testing take_snapshot end-to-end with file generation verification...');
@@ -18,17 +39,34 @@ async function testTakeSnapshotEndToEnd() {
         console.log(`📊 Initial snapshot files: ${initialFiles.length}`);
         initialFiles.forEach(file => console.log(`   - ${file}`));
         
-        // Step 2: Authenticate (we'll use a simple approach for testing)
+        // Step 2: Authenticate with dynamically generated token
         console.log('\n🔐 Step 2: Attempting authentication...');
         let authResult;
         try {
+          // Generate token dynamically using environment variable
+          const jwtSecret = process.env.CAMERA_SERVICE_JWT_SECRET;
+          if (!jwtSecret) {
+            throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable not set. Run: ./set-test-env.sh');
+          }
+          
+          // Generate a proper JWT token for testing
+          const payload = {
+            user_id: 'test_user',
+            role: 'operator',
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600
+          };
+          
+          // Generate token using crypto (since we don't have jwt library)
+          const token = generateJWTToken(payload, jwtSecret);
+          
           authResult = await sendRequest(ws, 'authenticate', {
-            token: 'test.token.123'
+            token: token
           });
           console.log('✅ Authentication result:', authResult);
         } catch (error) {
-          console.log('⚠️ Authentication failed (expected for testing):', error.message);
-          console.log('   This is expected in test environment without valid token');
+          console.log('⚠️ Authentication failed:', error.message);
+          console.log('   This may be expected in test environment without proper setup');
         }
         
         // Step 3: Take snapshot (will fail due to auth, but we can test parameter acceptance)
