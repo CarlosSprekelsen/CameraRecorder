@@ -3,20 +3,23 @@
  * Verifies that the JWT authentication works with the correct environment variable name
  */
 
-
+const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 
 const CONFIG = {
-  serverUrl: 'ws://localhost:8002/ws',
-  device: '/dev/video0',
-  timeout: 10000,
-  // This should now work with the corrected environment variable
-  jwtSecret: 'd0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7'
+  serverUrl: process.env.TEST_SERVER_URL || 'ws://localhost:8002/ws',
+  device: process.env.TEST_CAMERA_DEVICE || '/dev/video0',
+  timeout: parseInt(process.env.TEST_TIMEOUT) || 10000,
+  jwtSecret: process.env.CAMERA_SERVICE_JWT_SECRET
 };
 
 function generateValidToken() {
+  if (!CONFIG.jwtSecret) {
+    throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable not set. Run: ./set-test-env.sh');
+  }
+  
   const payload = {
-    user_id: 'test_user',
+    user_id: 'test-user',
     role: 'operator',
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
@@ -43,7 +46,7 @@ function sendRequest(ws, method, params = {}) {
     
     const messageHandler = (data) => {
       try {
-        const response = JSON.parse(data);
+        const response = JSON.parse(data.toString());
         if (response.id === id) {
           clearTimeout(timeout);
           ws.removeListener('message', messageHandler);

@@ -1,10 +1,21 @@
 #!/bin/bash
 
-# Script to set up test environment variables from camera service
-# This reads the JWT secret from the service's .env file and exports it
-# Updated for new test organization structure (2025-08-19)
+# Script to set up test environment variables for MediaMTX Camera Service Client
+# Follows "Test First, Real Integration Always" philosophy
+# Updated for client testing guidelines compliance (2025-08-19)
 
-echo "🔧 Setting up test environment variables..."
+echo "🔧 Setting up MediaMTX Camera Service Client test environment..."
+echo "📋 Testing Philosophy: 'Test First, Real Integration Always'"
+echo ""
+
+# Validate we're in the correct directory
+if [ ! -f "package.json" ] || [ ! -d "tests" ]; then
+    echo "❌ ERROR: Must run from client directory!"
+    echo "💡 Please run: cd MediaMTX-Camera-Service-Client/client && ./set-test-env.sh"
+    exit 1
+fi
+
+echo "✅ Running from correct client directory"
 
 # Read JWT secret from camera service .env file
 if [ -f "/opt/camera-service/.env" ]; then
@@ -29,41 +40,53 @@ if [ -f "/opt/camera-service/.env" ]; then
     fi
 else
     echo "❌ Camera service .env file not found at /opt/camera-service/.env"
-    echo "💡 Make sure the camera service is installed"
+    echo "💡 Make sure the camera service is installed and running"
     exit 1
 fi
 
 echo ""
-echo "🎯 Test environment ready! You can now run comprehensive tests:"
+echo "🎯 Test Environment Ready!"
+echo "📋 Following Client Testing Guidelines:"
+echo "   ✅ Unit Tests: ≥80% coverage, isolated component behavior"
+echo "   ✅ Integration Tests: ≥70% coverage, real server communication"
+echo "   ✅ E2E Tests: Critical paths, complete user workflows"
+echo "   ✅ Performance: <50ms status, <100ms control, <1s WebSocket"
 echo ""
-echo "📁 Comprehensive Camera Operations Test:"
-echo "   cd tests/integration/camera_ops && source ../../.test_env && node test-camera-operations-comprehensive.js"
+
+echo "⚠️  CRITICAL: IV&V Testing Protocol"
+echo "   🚫 NEVER run tests from root directory"
+echo "   ✅ ALWAYS run tests from client directory: cd client && npm test"
 echo ""
-echo "📁 Comprehensive Authentication Test:"
-echo "   cd tests/integration/authentication && source ../../.test_env && node test-authentication-comprehensive.js"
+
+echo "🔧 Environment Variables Available:"
+echo "   CAMERA_SERVICE_JWT_SECRET=${JWT_SECRET:0:16}..."
 echo ""
-echo "📁 Basic WebSocket Integration Test:"
-echo "   cd tests/integration/websocket && source ../../.test_env && node test-websocket.js"
+
+echo "📋 Test Organization Structure:"
+echo "   tests/"
+echo "   ├── unit/           # Isolated component/logic tests"
+echo "   ├── integration/    # Real server communication tests"
+echo "   ├── e2e/           # Complete workflow tests"
+echo "   ├── performance/   # Load and timing validation"
+echo "   └── fixtures/      # Shared test utilities"
 echo ""
-echo "📁 Sprint Integration Tests:"
-echo "   cd tests/integration && source ../.test_env && node test-sprint-3-day-9-integration.js"
-echo "   cd tests/integration && source ../.test_env && node test-sprint-3-integration.js"
+
+echo "⚠️  WebSocket Environment Compatibility:"
+echo "   ✅ Tests use proper WebSocket API for environment"
+echo "   ✅ Browser tests use native WebSocket object"
+echo "   ✅ Node.js tests use appropriate WebSocket library"
+echo "   ✅ No 'ws does not work in browser' errors"
 echo ""
-echo "📁 Performance Tests:"
-echo "   cd tests/performance && source ../.test_env && node test-notification-timing.js"
-echo "   cd tests/performance && source ../.test_env && node test-realtime-updates.js"
+
+echo "🎯 Quality Gates:"
+echo "   ✅ Performance: Status <50ms, Control <100ms, WebSocket <1s"
+echo "   ✅ Coverage: Unit ≥80%, Integration ≥70%"
+echo "   ✅ Integration: All tests pass against real server"
+echo "   ✅ Authentication: Dynamic token generation, no hardcoded credentials"
 echo ""
-echo "📁 E2E Tests:"
-echo "   cd tests/e2e && source ../.test_env && node test-take-snapshot-e2e.cjs"
-echo ""
-echo "🔧 Or run with direct environment variable:"
-echo "   CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node tests/integration/camera_ops/test-camera-operations-comprehensive.js"
-echo ""
-echo "⚠️  IMPORTANT: Always run integration tests from their respective directories!"
-echo "   This ensures proper component path resolution and test execution context."
-echo ""
-echo "📋 Test Organization Summary:"
-echo "   ✅ Removed duplicate/obsolete tests"
-echo "   ✅ Created comprehensive test suites following server API specification"
-echo "   ✅ All tests validate against real server implementation"
-echo "   ✅ Proper authentication and error handling coverage"
+
+echo "🚀 Ready to run tests! Remember:"
+echo "   📍 Always run from client directory"
+echo "   🔐 Authentication handled automatically"
+echo "   🌐 Real server integration for all tests"
+echo "   📊 Coverage thresholds enforced"

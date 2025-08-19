@@ -307,6 +307,8 @@ Task: [specific request]
 
 #### **PDR Assessment Areas & Tasks**
 
+**Note**: ⚠️ Always run tests with `source .test_env && npm test` for proper authentication
+
 ##### **PDR-1: MVP Functionality Validation**
 **Role**: IV&V  
 **Duration**: 2 days  

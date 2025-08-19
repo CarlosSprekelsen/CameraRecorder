@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 /**
  * E2E Test Suite for Take Snapshot Functionality
@@ -9,23 +9,13 @@ const crypto = require('crypto');
  */
 
 /**
- * Generate JWT token using crypto (no external dependencies)
+ * Generate JWT token using jsonwebtoken library
  * @param {Object} payload - Token payload
  * @param {string} secret - JWT secret
  * @returns {string} JWT token
  */
 function generateJWTToken(payload, secret) {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  
-  // Encode header and payload
-  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  
-  // Create signature
-  const data = `${encodedHeader}.${encodedPayload}`;
-  const signature = crypto.createHmac('sha256', secret).update(data).digest('base64url');
-  
-  return `${data}.${signature}`;
+  return jwt.sign(payload, secret, { algorithm: 'HS256' });
 }
 
 async function testTakeSnapshotEndToEnd() {
@@ -56,7 +46,7 @@ async function testTakeSnapshotEndToEnd() {
           
           // Generate a proper JWT token for testing
           const payload = {
-            user_id: 'test_user',
+            user_id: 'test-user',
             role: 'operator',
             iat: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + 3600

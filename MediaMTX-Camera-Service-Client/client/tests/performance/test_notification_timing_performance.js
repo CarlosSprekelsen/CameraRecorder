@@ -5,28 +5,15 @@
  * This helps understand the user feedback delay and identify intermittent notification issues.
  */
 
-
+const WebSocket = require('ws');
 const { performance } = require('perf_hooks');
-const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 /**
- * Generate JWT token using crypto (since we don't have jwt library)
+ * Generate JWT token using jsonwebtoken library
  */
 function generateJWTToken(payload, secret) {
-  const header = {
-    alg: 'HS256',
-    typ: 'JWT'
-  };
-  
-  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(`${encodedHeader}.${encodedPayload}`)
-    .digest('base64url');
-  
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
+  return jwt.sign(payload, secret, { algorithm: 'HS256' });
 }
 
 const CONFIG = {
@@ -160,7 +147,7 @@ async function main() {
         
         // Generate a proper JWT token for testing
         const payload = {
-          user_id: 'test_user',
+          user_id: 'test-user',
           role: 'operator',
           iat: Math.floor(Date.now() / 1000),
           exp: Math.floor(Date.now() / 1000) + 3600

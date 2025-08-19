@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 
 async function testIntegration() {
   console.log('🔍 Testing Camera List Integration with Real Server');
@@ -73,7 +73,7 @@ async function testIntegration() {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   testIntegration()
     .then((result) => {
       console.log('\n🎉 Integration test completed successfully!');
@@ -85,4 +85,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { testIntegration };
+module.exports = { testIntegration };
+
+/**
+ * Jest test suite for camera list integration
+ */
+describe('Camera List Integration Tests', () => {
+  test('should retrieve camera list from real server', async () => {
+    await expect(testIntegration()).resolves.toBe('Integration test passed');
+  }, 15000);
+});
