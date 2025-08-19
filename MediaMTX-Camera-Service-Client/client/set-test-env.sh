@@ -2,6 +2,7 @@
 
 # Script to set up test environment variables from camera service
 # This reads the JWT secret from the service's .env file and exports it
+# Updated for new test organization structure (2025-08-19)
 
 echo "🔧 Setting up test environment variables..."
 
@@ -32,8 +33,32 @@ else
     exit 1
 fi
 
-echo "🎯 Test environment ready! You can now run:"
-echo "   source .test_env && node test-sprint-3-day-9-integration.js"
 echo ""
-echo "Or run the test directly:"
-echo "   CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node test-sprint-3-day-9-integration.js"
+echo "🎯 Test environment ready! You can now run tests from the correct directories:"
+echo ""
+echo "📁 Integration Tests (Real Server):"
+echo "   cd tests/integration && source ../.test_env && node test-with-valid-token.js"
+echo "   cd tests/integration && source ../.test_env && node test-sprint-3-day-9-integration.js"
+echo "   cd tests/integration && source ../.test_env && node test-camera-operations.js"
+echo ""
+echo "📁 Authentication Tests:"
+echo "   cd tests/integration/authentication && source ../../.test_env && node test-auth-working.js"
+echo ""
+echo "📁 Camera Operations Tests:"
+echo "   cd tests/integration/camera_ops && source ../../.test_env && node test-take-snapshot.js"
+echo "   cd tests/integration/camera_ops && source ../../.test_env && node test-recording-operations.js"
+echo ""
+echo "📁 WebSocket Tests:"
+echo "   cd tests/integration/websocket && source ../../.test_env && node test-websocket-integration.js"
+echo ""
+echo "📁 Performance Tests:"
+echo "   cd tests/performance && source ../.test_env && node test-notification-timing.js"
+echo ""
+echo "📁 E2E Tests:"
+echo "   cd tests/e2e && source ../.test_env && node test-take-snapshot-e2e.cjs"
+echo ""
+echo "🔧 Or run with direct environment variable:"
+echo "   CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node tests/integration/test-with-valid-token.js"
+echo ""
+echo "⚠️  IMPORTANT: Always run integration tests from their respective directories!"
+echo "   This ensures proper component path resolution and test execution context."

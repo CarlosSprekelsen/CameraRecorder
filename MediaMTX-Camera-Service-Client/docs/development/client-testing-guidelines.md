@@ -119,7 +119,7 @@ date: "2025-08-05"
 ./MediaMTX-Camera-Service-Client/client/set-test-env.sh
 
 # Step 2: Run tests with correct environment
-source .test_env && node MediaMTX-Camera-Service-Client/client/test-sprint-3-day-9-integration.js
+cd tests/integration && source ../.test_env && node test-sprint-3-day-9-integration.js
 ```
 
 **What the script does**:
@@ -134,7 +134,7 @@ source .test_env && node MediaMTX-Camera-Service-Client/client/test-sprint-3-day
 JWT_SECRET=$(sudo grep "^CAMERA_SERVICE_JWT_SECRET=" /opt/camera-service/.env | cut -d'=' -f2)
 
 # Run tests with environment variable
-CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node MediaMTX-Camera-Service-Client/client/test-sprint-3-day-9-integration.js
+cd tests/integration && CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET node test-sprint-3-day-9-integration.js
 ```
 
 ### Authentication Process

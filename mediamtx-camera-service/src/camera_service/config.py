@@ -146,6 +146,36 @@ class SnapshotConfig:
 
 
 @dataclass
+class PerformanceConfig:
+    """Performance configuration settings."""
+    
+    response_time_targets: Dict[str, float] = field(default_factory=lambda: {
+        "snapshot_capture": 2.0,
+        "recording_start": 2.0,
+        "recording_stop": 2.0,
+        "file_listing": 1.0
+    })
+    
+    snapshot_tiers: Dict[str, float] = field(default_factory=lambda: {
+        "tier1_rtsp_ready_check_timeout": 1.0,
+        "tier2_activation_timeout": 3.0,
+        "tier2_activation_trigger_timeout": 1.0,
+        "tier3_direct_capture_timeout": 5.0,
+        "total_operation_timeout": 10.0,
+        "immediate_response_threshold": 0.5,
+        "acceptable_response_threshold": 2.0,
+        "slow_response_threshold": 5.0
+    })
+    
+    optimization: Dict[str, Any] = field(default_factory=lambda: {
+        "enable_caching": True,
+        "cache_ttl": 300,
+        "max_concurrent_operations": 5,
+        "connection_pool_size": 10
+    })
+
+
+@dataclass
 class Config:
     """Complete service configuration."""
 
@@ -155,6 +185,7 @@ class Config:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     recording: RecordingConfig = field(default_factory=RecordingConfig)
     snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
+    performance: PerformanceConfig = field(default_factory=PerformanceConfig)
 
     def __init__(self, **kwargs):
         """Initialize configuration with proper dataclass conversion."""
@@ -165,6 +196,7 @@ class Config:
         self.logging = LoggingConfig()
         self.recording = RecordingConfig()
         self.snapshots = SnapshotConfig()
+        self.performance = PerformanceConfig()
         
         # Update with provided data
         if kwargs:
@@ -226,6 +258,15 @@ class Config:
             elif isinstance(snapshots_data, SnapshotConfig):
                 self.snapshots = snapshots_data
 
+        if "performance" in config_data:
+            performance_data = config_data["performance"]
+            if isinstance(performance_data, dict):
+                for key, value in performance_data.items():
+                    if hasattr(self.performance, key):
+                        setattr(self.performance, key, value)
+            elif isinstance(performance_data, PerformanceConfig):
+                self.performance = performance_data
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary for serialization."""
         try:
@@ -236,6 +277,7 @@ class Config:
                 "logging": asdict(self.logging),
                 "recording": asdict(self.recording),
                 "snapshots": asdict(self.snapshots),
+                "performance": asdict(self.performance),
             }
         except Exception as e:
             # Fallback to manual conversion if asdict fails
