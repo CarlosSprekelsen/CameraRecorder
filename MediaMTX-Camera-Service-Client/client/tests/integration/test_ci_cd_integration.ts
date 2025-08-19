@@ -114,7 +114,7 @@ describe('CI/CD Integration Tests', () => {
             expect(snapshot.status).toBe('completed');
           } catch (error) {
             // Expected for some cameras that don't support snapshot
-            console.warn('Snapshot test failed (expected for some cameras):', error.message);
+            console.warn('Snapshot test failed (expected for some cameras):', (error as Error).message);
           }
           
           // Step 4: Start recording
@@ -135,7 +135,7 @@ describe('CI/CD Integration Tests', () => {
             expect(stopResult.status).toBe('STOPPED');
           } catch (error) {
             // Expected for some cameras that don't support recording
-            console.warn('Recording test failed (expected for some cameras):', error.message);
+            console.warn('Recording test failed (expected for some cameras):', (error as Error).message);
           }
         }
       } finally {
@@ -237,6 +237,7 @@ async function checkSystemdServiceStatus(): Promise<boolean> {
   try {
     // In CI environment, we can't directly check systemd
     // Instead, check if the service is accessible via API
+    const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
     const response = await fetch(`${TEST_API_URL}/health`);
     return response.ok;
   } catch {
@@ -249,6 +250,7 @@ async function checkSystemdServiceStatus(): Promise<boolean> {
  */
 async function checkHealthEndpoint(): Promise<boolean> {
   try {
+    const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
     const response = await fetch(`${TEST_API_URL}/health`);
     return response.ok;
   } catch {
@@ -261,6 +263,7 @@ async function checkHealthEndpoint(): Promise<boolean> {
  */
 async function checkWebSocketEndpoint(): Promise<boolean> {
   try {
+    const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
     const ws = new WebSocket(TEST_WEBSOCKET_URL);
     
     return new Promise((resolve) => {

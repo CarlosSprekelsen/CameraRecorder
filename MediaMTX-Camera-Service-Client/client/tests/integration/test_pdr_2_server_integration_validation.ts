@@ -22,7 +22,7 @@ import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS } from '../../src/types';
 import { useConnectionStore } from '../../src/stores/connectionStore';
 import { useCameraStore } from '../../src/stores/cameraStore';
 import { useUIStore } from '../../src/stores/uiStore';
-import { generateValidToken, validateTestEnvironment } from './auth-utils.js';
+import { generateValidToken, validateTestEnvironment } from './auth-utils';
 
 describe('PDR-2: Server Integration Validation', () => {
   let wsService: WebSocketService;

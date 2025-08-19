@@ -1,84 +1,147 @@
 # MediaMTX Camera Service Client
 
-React PWA for managing MediaMTX camera service with real-time WebSocket communication.
+A React-based client application for interacting with the MediaMTX Camera Service.
 
-## Server API
+## Prerequisites
 
-See [JSON-RPC Methods](../docs/api/json-rpc-methods.md) for server endpoints like `get_camera_list`.
+### Node.js Version Requirements
+- **Node.js**: >= 20.19.0 (LTS Iron release)
+- **npm**: >= 10.8.0
 
-### Example API Usage
+The project uses React 19.1.1 and requires a modern Node.js environment for optimal compatibility.
 
-```typescript
-// WebSocket JSON-RPC call example
-const response = await rpc.call("get_camera_list", {});
+### Installing Node.js
+If you need to upgrade Node.js, we recommend using nvm (Node Version Manager):
+
+```bash
+# Install nvm (if not already installed)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Restart your terminal or source bashrc
+source ~/.bashrc
+
+# Install and use Node.js 20.19.4
+nvm install 20.19.4
+nvm use 20.19.4
 ```
 
-## Development
+## Environment Validation
 
-This project uses React + TypeScript + Vite with Material-UI and PWA support.
+### Quick Environment Check
+Before starting development, validate your environment:
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+chmod +x validate-environment.sh
+./validate-environment.sh
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This script performs comprehensive validation:
+- ✅ Node.js version (>= 20.19.0)
+- ✅ npm version (>= 10.8.0)
+- ✅ nvm availability (recommended)
+- ✅ Project structure
+- ✅ Dependencies installation
+- ✅ TypeScript compilation
+- ✅ Test environment configuration
+- ✅ React version (19.1.1)
+- ✅ Build process
+- ✅ Test execution
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Test Environment Setup
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+This project includes two complementary test environment scripts:
+
+### 1. Test Infrastructure Setup (`setup-test-environment.sh`)
+**Purpose**: Recreates the entire test infrastructure from scratch using proven configurations.
+
+**When to use**:
+- Initial development setup
+- After dependency conflicts
+- CI/CD environment setup
+- When React Testing Library has issues
+
+**Usage**:
+```bash
+./setup-test-environment.sh
 ```
+
+**What it does**:
+- Nuclear reset of test environment
+- Installs proven compatible package versions
+- Creates battle-tested Jest and TypeScript configurations
+- Fixes React DOM compatibility issues
+- Validates test environment
+
+### 2. Integration Test Authentication (`set-test-env.sh`)
+**Purpose**: Sets up JWT authentication environment variables for integration tests.
+
+**When to use**:
+- Before running integration tests
+- Before running E2E tests
+- Before running performance tests
+
+**Usage**:
+```bash
+./set-test-env.sh
+```
+
+**What it does**:
+- Reads JWT secret from camera service
+- Exports authentication environment variables
+- Creates `.test_env` file for test execution
+
+## Development Workflow
+
+1. **Initial Setup**:
+   ```bash
+   ./setup-test-environment.sh
+   ```
+
+2. **Before Running Integration Tests**:
+   ```bash
+   ./set-test-env.sh
+   npm test
+   ```
+
+3. **Running Specific Test Types**:
+   ```bash
+   # Unit tests (no authentication needed)
+   npm test -- --testPathPattern=unit
+   
+   # Integration tests (authentication required)
+   ./set-test-env.sh
+   npm test -- --testPathPattern=integration
+   ```
+
+## Available Scripts
+
+- `npm test` - Run all tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage
+- `npm run lint` - Run linting
+- `npm run build` - Build the project
+- `npm run dev` - Start development server
+
+## Test Organization
+
+- **Unit Tests**: `tests/unit/` - Component and logic tests (no authentication needed)
+- **Integration Tests**: `tests/integration/` - Real server communication tests (authentication required)
+- **E2E Tests**: `tests/e2e/` - Complete workflow tests (authentication required)
+- **Performance Tests**: `tests/performance/` - Load and timing tests (authentication required)
+
+## Troubleshooting
+
+### React Testing Library Issues
+If you encounter React DOM compatibility issues:
+```bash
+./setup-test-environment.sh
+```
+
+### Authentication Issues
+If integration tests fail with authentication errors:
+```bash
+./set-test-env.sh
+```
+
+### WebSocket Connection Issues
+Integration tests may timeout due to WebSocket connection issues in Jest environment. This is a known limitation and doesn't affect unit test functionality.

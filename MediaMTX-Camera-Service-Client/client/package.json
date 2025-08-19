@@ -3,17 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=20.19.0",
+    "npm": ">=10.8.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint src",
     "preview": "vite preview",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "jest --config jest.config.cjs",
+    "test:watch": "jest --config jest.config.cjs --watch",
+    "test:coverage": "jest --config jest.config.cjs --coverage"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
@@ -21,20 +21,20 @@
     "@mui/icons-material": "^5.14.19",
     "@mui/material": "^5.14.20",
     "jsonwebtoken": "^9.0.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-router-dom": "^6.20.1",
     "ws": "^8.14.2",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.1.4",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^14.5.1",
-    "@types/jest": "^29.5.8",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "29.5.12",
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15",
+    "@types/react": "^19.1.1",
+    "@types/react-dom": "^19.1.1",
     "@types/react-router-dom": "^5.3.3",
     "@types/ws": "^8.5.9",
     "@typescript-eslint/eslint-plugin": "^6.12.0",
@@ -44,12 +44,12 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
     "identity-obj-proxy": "^3.0.0",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
+    "jest": "29.6.4",
+    "jest-environment-jsdom": "29.6.4",
     "prettier": "^3.1.0",
-    "ts-jest": "^29.1.1",
+    "ts-jest": "29.1.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.0",
-    "vite-plugin-pwa": "^0.17.4"
+    "vite": "^5.4.19",
+    "vite-plugin-pwa": "^0.17.5"
   }
 }

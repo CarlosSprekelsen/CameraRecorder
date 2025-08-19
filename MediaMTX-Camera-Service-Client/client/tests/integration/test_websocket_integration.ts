@@ -10,7 +10,8 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket';
-import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS } from '../../src/types';
+import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS, isNotification } from '../../src/types';
+import type { CameraListResponse, CameraDevice, JSONRPCNotification } from '../../src/types';
 
 describe('WebSocket Integration Tests', () => {
   let wsService: WebSocketService;
@@ -100,7 +101,7 @@ describe('WebSocket Integration Tests', () => {
 
     it('should get camera status for valid device', async () => {
       // First get camera list to find a valid device
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for status test - cannot validate core functionality');
@@ -109,7 +110,7 @@ describe('WebSocket Integration Tests', () => {
       const testDevice = cameraList.cameras[0].device;
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: testDevice });
+      const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: testDevice }) as CameraDevice;
       
       const responseTime = performance.now() - startTime;
       
@@ -137,7 +138,7 @@ describe('WebSocket Integration Tests', () => {
         
         // Validate error structure
         expect(error).toHaveProperty('code');
-        expect(error.code).toBe(ERROR_CODES.CAMERA_NOT_FOUND);
+        expect((error as any).code).toBe(ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED);
         expect(error).toHaveProperty('message');
         
         // Validate performance target (errors should also be fast)
@@ -150,7 +151,7 @@ describe('WebSocket Integration Tests', () => {
     it('should receive camera status update notifications', async () => {
       const notificationPromise = new Promise((resolve) => {
         wsService.onMessage((message) => {
-          if (message.method === 'camera_status_update') {
+          if (isNotification(message) && message.method === 'camera_status_update') {
             resolve(message.params);
           }
         });
@@ -174,7 +175,7 @@ describe('WebSocket Integration Tests', () => {
     it('should receive recording status update notifications', async () => {
       const notificationPromise = new Promise((resolve) => {
         wsService.onMessage((message) => {
-          if (message.method === 'recording_status_update') {
+          if (isNotification(message) && message.method === 'recording_status_update') {
             resolve(message.params);
           }
         });
@@ -211,7 +212,7 @@ describe('WebSocket Integration Tests', () => {
 
     it('should meet control method performance targets', async () => {
       // Test with take_snapshot (control method)
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for control method test - cannot validate core functionality');
@@ -224,7 +225,7 @@ describe('WebSocket Integration Tests', () => {
         await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, { device: testDevice });
       } catch (error) {
         // Expected if camera doesn't support snapshot
-        console.warn('Snapshot test failed (expected for some cameras):', error.message);
+        console.warn('Snapshot test failed (expected for some cameras):', (error as Error).message);
       }
       
       const responseTime = performance.now() - startTime;
@@ -239,7 +240,7 @@ describe('WebSocket Integration Tests', () => {
         fail('Expected error for invalid method');
       } catch (error) {
         expect(error).toHaveProperty('code');
-        expect(error.code).toBe(ERROR_CODES.METHOD_NOT_FOUND);
+        expect((error as any).code).toBe(ERROR_CODES.METHOD_NOT_FOUND);
       }
     });
 
@@ -249,7 +250,7 @@ describe('WebSocket Integration Tests', () => {
         fail('Expected error for missing device parameter');
       } catch (error) {
         expect(error).toHaveProperty('code');
-        expect(error.code).toBe(ERROR_CODES.INVALID_PARAMS);
+        expect((error as any).code).toBe(ERROR_CODES.INVALID_PARAMS);
       }
     });
 
@@ -261,7 +262,7 @@ describe('WebSocket Integration Tests', () => {
         await wsService.call(RPC_METHODS.PING, {});
         fail('Expected error when disconnected');
       } catch (error) {
-        expect(error.message).toContain('not connected');
+        expect((error as Error).message).toContain('not connected');
       }
     });
   });

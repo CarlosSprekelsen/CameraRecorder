@@ -9,6 +9,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useCameraStore } from '../../src/stores/cameraStore';
 import { useFileStore } from '../../src/stores/fileStore';
 import { createWebSocketServiceSync } from '../../src/services/websocket';
+import type { CameraDevice } from '../../src/types';
 
 const TEST_WS_URL = 'ws://localhost:8002/ws';
 
@@ -81,7 +82,7 @@ describe('Camera Operations Integration', () => {
         fail('No cameras available for snapshot test - cannot validate core functionality');
       }
 
-      const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
+      const testCamera = cameraStore.cameras.find((c: CameraDevice) => c.status === 'CONNECTED');
       if (!testCamera) {
         fail('No connected cameras available for snapshot test - cannot validate core functionality');
       }
@@ -103,7 +104,7 @@ describe('Camera Operations Integration', () => {
         fail('No cameras available for PNG snapshot test - cannot validate core functionality');
       }
 
-      const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
+      const testCamera = cameraStore.cameras.find((c: CameraDevice) => c.status === 'CONNECTED');
       if (!testCamera) {
         fail('No connected cameras available for PNG snapshot test - cannot validate core functionality');
       }
@@ -125,7 +126,7 @@ describe('Camera Operations Integration', () => {
           fail('Should have thrown an error');
         } catch (error) {
           expect(error).toBeDefined();
-          expect(error.message).toContain('Camera not found');
+          expect((error as Error).message).toContain('Camera not found');
         }
       });
     }, 10000);
@@ -137,7 +138,7 @@ describe('Camera Operations Integration', () => {
         fail('No cameras available for recording test - cannot validate core functionality');
       }
 
-      const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
+      const testCamera = cameraStore.cameras.find((c: CameraDevice) => c.status === 'CONNECTED');
       if (!testCamera) {
         fail('No connected cameras available for recording test - cannot validate core functionality');
       }
@@ -175,7 +176,7 @@ describe('Camera Operations Integration', () => {
         fail('No cameras available for unlimited recording test - cannot validate core functionality');
       }
 
-      const testCamera = cameraStore.cameras.find(c => c.status === 'CONNECTED');
+      const testCamera = cameraStore.cameras.find((c: CameraDevice) => c.status === 'CONNECTED');
       if (!testCamera) {
         fail('No connected cameras available for unlimited recording test - cannot validate core functionality');
       }
@@ -207,7 +208,7 @@ describe('Camera Operations Integration', () => {
           fail('Should have thrown an error');
         } catch (error) {
           expect(error).toBeDefined();
-          expect(error.message).toContain('Camera not found');
+          expect((error as Error).message).toContain('Camera not found');
         }
       });
     }, 10000);
