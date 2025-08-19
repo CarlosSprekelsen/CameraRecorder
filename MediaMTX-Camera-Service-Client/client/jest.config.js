@@ -29,8 +29,10 @@ export default {
     '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/tests/fixtures/fileMock.js',
+    // Fix React DOM import paths
     '^react-dom/client$': 'react-dom/client',
-    '^react-dom$': 'react-dom'
+    '^react-dom$': 'react-dom',
+    '^react$': 'react'
   },
   
   // Test file patterns - ALL relative to client/
@@ -88,7 +90,8 @@ export default {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: '<rootDir>/tsconfig.test.json',
-      useESM: false
+      useESM: false,
+      jsx: 'react-jsx'
     }],
     '^.+\\.(js|jsx)$': 'babel-jest'
   },
@@ -128,5 +131,22 @@ export default {
   // Test environment variables
   testEnvironmentOptions: {
     url: 'http://localhost:3000'
+  },
+  
+  // Extensions to treat as ES modules
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  
+  // Test environment setup for React compatibility
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts'
+  ],
+  
+  // React Testing Library setup
+  testEnvironment: 'jsdom',
+  
+  // React Testing Library configuration
+  testEnvironmentOptions: {
+    url: 'http://localhost:3000',
+    customExportConditions: ['node', 'node-addons']
   }
 };
