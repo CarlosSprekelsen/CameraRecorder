@@ -23,15 +23,15 @@ describe('CameraDetail Component Integration Test', () => {
         reject(new Error('WebSocket connection timeout'));
       }, 5000);
 
-      wsService.on('open', () => {
+      wsService.onopen = () => {
         clearTimeout(timeout);
         resolve();
-      });
+      };
 
-      wsService.on('error', (error) => {
+      wsService.onerror = (error) => {
         clearTimeout(timeout);
         reject(error);
-      });
+      };
     });
   });
 
@@ -157,10 +157,10 @@ describe('CameraDetail Component Integration Test', () => {
       const tempWs = new WebSocket(TEST_WEBSOCKET_URL);
       
       await new Promise((resolve) => {
-        tempWs.on('open', () => {
+        tempWs.onopen = () => {
           tempWs.close();
           resolve();
-        });
+        };
       });
 
       expect(tempWs.readyState).toBe(WebSocket.CLOSED);

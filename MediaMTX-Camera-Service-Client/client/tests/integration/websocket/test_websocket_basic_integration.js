@@ -1,9 +1,11 @@
 /**
  * WebSocket Basic Integration Test
  * 
- * Tests basic WebSocket functionality using native browser WebSocket API
+ * Tests basic WebSocket functionality using Node.js ws library
  * This test requires a running MediaMTX server for integration testing
  */
+
+const WebSocket = require('ws');
 
 function send(ws, method, id, params = undefined) {
   const req = { jsonrpc: '2.0', method, id };
@@ -44,14 +46,14 @@ describe('WebSocket Basic Integration Tests', () => {
 
       ws = new WebSocket('ws://localhost:8002/ws');
 
-      ws.onopen = () => {
+      ws.on('open', () => {
         console.log('✅ WebSocket connection established');
         send(ws, 'ping', 1);
-      };
+      });
 
-      ws.onmessage = (event) => {
+      ws.on('message', (data) => {
         try {
-          const msg = JSON.parse(event.data);
+          const msg = JSON.parse(data.toString());
           console.log('📥', JSON.stringify(msg));
 
           if (msg.error && (msg.id === undefined || msg.id === null)) {
@@ -137,16 +139,16 @@ describe('WebSocket Basic Integration Tests', () => {
           ws.close();
           reject(err);
         }
-      };
+      });
 
-      ws.onerror = (error) => {
+      ws.on('error', (error) => {
         clearTimeout(timeout);
         reject(error);
-      };
+      });
 
-      ws.onclose = () => {
+      ws.on('close', () => {
         console.log('🔌 WebSocket closed');
-      };
+      });
     });
   }, 30000); // 30 second timeout for integration test
 });

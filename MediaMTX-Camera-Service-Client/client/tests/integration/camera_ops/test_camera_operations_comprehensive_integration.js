@@ -1,22 +1,11 @@
 /**
  * Comprehensive Camera Operations Integration Test
  * 
- * This test validates all camera operations against the real MediaMTX Camera Service server
- * following the actual server API specification.
- * 
- * Server API Methods Tested:
- * - take_snapshot(device, filename?) - Only device and filename parameters
- * - start_recording(device, duration?, format?) - Only device, duration, format parameters
- * - stop_recording(device) - Only device parameter
- * 
- * Prerequisites:
- * - MediaMTX Camera Service running on localhost:8002
- * - WebSocket endpoint available at ws://localhost:8002/ws
- * - Camera device available at /dev/video0
- * - Valid JWT authentication
+ * Tests complete camera operations workflow using Node.js ws library
+ * This test requires a running MediaMTX server for integration testing
  */
 
-
+const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 
 // Test configuration

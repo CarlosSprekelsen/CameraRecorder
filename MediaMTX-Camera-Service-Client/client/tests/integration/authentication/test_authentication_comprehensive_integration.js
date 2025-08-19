@@ -118,7 +118,7 @@ function sendRequest(ws, method, params = {}) {
         const response = JSON.parse(data);
         if (response.id === id) {
           clearTimeout(timeout);
-          ws.removeListener('message', messageHandler);
+          ws.onmessage = null;
           
           if (response.error) {
             console.log(`📥 Error response:`, response.error);
@@ -134,7 +134,7 @@ function sendRequest(ws, method, params = {}) {
       }
     };
     
-    ws.on('message', messageHandler);
+    ws.onmessage = messageHandler;
     ws.send(JSON.stringify(request));
   });
 }
@@ -299,7 +299,7 @@ async function testUnauthenticatedAccess() {
   
   try {
     const ws2 = new WebSocket(CONFIG.serverUrl);
-    await new Promise((resolve) => ws2.on('open', resolve));
+    await new Promise((resolve) => ws2.onopen = resolve);
     
     // Test unauthenticated access to protected methods
     console.log('\n📸 Testing unauthenticated access to take_snapshot');
@@ -373,8 +373,8 @@ describe('Authentication Integration Tests', () => {
     // Setup WebSocket connection
     ws = new WebSocket(CONFIG.serverUrl);
     await new Promise((resolve, reject) => {
-      ws.on('open', resolve);
-      ws.on('error', reject);
+      ws.onopen = resolve;
+      ws.onerror = reject;
     });
     console.log('✅ WebSocket connected for authentication test suite');
   });

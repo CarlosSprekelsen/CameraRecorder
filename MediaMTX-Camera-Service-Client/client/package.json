@@ -12,9 +12,11 @@
     "lint": "eslint src",
     "preview": "vite preview",
     "test": "jest --config jest.config.cjs",
-    "test:unit": "jest --config jest.config.cjs --testPathPattern='tests/unit' --testPathIgnorePatterns='tests/integration|tests/e2e'",
-    "test:integration": "jest --config jest.config.cjs --testPathPattern='tests/integration' --testPathIgnorePatterns='tests/unit|tests/e2e'",
-    "test:e2e": "jest --config jest.config.cjs --testPathPattern='tests/e2e' --testPathIgnorePatterns='tests/unit|tests/integration'",
+    "test:unit": "jest --config jest.config.cjs --testPathPattern='tests/unit' --testPathIgnorePatterns='tests/integration|tests/e2e|tests/performance'",
+    "test:integration": "jest --config jest.integration.config.cjs --testPathPattern='tests/integration' --testPathIgnorePatterns='tests/unit'",
+    "test:e2e": "jest --config jest.integration.config.cjs --testPathPattern='tests/e2e' --testPathIgnorePatterns='tests/unit'",
+    "test:performance": "jest --config jest.integration.config.cjs --testPathPattern='tests/performance' --testPathIgnorePatterns='tests/unit'",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:performance",
     "test:watch": "jest --config jest.config.cjs --watch",
     "test:coverage": "jest --config jest.config.cjs --coverage"
   },
@@ -30,6 +32,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -41,6 +44,7 @@
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitejs/plugin-react": "^4.1.1",
+    "babel-jest": "^30.0.5",
     "eslint": "^8.54.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
@@ -51,6 +55,7 @@
     "ts-jest": "29.1.5",
     "typescript": "^5.3.3",
     "vite": "^5.4.19",
-    "vite-plugin-pwa": "^0.17.5"
+    "vite-plugin-pwa": "^0.17.5",
+    "ws": "^8.18.3"
   }
 }
