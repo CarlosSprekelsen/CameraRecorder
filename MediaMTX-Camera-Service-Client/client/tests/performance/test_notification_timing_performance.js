@@ -5,7 +5,7 @@
  * This helps understand the user feedback delay and identify intermittent notification issues.
  */
 
-const WebSocket = require('ws');
+
 const { performance } = require('perf_hooks');
 const crypto = require('crypto');
 

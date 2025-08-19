@@ -12,6 +12,9 @@
     "lint": "eslint src",
     "preview": "vite preview",
     "test": "jest --config jest.config.cjs",
+    "test:unit": "jest --config jest.config.cjs --testPathPattern='tests/unit' --testPathIgnorePatterns='tests/integration|tests/e2e'",
+    "test:integration": "jest --config jest.config.cjs --testPathPattern='tests/integration' --testPathIgnorePatterns='tests/unit|tests/e2e'",
+    "test:e2e": "jest --config jest.config.cjs --testPathPattern='tests/e2e' --testPathIgnorePatterns='tests/unit|tests/integration'",
     "test:watch": "jest --config jest.config.cjs --watch",
     "test:coverage": "jest --config jest.config.cjs --coverage"
   },
@@ -24,7 +27,6 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.20.1",
-    "ws": "^8.14.2",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
@@ -36,7 +38,6 @@
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.1",
     "@types/react-router-dom": "^5.3.3",
-    "@types/ws": "^8.5.9",
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitejs/plugin-react": "^4.1.1",

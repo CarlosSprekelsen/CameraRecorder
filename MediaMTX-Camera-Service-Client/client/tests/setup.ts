@@ -11,19 +11,44 @@
 // Import jest-dom matchers
 import '@testing-library/jest-dom';
 
-// Mock WebSocket for tests
+// Enhanced Mock WebSocket for tests
 class MockWebSocket {
-  public readyState: number = WebSocket.CONNECTING;
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+
+  public readyState: number = MockWebSocket.CONNECTING;
   public url: string;
-  public onopen: (() => void) | null = null;
-  public onclose: ((event: { wasClean: boolean }) => void) | null = null;
+  public protocol: string = '';
+  public extensions: string = '';
+  public bufferedAmount: number = 0;
+  public binaryType: BinaryType = 'blob';
+  
+  public onopen: ((event: Event) => void) | null = null;
+  public onclose: ((event: CloseEvent) => void) | null = null;
   public onerror: ((event: Event) => void) | null = null;
-  public onmessage: ((event: { data: string }) => void) | null = null;
+  public onmessage: ((event: MessageEvent) => void) | null = null;
+  
   public send: jest.Mock = jest.fn();
   public close: jest.Mock = jest.fn();
+  public addEventListener: jest.Mock = jest.fn();
+  public removeEventListener: jest.Mock = jest.fn();
+  public dispatchEvent: jest.Mock = jest.fn();
 
-  constructor(url: string) {
+  constructor(url: string, protocols?: string | string[]) {
     this.url = url;
+    if (protocols) {
+      this.protocol = Array.isArray(protocols) ? protocols[0] : protocols;
+    }
+    
+    // Simulate connection opening after a short delay
+    setTimeout(() => {
+      this.readyState = MockWebSocket.OPEN;
+      if (this.onopen) {
+        this.onopen(new Event('open'));
+      }
+    }, 10);
   }
 }
 
@@ -100,4 +125,64 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
   })),
-}); 
+});
+
+// Mock Event constructor with proper static properties
+class MockEvent {
+  static NONE = 0;
+  static CAPTURING_PHASE = 1;
+  static AT_TARGET = 2;
+  static BUBBLING_PHASE = 3;
+
+  public type: string;
+  public preventDefault: jest.Mock;
+  public stopPropagation: jest.Mock;
+
+  constructor(type: string, options: any = {}) {
+    this.type = type;
+    this.preventDefault = jest.fn();
+    this.stopPropagation = jest.fn();
+    Object.assign(this, options);
+  }
+}
+
+// Mock MessageEvent constructor
+class MockMessageEvent {
+  public type: string;
+  public data: any;
+  public origin: string;
+  public lastEventId: string;
+  public source: any;
+  public ports: any[];
+
+  constructor(type: string, options: any = {}) {
+    this.type = type;
+    this.data = options.data || '';
+    this.origin = options.origin || '';
+    this.lastEventId = options.lastEventId || '';
+    this.source = options.source || null;
+    this.ports = options.ports || [];
+    Object.assign(this, options);
+  }
+}
+
+// Mock CloseEvent constructor
+class MockCloseEvent {
+  public type: string;
+  public code: number;
+  public reason: string;
+  public wasClean: boolean;
+
+  constructor(type: string, options: any = {}) {
+    this.type = type;
+    this.code = options.code || 1000;
+    this.reason = options.reason || '';
+    this.wasClean = options.wasClean || true;
+    Object.assign(this, options);
+  }
+}
+
+// Assign mocks to global
+global.Event = MockEvent as any;
+global.MessageEvent = MockMessageEvent as any;
+global.CloseEvent = MockCloseEvent as any; 

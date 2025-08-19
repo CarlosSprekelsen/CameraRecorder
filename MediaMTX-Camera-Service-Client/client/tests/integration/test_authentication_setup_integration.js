@@ -3,7 +3,7 @@
  * Verifies that the JWT authentication works with the correct environment variable name
  */
 
-const WebSocket = require('ws');
+
 const jwt = require('jsonwebtoken');
 
 const CONFIG = {

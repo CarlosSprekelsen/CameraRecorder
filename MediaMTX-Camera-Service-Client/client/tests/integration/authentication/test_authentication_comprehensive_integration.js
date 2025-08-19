@@ -18,7 +18,6 @@
  * - Valid JWT secret configured
  */
 
-const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 
 // Test configuration

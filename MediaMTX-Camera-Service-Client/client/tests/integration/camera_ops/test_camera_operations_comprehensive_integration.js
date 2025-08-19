@@ -16,7 +16,7 @@
  * - Valid JWT authentication
  */
 
-const WebSocket = require('ws');
+
 const jwt = require('jsonwebtoken');
 
 // Test configuration

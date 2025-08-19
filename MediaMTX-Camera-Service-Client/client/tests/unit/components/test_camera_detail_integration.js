@@ -4,7 +4,7 @@
  * Bypasses broken React testing library by testing the underlying logic
  */
 
-const WebSocket = require('ws');
+
 
 // Test configuration
 const TEST_WEBSOCKET_URL = 'ws://localhost:8002/ws';
