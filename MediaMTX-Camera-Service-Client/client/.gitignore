@@ -22,3 +22,47 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test artifacts and coverage
+coverage/
+*.lcov
+test-results/
+test-output/
+junit.xml
+coverage.xml
+*.coverage
+.nyc_output/
+
+# Test execution artifacts
+test-snapshots/
+test-screenshots/
+test-videos/
+test-audio/
+test-files/
+*.test.jpg
+*.test.png
+*.test.mp4
+*.test.avi
+*.test.mov
+test_*.jpg
+test_*.png
+test_*.mp4
+test_*.avi
+test_*.mov
+
+# Temporary test files
+*.tmp
+*.temp
+test-temp/
+temp-test/
+
+# Performance test artifacts
+performance-results/
+load-test-results/
+*.perf
+*.benchmark
+
+# Integration test artifacts
+integration-test-results/
+e2e-test-results/
+browser-test-results/
