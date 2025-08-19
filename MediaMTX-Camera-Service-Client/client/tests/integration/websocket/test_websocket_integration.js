@@ -394,11 +394,76 @@ async function runTests() {
 }
 
 // Run tests if this script is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   runTests().catch((error) => {
     console.error('💥 Test runner failed:', error);
     process.exit(1);
   });
 }
 
-export { runTests, testResults };
+module.exports = { runTests, testResults };
+
+// Add Jest test functions for integration testing
+describe('WebSocket Integration Tests', () => {
+  test('should test WebSocket integration', async () => {
+    await expect(runTests()).resolves.not.toThrow();
+  }, 60000);
+
+  test('should validate connection establishment', async () => {
+    // Test connection establishment specifically
+    const WebSocket = require('ws');
+    const ws = new WebSocket('ws://localhost:8002/ws');
+    
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Connection timeout')), 5000);
+      
+      ws.on('open', () => {
+        clearTimeout(timeout);
+        ws.close();
+        resolve();
+      });
+      
+      ws.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+  }, 10000);
+
+  test('should validate JSON-RPC protocol', async () => {
+    const WebSocket = require('ws');
+    const ws = new WebSocket('ws://localhost:8002/ws');
+    
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('RPC timeout')), 5000);
+      
+      ws.on('open', () => {
+        // Send ping request
+        const request = {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'ping'
+        };
+        ws.send(JSON.stringify(request));
+      });
+      
+      ws.on('message', (data) => {
+        try {
+          const response = JSON.parse(data.toString());
+          if (response.id === 1 && response.result === 'pong') {
+            clearTimeout(timeout);
+            ws.close();
+            resolve();
+          }
+        } catch (error) {
+          // Ignore non-JSON messages
+        }
+      });
+      
+      ws.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+  }, 10000);
+});

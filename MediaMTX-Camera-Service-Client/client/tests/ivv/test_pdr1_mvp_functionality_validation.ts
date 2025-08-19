@@ -25,7 +25,10 @@ import {
 import jwt from 'jsonwebtoken';
 
 const generateValidToken = (userId = 'pdr1_test_user', role = 'operator', expiresIn = 24 * 60 * 60): string => {
-    const secret = process.env.CAMERA_SERVICE_JWT_SECRET || 'd0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7';
+    const secret = process.env.CAMERA_SERVICE_JWT_SECRET;
+    if (!secret) {
+        throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable is required');
+    }
     
     const payload = {
         user_id: userId,
@@ -39,7 +42,10 @@ const generateValidToken = (userId = 'pdr1_test_user', role = 'operator', expire
 
 const validateTestEnvironment = (): boolean => {
     try {
-        const secret = process.env.CAMERA_SERVICE_JWT_SECRET || 'd0adf90f433d25a0f1d8b9e384f77976fff12f3ecf57ab39364dcc83731aa6f7';
+        const secret = process.env.CAMERA_SERVICE_JWT_SECRET;
+        if (!secret) {
+            throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable is required');
+        }
         console.log('✅ Test environment validated - JWT secret available');
         return true;
     } catch (error) {
