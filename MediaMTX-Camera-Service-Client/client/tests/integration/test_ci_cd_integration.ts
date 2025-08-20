@@ -19,8 +19,8 @@
 import { createWebSocketService } from '../fixtures/mock-server';
 
 describe('CI/CD Integration Tests', () => {
-  const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
   const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
+  const TEST_HEALTH_URL = process.env.TEST_HEALTH_URL || 'http://localhost:8003';
 
   describe('Service Startup and Readiness', () => {
     it('should verify server service is running', async () => {
@@ -256,8 +256,8 @@ async function checkSystemdServiceStatus(): Promise<boolean> {
  */
 async function checkHealthEndpoint(): Promise<boolean> {
   try {
-    const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
-    const response = await fetch(`${TEST_API_URL}/health`);
+    const TEST_HEALTH_URL = process.env.TEST_HEALTH_URL || 'http://localhost:8003';
+    const response = await fetch(`${TEST_HEALTH_URL}/health/system`);
     return response.ok;
   } catch {
     return false;

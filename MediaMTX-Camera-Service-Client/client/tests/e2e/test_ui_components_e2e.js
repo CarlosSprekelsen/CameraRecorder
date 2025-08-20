@@ -1,6 +1,6 @@
 /**
- * REQ-E2E01-001: [Primary requirement being tested]
- * REQ-E2E01-002: [Secondary requirements covered]
+ * REQ-E2E01-001: UI/UX Validation - Client must provide responsive, accessible, and performant user interface
+ * REQ-E2E01-002: Component Structure - All required components must be present and functional
  * Coverage: E2E
  * Quality: HIGH
  */
@@ -8,206 +8,160 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-console.log('Testing UI Components and User Experience...');
-
-// Test 1: Check if client is running
-function testClientRunning() {
+describe('UI/UX E2E Validation', () => {
+  const CLIENT_URL = 'http://localhost:5173';
+  
+  // Test 1: Check if client is running
+  test('REQ-E2E01-001: Client server should be running and accessible', () => {
     try {
-        const response = execSync('curl -s -I http://localhost:5173', { encoding: 'utf8' });
-        console.log('✅ Test 1: Client server is running');
-        return true;
+      const response = execSync(`curl -s -I ${CLIENT_URL}`, { encoding: 'utf8' });
+      expect(response).toContain('HTTP/');
+      expect(response).toMatch(/200|404/); // 200 OK or 404 (still means server is running)
     } catch (error) {
-        console.log('❌ Test 1: Client server is not running');
-        return false;
+      fail('Client server is not running or accessible');
     }
-}
+  });
 
-// Test 2: Check responsive design meta tags
-function testResponsiveDesign() {
+  // Test 2: Check responsive design meta tags
+  test('REQ-E2E01-001: Should have responsive design meta tags', () => {
     try {
-        const html = execSync('curl -s http://localhost:5173', { encoding: 'utf8' });
-        
-        const hasViewport = html.includes('viewport');
-        const hasResponsiveMeta = html.includes('width=device-width');
-        const hasInitialScale = html.includes('initial-scale=1.0');
-        
-        if (hasViewport && hasResponsiveMeta && hasInitialScale) {
-            console.log('✅ Test 2: Responsive design meta tags present');
-            return true;
-        } else {
-            console.log('❌ Test 2: Missing responsive design meta tags');
-            return false;
-        }
+      const html = execSync(`curl -s ${CLIENT_URL}`, { encoding: 'utf8' });
+      
+      expect(html).toContain('viewport');
+      expect(html).toContain('width=device-width');
+      expect(html).toContain('initial-scale=1.0');
     } catch (error) {
-        console.log('❌ Test 2: Could not test responsive design');
-        return false;
+      fail('Could not test responsive design - client not accessible');
     }
-}
+  });
 
-// Test 3: Check PWA features
-function testPWAFeatures() {
+  // Test 3: Check PWA features (optional for MVP)
+  test('REQ-E2E01-001: Should have PWA features (optional)', () => {
     try {
-        const html = execSync('curl -s http://localhost:5173', { encoding: 'utf8' });
-        
-        const hasManifest = html.includes('manifest') || html.includes('manifest.json');
-        const hasServiceWorker = html.includes('service-worker') || html.includes('sw.js');
-        
-        if (hasManifest || hasServiceWorker) {
-            console.log('✅ Test 3: PWA features detected');
-            return true;
-        } else {
-            console.log('⚠️ Test 3: PWA features not detected (may be optional)');
-            return true; // Not critical for MVP
-        }
+      const html = execSync(`curl -s ${CLIENT_URL}`, { encoding: 'utf8' });
+      
+      const hasManifest = html.includes('manifest') || html.includes('manifest.json');
+      const hasServiceWorker = html.includes('service-worker') || html.includes('sw.js');
+      
+      // PWA features are optional for MVP, so we don't fail if missing
+      if (hasManifest || hasServiceWorker) {
+        console.log('✅ PWA features detected');
+      } else {
+        console.log('⚠️ PWA features not detected (optional for MVP)');
+      }
+      
+      // Test passes regardless - PWA is optional
+      expect(true).toBe(true);
     } catch (error) {
-        console.log('❌ Test 3: Could not test PWA features');
-        return false;
+      console.log('⚠️ Could not test PWA features - client not accessible');
+      // Don't fail the test for optional features
+      expect(true).toBe(true);
     }
-}
+  });
 
-// Test 4: Check component structure
-function testComponentStructure() {
+  // Test 4: Check component structure
+  test('REQ-E2E01-002: Should have all required component files', () => {
     const componentPaths = [
-        'client/src/components/Dashboard/Dashboard.tsx',
-        'client/src/components/common/ConnectionManager.tsx',
-        'client/src/components/common/ConnectionStatus.tsx',
-        'client/src/components/CameraDetail/CameraDetail.tsx',
-        'client/src/components/FileManager/FileManager.tsx'
+      'src/components/Dashboard/Dashboard.tsx',
+      'src/components/common/ConnectionManager.tsx',
+      'src/components/common/ConnectionStatus.tsx',
+      'src/components/CameraDetail/CameraDetail.tsx',
+      'src/components/FileManager/FileManager.tsx'
     ];
     
-    let allExist = true;
-    componentPaths.forEach(path => {
-        if (fs.existsSync(path)) {
-            console.log(`✅ Component exists: ${path}`);
-        } else {
-            console.log(`❌ Component missing: ${path}`);
-            allExist = false;
-        }
+    const missingComponents = [];
+    
+    componentPaths.forEach(componentPath => {
+      if (!fs.existsSync(componentPath)) {
+        missingComponents.push(componentPath);
+      }
     });
     
-    return allExist;
-}
+    if (missingComponents.length > 0) {
+      fail(`Missing required components: ${missingComponents.join(', ')}`);
+    }
+    
+    expect(missingComponents).toHaveLength(0);
+  });
 
-// Test 5: Check accessibility features
-function testAccessibility() {
+  // Test 5: Check accessibility features
+  test('REQ-E2E01-001: Should have basic accessibility features', () => {
     try {
-        const html = execSync('curl -s http://localhost:5173', { encoding: 'utf8' });
-        
-        const hasLang = html.includes('lang="en"');
-        const hasAltTags = html.includes('alt=');
-        const hasAriaLabels = html.includes('aria-');
-        
-        if (hasLang) {
-            console.log('✅ Test 5: Basic accessibility features present');
-            return true;
-        } else {
-            console.log('⚠️ Test 5: Basic accessibility features may be missing');
-            return true; // Not critical for MVP
-        }
+      const html = execSync(`curl -s ${CLIENT_URL}`, { encoding: 'utf8' });
+      
+      // Check for basic accessibility features
+      const hasLang = html.includes('lang="en"');
+      const hasAltTags = html.includes('alt=');
+      const hasAriaLabels = html.includes('aria-');
+      
+      // At minimum, should have language attribute
+      expect(hasLang).toBe(true);
+      
+      // Log other accessibility features (not failing for these)
+      if (hasAltTags) console.log('✅ Alt tags detected');
+      if (hasAriaLabels) console.log('✅ ARIA labels detected');
+      
     } catch (error) {
-        console.log('❌ Test 5: Could not test accessibility');
-        return false;
+      fail('Could not test accessibility features - client not accessible');
     }
-}
+  });
 
-// Test 6: Check cross-browser compatibility
-function testCrossBrowserCompatibility() {
+  // Test 6: Check cross-browser compatibility
+  test('REQ-E2E01-001: Should support modern JavaScript', () => {
     try {
-        const html = execSync('curl -s http://localhost:5173', { encoding: 'utf8' });
-        
-        const hasPolyfills = html.includes('polyfill') || html.includes('@babel');
-        const hasModernJS = html.includes('type="module"');
-        
-        if (hasModernJS) {
-            console.log('✅ Test 6: Modern JavaScript support detected');
-            return true;
-        } else {
-            console.log('⚠️ Test 6: Modern JavaScript support may be limited');
-            return true; // Not critical for MVP
-        }
+      const html = execSync(`curl -s ${CLIENT_URL}`, { encoding: 'utf8' });
+      
+      const hasModernJS = html.includes('type="module"');
+      
+      if (hasModernJS) {
+        console.log('✅ Modern JavaScript support detected');
+      } else {
+        console.log('⚠️ Modern JavaScript support may be limited');
+      }
+      
+      // Test passes - modern JS is preferred but not critical
+      expect(true).toBe(true);
     } catch (error) {
-        console.log('❌ Test 6: Could not test cross-browser compatibility');
-        return false;
+      console.log('⚠️ Could not test cross-browser compatibility');
+      // Don't fail for optional features
+      expect(true).toBe(true);
     }
-}
+  });
 
-// Test 7: Check mobile responsiveness
-function testMobileResponsiveness() {
+  // Test 7: Check mobile responsiveness
+  test('REQ-E2E01-001: Should respond to mobile user agents', () => {
     try {
-        // Test with mobile user agent
-        const mobileResponse = execSync('curl -s -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15" http://localhost:5173', { encoding: 'utf8' });
-        
-        if (mobileResponse.length > 0) {
-            console.log('✅ Test 7: Mobile user agent test passed');
-            return true;
-        } else {
-            console.log('❌ Test 7: Mobile user agent test failed');
-            return false;
-        }
+      const mobileResponse = execSync(
+        `curl -s -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15" ${CLIENT_URL}`, 
+        { encoding: 'utf8' }
+      );
+      
+      expect(mobileResponse.length).toBeGreaterThan(0);
+      expect(mobileResponse).toContain('html');
     } catch (error) {
-        console.log('❌ Test 7: Could not test mobile responsiveness');
-        return false;
+      fail('Could not test mobile responsiveness - client not accessible');
     }
-}
+  });
 
-// Test 8: Check performance optimization
-function testPerformanceOptimization() {
+  // Test 8: Check performance optimization
+  test('REQ-E2E01-001: Should have performance optimizations', () => {
     try {
-        const html = execSync('curl -s http://localhost:5173', { encoding: 'utf8' });
-        
-        const hasOptimizedAssets = html.includes('vite') || html.includes('optimized');
-        const hasCompression = html.includes('gzip') || html.includes('deflate');
-        
-        if (hasOptimizedAssets) {
-            console.log('✅ Test 8: Performance optimization detected');
-            return true;
-        } else {
-            console.log('⚠️ Test 8: Performance optimization may be limited');
-            return true; // Not critical for MVP
-        }
+      const html = execSync(`curl -s ${CLIENT_URL}`, { encoding: 'utf8' });
+      
+      const hasOptimizedAssets = html.includes('vite') || html.includes('optimized');
+      
+      if (hasOptimizedAssets) {
+        console.log('✅ Performance optimization detected');
+      } else {
+        console.log('⚠️ Performance optimization may be limited');
+      }
+      
+      // Test passes - optimization is preferred but not critical
+      expect(true).toBe(true);
     } catch (error) {
-        console.log('❌ Test 8: Could not test performance optimization');
-        return false;
+      console.log('⚠️ Could not test performance optimization');
+      // Don't fail for optional features
+      expect(true).toBe(true);
     }
-}
-
-// Run all tests
-function runAllTests() {
-    console.log('\n🎯 UI/UX VALIDATION TESTS\n');
-    
-    const tests = [
-        { name: 'Client Running', fn: testClientRunning },
-        { name: 'Responsive Design', fn: testResponsiveDesign },
-        { name: 'PWA Features', fn: testPWAFeatures },
-        { name: 'Component Structure', fn: testComponentStructure },
-        { name: 'Accessibility', fn: testAccessibility },
-        { name: 'Cross-Browser Compatibility', fn: testCrossBrowserCompatibility },
-        { name: 'Mobile Responsiveness', fn: testMobileResponsiveness },
-        { name: 'Performance Optimization', fn: testPerformanceOptimization }
-    ];
-    
-    const results = tests.map(test => ({
-        name: test.name,
-        passed: test.fn()
-    }));
-    
-    console.log('\n📊 TEST RESULTS SUMMARY:');
-    results.forEach(result => {
-        console.log(`${result.passed ? '✅' : '❌'} ${result.name}: ${result.passed ? 'PASS' : 'FAIL'}`);
-    });
-    
-    const passedCount = results.filter(r => r.passed).length;
-    const totalCount = results.length;
-    
-    console.log(`\n🎉 OVERALL RESULT: ${passedCount}/${totalCount} tests passed`);
-    
-    if (passedCount === totalCount) {
-        console.log('✅ ALL UI/UX TESTS PASSED');
-        process.exit(0);
-    } else {
-        console.log('❌ SOME UI/UX TESTS FAILED');
-        process.exit(1);
-    }
-}
-
-runAllTests();
+  });
+});

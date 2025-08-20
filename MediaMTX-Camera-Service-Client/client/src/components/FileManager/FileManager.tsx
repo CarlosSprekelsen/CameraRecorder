@@ -104,10 +104,25 @@ const FileManager: React.FC = () => {
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
+    
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    
+    // Determine the appropriate unit
+    let i = 0;
+    if (bytes >= k * k) { // >= 1MB
+      i = 2; // MB
+    } else if (bytes >= k) { // >= 1KB
+      i = 1; // KB
+    }
+    
+    // Calculate the value in the selected unit
+    const value = bytes / Math.pow(k, i);
+    
+    // For MB and GB, round to whole numbers; for KB and Bytes, show 2 decimal places
+    const formattedValue = i >= 2 ? Math.round(value) : parseFloat(value.toFixed(2));
+    
+    return `${formattedValue} ${sizes[i]}`;
   };
 
   const formatDuration = (seconds: number): string => {
@@ -281,6 +296,7 @@ const FileTable: React.FC<FileTableProps> = ({
                   onClick={() => onDownload(file.filename)}
                   disabled={isDownloading}
                   color="primary"
+                  aria-label={`Download ${file.filename}`}
                 >
                   <Download />
                 </IconButton>

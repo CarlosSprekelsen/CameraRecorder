@@ -13,6 +13,36 @@ source .test_env
 npm test
 ```
 
+## ⚠️ CRITICAL: Authentication Setup Required
+**ALWAYS run `./set-test-env.sh` before executing tests**
+- Tests accessing protected methods require valid authentication tokens
+- Environment variables get synced with git and may be outdated
+- `set-test-env.sh` ensures current valid keys for your server instance
+- **MANDATORY**: All tests calling protected methods must authenticate first
+
+```bash
+# REQUIRED: Set up authentication before any test execution
+cd MediaMTX-Camera-Service-Client/client
+./set-test-env.sh
+source .test_env
+npm test
+```
+
+## ⚠️ CRITICAL: Server Port Configuration
+**MediaMTX Camera Service has TWO endpoints - use correct ports:**
+- **WebSocket Server (JSON-RPC)**: Port 8002 - All camera operations, file management
+- **Health Server (REST)**: Port 8003 - Health checks, system status
+- **MANDATORY**: Tests must use correct endpoint for each operation type
+- **MANDATORY**: Do not mix WebSocket methods with health endpoints
+
+```bash
+# WebSocket operations (camera control, file management)
+ws://localhost:8002/ws
+
+# Health operations (system status, monitoring)  
+http://localhost:8003/health/*
+```
+
 ## Philosophy
 **"Test First, Real Integration Always"**
 

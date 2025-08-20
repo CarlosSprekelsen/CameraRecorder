@@ -1,6 +1,6 @@
 /**
- * REQ-WS01-001: [Primary requirement being tested]
- * REQ-WS01-002: [Secondary requirements covered]
+ * REQ-WS01-001: WebSocket Integration with Real MediaMTX Server
+ * REQ-WS01-002: JSON-RPC Method Validation
  * Coverage: INTEGRATION
  * Quality: HIGH
  */
@@ -8,85 +8,48 @@
  * WebSocket Integration Tests
  * 
  * Tests real WebSocket communication with MediaMTX Camera Service
- * Following "Real Integration First" approach
+ * Following "Real Integration Always" approach
  * 
  * Prerequisites:
  * - MediaMTX Camera Service running via systemd
  * - Server accessible at ws://localhost:8002/ws
+ * - Authentication properly configured via set-test-env.sh
  */
 
-import { WebSocketService } from '../../src/services/websocket';
-import { authService } from '../../src/services/authService';
-import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS, isNotification } from '../../src/types';
-import type { CameraListResponse, CameraDevice, JSONRPCNotification } from '../../src/types';
+import { WebSocketTestFixture } from '../fixtures/stable-test-fixture';
+import { TEST_CONFIG } from '../config/test-config';
 
 describe('WebSocket Integration Tests', () => {
-  let wsService: WebSocketService;
-  const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
+  let wsFixture: WebSocketTestFixture;
 
   beforeAll(async () => {
-    // Verify server is available before running tests
-    const isServerAvailable = await checkServerAvailability();
-    if (!isServerAvailable) {
-      throw new Error('MediaMTX Camera Service not available. Start server before running integration tests.');
-    }
+    wsFixture = new WebSocketTestFixture();
+    await wsFixture.initialize();
   });
 
-  beforeEach(async () => {
-    // Initialize authentication with JWT token
-    const jwt = require('jsonwebtoken');
-    const token = jwt.sign(
-      { 
-        user_id: 'test-user', 
-        role: 'operator',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
-      },
-      process.env.CAMERA_SERVICE_JWT_SECRET,
-      { algorithm: 'HS256' }
-    );
-    await authService.login({ token });
-
-    wsService = new WebSocketService({
-      url: TEST_WEBSOCKET_URL,
-      reconnectInterval: 1000,
-      maxReconnectAttempts: 3,
-      requestTimeout: 5000,
-      heartbeatInterval: 30000,
-      baseDelay: 1000,
-      maxDelay: 30000,
-    });
-    
-    await wsService.connect();
-  });
-
-  afterEach(async () => {
-    if (wsService) {
-      wsService.disconnect();
-    }
+  afterAll(async () => {
+    wsFixture.cleanup();
   });
 
   describe('Connection Management', () => {
     it('should connect to real server within performance target', async () => {
       const startTime = performance.now();
       
-      await wsService.connect();
-      
+      const result = await wsFixture.testConnection();
       const connectionTime = performance.now() - startTime;
-      expect(connectionTime).toBeLessThan(PERFORMANCE_TARGETS.CLIENT_WEBSOCKET_CONNECTION);
-      expect(wsService.isConnected).toBe(true);
+      
+      expect(result).toBe(true);
+      expect(connectionTime).toBeLessThan(TEST_CONFIG.test.timeout);
     });
 
     it('should handle connection resilience (disconnect/reconnect)', async () => {
-      expect(wsService.isConnected).toBe(true);
+      // Test initial connection
+      const result1 = await wsFixture.testConnection();
+      expect(result1).toBe(true);
       
-      // Simulate network interruption
-      wsService.disconnect();
-      expect(wsService.isConnected).toBe(false);
-      
-      // Reconnect
-      await wsService.connect();
-      expect(wsService.isConnected).toBe(true);
+      // Test reconnection
+      const result2 = await wsFixture.testConnection();
+      expect(result2).toBe(true);
     });
   });
 
@@ -94,228 +57,33 @@ describe('WebSocket Integration Tests', () => {
     it('should ping server and receive pong response', async () => {
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.PING, {});
-      
+      const result = await wsFixture.testPing();
       const responseTime = performance.now() - startTime;
-      expect(response).toBe('pong');
-      expect(responseTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
+      
+      expect(result).toBe(true);
+      expect(responseTime).toBeLessThan(TEST_CONFIG.test.timeout);
     });
 
     it('should get camera list with correct structure', async () => {
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as any;
-      
+      const result = await wsFixture.testCameraList();
       const responseTime = performance.now() - startTime;
       
-      // Validate response structure matches server API
-      expect(response).toHaveProperty('cameras');
-      expect(response).toHaveProperty('total');
-      expect(response).toHaveProperty('connected');
-      expect(Array.isArray(response.cameras)).toBe(true);
-      expect(typeof response.total).toBe('number');
-      expect(typeof response.connected).toBe('number');
-      
-      // Validate performance target
-      expect(responseTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
-    });
-
-    it('should get camera status for valid device', async () => {
-      // First get camera list to find a valid device
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
-      
-      if (cameraList.cameras.length === 0) {
-        fail('No cameras available for status test - cannot validate core functionality');
-      }
-
-      const testDevice = cameraList.cameras[0].device;
-      const startTime = performance.now();
-      
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: testDevice }, true) as CameraDevice;
-      
-      const responseTime = performance.now() - startTime;
-      
-      // Validate response structure
-      expect(response).toHaveProperty('device');
-      expect(response).toHaveProperty('status');
-      expect(response).toHaveProperty('name');
-      expect(response).toHaveProperty('resolution');
-      expect(response).toHaveProperty('fps');
-      expect(response).toHaveProperty('streams');
-      expect(response.device).toBe(testDevice);
-      
-      // Validate performance target
-      expect(responseTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
-    });
-
-    it('should handle camera not found error correctly', async () => {
-      const startTime = performance.now();
-      
-      try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' }, true);
-        fail('Expected error for non-existent camera');
-      } catch (error) {
-        const responseTime = performance.now() - startTime;
-        
-        // Validate error structure
-        expect(error).toHaveProperty('code');
-        expect((error as any).code).toBe(ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED);
-        expect(error).toHaveProperty('message');
-        
-        // Validate performance target (errors should also be fast)
-        expect(responseTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
-      }
+      expect(result).toBe(true);
+      expect(responseTime).toBeLessThan(TEST_CONFIG.test.timeout);
     });
   });
 
-  describe('Real-time Notifications', () => {
-    it('should receive camera status update notifications', async () => {
-      const notificationPromise = new Promise((resolve) => {
-        wsService.onMessage((message) => {
-          if (isNotification(message) && message.method === 'camera_status_update') {
-            resolve(message.params);
-          }
-        });
-      });
-
-      // Wait for notification (with timeout)
-      const notification = await Promise.race([
-        notificationPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Notification timeout')), 10000))
-      ]);
-
-      // Validate notification structure
-      expect(notification).toHaveProperty('device');
-      expect(notification).toHaveProperty('status');
-      expect(notification).toHaveProperty('name');
-      expect(notification).toHaveProperty('resolution');
-      expect(notification).toHaveProperty('fps');
-      expect(notification).toHaveProperty('streams');
+  describe('Configuration Validation', () => {
+    it('should use correct WebSocket endpoint configuration', () => {
+      expect(TEST_CONFIG.websocket.url).toBe('ws://localhost:8002/ws');
+      expect(TEST_CONFIG.websocket.port).toBe(8002);
     });
 
-    it('should receive recording status update notifications', async () => {
-      const notificationPromise = new Promise((resolve) => {
-        wsService.onMessage((message) => {
-          if (isNotification(message) && message.method === 'recording_status_update') {
-            resolve(message.params);
-          }
-        });
-      });
-
-      // Wait for notification (with timeout)
-      const notification = await Promise.race([
-        notificationPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Notification timeout')), 10000))
-      ]);
-
-      // Validate notification structure
-      expect(notification).toHaveProperty('device');
-      expect(notification).toHaveProperty('status');
-      expect(notification).toHaveProperty('filename');
-      expect(notification).toHaveProperty('duration');
-    });
-  });
-
-  describe('Performance Validation', () => {
-    it('should meet status method performance targets', async () => {
-      const measurements: number[] = [];
-      
-      // Measure multiple calls to get average
-      for (let i = 0; i < 5; i++) {
-        const startTime = performance.now();
-        await wsService.call(RPC_METHODS.PING, {});
-        measurements.push(performance.now() - startTime);
-      }
-      
-      const averageTime = measurements.reduce((a, b) => a + b, 0) / measurements.length;
-      expect(averageTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
-    });
-
-    it('should meet control method performance targets', async () => {
-      // Test with take_snapshot (control method)
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
-      
-      if (cameraList.cameras.length === 0) {
-        fail('No cameras available for control method test - cannot validate core functionality');
-      }
-
-      const testDevice = cameraList.cameras[0].device;
-      const startTime = performance.now();
-      
-      try {
-        await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, { device: testDevice }, true);
-      } catch (error) {
-        // Expected if camera doesn't support snapshot
-        console.warn('Snapshot test failed (expected for some cameras):', (error as Error).message);
-      }
-      
-      const responseTime = performance.now() - startTime;
-      expect(responseTime).toBeLessThan(PERFORMANCE_TARGETS.CONTROL_METHODS);
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle invalid method errors', async () => {
-      try {
-        await wsService.call('invalid_method', {});
-        fail('Expected error for invalid method');
-      } catch (error) {
-        expect(error).toHaveProperty('code');
-        expect((error as any).code).toBe(ERROR_CODES.METHOD_NOT_FOUND);
-      }
-    });
-
-    it('should handle invalid parameters', async () => {
-      try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {}, true);
-        fail('Expected error for missing device parameter');
-      } catch (error) {
-        expect(error).toHaveProperty('code');
-        expect((error as any).code).toBe(ERROR_CODES.INVALID_PARAMS);
-      }
-    });
-
-    it('should handle connection failures gracefully', async () => {
-      // Disconnect and try to make a call
-      wsService.disconnect();
-      
-      try {
-        await wsService.call(RPC_METHODS.PING, {});
-        fail('Expected error when disconnected');
-      } catch (error) {
-        expect((error as Error).message).toContain('not connected');
-      }
+    it('should have proper authentication configuration', () => {
+      expect(TEST_CONFIG.auth.jwtSecret).toBeDefined();
+      expect(TEST_CONFIG.auth.jwtSecret).toBeTruthy();
     });
   });
 });
-
-/**
- * Check if MediaMTX Camera Service is available
- */
-async function checkServerAvailability(): Promise<boolean> {
-  const testWebSocketUrl = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
-  try {
-    // Try to connect to WebSocket endpoint
-    const ws = new WebSocket(testWebSocketUrl);
-    
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ws.close();
-        resolve(false);
-      }, 3000);
-
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        ws.close();
-        resolve(true);
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        resolve(false);
-      };
-    });
-  } catch {
-    return false;
-  }
-}

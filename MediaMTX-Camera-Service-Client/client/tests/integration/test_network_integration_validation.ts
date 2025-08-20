@@ -23,15 +23,26 @@
 
 import { WebSocketService } from '../../src/services/websocket';
 import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS } from '../../src/types';
+import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
+import { TEST_CONFIG } from '../config/test-config';
 
 describe('Network Integration Validation Tests', () => {
   let wsService: WebSocketService;
+  let wsFixture: WebSocketTestFixture;
+  let healthFixture: HealthTestFixture;
   const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
 
   beforeAll(async () => {
-    // Verify server is available
-    const isServerAvailable = await checkServerAvailability();
-    if (!isServerAvailable) {
+    // Initialize stable fixtures for authentication and server availability
+    wsFixture = new WebSocketTestFixture();
+    healthFixture = new HealthTestFixture();
+    
+    await wsFixture.initialize();
+    await healthFixture.initialize();
+    
+    // Verify server is available using stable fixtures
+    const serverAvailable = await wsFixture.testConnection();
+    if (!serverAvailable) {
       throw new Error('MediaMTX Camera Service not available for REQ-NET01 gap validation.');
     }
   });
@@ -56,6 +67,11 @@ describe('Network Integration Validation Tests', () => {
     }
   });
 
+  afterAll(async () => {
+    wsFixture.cleanup();
+    healthFixture.cleanup();
+  });
+
   describe('REQ-NET01-001: Real-world Network Interruption Scenarios', () => {
     it('should handle rapid connection cycling (network instability simulation)', async () => {
       const cycles = 10;
@@ -64,6 +80,7 @@ describe('Network Integration Validation Tests', () => {
       for (let i = 0; i < cycles; i++) {
         const startTime = performance.now();
         
+        // CRITICAL: Actually disconnect and reconnect to simulate network instability
         wsService.disconnect();
         await wsService.connect();
         
@@ -85,7 +102,7 @@ describe('Network Integration Validation Tests', () => {
       const operations = [];
       
       for (let i = 0; i < 5; i++) {
-        // Disconnect and reconnect
+        // CRITICAL: Actually disconnect and reconnect to simulate network instability
         wsService.disconnect();
         await wsService.connect();
         
@@ -149,9 +166,9 @@ describe('Network Integration Validation Tests', () => {
       });
       
       // Trigger multiple operations that should generate notifications
-              await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
-        await wsService.call(RPC_METHODS.PING, {});
-        await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
+      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
+      await wsService.call(RPC_METHODS.PING, {});
+      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
       
       // Wait for notifications
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -169,7 +186,7 @@ describe('Network Integration Validation Tests', () => {
     it('should use polling fallback when WebSocket is disconnected', async () => {
       // This test validates that polling fallback is now implemented
       
-      // Simulate WebSocket failure
+      // CRITICAL: Actually disconnect WebSocket to test fallback
       wsService.disconnect();
       
       // Wait for disconnect to complete
@@ -324,34 +341,18 @@ describe('Network Integration Validation Tests', () => {
       expect(averageTime).toBeLessThan(PERFORMANCE_TARGETS.STATUS_METHODS);
     });
   });
-});
 
-/**
- * Check if MediaMTX Camera Service is available
- */
-async function checkServerAvailability(): Promise<boolean> {
-  const testWebSocketUrl = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
-  try {
-    const ws = new WebSocket(testWebSocketUrl);
-    
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ws.close();
-        resolve(false);
-      }, 5000);
-
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        ws.close();
-        resolve(true);
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        resolve(false);
-      };
+  describe('Health Server Integration (Fallback Testing)', () => {
+    it('should access health endpoints as fallback mechanism', async () => {
+      // Test health endpoints as alternative to WebSocket
+      const systemHealth = await healthFixture.testSystemHealth();
+      expect(systemHealth).toBe(true);
+      
+      const cameraHealth = await healthFixture.testCameraHealth();
+      expect(cameraHealth).toBe(true);
+      
+      const mediamtxHealth = await healthFixture.testMediaMTXHealth();
+      expect(mediamtxHealth).toBe(true);
     });
-  } catch {
-    return false;
-  }
-}
+  });
+});
