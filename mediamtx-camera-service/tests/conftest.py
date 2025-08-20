@@ -36,8 +36,9 @@ from pathlib import Path
 
 def pytest_sessionstart(session):
     """Set up test environment variables and ensure clean state."""
-    # Provide a deterministic secret for JWT tests
-    os.environ.setdefault("CAMERA_SERVICE_JWT_SECRET", "test-secret-key")
+    # Provide a deterministic secret for JWT tests using shared utilities
+    from tests.fixtures.auth_utils import get_test_jwt_secret
+    os.environ.setdefault("CAMERA_SERVICE_JWT_SECRET", get_test_jwt_secret())
     os.environ.setdefault("CAMERA_SERVICE_RATE_RPM", "1000")
     
     # Set test-specific environment variables
@@ -112,6 +113,24 @@ def pytest_configure(config):
                     f"Remove {module_name} from test environment."
                 )
 
+# Add marker for tests requiring sudo privileges
+def pytest_configure(config):
+    """Configure pytest markers."""
+    config.addinivalue_line(
+        "markers", "sudo_required: mark test as requiring sudo privileges"
+    )
+    config.addinivalue_line(
+        "markers", "real_mediamtx: mark test as requiring real MediaMTX service"
+    )
+    
+    # Check if sudo is available for sudo_required tests
+    import subprocess
+    try:
+        subprocess.run(["sudo", "-n", "true"], check=True, timeout=5)
+        config.sudo_available = True
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        config.sudo_available = False
+
 # Test markers for different test types
 def pytest_collection_modifyitems(config, items):
     """Add test markers based on directory structure and enforce no-mock for specific tests."""
@@ -162,6 +181,10 @@ def pytest_collection_modifyitems(config, items):
         if is_restricted_test and os.environ.get("FORBID_MOCKS") != "1":
             # Mark this specific test to be skipped, don't fail the entire collection
             item.add_marker(pytest.mark.skip(reason="PDR/Integration/IVV tests require FORBID_MOCKS=1 environment variable"))
+        
+        # Skip sudo_required tests if sudo is not available
+        if item.get_closest_marker("sudo_required") and not getattr(config, 'sudo_available', False):
+            item.add_marker(pytest.mark.skip(reason="sudo not available"))
 
 @pytest.fixture(scope="session")
 def test_environment():
@@ -179,7 +202,7 @@ def test_environment():
         "test_snapshots_path": "/tmp/test_snapshots",
         "test_logs_path": "/tmp/test_logs",
         "test_device_range": [0, 1, 2],
-        "test_jwt_secret": "test-secret-key",
+        "test_jwt_secret": get_test_jwt_secret(),
         "test_rate_limit": 1000,
     }
 
@@ -242,4 +265,10 @@ def real_system_validator():
                 raise
     
     return RealSystemValidator()
+
+@pytest.fixture(scope="session")
+def jwt_secret():
+    """JWT secret key for testing using shared utilities."""
+    from tests.fixtures.auth_utils import get_test_jwt_secret
+    return get_test_jwt_secret()
 

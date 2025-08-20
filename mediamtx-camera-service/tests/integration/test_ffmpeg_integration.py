@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
 Test script for MediaMTX FFmpeg integration implementation.
+
+Requirements Traceability:
+- REQ-FFMPEG-001: System shall integrate with FFmpeg for video processing
+- REQ-FFMPEG-002: System shall handle FFmpeg process lifecycle management
+- REQ-FFMPEG-003: System shall validate FFmpeg integration functionality
+
+Test Categories: Integration
 """
 
 import asyncio
@@ -18,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_ffmpeg_integration():
     """Test the MediaMTX FFmpeg integration implementation."""
     

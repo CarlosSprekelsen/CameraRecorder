@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
 Test script for camera discovery and MediaMTX integration with real video devices.
+
+Requirements Traceability:
+- REQ-CAMERA-001: System shall discover real video devices automatically
+- REQ-CAMERA-002: System shall integrate camera discovery with MediaMTX service
+- REQ-CAMERA-003: System shall handle camera capability detection
+- REQ-MEDIA-001: MediaMTX integration shall use single systemd-managed service
+
+Test Categories: Integration
 """
 
 import asyncio
@@ -25,6 +33,7 @@ logger = logging.getLogger(__name__)
 import pytest
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_camera_discovery():
     """Test camera discovery with real devices."""
     logger.info("=== Testing Camera Discovery ===")
@@ -75,6 +84,7 @@ async def test_camera_discovery():
         await camera_monitor.stop()
 
 @pytest.mark.asyncio
+@pytest.mark.integration
 async def test_mediamtx_integration():
     """Test MediaMTX integration."""
     logger.info("=== Testing MediaMTX Integration ===")

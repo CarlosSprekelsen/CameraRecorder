@@ -25,6 +25,7 @@ class TestConfigurationComponentIntegration:
     """Requirement-driven integration validations."""
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_stream_creation_uses_configured_endpoints_on_connect(self, temp_test_dir):
         """
         Req: S5-STREAM-ADD-001

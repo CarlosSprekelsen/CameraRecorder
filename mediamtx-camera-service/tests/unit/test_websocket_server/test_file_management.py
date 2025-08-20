@@ -1,12 +1,17 @@
 """
-Unit tests for WebSocket server file management methods.
+WebSocket server file management tests.
 
-Tests the file management functionality added in Epic E6:
-- list_recordings method
-- list_snapshots method
+Requirements Traceability:
+- REQ-WS-001: WebSocket server shall handle file listing operations
+- REQ-WS-002: WebSocket server shall provide file download URLs
+- REQ-WS-003: WebSocket server shall handle file access permissions
 
-Requirements: REQ-FUNC-008, REQ-FUNC-009
-Epic E6: Server Recording and Snapshot File Management Infrastructure
+Test Categories: Unit
+
+TODO: VIOLATION - Filesystem mocking violates strategic mocking rules
+- Lines 89-102: Mocking os.path.exists, os.access, os.listdir, os.path.isfile, os.stat
+- VIOLATION: Testing guide states "NEVER MOCK: filesystem"
+- FIX REQUIRED: Replace with tempfile.TemporaryDirectory() for real filesystem testing
 """
 
 import pytest
@@ -82,6 +87,7 @@ class TestFileManagementMethods:
         return WebSocketJsonRpcServer(host="127.0.0.1", port=8002, websocket_path="/ws", max_connections=100)
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     @patch('src.websocket_server.server.os.path.exists')
     @patch('src.websocket_server.server.os.access')
     @patch('src.websocket_server.server.os.listdir')

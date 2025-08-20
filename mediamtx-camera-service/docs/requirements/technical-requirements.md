@@ -165,11 +165,11 @@ This document defines the technical requirements for the MediaMTX Camera Service
 
 ### 4.1 Containerization
 
-#### REQ-TECH-010: Docker Containerization
-**Requirement:** The system SHALL be containerized using Docker
+#### REQ-TECH-010: OCI Compliant Container Runtime
+**Requirement:** The system SHALL be deployed using OCI compliant container runtime
 **Specifications:**
-- **Container Type:** Docker containers for all components
-- **Image Management:** Docker image creation and management
+- **Container Type:** OCI compliant containers for all components
+- **Image Management:** OCI container image creation and management
 - **Configuration:** Environment-based configuration management
 - **Networking:** Container networking and service discovery
 

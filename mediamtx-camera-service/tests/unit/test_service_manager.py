@@ -93,6 +93,7 @@ async def _real_mediamtx_service():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_req_svc_lifecycle_001_start_and_ping_ws():
     """
     Req: SVC-LIFECYCLE-001
@@ -114,6 +115,7 @@ async def test_req_svc_lifecycle_001_start_and_ping_ws():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_req_svc_api_cam_list_001_get_camera_list_structure():
     """
     Req: SVC-API-CAM-LIST-001
@@ -139,6 +141,7 @@ async def test_req_svc_api_cam_list_001_get_camera_list_structure():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_req_svc_error_001_invalid_method_returns_error():
     """
     Req: SVC-ERROR-001
@@ -160,6 +163,7 @@ async def test_req_svc_error_001_invalid_method_returns_error():
 
 
 @pytest.mark.asyncio
+@pytest.mark.unit
 async def test_req_svc_shutdown_001_clean_shutdown_and_ws_unavailable():
     """
     Req: SVC-SHUTDOWN-001

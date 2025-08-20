@@ -1,21 +1,21 @@
 # tests/unit/test_critical_requirements_minimal.py
 """
-Minimal test cases for critical requirements with missing coverage.
-
-This test file addresses the top critical gaps identified in the comprehensive audit:
-- REQ-WS-001: WebSocket server shall aggregate camera status with real MediaMTX integration
-- REQ-SVC-001: System shall manage service lifecycle
-- REQ-PERF-001: System shall handle concurrent camera operations efficiently
-- REQ-ERROR-004: System shall handle configuration loading failures gracefully
+Critical requirements minimal test suite.
 
 Requirements Traceability:
-- REQ-WS-001: Real MediaMTX integration validation
-- REQ-SVC-001: Service lifecycle management validation
-- REQ-PERF-001: Concurrent operations handling validation
-- REQ-ERROR-004: Configuration failure graceful handling validation
+- REQ-SVC-001: System shall manage service lifecycle
+- REQ-PERF-001: System shall handle concurrent operations efficiently
+- REQ-ERROR-001: System shall handle errors gracefully
 
-Story Coverage: Critical requirements validation
-IV&V Control Point: Minimal viable tests for critical gaps
+Test Categories: Unit
+
+TODO: VIOLATION - MediaMTX service mocking violates strategic mocking rules
+- Lines 65-74: Mocking MediaMTX controller with Mock() and AsyncMock()
+- Lines 122-130: Mocking MediaMTX controller for service lifecycle
+- Lines 290-296: Mocking MediaMTX controller with failure simulation
+- Lines 342-350: Mocking MediaMTX controller for service management
+- VIOLATION: Testing guide states "NEVER MOCK: MediaMTX service"
+- FIX REQUIRED: Replace with real systemd-managed MediaMTX service integration
 """
 
 import pytest
@@ -34,6 +34,7 @@ class TestCriticalRequirementsMinimal:
     """Minimal test cases for critical requirements with missing coverage."""
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_ws_001_mediamtx_integration_validation(self):
         """
         Test REQ-WS-001: WebSocket server shall aggregate camera status with real MediaMTX integration.
@@ -90,6 +91,7 @@ class TestCriticalRequirementsMinimal:
         assert result["metrics"]["bytes_sent"] == 1024
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_svc_001_service_lifecycle_management(self):
         """
         Test REQ-SVC-001: System shall manage service lifecycle.
@@ -144,6 +146,7 @@ class TestCriticalRequirementsMinimal:
         assert service_manager._running is False
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_perf_001_concurrent_operations_handling(self):
         """
         Test REQ-PERF-001: System shall handle concurrent camera operations efficiently.
@@ -204,6 +207,7 @@ class TestCriticalRequirementsMinimal:
         assert total_time < 1.0  # Should complete within 1 second
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_error_004_configuration_failure_graceful_handling(self):
         """
         Test REQ-ERROR-004: System shall handle configuration loading failures gracefully.
@@ -310,6 +314,7 @@ class TestCriticalRequirementsMinimal:
         assert result["metrics"] == {"bytes_sent": 0, "readers": 0, "uptime": 0}
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_svc_001_service_lifecycle_with_failures(self):
         """
         Test REQ-SVC-001 with service lifecycle failures.
@@ -366,6 +371,7 @@ class TestCriticalRequirementsMinimal:
             pass
 
     @pytest.mark.asyncio
+    @pytest.mark.unit
     async def test_req_perf_001_concurrent_operations_under_load(self):
         """
         Test REQ-PERF-001 with concurrent operations under load.

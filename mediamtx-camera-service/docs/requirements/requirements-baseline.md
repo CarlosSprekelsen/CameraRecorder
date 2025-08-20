@@ -79,7 +79,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-TECH-001 | Architecture | Python implementation | High | Technical Requirements | ✅ Implemented |
 | REQ-TECH-002 | Architecture | WebSocket communication | Critical | Architecture | ✅ Implemented |
 | REQ-TECH-003 | Integration | MediaMTX API integration | Critical | Architecture | ✅ Implemented |
-| REQ-TECH-004 | Deployment | Docker containerization | High | Deployment Requirements | ⚠️ Validating |
+| REQ-TECH-004 | Deployment | OCI compliant container runtime | High | Deployment Requirements | ⚠️ Validating |
 | REQ-TECH-005 | Operations | Monitoring and alerting | High | Operations Requirements | ⚠️ Validating |
 
 ---
