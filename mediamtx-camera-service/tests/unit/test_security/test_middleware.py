@@ -55,7 +55,7 @@ class TestSecurityMiddleware:
     @pytest.fixture
     def jwt_handler(self):
         """Create JWT handler for testing."""
-        return JWTHandler("test_secret_key")
+        return JWTHandler(get_test_jwt_secret())
     
     @pytest.fixture
     def temp_storage_file(self):
@@ -404,7 +404,7 @@ class TestSecurityMiddlewareIntegration:
     @pytest.fixture
     def security_middleware(self, temp_storage_file):
         """Create security middleware for integration tests."""
-        jwt_handler = JWTHandler("integration_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         auth_manager = AuthManager(jwt_handler, api_key_handler)
         

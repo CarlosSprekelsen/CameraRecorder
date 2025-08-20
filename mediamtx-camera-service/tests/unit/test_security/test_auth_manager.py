@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from src.security.auth_manager import AuthManager, AuthResult
 from src.security.jwt_handler import JWTHandler
 from src.security.api_key_handler import APIKeyHandler
+from tests.fixtures.auth_utils import get_test_jwt_secret
 
 
 class TestAuthResult:
@@ -71,7 +72,7 @@ class TestAuthManager:
     @pytest.fixture
     def jwt_handler(self):
         """Create JWT handler for testing."""
-        return JWTHandler("test_secret_key")
+        return JWTHandler(get_test_jwt_secret())
     
     @pytest.fixture
     def temp_storage_file(self):
@@ -317,7 +318,7 @@ class TestAuthManagerIntegration:
     @pytest.fixture
     def auth_manager(self, temp_storage_file):
         """Create authentication manager for integration tests."""
-        jwt_handler = JWTHandler("integration_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         return AuthManager(jwt_handler, api_key_handler)
     
@@ -348,14 +349,14 @@ class TestAuthManagerIntegration:
     def test_authentication_persistence(self, temp_storage_file):
         """Test that authentication state persists across instances."""
         # Create first manager and add API key
-        jwt_handler1 = JWTHandler("test_secret")
+        jwt_handler1 = JWTHandler(get_test_jwt_secret())
         api_handler1 = APIKeyHandler(temp_storage_file)
         manager1 = AuthManager(jwt_handler1, api_handler1)
         
         api_key = manager1.create_api_key("Persistent Key", "viewer", 1)
         
         # Create second manager and verify key exists
-        jwt_handler2 = JWTHandler("test_secret")
+        jwt_handler2 = JWTHandler(get_test_jwt_secret())
         api_handler2 = APIKeyHandler(temp_storage_file)
         manager2 = AuthManager(jwt_handler2, api_handler2)
         
