@@ -3,8 +3,7 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.integration.ts'],
   testMatch: [
-    '<rootDir>/tests/integration/**/test_*.{js,ts,tsx}',
-    '<rootDir>/tests/e2e/**/test_*.{js,ts,tsx}'
+    '<rootDir>/tests/performance/**/test_*.{js,ts,tsx}'
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -18,9 +17,14 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
-  testTimeout: 30000,
+  testTimeout: 60000, // Longer timeout for performance tests
   
   transformIgnorePatterns: [
     'node_modules/(?!(ws)/)'
-  ]
+  ],
+  
+  // Performance test specific settings
+  verbose: true,
+  collectCoverage: false, // Performance tests don't need coverage
+  maxWorkers: 1, // Run performance tests sequentially to avoid interference
 };

@@ -11,18 +11,18 @@
 // Import jest-dom matchers
 import '@testing-library/jest-dom';
 
-// Enhanced Mock WebSocket for tests
+// Simple, TypeScript-compliant Mock WebSocket for unit tests
 class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
 
   public readyState: number = MockWebSocket.CONNECTING;
-  public url: string;
-  public protocol: string = '';
-  public extensions: string = '';
-  public bufferedAmount: number = 0;
+  public readonly url: string;
+  public readonly protocol: string = '';
+  public readonly extensions: string = '';
+  public readonly bufferedAmount: number = 0;
   public binaryType: BinaryType = 'blob';
   
   public onopen: ((event: Event) => void) | null = null;
@@ -39,7 +39,7 @@ class MockWebSocket {
   constructor(url: string, protocols?: string | string[]) {
     this.url = url;
     if (protocols) {
-      this.protocol = Array.isArray(protocols) ? protocols[0] : protocols;
+      (this as any).protocol = Array.isArray(protocols) ? protocols[0] : protocols;
     }
     
     // Simulate connection opening after a short delay
@@ -52,7 +52,7 @@ class MockWebSocket {
   }
 }
 
-// Mock global WebSocket
+// Mock global WebSocket for unit tests
 global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
 
 // Mock service worker environment
@@ -98,11 +98,64 @@ global.console = {
 
 // Ensure React DOM is properly set up for tests
 if (typeof window === 'undefined') {
-  global.window = {} as any;
+  global.window = {
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+    document: {
+      createElement: jest.fn((tagName) => ({
+        tagName: tagName.toUpperCase(),
+        setAttribute: jest.fn(),
+        getAttribute: jest.fn(),
+        appendChild: jest.fn(),
+        removeChild: jest.fn(),
+        querySelector: jest.fn(),
+        querySelectorAll: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+        // React 19 specific properties
+        _reactRootContainer: null,
+        _reactInternalInstance: null,
+      })),
+      body: {
+        appendChild: jest.fn(),
+        removeChild: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      },
+      createTextNode: jest.fn((text) => ({ textContent: text })),
+      getElementById: jest.fn(),
+    },
+  } as any;
 }
 
 if (typeof document === 'undefined') {
-  global.document = {} as any;
+  global.document = {
+    createElement: jest.fn((tagName) => ({
+      tagName: tagName.toUpperCase(),
+      setAttribute: jest.fn(),
+      getAttribute: jest.fn(),
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+      querySelector: jest.fn(),
+      querySelectorAll: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+      // React 19 specific properties
+      _reactRootContainer: null,
+      _reactInternalInstance: null,
+    })),
+    body: {
+      appendChild: jest.fn(),
+      removeChild: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    },
+    createTextNode: jest.fn((text) => ({ textContent: text })),
+    getElementById: jest.fn(),
+  } as any;
 }
 
 // Mock React 18 features that might cause issues

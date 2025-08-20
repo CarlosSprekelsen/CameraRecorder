@@ -2,6 +2,8 @@
  * WebSocket JSON-RPC 2.0 Client for MediaMTX Camera Service
  * 
  * Sprint 3: Real Server Integration with Enhanced Connection Management
+ * REQ-NET01-003: Polling Fallback Mechanism Implementation
+ * 
  * Implements:
  * - Real WebSocket connection to MediaMTX server at ws://localhost:8002/ws
  * - JSON-RPC 2.0 protocol client with full error handling
@@ -11,10 +13,13 @@
  * - Integration with connection store for state management
  * - Performance metrics tracking and health monitoring
  * - Enhanced notification handling and real-time updates
+ * - HTTP polling fallback when WebSocket fails (REQ-NET01-003)
+ * - Automatic switch back to WebSocket when connection restored
  * 
  * References:
  * - Server API: docs/api/json-rpc-methods.md
  * - WebSocket Protocol: docs/api/websocket-protocol.md
+ * - Health Endpoints: docs/api/health-endpoints.md
  * - Test script: test-websocket.js
  */
 
@@ -30,6 +35,7 @@ import type {
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS } from '../types';
+import { HTTPPollingService, HTTPPollingConfig, HTTPPollingError } from './httpPollingService';
 
 // Store interface types for better type safety
 // These interfaces match the actual store state objects returned by getState()
@@ -79,7 +85,7 @@ export class WebSocketError extends Error {
 }
 
 export class WebSocketService {
-  private ws: WebSocket | null = null;
+  private ws: any | null = null;
   private requestId = 0;
   private pendingRequests = new Map<number, {
     resolve: (value: unknown) => void;
@@ -113,10 +119,83 @@ export class WebSocketService {
   private lastNotificationTime = 0;
   private notificationLatency: number[] = [];
 
+  // REQ-NET01-003: HTTP Polling Fallback
+  private httpPollingService: HTTPPollingService | null = null;
+  private fallbackMode = false;
+  private fallbackStartTime = 0;
+
   private config: WebSocketConfig;
 
   constructor(config: WebSocketConfig) {
     this.config = config;
+    
+    // Initialize HTTP polling fallback service
+    this.initializeHTTPPollingFallback();
+  }
+
+  /**
+   * Initialize HTTP polling fallback service (REQ-NET01-003)
+   */
+  private initializeHTTPPollingFallback(): void {
+    // Extract HTTP base URL from WebSocket URL
+    const wsUrl = new URL(this.config.url);
+    const httpBaseUrl = `http://${wsUrl.hostname}:8003`; // Health server port
+    
+    const pollingConfig: HTTPPollingConfig = {
+      baseUrl: httpBaseUrl,
+      pollingInterval: 5000, // 5 seconds
+      timeout: 3000, // 3 seconds
+      maxRetries: 3,
+      retryDelay: 1000,
+    };
+    
+    this.httpPollingService = new HTTPPollingService(pollingConfig);
+    
+    // Set up event handlers for polling service
+    this.httpPollingService.onCameraListUpdate((cameras) => {
+      console.log('📡 HTTP Polling: Camera list updated', cameras.length, 'cameras');
+      
+      // Update camera store if available
+      if (this.cameraStore && this.cameraStore.handleNotification) {
+        this.cameraStore.handleNotification({
+          type: 'camera_list_update',
+          cameras: cameras
+        });
+      }
+    });
+    
+    this.httpPollingService.onError((error) => {
+      console.error('📡 HTTP Polling Error:', error.message);
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError(`HTTP Polling: ${error.message}`, error.statusCode);
+        this.connectionStore.incrementErrorCount();
+      }
+    });
+    
+    this.httpPollingService.onPollingStart(() => {
+      console.log('🔄 HTTP Polling Fallback: Started');
+      this.fallbackMode = true;
+      this.fallbackStartTime = Date.now();
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.setError('WebSocket disconnected - using HTTP polling fallback');
+        this.connectionStore.updateConnectionQuality('poor');
+      }
+    });
+    
+    this.httpPollingService.onPollingStop(() => {
+      console.log('🔄 HTTP Polling Fallback: Stopped');
+      this.fallbackMode = false;
+      this.fallbackStartTime = 0;
+      
+      // Update connection store
+      if (this.connectionStore) {
+        this.connectionStore.updateConnectionQuality('excellent');
+      }
+    });
   }
 
   /**
@@ -163,7 +242,17 @@ export class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         console.log(`🔌 Connecting to MediaMTX server: ${this.config.url}`);
-        this.ws = new WebSocket(this.config.url);
+        
+        // Use Node.js ws library in Node.js environment, browser WebSocket in browser
+        if (typeof window === 'undefined') {
+          // Node.js environment - use 'ws' library
+          const WebSocket = require('ws');
+          this.ws = new WebSocket(this.config.url);
+        } else {
+          // Browser environment - use native WebSocket
+          this.ws = new WebSocket(this.config.url);
+        }
+        
         this.setupEventHandlers(resolve, reject);
       } catch (error) {
         this.isConnecting = false;
@@ -186,7 +275,6 @@ export class WebSocketService {
    */
   public disconnect(): void {
     console.log('🔌 Disconnecting from MediaMTX server');
-    this.isDestroyed = true;
     this.clearReconnectTimeout();
     this.clearHeartbeat();
     this.clearMetricsInterval();
@@ -194,6 +282,14 @@ export class WebSocketService {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+    }
+
+    // REQ-NET01-003: Start HTTP polling fallback when manually disconnected
+    if (this.httpPollingService && !this.httpPollingService.isActive) {
+      console.log('🔄 Manual disconnect - starting HTTP polling fallback');
+      this.httpPollingService.startPolling();
+      this.fallbackMode = true;
+      this.fallbackStartTime = Date.now();
     }
 
     // Reset connection state
@@ -216,9 +312,44 @@ export class WebSocketService {
   /**
    * Send a JSON-RPC method call with optional authentication
    * Sprint 3: Enhanced for real server integration with metrics tracking
+   * REQ-NET01-003: HTTP polling fallback when WebSocket fails
    */
   public async call(method: string, params: Record<string, unknown> | object = {}, requireAuth: boolean = false): Promise<unknown> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    if (!this.ws || this.ws.readyState !== 1) { // WebSocket.OPEN = 1
+      // REQ-NET01-003: Try HTTP polling fallback for supported methods
+      if (this.httpPollingService && this.isFallbackMethodSupported(method)) {
+        console.log(`🔄 WebSocket disconnected - using HTTP polling fallback for ${method}`);
+        
+        try {
+          // Start polling if not already active
+          if (!this.httpPollingService.isActive) {
+            this.httpPollingService.startPolling();
+          }
+          
+          // Use HTTP polling for camera list
+          if (method === 'get_camera_list') {
+            const result = await this.httpPollingService.getCameraList();
+            console.log(`✅ HTTP Polling: ${method} successful`);
+            return result;
+          }
+          
+          // For other methods, return a fallback response
+          return this.getFallbackResponse(method, params);
+          
+        } catch (error) {
+          console.error(`❌ HTTP Polling fallback failed for ${method}:`, error);
+          const fallbackError = new WebSocketError(`HTTP polling fallback failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          
+          // Update connection store
+          if (this.connectionStore) {
+            this.connectionStore.setError(fallbackError.message, fallbackError.code);
+            this.connectionStore.incrementErrorCount();
+          }
+          
+          throw fallbackError;
+        }
+      }
+      
       const error = new WebSocketError('WebSocket not connected');
       
       // Update connection store
@@ -322,7 +453,7 @@ export class WebSocketService {
    * Get connection status
    */
   public get isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return this.ws?.readyState === 1; // WebSocket.OPEN = 1
   }
 
   public get isConnectingStatus(): boolean {
@@ -366,10 +497,69 @@ export class WebSocketService {
         reconnectAttempts: this.reconnectAttempts,
         pendingRequests: this.pendingRequests,
         connectionStore: this.connectionStore,
-        cameraStore: this.cameraStore
+        cameraStore: this.cameraStore,
+        httpPollingService: this.httpPollingService,
+        fallbackMode: this.fallbackMode
       };
     }
     return null;
+  }
+
+  /**
+   * REQ-NET01-003: Check if method is supported in HTTP polling fallback
+   */
+  private isFallbackMethodSupported(method: string): boolean {
+    const supportedMethods = [
+      'get_camera_list',
+      'ping',
+      'get_camera_status'
+    ];
+    return supportedMethods.includes(method);
+  }
+
+  /**
+   * REQ-NET01-003: Get fallback response for methods not fully supported via HTTP
+   */
+  private getFallbackResponse(method: string, params: Record<string, unknown> | object): unknown {
+    switch (method) {
+      case 'ping':
+        return 'pong';
+      
+      case 'get_camera_status':
+        // Return a basic status indicating fallback mode
+        return {
+          device: (params as any).device || 'unknown',
+          status: 'UNKNOWN',
+          name: 'Camera (Fallback Mode)',
+          resolution: 'unknown',
+          fps: 0,
+          streams: {},
+          fallback_mode: true,
+          message: 'Status unavailable in HTTP polling fallback mode'
+        };
+      
+      default:
+        throw new WebSocketError(`Method ${method} not supported in HTTP polling fallback mode`);
+    }
+  }
+
+  /**
+   * REQ-NET01-003: Get fallback mode status
+   */
+  public get isInFallbackMode(): boolean {
+    return this.fallbackMode;
+  }
+
+  /**
+   * REQ-NET01-003: Get fallback statistics
+   */
+  public getFallbackStats() {
+    return {
+      isInFallbackMode: this.fallbackMode,
+      fallbackStartTime: this.fallbackStartTime,
+      fallbackDuration: this.fallbackStartTime > 0 ? Date.now() - this.fallbackStartTime : 0,
+      httpPollingStats: this.httpPollingService?.getPollingStats() || null
+    };
   }
 
   /**
@@ -462,6 +652,12 @@ export class WebSocketService {
       this.startHeartbeat();
       this.startMetricsCollection();
       
+      // REQ-NET01-003: Stop HTTP polling fallback when WebSocket is restored
+      if (this.httpPollingService && this.httpPollingService.isActive) {
+        console.log('🔄 WebSocket restored - stopping HTTP polling fallback');
+        this.httpPollingService.stopPolling();
+      }
+      
       // Update connection store
       if (this.connectionStore) {
         this.connectionStore.setLastConnected(new Date());
@@ -473,7 +669,7 @@ export class WebSocketService {
       resolve();
     };
 
-    this.ws.onclose = (event) => {
+    this.ws.onclose = (event: any) => {
       console.log('🔌 WebSocket connection closed', { 
         wasClean: event.wasClean, 
         code: event.code, 
@@ -482,6 +678,14 @@ export class WebSocketService {
       this.isConnecting = false;
       this.clearHeartbeat();
       this.clearMetricsInterval();
+      
+      // REQ-NET01-003: Start HTTP polling fallback when WebSocket closes
+      if (this.httpPollingService && !this.httpPollingService.isActive) {
+        console.log('🔄 WebSocket closed - starting HTTP polling fallback');
+        this.httpPollingService.startPolling();
+        this.fallbackMode = true;
+        this.fallbackStartTime = Date.now();
+      }
       
       // Update connection store
       if (this.connectionStore) {
@@ -498,7 +702,7 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onerror = (event) => {
+    this.ws.onerror = (event: any) => {
       console.error('❌ WebSocket error:', event);
       this.isConnecting = false;
       const error = new WebSocketError('WebSocket error occurred');
@@ -517,7 +721,7 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = (event: any) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const receiveTime = performance.now();

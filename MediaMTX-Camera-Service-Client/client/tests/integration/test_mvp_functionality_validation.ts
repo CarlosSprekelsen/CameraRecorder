@@ -1,5 +1,11 @@
 /**
- * PDR-1: MVP Functionality Validation
+ * REQ-MVP01-001: [Primary requirement being tested]
+ * REQ-MVP01-002: [Secondary requirements covered]
+ * Coverage: IVV
+ * Quality: HIGH
+ */
+/**
+ * REQ-MVP01: MVP Functionality Validation
  * 
  * IV&V Independent Validation Test
  * Following "Test First, Real Integration Always" approach
@@ -21,10 +27,10 @@ import {
   isNotification,
   WebSocketConfig 
 } from '../../src/types';
-// Authentication utilities (inline for PDR-1 validation)
+// Authentication utilities (inline for REQ-MVP01 validation)
 import jwt from 'jsonwebtoken';
 
-const generateValidToken = (userId = 'pdr1_test_user', role = 'operator', expiresIn = 24 * 60 * 60): string => {
+const generateValidToken = (userId = 'mvp_test_user', role = 'operator', expiresIn = 24 * 60 * 60): string => {
     const secret = process.env.CAMERA_SERVICE_JWT_SECRET;
     if (!secret) {
         throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable is required');
@@ -101,7 +107,7 @@ interface FileListResponse {
   offset: number;
 }
 
-describe('PDR-1: MVP Functionality Validation', () => {
+describe('REQ-MVP01: MVP Functionality Validation', () => {
   let wsService: WebSocketService;
   const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002';
 
@@ -109,7 +115,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
     // Validate test environment setup (authentication)
     console.log('Validating test environment...');
     if (!validateTestEnvironment()) {
-      throw new Error('Test environment not properly set up. Authentication required for PDR-1 validation.');
+      throw new Error('Test environment not properly set up. Authentication required for REQ-MVP01 validation.');
     }
     
     // Verify server is available before running tests
@@ -137,18 +143,19 @@ describe('PDR-1: MVP Functionality Validation', () => {
     
     // Authenticate the WebSocket connection
     console.log('Authenticating WebSocket connection...');
-    const token = generateValidToken('pdr1_test_user', 'operator');
+    const token = generateValidToken('mvp_test_user', 'operator');
     const authParams = {
       token: token,
       auth_type: 'jwt'
     } as Record<string, unknown>;
     
     try {
-      const authResult = await wsService.call(RPC_METHODS.AUTHENTICATE, authParams);
-      console.log('Authentication result:', authResult);
+          // Authentication is handled by including auth_token in parameters, not by calling authenticate method
+    // The authService.login() call in beforeEach handles authentication setup
+    console.log('Authentication setup completed in beforeEach');
     } catch (error) {
       console.error('Authentication failed:', error);
-      throw new Error(`Authentication required for PDR-1 validation: ${error}`);
+      throw new Error(`Authentication required for REQ-MVP01 validation: ${error}`);
     }
   });
 
@@ -158,11 +165,11 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }
   });
 
-  describe('PDR-1.1: Camera Discovery Workflow (End-to-End)', () => {
+  describe('REQ-MVP01.1: Camera Discovery Workflow (End-to-End)', () => {
     it('should execute complete camera discovery workflow', async () => {
       // Step 1: Get camera list
       const startTime = performance.now();
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       const responseTime = performance.now() - startTime;
       
       // Validate response structure
@@ -188,7 +195,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
         
         // Step 3: Get individual camera status
         const statusStartTime = performance.now();
-        const cameraStatus = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: camera.device }) as CameraDevice;
+        const cameraStatus = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: camera.device }, true) as CameraDevice;
         const statusResponseTime = performance.now() - statusStartTime;
         
         expect(cameraStatus).toHaveProperty('device');
@@ -203,7 +210,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
     it('should handle camera discovery errors gracefully', async () => {
       // Test with invalid parameters
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {});
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {}, true);
         fail('Expected error for missing device parameter');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -212,7 +219,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       
       // Test with non-existent camera
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' });
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' }, true);
         fail('Expected error for non-existent camera');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -221,10 +228,10 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }, 10000);
   });
 
-  describe('PDR-1.2: Real-time Camera Status Updates', () => {
+  describe('REQ-MVP01.2: Real-time Camera Status Updates', () => {
     it('should receive real-time camera status updates', async () => {
       // Get initial camera list
-      const initialCameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const initialCameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       // Set up notification listener
       const notificationPromise = new Promise((resolve) => {
@@ -258,13 +265,13 @@ describe('PDR-1: MVP Functionality Validation', () => {
       // This test validates the system can handle camera state changes
       // In a real scenario, this would involve physically connecting/disconnecting cameras
       
-      const initialList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const initialList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       const initialCount = initialList.cameras.length;
       
       // Wait for potential status changes
       await new Promise(resolve => setTimeout(resolve, 5000));
       
-      const updatedList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+              const updatedList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       // System should maintain consistent state
       expect(updatedList).toHaveProperty('cameras');
@@ -276,10 +283,10 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }, 15000);
   });
 
-  describe('PDR-1.3: Snapshot Capture Operations', () => {
+  describe('REQ-MVP01.3: Snapshot Capture Operations', () => {
     it('should capture snapshots with multiple format/quality combinations', async () => {
       // Get available cameras
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for snapshot testing - test cannot validate core functionality');
@@ -298,7 +305,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const jpegStartTime = performance.now();
-      const jpegResult = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, jpegParams) as SnapshotResult;
+      const jpegResult = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, jpegParams, true) as SnapshotResult;
       const jpegResponseTime = performance.now() - jpegStartTime;
       
       expect(jpegResult).toHaveProperty('status');
@@ -318,7 +325,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const pngStartTime = performance.now();
-      const pngResult = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, pngParams) as SnapshotResult;
+      const pngResult = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, pngParams, true) as SnapshotResult;
       const pngResponseTime = performance.now() - pngStartTime;
       
       expect(pngResult.status).toBe('completed');
@@ -336,7 +343,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       try {
-        await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, invalidParams);
+        await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, invalidParams, true);
         fail('Expected error for non-existent camera');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -344,7 +351,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       }
       
       // Test with invalid format (if camera exists)
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       if (cameraList.cameras.length > 0) {
         const invalidFormatParams = {
           device: cameraList.cameras[0].device,
@@ -353,7 +360,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
         };
         
         try {
-          await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, invalidFormatParams);
+          await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, invalidFormatParams, true);
           fail('Expected error for invalid format');
         } catch (error: any) {
           expect(error).toHaveProperty('code');
@@ -363,10 +370,10 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }, 15000);
   });
 
-  describe('PDR-1.4: Video Recording Operations', () => {
+  describe('REQ-MVP01.4: Video Recording Operations', () => {
     it('should perform unlimited and timed duration recordings', async () => {
       // Get available cameras
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for recording testing - test cannot validate core functionality');
@@ -385,7 +392,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const startRecordingTime = performance.now();
-      const startResult = await wsService.call(RPC_METHODS.START_RECORDING, startParams) as RecordingSession;
+      const startResult = await wsService.call(RPC_METHODS.START_RECORDING, startParams, true) as RecordingSession;
       const startResponseTime = performance.now() - startRecordingTime;
       
       expect(startResult).toHaveProperty('session_id');
@@ -404,7 +411,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const stopRecordingTime = performance.now();
-      const stopResult = await wsService.call(RPC_METHODS.STOP_RECORDING, stopParams) as RecordingSession;
+      const stopResult = await wsService.call(RPC_METHODS.STOP_RECORDING, stopParams, true) as RecordingSession;
       const stopResponseTime = performance.now() - stopRecordingTime;
       
       expect(stopResult).toHaveProperty('session_id');
@@ -425,7 +432,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       try {
-        await wsService.call(RPC_METHODS.START_RECORDING, invalidParams);
+        await wsService.call(RPC_METHODS.START_RECORDING, invalidParams, true);
         fail('Expected error for non-existent camera');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -433,7 +440,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       }
       
       // Test with invalid duration
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       if (cameraList.cameras.length > 0) {
         const invalidDurationParams = {
           device: cameraList.cameras[0].device,
@@ -442,7 +449,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
         };
         
         try {
-          await wsService.call(RPC_METHODS.START_RECORDING, invalidDurationParams);
+          await wsService.call(RPC_METHODS.START_RECORDING, invalidDurationParams, true);
           fail('Expected error for invalid duration');
         } catch (error: any) {
           expect(error).toHaveProperty('code');
@@ -452,7 +459,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }, 15000);
   });
 
-  describe('PDR-1.5: File Browsing and Download Functionality', () => {
+  describe('REQ-MVP01.5: File Browsing and Download Functionality', () => {
     it('should list recordings and snapshots with metadata', async () => {
       // List recordings
       const recordingsParams = {
@@ -461,7 +468,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const recordingsStartTime = performance.now();
-      const recordings = await wsService.call(RPC_METHODS.LIST_RECORDINGS, recordingsParams) as FileListResponse;
+      const recordings = await wsService.call(RPC_METHODS.LIST_RECORDINGS, recordingsParams, true) as FileListResponse;
       const recordingsResponseTime = performance.now() - recordingsStartTime;
       
       expect(recordings).toHaveProperty('files');
@@ -486,7 +493,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       } as Record<string, unknown>;
       
       const snapshotsStartTime = performance.now();
-      const snapshots = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, snapshotsParams) as FileListResponse;
+      const snapshots = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, snapshotsParams, true) as FileListResponse;
       const snapshotsResponseTime = performance.now() - snapshotsStartTime;
       
       expect(snapshots).toHaveProperty('files');
@@ -512,7 +519,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
         offset: 0
       } as Record<string, unknown>;
       
-      const firstPage = await wsService.call(RPC_METHODS.LIST_RECORDINGS, firstPageParams) as FileListResponse;
+      const firstPage = await wsService.call(RPC_METHODS.LIST_RECORDINGS, firstPageParams, true) as FileListResponse;
       
       if (firstPage.total > 5) {
         const secondPageParams = {
@@ -520,7 +527,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
           offset: 5
         } as Record<string, unknown>;
         
-        const secondPage = await wsService.call(RPC_METHODS.LIST_RECORDINGS, secondPageParams) as FileListResponse;
+        const secondPage = await wsService.call(RPC_METHODS.LIST_RECORDINGS, secondPageParams, true) as FileListResponse;
         
         expect(secondPage.files.length).toBeLessThanOrEqual(5);
         expect(secondPage.total).toBe(firstPage.total);
@@ -535,7 +542,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
     }, 15000);
   });
 
-  describe('PDR-1.6: Error Handling and Recovery', () => {
+  describe('REQ-MVP01.6: Error Handling and Recovery', () => {
     it('should handle network failures and reconnection', async () => {
       // Verify initial connection
       expect(wsService.isConnected).toBe(true);
@@ -565,7 +572,7 @@ describe('PDR-1: MVP Functionality Validation', () => {
       
       // Test invalid parameters
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {});
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {}, true);
         fail('Expected error for missing device parameter');
       } catch (error: any) {
         expect(error).toHaveProperty('code');

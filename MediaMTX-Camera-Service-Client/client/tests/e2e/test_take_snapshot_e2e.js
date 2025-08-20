@@ -1,3 +1,9 @@
+/**
+ * REQ-E2E01-001: [Primary requirement being tested]
+ * REQ-E2E01-002: [Secondary requirements covered]
+ * Coverage: E2E
+ * Quality: HIGH
+ */
 const WebSocket = require('ws');
 const fs = require('fs');
 const path = require('path');

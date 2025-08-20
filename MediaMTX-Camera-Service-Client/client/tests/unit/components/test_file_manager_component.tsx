@@ -1,4 +1,10 @@
 /**
+ * REQ-UNIT01-001: [Primary requirement being tested]
+ * REQ-UNIT01-002: [Secondary requirements covered]
+ * Coverage: UNIT
+ * Quality: HIGH
+ */
+/**
  * Unit tests for FileManager component
  * Tests file browsing, download functionality, and pagination
  */

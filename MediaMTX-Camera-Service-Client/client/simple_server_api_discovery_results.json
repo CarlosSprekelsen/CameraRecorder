@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-08-20T08:33:54.608Z",
+  "server_url": "ws://localhost:8002/ws",
+  "total_methods_tested": 14,
+  "successful_methods": [],
+  "error_methods": [],
+  "failed_methods": [
+    {
+      "method": "ping",
+      "error": "Request timeout for method: ping"
+    },
+    {
+      "method": "pong",
+      "error": "Request timeout for method: pong"
+    },
+    {
+      "method": "system_status",
+      "error": "Request timeout for method: system_status"
+    },
+    {
+      "method": "get_status",
+      "error": "Request timeout for method: get_status"
+    },
+    {
+      "method": "health",
+      "error": "Request timeout for method: health"
+    },
+    {
+      "method": "status",
+      "error": "Request timeout for method: status"
+    },
+    {
+      "method": "info",
+      "error": "Request timeout for method: info"
+    },
+    {
+      "method": "version",
+      "error": "Request timeout for method: version"
+    },
+    {
+      "method": "help",
+      "error": "Request timeout for method: help"
+    },
+    {
+      "method": "get_camera_list",
+      "error": "Request timeout for method: get_camera_list"
+    },
+    {
+      "method": "list_cameras",
+      "error": "Request timeout for method: list_cameras"
+    },
+    {
+      "method": "cameras",
+      "error": "Request timeout for method: cameras"
+    },
+    {
+      "method": "invalid_method",
+      "error": "Request timeout for method: invalid_method"
+    },
+    {
+      "method": "nonexistent_method",
+      "error": "Request timeout for method: nonexistent_method"
+    }
+  ]
+}

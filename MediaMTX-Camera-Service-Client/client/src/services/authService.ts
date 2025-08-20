@@ -66,6 +66,10 @@ export class AuthService {
         throw new Error('JWT token is expired');
       }
 
+      // Set authenticated state
+      this.authState.authenticated = true;
+      this.authState.auth_method = 'jwt';
+
       // Set up token refresh timer
       this.setupTokenRefresh(credentials.token);
       
@@ -74,6 +78,14 @@ export class AuthService {
       this.clearAuthState();
       throw error;
     }
+  }
+
+  /**
+   * Get current authentication token
+   * @returns string | undefined Current JWT token or undefined if not authenticated
+   */
+  getToken(): string | undefined {
+    return this.authState.token;
   }
 
   /**
@@ -126,40 +138,25 @@ export class AuthService {
       token: this.authState.token
     };
 
-    const request: JSONRPCRequest = {
-      jsonrpc: '2.0',
-      method: RPC_METHODS.AUTHENTICATE,
-      params: authParams as unknown as Record<string, unknown>,
-      id: Date.now()
-    };
-
-    try {
-      const response = await sendRequest(request);
+    // Server doesn't have an authenticate method - authentication is handled by including auth_token in parameters
+    // Just validate the token locally and set authenticated state
+    if (this.isValidJWTFormat(this.authState.token) && !this.isTokenExpired(this.authState.token)) {
+      this.authState.authenticated = true;
+      this.authState.auth_method = 'jwt';
       
-      if (response.error) {
-        throw new Error(`Authentication failed: ${response.error.message}`);
-      }
-
-      const result = response.result as AuthenticateResponse;
+      // Set up token refresh timer
+      this.setupTokenRefresh(this.authState.token!);
       
-      if (result.authenticated) {
-        // Update authentication state
-        this.authState.authenticated = true;
-        this.authState.user_id = result.user_id;
-        this.authState.role = result.role;
-        this.authState.auth_method = result.auth_method;
-        
-        // Set up token refresh timer
-        this.setupTokenRefresh(this.authState.token!);
-      } else {
-        this.clearAuthState();
-      }
-
-      return result;
-    } catch (error) {
+      return {
+        authenticated: true,
+        auth_method: 'jwt'
+      };
+    } else {
       this.clearAuthState();
-      throw error;
+      throw new Error('Invalid or expired JWT token');
     }
+
+
   }
 
   /**

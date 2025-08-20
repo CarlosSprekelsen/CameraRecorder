@@ -1,4 +1,10 @@
 /**
+ * REQ-WS01-001: [Primary requirement being tested]
+ * REQ-WS01-002: [Secondary requirements covered]
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
  * WebSocket Integration Tests
  * 
  * Tests real WebSocket communication with MediaMTX Camera Service
@@ -10,6 +16,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket';
+import { authService } from '../../src/services/authService';
 import { RPC_METHODS, ERROR_CODES, PERFORMANCE_TARGETS, isNotification } from '../../src/types';
 import type { CameraListResponse, CameraDevice, JSONRPCNotification } from '../../src/types';
 
@@ -26,6 +33,20 @@ describe('WebSocket Integration Tests', () => {
   });
 
   beforeEach(async () => {
+    // Initialize authentication with JWT token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { 
+        user_id: 'test-user', 
+        role: 'operator',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
+      },
+      process.env.CAMERA_SERVICE_JWT_SECRET,
+      { algorithm: 'HS256' }
+    );
+    await authService.login({ token });
+
     wsService = new WebSocketService({
       url: TEST_WEBSOCKET_URL,
       reconnectInterval: 1000,
@@ -83,7 +104,7 @@ describe('WebSocket Integration Tests', () => {
     it('should get camera list with correct structure', async () => {
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as any;
+      const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as any;
       
       const responseTime = performance.now() - startTime;
       
@@ -101,7 +122,7 @@ describe('WebSocket Integration Tests', () => {
 
     it('should get camera status for valid device', async () => {
       // First get camera list to find a valid device
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for status test - cannot validate core functionality');
@@ -110,7 +131,7 @@ describe('WebSocket Integration Tests', () => {
       const testDevice = cameraList.cameras[0].device;
       const startTime = performance.now();
       
-      const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: testDevice }) as CameraDevice;
+      const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: testDevice }, true) as CameraDevice;
       
       const responseTime = performance.now() - startTime;
       
@@ -131,7 +152,7 @@ describe('WebSocket Integration Tests', () => {
       const startTime = performance.now();
       
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' });
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' }, true);
         fail('Expected error for non-existent camera');
       } catch (error) {
         const responseTime = performance.now() - startTime;
@@ -212,7 +233,7 @@ describe('WebSocket Integration Tests', () => {
 
     it('should meet control method performance targets', async () => {
       // Test with take_snapshot (control method)
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       if (cameraList.cameras.length === 0) {
         fail('No cameras available for control method test - cannot validate core functionality');
@@ -222,7 +243,7 @@ describe('WebSocket Integration Tests', () => {
       const startTime = performance.now();
       
       try {
-        await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, { device: testDevice });
+        await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, { device: testDevice }, true);
       } catch (error) {
         // Expected if camera doesn't support snapshot
         console.warn('Snapshot test failed (expected for some cameras):', (error as Error).message);
@@ -246,7 +267,7 @@ describe('WebSocket Integration Tests', () => {
 
     it('should handle invalid parameters', async () => {
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {});
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {}, true);
         fail('Expected error for missing device parameter');
       } catch (error) {
         expect(error).toHaveProperty('code');

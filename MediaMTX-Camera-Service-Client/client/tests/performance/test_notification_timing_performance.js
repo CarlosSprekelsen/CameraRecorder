@@ -1,4 +1,10 @@
 /**
+ * REQ-PERF01-001: Notification timing performance validation
+ * REQ-PERF01-002: Secondary requirements covered
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
  * Notification Timing Performance Test
  * 
  * Measures the complete loop from sending recording command to receiving notification feedback.

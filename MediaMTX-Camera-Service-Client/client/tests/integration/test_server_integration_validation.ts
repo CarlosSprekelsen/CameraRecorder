@@ -1,15 +1,21 @@
 /**
- * PDR-2: Server Integration Validation Tests
+ * REQ-SRV01-001: [Primary requirement being tested]
+ * REQ-SRV01-002: [Secondary requirements covered]
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
+ * Server Integration Validation Tests
  * 
- * Comprehensive validation of server integration requirements for PDR-2
+ * Comprehensive validation of server integration requirements for REQ-SRV01
  * Following "Real Integration First" approach with real MediaMTX server
  * 
- * PDR-2 Requirements:
- * - PDR-2.1: WebSocket connection stability under network interruption
- * - PDR-2.2: All JSON-RPC method calls against real MediaMTX server
- * - PDR-2.3: Real-time notification handling and state synchronization
- * - PDR-2.4: Polling fallback mechanism when WebSocket fails
- * - PDR-2.5: API error handling and user feedback mechanisms
+ * REQ-SRV01 Requirements:
+ * - REQ-NET01-001: WebSocket connection stability under network interruption
+ * - REQ-SRV01-001: All JSON-RPC method calls against real MediaMTX server
+ * - REQ-NET01-002: Real-time notification handling and state synchronization
+ * - REQ-NET01-003: Polling fallback mechanism when WebSocket fails
+ * - REQ-SRV01-002: API error handling and user feedback mechanisms
  * 
  * Prerequisites:
  * - MediaMTX Camera Service running via systemd
@@ -24,7 +30,7 @@ import { useCameraStore } from '../../src/stores/cameraStore';
 import { useUIStore } from '../../src/stores/uiStore';
 import { generateValidToken, validateTestEnvironment } from './auth-utils';
 
-describe('PDR-2: Server Integration Validation', () => {
+describe('REQ-SRV01: Server Integration Validation', () => {
   let wsService: WebSocketService;
   let connectionStore: any;
   let cameraStore: any;
@@ -38,10 +44,10 @@ describe('PDR-2: Server Integration Validation', () => {
       throw new Error('Test environment not properly set up. Run ./set-test-env.sh to configure authentication.');
     }
     
-    // Verify server is available before running PDR-2 tests
+    // Verify server is available before running REQ-SRV01 tests
     const isServerAvailable = await validateServerAvailability();
     if (!isServerAvailable) {
-      throw new Error('MediaMTX Camera Service not available for PDR-2 validation. Start server before running tests.');
+      throw new Error('MediaMTX Camera Service not available for REQ-SRV01 validation. Start server before running tests.');
     }
     
     // Initialize stores for comprehensive testing
@@ -70,7 +76,7 @@ describe('PDR-2: Server Integration Validation', () => {
     }
   });
 
-  describe('PDR-2.1: WebSocket Connection Stability Under Network Interruption', () => {
+  describe('REQ-NET01-001: WebSocket Connection Stability Under Network Interruption', () => {
     it('should handle network interruption with automatic reconnection', async () => {
       const startTime = performance.now();
       
@@ -136,7 +142,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
   });
 
-  describe('PDR-2.2: All JSON-RPC Method Calls Against Real MediaMTX Server', () => {
+  describe('REQ-SRV01-001: All JSON-RPC Method Calls Against Real MediaMTX Server', () => {
     it('should execute all status methods successfully', async () => {
       const statusMethods = [
         RPC_METHODS.PING,
@@ -169,7 +175,7 @@ describe('PDR-2: Server Integration Validation', () => {
 
     it('should execute camera status method for available devices', async () => {
       // First get camera list
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as any;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as any;
       
       if (cameraList.cameras.length === 0) {
         console.warn('No cameras available for camera status test');
@@ -180,7 +186,7 @@ describe('PDR-2: Server Integration Validation', () => {
       for (const camera of cameraList.cameras) {
         const startTime = performance.now();
         
-        const status = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: camera.device }) as any;
+        const status = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: camera.device }, true) as any;
         const responseTime = performance.now() - startTime;
         
         expect(status).toHaveProperty('device');
@@ -192,7 +198,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
 
     it('should execute control methods with proper error handling', async () => {
-      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as any;
+      const cameraList = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as any;
       
       if (cameraList.cameras.length === 0) {
         console.warn('No cameras available for control method test');
@@ -209,7 +215,7 @@ describe('PDR-2: Server Integration Validation', () => {
         const startTime = performance.now();
         
         try {
-          const response = await wsService.call(method, params);
+          const response = await wsService.call(method, params, true);
           const responseTime = performance.now() - startTime;
           
           expect(response).toBeDefined();
@@ -234,7 +240,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
   });
 
-  describe('PDR-2.3: Real-time Notification Handling and State Synchronization', () => {
+  describe('REQ-NET01-002: Real-time Notification Handling and State Synchronization', () => {
     it('should receive and process camera status update notifications', async () => {
       const notifications: any[] = [];
       
@@ -281,7 +287,7 @@ describe('PDR-2: Server Integration Validation', () => {
       });
       
       // Trigger camera list refresh to generate notifications
-      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
+      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
       
       // Wait for state updates
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -306,7 +312,7 @@ describe('PDR-2: Server Integration Validation', () => {
       });
       
       // Generate activity that should trigger notifications
-      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {});
+      await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true);
       
       // Wait for notifications
       await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -320,7 +326,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
   });
 
-  describe('PDR-2.4: Polling Fallback Mechanism When WebSocket Fails', () => {
+  describe('REQ-NET01-003: Polling Fallback Mechanism When WebSocket Fails', () => {
     it('should fallback to polling when WebSocket connection fails', async () => {
       // This test requires implementation of polling fallback mechanism
       // Currently not implemented in the codebase
@@ -356,7 +362,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
   });
 
-  describe('PDR-2.5: API Error Handling and User Feedback Mechanisms', () => {
+  describe('REQ-SRV01-002: API Error Handling and User Feedback Mechanisms', () => {
     it('should handle invalid method errors with proper error codes', async () => {
       try {
         await wsService.call('invalid_method', {});
@@ -370,7 +376,7 @@ describe('PDR-2: Server Integration Validation', () => {
 
     it('should handle invalid parameters with descriptive error messages', async () => {
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {});
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, {}, true);
         fail('Expected error for missing device parameter');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -381,7 +387,7 @@ describe('PDR-2: Server Integration Validation', () => {
 
     it('should handle camera not found errors gracefully', async () => {
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' });
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' }, true);
         fail('Expected error for non-existent camera');
       } catch (error: any) {
         expect(error).toHaveProperty('code');
@@ -427,7 +433,7 @@ describe('PDR-2: Server Integration Validation', () => {
     });
   });
 
-  describe('PDR-2: Performance Validation Under Load', () => {
+  describe('REQ-SRV01: Performance Validation Under Load', () => {
     it('should maintain performance targets under concurrent requests', async () => {
       const concurrentRequests = 5;
       const requestPromises = [];
@@ -435,7 +441,7 @@ describe('PDR-2: Server Integration Validation', () => {
       // Launch concurrent requests
       for (let i = 0; i < concurrentRequests; i++) {
         requestPromises.push(
-          wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}).then(() => performance.now())
+          wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true).then(() => performance.now())
         );
       }
       
@@ -476,7 +482,7 @@ describe('PDR-2: Server Integration Validation', () => {
 });
 
 /**
- * Validate server availability for PDR-2 tests
+ * Validate server availability for REQ-SRV01 tests
  */
 async function validateServerAvailability(): Promise<boolean> {
   const testWebSocketUrl = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';

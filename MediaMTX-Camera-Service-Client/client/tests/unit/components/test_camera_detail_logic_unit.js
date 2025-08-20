@@ -1,12 +1,18 @@
 /**
+ * REQ-UNIT01-001: [Primary requirement being tested]
+ * REQ-UNIT01-002: [Secondary requirements covered]
+ * Coverage: UNIT
+ * Quality: HIGH
+ */
+/**
  * CameraDetail Component Logic Test
  * Tests component logic and state management without React testing library
- * Focuses on business logic validation for PDR-3 requirements
+ * Focuses on business logic validation for REQ-UNIT01 requirements
  */
 
 describe('CameraDetail Component Logic Test', () => {
   
-  describe('PDR-3.1: Unit Tests for Critical Components', () => {
+  describe('REQ-UNIT01.1: Unit Tests for Critical Components', () => {
     it('should validate camera status management logic', () => {
       const cameraStore = createCameraStore();
       
@@ -45,7 +51,7 @@ describe('CameraDetail Component Logic Test', () => {
     });
   });
 
-  describe('PDR-3.2: State Management Consistency', () => {
+  describe('REQ-UNIT01.2: State Management Consistency', () => {
     it('should maintain consistent state across component interactions', () => {
       const appState = createAppState();
       
@@ -84,7 +90,7 @@ describe('CameraDetail Component Logic Test', () => {
     });
   });
 
-  describe('PDR-3.3: Props and Data Flow Validation', () => {
+  describe('REQ-UNIT01.3: Props and Data Flow Validation', () => {
     it('should validate component props structure', () => {
       const propsValidator = createPropsValidator();
       
@@ -121,7 +127,7 @@ describe('CameraDetail Component Logic Test', () => {
     });
   });
 
-  describe('PDR-3.4: Event Handling and User Interactions', () => {
+  describe('REQ-UNIT01.4: Event Handling and User Interactions', () => {
     it('should handle user interaction events correctly', () => {
       const eventHandler = createEventHandler();
       
@@ -155,7 +161,7 @@ describe('CameraDetail Component Logic Test', () => {
     });
   });
 
-  describe('PDR-3.5: Component Lifecycle and Cleanup', () => {
+  describe('REQ-UNIT01.5: Component Lifecycle and Cleanup', () => {
     it('should handle component lifecycle events', () => {
       const lifecycleManager = createLifecycleManager();
       
@@ -209,10 +215,11 @@ function createCameraStore() {
 function createSnapshotService() {
   return {
     validateParams(params) {
-      return params.device && 
+      const isValid = params.device && 
              params.device.length > 0 && 
              ['jpg', 'png'].includes(params.format) && 
              params.quality >= 1 && params.quality <= 100;
+      return Boolean(isValid);
     }
   };
 }
@@ -276,12 +283,13 @@ function createAppState() {
 function createPropsValidator() {
   return {
     validateCameraDetailProps(props) {
-      return props.deviceId && 
+      const isValid = props.deviceId && 
              props.deviceId.length > 0 && 
              props.camera && 
              typeof props.onSnapshot === 'function' &&
              typeof props.onRecordingStart === 'function' &&
              typeof props.onRecordingStop === 'function';
+      return Boolean(isValid);
     }
   };
 }

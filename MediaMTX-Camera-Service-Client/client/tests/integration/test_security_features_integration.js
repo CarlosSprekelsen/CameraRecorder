@@ -1,3 +1,9 @@
+/**
+ * REQ-SEC01-001: [Primary requirement being tested]
+ * REQ-SEC01-002: [Secondary requirements covered]
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
 import WebSocket from 'ws';
 import { generateValidToken, generateInvalidToken, generateExpiredToken, validateTestEnvironment } from './auth-utils.js';
 
@@ -255,7 +261,7 @@ async function testDataProtection() {
             // Test data handling
             const dataRequest = {
                 jsonrpc: "2.0",
-                method: "get_cameras",
+                method: "get_camera_list",
                 id: 1
             };
             

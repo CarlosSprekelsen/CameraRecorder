@@ -1,3 +1,9 @@
+/**
+ * REQ-CAM02-001: Camera list retrieval and management
+ * REQ-CAM02-002: Secondary requirements covered
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
 const WebSocket = require('ws');
 
 async function testIntegration() {

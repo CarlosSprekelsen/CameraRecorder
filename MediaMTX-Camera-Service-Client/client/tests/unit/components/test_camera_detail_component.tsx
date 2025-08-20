@@ -1,4 +1,10 @@
 /**
+ * REQ-UNIT01-001: [Primary requirement being tested]
+ * REQ-UNIT01-002: [Secondary requirements covered]
+ * Coverage: UNIT
+ * Quality: HIGH
+ */
+/**
  * Unit tests for CameraDetail component
  * Tests camera operations, snapshot controls, and recording functionality
  */
@@ -31,25 +37,6 @@ jest.mock('../../../src/services/websocket', () => ({
 }));
 
 // Mock WebSocket global
-class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  
-  readyState = MockWebSocket.CONNECTING;
-  onopen = null;
-  onclose = null;
-  onmessage = null;
-  onerror = null;
-  
-  send = jest.fn();
-  close = jest.fn();
-  addEventListener = jest.fn();
-  removeEventListener = jest.fn();
-}
-
-global.WebSocket = MockWebSocket;
 
 // Mock camera data
 const mockCamera = {

@@ -1,4 +1,10 @@
 /**
+ * REQ-CICD01-001: CI/CD pipeline integration validation
+ * REQ-CICD01-002: Secondary requirements covered
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
  * CI/CD Integration Tests
  * 
  * Validates automated testing pipeline with real server integration
@@ -93,7 +99,7 @@ describe('CI/CD Integration Tests', () => {
         await wsService.connect();
         
         // Step 1: Get camera list
-        const cameraList = await wsService.call('get_camera_list', {});
+        const cameraList = await wsService.call('get_camera_list', {}, true);
         expect(cameraList.cameras.length).toBeGreaterThanOrEqual(0);
         
         if (cameraList.cameras.length > 0) {
@@ -102,14 +108,14 @@ describe('CI/CD Integration Tests', () => {
           // Step 2: Get camera status
           const cameraStatus = await wsService.call('get_camera_status', { 
             device: testCamera.device 
-          });
+          }, true);
           expect(cameraStatus.device).toBe(testCamera.device);
           
           // Step 3: Take snapshot
           try {
             const snapshot = await wsService.call('take_snapshot', { 
               device: testCamera.device 
-            });
+            }, true);
             expect(snapshot.device).toBe(testCamera.device);
             expect(snapshot.status).toBe('completed');
           } catch (error) {
@@ -123,14 +129,14 @@ describe('CI/CD Integration Tests', () => {
               device: testCamera.device,
               duration: 10, // Short duration for testing
               format: 'mp4'
-            });
+            }, true);
             expect(recording.device).toBe(testCamera.device);
             expect(recording.status).toBe('STARTED');
             
             // Step 5: Stop recording
             const stopResult = await wsService.call('stop_recording', { 
               device: testCamera.device 
-            });
+            }, true);
             expect(stopResult.device).toBe(testCamera.device);
             expect(stopResult.status).toBe('STOPPED');
           } catch (error) {
@@ -150,13 +156,13 @@ describe('CI/CD Integration Tests', () => {
         await wsService.connect();
         
         // Test recordings list
-        const recordings = await wsService.call('list_recordings', { limit: 10 });
+        const recordings = await wsService.call('list_recordings', { limit: 10 }, true);
         expect(recordings).toHaveProperty('files');
         expect(recordings).toHaveProperty('total');
         expect(Array.isArray(recordings.files)).toBe(true);
         
         // Test snapshots list
-        const snapshots = await wsService.call('list_snapshots', { limit: 10 });
+        const snapshots = await wsService.call('list_snapshots', { limit: 10 }, true);
         expect(snapshots).toHaveProperty('files');
         expect(snapshots).toHaveProperty('total');
         expect(Array.isArray(snapshots.files)).toBe(true);
@@ -180,11 +186,11 @@ describe('CI/CD Integration Tests', () => {
         expect(statusTime).toBeLessThan(50); // <50ms target
         
         // Test control method performance
-        const cameraList = await wsService.call('get_camera_list', {});
+        const cameraList = await wsService.call('get_camera_list', {}, true);
         if (cameraList.cameras.length > 0) {
           const controlStartTime = performance.now();
           try {
-            await wsService.call('take_snapshot', { device: cameraList.cameras[0].device });
+            await wsService.call('take_snapshot', { device: cameraList.cameras[0].device }, true);
           } catch (error) {
             // Expected for some cameras
           }

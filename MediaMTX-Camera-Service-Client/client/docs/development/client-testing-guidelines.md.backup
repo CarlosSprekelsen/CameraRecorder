@@ -1,18 +1,5 @@
 # Testing Strategy
 
-## ⚠️ CRITICAL: Environment Setup Required
-**ALWAYS run `source .test_env` before executing tests**
-- Authentication failures occur without proper environment variables
-- JWT secret and server URL must be loaded before test execution
-- This is the #1 cause of false test failures
-
-```bash
-# REQUIRED: Load environment before any test execution
-cd MediaMTX-Camera-Service-Client/client
-source .test_env
-npm test
-```
-
 ## Philosophy
 **"Test First, Real Integration Always"**
 
@@ -87,19 +74,3 @@ When test environment limitations prevent real integration testing (e.g., jsdom 
 ---
 
 **Status**: Core strategy for test-driven development with real integration focus
-
-## Test Execution Requirements
-- Unit tests: Use `jest.config.cjs` (jsdom + mocks)
-- Integration tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
-- Performance tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
-- E2E tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
-
-## WebSocket Testing
-- Unit tests: Mock WebSocket services completely
-- Integration tests: Use `require('ws')` for Node.js WebSocket
-- Browser tests: Use native WebSocket API
-
-## Requirements Traceability
-- Every test file MUST include REQ-* header
-- REQ-* IDs MUST map to actual project requirements
-- No test without requirements traceability

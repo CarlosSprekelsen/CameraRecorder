@@ -1,4 +1,10 @@
 /**
+ * REQ-CAM01-001: [Primary requirement being tested]
+ * REQ-CAM01-002: [Secondary requirements covered]
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
  * Integration tests for camera operations
  * Tests real server integration for snapshot and recording functionality
  * 

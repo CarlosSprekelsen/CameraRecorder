@@ -83,9 +83,6 @@ export const RPC_METHODS = {
   GET_CAMERA_LIST: 'get_camera_list',
   GET_CAMERA_STATUS: 'get_camera_status',
   
-  // Authentication method
-  AUTHENTICATE: 'authenticate',
-  
   // Camera control methods
   TAKE_SNAPSHOT: 'take_snapshot',
   START_RECORDING: 'start_recording',

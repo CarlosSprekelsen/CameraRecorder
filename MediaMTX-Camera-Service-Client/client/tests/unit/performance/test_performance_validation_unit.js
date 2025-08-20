@@ -1,3 +1,9 @@
+/**
+ * REQ-UNIT01-001: [Primary requirement being tested]
+ * REQ-UNIT01-002: [Secondary requirements covered]
+ * Coverage: UNIT
+ * Quality: HIGH
+ */
 const jwt = require('jsonwebtoken');
 
 /**

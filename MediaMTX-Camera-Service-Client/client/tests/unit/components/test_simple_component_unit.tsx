@@ -1,4 +1,10 @@
 /**
+ * REQ-UNIT01-001: [Primary requirement being tested]
+ * REQ-UNIT01-002: [Secondary requirements covered]
+ * Coverage: UNIT
+ * Quality: HIGH
+ */
+/**
  * Simple component test to validate React testing infrastructure
  * This test validates that the testing environment is properly configured
  */

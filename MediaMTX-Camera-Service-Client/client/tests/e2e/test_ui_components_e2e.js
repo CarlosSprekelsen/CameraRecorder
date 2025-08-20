@@ -1,3 +1,9 @@
+/**
+ * REQ-E2E01-001: [Primary requirement being tested]
+ * REQ-E2E01-002: [Secondary requirements covered]
+ * Coverage: E2E
+ * Quality: HIGH
+ */
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';

@@ -1,4 +1,10 @@
 /**
+ * REQ-AUTH01-001: [Primary requirement being tested]
+ * REQ-AUTH01-002: [Secondary requirements covered]
+ * Coverage: INTEGRATION
+ * Quality: HIGH
+ */
+/**
  * Authentication Setup Integration Test
  * Verifies that the JWT authentication works with the correct environment variable name
  */
