@@ -1,24 +1,19 @@
 """
 Security attack vector tests against real MediaMTX service.
 
+Requirements Coverage:
+- REQ-SEC-005: Input Sanitization - Comprehensive validation of all input parameters
+- REQ-SEC-006: File Upload Security - Secure file upload handling
+- REQ-SEC-007: Data Encryption - Encryption of sensitive data in transit and at rest
+- REQ-SEC-008: Data Privacy - Protection of user privacy and personal data
+- REQ-SEC-009: Security Event Logging - Logging of all security-related events
+- REQ-SEC-010: Security Alerting - Security alerting for suspicious activities
+
+Test Categories: Security
+
 Tests security implementation against common attack vectors including
 JWT token tampering, brute force attempts, rate limit bypass,
 connection exhaustion, and role elevation against the real systemd-managed MediaMTX service.
-
-Requirements Traceability:
-# Reference: docs/requirements/security-requirements.md REQ-SEC-005
-# Reference: docs/requirements/security-requirements.md REQ-SEC-006
-# Reference: docs/requirements/security-requirements.md REQ-SEC-007
-# Reference: docs/requirements/security-requirements.md REQ-SEC-008
-# Reference: docs/requirements/security-requirements.md REQ-SEC-009
-# Reference: docs/requirements/security-requirements.md REQ-SEC-010
-
-REQ-SEC-005: Input Sanitization - Comprehensive validation of all input parameters
-REQ-SEC-006: File Upload Security - Secure file upload handling
-REQ-SEC-007: Data Encryption - Encryption of sensitive data in transit and at rest
-REQ-SEC-008: Data Privacy - Protection of user privacy and personal data
-REQ-SEC-009: Security Event Logging - Logging of all security-related events
-REQ-SEC-010: Security Alerting - Security alerting for suspicious activities
 """
 
 import pytest
@@ -37,6 +32,7 @@ from src.security.auth_manager import AuthManager
 from src.security.middleware import SecurityMiddleware
 
 
+@pytest.mark.security
 class TestJWTSecurityAttacks:
     """Test JWT security against various attack vectors."""
     

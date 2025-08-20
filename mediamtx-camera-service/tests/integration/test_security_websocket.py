@@ -9,6 +9,8 @@ Requirements Traceability:
 Story Coverage: S7 - Security Implementation
 IV&V Control Point: Real WebSocket security validation
 
+
+
 Tests WebSocket authentication, permission checking, rate limiting,
 and connection control as specified in Sprint 2 Task S7.1.
 """
@@ -23,6 +25,7 @@ from src.security.middleware import SecurityMiddleware
 from src.security.auth_manager import AuthManager
 from src.security.jwt_handler import JWTHandler
 from src.security.api_key_handler import APIKeyHandler
+from tests.fixtures.auth_utils import get_test_jwt_secret
 
 
 class TestWebSocketAuthentication:
@@ -44,7 +47,7 @@ class TestWebSocketAuthentication:
     @pytest.fixture
     def security_middleware(self, temp_storage_file):
         """Create security middleware for WebSocket testing."""
-        jwt_handler = JWTHandler("websocket_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         auth_manager = AuthManager(jwt_handler, api_key_handler)
         
@@ -209,7 +212,7 @@ class TestWebSocketSecurityIntegration:
     @pytest.fixture
     def security_middleware(self, temp_storage_file):
         """Create security middleware for integration testing."""
-        jwt_handler = JWTHandler("integration_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         auth_manager = AuthManager(jwt_handler, api_key_handler)
         
@@ -363,7 +366,7 @@ class TestWebSocketSecurityPerformance:
     @pytest.fixture
     def security_middleware(self, temp_storage_file):
         """Create security middleware for performance testing."""
-        jwt_handler = JWTHandler("performance_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         auth_manager = AuthManager(jwt_handler, api_key_handler)
         
@@ -502,7 +505,7 @@ class TestWebSocketSecurityErrorHandling:
     @pytest.fixture
     def security_middleware(self, temp_storage_file):
         """Create security middleware for error handling tests."""
-        jwt_handler = JWTHandler("error_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         auth_manager = AuthManager(jwt_handler, api_key_handler)
         

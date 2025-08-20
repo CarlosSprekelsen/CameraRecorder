@@ -107,6 +107,7 @@ class CriticalErrorHandlingTests:
     """Test suite for critical error handling scenarios."""
     
     @pytest.mark.asyncio
+    @pytest.mark.integration
     @pytest.mark.timeout(180)  # 3 minutes for critical error testing
     async def test_network_failure_and_timeout_scenarios(self, service_manager, websocket_client):
         """

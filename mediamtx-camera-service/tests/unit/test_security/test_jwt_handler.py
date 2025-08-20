@@ -17,7 +17,8 @@ import pytest
 import time
 import jwt
 
-from src.security.jwt_handler import JWTHandler, JWTClaims
+from src.security.jwt_handler import JWTHandler
+from tests.fixtures.auth_utils import get_test_jwt_secret, JWTClaims
 
 
 class TestJWTClaims:
@@ -54,11 +55,11 @@ class TestJWTHandler:
     @pytest.fixture
     def jwt_handler(self):
         """Create JWT handler with test secret."""
-        return JWTHandler("test_secret_key_12345")
+        return JWTHandler(get_test_jwt_secret())
     
     def test_init_with_secret(self, jwt_handler):
         """Test JWT handler initialization."""
-        assert jwt_handler.secret_key == "test_secret_key_12345"
+        assert jwt_handler.secret_key == get_test_jwt_secret()
         assert jwt_handler.algorithm == "HS256"
     
     def test_init_without_secret(self):
@@ -261,7 +262,7 @@ class TestJWTHandlerIntegration:
     @pytest.fixture
     def jwt_handler(self):
         """Create JWT handler for integration tests."""
-        return JWTHandler("integration_test_secret_key")
+        return JWTHandler(get_test_jwt_secret())
     
     def test_full_token_lifecycle(self, jwt_handler):
         """Test complete token lifecycle."""

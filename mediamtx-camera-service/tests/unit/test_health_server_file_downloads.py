@@ -7,6 +7,19 @@ Tests the HTTP file download functionality added in Epic E6:
 
 Requirements: REQ-FUNC-010, REQ-FUNC-011
 Epic E6: Server Recording and Snapshot File Management Infrastructure
+
+TODO: VIOLATION - Filesystem mocking violates strategic mocking rules
+- Lines 86-90: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- Lines 119-123: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- Lines 185-186: Mocking os.path.join, os.path.exists
+- Lines 208-210: Mocking os.path.join, os.path.exists, os.path.isfile
+- Lines 233-236: Mocking os.path.join, os.path.exists, os.path.isfile, os.access
+- Lines 260-264: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- Lines 302-306: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- Lines 345-349: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- Lines 371-375: Mocking os.path.join, os.path.exists, os.path.isfile, os.access, os.path.getsize
+- VIOLATION: Testing guide states "NEVER MOCK: filesystem"
+- FIX REQUIRED: Replace with tempfile.TemporaryDirectory() for real filesystem testing
 """
 
 import pytest

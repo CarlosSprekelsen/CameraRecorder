@@ -2,6 +2,15 @@
 """
 Critical Interface Validation Test Script
 
+Requirements Coverage:
+- REQ-API-001: System shall provide get_camera_list method
+- REQ-API-002: System shall provide take_snapshot method
+- REQ-API-003: System shall provide start_recording method
+- REQ-API-004: System shall support on-demand stream activation
+- REQ-API-005: System shall enforce authentication for protected methods
+
+Test Categories: Integration
+
 Tests the 3 most critical API methods:
 1. get_camera_list - Core camera discovery
 2. take_snapshot - Photo capture functionality with on-demand stream activation
@@ -157,6 +166,7 @@ class IntegrationTestSetup:
             await self.mediamtx_controller.stop()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_camera_list_success():
     """Test get_camera_list success case with proper authentication."""
@@ -193,6 +203,7 @@ async def test_get_camera_list_success():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_camera_list_negative():
     """Test get_camera_list negative case (unauthenticated)."""
@@ -216,6 +227,7 @@ async def test_get_camera_list_negative():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_take_snapshot_success():
     """Test take_snapshot success case with proper authentication and on-demand stream activation."""
@@ -294,6 +306,7 @@ async def test_take_snapshot_success():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_take_snapshot_negative():
     """Test take_snapshot negative case (invalid device, authenticated)."""
@@ -337,6 +350,7 @@ async def test_take_snapshot_negative():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_start_recording_success():
     """Test start_recording success case with proper authentication and on-demand stream activation."""
@@ -431,6 +445,7 @@ async def test_start_recording_success():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_start_recording_negative():
     """Test start_recording negative case (invalid device, authenticated)."""
@@ -474,6 +489,7 @@ async def test_start_recording_negative():
         await setup.cleanup()
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ping_method():
     """Test ping method (no authentication required)."""

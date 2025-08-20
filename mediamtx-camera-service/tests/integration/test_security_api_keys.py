@@ -30,6 +30,7 @@ from typing import Dict, Any
 from src.security.api_key_handler import APIKeyHandler
 from src.security.auth_manager import AuthManager
 from src.security.jwt_handler import JWTHandler
+from tests.fixtures.auth_utils import get_test_jwt_secret
 
 
 class TestAPIKeyAuthenticationFlow:
@@ -56,7 +57,7 @@ class TestAPIKeyAuthenticationFlow:
     @pytest.fixture
     def auth_manager(self, temp_storage_file):
         """Create authentication manager for integration tests."""
-        jwt_handler = JWTHandler("integration_test_secret")
+        jwt_handler = JWTHandler(get_test_jwt_secret())
         api_key_handler = APIKeyHandler(temp_storage_file)
         return AuthManager(jwt_handler, api_key_handler)
     

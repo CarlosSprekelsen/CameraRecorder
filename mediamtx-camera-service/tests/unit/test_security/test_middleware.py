@@ -23,6 +23,7 @@ from src.security.middleware import SecurityMiddleware, RateLimitInfo
 from src.security.auth_manager import AuthManager
 from src.security.jwt_handler import JWTHandler
 from src.security.api_key_handler import APIKeyHandler
+from tests.fixtures.auth_utils import get_test_jwt_secret
 
 
 class TestRateLimitInfo:

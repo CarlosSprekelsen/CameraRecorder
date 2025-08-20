@@ -2,6 +2,14 @@
 """
 Test runner for MediaMTX Camera Service tests.
 
+Requirements Coverage:
+- REQ-TEST-001: System shall provide comprehensive test execution
+- REQ-TEST-002: System shall support unit test execution
+- REQ-TEST-003: System shall support integration test execution
+- REQ-TEST-004: System shall support coverage reporting
+
+Test Categories: Test Infrastructure
+
 Usage:
     python3 run_tests.py                    # Run all tests
     python3 run_tests.py --unit             # Run only unit tests

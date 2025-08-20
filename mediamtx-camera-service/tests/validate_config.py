@@ -2,6 +2,14 @@
 """
 Configuration validation script.
 
+Requirements Coverage:
+- REQ-CONFIG-001: System shall validate configuration compatibility
+- REQ-CONFIG-002: System shall ensure MediaMTXConfig matches MediaMTXController
+- REQ-CONFIG-003: System shall validate configuration field types
+- REQ-CONFIG-004: System shall catch configuration mismatches before runtime
+
+Test Categories: Configuration
+
 This script validates that:
 1. MediaMTXConfig dataclass matches MediaMTXController constructor parameters
 2. Configuration files can be loaded without parameter mismatches
@@ -27,6 +35,7 @@ except ImportError as e:
     sys.exit(1)
 
 
+@pytest.mark.config
 def test_mediamtx_config_controller_compatibility():
     """Test that MediaMTXConfig fields match MediaMTXController constructor parameters."""
     print("Testing MediaMTXConfig and MediaMTXController parameter compatibility...")
@@ -56,6 +65,7 @@ def test_mediamtx_config_controller_compatibility():
     return True
 
 
+@pytest.mark.config
 def test_mediamtx_config_field_types():
     """Test that MediaMTXConfig field types are compatible with expected values."""
     print("Testing MediaMTXConfig field types...")
@@ -117,6 +127,7 @@ def test_mediamtx_config_field_types():
     return True
 
 
+@pytest.mark.config
 def test_required_health_monitoring_parameters():
     """Test that all required health monitoring parameters are present and correctly typed."""
     print("Testing required health monitoring parameters...")
@@ -156,6 +167,7 @@ def test_required_health_monitoring_parameters():
     return True
 
 
+@pytest.mark.config
 def test_config_instantiation():
     """Test that configuration can be instantiated with all required parameters."""
     print("Testing configuration instantiation...")

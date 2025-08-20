@@ -2,21 +2,18 @@
 """
 Security Concept Validation Test Script against Real MediaMTX Service
 
+Requirements Coverage:
+- REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
+- REQ-SEC-002: API Key Validation - Service-to-service communication
+- REQ-SEC-003: Role-Based Access Control - User role enforcement
+- REQ-SEC-004: Resource Access Control - Camera and media file access
+
+Test Categories: Security
+
 Tests basic security concepts against the real systemd-managed MediaMTX service:
 1. Authentication - JWT token validation
 2. Authorization - Access control and permission checking
 3. Security design feasibility
-
-Requirements Traceability:
-# Reference: docs/requirements/security-requirements.md REQ-SEC-001
-# Reference: docs/requirements/security-requirements.md REQ-SEC-002
-# Reference: docs/requirements/security-requirements.md REQ-SEC-003
-# Reference: docs/requirements/security-requirements.md REQ-SEC-004
-
-REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
-REQ-SEC-002: API Key Validation - Service-to-service communication
-REQ-SEC-003: Role-Based Access Control - User role enforcement
-REQ-SEC-004: Resource Access Control - Camera and media file access
 
 Each concept tested with:
 - Success case: Valid authentication/authorization
@@ -70,6 +67,7 @@ def check_real_mediamtx_service():
         return False
 
 
+@pytest.mark.security
 def test_jwt_authentication_concept():
     """Test JWT authentication concept - token generation and validation against real MediaMTX service.
     
@@ -173,6 +171,7 @@ def test_jwt_authentication_concept():
     return test_results
 
 
+@pytest.mark.security
 def test_authorization_concept():
     """Test authorization concept - role-based access control."""
     print("\n=== Testing Authorization Concept ===")
@@ -296,6 +295,8 @@ def test_authorization_concept():
     return test_results
 
 
+@pytest.mark.security
+@pytest.mark.asyncio
 async def test_security_middleware_concept():
     """Test security middleware concept - integrated authentication and authorization."""
     print("\n=== Testing Security Middleware Concept ===")

@@ -102,6 +102,7 @@ class TestConfigurationComponentIntegration:
             await svc.stop()
 
     @pytest.mark.asyncio
+    @pytest.mark.integration
     async def test_resilience_on_stream_creation_failure(self, temp_test_dir):
         """
         Req: S5-RES-002

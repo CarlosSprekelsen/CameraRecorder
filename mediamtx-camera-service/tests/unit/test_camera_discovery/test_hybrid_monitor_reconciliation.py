@@ -13,6 +13,21 @@ Requirements Traceability:
 Story Coverage: S3 - Camera Discovery Hardening
 IV&V Control Point: Real system behavior validation with minimal mocking
 
+TODO: VIOLATION - MediaMTX service mocking violates strategic mocking rules
+- Line 200: Mocking MediaMTX controller with mock_dependencies["mediamtx_controller"]
+- VIOLATION: Testing guide states "NEVER MOCK: MediaMTX service"
+- FIX REQUIRED: Replace with real systemd-managed MediaMTX service integration
+
+TODO: VIOLATION - WebSocket mocking violates strategic mocking rules
+- Line 206: Mocking WebSocket server with mock_dependencies["websocket_server"]
+- VIOLATION: Testing guide states "NEVER MOCK: internal WebSocket"
+- FIX REQUIRED: Replace with real WebSocket server integration
+
+TODO: VIOLATION - Config loading mocking violates strategic mocking rules
+- Line 209: Mocking config with mock_dependencies["config"]
+- VIOLATION: Testing guide states "NEVER MOCK: config loading"
+- FIX REQUIRED: Replace with real config loading
+
 Test Strategy:
 - Test real adaptive polling behavior under various conditions
 - Validate failure recovery mechanisms with actual error scenarios

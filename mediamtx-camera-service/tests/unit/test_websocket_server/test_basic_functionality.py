@@ -2,6 +2,14 @@
 """
 Basic WebSocket server functionality test to isolate real system issues.
 
+Requirements Coverage:
+- REQ-WS-001: WebSocket server shall handle basic functionality
+- REQ-WS-002: WebSocket server shall provide stream name generation
+- REQ-WS-003: WebSocket server shall provide filename generation
+- REQ-WS-004: WebSocket server shall handle ping/pong communication
+
+Test Categories: Unit
+
 This test file focuses on basic functionality without complex async fixtures
 to identify and fix real system issues that are preventing proper testing.
 """
@@ -10,6 +18,7 @@ import pytest
 from src.websocket_server.server import WebSocketJsonRpcServer
 
 
+@pytest.mark.unit
 class TestBasicWebSocketFunctionality:
     """Basic WebSocket server functionality tests."""
 
