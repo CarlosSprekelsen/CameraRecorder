@@ -242,6 +242,7 @@ async def test_service_manager_integration():
     finally:
         await service_manager.stop()
 
+@pytest.mark.asyncio
 async def test_running_server_camera_detection():
     """Test camera detection via the running server's WebSocket API."""
     logger.info("=== Testing Running Server Camera Detection ===")

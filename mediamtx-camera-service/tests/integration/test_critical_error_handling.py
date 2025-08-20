@@ -797,7 +797,7 @@ async def service_manager():
 @pytest.fixture
 async def websocket_client():
     """Create WebSocket test client."""
-    client = WebSocketTestClient("ws://localhost:8080/ws")
+    client = WebSocketTestClient("ws://localhost:8002/ws")
     await client.connect()
     yield client
     await client.disconnect()

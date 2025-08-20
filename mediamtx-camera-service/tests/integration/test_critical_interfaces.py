@@ -45,7 +45,7 @@ from camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraCo
 from camera_service.service_manager import ServiceManager
 from mediamtx_wrapper.controller import MediaMTXController
 from camera_discovery.hybrid_monitor import HybridCameraMonitor
-from test_auth_utilities import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient, cleanup_test_auth_manager
+from .test_auth_utilities import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient, cleanup_test_auth_manager
 
 
 def build_test_config() -> Config:

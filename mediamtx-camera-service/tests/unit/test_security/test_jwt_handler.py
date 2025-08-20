@@ -18,7 +18,8 @@ import time
 import jwt
 
 from src.security.jwt_handler import JWTHandler
-from tests.fixtures.auth_utils import get_test_jwt_secret, JWTClaims
+from tests.fixtures.auth_utils import get_test_jwt_secret
+from src.security.jwt_handler import JWTClaims
 
 
 class TestJWTClaims:

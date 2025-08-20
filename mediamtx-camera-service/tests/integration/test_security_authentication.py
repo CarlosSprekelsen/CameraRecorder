@@ -32,7 +32,7 @@ from typing import Dict, Any
 from src.security.jwt_handler import JWTHandler
 from src.security.auth_manager import AuthManager
 from src.security.api_key_handler import APIKeyHandler
-from test_auth_utilities import get_test_auth_manager, TestUserFactory, cleanup_test_auth_manager
+from .test_auth_utilities import get_test_auth_manager, TestUserFactory, cleanup_test_auth_manager
 
 
 class TestJWTAuthenticationFlow:
