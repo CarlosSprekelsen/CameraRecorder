@@ -97,9 +97,8 @@ async function testValidToken(ws) {
 
     const token = jwt.sign(payload, CONFIG.jwtSecret, { algorithm: 'HS256' });
 
-    // Server doesn't have an authenticate method - authentication is handled by including auth_token in parameters
-    // Test authentication by calling a protected method with auth_token
-    const authResult = await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: token });
+    // First authenticate using the authenticate method
+    const authResult = await sendRequest(ws, 'authenticate', { token: token });
     assert(authResult.authenticated === true, 'valid token should authenticate');
     assert(authResult.role === 'operator', 'user should have operator role');
     
@@ -120,8 +119,8 @@ async function testInvalidToken(ws) {
     const invalidToken = 'invalid.token.here';
     
     try {
-      // Test invalid token by calling protected method
-    await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: invalidToken });
+      // Test invalid token by calling authenticate method
+      await sendRequest(ws, 'authenticate', { token: invalidToken });
       throw new Error('Should have rejected invalid token');
     } catch (error) {
       assert(error.message.includes('Invalid token') || error.message.includes('Authentication failed'), 'invalid token should be rejected');
@@ -152,8 +151,8 @@ async function testExpiredToken(ws) {
     );
 
     try {
-      // Test expired token by calling protected method
-    await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: expiredToken });
+      // Test expired token by calling authenticate method
+      await sendRequest(ws, 'authenticate', { token: expiredToken });
       throw new Error('Should have rejected expired token');
     } catch (error) {
       assert(error.message.includes('Token expired') || error.message.includes('Authentication failed'), 'expired token should be rejected');
@@ -176,8 +175,8 @@ async function testMalformedToken(ws) {
     const malformedToken = 'not.a.valid.jwt.token';
     
     try {
-      // Test malformed token by calling protected method
-    await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: malformedToken });
+      // Test malformed token by calling authenticate method
+      await sendRequest(ws, 'authenticate', { token: malformedToken });
       throw new Error('Should have rejected malformed token');
     } catch (error) {
       assert(error.message.includes('Invalid token') || error.message.includes('Authentication failed'), 'malformed token should be rejected');
@@ -210,11 +209,11 @@ async function testProtectedMethodAccess(ws) {
 
     const token = jwt.sign(payload, CONFIG.jwtSecret, { algorithm: 'HS256' });
 
-    // Authenticate first
-    // Test authentication by calling protected method
-    await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: token });
+    // First authenticate
+    const authResult = await sendRequest(ws, 'authenticate', { token: token });
+    assert(authResult.authenticated === true, 'authentication should succeed');
 
-    // Test protected method access
+    // Now test protected method access (should work after authentication)
     const result = await sendRequest(ws, 'take_snapshot', { device: '/dev/video0' });
     assert(result, 'authenticated user should access protected method');
     
@@ -268,8 +267,10 @@ async function testRoleBasedAccess(ws) {
       { expiresIn: '1h' }
     );
 
-    // Test viewer token by calling protected method
-    await sendRequest(ws, 'get_camera_status', { device: '/dev/video0', auth_token: viewerToken });
+    // Authenticate with viewer token
+    const authResult = await sendRequest(ws, 'authenticate', { token: viewerToken });
+    assert(authResult.authenticated === true, 'viewer authentication should succeed');
+    assert(authResult.role === 'viewer', 'user should have viewer role');
     
     // Viewer should be able to read but not write
     const cameraList = await sendRequest(ws, 'get_camera_list');
