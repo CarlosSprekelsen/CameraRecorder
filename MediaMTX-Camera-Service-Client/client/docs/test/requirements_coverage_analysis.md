@@ -256,7 +256,7 @@ This analysis identifies all REQ-* requirements across the test suite and maps t
 - **Impact**: Critical for security and functionality
 - **Description**: JWT secret properly configured in server source directory
 - **Priority**: **RESOLVED**
-- **Action Required**: None - authentication working correctly
+- **Action Required**: None - authentication working correctly {if fails regenerate keys}
 
 ### **2. IMPROVING: E2E Test Suite**
 - **Status**: ⚠️ PARTIALLY WORKING (75% coverage)
