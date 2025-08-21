@@ -148,8 +148,10 @@ class IntegrationTestSetup:
             config=self.config
         )
         
-        # Set security middleware
-        self.server.set_security_middleware(self.auth_manager.security_middleware)
+        # Create and set security middleware
+        from src.security.middleware import SecurityMiddleware
+        security_middleware = SecurityMiddleware(self.auth_manager, max_connections=10, requests_per_minute=120)
+        self.server.set_security_middleware(security_middleware)
         self.server.set_service_manager(self.service_manager)
         
         # Start server
@@ -163,7 +165,6 @@ class IntegrationTestSetup:
     async def cleanup(self):
         """Clean up test resources."""
         if self.websocket_client:
-            self.websocket_client.cleanup()
             await self.websocket_client.disconnect()
         
         if self.server:
@@ -194,8 +195,9 @@ async def test_get_camera_list_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {operator_user['user_id']} with role {operator_user['role']}")
+        assert "result" in auth_result, "Authentication response missing 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
+        print(f"✅ Authenticated as {operator_user['username']} with role {operator_user['role']}")
 
         # Test get_camera_list through WebSocket (not direct method call)
         result = await setup.websocket_client.call_protected_method("get_camera_list", {})

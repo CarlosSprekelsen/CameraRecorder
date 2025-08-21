@@ -74,14 +74,14 @@ def get_test_auth_manager() -> AuthManager:
     jwt_secret = get_test_jwt_secret()
     jwt_handler = JWTHandler(jwt_secret)
     
-    # Create real API key handler
-    api_key_handler = APIKeyHandler()
-    
-    # Create real security middleware
-    security_middleware = SecurityMiddleware(jwt_handler, api_key_handler)
+    # Create real API key handler with test storage file
+    import tempfile
+    import os
+    test_api_keys_file = os.path.join(tempfile.gettempdir(), "test_api_keys.json")
+    api_key_handler = APIKeyHandler(storage_file=test_api_keys_file)
     
     # Create and return real auth manager
-    auth_manager = AuthManager(jwt_handler, api_key_handler, security_middleware)
+    auth_manager = AuthManager(jwt_handler, api_key_handler)
     return auth_manager
 
 

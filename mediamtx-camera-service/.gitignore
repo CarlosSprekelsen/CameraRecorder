@@ -76,8 +76,7 @@ bandit_scan_results.json
 uninstall_report_*.txt
 fresh_installation_log.txt
 debug_health_server.py
-test_*.py
-test_*.js
+
 
 # Node.js
 node_modules/

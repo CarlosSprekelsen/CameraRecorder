@@ -1,0 +1,622 @@
+#!/usr/bin/env python3
+"""
+Health monitoring test suite for MediaMTX Camera Service.
+
+Requirements Coverage:
+- REQ-HEALTH-005: The system SHALL provide health status with detailed component information
+- REQ-HEALTH-006: The system SHALL support Kubernetes readiness probes
+- REQ-API-017: Health endpoints SHALL return JSON responses with status and timestamp
+- REQ-API-018: Health endpoints SHALL return 200 OK for healthy status
+- REQ-API-019: Health endpoints SHALL return 500 Internal Server Error for unhealthy status
+
+Test Categories: Health
+"""
+
+import asyncio
+import json
+import sys
+import os
+import pytest
+import time
+import aiohttp
+import websockets
+from typing import Dict, Any, List
+from dataclasses import dataclass
+from pathlib import Path
+
+# Add src to path for imports
+sys.path.append('src')
+
+from websocket_server.server import WebSocketJsonRpcServer
+from camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
+from camera_service.service_manager import ServiceManager
+from mediamtx_wrapper.controller import MediaMTXController
+from camera_discovery.hybrid_monitor import HybridCameraMonitor
+
+
+@dataclass
+class HealthComponent:
+    """Health component information."""
+    name: str
+    status: str
+    details: Dict[str, Any]
+    last_check: float
+    uptime: float
+
+
+@dataclass
+class HealthStatus:
+    """Overall health status."""
+    overall_status: str
+    timestamp: float
+    components: Dict[str, HealthComponent]
+    version: str
+    uptime: float
+
+
+class HealthTestSetup:
+    """Real system health test setup."""
+    
+    def __init__(self):
+        self.config = self._build_test_config()
+        self.service_manager = None
+        self.mediamtx_controller = None
+        self.camera_monitor = None
+        self.server = None
+        self.websocket_client = None
+        self.http_client = None
+        
+    def _build_test_config(self) -> Config:
+        """Build test configuration for health testing."""
+        return Config(
+            server=ServerConfig(host="127.0.0.1", port=8005, websocket_path="/ws", max_connections=100),
+            mediamtx=MediaMTXConfig(
+                host="127.0.0.1",
+                api_port=9997,
+                rtsp_port=8554,
+                webrtc_port=8889,
+                hls_port=8888,
+                recordings_path="./.tmp_recordings",
+                snapshots_path="./.tmp_snapshots",
+            ),
+            camera=CameraConfig(
+                device_range=[0, 1, 2, 3], 
+                enable_capability_detection=True, 
+                detection_timeout=0.5,
+                auto_start_streams=True
+            ),
+            logging=LoggingConfig(),
+            recording=RecordingConfig(),
+            snapshots=SnapshotConfig(),
+        )
+    
+    async def setup(self):
+        """Set up real system components for health testing."""
+        # Initialize real MediaMTX controller
+        mediamtx_config = self.config.mediamtx
+        self.mediamtx_controller = MediaMTXController(
+            host=mediamtx_config.host,
+            api_port=mediamtx_config.api_port,
+            rtsp_port=mediamtx_config.rtsp_port,
+            webrtc_port=mediamtx_config.webrtc_port,
+            hls_port=mediamtx_config.hls_port,
+            config_path=mediamtx_config.config_path,
+            recordings_path=mediamtx_config.recordings_path,
+            snapshots_path=mediamtx_config.snapshots_path,
+        )
+        
+        # Start MediaMTX controller
+        await self.mediamtx_controller.start()
+        
+        # Initialize camera monitor
+        self.camera_monitor = HybridCameraMonitor(
+            device_range=self.config.camera.device_range,
+            enable_capability_detection=self.config.camera.enable_capability_detection,
+            detection_timeout=self.config.camera.detection_timeout,
+            auto_start_streams=self.config.camera.auto_start_streams
+        )
+        
+        # Start camera monitor
+        await self.camera_monitor.start()
+        
+        # Initialize service manager
+        self.service_manager = ServiceManager(self.config)
+        await self.service_manager.start()
+        
+        # Create HTTP client for health endpoint testing
+        self.http_client = aiohttp.ClientSession()
+        
+        # Create WebSocket client for health API testing
+        self.websocket_client = WebSocketHealthClient(f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}")
+        await self.websocket_client.connect()
+        
+        print(f"✅ Health test setup completed")
+    
+    async def cleanup(self):
+        """Clean up health test resources."""
+        if self.http_client:
+            await self.http_client.close()
+        
+        if self.websocket_client:
+            await self.websocket_client.disconnect()
+        
+        if self.service_manager:
+            await self.service_manager.stop()
+        
+        if self.camera_monitor:
+            await self.camera_monitor.stop()
+        
+        if self.mediamtx_controller:
+            await self.mediamtx_controller.stop()
+        
+        print(f"✅ Health test cleanup completed")
+
+
+class WebSocketHealthClient:
+    """WebSocket client for health API testing."""
+    
+    def __init__(self, server_url: str):
+        self.server_url = server_url
+        self.websocket = None
+        self.connected = False
+        self.message_id_counter = 1
+    
+    async def connect(self):
+        """Connect to WebSocket server."""
+        self.websocket = await websockets.connect(self.server_url)
+        self.connected = True
+    
+    async def disconnect(self):
+        """Disconnect from server."""
+        if self.websocket:
+            await self.websocket.close()
+            self.connected = False
+    
+    async def call_method(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Call a JSON-RPC method."""
+        if not self.connected:
+            raise RuntimeError("WebSocket client not connected")
+        
+        message = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params or {},
+            "id": self.message_id_counter
+        }
+        self.message_id_counter += 1
+        
+        await self.websocket.send(json.dumps(message))
+        response = await self.websocket.recv()
+        return json.loads(response)
+
+
+class HealthEndpointTester:
+    """Health endpoint testing utilities."""
+    
+    def __init__(self, http_client: aiohttp.ClientSession, base_url: str = "http://localhost:8003"):
+        self.http_client = http_client
+        self.base_url = base_url
+    
+    async def test_health_endpoint(self, endpoint: str) -> Dict[str, Any]:
+        """Test a health endpoint and return response details."""
+        url = f"{self.base_url}/health/{endpoint}"
+        
+        try:
+            async with self.http_client.get(url) as response:
+                status_code = response.status
+                content_type = response.headers.get('content-type', '')
+                response_text = await response.text()
+                
+                # Try to parse JSON response
+                try:
+                    json_data = json.loads(response_text) if response_text else {}
+                except json.JSONDecodeError:
+                    json_data = {"raw_response": response_text}
+                
+                return {
+                    "status_code": status_code,
+                    "content_type": content_type,
+                    "response": json_data,
+                    "success": 200 <= status_code < 300
+                }
+                
+        except Exception as e:
+            return {
+                "status_code": 0,
+                "content_type": "",
+                "response": {"error": str(e)},
+                "success": False
+            }
+
+
+@pytest.mark.health
+@pytest.mark.asyncio
+async def test_health_status_detailed_components():
+    """Test REQ-HEALTH-005: Health status with detailed component information."""
+    print("\n=== Health Test: Detailed Component Information ===")
+    
+    setup = HealthTestSetup()
+    try:
+        await setup.setup()
+        
+        # Test health status via WebSocket API
+        health_response = await setup.websocket_client.call_method("get_status", {})
+        
+        print(f"📊 Health Status Response: {json.dumps(health_response, indent=2)}")
+        
+        # Validate response structure
+        assert "result" in health_response, "Health response missing 'result' field"
+        result = health_response["result"]
+        
+        # REQ-HEALTH-005: Detailed component information
+        required_components = ["mediamtx", "camera_discovery", "service_manager"]
+        
+        for component in required_components:
+            assert component in result, f"Missing health component: {component}"
+            component_data = result[component]
+            
+            # Validate component has required fields
+            assert "status" in component_data, f"Component {component} missing status"
+            assert "details" in component_data, f"Component {component} missing details"
+            assert "uptime" in component_data, f"Component {component} missing uptime"
+            
+            # Validate status values
+            assert component_data["status"] in ["healthy", "unhealthy", "degraded"], \
+                f"Invalid status for {component}: {component_data['status']}"
+            
+            # Validate uptime is positive
+            assert component_data["uptime"] >= 0, f"Invalid uptime for {component}: {component_data['uptime']}"
+            
+            print(f"   ✅ {component}: {component_data['status']} (uptime: {component_data['uptime']:.2f}s)")
+        
+        # Validate overall health status
+        assert "overall_status" in result, "Missing overall status"
+        assert result["overall_status"] in ["healthy", "unhealthy", "degraded"], \
+            f"Invalid overall status: {result['overall_status']}"
+        
+        # Validate timestamp
+        assert "timestamp" in result, "Missing timestamp"
+        assert isinstance(result["timestamp"], (int, float)), "Invalid timestamp format"
+        
+        print(f"✅ REQ-HEALTH-005: Detailed component information validated")
+        return health_response
+        
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.health
+@pytest.mark.asyncio
+async def test_kubernetes_readiness_probes():
+    """Test REQ-HEALTH-006: Kubernetes readiness probe support."""
+    print("\n=== Health Test: Kubernetes Readiness Probes ===")
+    
+    setup = HealthTestSetup()
+    try:
+        await setup.setup()
+        
+        # Create health endpoint tester
+        health_tester = HealthEndpointTester(setup.http_client)
+        
+        # Test Kubernetes readiness probe endpoints
+        readiness_endpoints = [
+            "ready",           # Standard Kubernetes readiness probe
+            "live",            # Kubernetes liveness probe
+            "startup",         # Kubernetes startup probe
+            "healthz",         # Alternative health endpoint
+            "readyz"           # Alternative readiness endpoint
+        ]
+        
+        probe_results = {}
+        
+        for endpoint in readiness_endpoints:
+            print(f"🔄 Testing Kubernetes probe: /health/{endpoint}")
+            result = await health_tester.test_health_endpoint(endpoint)
+            probe_results[endpoint] = result
+            
+            # REQ-HEALTH-006: Kubernetes readiness probe support
+            if result["success"]:
+                print(f"   ✅ {endpoint}: {result['status_code']} - {result['response'].get('status', 'unknown')}")
+                
+                # Validate JSON response structure
+                response_data = result["response"]
+                assert "status" in response_data, f"Missing status in {endpoint} response"
+                assert response_data["status"] in ["ok", "healthy", "ready"], \
+                    f"Invalid status in {endpoint}: {response_data['status']}"
+                
+                # Validate timestamp if present
+                if "timestamp" in response_data:
+                    assert isinstance(response_data["timestamp"], (int, float)), \
+                        f"Invalid timestamp in {endpoint}"
+            else:
+                print(f"   ⚠️ {endpoint}: {result['status_code']} - {result['response'].get('error', 'unknown error')}")
+        
+        # At least one readiness probe should work
+        working_probes = [ep for ep, result in probe_results.items() if result["success"]]
+        assert len(working_probes) > 0, "No Kubernetes readiness probes working"
+        
+        print(f"✅ REQ-HEALTH-006: Kubernetes readiness probe support validated")
+        print(f"   Working probes: {', '.join(working_probes)}")
+        return probe_results
+        
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.health
+@pytest.mark.asyncio
+async def test_health_endpoint_json_responses():
+    """Test REQ-API-017: Health endpoints return JSON responses with status and timestamp."""
+    print("\n=== Health Test: JSON Response Format ===")
+    
+    setup = HealthTestSetup()
+    try:
+        await setup.setup()
+        
+        # Create health endpoint tester
+        health_tester = HealthEndpointTester(setup.http_client)
+        
+        # Test health endpoints
+        health_endpoints = [
+            "system",      # System health
+            "cameras",     # Camera health
+            "mediamtx",    # MediaMTX health
+            "overall"      # Overall health
+        ]
+        
+        json_validation_results = {}
+        
+        for endpoint in health_endpoints:
+            print(f"🔄 Testing JSON response: /health/{endpoint}")
+            result = await health_tester.test_health_endpoint(endpoint)
+            json_validation_results[endpoint] = result
+            
+            # REQ-API-017: JSON responses with status and timestamp
+            if result["success"]:
+                print(f"   ✅ {endpoint}: {result['status_code']}")
+                
+                # Validate content type
+                content_type = result["content_type"]
+                assert "application/json" in content_type, \
+                    f"Invalid content type for {endpoint}: {content_type}"
+                
+                # Validate JSON response structure
+                response_data = result["response"]
+                assert isinstance(response_data, dict), \
+                    f"Response for {endpoint} is not a JSON object"
+                
+                # Validate required fields
+                assert "status" in response_data, f"Missing status in {endpoint}"
+                assert "timestamp" in response_data, f"Missing timestamp in {endpoint}"
+                
+                # Validate status values
+                assert response_data["status"] in ["healthy", "unhealthy", "degraded", "ok"], \
+                    f"Invalid status in {endpoint}: {response_data['status']}"
+                
+                # Validate timestamp format
+                timestamp = response_data["timestamp"]
+                assert isinstance(timestamp, (int, float)), \
+                    f"Invalid timestamp format in {endpoint}: {timestamp}"
+                
+                # Validate timestamp is recent (within last 60 seconds)
+                current_time = time.time()
+                assert abs(current_time - timestamp) < 60, \
+                    f"Timestamp too old in {endpoint}: {timestamp}"
+                
+                print(f"      Status: {response_data['status']}")
+                print(f"      Timestamp: {timestamp}")
+                
+            else:
+                print(f"   ❌ {endpoint}: {result['status_code']} - {result['response'].get('error', 'unknown error')}")
+        
+        # At least system health should work
+        assert json_validation_results["system"]["success"], "System health endpoint not working"
+        
+        print(f"✅ REQ-API-017: JSON response format validated")
+        return json_validation_results
+        
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.health
+@pytest.mark.asyncio
+async def test_health_endpoint_200_ok():
+    """Test REQ-API-018: Health endpoints return 200 OK for healthy status."""
+    print("\n=== Health Test: 200 OK Response ===")
+    
+    setup = HealthTestSetup()
+    try:
+        await setup.setup()
+        
+        # Create health endpoint tester
+        health_tester = HealthEndpointTester(setup.http_client)
+        
+        # Test health endpoints for 200 OK response
+        health_endpoints = [
+            "system",      # System health
+            "cameras",     # Camera health
+            "mediamtx",    # MediaMTX health
+            "overall"      # Overall health
+        ]
+        
+        ok_response_results = {}
+        
+        for endpoint in health_endpoints:
+            print(f"🔄 Testing 200 OK: /health/{endpoint}")
+            result = await health_tester.test_health_endpoint(endpoint)
+            ok_response_results[endpoint] = result
+            
+            # REQ-API-018: 200 OK for healthy status
+            if result["success"]:
+                status_code = result["status_code"]
+                print(f"   ✅ {endpoint}: {status_code}")
+                
+                # Validate 200 OK response
+                assert status_code == 200, \
+                    f"Expected 200 OK for {endpoint}, got {status_code}"
+                
+                # Validate healthy status in response
+                response_data = result["response"]
+                if "status" in response_data:
+                    status = response_data["status"]
+                    assert status in ["healthy", "ok"], \
+                        f"Expected healthy status for {endpoint}, got {status}"
+                
+                print(f"      Status Code: {status_code}")
+                print(f"      Health Status: {response_data.get('status', 'unknown')}")
+                
+            else:
+                print(f"   ❌ {endpoint}: {result['status_code']} - {result['response'].get('error', 'unknown error')}")
+        
+        # At least system health should return 200 OK
+        assert ok_response_results["system"]["success"], "System health endpoint not returning 200 OK"
+        assert ok_response_results["system"]["status_code"] == 200, "System health not returning 200 OK"
+        
+        print(f"✅ REQ-API-018: 200 OK response validated")
+        return ok_response_results
+        
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.health
+@pytest.mark.asyncio
+async def test_health_endpoint_500_error():
+    """Test REQ-API-019: Health endpoints return 500 Internal Server Error for unhealthy status."""
+    print("\n=== Health Test: 500 Error Response ===")
+    
+    setup = HealthTestSetup()
+    try:
+        await setup.setup()
+        
+        # Create health endpoint tester
+        health_tester = HealthEndpointTester(setup.http_client)
+        
+        # Test health endpoints for 500 error when components are unhealthy
+        health_endpoints = [
+            "system",      # System health
+            "cameras",     # Camera health
+            "mediamtx",    # MediaMTX health
+            "overall"      # Overall health
+        ]
+        
+        error_response_results = {}
+        
+        # First, verify healthy status
+        print("🔄 Verifying healthy status first...")
+        for endpoint in health_endpoints:
+            result = await health_tester.test_health_endpoint(endpoint)
+            if result["success"]:
+                print(f"   ✅ {endpoint}: Healthy ({result['status_code']})")
+            else:
+                print(f"   ⚠️ {endpoint}: {result['status_code']} - {result['response'].get('error', 'unknown error')}")
+        
+        # Now test error scenarios by stopping components
+        print("\n🔄 Testing 500 error scenarios...")
+        
+        # Stop MediaMTX to create unhealthy state
+        print("   Stopping MediaMTX to test unhealthy state...")
+        await setup.mediamtx_controller.stop()
+        
+        # Wait a moment for health check to detect the change
+        await asyncio.sleep(2)
+        
+        # Test health endpoints for 500 error
+        for endpoint in health_endpoints:
+            print(f"🔄 Testing 500 error: /health/{endpoint}")
+            result = await health_tester.test_health_endpoint(endpoint)
+            error_response_results[endpoint] = result
+            
+            # REQ-API-019: 500 Internal Server Error for unhealthy status
+            if result["status_code"] == 500:
+                print(f"   ✅ {endpoint}: 500 Internal Server Error (expected)")
+                
+                # Validate error response structure
+                response_data = result["response"]
+                if "error" in response_data:
+                    print(f"      Error: {response_data['error']}")
+                
+                if "status" in response_data:
+                    status = response_data["status"]
+                    assert status in ["unhealthy", "error", "down"], \
+                        f"Expected unhealthy status for {endpoint}, got {status}"
+                    print(f"      Status: {status}")
+                
+            elif result["success"]:
+                print(f"   ⚠️ {endpoint}: Still healthy ({result['status_code']})")
+            else:
+                print(f"   ❌ {endpoint}: Unexpected response ({result['status_code']})")
+        
+        # Restart MediaMTX to restore healthy state
+        print("\n🔄 Restarting MediaMTX to restore healthy state...")
+        await setup.mediamtx_controller.start()
+        
+        # Wait for health check to detect the recovery
+        await asyncio.sleep(2)
+        
+        # Verify recovery
+        print("🔄 Verifying recovery...")
+        for endpoint in health_endpoints:
+            result = await health_tester.test_health_endpoint(endpoint)
+            if result["success"]:
+                print(f"   ✅ {endpoint}: Recovered ({result['status_code']})")
+            else:
+                print(f"   ⚠️ {endpoint}: Still unhealthy ({result['status_code']})")
+        
+        # At least one endpoint should have returned 500 during unhealthy state
+        error_responses = [r for r in error_response_results.values() if r["status_code"] == 500]
+        assert len(error_responses) > 0, "No health endpoints returned 500 error during unhealthy state"
+        
+        print(f"✅ REQ-API-019: 500 error response validated")
+        return error_response_results
+        
+    finally:
+        await setup.cleanup()
+
+
+# Main health test runner
+async def run_all_health_tests():
+    """Run all health tests with comprehensive reporting."""
+    print("=== MediaMTX Camera Service Health Test Suite ===")
+    print("Testing health monitoring against requirements baseline")
+    
+    test_results = {}
+    
+    try:
+        # Test 1: Detailed Component Information
+        print("\n=== Test 1: Detailed Component Information ===")
+        test_results['detailed_components'] = await test_health_status_detailed_components()
+        
+        # Test 2: Kubernetes Readiness Probes
+        print("\n=== Test 2: Kubernetes Readiness Probes ===")
+        test_results['kubernetes_probes'] = await test_kubernetes_readiness_probes()
+        
+        # Test 3: JSON Response Format
+        print("\n=== Test 3: JSON Response Format ===")
+        test_results['json_responses'] = await test_health_endpoint_json_responses()
+        
+        # Test 4: 200 OK Response
+        print("\n=== Test 4: 200 OK Response ===")
+        test_results['ok_responses'] = await test_health_endpoint_200_ok()
+        
+        # Test 5: 500 Error Response
+        print("\n=== Test 5: 500 Error Response ===")
+        test_results['error_responses'] = await test_health_endpoint_500_error()
+        
+        print("\n=== All Health Tests Completed Successfully ===")
+        print("✅ All health requirements validated")
+        print("✅ Health endpoint responses verified")
+        print("✅ Kubernetes readiness probe support confirmed")
+        print("✅ Error handling validated")
+        
+        return test_results
+        
+    except Exception as e:
+        print(f"\n❌ Health Tests Failed: {e}")
+        raise
+
+
+if __name__ == "__main__":
+    # Run health tests
+    asyncio.run(run_all_health_tests())

@@ -50,7 +50,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class WebSocketTestClient:
+class WebSocketErrorTestClient:
     """Test client for WebSocket communication with error handling."""
     
     def __init__(self, websocket_url: str):
@@ -414,7 +414,7 @@ class CriticalErrorHandlingTests:
         # Test with very short timeout
         try:
             # Create client with short timeout
-            timeout_client = WebSocketTestClient(websocket_client.websocket_url)
+            timeout_client = WebSocketErrorTestClient(websocket_client.websocket_url)
             
             # Connect with timeout
             await asyncio.wait_for(timeout_client.connect(), timeout=1.0)
@@ -440,7 +440,7 @@ class CriticalErrorHandlingTests:
             # Create multiple clients
             clients = []
             for i in range(3):
-                client = WebSocketTestClient(websocket_client.websocket_url)
+                client = WebSocketErrorTestClient(websocket_client.websocket_url)
                 await client.connect()
                 clients.append(client)
             
@@ -797,7 +797,7 @@ async def service_manager():
 @pytest.fixture
 async def websocket_client():
     """Create WebSocket test client."""
-    client = WebSocketTestClient("ws://localhost:8002/ws")
+    client = WebSocketErrorTestClient("ws://localhost:8002/ws")
     await client.connect()
     yield client
     await client.disconnect()
