@@ -90,6 +90,16 @@ class MediaMTXConfig:
     backoff_jitter_range: tuple = (0.8, 1.2)
     process_termination_timeout: float = 3.0
     process_kill_timeout: float = 2.0
+    
+    # Stream readiness configuration for improved reliability
+    stream_readiness: Dict[str, Any] = field(default_factory=lambda: {
+        "timeout": 15.0,              # Increased from 5.0s to 15.0s for reliability
+        "retry_attempts": 3,          # Number of retry attempts
+        "retry_delay": 2.0,           # Delay between retries in seconds
+        "check_interval": 0.5,        # Interval between readiness checks
+        "enable_progress_notifications": True,  # Send progress notifications during validation
+        "graceful_fallback": True     # Enable graceful fallback when streams unavailable
+    })
 
 
 @dataclass

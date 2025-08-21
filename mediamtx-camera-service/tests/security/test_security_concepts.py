@@ -35,6 +35,7 @@ import json
 import time
 import subprocess
 import requests
+import pytest
 from typing import Dict, Any
 
 # Add src to path for imports

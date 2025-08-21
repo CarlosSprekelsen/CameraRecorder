@@ -4,6 +4,7 @@ Port utility functions for testing.
 
 import socket
 import requests
+from typing import Dict, Any
 
 
 def check_websocket_server_port(port: int) -> bool:
@@ -42,3 +43,44 @@ def check_http_server_port(port: int) -> bool:
         return response.status_code < 500  # Any response means server is running
     except Exception:
         return False
+
+
+def find_free_port() -> int:
+    """
+    Find a free port for testing.
+    
+    Returns:
+        Available port number
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        s.listen(1)
+        port = s.getsockname()[1]
+    return port
+
+
+def create_test_health_server(recordings_path: str, snapshots_path: str) -> Any:
+    """
+    Create a test health server with a free port.
+    
+    Args:
+        recordings_path: Path to recordings directory
+        snapshots_path: Path to snapshots directory
+        
+    Returns:
+        HealthServer instance configured for testing
+    """
+    from src.health_server import HealthServer
+    
+    # Find a free port for the test health server
+    free_port = find_free_port()
+    
+    # Create health server with test-specific port
+    health_server = HealthServer(
+        host="127.0.0.1",  # Use localhost for tests
+        port=free_port,
+        recordings_path=recordings_path,
+        snapshots_path=snapshots_path
+    )
+    
+    return health_server

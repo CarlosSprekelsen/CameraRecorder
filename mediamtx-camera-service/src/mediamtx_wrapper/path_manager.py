@@ -39,6 +39,7 @@ class MediaMTXPathManager:
         camera_id: str, 
         device_path: str, 
         rtsp_port: int = 8554,
+        codec: str = "libx264",
         video_profile: str = "baseline",
         video_level: str = "3.0",
         pixel_format: str = "yuv420p",
@@ -52,6 +53,7 @@ class MediaMTXPathManager:
             camera_id: Camera identifier (e.g., "0", "1", "2", "3")
             device_path: Device path (e.g., "/dev/video0")
             rtsp_port: RTSP port for MediaMTX
+            codec: Video codec (e.g., "libx264" for H.264)
             video_profile: H.264 profile (baseline, main, high)
             video_level: H.264 level (1.0-5.2)
             pixel_format: Pixel format (yuv420p, yuv422p, yuv444p)
@@ -67,7 +69,7 @@ class MediaMTXPathManager:
 
         path_name = f"camera{camera_id}"
         ffmpeg_command = (
-            f"ffmpeg -f v4l2 -i {device_path} -c:v libx264 -profile:v {video_profile} -level {video_level} "
+            f"ffmpeg -f v4l2 -i {device_path} -c:v {codec} -profile:v {video_profile} -level {video_level} "
             f"-pix_fmt {pixel_format} -preset {preset} -b:v {bitrate} -f rtsp rtsp://127.0.0.1:{rtsp_port}/{path_name}"
         )
         

@@ -60,6 +60,134 @@ def generate_invalid_test_token() -> str:
     return "invalid.jwt.token"
 
 
+def get_test_auth_manager() -> AuthManager:
+    """Get a test authentication manager instance.
+    
+    Creates a real AuthManager with test JWT secret for integration testing.
+    Follows testing guide: use real authentication, never mock.
+    """
+    from src.security.jwt_handler import JWTHandler
+    from src.security.api_key_handler import APIKeyHandler
+    from src.security.middleware import SecurityMiddleware
+    
+    # Create real JWT handler with test secret
+    jwt_secret = get_test_jwt_secret()
+    jwt_handler = JWTHandler(jwt_secret)
+    
+    # Create real API key handler
+    api_key_handler = APIKeyHandler()
+    
+    # Create real security middleware
+    security_middleware = SecurityMiddleware(jwt_handler, api_key_handler)
+    
+    # Create and return real auth manager
+    auth_manager = AuthManager(jwt_handler, api_key_handler, security_middleware)
+    return auth_manager
+
+
+def cleanup_test_auth_manager(auth_manager: AuthManager):
+    """Cleanup test authentication manager.
+    
+    Cleans up any test data or resources used by the auth manager.
+    """
+    if auth_manager and hasattr(auth_manager, 'api_key_handler'):
+        # Clean up any test API keys
+        if hasattr(auth_manager.api_key_handler, 'cleanup_expired_keys'):
+            auth_manager.api_key_handler.cleanup_expired_keys()
+
+
+class TestUserFactory:
+    """Factory for creating test users with different roles and permissions.
+    
+    Provides convenient methods to create test users for integration testing.
+    """
+    
+    def __init__(self, auth_manager: AuthManager):
+        self.auth_manager = auth_manager
+        self.user_counter = 0
+    
+    def create_admin_user(self, username: str = None) -> Dict[str, Any]:
+        """Create a test admin user with admin privileges."""
+        if username is None:
+            username = f"admin_user_{self.user_counter}"
+            self.user_counter += 1
+        
+        token = generate_valid_test_token(username, "admin")
+        return {
+            "username": username,
+            "role": "admin",
+            "token": token,
+            "permissions": ["admin", "operator", "viewer"]
+        }
+    
+    def create_operator_user(self, username: str = None) -> Dict[str, Any]:
+        """Create a test operator user with operator privileges."""
+        if username is None:
+            username = f"operator_user_{self.user_counter}"
+            self.user_counter += 1
+        
+        token = generate_valid_test_token(username, "operator")
+        return {
+            "username": username,
+            "role": "operator",
+            "token": token,
+            "permissions": ["operator", "viewer"]
+        }
+    
+    def create_viewer_user(self, username: str = None) -> Dict[str, Any]:
+        """Create a test viewer user with viewer privileges."""
+        if username is None:
+            username = f"viewer_user_{self.user_counter}"
+            self.user_counter += 1
+        
+        token = generate_valid_test_token(username, "viewer")
+        return {
+            "username": username,
+            "role": "viewer",
+            "token": token,
+            "permissions": ["viewer"]
+        }
+    
+    def create_expired_user(self, username: str = None) -> Dict[str, Any]:
+        """Create a test user with expired token."""
+        if username is None:
+            username = f"expired_user_{self.user_counter}"
+            self.user_counter += 1
+        
+        token = generate_expired_test_token()
+        return {
+            "username": username,
+            "role": "operator",
+            "token": token,
+            "permissions": []
+        }
+    
+    def create_invalid_user(self, username: str = None) -> Dict[str, Any]:
+        """Create a test user with invalid token."""
+        if username is None:
+            username = f"invalid_user_{self.user_counter}"
+            self.user_counter += 1
+        
+        token = generate_invalid_test_token()
+        return {
+            "username": username,
+            "role": "unknown",
+            "token": token,
+            "permissions": []
+        }
+    
+    def create_user_with_role(self, role: str, username: str = None) -> Dict[str, Any]:
+        """Create a test user with specified role."""
+        if role == "admin":
+            return self.create_admin_user(username)
+        elif role == "operator":
+            return self.create_operator_user(username)
+        elif role == "viewer":
+            return self.create_viewer_user(username)
+        else:
+            raise ValueError(f"Unknown role: {role}")
+
+
 class RealAuthTestBase:
     """Base class for real authentication testing.
     
@@ -99,17 +227,29 @@ class RealAuthTestBase:
         # Create real authentication manager with handlers
         from src.security.jwt_handler import JWTHandler
         from src.security.api_key_handler import APIKeyHandler
+        from src.security.middleware import SecurityMiddleware
         
-        jwt_handler = JWTHandler(secret_key="test-secret-dev-only")
-        api_key_handler = APIKeyHandler(storage_file="/tmp/test_api_keys.json")
-        auth_manager = AuthManager(jwt_handler, api_key_handler)
+        # Use real JWT secret
+        secret = os.getenv('CAMERA_SERVICE_JWT_SECRET', 'test-secret-dev-only')
+        
+        # Create real handlers
+        jwt_handler = JWTHandler(secret)
+        api_key_handler = APIKeyHandler()
+        security_middleware = SecurityMiddleware(jwt_handler, api_key_handler)
+        
+        # Create real auth manager
+        auth_manager = AuthManager(jwt_handler, api_key_handler, security_middleware)
         
         yield auth_manager
+        
+        # Cleanup
+        if hasattr(api_key_handler, 'cleanup_expired_keys'):
+            api_key_handler.cleanup_expired_keys()
     
     def _generate_valid_token(self, username: str, role: str, secret: str) -> str:
         """Generate a valid JWT token."""
         payload = {
-            "user_id": username,  # Use user_id field as expected by JWT handler
+            "user_id": username,
             "role": role,
             "exp": time.time() + 3600,  # 1 hour expiration
             "iat": time.time()
@@ -119,7 +259,7 @@ class RealAuthTestBase:
     def _generate_expired_token(self, username: str, role: str, secret: str) -> str:
         """Generate an expired JWT token."""
         payload = {
-            "user_id": username,  # Use user_id field as expected by JWT handler
+            "user_id": username,
             "role": role,
             "exp": time.time() - 3600,  # Expired 1 hour ago
             "iat": time.time() - 7200
@@ -127,7 +267,7 @@ class RealAuthTestBase:
         return jwt.encode(payload, secret, algorithm="HS256")
     
     def get_test_jwt_secret(self) -> str:
-        """Get the test JWT secret from environment or use default."""
+        """Get the test JWT secret."""
         return os.getenv('CAMERA_SERVICE_JWT_SECRET', 'test-secret-dev-only')
     
     def generate_valid_test_token(self, username: str = "test_user", role: str = "operator") -> str:

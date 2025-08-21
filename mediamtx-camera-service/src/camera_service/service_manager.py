@@ -364,6 +364,7 @@ class ServiceManager(CameraEventHandler):
                     camera_id=camera_id,
                     device_path=device_path,
                     rtsp_port=self._config.mediamtx.rtsp_port,
+                    codec=self._config.mediamtx.codec,
                     video_profile=self._config.mediamtx.video_profile,
                     video_level=self._config.mediamtx.video_level,
                     pixel_format=self._config.mediamtx.pixel_format,
