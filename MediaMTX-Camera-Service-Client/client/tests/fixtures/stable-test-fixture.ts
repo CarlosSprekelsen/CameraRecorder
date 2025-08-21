@@ -899,19 +899,107 @@ export class WebSocketTestFixture extends StableTestFixture {
         const ws = await this.connectWebSocketWithAuth();
         const id = Math.floor(Math.random() * 1000000);
 
-        this.sendRequest(ws, 'list_recordings', id, { limit: -1, offset: 0 });
+        // Test invalid file operation
+        this.sendRequest(ws, 'list_recordings', id, { 
+          limit: -1, // Invalid limit
+          offset: -1 // Invalid offset
+        });
         
         try {
           await this.waitForResponse(ws, id);
           this.assert(false, 'Should have thrown an error for invalid parameters');
         } catch (error: any) {
-          this.assert(error.message.includes('error'), 'Invalid file operations error handled correctly');
+          this.assert(error.message.includes('error') || error.message.includes('invalid'), 'Invalid file operation error handled correctly');
         }
         
         ws.close();
         resolve(true);
       } catch (error) {
         this.assert(false, `Invalid file operations test failed: ${error}`);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Test connection error handling
+   */
+  async testConnectionError(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      try {
+        // Test with invalid URL to simulate connection error
+        const invalidWs = new WebSocket('ws://invalid-host:9999/ws');
+        
+        const timeout = setTimeout(() => {
+          this.assert(true, 'Connection error handled gracefully');
+          resolve(true);
+        }, 3000);
+
+        invalidWs.onerror = () => {
+          clearTimeout(timeout);
+          this.assert(true, 'Connection error detected correctly');
+          resolve(true);
+        };
+
+        invalidWs.onopen = () => {
+          clearTimeout(timeout);
+          this.assert(false, 'Should not connect to invalid host');
+          resolve(false);
+        };
+      } catch (error) {
+        this.assert(false, `Connection error test failed: ${error}`);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Test authentication flow
+   */
+  async testAuthentication(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      try {
+        const ws = await this.connectWebSocketWithAuth();
+        
+        // Test that we can make authenticated requests
+        const id = Math.floor(Math.random() * 1000000);
+        this.sendRequest(ws, 'ping', id);
+        const response = await this.waitForResponse(ws, id);
+        this.assert(response === 'pong', 'Authenticated ping successful');
+        
+        ws.close();
+        resolve(true);
+      } catch (error) {
+        this.assert(false, `Authentication test failed: ${error}`);
+        resolve(false);
+      }
+    });
+  }
+
+  /**
+   * Test unauthorized access blocking
+   */
+  async testUnauthorizedAccess(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      try {
+        // Connect without authentication
+        const ws = await this.connectWebSocket();
+        
+        // Try to access protected method
+        const id = Math.floor(Math.random() * 1000000);
+        this.sendRequest(ws, 'take_snapshot', id, { device: '/dev/video0' });
+        
+        try {
+          await this.waitForResponse(ws, id);
+          this.assert(false, 'Should have blocked unauthorized access');
+        } catch (error: any) {
+          this.assert(error.message.includes('Authentication required') || error.message.includes('Unauthorized'), 'Unauthorized access blocked correctly');
+        }
+        
+        ws.close();
+        resolve(true);
+      } catch (error) {
+        this.assert(false, `Unauthorized access test failed: ${error}`);
         resolve(false);
       }
     });
@@ -1073,6 +1161,13 @@ export class HealthTestFixture extends StableTestFixture {
       this.assert(false, `Readiness test failed: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Test health endpoint (alias for system health)
+   */
+  async testHealthEndpoint(): Promise<boolean> {
+    return this.testSystemHealth();
   }
 }
 

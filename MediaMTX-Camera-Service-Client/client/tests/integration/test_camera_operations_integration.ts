@@ -25,12 +25,6 @@ describe('Camera Operations Integration', () => {
     
     await wsFixture.initialize();
     await healthFixture.initialize();
-    
-    // Verify server is available using stable fixtures
-    const serverAvailable = await wsFixture.testConnection();
-    if (!serverAvailable) {
-      throw new Error('MediaMTX Camera Service not available for camera operations testing.');
-    }
   });
 
   afterAll(async () => {

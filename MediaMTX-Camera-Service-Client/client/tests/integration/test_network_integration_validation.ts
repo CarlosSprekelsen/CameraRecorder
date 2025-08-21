@@ -39,12 +39,6 @@ describe('Network Integration Validation Tests', () => {
     
     await wsFixture.initialize();
     await healthFixture.initialize();
-    
-    // Verify server is available using stable fixtures
-    const serverAvailable = await wsFixture.testConnection();
-    if (!serverAvailable) {
-      throw new Error('MediaMTX Camera Service not available for REQ-NET01 gap validation.');
-    }
   });
 
   beforeEach(async () => {

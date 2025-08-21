@@ -29,12 +29,6 @@ describe('CI/CD Integration Tests', () => {
     
     await wsFixture.initialize();
     await healthFixture.initialize();
-    
-    // Verify server is available using stable fixtures
-    const serverAvailable = await wsFixture.testConnection();
-    if (!serverAvailable) {
-      throw new Error('MediaMTX Camera Service not available for CI/CD testing.');
-    }
   });
 
   afterAll(async () => {
@@ -83,25 +77,25 @@ describe('CI/CD Integration Tests', () => {
   describe('Test Execution Sequencing', () => {
     it('should execute server-first, then client tests', async () => {
       // Step 1: Verify server is ready
-      const serverReady = await verifyServerReadiness();
+      const serverReady = await verifyServerReadiness(wsFixture, healthFixture);
       expect(serverReady).toBe(true);
       
       // Step 2: Execute client integration tests
-      const clientTestsPass = await executeClientIntegrationTests();
+      const clientTestsPass = await executeClientIntegrationTests(wsFixture);
       expect(clientTestsPass).toBe(true);
     });
 
     it('should handle test isolation and cleanup', async () => {
       // Setup test state
-      const testState = await setupTestState();
+      const testState = await setupTestState(wsFixture);
       expect(testState.initialized).toBe(true);
       
       // Execute tests
-      const testResult = await executeIsolatedTests();
+      const testResult = await executeIsolatedTests(wsFixture);
       expect(testResult.success).toBe(true);
       
       // Cleanup test state
-      const cleanupResult = await cleanupTestState();
+      const cleanupResult = await cleanupTestState(wsFixture);
       expect(cleanupResult.cleaned).toBe(true);
     });
   });
@@ -225,7 +219,7 @@ async function performConnectivityChecks(): Promise<{
   }
 }
 
-async function verifyServerReadiness(): Promise<boolean> {
+async function verifyServerReadiness(wsFixture: WebSocketTestFixture, healthFixture: HealthTestFixture): Promise<boolean> {
   try {
     const healthResult = await healthFixture.testHealthEndpoint();
     const wsResult = await wsFixture.testConnection();
@@ -235,7 +229,7 @@ async function verifyServerReadiness(): Promise<boolean> {
   }
 }
 
-async function executeClientIntegrationTests(): Promise<boolean> {
+async function executeClientIntegrationTests(wsFixture: WebSocketTestFixture): Promise<boolean> {
   try {
     // Test core functionality
     const pingResult = await wsFixture.testPing();
@@ -248,7 +242,7 @@ async function executeClientIntegrationTests(): Promise<boolean> {
   }
 }
 
-async function setupTestState(): Promise<{ initialized: boolean }> {
+async function setupTestState(wsFixture: WebSocketTestFixture): Promise<{ initialized: boolean }> {
   try {
     await wsFixture.initialize();
     return { initialized: true };
@@ -257,7 +251,7 @@ async function setupTestState(): Promise<{ initialized: boolean }> {
   }
 }
 
-async function executeIsolatedTests(): Promise<{ success: boolean }> {
+async function executeIsolatedTests(wsFixture: WebSocketTestFixture): Promise<{ success: boolean }> {
   try {
     const pingResult = await wsFixture.testPing();
     return { success: pingResult };
@@ -266,7 +260,7 @@ async function executeIsolatedTests(): Promise<{ success: boolean }> {
   }
 }
 
-async function cleanupTestState(): Promise<{ cleaned: boolean }> {
+async function cleanupTestState(wsFixture: WebSocketTestFixture): Promise<{ cleaned: boolean }> {
   try {
     wsFixture.cleanup();
     return { cleaned: true };

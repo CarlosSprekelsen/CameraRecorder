@@ -147,7 +147,7 @@ describe('REQ-MVP01: MVP Functionality Validation', () => {
     
     try {
       // Call the authenticate method explicitly
-      const authResult = await wsService.call('authenticate', { token: token });
+      const authResult = await wsService.call('authenticate', { token: token }) as any;
       expect(authResult.authenticated).toBe(true);
       console.log('Authentication completed successfully');
     } catch (error) {

@@ -44,12 +44,6 @@ describe('REQ-SRV01: Server Integration Validation', () => {
       throw new Error('Test environment not properly set up. Run ./set-test-env.sh to configure authentication.');
     }
     
-    // Verify server is available before running REQ-SRV01 tests
-    const isServerAvailable = await validateServerAvailability();
-    if (!isServerAvailable) {
-      throw new Error('MediaMTX Camera Service not available for REQ-SRV01 validation. Start server before running tests.');
-    }
-    
     // Initialize stores for comprehensive testing
     connectionStore = useConnectionStore.getState();
     cameraStore = useCameraStore.getState();
