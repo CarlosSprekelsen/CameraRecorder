@@ -1,16 +1,24 @@
 """
-Unit tests for authentication manager.
+Authentication manager unit tests for JWT and API key coordination.
 
-Requirements Traceability:
-- REQ-SEC-001: Security system shall provide authentication manager validation
-- REQ-SEC-002: Security system shall support JWT and API key authentication coordination
-- REQ-SEC-002: Security system shall handle authentication result structure and role management
+Requirements Coverage:
+- REQ-SEC-001: JWT token-based authentication for all API access
+- REQ-SEC-002: Token format with JSON Web Token (JWT) and standard claims
+- REQ-SEC-003: Token expiration with configurable expiration time
+- REQ-SEC-004: Token refresh mechanism support
+- REQ-SEC-005: Token validation with proper signature validation and claim verification
+- REQ-SEC-006: API key validation for service-to-service communication
+- REQ-SEC-007: API key format with secure random string (32+ characters)
+- REQ-SEC-008: Secure storage of API keys
+- REQ-SEC-009: API key rotation support
+- REQ-SEC-010: Role-based access control for different user types
+- REQ-SEC-011: Admin, User, Read-Only roles
+- REQ-SEC-012: Permission matrix and clear permission definitions
+- REQ-SEC-013: Enforcement of role-based permissions
+- REQ-TEST-009: Authentication and authorization test coverage
+- REQ-CLIENT-032: Role-based access control with viewer, operator, and admin permissions
 
-Story Coverage: S7 - Security Implementation
-IV&V Control Point: Real authentication manager validation
-
-Tests authentication coordination between JWT and API key handlers
-as specified in Architecture Decision AD-7.
+Test Categories: Unit
 """
 
 import pytest

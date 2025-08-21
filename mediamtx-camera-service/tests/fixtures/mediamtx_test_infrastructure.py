@@ -1,11 +1,7 @@
 """
 MediaMTX test infrastructure fixture for MediaMTX Camera Service.
 
-Requirements Traceability:
-- REQ-UTIL-017: MediaMTX test infrastructure shall provide real MediaMTX service testing
-
-Story Coverage: All MediaMTX test stories
-IV&V Control Point: MediaMTX test infrastructure validation
+Test Categories: Test Infrastructure
 """
 
 import asyncio

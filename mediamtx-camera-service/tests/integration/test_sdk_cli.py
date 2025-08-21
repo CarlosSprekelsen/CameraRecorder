@@ -1,12 +1,5 @@
 """
 Integration test for Python SDK CLI functionality.
-
-Requirements Traceability:
-- REQ-SDK-004: SDK shall provide command-line interface
-- REQ-SDK-003: SDK shall handle errors gracefully
-
-Story Coverage: S8.3 - SDK Development
-IV&V Control Point: SDK validation
 """
 
 import pytest

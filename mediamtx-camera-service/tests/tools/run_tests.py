@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 """
-Test runner for MediaMTX Camera Service tests.
+Basic test runner for MediaMTX Camera Service tests.
 
-Requirements Coverage:
-- REQ-TEST-001: System shall provide comprehensive test execution
-- REQ-TEST-002: System shall support unit test execution
-- REQ-TEST-003: System shall support integration test execution
-- REQ-TEST-004: System shall support coverage reporting
-
-Test Categories: Test Infrastructure
+A simple test runner that sets up the test environment and executes pytest
+with various options for unit tests, integration tests, and coverage reporting.
 
 Usage:
     python3 run_tests.py                    # Run all tests

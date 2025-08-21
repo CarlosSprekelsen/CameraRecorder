@@ -1,19 +1,19 @@
 # tests/unit/test_service_manager.py
 """
-Requirement-based tests for ServiceManager behavior.
+ServiceManager unit tests for core service orchestration and lifecycle management.
 
-Requirements Traceability:
-- REQ-SVC-001: ServiceManager shall orchestrate camera discovery and MediaMTX integration
-- REQ-SVC-002: ServiceManager shall handle camera lifecycle events with real component coordination
-- REQ-SVC-001: ServiceManager shall provide WebSocket API for camera management
-- REQ-MEDIA-001: MediaMTX integration shall use single systemd-managed service
-- REQ-MEDIA-002: MediaMTX integration shall handle service failures gracefully
+Requirements Coverage:
+- REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint at ws://localhost:8002/ws
+- REQ-API-002: ping method for health checks
+- REQ-API-003: get_camera_list method for camera enumeration
+- REQ-TEST-001: Use single systemd-managed MediaMTX service instance
+- REQ-TEST-002: No multiple MediaMTX instances or processes
+- REQ-TEST-003: Validate against actual production MediaMTX service
+- REQ-TEST-004: Use fixed systemd service ports (API: 9997, RTSP: 8554, WebRTC: 8889, HLS: 8888)
+- REQ-TEST-005: Coordinate on shared service with proper test isolation
+- REQ-TEST-006: Verify MediaMTX service is running via systemd before execution
 
-Story Coverage: S1 - Service Manager Integration
-IV&V Control Point: Real service manager validation
-
-Each test traces to a customer requirement and validates real component
-behavior via the public WebSocket API and MediaMTX HTTP integration.
+Test Categories: Unit
 """
 
 import json
@@ -94,11 +94,8 @@ async def _real_mediamtx_service():
 
 @pytest.mark.asyncio
 @pytest.mark.unit
-async def test_req_svc_lifecycle_001_start_and_ping_ws():
-    """
-    Req: SVC-LIFECYCLE-001
-    Service must start all components and respond to WebSocket ping.
-    """
+async def test_service_manager_lifecycle_req_tech_001():
+    """REQ-TECH-001: Service-oriented architecture validation."""
     ws_port = _free_port()
     async with _real_mediamtx_service():
         cfg = _build_config(ws_port)

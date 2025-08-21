@@ -5,11 +5,10 @@ Real System Integration Test Runner
 This script runs the real system integration tests with proper setup and teardown.
 It ensures all dependencies are available and handles test environment preparation.
 
-Requirements Traceability:
-- REQ-INT-006: Integration test runner
-
-Story Coverage: S3 - System Integration
-IV&V Control Point: Integration test validation
+Usage:
+    python3 run_integration_tests.py             # Run all integration tests
+    python3 run_integration_tests.py --check-deps # Check dependencies only
+    python3 run_integration_tests.py --setup-only # Setup environment only
 """
 
 import asyncio

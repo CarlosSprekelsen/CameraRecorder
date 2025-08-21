@@ -1,23 +1,31 @@
 """
-Integration tests for JWT authentication flow validation.
+JWT authentication integration tests for real system validation.
 
-Requirements Traceability:
-# Reference: docs/requirements/security-requirements.md REQ-SEC-001
-# Reference: docs/requirements/security-requirements.md REQ-SEC-002
-# Reference: docs/requirements/security-requirements.md REQ-SEC-003
-# Reference: docs/requirements/security-requirements.md REQ-SEC-004
+Requirements Coverage:
+- REQ-SEC-001: JWT token-based authentication for all API access
+- REQ-SEC-002: Token format with JSON Web Token (JWT) and standard claims
+- REQ-SEC-003: Token expiration with configurable expiration time
+- REQ-SEC-004: Token refresh mechanism support
+- REQ-SEC-005: Token validation with proper signature validation and claim verification
+- REQ-SEC-006: API key validation for service-to-service communication
+- REQ-SEC-007: API key format with secure random string (32+ characters)
+- REQ-SEC-008: Secure storage of API keys
+- REQ-SEC-009: API key rotation support
+- REQ-SEC-010: Role-based access control for different user types
+- REQ-SEC-011: Admin, User, Read-Only roles
+- REQ-SEC-012: Permission matrix and clear permission definitions
+- REQ-SEC-013: Enforcement of role-based permissions
+- REQ-SEC-014: Resource access control for camera resources and media files
+- REQ-SEC-015: Camera access control and user authorization
+- REQ-SEC-016: File access control and user authorization
+- REQ-SEC-017: Resource isolation between user resources
+- REQ-SEC-018: Access logging of all resource access attempts
+- REQ-CLIENT-032: Role-based access control with viewer, operator, and admin permissions
+- REQ-CLIENT-033: Token expiration handling with re-authentication
+- REQ-TEST-009: Authentication and authorization test coverage
+- REQ-TEST-012: Security test coverage for all security requirements
 
-REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
-REQ-SEC-002: API Key Validation - Service-to-service communication
-REQ-SEC-003: Role-Based Access Control - User role enforcement
-REQ-SEC-004: Resource Access Control - Camera and media file access
-
-Story Coverage: S7 - Security Implementation
-IV&V Control Point: Real JWT authentication validation against MediaMTX service
-
-Tests complete authentication scenarios including token generation,
-validation, role-based access control, and error handling against
-the real systemd-managed MediaMTX service instance.
+Test Categories: Integration
 """
 
 import pytest
@@ -32,7 +40,7 @@ from typing import Dict, Any
 from src.security.jwt_handler import JWTHandler
 from src.security.auth_manager import AuthManager
 from src.security.api_key_handler import APIKeyHandler
-from .test_auth_utilities import get_test_auth_manager, TestUserFactory, cleanup_test_auth_manager
+from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, cleanup_test_auth_manager
 
 
 class TestJWTAuthenticationFlow:

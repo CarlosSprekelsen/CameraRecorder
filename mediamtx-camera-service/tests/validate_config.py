@@ -3,19 +3,12 @@
 Configuration validation script.
 
 Requirements Coverage:
-- REQ-CONFIG-001: System shall validate configuration compatibility
-- REQ-CONFIG-002: System shall ensure MediaMTXConfig matches MediaMTXController
-- REQ-CONFIG-003: System shall validate configuration field types
-- REQ-CONFIG-004: System shall catch configuration mismatches before runtime
+- REQ-TECH-016: System implemented in Python 3.8+
+- REQ-TECH-017: Language: Python 3.8 or higher
+- REQ-TECH-019: Dependencies: Standard Python libraries and third-party packages
+- REQ-TECH-020: Compatibility: Linux Ubuntu 20.04+ compatibility
 
 Test Categories: Configuration
-
-This script validates that:
-1. MediaMTXConfig dataclass matches MediaMTXController constructor parameters
-2. Configuration files can be loaded without parameter mismatches
-3. All required parameters are present and correctly typed
-
-Run this script to catch configuration mismatches before they cause runtime errors.
 """
 
 import sys

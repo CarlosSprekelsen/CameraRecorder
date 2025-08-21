@@ -1,13 +1,11 @@
 """
-WebSocket server binding and connectivity tests.
+WebSocket server binding and connectivity unit tests.
 
-Requirements Traceability:
-- REQ-WS-006: WebSocket server shall bind to specified host and port
-- REQ-WS-006: WebSocket server shall accept connections and respond to ping requests
-- REQ-WS-006: WebSocket server shall provide JSON-RPC 2.0 protocol support
+Requirements Coverage:
+- REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint at ws://localhost:8002/ws
+- REQ-API-002: ping method for health checks
 
-Story Coverage: S3 - WebSocket API Integration
-IV&V Control Point: Real WebSocket binding validation
+Test Categories: Unit
 """
 
 import json

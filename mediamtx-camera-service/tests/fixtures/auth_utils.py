@@ -4,11 +4,12 @@ Real Authentication Test Infrastructure
 Provides real authentication testing infrastructure without mocking.
 Follows testing guide principles: use real JWT tokens, real authentication flows.
 
-Requirements Traceability:
-- REQ-AUTH-001: System shall provide secure authentication using JWT tokens
-- REQ-AUTH-002: System shall validate token expiration and renewal
-- REQ-AUTH-003: System shall handle authentication failures gracefully
-- REQ-AUTH-004: System shall support role-based access control
+Requirements Coverage:
+- REQ-SEC-001: JWT token-based authentication for all API access
+- REQ-SEC-002: Token Format: JSON Web Token (JWT) with standard claims
+- REQ-SEC-003: Token Expiration: Configurable expiration time (default: 24 hours)
+- REQ-SEC-004: Token Refresh: Support for token refresh mechanism
+- REQ-SEC-005: Token Validation: Proper signature validation and claim verification
 
 Test Categories: Integration
 """
@@ -68,10 +69,7 @@ class RealAuthTestBase:
     
     @pytest_asyncio.fixture(autouse=True)
     async def real_jwt_tokens(self):
-        """Generate real JWT tokens for testing.
-        
-        Requirements: REQ-AUTH-001, REQ-AUTH-002
-        """
+        """Generate real JWT tokens for testing."""
         # Use real JWT secret from environment or test secret
         secret = os.getenv('CAMERA_SERVICE_JWT_SECRET', 'test-secret-dev-only')
         
@@ -97,10 +95,7 @@ class RealAuthTestBase:
     
     @pytest_asyncio.fixture(autouse=True)
     async def real_auth_manager(self):
-        """Real authentication manager for testing.
-        
-        Requirements: REQ-AUTH-003, REQ-AUTH-004
-        """
+        """Real authentication manager for testing."""
         # Create real authentication manager with handlers
         from src.security.jwt_handler import JWTHandler
         from src.security.api_key_handler import APIKeyHandler

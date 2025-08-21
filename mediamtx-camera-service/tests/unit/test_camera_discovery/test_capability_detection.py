@@ -1,16 +1,22 @@
 """
-Real integration tests for camera capability detection without mocks.
+Camera capability detection unit tests using real V4L2 system integration.
 
-Tests the HybridMonitor capability detection with real V4L2 subprocess operations,
-real file system checks, and real device access scenarios.
+Requirements Coverage:
+- REQ-CLIENT-024: Display list of available cameras from service API
+- REQ-CLIENT-025: Show camera status (connected/disconnected)
+- REQ-CLIENT-026: Handle camera hot-plug events via real-time notifications
+- REQ-CLIENT-027: Provide camera switching interface
+- REQ-PERF-006: System discovers and enumerates cameras within specified time limits
+- REQ-PERF-007: Python Implementation: < 10 seconds for 5 cameras
+- REQ-PERF-008: Go/C++ Target: < 5 seconds for 5 cameras
+- REQ-PERF-009: Hot-plug Detection: < 2 seconds for new camera detection
+- REQ-TECH-026: System integrates with various camera devices and protocols
+- REQ-API-003: get_camera_list method for camera enumeration
+- REQ-API-004: get_camera_status method for camera status
+- REQ-API-020: Real-time camera status update notifications
+- REQ-TEST-010: Error handling and edge case test coverage
 
-Requirements:
-- REQ-CAM-003: System shall detect camera capabilities using V4L2
-- REQ-ERROR-004: System shall handle capability detection failures gracefully
-- REQ-ERROR-005: System shall provide meaningful error messages for device issues
-
-Story Coverage: S12 - Camera Discovery and Capability Detection
-IV&V Control Point: Real V4L2 integration validation
+Test Categories: Unit
 """
 
 import asyncio

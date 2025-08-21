@@ -1,11 +1,7 @@
 """
 WebSocket test client fixture for MediaMTX Camera Service.
 
-Requirements Traceability:
-- REQ-UTIL-016: WebSocket test client shall provide real WebSocket communication testing
-
-Story Coverage: All WebSocket test stories
-IV&V Control Point: WebSocket test infrastructure validation
+Test Categories: Test Infrastructure
 """
 
 import asyncio

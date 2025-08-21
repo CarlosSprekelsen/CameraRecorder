@@ -1,19 +1,25 @@
 # tests/unit/test_mediamtx_wrapper/test_controller_health_monitoring.py
 """
-Test health monitoring circuit breaker activation/recovery and adaptive backoff.
+MediaMTX controller health monitoring unit tests for circuit breaker and fault tolerance.
 
-Requirements Traceability:
-- REQ-MEDIA-003: MediaMTX controller shall implement circuit breaker pattern for fault tolerance
-- REQ-MEDIA-004: MediaMTX controller shall provide configurable health monitoring with exponential backoff
-- REQ-ERROR-003: MediaMTX controller shall maintain operation during MediaMTX failures
-- REQ-MEDIA-001: MediaMTX controller shall integrate with systemd-managed MediaMTX service
-- REQ-MEDIA-002: MediaMTX controller shall provide health monitoring with configurable parameters
+Requirements Coverage:
+- REQ-TECH-011: MediaMTX streaming server integration
+- REQ-TECH-012: HTTP API integration with MediaMTX
+- REQ-TECH-013: Stream management and camera stream discovery
+- REQ-TECH-014: MediaMTX configuration and stream setup
+- REQ-TECH-015: Real-time stream status monitoring
+- REQ-HEALTH-001: System provides comprehensive health monitoring capabilities
+- REQ-HEALTH-005: System provides health status with detailed component information
+- REQ-HEALTH-006: System supports Kubernetes readiness probes
+- REQ-TEST-001: Use single systemd-managed MediaMTX service instance
+- REQ-TEST-002: No multiple MediaMTX instances or processes
+- REQ-TEST-003: Validate against actual production MediaMTX service
+- REQ-TEST-004: Use fixed systemd service ports (API: 9997, RTSP: 8554, WebRTC: 8889, HLS: 8888)
+- REQ-TEST-005: Coordinate on shared service with proper test isolation
+- REQ-TEST-006: Verify MediaMTX service is running via systemd before execution
+- REQ-TEST-010: Error handling and edge case test coverage
 
-Story Coverage: S2 - MediaMTX Integration
-IV&V Control Point: Real MediaMTX health monitoring validation
-
-Test policy: Verify configurable circuit breaker behavior, exponential backoff
-with jitter, state transitions, and recovery logging with real MediaMTX service integration.
+Test Categories: Unit
 """
 
 import pytest

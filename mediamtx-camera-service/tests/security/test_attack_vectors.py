@@ -2,18 +2,18 @@
 Security attack vector tests against real MediaMTX service.
 
 Requirements Coverage:
-- REQ-SEC-005: Input Sanitization - Comprehensive validation of all input parameters
-- REQ-SEC-006: File Upload Security - Secure file upload handling
-- REQ-SEC-007: Data Encryption - Encryption of sensitive data in transit and at rest
-- REQ-SEC-008: Data Privacy - Protection of user privacy and personal data
-- REQ-SEC-009: Security Event Logging - Logging of all security-related events
-- REQ-SEC-010: Security Alerting - Security alerting for suspicious activities
+- REQ-SEC-019: Sanitize and validate all input data
+- REQ-SEC-020: Input Validation: Comprehensive validation of all input parameters
+- REQ-SEC-021: Sanitization: Proper sanitization of user input
+- REQ-SEC-022: Injection Prevention: Prevention of SQL injection, XSS, and command injection
+- REQ-SEC-023: Parameter Validation: Validation of parameter types and ranges
+- REQ-SEC-024: Secure file upload handling
+- REQ-SEC-025: File Type Validation: Validation of uploaded file types
+- REQ-SEC-026: File Size Limits: Enforcement of file size limits
+- REQ-SEC-027: Virus Scanning: Scanning of uploaded files for malware
+- REQ-SEC-028: Secure Storage: Secure storage of uploaded files
 
 Test Categories: Security
-
-Tests security implementation against common attack vectors including
-JWT token tampering, brute force attempts, rate limit bypass,
-connection exhaustion, and role elevation against the real systemd-managed MediaMTX service.
 """
 
 import pytest

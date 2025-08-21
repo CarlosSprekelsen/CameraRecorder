@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
 Individual Test Execution with Failure Categorization
+
 Executes each test individually with timeout protection and categorizes failures
+into meaningful categories for analysis and debugging.
+
+Usage:
+    python3 run_individual_tests.py              # Run all tests individually
+    python3 run_individual_tests.py --timeout=60 # Custom timeout
+    python3 run_individual_tests.py --output=json # JSON output format
 """
 
 import subprocess

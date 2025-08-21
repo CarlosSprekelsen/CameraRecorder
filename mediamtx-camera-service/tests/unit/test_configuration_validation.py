@@ -1,22 +1,15 @@
 """
-Test configuration schema validation and compatibility.
+Configuration validation unit tests for schema consistency and parameter compatibility.
 
-Requirements Traceability:
-- REQ-CONFIG-001: Configuration system shall validate schema consistency and parameter compatibility
-- REQ-CONFIG-001: Configuration system shall prevent runtime parameter mismatches
-- REQ-CONFIG-001: Configuration system shall ensure component instantiation with valid config objects
+Requirements Coverage:
+- REQ-TECH-016: System implemented in Python 3.8+
+- REQ-TECH-017: Language: Python 3.8 or higher
+- REQ-TECH-019: Dependencies: Standard Python libraries and third-party packages
+- REQ-TECH-020: Compatibility: Linux Ubuntu 20.04+ compatibility
+- REQ-TECH-021: WebSocket server implementation with concurrent connection handling
+- REQ-TEST-010: Error handling and edge case test coverage
 
-Story Coverage: S1 - Configuration Management
-IV&V Control Point: Real configuration validation
-
-This test suite validates that:
-1. MediaMTXConfig dataclass matches MediaMTXController constructor parameters
-2. Configuration files can be loaded without parameter mismatches
-3. Service manager can instantiate components with configuration objects
-4. All required parameters are present and correctly typed
-
-Test policy: Verify configuration schema consistency and prevent runtime
-parameter mismatches that cause startup failures.
+Test Categories: Unit
 """
 
 import pytest

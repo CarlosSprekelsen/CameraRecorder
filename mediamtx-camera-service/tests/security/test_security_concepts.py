@@ -3,10 +3,19 @@
 Security Concept Validation Test Script against Real MediaMTX Service
 
 Requirements Coverage:
-- REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
-- REQ-SEC-002: API Key Validation - Service-to-service communication
-- REQ-SEC-003: Role-Based Access Control - User role enforcement
-- REQ-SEC-004: Resource Access Control - Camera and media file access
+- REQ-SEC-001: JWT token-based authentication for all API access
+- REQ-SEC-002: Token Format: JSON Web Token (JWT) with standard claims
+- REQ-SEC-003: Token Expiration: Configurable expiration time (default: 24 hours)
+- REQ-SEC-004: Token Refresh: Support for token refresh mechanism
+- REQ-SEC-005: Token Validation: Proper signature validation and claim verification
+- REQ-SEC-006: API key validation for service-to-service communication
+- REQ-SEC-007: API Key Format: Secure random string (32+ characters)
+- REQ-SEC-008: Key Storage: Secure storage of API keys
+- REQ-SEC-009: Key Rotation: Support for API key rotation
+- REQ-SEC-010: Role-based access control for different user types
+- REQ-SEC-011: User Roles: Admin, User, Read-Only roles
+- REQ-SEC-012: Permission Matrix: Clear permission definitions for each role
+- REQ-SEC-013: Access Control: Enforcement of role-based permissions
 
 Test Categories: Security
 

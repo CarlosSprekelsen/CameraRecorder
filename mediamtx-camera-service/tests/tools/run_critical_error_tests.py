@@ -5,23 +5,17 @@ Critical Error Handling Test Runner
 This script runs the critical error handling tests that focus on failure scenarios
 that could break the system during PDR.
 
-Requirements Traceability:
-- REQ-ERROR-002: WebSocket server shall handle client disconnection gracefully
-- REQ-ERROR-003: System shall handle MediaMTX service unavailability gracefully
-- REQ-ERROR-007: System shall handle service failure scenarios with graceful degradation
-- REQ-ERROR-008: System shall handle network timeout scenarios with retry mechanisms
-- REQ-ERROR-009: System shall handle resource exhaustion scenarios with graceful degradation
-- REQ-ERROR-010: System shall provide comprehensive edge case coverage for production reliability
-
-Story Coverage: S4 - System Integration
-IV&V Control Point: Critical error handling validation
-
 This test runner focuses on:
 - Network failures and timeouts
 - Service unavailability scenarios
 - Resource constraints and exhaustion
 - Graceful degradation and recovery mechanisms
 - Error logging and monitoring validation
+
+Usage:
+    python3 run_critical_error_tests.py          # Run all critical error tests
+    python3 run_critical_error_tests.py --timeout=180 # Custom timeout
+    python3 run_critical_error_tests.py --retries=3   # Custom retry count
 """
 
 import asyncio
