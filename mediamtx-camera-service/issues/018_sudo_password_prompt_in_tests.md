@@ -2,7 +2,7 @@
 
 **Date:** 2025-01-15  
 **Priority:** HIGH  
-**Status:** OPEN  
+**Status:** INVESTIGATION COMPLETE - ROOT CAUSE CONFIRMED  
 **Type:** Test Infrastructure Bug  
 
 ## Description
@@ -50,6 +50,20 @@ except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundEr
 3. **Environment Issue**: The system's sudo configuration may not allow passwordless sudo for the test user
 4. **Timing**: This happens even for tests that don't require sudo privileges
 
+### Investigation Findings
+
+**Confirmed Root Cause:** The sudo password prompt occurs during pytest collection when the `conftest.py` file runs the sudo availability check.
+
+**Environment Behavior:**
+- `sudo -n true` works correctly when run directly in terminal
+- `sudo -n true` fails with "sudo: a password is required" when run via subprocess from the mediamtx-camera-service directory
+- This suggests a directory-specific environment issue or sudo configuration
+
+**Additional Sudo Usage Found:**
+- `tests/integration/test_installation_validation.py` contains multiple sudo calls for systemctl operations
+- `tests/performance/test_performance_validation.py` contains sudo calls for MediaMTX restart
+- These tests are marked with `@pytest.mark.sudo_required` and should be skipped when sudo is not available
+
 ### Additional Causes (Secondary)
 
 1. **FFmpeg System Calls**: Some tests call FFmpeg commands that may require elevated privileges
@@ -73,7 +87,7 @@ except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundEr
 
 ## Investigation Plan
 
-### Phase 1: Identify Sudo Usage
+### Phase 1: Identify Sudo Usage ✅ COMPLETED
 ```bash
 # Search for sudo usage in test files
 grep -r "sudo" tests/
@@ -81,7 +95,7 @@ grep -r "subprocess.*sudo" tests/
 grep -r "os.system.*sudo" tests/
 ```
 
-### Phase 2: Check File Permissions
+### Phase 2: Check File Permissions ✅ COMPLETED
 ```bash
 # Check permissions of test directories
 ls -la tests/
@@ -89,13 +103,13 @@ ls -la /opt/camera-service/
 ls -la /etc/mediamtx/
 ```
 
-### Phase 3: Review Port Usage
+### Phase 3: Review Port Usage ✅ COMPLETED
 ```bash
 # Check if tests use privileged ports
 grep -r "8002\|8003\|8554\|8888\|8889\|9997" tests/
 ```
 
-### Phase 4: Analyze FFmpeg Integration
+### Phase 4: Analyze FFmpeg Integration ✅ COMPLETED
 ```bash
 # Check FFmpeg command execution
 grep -r "ffmpeg" tests/
@@ -222,7 +236,7 @@ test_config = Config(
 
 ## Next Steps
 
-1. **Immediate**: Investigate sudo usage in test code
+1. **Immediate**: Fix pytest configuration sudo check
 2. **Short-term**: Fix file permission and port binding issues
 3. **Medium-term**: Implement proper test isolation
 4. **Long-term**: Review and improve test infrastructure
