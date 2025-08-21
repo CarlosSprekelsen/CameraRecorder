@@ -14,10 +14,11 @@ import asyncio
 import logging
 import sys
 import os
+import tempfile
 import pytest
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from camera_service.config import Config
+from camera_service.config import Config, MediaMTXConfig
 from camera_service.service_manager import ServiceManager
 
 # Configure logging
@@ -32,8 +33,19 @@ async def test_ffmpeg_integration():
     logger.info("Starting MediaMTX FFmpeg integration test")
     
     try:
-        # Create configuration
-        config = Config()
+        # Create temporary directories for testing
+        temp_dir = tempfile.mkdtemp(prefix="ffmpeg_test_")
+        recordings_dir = os.path.join(temp_dir, "recordings")
+        snapshots_dir = os.path.join(temp_dir, "snapshots")
+        os.makedirs(recordings_dir, exist_ok=True)
+        os.makedirs(snapshots_dir, exist_ok=True)
+        
+        # Create configuration with temporary directories
+        mediamtx_config = MediaMTXConfig(
+            recordings_path=recordings_dir,
+            snapshots_path=snapshots_dir
+        )
+        config = Config(mediamtx=mediamtx_config)
         
         # Create service manager
         service_manager = ServiceManager(config)
@@ -58,6 +70,12 @@ async def test_ffmpeg_integration():
             logger.info("Stopping service manager...")
             await service_manager.stop()
             logger.info("Service manager stopped")
+        
+        # Clean up temporary directories
+        if 'temp_dir' in locals() and os.path.exists(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir)
+            logger.info(f"Cleaned up temporary directory: {temp_dir}")
 
 if __name__ == "__main__":
     asyncio.run(test_ffmpeg_integration())

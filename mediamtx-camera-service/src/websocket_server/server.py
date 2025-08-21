@@ -623,15 +623,39 @@ class WebSocketJsonRpcServer:
                         "result": {"authenticated": True, "role": auth_result.role, "auth_method": auth_result.auth_method},
                         "id": request_id,
                     })
+                # Return proper JSON-RPC error for authentication failures
+                # According to requirements: expired tokens should return -32003 (authorization)
+                error_code = -32003 if "expired" in auth_result.error_message.lower() else -32001
                 return json.dumps({
                     "jsonrpc": "2.0",
-                    "result": {"authenticated": False, "error": auth_result.error_message},
+                    "error": {"code": error_code, "message": auth_result.error_message},
                     "id": request_id,
                 })
 
             # Security enforcement and rate limiting (F3.2.5/F3.2.6/I1.7/N3.x)
             if self._security_middleware:
-                protected_methods = {"take_snapshot", "start_recording", "stop_recording"}
+                # Comprehensive method protection with role-based access control
+                # CRITICAL FIX: Protect all sensitive methods from authentication bypass
+                method_permissions = {
+                    # Viewer access (read-only operations)
+                    "get_camera_list": "viewer",
+                    "get_camera_status": "viewer", 
+                    "get_camera_capabilities": "viewer",
+                    "list_recordings": "viewer",
+                    "list_snapshots": "viewer",
+                    "get_streams": "viewer",
+                    "ping": "viewer",
+                    
+                    # Operator access (camera control operations)
+                    "take_snapshot": "operator",
+                    "start_recording": "operator", 
+                    "stop_recording": "operator",
+                    
+                    # Admin access (system management operations)
+                    "get_metrics": "admin",
+                    "get_status": "admin",
+                    "get_server_info": "admin"
+                }
 
                 # Rate limiting applies to all methods
                 if not self._security_middleware.check_rate_limit(client.client_id):
@@ -643,8 +667,11 @@ class WebSocketJsonRpcServer:
                         }
                     )
 
-                if method_name in protected_methods:
-                    # Require authentication for protected methods
+                # Check if method requires authentication
+                if method_name in method_permissions:
+                    required_role = method_permissions[method_name]
+                    
+                    # Require authentication for all protected methods
                     if not self._security_middleware.is_authenticated(client.client_id):
                         auth_token = None
                         if params and isinstance(params, dict):
@@ -676,20 +703,20 @@ class WebSocketJsonRpcServer:
                                     "jsonrpc": "2.0",
                                     "error": {
                                         "code": -32001,
-                                        "message": "Authentication required - call authenticate or provide auth_token",
+                                        "message": f"Authentication required for {method_name} - call authenticate or provide auth_token",
                                     },
                                     "id": request_id,
                                 }
                             )
 
-                    # Authorization: operator role required
-                    if not self._security_middleware.has_permission(client.client_id, "operator"):
+                    # Role-based authorization check
+                    if not self._security_middleware.has_permission(client.client_id, required_role):
                         return json.dumps(
                             {
                                 "jsonrpc": "2.0",
                                 "error": {
                                     "code": -32003,
-                                    "message": "Insufficient permissions - operator role required",
+                                    "message": f"Insufficient permissions - {required_role} role required for {method_name}",
                                 },
                                 "id": request_id,
                             }
@@ -1091,12 +1118,12 @@ class WebSocketJsonRpcServer:
         self.register_method(
             "get_camera_list", self._method_get_camera_list, version="1.0"
         )
-        # Alias for compatibility
-        self.register_method(
-            "get_cameras", self._method_get_camera_list, version="1.0"
-        )
+
         self.register_method(
             "get_camera_status", self._method_get_camera_status, version="1.0"
+        )
+        self.register_method(
+            "get_camera_capabilities", self._method_get_camera_capabilities, version="1.0"
         )
         self.register_method(
             "get_streams", self._method_get_streams, version="1.0"
@@ -1221,6 +1248,8 @@ class WebSocketJsonRpcServer:
                 "role": auth_result.role,
                 "auth_method": auth_result.auth_method,
             }
+        # This method is handled specially in the main request handler
+        # The main handler will return proper JSON-RPC error responses
         return {"authenticated": False, "error": auth_result.error_message}
 
     async def _method_get_metrics(
@@ -1376,20 +1405,25 @@ class WebSocketJsonRpcServer:
 
                 # Generate stream name and URLs
                 stream_name = self._get_stream_name_from_device_path(device_path)
-                streams = {}
+                
+                # Always provide stream URLs as per API specification
+                # Stream URLs should be available regardless of current stream status
+                streams = {
+                    "rtsp": f"rtsp://localhost:8554/{stream_name}",
+                    "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
+                    "hls": f"http://localhost:8888/{stream_name}",
+                }
 
-                # Get stream URLs from concurrent request results
+                # Get stream status for additional validation (but don't affect URL generation)
                 if camera_device.status == "CONNECTED" and device_path in stream_status_tasks:
                     task = stream_status_tasks[device_path]
                     if task.done() and not task.exception():
                         try:
                             stream_status = task.result()
-                            if stream_status and stream_status.get("status") == "active":
-                                streams = {
-                                    "rtsp": f"rtsp://localhost:8554/{stream_name}",
-                                    "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
-                                    "hls": f"http://localhost:8888/{stream_name}",
-                                }
+                            # Log stream status for debugging but don't modify URLs
+                            self._logger.debug(
+                                f"Stream {stream_name} status: {stream_status.get('status', 'unknown')}"
+                            )
                         except Exception as e:
                             self._logger.debug(
                                 f"Error processing stream status for {stream_name}: {e}"
@@ -1548,19 +1582,22 @@ class WebSocketJsonRpcServer:
             if mediamtx_controller and camera_status["status"] == "CONNECTED":
                 try:
                     stream_name = self._get_stream_name_from_device_path(device_path)
+                    
+                    # Always provide stream URLs as per API specification
+                    # Stream URLs should be available regardless of current stream status
+                    camera_status["streams"] = {
+                        "rtsp": f"rtsp://localhost:8554/{stream_name}",
+                        "webrtc": f"http://localhost:8889/{stream_name}/webrtc",
+                        "hls": f"http://localhost:8888/{stream_name}",
+                    }
+                    
+                    # Get stream status for metrics but don't affect URL generation
                     stream_status = await mediamtx_controller.get_stream_status(
                         stream_name
                     )
 
-                    if stream_status.get("status") == "active":
-                        # Update stream URLs
-                        camera_status["streams"] = {
-                            "rtsp": f"rtsp://localhost:8554/{stream_name}",
-                            "webrtc": f"webrtc://localhost:8002/{stream_name}",
-                            "hls": f"http://localhost:8002/hls/{stream_name}.m3u8",
-                        }
-
-                        # Update metrics from MediaMTX
+                    # Update metrics from MediaMTX if stream status available
+                    if stream_status:
                         camera_status["metrics"] = {
                             "bytes_sent": stream_status.get("bytes_sent", 0),
                             "readers": stream_status.get("readers", 0),
@@ -1578,6 +1615,88 @@ class WebSocketJsonRpcServer:
             # Degrade gracefully on monitor errors
             self._logger.error(f"Error getting camera status for {device_path}: {e}")
             return {"status": "ERROR", "device": device_path}
+
+    async def _method_get_camera_capabilities(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get camera capability metadata for a specific camera device.
+
+        Args:
+            params: Method parameters containing:
+                - device (str): Camera device path
+
+        Returns:
+            Dict containing camera capability metadata:
+                - device, formats, resolutions, fps_options, validation_status
+        """
+        if not params or "device" not in params:
+            raise ValueError("device parameter is required")
+
+        device_path = params["device"]
+
+        # Initialize response with architecture defaults
+        camera_capabilities = {
+            "device": device_path,
+            "formats": [],
+            "resolutions": [],
+            "fps_options": [],
+            "validation_status": "none"
+        }
+
+        try:
+            # Get camera monitor from service manager if available
+            camera_monitor = None
+            if self._service_manager and hasattr(self._service_manager, '_camera_monitor'):
+                camera_monitor = self._service_manager._camera_monitor
+            elif self._camera_monitor:
+                camera_monitor = self._camera_monitor
+
+            # Get camera info from camera monitor
+            if camera_monitor:
+                connected_cameras = await camera_monitor.get_connected_cameras()
+                camera_device = connected_cameras.get(device_path)
+
+                if camera_device and camera_device.status == "CONNECTED":
+                    # Get real capability metadata with provisional/confirmed logic
+                    if hasattr(camera_monitor, "get_effective_capability_metadata"):
+                        try:
+                            capability_metadata = camera_monitor.get_effective_capability_metadata(device_path)
+                            
+                            # Update capabilities with real detected data
+                            if capability_metadata.get("formats"):
+                                camera_capabilities["formats"] = capability_metadata["formats"]
+                            if capability_metadata.get("all_resolutions"):
+                                camera_capabilities["resolutions"] = capability_metadata["all_resolutions"]
+                            if capability_metadata.get("fps_options"):
+                                camera_capabilities["fps_options"] = capability_metadata["fps_options"]
+                            
+                            # Set validation status
+                            camera_capabilities["validation_status"] = capability_metadata.get("validation_status", "none")
+                            
+                            self._logger.debug(f"Camera {device_path} capabilities: {camera_capabilities}")
+                            
+                        except Exception as e:
+                            self._logger.warning(f"Could not get capability metadata for {device_path}: {e}")
+                            # Return default capabilities on error
+                            camera_capabilities["validation_status"] = "error"
+                else:
+                    camera_capabilities["validation_status"] = "disconnected"
+            else:
+                camera_capabilities["validation_status"] = "no_monitor"
+
+            return camera_capabilities
+
+        except Exception as e:
+            # Degrade gracefully on monitor errors
+            self._logger.error(f"Error getting camera capabilities for {device_path}: {e}")
+            return {
+                "device": device_path,
+                "formats": [],
+                "resolutions": [],
+                "fps_options": [],
+                "validation_status": "error"
+            }
 
     async def _method_take_snapshot(
         self, params: Optional[Dict[str, Any]] = None

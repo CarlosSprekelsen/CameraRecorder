@@ -218,7 +218,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       }
 
       console.log('📷 Getting camera list');
-      const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
       
       set({ 
         cameras: result.cameras,
@@ -252,7 +252,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       }
 
       console.log(`📷 Getting status for camera ${device}`);
-      const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }) as CameraDevice;
+      const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }, true) as CameraDevice;
       
       // Update camera in list
       set((state) => ({
@@ -416,7 +416,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       }
 
       console.log('ℹ️ Getting server information');
-      const result = await wsService.call('get_server_info', {}) as ServerInfo;
+      const result = await wsService.call('get_server_info', {}, true) as ServerInfo;
       set({ serverInfo: result });
       return result;
       
@@ -442,7 +442,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       }
 
       console.log('🏓 Pinging server');
-      const result = await wsService.call('ping', {});
+      const result = await wsService.call('ping', {}, true);
       return result === 'pong';
       
     } catch (error) {

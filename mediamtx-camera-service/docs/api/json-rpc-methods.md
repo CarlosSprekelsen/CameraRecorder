@@ -9,6 +9,24 @@ Connect to the WebSocket endpoint:
 ws://localhost:8002/ws
 ```
 
+## Authentication & Authorization
+
+**CRITICAL SECURITY UPDATE**: All API methods now require authentication and proper role-based authorization.
+
+### Authentication Methods
+- **JWT Token**: Pass `auth_token` parameter with valid JWT token
+- **API Key**: Pass `auth_token` parameter with valid API key
+
+### Role-Based Access Control
+- **viewer**: Read-only access to camera status, file listings, and basic information
+- **operator**: Viewer permissions + camera control operations (snapshots, recording)
+- **admin**: Full access to all features including system metrics and configuration
+
+### Authentication Flow
+1. Call `authenticate` method with your token to establish session
+2. Include `auth_token` parameter in subsequent requests
+3. Server validates token and checks role permissions for each method
+
 ## Performance Guarantees
 
 All API methods adhere to architecture performance targets:
@@ -22,6 +40,8 @@ Performance measured from request receipt to response transmission at service le
 
 ### ping
 Health check method that returns "pong".
+
+**Authentication:** Required (viewer role)
 
 **Parameters:** None
 
@@ -48,6 +68,8 @@ Health check method that returns "pong".
 
 ### get_camera_list
 Get list of all discovered cameras with their current status.
+
+**Authentication:** Required (viewer role)
 
 **Parameters:** None
 
@@ -95,6 +117,8 @@ Get list of all discovered cameras with their current status.
 
 ### get_camera_status
 Get status for a specific camera device.
+
+**Authentication:** Required (viewer role)
 
 **Parameters:**
 - device: string - Camera device path (required)
@@ -148,6 +172,8 @@ Get status for a specific camera device.
 ### take_snapshot  
 Capture a snapshot from the specified camera.
 
+**Authentication:** Required (operator role)
+
 **Parameters:**
 - device: string - Camera device path (required)
 - filename: string - Custom filename (optional)
@@ -188,6 +214,8 @@ Capture a snapshot from the specified camera.
 
 ### start_recording
 Start recording video from the specified camera.
+
+**Authentication:** Required (operator role)
 
 **Parameters:**
 - device: string - Camera device path (required)
@@ -233,6 +261,8 @@ Start recording video from the specified camera.
 ### stop_recording
 Stop active recording for the specified camera.
 
+**Authentication:** Required (operator role)
+
 **Parameters:**
 - device: string - Camera device path (required)
 
@@ -275,6 +305,8 @@ Stop active recording for the specified camera.
 
 ### list_recordings
 List available recording files with metadata and pagination support.
+
+**Authentication:** Required (viewer role)
 
 **Parameters:**
 - limit: number - Maximum number of files to return (optional)
@@ -322,6 +354,8 @@ List available recording files with metadata and pagination support.
 ### list_snapshots
 List available snapshot files with metadata and pagination support.
 
+**Authentication:** Required (viewer role)
+
 **Parameters:**
 - limit: number - Maximum number of files to return (optional)
 - offset: number - Number of files to skip for pagination (optional)
@@ -364,6 +398,166 @@ List available snapshot files with metadata and pagination support.
   "id": 8
 }
 ```
+
+## System Management Methods
+
+### get_metrics
+Get system performance metrics and statistics.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing system metrics, performance data, and statistics
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_metrics",
+  "id": 9
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "active_connections": 5,
+    "total_requests": 1250,
+    "average_response_time": 45.2,
+    "error_rate": 0.02,
+    "memory_usage": 85.5,
+    "cpu_usage": 23.1
+  },
+  "id": 9
+}
+```
+
+### get_status
+Get system status and health information.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing system status, component health, and operational state
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_status",
+  "id": 10
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "status": "healthy",
+    "uptime": 86400,
+    "version": "1.0.0",
+    "components": {
+      "websocket_server": "running",
+      "camera_monitor": "running",
+      "mediamtx_controller": "running"
+    }
+  },
+  "id": 10
+}
+```
+
+### get_server_info
+Get server configuration and capability information.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing server configuration, capabilities, and feature information
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_server_info",
+  "id": 11
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "name": "MediaMTX Camera Service",
+    "version": "1.0.0",
+    "capabilities": ["snapshots", "recordings", "streaming"],
+    "supported_formats": ["mp4", "mkv", "jpg"],
+    "max_cameras": 10
+  },
+  "id": 11
+}
+```
+
+### get_streams
+Get list of all active streams from MediaMTX.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:** None
+
+**Returns:** Array of stream information objects
+
+**Status:** ✅ Implemented
+
+**Implementation:** Integrates with MediaMTX controller to return real-time stream status and metrics.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_streams",
+  "id": 12
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "name": "camera0",
+      "source": "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264...",
+      "ready": true,
+      "readers": 2,
+      "bytes_sent": 12345678
+    },
+    {
+      "name": "camera1", 
+      "source": "ffmpeg -f v4l2 -i /dev/video1 -c:v libx264...",
+      "ready": false,
+      "readers": 0,
+      "bytes_sent": 0
+    }
+  ],
+  "id": 12
+}
+```
+
+**Response Fields:**
+- `name`: Stream name (string)
+- `source`: FFmpeg command or source configuration (string)
+- `ready`: Stream readiness status (boolean)
+- `readers`: Number of active stream readers (integer)
+- `bytes_sent`: Total bytes sent for this stream (integer)
 
 ## HTTP File Download Endpoints
 
@@ -505,12 +699,14 @@ Custom error codes:
 ## Error Codes
 
 Standard JSON-RPC 2.0 error codes plus service-specific codes:
-- **-32001**: Camera not found or disconnected
-- **-32002**: Recording already in progress
-- **-32003**: MediaMTX service unavailable  
-- **-32004**: Authentication required or token expired
-- **-32005**: Insufficient storage space
-- **-32006**: Camera capability not supported
+- **-32001**: Authentication failed or token expired
+- **-32002**: Rate limit exceeded
+- **-32003**: Insufficient permissions (role-based access control)
+- **-32004**: Camera not found or disconnected
+- **-32005**: Recording already in progress
+- **-32006**: MediaMTX service unavailable  
+- **-32007**: Insufficient storage space
+- **-32008**: Camera capability not supported
 
 ---
 

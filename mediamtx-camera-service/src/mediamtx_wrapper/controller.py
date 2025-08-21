@@ -630,6 +630,7 @@ class MediaMTXController:
             duration: Recording duration in seconds (None for unlimited)
             format: Recording format (mp4, mkv)
 
+
         Returns:
             Dict containing recording session information
 
@@ -660,20 +661,23 @@ class MediaMTXController:
                 f"Invalid format: {format}. Must be one of: {valid_formats}"
             )
 
+        # Use configured recordings path
+        output_dir = self._recordings_path
+        
         try:
-            # Ensure recordings directory exists and is writable
+            # Ensure output directory exists and is writable
             try:
-                os.makedirs(self._recordings_path, exist_ok=True)
+                os.makedirs(output_dir, exist_ok=True)
                 # Test write permissions
                 test_file = os.path.join(
-                    self._recordings_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                    output_dir, f".write_test_{uuid.uuid4().hex[:8]}"
                 )
                 with open(test_file, "w") as f:
                     f.write("test")
                 os.remove(test_file)
             except (PermissionError, OSError) as e:
                 error_msg = (
-                    f"Cannot write to recordings directory {self._recordings_path}: {e}"
+                    f"Cannot write to output directory {output_dir}: {e}"
                 )
                 self._logger.error(
                     error_msg,
@@ -683,11 +687,11 @@ class MediaMTXController:
                     },
                 )
                 raise ValueError(error_msg) from e
-
+            
             # Generate recording filename with timestamp
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"{stream_name}_{timestamp}.{format}"
-            record_path = os.path.join(self._recordings_path, filename)
+            record_path = os.path.join(output_dir, filename)
 
             # Record start time for duration calculation
             start_time = time.time()
@@ -1057,6 +1061,7 @@ class MediaMTXController:
             format: Image format ("jpg" or "png")
             quality: Image quality (1-100 for jpg, ignored for png)
 
+
         Returns:
             Dict containing snapshot capture information with the following structure:
             {
@@ -1110,17 +1115,20 @@ class MediaMTXController:
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"{stream_name}_snapshot_{timestamp}.{format}"
 
-        # Validate snapshots directory
+        # Use configured snapshots path
+        output_dir = self._snapshots_path
+        
+        # Validate output directory
         try:
-            os.makedirs(self._snapshots_path, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
             test_file = os.path.join(
-                self._snapshots_path, f".write_test_{uuid.uuid4().hex[:8]}"
+                output_dir, f".write_test_{uuid.uuid4().hex[:8]}"
             )
             with open(test_file, "w") as f:
                 f.write("test")
             os.remove(test_file)
         except (PermissionError, OSError) as e:
-            error_msg = f"Cannot write to snapshots directory {self._snapshots_path}: {e}"
+            error_msg = f"Cannot write to output directory {output_dir}: {e}"
             self._logger.error(error_msg, extra={"correlation_id": correlation_id, "stream_name": stream_name})
             return {
                 "stream_name": stream_name,
@@ -1133,7 +1141,7 @@ class MediaMTXController:
                 "user_experience": "failed"
             }
 
-        snapshot_path = os.path.join(self._snapshots_path, filename)
+        snapshot_path = os.path.join(output_dir, filename)
         start_time = time.time()
         capture_methods_tried = []
 
@@ -1642,6 +1650,7 @@ class MediaMTXController:
                     return {
                         "name": stream_name,
                         "status": "active" if data.get("ready", False) else "inactive",
+                        "ready": data.get("ready", False),
                         "source": data.get("source", ""),
                         "readers": data.get("readers", 0),
                         "bytes_sent": data.get("bytesSent", 0),
@@ -2362,3 +2371,22 @@ class MediaMTXController:
                     "validation_status": status,
                 },
             )
+
+    async def get_stream_urls(self, stream_name: str) -> Dict[str, str]:
+        """
+        Get stream URLs for different protocols.
+        
+        Args:
+            stream_name: Name of the stream
+            
+        Returns:
+            Dict containing URLs for RTSP, WebRTC, and HLS protocols
+        """
+        if not stream_name:
+            raise ValueError("Stream name is required")
+            
+        return {
+            "rtsp": f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}",
+            "webrtc": f"webrtc://{self._host}:{self._webrtc_port}/{stream_name}",
+            "hls": f"http://{self._host}:{self._hls_port}/{stream_name}/index.m3u8"
+        }

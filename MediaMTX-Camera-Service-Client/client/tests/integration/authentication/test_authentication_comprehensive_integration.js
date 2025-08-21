@@ -107,8 +107,9 @@ describe('Authentication Integration Tests', () => {
     test('should reject invalid token', async () => {
       const invalidToken = 'invalid.token.here';
       
-      await expect(sendRequest(ws, 'authenticate', { token: invalidToken }))
-        .rejects.toThrow(/Invalid token|Authentication failed/);
+      const result = await sendRequest(ws, 'authenticate', { token: invalidToken });
+      expect(result.authenticated).toBe(false);
+      expect(result.error).toMatch(/Invalid authentication token/);
     }, CONFIG.timeout);
   });
 
@@ -124,8 +125,9 @@ describe('Authentication Integration Tests', () => {
         { expiresIn: '-1h' } // Expired 1 hour ago
       );
 
-      await expect(sendRequest(ws, 'authenticate', { token: expiredToken }))
-        .rejects.toThrow(/Token expired|Authentication failed/);
+      const result = await sendRequest(ws, 'authenticate', { token: expiredToken });
+      expect(result.authenticated).toBe(false);
+      expect(result.error).toMatch(/Invalid authentication token/);
     }, CONFIG.timeout);
   });
 
@@ -133,8 +135,9 @@ describe('Authentication Integration Tests', () => {
     test('should reject malformed token', async () => {
       const malformedToken = 'not.a.valid.jwt.token';
       
-      await expect(sendRequest(ws, 'authenticate', { token: malformedToken }))
-        .rejects.toThrow(/Invalid token|Authentication failed/);
+      const result = await sendRequest(ws, 'authenticate', { token: malformedToken });
+      expect(result.authenticated).toBe(false);
+      expect(result.error).toMatch(/Invalid authentication token/);
     }, CONFIG.timeout);
   });
 

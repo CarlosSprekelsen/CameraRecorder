@@ -82,8 +82,8 @@ performance:
     recording_stop: 2.0              # seconds
     file_listing: 1.0                # seconds
   
-          # Multi-tier snapshot capture configuration for optimal user experience
-        snapshot_tiers:
+  # Multi-tier snapshot capture configuration for optimal user experience
+  snapshot_tiers:
           # Tier 1: USB direct capture (fastest for USB container)
           tier1_usb_direct_timeout: 0.5          # seconds - Timeout for direct USB camera capture
           

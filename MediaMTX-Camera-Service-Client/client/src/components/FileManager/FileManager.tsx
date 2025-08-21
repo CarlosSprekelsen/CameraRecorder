@@ -280,7 +280,7 @@ const FileTable: React.FC<FileTableProps> = ({
             <TableRow key={file.filename}>
               <TableCell>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  {fileType === 'recordings' ? <VideoFile /> : <Image />}
+                  {fileType === 'recordings' ? <VideoFile data-testid="VideoFileIcon" /> : <Image data-testid="ImageIcon" />}
                   <Typography variant="body2">{file.filename}</Typography>
                 </Stack>
               </TableCell>

@@ -4,7 +4,7 @@
  */
 
 import { TEST_CONFIG, getWebSocketUrl, getHealthUrl, validateTestEnvironment } from '../config/test-config';
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 
 /**
  * Test result tracking
@@ -57,7 +57,7 @@ export class StableTestFixture {
 
       this.ws = new WebSocket(getWebSocketUrl());
 
-      this.ws.onopen = async () => {
+      this.ws!.onopen = async () => {
         try {
           // For basic operations like ping, authentication is not required
           clearTimeout(timeout);
@@ -68,7 +68,7 @@ export class StableTestFixture {
         }
       };
 
-      this.ws.onerror = (error) => {
+      this.ws!.onerror = (error: any) => {
         clearTimeout(timeout);
         reject(error);
       };
@@ -86,7 +86,7 @@ export class StableTestFixture {
 
       this.ws = new WebSocket(getWebSocketUrl());
 
-      this.ws.onopen = async () => {
+      this.ws!.onopen = async () => {
         try {
           // Authenticate after connection for operations that require auth
           await this.authenticateWebSocket();
@@ -98,7 +98,7 @@ export class StableTestFixture {
         }
       };
 
-      this.ws.onerror = (error) => {
+      this.ws!.onerror = (error: any) => {
         clearTimeout(timeout);
         reject(error);
       };
@@ -155,7 +155,7 @@ export class StableTestFixture {
       }, this.timeout);
 
       const originalOnMessage = ws.onmessage;
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: any) => {
         try {
           const data = JSON.parse(event.data.toString());
           if (data.id === id) {
@@ -282,7 +282,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         resolve(true);
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (error: any) => {
         clearTimeout(timeout);
         this.assert(false, `WebSocket connection failed: ${error}`);
         resolve(false);
@@ -309,7 +309,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         ws.send(JSON.stringify(request));
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: any) => {
         try {
           const data = JSON.parse(event.data.toString());
           if (data.id === id) {
@@ -323,7 +323,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (error: any) => {
         clearTimeout(timeout);
         this.assert(false, `Ping test failed: ${error}`);
         resolve(false);
@@ -350,7 +350,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         ws.send(JSON.stringify(request));
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: any) => {
         try {
           const data = JSON.parse(event.data.toString());
           if (data.id === id) {
@@ -365,7 +365,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (error: any) => {
         clearTimeout(timeout);
         this.assert(false, `Camera list test failed: ${error}`);
         resolve(false);
@@ -1082,7 +1082,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         ws.send(JSON.stringify(request));
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: any) => {
         try {
           const data = JSON.parse(event.data.toString());
           if (data.id === id) {

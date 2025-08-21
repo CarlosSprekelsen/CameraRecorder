@@ -146,7 +146,7 @@ export const useFileStore = create<FileStore>()(
           const response = await wsService.call(RPC_METHODS.LIST_RECORDINGS, {
             limit,
             offset
-          });
+          }, true);
 
           const normalized = normalizeFileListResponse(response);
           set({ recordings: normalized.files as FileItem[] });
@@ -175,7 +175,7 @@ export const useFileStore = create<FileStore>()(
           const response = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, {
             limit,
             offset
-          });
+          }, true);
 
           const normalized = normalizeFileListResponse(response);
           set({ snapshots: normalized.files as FileItem[] });

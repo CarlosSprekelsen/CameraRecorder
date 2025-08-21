@@ -72,6 +72,14 @@ class MediaMTXConfig:
     recordings_path: str = "/opt/camera-service/recordings"
     snapshots_path: str = "/opt/camera-service/snapshots"
     
+    # STANAG 4406 H.264 codec configuration
+    codec: str = "libx264"  # H.264 codec for STANAG 4406 compliance
+    video_profile: str = "baseline"  # Baseline profile for STANAG 4406
+    video_level: str = "3.0"  # Level 3.0 for STANAG 4406
+    pixel_format: str = "yuv420p"  # 4:2:0 pixel format for STANAG 4406
+    bitrate: str = "600k"  # STANAG 4406 compatible bitrate
+    preset: str = "ultrafast"  # Encoding preset
+    
     # Health monitoring configuration
     health_check_interval: int = 30
     health_failure_threshold: int = 10
@@ -1124,9 +1132,26 @@ class ConfigManager:
         if "backoff_jitter_range" in mediamtx_data and isinstance(mediamtx_data["backoff_jitter_range"], list):
             mediamtx_data["backoff_jitter_range"] = tuple(mediamtx_data["backoff_jitter_range"])
         
+        # Filter out non-MediaMTXConfig parameters
+        valid_mediamtx_params = {
+            'host', 'api_port', 'rtsp_port', 'webrtc_port', 'hls_port',
+            'config_path', 'recordings_path', 'snapshots_path',
+            'codec', 'video_profile', 'video_level', 'pixel_format', 'bitrate', 'preset',
+            'health_check_interval', 'health_failure_threshold', 'health_circuit_breaker_timeout',
+            'health_max_backoff_interval', 'health_recovery_confirmation_threshold',
+            'backoff_base_multiplier', 'backoff_jitter_range',
+            'process_termination_timeout', 'process_kill_timeout'
+        }
+        
+        # Only include valid MediaMTXConfig parameters
+        filtered_mediamtx_data = {
+            k: v for k, v in mediamtx_data.items() 
+            if k in valid_mediamtx_params
+        }
+        
         return Config(
             server=ServerConfig(**config_data.get("server", {})),
-            mediamtx=MediaMTXConfig(**mediamtx_data),
+            mediamtx=MediaMTXConfig(**filtered_mediamtx_data),
             camera=CameraConfig(**config_data.get("camera", {})),
             logging=LoggingConfig(**config_data.get("logging", {})),
             recording=RecordingConfig(**config_data.get("recording", {})),

@@ -72,11 +72,17 @@ class AuthManager:
             jwt_result = self._authenticate_jwt(auth_token)
             if jwt_result.authenticated:
                 return jwt_result
+            # If JWT fails and auth_type is "jwt", return the JWT error
+            elif auth_type == "jwt":
+                return jwt_result
         
         if auth_type == "api_key" or auth_type == "auto":
             # Try API key authentication
             api_key_result = self._authenticate_api_key(auth_token)
             if api_key_result.authenticated:
+                return api_key_result
+            # If API key fails and auth_type is "api_key", return the API key error
+            elif auth_type == "api_key":
                 return api_key_result
         
         # For invalid auth types, try auto authentication
@@ -89,6 +95,11 @@ class AuthManager:
             api_key_result = self._authenticate_api_key(auth_token)
             if api_key_result.authenticated:
                 return api_key_result
+        
+        # For auto authentication, if both JWT and API key fail, return the JWT error
+        # since JWT was tried first and is more specific
+        if auth_type == "auto":
+            return jwt_result  # Return the JWT error message
         
         # Determine which auth method was attempted last
         if auth_type == "jwt":

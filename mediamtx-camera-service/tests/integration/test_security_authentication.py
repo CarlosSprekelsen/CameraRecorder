@@ -237,6 +237,7 @@ class TestRoleBasedAccessControl:
         # Viewer should have access to basic methods
         assert "get_camera_list" in viewer_user["permissions"]
         assert "get_camera_status" in viewer_user["permissions"]
+        assert "get_streams" in viewer_user["permissions"]
         
         # Viewer should not have access to protected methods
         assert "take_snapshot" not in viewer_user["permissions"]
@@ -250,6 +251,7 @@ class TestRoleBasedAccessControl:
         # Operator should have access to all camera control methods
         assert "get_camera_list" in operator_user["permissions"]
         assert "get_camera_status" in operator_user["permissions"]
+        assert "get_streams" in operator_user["permissions"]
         assert "take_snapshot" in operator_user["permissions"]
         assert "start_recording" in operator_user["permissions"]
         assert "stop_recording" in operator_user["permissions"]
@@ -265,6 +267,7 @@ class TestRoleBasedAccessControl:
         # Admin should have access to all methods
         assert "get_camera_list" in admin_user["permissions"]
         assert "get_camera_status" in admin_user["permissions"]
+        assert "get_streams" in admin_user["permissions"]
         assert "take_snapshot" in admin_user["permissions"]
         assert "start_recording" in admin_user["permissions"]
         assert "stop_recording" in admin_user["permissions"]

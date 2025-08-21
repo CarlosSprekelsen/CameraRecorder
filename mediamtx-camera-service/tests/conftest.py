@@ -36,9 +36,8 @@ from pathlib import Path
 
 def pytest_sessionstart(session):
     """Set up test environment variables and ensure clean state."""
-    # Provide a deterministic secret for JWT tests using shared utilities
-    from tests.fixtures.auth_utils import get_test_jwt_secret
-    os.environ.setdefault("CAMERA_SERVICE_JWT_SECRET", get_test_jwt_secret())
+    # Provide a deterministic secret for JWT tests
+    os.environ.setdefault("CAMERA_SERVICE_JWT_SECRET", "test-secret-dev-only")
     os.environ.setdefault("CAMERA_SERVICE_RATE_RPM", "1000")
     
     # Set test-specific environment variables

@@ -1,12 +1,14 @@
 # Authentication Setup and Usage Guide
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Architecture Decision:** AD-7  
-**Implementation:** Sprint 1 (S6)
+**Implementation:** Sprint 1 (S6) + Security Hardening (2025-01-15)
 
 ## Overview
 
 The MediaMTX Camera Service implements a comprehensive authentication system supporting both JWT tokens for user sessions and API keys for service authentication as specified in Architecture Decision AD-7.
+
+**CRITICAL SECURITY UPDATE (2025-01-15):** All API methods now require authentication and proper role-based authorization to prevent authentication bypass vulnerabilities.
 
 ## Authentication Methods
 
@@ -98,6 +100,37 @@ JWT tokens are passed in JSON-RPC requests:
 3. Server validates JWT token
 4. Server checks user permissions for requested method
 5. Server executes method if authorized
+
+## Method Protection Matrix
+
+**CRITICAL SECURITY UPDATE:** All API methods now require authentication and proper role-based authorization.
+
+### Viewer Access (Read-only Operations)
+- `ping` - Health check
+- `get_camera_list` - List available cameras
+- `get_camera_status` - Get camera status
+- `list_recordings` - List recording files
+- `list_snapshots` - List snapshot files
+- `get_streams` - Get stream information
+
+### Operator Access (Camera Control Operations)
+- All viewer permissions
+- `take_snapshot` - Capture camera snapshots
+- `start_recording` - Start video recording
+- `stop_recording` - Stop video recording
+
+### Admin Access (System Management Operations)
+- All operator permissions
+- `get_metrics` - System performance metrics
+- `get_status` - System health status
+- `get_server_info` - Server configuration information
+
+### Security Enforcement
+- **Authentication Required**: All methods require valid JWT token or API key
+- **Role-Based Authorization**: Methods enforce minimum required role
+- **Session Validation**: Token expiry is checked on each request
+- **Rate Limiting**: All methods are subject to rate limiting
+- **Error Handling**: Proper error responses for authentication failures
 
 ## API Key Usage
 

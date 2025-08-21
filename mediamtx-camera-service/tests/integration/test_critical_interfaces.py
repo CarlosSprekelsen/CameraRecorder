@@ -11,10 +11,11 @@ Requirements Coverage:
 
 Test Categories: Integration
 
-Tests the 3 most critical API methods:
+Tests the 4 most critical API methods:
 1. get_camera_list - Core camera discovery
-2. take_snapshot - Photo capture functionality with on-demand stream activation
-3. start_recording - Video recording functionality with on-demand stream activation
+2. get_streams - Stream enumeration and management
+3. take_snapshot - Photo capture functionality with on-demand stream activation
+4. start_recording - Video recording functionality with on-demand stream activation
 
 Each method tested with:
 - Success case: Valid parameters with on-demand stream activation
@@ -116,13 +117,14 @@ class IntegrationTestSetup:
             poll_interval=self.config.camera.poll_interval,
             detection_timeout=self.config.camera.detection_timeout,
             enable_capability_detection=self.config.camera.enable_capability_detection,
-            auto_start_streams=self.config.camera.auto_start_streams,
         )
         
-        # Initialize service manager
-        self.service_manager = ServiceManager(self.config)
-        self.service_manager.set_mediamtx_controller(self.mediamtx_controller)
-        self.service_manager.set_camera_monitor(self.camera_monitor)
+        # Initialize service manager with components
+        self.service_manager = ServiceManager(
+            config=self.config,
+            mediamtx_controller=self.mediamtx_controller,
+            camera_monitor=self.camera_monitor
+        )
         
         # Initialize WebSocket server with security middleware
         self.server = WebSocketJsonRpcServer(
@@ -220,6 +222,76 @@ async def test_get_camera_list_negative():
         assert "error" in result, "Should return error for unauthenticated request"
         assert result["error"]["code"] == -32001, "Should return authentication error code"
         print(f"✅ Success: get_camera_list properly rejected unauthenticated request")
+
+        return result
+
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_streams_success():
+    """Test get_streams success case with proper authentication."""
+    print("\nTesting get_streams - Success Case (Authenticated)")
+
+    setup = IntegrationTestSetup()
+    try:
+        await setup.setup()
+
+        # Create viewer user for testing (required for get_streams)
+        viewer_user = setup.user_factory.create_viewer_user()
+        
+        # Authenticate with WebSocket server
+        auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
+        assert auth_result["authenticated"] is True, "Authentication failed"
+        print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
+
+        # Test get_streams through WebSocket (not direct method call)
+        result = await setup.websocket_client.call_protected_method("get_streams", {})
+        
+        print(f"✅ Success: get_streams completed")
+        print(f"   Response: {json.dumps(result, indent=2)}")
+
+        # Validate response structure
+        assert "result" in result, "Response should contain 'result' field"
+        streams_result = result["result"]
+        assert isinstance(streams_result, list), "Response should be a list of streams"
+        
+        # Validate stream objects if any exist
+        for stream in streams_result:
+            assert "name" in stream, "Stream should contain 'name' field"
+            assert "source" in stream, "Stream should contain 'source' field"
+            assert "ready" in stream, "Stream should contain 'ready' field"
+            assert "readers" in stream, "Stream should contain 'readers' field"
+            assert "bytes_sent" in stream, "Stream should contain 'bytes_sent' field"
+
+        return result
+
+    finally:
+        await setup.cleanup()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_streams_negative():
+    """Test get_streams negative case (unauthenticated)."""
+    print("\nTesting get_streams - Negative Case (Unauthenticated)")
+
+    setup = IntegrationTestSetup()
+    try:
+        await setup.setup()
+
+        # Try to call get_streams without authentication
+        result = await setup.websocket_client.call_protected_method("get_streams", {})
+        
+        print(f"✅ Success: get_streams properly rejected unauthenticated request")
+        print(f"   Response: {json.dumps(result, indent=2)}")
+
+        # Should fail with authentication error
+        assert "error" in result, "Should return error for unauthenticated request"
+        assert result["error"]["code"] == -32001, "Should return authentication error code"
+        print(f"✅ Success: get_streams properly rejected unauthenticated request")
 
         return result
 
@@ -529,18 +601,23 @@ async def run_all_critical_interface_tests():
         test_results['get_camera_list_success'] = await test_get_camera_list_success()
         test_results['get_camera_list_negative'] = await test_get_camera_list_negative()
         
-        # Test 2: take_snapshot (Photo capture with authentication and on-demand activation)
-        print("\n=== Test 2: take_snapshot ===")
+        # Test 2: get_streams (Stream enumeration with authentication)
+        print("\n=== Test 2: get_streams ===")
+        test_results['get_streams_success'] = await test_get_streams_success()
+        test_results['get_streams_negative'] = await test_get_streams_negative()
+        
+        # Test 3: take_snapshot (Photo capture with authentication and on-demand activation)
+        print("\n=== Test 3: take_snapshot ===")
         test_results['take_snapshot_success'] = await test_take_snapshot_success()
         test_results['take_snapshot_negative'] = await test_take_snapshot_negative()
         
-        # Test 3: start_recording (Video recording with authentication and on-demand activation)
-        print("\n=== Test 3: start_recording ===")
+        # Test 4: start_recording (Video recording with authentication and on-demand activation)
+        print("\n=== Test 4: start_recording ===")
         test_results['start_recording_success'] = await test_start_recording_success()
         test_results['start_recording_negative'] = await test_start_recording_negative()
         
-        # Test 4: ping (Health check without authentication)
-        print("\n=== Test 4: ping ===")
+        # Test 5: ping (Health check without authentication)
+        print("\n=== Test 5: ping ===")
         test_results['ping_method'] = await test_ping_method()
         
         print("\n=== All Critical Interface Tests Completed Successfully ===")

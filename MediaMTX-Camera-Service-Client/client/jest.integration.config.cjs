@@ -9,7 +9,11 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react-jsx'
+        jsx: 'react-jsx',
+        skipLibCheck: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        typeRoots: ['<rootDir>/tests/types', 'node_modules/@types']
       }
     }],
     '^.+\\.js$': 'babel-jest'

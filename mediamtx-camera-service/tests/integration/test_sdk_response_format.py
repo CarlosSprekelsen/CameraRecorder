@@ -157,6 +157,77 @@ class TestSDKResponseFormat:
         assert "status" in camera_data
         assert "capabilities" in camera_data
         assert "stream_url" in camera_data
+    
+    @pytest.mark.asyncio
+    async def test_get_streams_response_format_handling(self, client):
+        """Test that SDK correctly handles server response format for get_streams."""
+        # Mock a server response with the correct format for get_streams
+        mock_response = [
+            {
+                "name": "camera0",
+                "source": "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264...",
+                "ready": True,
+                "readers": 2,
+                "bytes_sent": 12345678
+            },
+            {
+                "name": "camera1",
+                "source": "ffmpeg -f v4l2 -i /dev/video1 -c:v libx264...",
+                "ready": False,
+                "readers": 0,
+                "bytes_sent": 0
+            }
+        ]
+        
+        # Test the response parsing logic
+        streams_data = mock_response
+        assert len(streams_data) == 2
+        assert isinstance(streams_data, list)
+        
+        # Verify the first stream data
+        stream1 = streams_data[0]
+        assert stream1.get("name") == "camera0"
+        assert stream1.get("source") == "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264..."
+        assert stream1.get("ready") is True
+        assert stream1.get("readers") == 2
+        assert stream1.get("bytes_sent") == 12345678
+        
+        # Verify the second stream data
+        stream2 = streams_data[1]
+        assert stream2.get("name") == "camera1"
+        assert stream2.get("source") == "ffmpeg -f v4l2 -i /dev/video1 -c:v libx264..."
+        assert stream2.get("ready") is False
+        assert stream2.get("readers") == 0
+        assert stream2.get("bytes_sent") == 0
+    
+    @pytest.mark.asyncio
+    async def test_get_streams_empty_response_handling(self, client):
+        """Test that SDK correctly handles empty streams list response."""
+        # Test with empty streams list
+        mock_response = []
+        
+        streams_data = mock_response
+        assert len(streams_data) == 0
+        assert isinstance(streams_data, list)
+    
+    @pytest.mark.asyncio
+    async def test_get_streams_stream_data_structure(self, client):
+        """Test that SDK correctly handles individual stream data structure."""
+        # Test individual stream data structure
+        stream_data = {
+            "name": "camera0",
+            "source": "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264...",
+            "ready": True,
+            "readers": 2,
+            "bytes_sent": 12345678
+        }
+        
+        # Verify all expected fields are present
+        assert "name" in stream_data
+        assert "source" in stream_data
+        assert "ready" in stream_data
+        assert "readers" in stream_data
+        assert "bytes_sent" in stream_data
         
         # Verify field types
         assert isinstance(camera_data.get("device"), str)

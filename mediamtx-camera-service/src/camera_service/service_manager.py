@@ -364,11 +364,11 @@ class ServiceManager(CameraEventHandler):
                     camera_id=camera_id,
                     device_path=device_path,
                     rtsp_port=self._config.mediamtx.rtsp_port,
-                    video_profile=getattr(self._config.mediamtx, 'codec', {}).get('video_profile', 'baseline'),
-                    video_level=getattr(self._config.mediamtx, 'codec', {}).get('video_level', '3.0'),
-                    pixel_format=getattr(self._config.mediamtx, 'codec', {}).get('pixel_format', 'yuv420p'),
-                    bitrate=getattr(self._config.mediamtx, 'codec', {}).get('bitrate', '600k'),
-                    preset=getattr(self._config.mediamtx, 'codec', {}).get('preset', 'ultrafast')
+                    video_profile=self._config.mediamtx.video_profile,
+                    video_level=self._config.mediamtx.video_level,
+                    pixel_format=self._config.mediamtx.pixel_format,
+                    bitrate=self._config.mediamtx.bitrate,
+                    preset=self._config.mediamtx.preset
                 )
 
                 if stream_created:

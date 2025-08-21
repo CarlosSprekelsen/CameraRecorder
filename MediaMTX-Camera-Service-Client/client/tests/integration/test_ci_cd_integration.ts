@@ -182,9 +182,25 @@ async function checkSystemdServiceStatus(): Promise<boolean> {
   try {
     const { exec } = require('child_process');
     return new Promise((resolve) => {
-      exec('systemctl is-active --quiet mediamtx-camera-service', (error: any) => {
-        resolve(!error);
-      });
+      // Try multiple possible service names
+      const serviceNames = ['mediamtx-camera-service', 'mediamtx', 'camera-service'];
+      
+      const checkService = (index: number) => {
+        if (index >= serviceNames.length) {
+          resolve(false);
+          return;
+        }
+        
+        exec(`systemctl is-active --quiet ${serviceNames[index]}`, (error: any) => {
+          if (!error) {
+            resolve(true);
+          } else {
+            checkService(index + 1);
+          }
+        });
+      };
+      
+      checkService(0);
     });
   } catch {
     return false;
