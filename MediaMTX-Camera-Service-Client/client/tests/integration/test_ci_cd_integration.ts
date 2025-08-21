@@ -16,11 +16,31 @@
  * - Health check endpoint accessible
  */
 
-import { createWebSocketService } from '../fixtures/mock-server';
+import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
 
 describe('CI/CD Integration Tests', () => {
-  const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
-  const TEST_HEALTH_URL = process.env.TEST_HEALTH_URL || 'http://localhost:8003';
+  let wsFixture: WebSocketTestFixture;
+  let healthFixture: HealthTestFixture;
+
+  beforeAll(async () => {
+    // Initialize stable fixtures for authentication and server availability
+    wsFixture = new WebSocketTestFixture();
+    healthFixture = new HealthTestFixture();
+    
+    await wsFixture.initialize();
+    await healthFixture.initialize();
+    
+    // Verify server is available using stable fixtures
+    const serverAvailable = await wsFixture.testConnection();
+    if (!serverAvailable) {
+      throw new Error('MediaMTX Camera Service not available for CI/CD testing.');
+    }
+  });
+
+  afterAll(async () => {
+    wsFixture.cleanup();
+    healthFixture.cleanup();
+  });
 
   describe('Service Startup and Readiness', () => {
     it('should verify server service is running', async () => {
@@ -30,12 +50,12 @@ describe('CI/CD Integration Tests', () => {
     });
 
     it('should verify health check endpoint is accessible', async () => {
-      const isHealthy = await checkHealthEndpoint();
+      const isHealthy = await healthFixture.testHealthEndpoint();
       expect(isHealthy).toBe(true);
     });
 
     it('should verify WebSocket endpoint is accessible', async () => {
-      const isWebSocketAccessible = await checkWebSocketEndpoint();
+      const isWebSocketAccessible = await wsFixture.testConnection();
       expect(isWebSocketAccessible).toBe(true);
     });
   });
@@ -50,18 +70,13 @@ describe('CI/CD Integration Tests', () => {
     });
 
     it('should validate component communication', async () => {
-      const wsService = createWebSocketService();
+      // Test basic communication using stable fixture
+      const connectionResult = await wsFixture.testConnection();
+      expect(connectionResult).toBe(true);
       
-      try {
-        await wsService.connect();
-        expect(wsService.isConnected()).toBe(true);
-        
-        // Test basic communication
-        const response = await wsService.call('ping', {});
-        expect(response).toBe('pong');
-      } finally {
-        wsService.disconnect();
-      }
+      // Test ping functionality
+      const pingResult = await wsFixture.testPing();
+      expect(pingResult).toBe(true);
     });
   });
 
@@ -93,276 +108,169 @@ describe('CI/CD Integration Tests', () => {
 
   describe('End-to-End Workflow Validation', () => {
     it('should validate complete camera operations workflow', async () => {
-      const wsService = createWebSocketService();
+      // Step 1: Get camera list
+      const cameraListResult = await wsFixture.testCameraList();
+      expect(cameraListResult).toBe(true);
       
-      try {
-        await wsService.connect();
-        
-        // Step 1: Get camera list
-        const cameraList = await wsService.call('get_camera_list', {}, true);
-        expect(cameraList.cameras.length).toBeGreaterThanOrEqual(0);
-        
-        if (cameraList.cameras.length > 0) {
-          const testCamera = cameraList.cameras[0];
-          
-          // Step 2: Get camera status
-          const cameraStatus = await wsService.call('get_camera_status', { 
-            device: testCamera.device 
-          }, true);
-          expect(cameraStatus.device).toBe(testCamera.device);
-          
-          // Step 3: Take snapshot
-          try {
-            const snapshot = await wsService.call('take_snapshot', { 
-              device: testCamera.device 
-            }, true);
-            expect(snapshot.device).toBe(testCamera.device);
-            expect(snapshot.status).toBe('completed');
-          } catch (error) {
-            // Expected for some cameras that don't support snapshot
-            console.warn('Snapshot test failed (expected for some cameras):', (error as Error).message);
-          }
-          
-          // Step 4: Start recording
-          try {
-            const recording = await wsService.call('start_recording', { 
-              device: testCamera.device,
-              duration: 10, // Short duration for testing
-              format: 'mp4'
-            }, true);
-            expect(recording.device).toBe(testCamera.device);
-            expect(recording.status).toBe('STARTED');
-            
-            // Step 5: Stop recording
-            const stopResult = await wsService.call('stop_recording', { 
-              device: testCamera.device 
-            }, true);
-            expect(stopResult.device).toBe(testCamera.device);
-            expect(stopResult.status).toBe('STOPPED');
-          } catch (error) {
-            // Expected for some cameras that don't support recording
-            console.warn('Recording test failed (expected for some cameras):', (error as Error).message);
-          }
-        }
-      } finally {
-        wsService.disconnect();
-      }
+      // Step 2: Get camera status
+      const cameraStatusResult = await wsFixture.testCameraStatus();
+      expect(cameraStatusResult).toBe(true);
+      
+      // Step 3: Take snapshot
+      const snapshotResult = await wsFixture.testSnapshot();
+      expect(snapshotResult).toBe(true);
+      
+      // Step 4: Start recording
+      const recordingResult = await wsFixture.testRecording();
+      expect(recordingResult).toBe(true);
     });
 
     it('should validate file management operations', async () => {
-      const wsService = createWebSocketService();
+      // Test recordings list
+      const recordingsResult = await wsFixture.testListRecordings();
+      expect(recordingsResult).toBe(true);
       
-      try {
-        await wsService.connect();
-        
-        // Test recordings list
-        const recordings = await wsService.call('list_recordings', { limit: 10 }, true);
-        expect(recordings).toHaveProperty('files');
-        expect(recordings).toHaveProperty('total');
-        expect(Array.isArray(recordings.files)).toBe(true);
-        
-        // Test snapshots list
-        const snapshots = await wsService.call('list_snapshots', { limit: 10 }, true);
-        expect(snapshots).toHaveProperty('files');
-        expect(snapshots).toHaveProperty('total');
-        expect(Array.isArray(snapshots.files)).toBe(true);
-      } finally {
-        wsService.disconnect();
-      }
+      // Test snapshots list
+      const snapshotsResult = await wsFixture.testListSnapshots();
+      expect(snapshotsResult).toBe(true);
     });
   });
 
   describe('Performance Validation in CI/CD', () => {
     it('should validate performance targets in CI environment', async () => {
-      const wsService = createWebSocketService();
+      // Test status method performance
+      const statusStartTime = performance.now();
+      const pingResult = await wsFixture.testPing();
+      const statusTime = performance.now() - statusStartTime;
+      expect(pingResult).toBe(true);
+      expect(statusTime).toBeLessThan(50); // <50ms target
       
-      try {
-        await wsService.connect();
-        
-        // Test status method performance
-        const statusStartTime = performance.now();
-        await wsService.call('ping', {});
-        const statusTime = performance.now() - statusStartTime;
-        expect(statusTime).toBeLessThan(50); // <50ms target
-        
-        // Test control method performance
-        const cameraList = await wsService.call('get_camera_list', {}, true);
-        if (cameraList.cameras.length > 0) {
-          const controlStartTime = performance.now();
-          try {
-            await wsService.call('take_snapshot', { device: cameraList.cameras[0].device }, true);
-          } catch (error) {
-            // Expected for some cameras
-          }
-          const controlTime = performance.now() - controlStartTime;
-          expect(controlTime).toBeLessThan(100); // <100ms target
-        }
-      } finally {
-        wsService.disconnect();
-      }
+      // Test control method performance
+      const controlStartTime = performance.now();
+      const snapshotResult = await wsFixture.testSnapshot();
+      const controlTime = performance.now() - controlStartTime;
+      expect(snapshotResult).toBe(true);
+      expect(controlTime).toBeLessThan(100); // <100ms target
     });
   });
 
   describe('Error Handling and Recovery', () => {
-    it('should handle server unavailability gracefully', async () => {
-      // Test with invalid endpoint
-      const invalidWsService = createWebSocketService();
-      
-      try {
-        await expect(invalidWsService.connect()).rejects.toThrow();
-      } finally {
-        invalidWsService.disconnect();
-      }
+    it('should handle connection failures gracefully', async () => {
+      // Test connection error handling
+      const errorResult = await wsFixture.testConnectionError();
+      expect(errorResult).toBe(true);
     });
 
-    it('should handle connection failures and recovery', async () => {
-      const wsService = createWebSocketService();
-      
-      try {
-        await wsService.connect();
-        expect(wsService.isConnected()).toBe(true);
-        
-        // Simulate connection failure
-        wsService.disconnect();
-        expect(wsService.isConnected()).toBe(false);
-        
-        // Test recovery
-        await wsService.connect();
-        expect(wsService.isConnected()).toBe(true);
-      } finally {
-        wsService.disconnect();
-      }
+    it('should validate recovery mechanisms', async () => {
+      // Test recovery from connection failures
+      const recoveryResult = await wsFixture.testConnectionRecovery();
+      expect(recoveryResult).toBe(true);
+    });
+  });
+
+  describe('Authentication and Security', () => {
+    it('should validate authentication requirements', async () => {
+      // Test authentication flow
+      const authResult = await wsFixture.testAuthentication();
+      expect(authResult).toBe(true);
+    });
+
+    it('should validate unauthorized access blocking', async () => {
+      // Test unauthorized access blocking
+      const unauthorizedResult = await wsFixture.testUnauthorizedAccess();
+      expect(unauthorizedResult).toBe(true);
     });
   });
 });
 
-/**
- * Check systemd service status
- */
+// Helper functions for CI/CD validation
 async function checkSystemdServiceStatus(): Promise<boolean> {
   try {
-    // In CI environment, we can't directly check systemd
-    // Instead, check if the service is accessible via API
-    const TEST_API_URL = process.env.TEST_API_URL || 'http://localhost:8002';
-    const response = await fetch(`${TEST_API_URL}/health`);
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check health endpoint
- */
-async function checkHealthEndpoint(): Promise<boolean> {
-  try {
-    const TEST_HEALTH_URL = process.env.TEST_HEALTH_URL || 'http://localhost:8003';
-    const response = await fetch(`${TEST_HEALTH_URL}/health/system`);
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check WebSocket endpoint
- */
-async function checkWebSocketEndpoint(): Promise<boolean> {
-  try {
-    const TEST_WEBSOCKET_URL = process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws';
-    const ws = new WebSocket(TEST_WEBSOCKET_URL);
-    
+    const { exec } = require('child_process');
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ws.close();
-        resolve(false);
-      }, 3000);
-
-      ws.onopen = () => {
-        clearTimeout(timeout);
-        ws.close();
-        resolve(true);
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        resolve(false);
-      };
+      exec('systemctl is-active --quiet mediamtx-camera-service', (error: any) => {
+        resolve(!error);
+      });
     });
   } catch {
     return false;
   }
 }
 
-/**
- * Perform connectivity checks
- */
 async function performConnectivityChecks(): Promise<{
   apiEndpoint: boolean;
   websocketEndpoint: boolean;
   rtspEndpoint: boolean;
 }> {
-  const apiEndpoint = await checkHealthEndpoint();
-  const websocketEndpoint = await checkWebSocketEndpoint();
-  
-  // Check RTSP endpoint (MediaMTX default port)
-  let rtspEndpoint = false;
   try {
-    const response = await fetch('http://localhost:8554');
-    rtspEndpoint = response.status === 404; // 404 is expected for RTSP endpoint
+    const { exec } = require('child_process');
+    
+    const checkPort = (port: number): Promise<boolean> => {
+      return new Promise((resolve) => {
+        exec(`nc -z localhost ${port}`, (error: any) => {
+          resolve(!error);
+        });
+      });
+    };
+
+    const [apiEndpoint, websocketEndpoint, rtspEndpoint] = await Promise.all([
+      checkPort(8003), // Health server
+      checkPort(8002), // WebSocket server
+      checkPort(8554)  // RTSP server
+    ]);
+
+    return { apiEndpoint, websocketEndpoint, rtspEndpoint };
   } catch {
-    rtspEndpoint = false;
+    return { apiEndpoint: false, websocketEndpoint: false, rtspEndpoint: false };
   }
-  
-  return {
-    apiEndpoint,
-    websocketEndpoint,
-    rtspEndpoint,
-  };
 }
 
-/**
- * Verify server readiness
- */
 async function verifyServerReadiness(): Promise<boolean> {
-  const healthCheck = await checkHealthEndpoint();
-  const websocketCheck = await checkWebSocketEndpoint();
-  
-  return healthCheck && websocketCheck;
+  try {
+    const healthResult = await healthFixture.testHealthEndpoint();
+    const wsResult = await wsFixture.testConnection();
+    return healthResult && wsResult;
+  } catch {
+    return false;
+  }
 }
 
-/**
- * Execute client integration tests
- */
 async function executeClientIntegrationTests(): Promise<boolean> {
-  // This would typically run the actual integration test suite
-  // For now, we'll simulate a successful test run
-  return true;
+  try {
+    // Test core functionality
+    const pingResult = await wsFixture.testPing();
+    const cameraListResult = await wsFixture.testCameraList();
+    const cameraStatusResult = await wsFixture.testCameraStatus();
+    
+    return pingResult && cameraListResult && cameraStatusResult;
+  } catch {
+    return false;
+  }
 }
 
-/**
- * Setup test state
- */
 async function setupTestState(): Promise<{ initialized: boolean }> {
-  // Initialize test environment
-  // This could include setting up test cameras, clearing test data, etc.
-  return { initialized: true };
+  try {
+    await wsFixture.initialize();
+    return { initialized: true };
+  } catch {
+    return { initialized: false };
+  }
 }
 
-/**
- * Execute isolated tests
- */
 async function executeIsolatedTests(): Promise<{ success: boolean }> {
-  // Execute tests in isolation
-  // This ensures tests don't interfere with each other
-  return { success: true };
+  try {
+    const pingResult = await wsFixture.testPing();
+    return { success: pingResult };
+  } catch {
+    return { success: false };
+  }
 }
 
-/**
- * Cleanup test state
- */
 async function cleanupTestState(): Promise<{ cleaned: boolean }> {
-  // Clean up test environment
-  // This could include removing test files, resetting state, etc.
-  return { cleaned: true };
+  try {
+    wsFixture.cleanup();
+    return { cleaned: true };
+  } catch {
+    return { cleaned: false };
+  }
 }

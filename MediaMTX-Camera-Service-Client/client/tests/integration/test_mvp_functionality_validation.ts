@@ -144,15 +144,12 @@ describe('REQ-MVP01: MVP Functionality Validation', () => {
     // Authenticate the WebSocket connection
     console.log('Authenticating WebSocket connection...');
     const token = generateValidToken('mvp_test_user', 'operator');
-    const authParams = {
-      token: token,
-      auth_type: 'jwt'
-    } as Record<string, unknown>;
     
     try {
-          // Authentication is handled by including auth_token in parameters, not by calling authenticate method
-    // The authService.login() call in beforeEach handles authentication setup
-    console.log('Authentication setup completed in beforeEach');
+      // Call the authenticate method explicitly
+      const authResult = await wsService.call('authenticate', { token: token });
+      expect(authResult.authenticated).toBe(true);
+      console.log('Authentication completed successfully');
     } catch (error) {
       console.error('Authentication failed:', error);
       throw new Error(`Authentication required for REQ-MVP01 validation: ${error}`);
