@@ -33,10 +33,54 @@ from src.camera_discovery.hybrid_monitor import (
     CameraEventData,
     CameraDevice,
 )
-from src.camera_service.service_manager import ServiceManager
+from src.camera_service.service_manager import ServiceManager as BaseServiceManager
 from src.websocket_server.server import WebSocketJsonRpcServer
 from src.mediamtx_wrapper.controller import MediaMTXController
 from src.camera_service.config import Config
+from src.camera_service.service_manager import get_correlation_id
+
+
+class TestServiceManager(BaseServiceManager):
+    """Custom service manager for testing with different health server port."""
+    
+    async def _start_health_server(self) -> None:
+        """Start the health server component with custom port."""
+        correlation_id = get_correlation_id()
+        self._logger.debug(
+            "Starting health server with custom port",
+            extra={"correlation_id": correlation_id},
+        )
+
+        try:
+            from health_server import HealthServer
+            
+            # Use custom port to avoid conflicts with real service
+            self._health_server = HealthServer(
+                host="0.0.0.0", 
+                port=9003,  # Use different port to avoid conflict with real service (8003)
+                recordings_path=self._config.mediamtx.recordings_path,
+                snapshots_path=self._config.mediamtx.snapshots_path
+            )
+            
+            # Set component references for health checks
+            if self._mediamtx_controller:
+                self._health_server.set_mediamtx_controller(self._mediamtx_controller)
+            if self._camera_monitor:
+                self._health_server.set_camera_monitor(self._camera_monitor)
+            self._health_server.set_service_manager(self)
+            
+            await self._health_server.start()
+            self._logger.info(
+                f"Health server started on 0.0.0.0:9003",
+                extra={"correlation_id": correlation_id}
+            )
+
+        except Exception as e:
+            self._logger.error(
+                f"Failed to start health server: {e}",
+                extra={"correlation_id": correlation_id},
+            )
+            raise
 
 
 class TestCameraDisconnectHandlingReal:
@@ -68,6 +112,7 @@ class TestCameraDisconnectHandlingReal:
         config.camera.poll_interval = 1.0
         config.camera.detection_timeout = 2.0
         config.camera.enable_capability_detection = True
+        
         return config
 
     @pytest.fixture
@@ -97,7 +142,7 @@ class TestCameraDisconnectHandlingReal:
     @pytest.fixture
     def real_service_manager(self, real_config):
         """Create real service manager for testing."""
-        return ServiceManager(real_config)
+        return TestServiceManager(real_config)
 
     @pytest.fixture
     def real_hybrid_monitor(self, real_config):
