@@ -45,12 +45,24 @@ class TestCameraDisconnectHandlingReal:
     @pytest.fixture
     def real_config(self):
         """Create real configuration for testing."""
+        import tempfile
+        import os
+        
+        # Create temporary directories for testing
+        temp_dir = tempfile.mkdtemp(prefix="disconnect_test_")
+        recordings_dir = os.path.join(temp_dir, "recordings")
+        snapshots_dir = os.path.join(temp_dir, "snapshots")
+        os.makedirs(recordings_dir, exist_ok=True)
+        os.makedirs(snapshots_dir, exist_ok=True)
+        
         config = Config()
         config.mediamtx.host = "localhost"
-        config.mediamtx.api_port = 9997
-        config.mediamtx.rtsp_port = 8554
+        config.mediamtx.api_port = 9997  # Use real MediaMTX service
+        config.mediamtx.rtsp_port = 8554  # Use real MediaMTX service
+        config.mediamtx.recordings_path = recordings_dir  # Use temporary directory
+        config.mediamtx.snapshots_path = snapshots_dir    # Use temporary directory
         config.server.host = "localhost"
-        config.server.port = 8002
+        config.server.port = 9002  # Use different port to avoid conflict with real service (8002)
         config.server.websocket_path = "/ws"
         config.camera.device_range = [0, 1, 2, 3]
         config.camera.poll_interval = 1.0
@@ -59,7 +71,7 @@ class TestCameraDisconnectHandlingReal:
         return config
 
     @pytest.fixture
-    def real_mediamtx_controller(self):
+    def real_mediamtx_controller(self, real_config):
         """Create real MediaMTX controller using systemd-managed service."""
         return MediaMTXController(
             host="localhost",
@@ -68,8 +80,8 @@ class TestCameraDisconnectHandlingReal:
             webrtc_port=8889,
             hls_port=8888,
             config_path="/etc/mediamtx/mediamtx.yml",
-            recordings_path="/tmp/test_recordings",
-            snapshots_path="/tmp/test_snapshots",
+            recordings_path=real_config.mediamtx.recordings_path,  # Use config temporary directory
+            snapshots_path=real_config.mediamtx.snapshots_path,    # Use config temporary directory
         )
 
     @pytest.fixture
@@ -218,7 +230,7 @@ class TestCameraDisconnectHandlingReal:
             
             # Connect real WebSocket client
             import websockets
-            uri = f"ws://localhost:8002/ws"
+            uri = f"ws://localhost:9002/ws"
             
             async with websockets.connect(uri) as websocket:
                 # Subscribe to camera status updates

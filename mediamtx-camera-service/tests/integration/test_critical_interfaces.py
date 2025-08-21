@@ -52,7 +52,7 @@ from .test_auth_utilities import get_test_auth_manager, TestUserFactory, WebSock
 def build_test_config() -> Config:
     """Build test configuration for interface validation."""
     return Config(
-        server=ServerConfig(host="127.0.0.1", port=8002, websocket_path="/ws", max_connections=10),
+        server=ServerConfig(host="127.0.0.1", port=8004, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(
             host="127.0.0.1",
             api_port=9997,
