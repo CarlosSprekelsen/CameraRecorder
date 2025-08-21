@@ -1,12 +1,8 @@
-# Comprehensive Test Suite Audit Framework
-
-## Primary IV&V Audit Task
-
-```
 Your role: IV&V
 Ground rules: docs/development/project-ground-rules.md
 Role reference: docs/development/roles-responsibilities.md
 Task: Conduct comprehensive test suite audit to validate requirements traceability, test quality, and coverage completeness
+OUTPUT for artifacts: docs/development/test/
 
 AUDIT OBJECTIVES:
 1. Validate requirements traceability completion across all test files
@@ -17,12 +13,10 @@ AUDIT OBJECTIVES:
 
 AUDIT SCOPE: All test files in tests/ directory tree
 OUTPUT: Single comprehensive audit report with traceability matrix and issue inventory
-```
 
 ## Phase 1: Requirements Inventory and Baseline
 
 ### Task 1.1: Complete Requirements Discovery
-```
 REQUIREMENTS INVENTORY EXECUTION:
 1. Scan all documentation for requirements:
    - docs/architecture/ directory
@@ -46,10 +40,8 @@ REQUIREMENTS INVENTORY EXECUTION:
    - Source document reference
 
 OUTPUT: Complete requirements inventory (requirements_master_list.md)
-```
 
 ### Task 1.2: Test File Inventory and Classification
-```
 TEST INVENTORY EXECUTION:
 1. Scan entire tests/ directory structure:
    - tests/unit/ (all subdirectories)
@@ -75,12 +67,11 @@ TEST INVENTORY EXECUTION:
    - Test quality indicators
 
 OUTPUT: Complete test file inventory (test_files_inventory.md)
-```
 
 ## Phase 2: Requirements Traceability Analysis
 
 ### Task 2.1: Traceability Matrix Creation
-```
+
 TRACEABILITY MATRIX EXECUTION:
 1. Map each requirement to test files:
    - Scan all test files for REQ-* references in docstrings
@@ -127,12 +118,12 @@ COVERAGE GAP ANALYSIS:
    - LOW: Nice-to-have requirements with minimal coverage
 
 OUTPUT: Prioritized coverage gap analysis (coverage_gaps_analysis.md)
-```
+
 
 ## Phase 3: Test Quality Assessment
 
 ### Task 3.1: Individual Test File Analysis
-```
+
 TEST QUALITY ASSESSMENT PER FILE:
 For each test file, analyze:
 1. Requirements validation quality:
@@ -174,10 +165,9 @@ Recommendations:
 - Specific improvement needed
 - Additional test cases required
 - Mock reduction opportunities
-```
 
 ### Task 3.2: Test Suite Quality Metrics
-```
+
 QUALITY METRICS CALCULATION:
 1. Traceability completeness metrics:
    - % of tests with requirements references
@@ -204,12 +194,11 @@ QUALITY METRICS CALCULATION:
    - Test maintenance burden indicators
 
 OUTPUT: Comprehensive quality metrics dashboard (test_quality_metrics.md)
-```
 
 ## Phase 4: Issue Identification and Recommendations
 
 ### Task 4.1: Specific Issue Inventory
-```
+
 ISSUE IDENTIFICATION PER TEST FILE:
 Create detailed issue inventory with:
 1. Missing requirements traceability:

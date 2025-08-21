@@ -1,8 +1,8 @@
 # Server Test Guide - MediaMTX Camera Service
 
-**Version:** 3.0  
+**Version:** 4.0  
 **Date:** 2025-01-06  
-**Status:** Updated with baseline rebuild and tools reorganization  
+**Status:** Updated with strict structure guidelines and comprehensive markers section  
 
 ## 1. Core Principles
 
@@ -16,34 +16,142 @@
 **MOCK:** External APIs, time operations, expensive hardware simulation  
 **NEVER MOCK:** MediaMTX service, filesystem, internal WebSocket, JWT auth, config loading
 
-## 2. Test Organization
+## 2. Test Organization - STRICT STRUCTURE GUIDELINES
 
-### Directory Structure
+### Mandatory Directory Structure
 ```
 tests/
-├── unit/                    # <30 seconds total
-├── integration/             # <5 minutes total  
-├── fixtures/                # Shared utilities
-├── performance/             # Load tests
-├── tools/                   # Test runners and utilities
-│   ├── run_all_tests.py     # Comprehensive test automation
-│   ├── run_tests.py         # Basic test runner
-│   ├── run_individual_tests.py # Individual test execution
-│   ├── run_critical_error_tests.py # Critical error testing
-│   ├── run_integration_tests.py # Integration test runner
-│   ├── setup_test_environment.py # Environment setup
-│   ├── validate_test_environment.py # Environment validation
-│   └── README.md            # Tools documentation
-└── requirements/            # Requirements coverage mapping
+├── unit/                   # Unit tests (<30 seconds total)
+├── integration/            # Integration tests (<5 minutes total)
+├── security/              # Security tests
+├── performance/           # Performance and load tests
+├── health/                # Health monitoring tests
+├── fixtures/              # Shared test fixtures and utilities
+├── utils/                 # Test utilities and helpers
+└── tools/                 # Test runners and orchestration tools
 ```
 
-### File Rules
+### STRICT DIRECTORY RULES
+
+#### **PROHIBITED DIRECTORY CREATION**
+- **NO subdirectories** within main test directories (unit/, integration/, etc.)
+- **NO feature-specific directories** (e.g., test_camera_discovery/, test_websocket_server/)
+- **NO variant directories** (e.g., real/, mock/, v2/)
+- **NO temporary directories** (e.g., quarantine/, edge_cases/, e2e/)
+
+#### **MANDATORY FLAT STRUCTURE**
+- **All test files** must be directly in their primary directory
+- **File naming**: `test_<feature>_<aspect>.py` (e.g., `test_camera_discovery_enumeration.py`)
+- **Maximum 1 level** of test directory nesting
+
+#### **UTILITY DIRECTORY RULES**
+- **fixtures/**: Shared test fixtures, conftest.py files, common setup
+- **utils/**: Test utilities, helpers, mock factories
+- **tools/**: Test runners, orchestration scripts, automation tools
+
+#### **ENFORCEMENT**
+- **Violation**: Any new directory creation requires IV&V approval
+- **Migration**: Existing subdirectories must be flattened
+- **Documentation**: All structure changes must be documented
+
+### File Organization Rules
 - **One file per feature** - no variants (_real, _v2)
 - **REQ-* references required** in every test file docstring
 - **Shared utilities over duplication**
 - **Test tools in tests/tools/** - separate from actual test files
 
-## 3. Requirements Traceability
+## 3. Test Markers - COMPREHENSIVE CLASSIFICATION
+
+### Primary Classification (Test Level)
+```python
+@pytest.mark.unit          # Unit-level tests (<30s)
+@pytest.mark.integration   # Integration tests (<5min)
+@pytest.mark.security      # Security validation tests
+@pytest.mark.performance   # Performance and load tests
+@pytest.mark.health        # Health monitoring tests
+```
+
+### Secondary Classification (Test Characteristics)
+```python
+@pytest.mark.asyncio       # Async test functions
+@pytest.mark.timeout       # Tests with specific timeouts
+@pytest.mark.slow          # Long-running tests
+@pytest.mark.real_mediamtx # Requires real MediaMTX service
+@pytest.mark.real_websocket # Real WebSocket connections
+@pytest.mark.real_system   # Real system integration
+@pytest.mark.sudo_required # Requires elevated privileges
+```
+
+### Tertiary Classification (Test Scope)
+```python
+@pytest.mark.edge_case     # Edge case testing
+@pytest.mark.sanity        # Basic functionality validation
+@pytest.mark.hardware      # Hardware-dependent tests (mocked)
+@pytest.mark.network       # Network-dependent tests (mocked)
+```
+
+### Marker Usage Rules
+
+#### **MANDATORY MARKERS**
+- **Every test function** must have at least one primary marker
+- **Async tests** must include `@pytest.mark.asyncio`
+- **Real system tests** must include appropriate `real_*` marker
+
+#### **MARKER COMBINATIONS**
+```python
+# Standard unit test
+@pytest.mark.unit
+def test_feature_behavior():
+    pass
+
+# Async integration test with real system
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.real_mediamtx
+async def test_real_system_integration():
+    pass
+
+# Performance test with timeout
+@pytest.mark.performance
+@pytest.mark.timeout(300)
+def test_load_performance():
+    pass
+```
+
+#### **MARKER DEFINITION REQUIREMENTS**
+- **All markers** must be defined in `pytest.ini`
+- **No undefined markers** allowed in test files
+- **Clear descriptions** required for each marker
+- **Regular validation** of marker usage vs definition
+
+### Pytest Configuration Alignment
+```ini
+# pytest.ini markers section
+markers =
+    # Primary Classification
+    unit: unit-level tests
+    integration: integration-level tests
+    security: security-focused tests
+    performance: performance and load tests
+    health: health monitoring tests
+    
+    # Secondary Classification
+    asyncio: async test functions
+    timeout: tests with specific timeouts
+    slow: long-running tests
+    real_mediamtx: requires real MediaMTX service
+    real_websocket: real WebSocket connections
+    real_system: real system integration
+    sudo_required: requires elevated privileges
+    
+    # Tertiary Classification
+    edge_case: edge case testing
+    sanity: basic functionality validation
+    hardware: hardware-dependent tests (mocked)
+    network: network-dependent tests (mocked)
+```
+
+## 4. Requirements Traceability
 
 ### Mandatory Format for Test Files
 ```python
@@ -54,9 +162,10 @@ Requirements Coverage:
 - REQ-XXX-001: Requirement description
 - REQ-XXX-002: Additional requirement
 
-Test Categories: Unit/Integration
+Test Categories: Unit/Integration/Security/Performance/Health
 """
 
+@pytest.mark.unit
 def test_feature_behavior_req_xxx_001(self):
     """REQ-XXX-001: Specific requirement validation."""
     # Test that would FAIL if requirement violated
@@ -73,7 +182,7 @@ def test_feature_behavior_req_xxx_001(self):
 - **High Priority Requirements**: 67 requirements (85% covered)
 - **Overall Coverage**: 85% (137/161 requirements)
 
-## 4. Test Tools and Runners
+## 5. Test Tools and Runners
 
 ### Test Tools Location
 All test runners and utilities are located in `tests/tools/`:
@@ -103,25 +212,19 @@ python3 tests/tools/run_all_tests.py
 python3 tests/tools/run_critical_error_tests.py
 ```
 
-## 5. Performance Targets
+## 6. Performance Targets
 
 - **Unit tests:** <30 seconds total
 - **Integration tests:** <5 minutes total  
 - **Full suite:** <10 minutes total
 - **Flaky rate:** <1%
 
-### Test Markers
-```python
-@pytest.mark.unit          # Fast isolated tests
-@pytest.mark.integration   # Real component integration
-@pytest.mark.real_mediamtx # Requires systemd MediaMTX
-@pytest.mark.performance   # Load/performance tests
-```
-
-## 6. Standard Patterns
+## 7. Standard Patterns
 
 ### MediaMTX Integration
 ```python
+@pytest.mark.integration
+@pytest.mark.asyncio
 @pytest.mark.real_mediamtx
 async def test_stream_creation():
     controller = MediaMTXController("http://localhost:9997")
@@ -131,6 +234,8 @@ async def test_stream_creation():
 
 ### Authentication Testing
 ```python
+@pytest.mark.security
+@pytest.mark.asyncio
 async def test_valid_auth():
     token = generate_valid_test_token("test_user", "operator")
     # Test with real JWT token
@@ -138,7 +243,7 @@ async def test_valid_auth():
 
 **Note**: Source `.test_env` before running tests to provide JWT token environment variables.
 
-## 7. Quality Assurance
+## 8. Quality Assurance
 
 ### Requirements Coverage Monitoring
 - **Baseline**: 161 requirements (frozen ground truth)
@@ -156,11 +261,11 @@ async def test_valid_auth():
 2. **Phase 2**: Complete API method coverage (HIGH)
 3. **Phase 3**: Add notification testing (HIGH)
 
-## 8. Documentation Standards
+## 9. Documentation Standards
 
 ### Test File Documentation
 - **Requirements Coverage**: Mandatory in every test file docstring
-- **Test Categories**: Unit/Integration/Performance
+- **Test Categories**: Unit/Integration/Security/Performance/Health
 - **Real Component Usage**: Document when real components are used
 
 ### Tool Documentation
@@ -173,19 +278,23 @@ async def test_valid_auth():
 - **Updates**: After major test changes
 - **Focus**: Critical and high-priority requirements gaps
 
-## 9. Compliance and Validation
+## 10. Compliance and Validation
 
 ### Testing Guide Compliance
 - **Test Files**: Must follow requirements traceability format
 - **Test Tools**: Must follow script conventions (no requirements coverage)
 - **Coverage Analysis**: Must be updated after major changes
+- **Directory Structure**: Must follow strict structure guidelines
+- **Markers**: Must be properly defined and used
 
 ### Quality Gates
 - **Critical Requirements**: 100% coverage required
 - **High Priority Requirements**: 95% coverage required
 - **Overall Coverage**: 90% coverage required
 - **Performance Testing**: Must be implemented for critical requirements
+- **Structure Compliance**: No unauthorized directory creation
+- **Marker Compliance**: All markers defined and properly used
 
 ---
 
-**Status**: **UPDATED** - Reflects baseline rebuild, tools reorganization, and comprehensive coverage analysis approach.
+**Status**: **UPDATED** - Reflects strict structure guidelines, comprehensive markers section, and enhanced compliance requirements.
