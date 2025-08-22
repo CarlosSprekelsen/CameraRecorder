@@ -136,9 +136,20 @@ async def test_req_svc_api_cam_list_001_get_camera_list_structure():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Create test user for authentication
+            auth_manager = get_test_auth_manager()
+            user_factory = TestUserFactory(auth_manager)
+            test_user = user_factory.create_operator_user("service_manager_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc": "2.0", "id": 2, "method": "get_camera_list"}))
+                # Send get_camera_list with authentication
+                await ws.send(json.dumps({
+                    "jsonrpc": "2.0", 
+                    "id": 2, 
+                    "method": "get_camera_list",
+                    "params": {"auth_token": test_user["token"]}
+                }))
                 resp = json.loads(await ws.recv())
                 assert isinstance(resp.get("result"), dict)
                 assert "cameras" in resp["result"]
