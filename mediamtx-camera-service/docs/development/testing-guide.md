@@ -11,6 +11,7 @@
 - **File System:** Use `tempfile`, never mock
 - **WebSocket:** Use real connections within system
 - **Authentication:** Use real JWT tokens with test secrets
+- **API Keys:** Use test-accessible storage location (`/tmp/test_api_keys.json`)
 
 ### Strategic Mocking Rules
 **MOCK:** External APIs, time operations, expensive hardware simulation  
@@ -241,7 +242,28 @@ async def test_valid_auth():
     # Test with real JWT token
 ```
 
-**Note**: Source `.test_env` before running tests to provide JWT token environment variables.
+**Note**: Source `.test_env` before running tests to provide JWT token and API key storage environment variables.
+
+### Test Environment Configuration
+**CRITICAL**: Always source the test environment before running tests:
+```bash
+source .test_env
+```
+
+**Required Environment Variables:**
+- `CAMERA_SERVICE_JWT_SECRET`: Test JWT secret for authentication
+- `CAMERA_SERVICE_API_KEYS_PATH`: Test API key storage location (`/tmp/test_api_keys.json`)
+
+**Why This Matters:**
+- Tests run as regular user, not `camera-service` user
+- Production API key storage (`/opt/camera-service/keys/`) requires elevated permissions
+- Test environment redirects to user-accessible location (`/tmp/`)
+- Without this configuration, 90% of tests will fail with authentication errors
+
+**Deployment Script Protection:**
+- ✅ **`deploy.sh`**: Modified to preserve `CAMERA_SERVICE_API_KEYS_PATH` when updating JWT secrets
+- ✅ **`setup_test_environment.py`**: Modified to include `CAMERA_SERVICE_API_KEYS_PATH` in generated files
+- ✅ **Test Environment**: Automatically maintained across deployments
 
 ## 8. Quality Assurance
 

@@ -947,8 +947,12 @@ class ServiceManager(CameraEventHandler):
 
             # Start camera monitoring
             await self._camera_monitor.start()
+            
+            # Wait for initial camera discovery to complete
+            await self._wait_for_camera_discovery_initialization()
+            
             self._logger.info(
-                "Camera discovery monitor started",
+                "Camera discovery monitor started and initialized",
                 extra={"correlation_id": correlation_id},
             )
 
@@ -958,6 +962,59 @@ class ServiceManager(CameraEventHandler):
                 extra={"correlation_id": correlation_id},
             )
             raise
+
+    async def _wait_for_camera_discovery_initialization(self) -> None:
+        """Wait for camera discovery monitor to complete initial discovery cycle."""
+        correlation_id = get_correlation_id()
+        self._logger.debug(
+            "Waiting for camera discovery initialization",
+            extra={"correlation_id": correlation_id},
+        )
+
+        max_wait_time = 10.0  # Maximum 10 seconds to wait
+        check_interval = 0.5   # Check every 500ms
+        start_time = asyncio.get_event_loop().time()
+
+        while (asyncio.get_event_loop().time() - start_time) < max_wait_time:
+            try:
+                # Get health status from camera monitor
+                health_status = await self._camera_monitor.health_check()
+                
+                # Check if camera monitor has completed at least one discovery cycle
+                if health_status.get('stats', {}).get('polling_cycles', 0) > 0:
+                    self._logger.info(
+                        f"Camera discovery initialized after {health_status['stats']['polling_cycles']} polling cycles",
+                        extra={"correlation_id": correlation_id},
+                    )
+                    return
+                
+                # Also check if any cameras have been discovered
+                if health_status.get('connected_devices', 0) > 0:
+                    self._logger.info(
+                        f"Camera discovery initialized with {health_status['connected_devices']} cameras found",
+                        extra={"correlation_id": correlation_id},
+                    )
+                    return
+                
+                # Force a discovery cycle if none have been completed yet
+                if health_status.get('stats', {}).get('polling_cycles', 0) == 0:
+                    self._logger.debug("Forcing initial discovery cycle")
+                    await self._camera_monitor.force_discovery_cycle()
+                
+                await asyncio.sleep(check_interval)
+                
+            except Exception as e:
+                self._logger.warning(
+                    f"Error during camera discovery initialization check: {e}",
+                    extra={"correlation_id": correlation_id},
+                )
+                await asyncio.sleep(check_interval)
+
+        # If we reach here, initialization timed out but we continue
+        self._logger.warning(
+            "Camera discovery initialization timed out, continuing anyway",
+            extra={"correlation_id": correlation_id},
+        )
 
     async def _start_health_monitor(self) -> None:
         """Start the health monitoring component."""

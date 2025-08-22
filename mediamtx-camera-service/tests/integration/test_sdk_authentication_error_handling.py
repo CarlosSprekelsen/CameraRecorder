@@ -1,7 +1,7 @@
 """
 Integration test for Python SDK authentication error handling.
 
-Requirements Traceability:
+Requirements Coverage:
 - REQ-SDK-003: SDK shall handle errors gracefully
 - REQ-AUTH-001: Authentication shall work with JWT tokens
 - REQ-AUTH-002: Authentication shall work with API keys

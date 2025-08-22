@@ -331,9 +331,9 @@ class RealAuthTestBase:
 class WebSocketAuthTestClient:
     """Real WebSocket client for authentication testing."""
     
-    def __init__(self, websocket_url: str, auth_manager: AuthManager):
+    def __init__(self, websocket_url: str, test_user: Dict[str, Any]):
         self.websocket_url = websocket_url
-        self.auth_manager = auth_manager
+        self.test_user = test_user
         self.websocket = None
         self.request_id = 1
     
@@ -348,10 +348,14 @@ class WebSocketAuthTestClient:
             await self.websocket.close()
             self.websocket = None
     
-    async def authenticate(self, token: str) -> Dict[str, Any]:
+    async def authenticate(self, token: str = None) -> Dict[str, Any]:
         """Authenticate with WebSocket server using real JWT token."""
         if not self.websocket:
             raise ConnectionError("WebSocket not connected")
+        
+        # Use test user's token if no token provided
+        if token is None:
+            token = self.test_user["token"]
         
         request = {
             "jsonrpc": "2.0",
@@ -367,19 +371,24 @@ class WebSocketAuthTestClient:
         response = await self.websocket.recv()
         return json.loads(response)
     
-    async def call_protected_method(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
-        """Call a protected method on WebSocket server."""
+    async def send_request(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+        """Send JSON-RPC request with authentication."""
         if not self.websocket:
             raise ConnectionError("WebSocket not connected")
+        
+        # Include authentication token in params
+        if params is None:
+            params = {}
+        
+        # Add auth token to params
+        params["auth_token"] = self.test_user["token"]
         
         request = {
             "jsonrpc": "2.0",
             "method": method,
+            "params": params,
             "id": self.request_id
         }
-        
-        if params:
-            request["params"] = params
         
         self.request_id += 1
         
@@ -387,3 +396,7 @@ class WebSocketAuthTestClient:
         await self.websocket.send(json.dumps(request))
         response = await self.websocket.recv()
         return json.loads(response)
+    
+    async def call_protected_method(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+        """Call a protected method on WebSocket server."""
+        return await self.send_request(method, params)

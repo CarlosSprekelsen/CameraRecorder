@@ -68,19 +68,21 @@ class TestSystemIntegration:
     @pytest.fixture
     def integration_config(self, temp_test_directory) -> Config:
         """Create integration test configuration."""
+        from tests.utils.port_utils import find_free_port
+        
         return Config(
             server=ServerConfig(
                 host="127.0.0.1",
-                port=8002,
+                port=find_free_port(),  # Dynamic port to avoid conflicts
                 websocket_path="/ws",
                 max_connections=10
             ),
             mediamtx=MediaMTXConfig(
                 host="127.0.0.1",
-                api_port=9997,
-                rtsp_port=8554,
-                webrtc_port=8889,
-                hls_port=8888,
+                api_port=9997,  # Fixed systemd service port
+                rtsp_port=8554,  # Fixed systemd service port
+                webrtc_port=8889,  # Fixed systemd service port
+                hls_port=8888,  # Fixed systemd service port
                 config_path=os.path.join(temp_test_directory, "mediamtx.yml"),
                 recordings_path=os.path.join(temp_test_directory, "recordings"),
                 snapshots_path=os.path.join(temp_test_directory, "snapshots"),
@@ -89,7 +91,8 @@ class TestSystemIntegration:
                 device_range=[0, 1, 2],
                 enable_capability_detection=True,
                 detection_timeout=2.0
-            )
+            ),
+            health_port=find_free_port(),  # Dynamic health port to avoid conflicts
         )
 
     @pytest.fixture

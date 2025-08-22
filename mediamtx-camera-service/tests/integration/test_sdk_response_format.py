@@ -1,7 +1,7 @@
 """
 Integration test for SDK response format handling.
 
-Requirements Traceability:
+Requirements Coverage:
 - REQ-SDK-001: SDK shall provide high-level client interface
 - REQ-SDK-003: SDK shall handle errors gracefully
 

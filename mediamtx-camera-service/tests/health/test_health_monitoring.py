@@ -5,11 +5,11 @@ Health monitoring test suite for MediaMTX Camera Service.
 Requirements Coverage:
 - REQ-HEALTH-005: The system SHALL provide health status with detailed component information
 - REQ-HEALTH-006: The system SHALL support Kubernetes readiness probes
-- REQ-API-017: Health endpoints SHALL return JSON responses with status and timestamp
-- REQ-API-018: Health endpoints SHALL return 200 OK for healthy status
-- REQ-API-019: Health endpoints SHALL return 500 Internal Server Error for unhealthy status
+- REQ-API-031: The system SHALL provide HTTP file download endpoints for secure file access
+- REQ-API-032: The system SHALL implement comprehensive file metadata tracking and retrieval
+- REQ-API-033: The system SHALL implement real-time storage space monitoring and alerts
 
-Test Categories: Health
+Test Categories: Health, File Management
 """
 
 import asyncio
@@ -347,7 +347,7 @@ async def test_kubernetes_readiness_probes():
 @pytest.mark.health
 @pytest.mark.asyncio
 async def test_health_endpoint_json_responses():
-    """Test REQ-API-017: Health endpoints return JSON responses with status and timestamp."""
+    """Test REQ-API-031: Health endpoints return JSON responses with status and timestamp."""
     print("\n=== Health Test: JSON Response Format ===")
     
     setup = HealthTestSetup()
@@ -372,7 +372,7 @@ async def test_health_endpoint_json_responses():
             result = await health_tester.test_health_endpoint(endpoint)
             json_validation_results[endpoint] = result
             
-            # REQ-API-017: JSON responses with status and timestamp
+            # REQ-API-031: JSON responses with status and timestamp
             if result["success"]:
                 print(f"   ✅ {endpoint}: {result['status_code']}")
                 
@@ -426,7 +426,7 @@ async def test_health_endpoint_json_responses():
         # At least system health should work
         assert json_validation_results["system"]["success"], "System health endpoint not working"
         
-        print(f"✅ REQ-API-017: JSON response format validated")
+        print(f"✅ REQ-API-031: JSON response format validated")
         return json_validation_results
         
     finally:
@@ -436,7 +436,7 @@ async def test_health_endpoint_json_responses():
 @pytest.mark.health
 @pytest.mark.asyncio
 async def test_health_endpoint_200_ok():
-    """Test REQ-API-018: Health endpoints return 200 OK for healthy status."""
+    """Test REQ-API-032: Health endpoints return 200 OK for healthy status."""
     print("\n=== Health Test: 200 OK Response ===")
     
     setup = HealthTestSetup()
@@ -461,7 +461,7 @@ async def test_health_endpoint_200_ok():
             result = await health_tester.test_health_endpoint(endpoint)
             ok_response_results[endpoint] = result
             
-            # REQ-API-018: 200 OK for healthy status
+            # REQ-API-032: 200 OK for healthy status
             if result["success"]:
                 status_code = result["status_code"]
                 print(f"   ✅ {endpoint}: {status_code}")
@@ -487,7 +487,7 @@ async def test_health_endpoint_200_ok():
         assert ok_response_results["system"]["success"], "System health endpoint not returning 200 OK"
         assert ok_response_results["system"]["status_code"] == 200, "System health not returning 200 OK"
         
-        print(f"✅ REQ-API-018: 200 OK response validated")
+        print(f"✅ REQ-API-032: 200 OK response validated")
         return ok_response_results
         
     finally:
@@ -601,7 +601,7 @@ class IsolatedHealthTestSetup:
 @pytest.mark.health
 @pytest.mark.asyncio
 async def test_health_endpoint_500_error():
-    """Test REQ-API-019: Health endpoints return 500 Internal Server Error for unhealthy status."""
+    """Test REQ-API-033: Health endpoints return 500 Internal Server Error for unhealthy status."""
     print("\n=== Health Test: 500 Error Response ===")
     
     setup = IsolatedHealthTestSetup()
@@ -646,7 +646,7 @@ async def test_health_endpoint_500_error():
             result = await health_tester.test_health_endpoint(endpoint)
             error_response_results[endpoint] = result
             
-            # REQ-API-019: 500 Internal Server Error for unhealthy status
+            # REQ-API-033: 500 Internal Server Error for unhealthy status
             if result["status_code"] == 500:
                 print(f"   ✅ {endpoint}: 500 Internal Server Error (expected)")
                 
@@ -686,7 +686,7 @@ async def test_health_endpoint_500_error():
         error_responses = [r for r in error_response_results.values() if r["status_code"] == 500]
         assert len(error_responses) > 0, "No health endpoints returned 500 error during unhealthy state"
         
-        print(f"✅ REQ-API-019: 500 error response validated")
+        print(f"✅ REQ-API-033: 500 error response validated")
         return error_response_results
         
     finally:

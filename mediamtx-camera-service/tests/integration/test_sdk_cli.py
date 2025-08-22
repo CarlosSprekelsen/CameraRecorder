@@ -1,5 +1,8 @@
 """
 Integration test for Python SDK CLI functionality.
+
+Requirements Coverage:
+- REQ-CLIENT-044: Command-line interface for camera operations
 """
 
 import pytest

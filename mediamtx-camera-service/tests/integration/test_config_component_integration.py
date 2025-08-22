@@ -17,8 +17,9 @@ Replaces smoke/instantiation-only checks with tests that:
 
 import pytest
 
-from src.camera_service.config import ConfigManager
+from src.camera_service.config import ConfigManager, Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
 from src.camera_service.service_manager import ServiceManager
+from tests.utils.port_utils import find_free_port
 
 
 class TestConfigurationComponentIntegration:
@@ -27,18 +28,6 @@ class TestConfigurationComponentIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_stream_creation_uses_configured_endpoints_on_connect(self, temp_test_dir):
-        # Skip if service is already running on port 8003
-        try:
-            import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex(('127.0.0.1', 8003))
-            sock.close()
-            
-            if result == 0:
-                pytest.skip("Service already running on port 8003, skipping test to avoid port conflict")
-        except Exception:
-            pass
         """
         Req: S5-STREAM-ADD-001
         On camera CONNECTED, service must create MediaMTX path using configured host/ports.
@@ -53,10 +42,24 @@ class TestConfigurationComponentIntegration:
         os.makedirs(recordings_dir, exist_ok=True)
         os.makedirs(snapshots_dir, exist_ok=True)
         
-        # Create configuration with temporary directories
-        cfg = ConfigManager().load_config()
-        cfg.mediamtx.recordings_path = recordings_dir
-        cfg.mediamtx.snapshots_path = snapshots_dir
+        # Create configuration with temporary directories and dynamic ports
+        cfg = Config(
+            server=ServerConfig(host="127.0.0.1", port=find_free_port(), websocket_path="/ws", max_connections=10),
+            mediamtx=MediaMTXConfig(
+                host="127.0.0.1",
+                api_port=9997,  # Fixed systemd service port
+                rtsp_port=8554,  # Fixed systemd service port
+                webrtc_port=8889,  # Fixed systemd service port
+                hls_port=8888,  # Fixed systemd service port
+                recordings_path=recordings_dir,
+                snapshots_path=snapshots_dir,
+            ),
+            camera=CameraConfig(device_range=[0, 1, 2], enable_capability_detection=True, detection_timeout=0.5),
+            logging=LoggingConfig(),
+            recording=RecordingConfig(),
+            snapshots=SnapshotConfig(),
+            health_port=find_free_port(),  # Dynamic health port to avoid conflicts
+        )
         svc = ServiceManager(cfg)
 
         # Patch only external HTTP client
@@ -116,18 +119,6 @@ class TestConfigurationComponentIntegration:
     @pytest.mark.asyncio
     @pytest.mark.integration
     async def test_resilience_on_stream_creation_failure(self, temp_test_dir):
-        # Skip if service is already running on port 8003
-        try:
-            import socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex(('127.0.0.1', 8003))
-            sock.close()
-            
-            if result == 0:
-                pytest.skip("Service already running on port 8003, skipping test to avoid port conflict")
-        except Exception:
-            pass
         
         """
         Req: S5-RES-002
@@ -142,10 +133,24 @@ class TestConfigurationComponentIntegration:
         os.makedirs(recordings_dir, exist_ok=True)
         os.makedirs(snapshots_dir, exist_ok=True)
         
-        # Create configuration with temporary directories
-        cfg = ConfigManager().load_config()
-        cfg.mediamtx.recordings_path = recordings_dir
-        cfg.mediamtx.snapshots_path = snapshots_dir
+        # Create configuration with temporary directories and dynamic ports
+        cfg = Config(
+            server=ServerConfig(host="127.0.0.1", port=find_free_port(), websocket_path="/ws", max_connections=10),
+            mediamtx=MediaMTXConfig(
+                host="127.0.0.1",
+                api_port=9997,  # Fixed systemd service port
+                rtsp_port=8554,  # Fixed systemd service port
+                webrtc_port=8889,  # Fixed systemd service port
+                hls_port=8888,  # Fixed systemd service port
+                recordings_path=recordings_dir,
+                snapshots_path=snapshots_dir,
+            ),
+            camera=CameraConfig(device_range=[0, 1, 2], enable_capability_detection=True, detection_timeout=0.5),
+            logging=LoggingConfig(),
+            recording=RecordingConfig(),
+            snapshots=SnapshotConfig(),
+            health_port=find_free_port(),  # Dynamic health port to avoid conflicts
+        )
         svc = ServiceManager(cfg)
 
         with pytest.MonkeyPatch.context() as mp:

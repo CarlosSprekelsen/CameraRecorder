@@ -38,10 +38,11 @@ from src.camera_service.config import (
 from src.camera_service.service_manager import ServiceManager
 
 
+from tests.utils.port_utils import find_free_port
+
 def _free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+    """Get a free port for testing - using common port utility."""
+    return find_free_port()
 
 
 def _build_config(ws_port: int) -> Config:
@@ -61,6 +62,7 @@ def _build_config(ws_port: int) -> Config:
         logging=LoggingConfig(),
         recording=RecordingConfig(),
         snapshots=SnapshotConfig(),
+        health_port=find_free_port(),  # Dynamic health port to avoid conflicts
     )
 
 

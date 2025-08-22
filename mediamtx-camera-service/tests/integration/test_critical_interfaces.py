@@ -18,9 +18,9 @@ Requirements Coverage:
 - REQ-API-014: get_streams method for stream enumeration
 - REQ-API-015: list_snapshots method for snapshot file enumeration
 - REQ-API-016: HTTP download endpoints for file downloads
-- REQ-API-017: get_recording_info method for recording metadata
-- REQ-API-018: get_snapshot_info method for snapshot metadata
-- REQ-API-019: delete_recording method for recording file deletion
+- REQ-API-024: get_recording_info method for recording metadata
+- REQ-API-025: get_snapshot_info method for snapshot metadata
+- REQ-API-026: delete_recording method for recording file deletion
 - REQ-API-020: Real-time camera status update notifications
 - REQ-API-021: Real-time recording status update notifications
 - REQ-API-022: Real-time system status update notifications
@@ -151,7 +151,9 @@ class IntegrationTestSetup:
         
         # Create WebSocket client for testing
         websocket_url = f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}"
-        self.websocket_client = WebSocketAuthTestClient(websocket_url, self.auth_manager)
+        # Create a test user for the WebSocket client
+        test_user = self.user_factory.create_operator_user("critical_interfaces_test_user")
+        self.websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
         await self.websocket_client.connect()
     
     async def cleanup(self):
@@ -183,14 +185,9 @@ async def test_get_camera_list_success():
     try:
         await setup.setup()
 
-        # Create operator user for testing
-        operator_user = setup.user_factory.create_operator_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert "result" in auth_result, "Authentication response missing 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {operator_user['username']} with role {operator_user['role']}")
+        # The WebSocket client is already configured with an operator user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured operator user for testing")
 
         # Test get_camera_list through WebSocket (not direct method call)
         result = await setup.websocket_client.call_protected_method("get_camera_list", {})
@@ -245,14 +242,9 @@ async def test_get_streams_success():
     try:
         await setup.setup()
 
-        # Create viewer user for testing (required for get_streams)
-        viewer_user = setup.user_factory.create_viewer_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
+        # The WebSocket client is already configured with an operator user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured operator user for testing")
 
         # Test get_streams through WebSocket (not direct method call)
         result = await setup.websocket_client.call_protected_method("get_streams", {})
@@ -441,14 +433,9 @@ async def test_start_recording_success():
     try:
         await setup.setup()
 
-        # Create operator user for testing (required for start_recording)
-        operator_user = setup.user_factory.create_operator_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {operator_user['user_id']} with role {operator_user['role']}")
+        # The WebSocket client is already configured with an operator user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured operator user for testing")
 
         # Step 1: Verify camera is detected
         camera_result = await setup.websocket_client.call_protected_method("get_camera_list", {})

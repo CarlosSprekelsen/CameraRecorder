@@ -180,6 +180,10 @@ class HybridCameraMonitor:
         self._polling_failure_count = 0
         self._last_udev_event_time = 0.0
         self._udev_event_freshness_threshold = 5.0  # 5s freshness window
+        
+        # Ensure _current_polling_interval is always available for health checks
+        if not hasattr(self, '_current_polling_interval'):
+            self._current_polling_interval = poll_interval
 
         # Statistics and monitoring
         self._stats = {
@@ -2314,3 +2318,56 @@ class HybridCameraMonitor:
         """
         # Return a copy of known devices to avoid modification during iteration
         return self._known_devices.copy()
+
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Get health status of the camera monitor.
+        
+        Returns:
+            Dictionary containing health status information
+        """
+        # Ensure _current_polling_interval is available (defensive programming)
+        current_polling_interval = getattr(self, '_current_polling_interval', self._base_poll_interval)
+        
+        health_status = {
+            "status": "healthy" if self._running else "stopped",
+            "running": self._running,
+            "active_tasks": len(self._monitoring_tasks),
+            "known_devices": len(self._known_devices),
+            "connected_devices": len([d for d in self._known_devices.values() if d.status == "CONNECTED"]),
+            "stats": self._stats.copy(),
+            "device_range": self._device_range,
+            "polling_interval": current_polling_interval,
+            "udev_available": self._udev_available,
+        }
+        
+        # Add device details if any are known
+        if self._known_devices:
+            health_status["devices"] = {
+                device_path: {
+                    "status": device.status,
+                    "name": device.name,
+                }
+                for device_path, device in self._known_devices.items()
+            }
+        
+        return health_status
+
+    async def force_discovery_cycle(self) -> None:
+        """
+        Force an immediate discovery cycle for testing and debugging.
+        
+        This method can be used to trigger camera discovery without waiting
+        for the normal polling interval.
+        """
+        if not self._running:
+            self._logger.warning("Cannot force discovery cycle - monitor not running")
+            return
+            
+        self._logger.debug("Forcing immediate discovery cycle")
+        try:
+            await self._single_polling_cycle()
+            self._logger.debug("Forced discovery cycle completed")
+        except Exception as e:
+            self._logger.error(f"Error during forced discovery cycle: {e}")
+            raise

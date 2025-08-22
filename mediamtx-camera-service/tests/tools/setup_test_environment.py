@@ -68,6 +68,7 @@ def setup_test_environment():
 # This file should be sourced before running tests
 
 export CAMERA_SERVICE_JWT_SECRET="{jwt_secret}"
+export CAMERA_SERVICE_API_KEYS_PATH="/tmp/test_api_keys.json"
 export CAMERA_SERVICE_TEST_MODE="true"
 export CAMERA_SERVICE_DISABLE_HARDWARE="true"
 export CAMERA_SERVICE_RATE_RPM="1000"

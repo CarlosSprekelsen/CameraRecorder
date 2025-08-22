@@ -89,7 +89,15 @@ update_test_env() {
         
         # Update the JWT secret (escape special characters for sed)
         local escaped_secret=$(echo "$new_secret" | sed 's/[[\.*^$()+?{|]/\\&/g')
-        sed -i "s/export CAMERA_SERVICE_JWT_SECRET=.*/export CAMERA_SERVICE_JWT_SECRET=$escaped_secret/" "$TEST_ENV_FILE"
+        
+        # Check if API key path is already set
+        if grep -q "CAMERA_SERVICE_API_KEYS_PATH" "$TEST_ENV_FILE"; then
+            # Update JWT secret while preserving API key path
+            sed -i "s/export CAMERA_SERVICE_JWT_SECRET=.*/export CAMERA_SERVICE_JWT_SECRET=$escaped_secret/" "$TEST_ENV_FILE"
+        else
+            # Add API key path if it doesn't exist
+            sed -i "s/export CAMERA_SERVICE_JWT_SECRET=.*/export CAMERA_SERVICE_JWT_SECRET=$escaped_secret\nexport CAMERA_SERVICE_API_KEYS_PATH=\"\/tmp\/test_api_keys.json\"/" "$TEST_ENV_FILE"
+        fi
         
         # Verify the update was successful
         local updated_secret=$(grep "CAMERA_SERVICE_JWT_SECRET=" "$TEST_ENV_FILE" | cut -d'=' -f2)

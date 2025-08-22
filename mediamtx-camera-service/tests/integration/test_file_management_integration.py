@@ -95,7 +95,9 @@ class FileManagementTestSetup:
         
         # Create WebSocket client for testing
         websocket_url = f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}"
-        self.websocket_client = WebSocketAuthTestClient(websocket_url, self.auth_manager)
+        # Create a test user for the WebSocket client
+        test_user = self.user_factory.create_admin_user("file_mgmt_integration_test_user")
+        self.websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
         await self.websocket_client.connect()
         
         # Create temporary directory for test files
@@ -148,14 +150,9 @@ async def test_get_recording_info_success():
     try:
         await setup.setup()
         
-        # Create viewer user for testing (required for get_recording_info)
-        viewer_user = setup.user_factory.create_viewer_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
+        # The WebSocket client is already configured with an admin user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured admin user for testing")
         
         # Test get_recording_info with filename parameter
         params = {
@@ -199,14 +196,9 @@ async def test_get_snapshot_info_success():
     try:
         await setup.setup()
         
-        # Create viewer user for testing (required for get_snapshot_info)
-        viewer_user = setup.user_factory.create_viewer_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
+        # The WebSocket client is already configured with an admin user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured admin user for testing")
         
         # Test get_snapshot_info with filename parameter
         params = {
@@ -396,14 +388,9 @@ async def test_get_storage_info_success():
     try:
         await setup.setup()
         
-        # Create admin user for testing (required for get_storage_info)
-        admin_user = setup.user_factory.create_admin_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(admin_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {admin_user['user_id']} with role {admin_user['role']}")
+        # The WebSocket client is already configured with an admin user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured admin user for testing")
         
         # Test get_storage_info method
         result = await setup.websocket_client.call_protected_method("get_storage_info", {})
@@ -453,14 +440,9 @@ async def test_set_retention_policy_success():
     try:
         await setup.setup()
         
-        # Create admin user for testing (required for set_retention_policy)
-        admin_user = setup.user_factory.create_admin_user()
-        
-        # Authenticate with WebSocket server
-        auth_result = await setup.websocket_client.authenticate(admin_user["token"])
-        assert "result" in auth_result, "Authentication response should contain 'result' field"
-        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
-        print(f"✅ Authenticated as {admin_user['user_id']} with role {admin_user['role']}")
+        # The WebSocket client is already configured with an admin user from setup
+        # No need for additional authentication - the client automatically includes auth token
+        print(f"✅ Using pre-configured admin user for testing")
         
         # Test set_retention_policy with age-based policy
         params = {

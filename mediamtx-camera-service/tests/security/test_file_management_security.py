@@ -92,7 +92,9 @@ class FileManagementSecurityTestSetup:
         
         # Create WebSocket client for testing
         websocket_url = f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}"
-        self.websocket_client = WebSocketAuthTestClient(websocket_url, self.auth_manager)
+        # Create a test user for the WebSocket client
+        test_user = self.user_factory.create_admin_user("file_mgmt_security_test_user")
+        self.websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
         await self.websocket_client.connect()
         
         # Create temporary directory for test files
@@ -154,7 +156,7 @@ async def test_file_deletion_authentication_required():
             "filename": "test_recording.mp4"
         }
         
-        result = await setup.websocket_client.call_method("delete_recording", params)
+        result = await setup.websocket_client.send_request("delete_recording", params)
         
         # Should receive authentication error
         assert "error" in result, "Should receive error response for unauthenticated request"
@@ -162,7 +164,7 @@ async def test_file_deletion_authentication_required():
         print(f"✅ Success: delete_recording properly rejected unauthenticated request")
         
         # Test delete_snapshot without authentication
-        result = await setup.websocket_client.call_method("delete_snapshot", params)
+        result = await setup.websocket_client.send_request("delete_snapshot", params)
         
         # Should receive authentication error
         assert "error" in result, "Should receive error response for unauthenticated request"
@@ -502,7 +504,7 @@ async def test_file_metadata_access_control():
             "filename": "test_recording.mp4"
         }
         
-        result = await setup.websocket_client.call_method("get_recording_info", params)
+        result = await setup.websocket_client.send_request("get_recording_info", params)
         
         # Should receive authentication error
         assert "error" in result, "Should receive error response for unauthenticated request"
@@ -514,7 +516,7 @@ async def test_file_metadata_access_control():
             "filename": "test_snapshot.jpg"
         }
         
-        result = await setup.websocket_client.call_method("get_snapshot_info", params)
+        result = await setup.websocket_client.send_request("get_snapshot_info", params)
         
         # Should receive authentication error
         assert "error" in result, "Should receive error response for unauthenticated request"
@@ -561,7 +563,7 @@ async def test_file_management_comprehensive_security():
         for method in methods_to_test:
             params = {"filename": "test.mp4"} if "recording" in method or "snapshot" in method else {}
             
-            result = await setup.websocket_client.call_method(method, params)
+            result = await setup.websocket_client.send_request(method, params)
             
             # Should receive authentication error
             assert "error" in result, f"Should receive error for unauthenticated {method}"
