@@ -36,8 +36,7 @@ from src.camera_service.config import (
     SnapshotConfig,
 )
 from src.camera_service.service_manager import ServiceManager
-
-
+from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
 from tests.utils.port_utils import find_free_port
 
 def _free_port() -> int:
@@ -104,9 +103,20 @@ async def test_service_manager_lifecycle_req_tech_001():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Create test user for authentication
+            auth_manager = get_test_auth_manager()
+            user_factory = TestUserFactory(auth_manager)
+            test_user = user_factory.create_operator_user("service_manager_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ping", "params": {}}))
+                # Send ping with authentication
+                await ws.send(json.dumps({
+                    "jsonrpc": "2.0", 
+                    "id": 1, 
+                    "method": "ping", 
+                    "params": {"auth_token": test_user["token"]}
+                }))
                 resp = json.loads(await ws.recv())
                 assert "result" in resp
         finally:
