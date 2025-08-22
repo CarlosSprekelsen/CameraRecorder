@@ -230,11 +230,11 @@ class TestSDKResponseFormat:
         assert "bytes_sent" in stream_data
         
         # Verify field types
-        assert isinstance(camera_data.get("device"), str)
-        assert isinstance(camera_data.get("name"), str)
-        assert isinstance(camera_data.get("status"), str)
-        assert isinstance(camera_data.get("capabilities"), list)
-        assert camera_data.get("stream_url") is None or isinstance(camera_data.get("stream_url"), str)
+        assert isinstance(stream_data.get("name"), str)
+        assert isinstance(stream_data.get("source"), str)
+        assert isinstance(stream_data.get("ready"), bool)
+        assert isinstance(stream_data.get("readers"), int)
+        assert isinstance(stream_data.get("bytes_sent"), int)
     
     @pytest.mark.asyncio
     async def test_get_camera_list_response_metadata(self, client):

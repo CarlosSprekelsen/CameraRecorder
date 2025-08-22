@@ -67,6 +67,7 @@ class FileManagementTestSetup:
         self.config.server.port = find_free_port()
         self.config.server.host = "127.0.0.1"
         self.config.server.websocket_path = "/ws"
+        self.config.server.max_connections = 10
         
         # Create auth manager
         self.auth_manager = get_test_auth_manager()
@@ -78,7 +79,11 @@ class FileManagementTestSetup:
         self.server = WebSocketJsonRpcServer(
             host=self.config.server.host,
             port=self.config.server.port,
-            websocket_path=self.config.server.websocket_path
+            websocket_path=self.config.server.websocket_path,
+            max_connections=self.config.server.max_connections,
+            mediamtx_controller=None,
+            camera_monitor=None,
+            config=self.config
         )
         
         # Create and set security middleware
@@ -106,15 +111,6 @@ class FileManagementTestSetup:
         
         if self.server:
             await self.server.stop()
-        
-        if self.service_manager:
-            await self.service_manager.stop()
-        
-        if self.camera_monitor:
-            await self.camera_monitor.stop()
-        
-        if self.mediamtx_controller:
-            await self.mediamtx_controller.stop()
         
         # Clean up temporary files
         if self.temp_dir and os.path.exists(self.temp_dir):

@@ -59,9 +59,6 @@ class FileManagementSecurityTestSetup:
         from tests.fixtures.auth_utils import get_test_auth_manager
         from src.camera_service.config import Config
         from src.websocket_server.server import WebSocketJsonRpcServer
-        from src.camera_service.service_manager import ServiceManager
-        from camera_discovery.hybrid_monitor import HybridCameraMonitor
-        from src.mediamtx_wrapper.controller import MediaMTXController
         from src.security.middleware import SecurityMiddleware
         from tests.utils.port_utils import find_free_port
         
@@ -77,19 +74,7 @@ class FileManagementSecurityTestSetup:
         # Create user factory
         self.user_factory = TestUserFactory(self.auth_manager)
         
-        # Create service manager
-        self.service_manager = ServiceManager(self.config)
-        await self.service_manager.start()
-        
-        # Create camera monitor
-        self.camera_monitor = HybridCameraMonitor(self.config)
-        await self.camera_monitor.start()
-        
-        # Create MediaMTX controller
-        self.mediamtx_controller = MediaMTXController(self.config.mediamtx)
-        await self.mediamtx_controller.start()
-        
-        # Create WebSocket server
+        # Create WebSocket server (without full service stack for security tests)
         self.server = WebSocketJsonRpcServer(
             host=self.config.server.host,
             port=self.config.server.port,
@@ -99,7 +84,6 @@ class FileManagementSecurityTestSetup:
         # Create and set security middleware
         security_middleware = SecurityMiddleware(self.auth_manager, max_connections=10, requests_per_minute=120)
         self.server.set_security_middleware(security_middleware)
-        self.server.set_service_manager(self.service_manager)
         
         # Start server
         await self.server.start()
@@ -122,15 +106,6 @@ class FileManagementSecurityTestSetup:
         
         if self.server:
             await self.server.stop()
-        
-        if self.service_manager:
-            await self.service_manager.stop()
-        
-        if self.camera_monitor:
-            await self.camera_monitor.stop()
-        
-        if self.mediamtx_controller:
-            await self.mediamtx_controller.stop()
         
         # Clean up temporary files
         if self.temp_dir and os.path.exists(self.temp_dir):

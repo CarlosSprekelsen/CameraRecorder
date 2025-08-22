@@ -58,12 +58,17 @@ from camera_service.service_manager import ServiceManager
 from mediamtx_wrapper.controller import MediaMTXController
 from camera_discovery.hybrid_monitor import HybridCameraMonitor
 from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient, cleanup_test_auth_manager
+from tests.utils.port_utils import find_free_port
 
 
 def build_test_config() -> Config:
     """Build test configuration for interface validation."""
+    # Use free ports to avoid conflicts with live server
+    free_websocket_port = find_free_port()
+    free_health_port = find_free_port()
+    
     return Config(
-        server=ServerConfig(host="127.0.0.1", port=8004, websocket_path="/ws", max_connections=10),
+        server=ServerConfig(host="127.0.0.1", port=free_websocket_port, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(
             host="127.0.0.1",
             api_port=9997,
@@ -82,6 +87,7 @@ def build_test_config() -> Config:
         logging=LoggingConfig(),
         recording=RecordingConfig(),
         snapshots=SnapshotConfig(),
+        health_port=free_health_port,  # Use free port for health server to avoid conflicts
     )
 
 
@@ -136,6 +142,9 @@ class IntegrationTestSetup:
             mediamtx_controller=self.mediamtx_controller,
             camera_monitor=self.camera_monitor
         )
+        
+        # Start service manager (this starts the HealthServer with HTTP endpoints)
+        await self.service_manager.start()
         
         # Initialize WebSocket server with security middleware
         self.server = WebSocketJsonRpcServer(
@@ -1006,7 +1015,13 @@ async def test_delete_recording_insufficient_permissions():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_http_download_endpoints():
-    """Test HTTP download endpoints for recordings and snapshots."""
+    """
+    REQ-API-022: Test HTTP file download endpoints for recordings.
+    REQ-API-023: Test HTTP file download endpoints for snapshots.
+    
+    Validates that HTTP download endpoints properly handle authentication
+    and return appropriate status codes (200 for existing files, 404 for missing files).
+    """
     print("\nTesting HTTP Download Endpoints - Authentication Required")
 
     setup = IntegrationTestSetup()
@@ -1028,15 +1043,15 @@ async def test_http_download_endpoints():
         async with aiohttp.ClientSession() as session:
             headers = {"Authorization": f"Bearer {viewer_user['token']}"}
             
-            # Test recordings download endpoint
-            recordings_url = "http://localhost:8002/files/recordings/test_recording.mp4"
+            # Test recordings download endpoint (HealthServer runs on health_port)
+            recordings_url = f"http://localhost:{setup.config.health_port}/files/recordings/test_recording.mp4"
             async with session.get(recordings_url, headers=headers) as response:
                 print(f"✅ Recordings download endpoint response: {response.status}")
                 # Should return 200 (if file exists) or 404 (if not)
                 assert response.status in [200, 404], f"Unexpected status: {response.status}"
 
-            # Test snapshots download endpoint
-            snapshots_url = "http://localhost:8002/files/snapshots/test_snapshot.jpg"
+            # Test snapshots download endpoint (HealthServer runs on health_port)
+            snapshots_url = f"http://localhost:{setup.config.health_port}/files/snapshots/test_snapshot.jpg"
             async with session.get(snapshots_url, headers=headers) as response:
                 print(f"✅ Snapshots download endpoint response: {response.status}")
                 # Should return 200 (if file exists) or 404 (if not)

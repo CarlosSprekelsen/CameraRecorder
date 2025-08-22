@@ -151,7 +151,8 @@ class PerformanceTestSetup:
         
         # Authenticate
         auth_result = await self.websocket_client.authenticate(self.test_token)
-        assert auth_result["authenticated"] is True, "Authentication failed for performance tests"
+        assert "result" in auth_result, "Authentication response should contain 'result' field per JSON-RPC 2.0"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed for performance tests"
         
         print(f"✅ Performance test setup completed")
     
@@ -541,7 +542,8 @@ async def test_concurrent_connections_performance():
             
             # Authenticate each connection
             auth_result = await client.authenticate(setup.test_token)
-            assert auth_result["authenticated"] is True, f"Authentication failed for connection {i}"
+            assert "result" in auth_result, f"Authentication response should contain 'result' field per JSON-RPC 2.0 for connection {i}"
+            assert auth_result["result"]["authenticated"] is True, f"Authentication failed for connection {i}"
             
             connections.append(client)
             print(f"   Connection {i+1}/{num_connections} established")

@@ -24,7 +24,8 @@ class TestGetVersion:
     
     def test_get_version_without_package(self):
         """Test version retrieval when package is not found."""
-        with patch('camera_service.main.version', side_effect=ImportError):
+        from importlib.metadata import PackageNotFoundError
+        with patch('importlib.metadata.version', side_effect=PackageNotFoundError):
             assert get_version() == 'unknown'
 
 
