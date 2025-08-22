@@ -87,6 +87,16 @@ The client applications will provide camera control functionality by communicati
   - Android: `/storage/emulated/0/DCIM/TWT_Camera/`
   - Web: Browser downloads folder with filename prompt
 
+#### F2.4: File Lifecycle Management
+- **F2.4.1:** The application SHALL provide file deletion capabilities for recordings and snapshots via service API
+- **F2.4.2:** The application SHALL implement configurable retention policies for media files (age-based, size-based, or manual)
+- **F2.4.3:** The application SHALL provide storage space monitoring and alerts when space is low
+- **F2.4.4:** The application SHALL support automatic cleanup of old files based on retention policies
+- **F2.4.5:** The application SHALL provide manual file management interface for bulk operations
+- **F2.4.6:** The application SHALL support file archiving to external storage before deletion
+- **F2.4.7:** The application SHALL provide file metadata viewing capabilities (size, duration, creation date, etc.)
+- **F2.4.8:** The application SHALL implement role-based access control for file deletion (admin/operator roles only)
+
 ### F3: User Interface Requirements
 
 #### F3.1: Camera Selection

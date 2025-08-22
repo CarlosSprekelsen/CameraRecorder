@@ -454,6 +454,267 @@ List available snapshot files with metadata and pagination support.
 }
 ```
 
+## File Management Methods
+
+### get_recording_info
+Get detailed information about a specific recording file.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- filename: string - Name of the recording file (required)
+
+**Returns:** Object containing recording file metadata and information
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_recording_info",
+  "params": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 12
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "file_size": 1073741824,
+    "duration": 3600,
+    "created_time": "2025-01-15T14:30:00Z",
+    "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 12
+}
+```
+
+### get_snapshot_info
+Get detailed information about a specific snapshot file.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- filename: string - Name of the snapshot file (required)
+
+**Returns:** Object containing snapshot file metadata and information
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_snapshot_info",
+  "params": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 13
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg",
+    "file_size": 204800,
+    "resolution": "1920x1080",
+    "created_time": "2025-01-15T14:30:00Z",
+    "download_url": "/files/snapshots/snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 13
+}
+```
+
+### delete_recording
+Delete a specific recording file.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- filename: string - Name of the recording file to delete (required)
+
+**Returns:** Object containing deletion status and confirmation
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "delete_recording",
+  "params": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 14
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "deleted": true,
+    "message": "Recording file deleted successfully"
+  },
+  "id": 14
+}
+```
+
+### delete_snapshot
+Delete a specific snapshot file.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- filename: string - Name of the snapshot file to delete (required)
+
+**Returns:** Object containing deletion status and confirmation
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "delete_snapshot",
+  "params": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 15
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg",
+    "deleted": true,
+    "message": "Snapshot file deleted successfully"
+  },
+  "id": 15
+}
+```
+
+### get_storage_info
+Get storage space information and usage statistics.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing storage space information and usage statistics
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_storage_info",
+  "id": 16
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "total_space": 107374182400,
+    "used_space": 53687091200,
+    "available_space": 53687091200,
+    "usage_percentage": 50.0,
+    "recordings_size": 42949672960,
+    "snapshots_size": 10737418240,
+    "low_space_warning": false
+  },
+  "id": 16
+}
+```
+
+### set_retention_policy
+Configure file retention policies for automatic cleanup.
+
+**Authentication:** Required (admin role)
+
+**Parameters:**
+- policy_type: string - Type of retention policy ("age", "size", "manual") (required)
+- max_age_days: number - Maximum age in days for age-based retention (optional)
+- max_size_gb: number - Maximum size in GB for size-based retention (optional)
+- enabled: boolean - Whether automatic cleanup is enabled (required)
+
+**Returns:** Object containing retention policy configuration
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "set_retention_policy",
+  "params": {
+    "policy_type": "age",
+    "max_age_days": 30,
+    "enabled": true
+  },
+  "id": 17
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "policy_type": "age",
+    "max_age_days": 30,
+    "enabled": true,
+    "message": "Retention policy updated successfully"
+  },
+  "id": 17
+}
+```
+
+### cleanup_old_files
+Manually trigger cleanup of old files based on retention policies.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing cleanup results and statistics
+
+**Status:** ❌ Not Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "cleanup_old_files",
+  "id": 18
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "cleanup_executed": true,
+    "files_deleted": 15,
+    "space_freed": 10737418240,
+    "message": "Cleanup completed successfully"
+  },
+  "id": 18
+}
+```
+
 ## System Management Methods
 
 ### get_metrics

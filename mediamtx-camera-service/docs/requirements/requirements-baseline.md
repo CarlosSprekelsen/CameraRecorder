@@ -67,7 +67,20 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-CLIENT-022 | The application SHALL validate storage permissions and available space | High | F2.3.3 |
 | REQ-CLIENT-023 | Default storage location SHALL be platform-appropriate | High | F2.3.4 |
 
-### 1.7 Camera Selection Requirements
+### 1.7 File Lifecycle Management Requirements
+
+| REQ-ID | Description | Priority | Source Reference |
+|--------|-------------|----------|------------------|
+| REQ-CLIENT-034 | The application SHALL provide file deletion capabilities for recordings and snapshots via service API | High | F2.4.1 |
+| REQ-CLIENT-035 | The application SHALL implement configurable retention policies for media files (age-based, size-based, or manual) | High | F2.4.2 |
+| REQ-CLIENT-036 | The application SHALL provide storage space monitoring and alerts when space is low | High | F2.4.3 |
+| REQ-CLIENT-037 | The application SHALL support automatic cleanup of old files based on retention policies | High | F2.4.4 |
+| REQ-CLIENT-038 | The application SHALL provide manual file management interface for bulk operations | High | F2.4.5 |
+| REQ-CLIENT-039 | The application SHALL support file archiving to external storage before deletion | Medium | F2.4.6 |
+| REQ-CLIENT-040 | The application SHALL provide file metadata viewing capabilities (size, duration, creation date, etc.) | High | F2.4.7 |
+| REQ-CLIENT-041 | The application SHALL implement role-based access control for file deletion (admin/operator roles only) | Critical | F2.4.8 |
+
+### 1.8 Camera Selection Requirements
 
 | REQ-ID | Description | Priority | Source Reference |
 |--------|-------------|----------|------------------|
@@ -76,7 +89,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-CLIENT-026 | The application SHALL handle camera hot-plug events via real-time notifications | High | F3.1.3 |
 | REQ-CLIENT-027 | The application SHALL provide camera switching interface | High | F3.1.4 |
 
-### 1.8 Recording Controls Requirements
+### 1.9 Recording Controls Requirements
 
 | REQ-ID | Description | Priority | Source Reference |
 |--------|-------------|----------|------------------|
@@ -287,6 +300,13 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-API-021 | The system SHALL provide real-time recording status update notifications | Critical | API Reference |
 | REQ-API-022 | The system SHALL implement HTTP file download endpoints for recordings | Critical | API Reference |
 | REQ-API-023 | The system SHALL implement HTTP file download endpoints for snapshots | Critical | API Reference |
+| REQ-API-024 | The system SHALL implement `get_recording_info` method for individual recording metadata | High | API Reference |
+| REQ-API-025 | The system SHALL implement `get_snapshot_info` method for individual snapshot metadata | High | API Reference |
+| REQ-API-026 | The system SHALL implement `delete_recording` method for recording file deletion | High | API Reference |
+| REQ-API-027 | The system SHALL implement `delete_snapshot` method for snapshot file deletion | High | API Reference |
+| REQ-API-028 | The system SHALL implement `get_storage_info` method for storage space monitoring | High | API Reference |
+| REQ-API-029 | The system SHALL implement `set_retention_policy` method for configurable file retention | High | API Reference |
+| REQ-API-030 | The system SHALL implement `cleanup_old_files` method for automatic file cleanup | High | API Reference |
 
 ### 5.2 Health Endpoints Requirements
 
@@ -361,24 +381,24 @@ This document serves as the master requirements register for the MediaMTX Camera
 
 | Category | Count | Critical | High | Medium | Total |
 |----------|-------|----------|------|--------|-------|
-| Client Application | 33 | 9 | 24 | 0 | 33 |
+| Client Application | 41 | 10 | 31 | 0 | 41 |
 | Performance | 28 | 0 | 20 | 8 | 28 |
 | Security | 35 | 22 | 13 | 0 | 35 |
 | Technical | 32 | 15 | 12 | 5 | 32 |
-| API | 31 | 19 | 12 | 0 | 31 |
+| API | 38 | 19 | 19 | 0 | 38 |
 | Testing | 12 | 6 | 6 | 0 | 12 |
 | Health Monitoring | 6 | 4 | 2 | 0 | 6 |
 | Operational | 4 | 0 | 3 | 1 | 4 |
-| **TOTAL** | **161** | **73** | **85** | **13** | **161** |
+| **TOTAL** | **175** | **74** | **98** | **13** | **175** |
 
 ### 9.2 Requirements by Priority
 
 | Priority | Count | Percentage |
 |----------|-------|------------|
-| Critical | 73 | 45.3% |
-| High | 85 | 52.8% |
-| Medium | 13 | 8.1% |
-| **TOTAL** | **161** | **100%** |
+| Critical | 74 | 42.3% |
+| High | 98 | 56.0% |
+| Medium | 13 | 7.4% |
+| **TOTAL** | **175** | **100%** |
 
 ---
 
