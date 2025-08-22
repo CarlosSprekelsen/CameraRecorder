@@ -845,13 +845,11 @@ class ServiceManager(CameraEventHandler):
             # Unpack MediaMTXConfig into individual parameters
             mediamtx_config = self._config.mediamtx
             
-            # Get FFmpeg configuration from config
-            ffmpeg_config = None
-            if hasattr(self._config, 'ffmpeg') and self._config.ffmpeg:
-                ffmpeg_config = {
-                    "snapshot": self._config.ffmpeg.snapshot,
-                    "recording": self._config.ffmpeg.recording
-                }
+            # Set ffmpeg_config in mediamtx_config for MediaMTXController compatibility
+            mediamtx_config.ffmpeg_config = {
+                "snapshot": self._config.ffmpeg.snapshot,
+                "recording": self._config.ffmpeg.recording
+            }
             
             # Get stream readiness configuration from config
             stream_readiness_config = None
@@ -876,7 +874,7 @@ class ServiceManager(CameraEventHandler):
                 backoff_jitter_range=mediamtx_config.backoff_jitter_range,
                 process_termination_timeout=mediamtx_config.process_termination_timeout,
                 process_kill_timeout=mediamtx_config.process_kill_timeout,
-                ffmpeg_config=ffmpeg_config,
+                ffmpeg_config=mediamtx_config.ffmpeg_config,
             )
             
             # Set stream readiness configuration if available

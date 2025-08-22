@@ -100,6 +100,9 @@ class MediaMTXConfig:
         "enable_progress_notifications": True,  # Send progress notifications during validation
         "graceful_fallback": True     # Enable graceful fallback when streams unavailable
     })
+    
+    # FFmpeg configuration for MediaMTXController compatibility
+    ffmpeg_config: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -164,6 +167,27 @@ class SnapshotConfig:
 
 
 @dataclass
+class FFmpegConfig:
+    """FFmpeg configuration settings for snapshot and recording operations."""
+
+    snapshot: Dict[str, Any] = field(default_factory=lambda: {
+        "process_creation_timeout": 5.0,
+        "execution_timeout": 8.0,
+        "internal_timeout": 5000000,
+        "retry_attempts": 2,
+        "retry_delay": 1.0
+    })
+    
+    recording: Dict[str, Any] = field(default_factory=lambda: {
+        "process_creation_timeout": 10.0,
+        "execution_timeout": 15.0,
+        "internal_timeout": 10000000,
+        "retry_attempts": 3,
+        "retry_delay": 2.0
+    })
+
+
+@dataclass
 class PerformanceConfig:
     """Performance configuration settings."""
     
@@ -203,6 +227,7 @@ class Config:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     recording: RecordingConfig = field(default_factory=RecordingConfig)
     snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
+    ffmpeg: FFmpegConfig = field(default_factory=FFmpegConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
 
     def __init__(self, **kwargs):
@@ -214,6 +239,7 @@ class Config:
         self.logging = LoggingConfig()
         self.recording = RecordingConfig()
         self.snapshots = SnapshotConfig()
+        self.ffmpeg = FFmpegConfig()
         self.performance = PerformanceConfig()
         
         # Update with provided data
@@ -276,6 +302,15 @@ class Config:
             elif isinstance(snapshots_data, SnapshotConfig):
                 self.snapshots = snapshots_data
 
+        if "ffmpeg" in config_data:
+            ffmpeg_data = config_data["ffmpeg"]
+            if isinstance(ffmpeg_data, dict):
+                for key, value in ffmpeg_data.items():
+                    if hasattr(self.ffmpeg, key):
+                        setattr(self.ffmpeg, key, value)
+            elif isinstance(ffmpeg_data, FFmpegConfig):
+                self.ffmpeg = ffmpeg_data
+
         if "performance" in config_data:
             performance_data = config_data["performance"]
             if isinstance(performance_data, dict):
@@ -295,6 +330,7 @@ class Config:
                 "logging": asdict(self.logging),
                 "recording": asdict(self.recording),
                 "snapshots": asdict(self.snapshots),
+                "ffmpeg": asdict(self.ffmpeg),
                 "performance": asdict(self.performance),
             }
         except Exception as e:
@@ -314,6 +350,8 @@ class Config:
                 "logging": _to_dict(self.logging),
                 "recording": _to_dict(self.recording),
                 "snapshots": _to_dict(self.snapshots),
+                "ffmpeg": _to_dict(self.ffmpeg),
+                "performance": _to_dict(self.performance),
             }
 
     @classmethod
@@ -1150,7 +1188,8 @@ class ConfigManager:
             'health_check_interval', 'health_failure_threshold', 'health_circuit_breaker_timeout',
             'health_max_backoff_interval', 'health_recovery_confirmation_threshold',
             'backoff_base_multiplier', 'backoff_jitter_range',
-            'process_termination_timeout', 'process_kill_timeout'
+            'process_termination_timeout', 'process_kill_timeout',
+            'ffmpeg_config' # Added ffmpeg_config to valid_mediamtx_params
         }
         
         # Only include valid MediaMTXConfig parameters
