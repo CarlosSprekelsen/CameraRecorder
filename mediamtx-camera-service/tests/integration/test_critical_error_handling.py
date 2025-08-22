@@ -789,7 +789,12 @@ class CriticalErrorHandlingTests:
 @pytest.fixture
 async def service_manager():
     """Create service manager for testing."""
-    config = Config()
+    from tests.utils.port_utils import find_free_port
+    
+    # Use free port for health server to avoid conflicts
+    free_health_port = find_free_port()
+    
+    config = Config(health_port=free_health_port)
     manager = ServiceManager(config)
     yield manager
     # Cleanup if needed

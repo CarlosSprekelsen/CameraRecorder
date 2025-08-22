@@ -54,10 +54,12 @@ class TestServiceManager(BaseServiceManager):
         try:
             from health_server import HealthServer
             
-            # Use custom port to avoid conflicts with real service
+            # Use configurable port to avoid conflicts with real service
+            health_port = getattr(self._config, 'health_port', 9003)  # Default to 9003 if not configured
+            
             self._health_server = HealthServer(
                 host="0.0.0.0", 
-                port=9003,  # Use different port to avoid conflict with real service (8003)
+                port=health_port,  # Use configurable port
                 recordings_path=self._config.mediamtx.recordings_path,
                 snapshots_path=self._config.mediamtx.snapshots_path
             )
@@ -71,7 +73,7 @@ class TestServiceManager(BaseServiceManager):
             
             await self._health_server.start()
             self._logger.info(
-                f"Health server started on 0.0.0.0:9003",
+                f"Health server started on 0.0.0.0:{health_port}",
                 extra={"correlation_id": correlation_id}
             )
 
@@ -91,6 +93,7 @@ class TestCameraDisconnectHandlingReal:
         """Create real configuration for testing."""
         import tempfile
         import os
+        from tests.utils.port_utils import find_free_port
         
         # Create temporary directories for testing
         temp_dir = tempfile.mkdtemp(prefix="disconnect_test_")
@@ -98,6 +101,9 @@ class TestCameraDisconnectHandlingReal:
         snapshots_dir = os.path.join(temp_dir, "snapshots")
         os.makedirs(recordings_dir, exist_ok=True)
         os.makedirs(snapshots_dir, exist_ok=True)
+        
+        # Use free port for health server to avoid conflicts
+        free_health_port = find_free_port()
         
         config = Config()
         config.mediamtx.host = "localhost"
@@ -112,6 +118,7 @@ class TestCameraDisconnectHandlingReal:
         config.camera.poll_interval = 1.0
         config.camera.detection_timeout = 2.0
         config.camera.enable_capability_detection = True
+        config.health_port = free_health_port  # Use free port for health server
         
         return config
 

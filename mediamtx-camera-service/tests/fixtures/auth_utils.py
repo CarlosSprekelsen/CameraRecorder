@@ -115,9 +115,16 @@ class TestUserFactory:
         token = generate_valid_test_token(username, "admin")
         return {
             "username": username,
+            "user_id": username,
             "role": "admin",
             "token": token,
-            "permissions": ["admin", "operator", "viewer"]
+            "permissions": [
+                "get_camera_list", "get_camera_status", "get_streams",
+                "take_snapshot", "start_recording", "stop_recording",
+                "list_recordings", "list_snapshots", "get_metrics",
+                "get_status", "get_server_info", "delete_recording",
+                "get_recording_info", "get_snapshot_info"
+            ]
         }
     
     def create_operator_user(self, username: str = None) -> Dict[str, Any]:
@@ -129,9 +136,14 @@ class TestUserFactory:
         token = generate_valid_test_token(username, "operator")
         return {
             "username": username,
+            "user_id": username,
             "role": "operator",
             "token": token,
-            "permissions": ["operator", "viewer"]
+            "permissions": [
+                "get_camera_list", "get_camera_status", "get_streams",
+                "take_snapshot", "start_recording", "stop_recording",
+                "list_recordings", "list_snapshots"
+            ]
         }
     
     def create_viewer_user(self, username: str = None) -> Dict[str, Any]:
@@ -143,9 +155,13 @@ class TestUserFactory:
         token = generate_valid_test_token(username, "viewer")
         return {
             "username": username,
+            "user_id": username,
             "role": "viewer",
             "token": token,
-            "permissions": ["viewer"]
+            "permissions": [
+                "get_camera_list", "get_camera_status", "get_streams",
+                "list_recordings", "list_snapshots"
+            ]
         }
     
     def create_expired_user(self, username: str = None) -> Dict[str, Any]:

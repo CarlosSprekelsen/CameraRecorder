@@ -57,11 +57,11 @@ class TestSDKCLI:
                 timeout=10
             )
             
-            # Should exit with error (1) but show help
-            assert result.returncode == 1, f"CLI should exit with error: {result.stdout}"
+            # Should exit with error (2) for missing required arguments
+            assert result.returncode == 2, f"CLI should exit with error: {result.stdout}"
             
             # Should display help information
-            assert "usage:" in result.stdout
+            assert "usage:" in result.stderr
             assert "error:" in result.stderr
             
             # Should not have any RuntimeWarning about coroutines
@@ -87,8 +87,8 @@ class TestSDKCLI:
             # Should exit with error (1)
             assert result.returncode == 1, f"CLI should exit with error: {result.stdout}"
             
-            # Should show error about unknown command
-            assert "Unknown command" in result.stderr or "error:" in result.stderr
+            # Should show error about missing token (since no auth provided)
+            assert "token required" in result.stderr or "error:" in result.stderr
             
             # Should not have any RuntimeWarning about coroutines
             assert "RuntimeWarning" not in result.stderr
@@ -183,9 +183,10 @@ class TestSDKCLI:
         """Test that CLI can be executed directly as a module."""
         try:
             result = subprocess.run(
-                [sys.executable, str(cli_path), "--help"],
+                [sys.executable, "-m", "mediamtx_camera_sdk.cli", "--help"],
                 capture_output=True,
                 text=True,
+                cwd=cli_path.parent.parent,  # sdk/python directory
                 timeout=10
             )
             

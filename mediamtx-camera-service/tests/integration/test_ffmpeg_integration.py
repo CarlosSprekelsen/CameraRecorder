@@ -45,7 +45,12 @@ async def test_ffmpeg_integration():
             recordings_path=recordings_dir,
             snapshots_path=snapshots_dir
         )
-        config = Config(mediamtx=mediamtx_config)
+        
+        # Use free port for health server to avoid conflicts
+        from tests.utils.port_utils import find_free_port
+        free_health_port = find_free_port()
+        
+        config = Config(mediamtx=mediamtx_config, health_port=free_health_port)
         
         # Create service manager
         service_manager = ServiceManager(config)

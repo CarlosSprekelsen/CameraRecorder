@@ -27,7 +27,7 @@ class TestJavaScriptClientExample:
     @pytest.fixture
     def js_client_path(self):
         """Path to JavaScript client example."""
-        return Path(__file__).parent.parent.parent.parent.parent / "mediamtx-camera-service" / "examples" / "javascript" / "camera_client.js"
+        return Path(__file__).parent.parent.parent / "examples" / "javascript" / "camera_client.js"
     
     @pytest.fixture
     def test_config(self):

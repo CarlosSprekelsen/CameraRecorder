@@ -197,7 +197,11 @@ async def test_service_manager_integration():
         logger.info("Skipping service manager start to avoid conflicts")
         return
     
-    config = Config()
+    # Use free port for health server to avoid conflicts
+    from tests.utils.port_utils import find_free_port
+    free_health_port = find_free_port()
+    
+    config = Config(health_port=free_health_port)
     service_manager = ServiceManager(config)
     
     try:

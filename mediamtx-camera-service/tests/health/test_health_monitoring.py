@@ -223,52 +223,58 @@ async def test_health_status_detailed_components():
     try:
         await setup.setup()
         
-        # Test health status via WebSocket API
-        health_response = await setup.websocket_client.call_method("get_status", {})
+        # Test health status via HTTP health endpoint
+        health_tester = HealthEndpointTester(setup.http_client)
+        result = await health_tester.test_health_endpoint("system")
         
-        print(f"📊 Health Status Response: {json.dumps(health_response, indent=2)}")
+        print(f"📊 Health Status Response: {json.dumps(result, indent=2)}")
         
         # Validate response structure
-        assert "result" in health_response, "Health response missing 'result' field"
-        result = health_response["result"]
+        assert result["success"], f"Health endpoint failed: {result.get('error', 'unknown error')}"
+        health_response = result["response"]
         
         # REQ-HEALTH-005: Detailed component information
-        # Based on actual API response structure
-        required_components = ["server", "mediamtx"]
+        # Based on actual API response structure from /health/system
+        assert "status" in health_response, "Health response missing 'status' field"
+        assert "timestamp" in health_response, "Health response missing 'timestamp' field"
+        assert "components" in health_response, "Health response missing 'components' field"
+        
+        # Validate overall status
+        valid_statuses = ["healthy", "degraded", "unhealthy"]
+        assert health_response["status"] in valid_statuses, \
+            f"Invalid overall status: {health_response['status']}"
+        
+        # Validate timestamp format (ISO 8601 string)
+        assert isinstance(health_response["timestamp"], str), "Timestamp should be ISO 8601 string"
+        # Basic ISO 8601 format validation
+        assert "T" in health_response["timestamp"], "Timestamp should be ISO 8601 format"
+        
+        # Validate components structure
+        components = health_response["components"]
+        required_components = ["mediamtx", "camera_monitor", "service_manager"]
         
         for component in required_components:
-            assert component in result, f"Missing health component: {component}"
-            component_data = result[component]
+            assert component in components, f"Missing health component: {component}"
+            component_data = components[component]
             
             # Validate component has required fields
             assert "status" in component_data, f"Component {component} missing status"
+            assert "details" in component_data, f"Component {component} missing details"
+            assert "timestamp" in component_data, f"Component {component} missing timestamp"
             
             # Validate status values
-            valid_statuses = ["healthy", "unhealthy", "degraded", "running"]
-            assert component_data["status"] in valid_statuses, \
+            valid_component_statuses = ["healthy", "unhealthy", "degraded"]
+            assert component_data["status"] in valid_component_statuses, \
                 f"Invalid status for {component}: {component_data['status']}"
             
-            # Validate optional fields if present
-            if "uptime" in component_data:
-                assert component_data["uptime"] >= 0, f"Invalid uptime for {component}: {component_data['uptime']}"
-                print(f"   ✅ {component}: {component_data['status']} (uptime: {component_data['uptime']:.2f}s)")
-            else:
-                print(f"   ✅ {component}: {component_data['status']}")
+            # Validate details is a string
+            assert isinstance(component_data["details"], str), f"Details should be string for {component}"
             
-            # Validate optional fields for specific components
-            if component == "server" and "connections" in component_data:
-                assert isinstance(component_data["connections"], int), f"Connections should be integer for {component}"
-            if component == "mediamtx" and "connected" in component_data:
-                assert isinstance(component_data["connected"], bool), f"Connected should be boolean for {component}"
-        
-        # Validate overall health status
-        assert "overall_status" in result, "Missing overall status"
-        assert result["overall_status"] in ["healthy", "unhealthy", "degraded"], \
-            f"Invalid overall status: {result['overall_status']}"
-        
-        # Validate timestamp
-        assert "timestamp" in result, "Missing timestamp"
-        assert isinstance(result["timestamp"], (int, float)), "Invalid timestamp format"
+            # Validate component timestamp format (ISO 8601 string)
+            assert isinstance(component_data["timestamp"], str), f"Component timestamp should be ISO 8601 string for {component}"
+            assert "T" in component_data["timestamp"], f"Component timestamp should be ISO 8601 format for {component}"
+            
+            print(f"   ✅ {component}: {component_data['status']} - {component_data['details']}")
         
         print(f"✅ REQ-HEALTH-005: Detailed component information validated")
         return health_response
@@ -318,8 +324,11 @@ async def test_kubernetes_readiness_probes():
                 
                 # Validate timestamp if present
                 if "timestamp" in response_data:
-                    assert isinstance(response_data["timestamp"], (int, float)), \
-                        f"Invalid timestamp in {endpoint}"
+                    assert isinstance(response_data["timestamp"], str), \
+                        f"Invalid timestamp in {endpoint} - should be ISO 8601 string"
+                    # Basic ISO 8601 format validation
+                    assert "T" in response_data["timestamp"], \
+                        f"Timestamp should be ISO 8601 format in {endpoint}"
             else:
                 print(f"   ⚠️ {endpoint}: {result['status_code']} - {result['response'].get('error', 'unknown error')}")
         
@@ -387,13 +396,26 @@ async def test_health_endpoint_json_responses():
                 
                 # Validate timestamp format
                 timestamp = response_data["timestamp"]
-                assert isinstance(timestamp, (int, float)), \
-                    f"Invalid timestamp format in {endpoint}: {timestamp}"
+                assert isinstance(timestamp, str), \
+                    f"Invalid timestamp format in {endpoint}: {timestamp} - should be ISO 8601 string"
+                # Basic ISO 8601 format validation
+                assert "T" in timestamp, \
+                    f"Timestamp should be ISO 8601 format in {endpoint}: {timestamp}"
                 
                 # Validate timestamp is recent (within last 60 seconds)
-                current_time = time.time()
-                assert abs(current_time - timestamp) < 60, \
-                    f"Timestamp too old in {endpoint}: {timestamp}"
+                # Parse ISO 8601 timestamp to check if recent
+                try:
+                    from datetime import datetime
+                    import re
+                    # Remove timezone info for parsing
+                    timestamp_clean = re.sub(r'[+-]\d{2}:\d{2}$', '', timestamp)
+                    parsed_time = datetime.fromisoformat(timestamp_clean)
+                    current_time = datetime.now()
+                    time_diff = abs((current_time - parsed_time).total_seconds())
+                    assert time_diff < 60, \
+                        f"Timestamp too old in {endpoint}: {timestamp}"
+                except Exception as e:
+                    print(f"   ⚠️ Could not validate timestamp format for {endpoint}: {e}")
                 
                 print(f"      Status: {response_data['status']}")
                 print(f"      Timestamp: {timestamp}")

@@ -229,6 +229,7 @@ class Config:
     snapshots: SnapshotConfig = field(default_factory=SnapshotConfig)
     ffmpeg: FFmpegConfig = field(default_factory=FFmpegConfig)
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
+    health_port: Optional[int] = None  # Configurable health server port for testing
 
     def __init__(self, **kwargs):
         """Initialize configuration with proper dataclass conversion."""
@@ -241,6 +242,7 @@ class Config:
         self.snapshots = SnapshotConfig()
         self.ffmpeg = FFmpegConfig()
         self.performance = PerformanceConfig()
+        self.health_port = None  # Initialize health_port as None
         
         # Update with provided data
         if kwargs:
@@ -319,6 +321,10 @@ class Config:
                         setattr(self.performance, key, value)
             elif isinstance(performance_data, PerformanceConfig):
                 self.performance = performance_data
+
+        # Handle health_port configuration
+        if "health_port" in config_data:
+            self.health_port = config_data["health_port"]
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary for serialization."""
@@ -938,12 +944,22 @@ class ConfigManager:
         # Merge with defaults, preserving existing values
         for section_name, section_defaults in default_data.items():
             if section_name not in config_data:
-                config_data[section_name] = section_defaults.copy()
+                # Handle different types of default values
+                if section_defaults is None:
+                    # None values should be copied as-is
+                    config_data[section_name] = None
+                elif isinstance(section_defaults, dict):
+                    # Dictionary values can be copied
+                    config_data[section_name] = section_defaults.copy()
+                else:
+                    # Primitive types (int, str, bool, etc.) should be copied as-is
+                    config_data[section_name] = section_defaults
             else:
                 # Fill in missing keys within sections
-                for key, default_value in section_defaults.items():
-                    if key not in config_data[section_name]:
-                        config_data[section_name][key] = default_value
+                if isinstance(section_defaults, dict):
+                    for key, default_value in section_defaults.items():
+                        if key not in config_data[section_name]:
+                            config_data[section_name][key] = default_value
 
         return config_data
 

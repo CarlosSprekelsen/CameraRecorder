@@ -27,6 +27,61 @@ ws://localhost:8002/ws
 2. Include `auth_token` parameter in subsequent requests
 3. Server validates token and checks role permissions for each method
 
+### authenticate
+Authenticate with the service using JWT token or API key.
+
+**Authentication:** Not required (this method handles authentication)
+
+**Parameters:**
+- auth_token: string - JWT token or API key (required)
+
+**Returns:** Authentication result with user role and session information
+
+**Status:** ✅ Implemented
+
+**Implementation:** Validates JWT tokens or API keys, extracts user role and permissions, and establishes authenticated session for subsequent requests.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "authenticate",
+  "params": {
+    "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  },
+  "id": 0
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "authenticated": true,
+    "role": "operator",
+    "permissions": ["view", "control"],
+    "expires_at": "2025-01-16T14:30:00Z",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "id": 0
+}
+```
+
+**Error Response (Invalid Token):**
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32001,
+    "message": "Authentication failed",
+    "data": {
+      "reason": "Invalid or expired token"
+    }
+  },
+  "id": 0
+}
+```
+
 ## Performance Guarantees
 
 All API methods adhere to architecture performance targets:

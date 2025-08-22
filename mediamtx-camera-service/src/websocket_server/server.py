@@ -79,30 +79,37 @@ class PerformanceMetrics:
     def get_metrics(self) -> Dict[str, Any]:
         """Get current performance metrics."""
         uptime = time.time() - self.start_time
-        avg_response_times = {}
-        methods = {}
         
-        for method, times in self.response_times.items():
-            if times:
-                avg_time = sum(times) / len(times)
-                max_time = max(times)
-                avg_response_times[method] = avg_time
-                
-                # Add detailed method metrics for performance framework
-                methods[method] = {
-                    "count": len(times),
-                    "avg_ms": avg_time * 1000,  # Convert to milliseconds
-                    "max_ms": max_time * 1000   # Convert to milliseconds
-                }
+        # Calculate average response time across all methods
+        all_response_times = []
+        for times in self.response_times.values():
+            all_response_times.extend(times)
+        
+        average_response_time = 0.0
+        if all_response_times:
+            average_response_time = (sum(all_response_times) / len(all_response_times)) * 1000  # Convert to milliseconds
+        
+        # Calculate error rate
+        error_rate = 0.0
+        if self.request_count > 0:
+            error_rate = self.error_count / self.request_count
+        
+        # Get system resource usage
+        try:
+            memory_usage = psutil.virtual_memory().percent
+            cpu_usage = psutil.cpu_percent(interval=0.1)
+        except Exception:
+            # Fallback values if psutil fails
+            memory_usage = 0.0
+            cpu_usage = 0.0
         
         return {
-            "uptime": uptime,
-            "request_count": self.request_count,
-            "error_count": self.error_count,
             "active_connections": self.active_connections,
-            "avg_response_times": avg_response_times,
-            "requests_per_second": self.request_count / uptime if uptime > 0 else 0,
-            "methods": methods  # Add the missing methods field
+            "total_requests": self.request_count,
+            "average_response_time": average_response_time,
+            "error_rate": error_rate,
+            "memory_usage": memory_usage,
+            "cpu_usage": cpu_usage
         }
 
 
@@ -580,16 +587,6 @@ class WebSocketJsonRpcServer:
                 }
             )
 
-            # Check if method exists
-            if method_name not in self._method_handlers:
-                return json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "error": {"code": -32601, "message": "Method not found"},
-                        "id": request_id,
-                    }
-                )
-
             # Allow authenticate method without prior enforcement and handle here to bind to correct client
             if method_name == "authenticate":
                 if not self._security_middleware:
@@ -631,6 +628,16 @@ class WebSocketJsonRpcServer:
                     "error": {"code": error_code, "message": auth_result.error_message},
                     "id": request_id,
                 })
+
+            # Check if method exists (after special authenticate handling)
+            if method_name not in self._method_handlers:
+                return json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {"code": -32601, "message": "Method not found"},
+                        "id": request_id,
+                    }
+                )
 
             # Security enforcement and rate limiting (F3.2.5/F3.2.6/I1.7/N3.x)
             if self._security_middleware:
@@ -1136,7 +1143,8 @@ class WebSocketJsonRpcServer:
             "stop_recording", self._method_stop_recording, version="1.0"
         )
         # Security and observability
-        self.register_method("authenticate", self._method_authenticate, version="1.0")
+        # authenticate method is handled directly in main request handler
+        # self.register_method("authenticate", self._method_authenticate, version="1.0")
         self.register_method("get_metrics", self._method_get_metrics, version="1.0")
         self.register_method("get_status", self._method_get_status, version="1.0")
         self.register_method("get_server_info", self._method_get_server_info, version="1.0")
@@ -2281,8 +2289,9 @@ class WebSocketJsonRpcServer:
                 self._logger.warning(f"Recordings directory does not exist: {recordings_dir}")
                 return {
                     "files": [],
-                    "total_count": 0,
-                    "has_more": False
+                    "total": 0,
+                    "limit": limit,
+                    "offset": offset
                 }
             
             if not os.access(recordings_dir, os.R_OK):
@@ -2310,8 +2319,8 @@ class WebSocketJsonRpcServer:
                         
                         file_info = {
                             "filename": filename,
-                            "size": file_size,
-                            "timestamp": file_time.isoformat() + "Z",
+                            "file_size": file_size,
+                            "modified_time": file_time.isoformat() + "Z",
                             "download_url": f"/files/recordings/{filename}"
                         }
                         
@@ -2336,8 +2345,9 @@ class WebSocketJsonRpcServer:
                 
                 return {
                     "files": paginated_files,
-                    "total_count": total_count,
-                    "has_more": end_idx < total_count
+                    "total": total_count,
+                    "limit": limit,
+                    "offset": offset
                 }
                 
             except OSError as e:
@@ -2387,8 +2397,9 @@ class WebSocketJsonRpcServer:
                 self._logger.warning(f"Snapshots directory does not exist: {snapshots_dir}")
                 return {
                     "files": [],
-                    "total_count": 0,
-                    "has_more": False
+                    "total": 0,
+                    "limit": limit,
+                    "offset": offset
                 }
             
             if not os.access(snapshots_dir, os.R_OK):
@@ -2413,8 +2424,8 @@ class WebSocketJsonRpcServer:
                         
                         file_info = {
                             "filename": filename,
-                            "size": file_size,
-                            "timestamp": file_time.isoformat() + "Z",
+                            "file_size": file_size,
+                            "modified_time": file_time.isoformat() + "Z",
                             "download_url": f"/files/snapshots/{filename}"
                         }
                         
@@ -2435,8 +2446,9 @@ class WebSocketJsonRpcServer:
                 
                 return {
                     "files": paginated_files,
-                    "total_count": total_count,
-                    "has_more": end_idx < total_count
+                    "total": total_count,
+                    "limit": limit,
+                    "offset": offset
                 }
                 
             except OSError as e:

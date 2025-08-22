@@ -984,7 +984,8 @@ class ServiceManager(CameraEventHandler):
         """Start the health server component."""
         correlation_id = get_correlation_id()
         self._logger.debug(
-            "Starting health server", extra={"correlation_id": correlation_id}
+            "Starting health server",
+            extra={"correlation_id": correlation_id},
         )
 
         try:
@@ -993,20 +994,26 @@ class ServiceManager(CameraEventHandler):
             health_port = 8003
             health_host = "0.0.0.0"
             
-            # Try to get configuration from config file if available
-            try:
-                # Check if we can access the config file directly
-                config_file = "/opt/camera-service/config/camera-service.yaml"
-                if os.path.exists(config_file):
-                    with open(config_file, 'r') as f:
-                        import yaml
-                        config_data = yaml.safe_load(f)
-                        if config_data and 'security' in config_data and 'health' in config_data['security']:
-                            health_config = config_data['security']['health']
-                            health_port = health_config.get('port', 8003)
-                            health_host = health_config.get('bind_address', '0.0.0.0')
-            except Exception as e:
-                self._logger.warning(f"Could not load health config from file, using defaults: {e}")
+            # Check if health port is configured in the config object (for testing)
+            if hasattr(self._config, 'health_port') and self._config.health_port is not None:
+                health_port = self._config.health_port
+                self._logger.info(f"Using configured health port: {health_port}")
+            
+            # Try to get configuration from config file if available (only if not overridden)
+            elif health_port == 8003:  # Only try config file if using default
+                try:
+                    # Check if we can access the config file directly
+                    config_file = "/opt/camera-service/config/camera-service.yaml"
+                    if os.path.exists(config_file):
+                        with open(config_file, 'r') as f:
+                            import yaml
+                            config_data = yaml.safe_load(f)
+                            if config_data and 'security' in config_data and 'health' in config_data['security']:
+                                health_config = config_data['security']['health']
+                                health_port = health_config.get('port', 8003)
+                                health_host = health_config.get('bind_address', '0.0.0.0')
+                except Exception as e:
+                    self._logger.warning(f"Could not load health config from file, using defaults: {e}")
             
             self._health_server = HealthServer(
                 host=health_host, 

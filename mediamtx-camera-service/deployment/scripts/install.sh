@@ -426,77 +426,31 @@ install_camera_service() {
     chmod 755 "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
     log_success "Required directories created with proper permissions"
     
-    # Create camera service configuration
-    cat > "$INSTALL_DIR/config/camera-service.yaml" << EOF
-# Camera Service Configuration
-server:
-  host: "0.0.0.0"
-  port: 8002
-  websocket_path: "/ws"
-  max_connections: 100
-
-security:
-  jwt:
-            secret_key: "\${CAMERA_SERVICE_JWT_SECRET}"
-    expiry_hours: 24
-    algorithm: "HS256"
-  
-  api_keys:
-    storage_file: "\${API_KEYS_FILE}"
-  
-  ssl:
-    enabled: false
-    cert_file: "\${SSL_CERT_FILE}"
-    key_file: "\${SSL_KEY_FILE}"
-  
-  rate_limiting:
-    max_connections: 100
-    requests_per_minute: 60
-  
-  health:
-    port: 8003
-    bind_address: "0.0.0.0"
-
-mediamtx:
-  host: "localhost"
-  api_port: 9997
-  rtsp_port: 8554
-  webrtc_port: 8889
-  hls_port: 8888
-  config_path: "/etc/mediamtx/mediamtx.yml"
-  recordings_path: "/opt/camera-service/recordings"
-  snapshots_path: "/opt/camera-service/snapshots"
-
-cameras:
-  discovery_enabled: true
-  polling_interval: 30
-
-logging:
-  level: "INFO"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file_enabled: true
-  file_path: "/var/log/camera-service/camera-service.log"
-  max_file_size: "10MB"
-  backup_count: 5
-
-recording:
-  auto_record: false
-  format: "mp4"
-  quality: "medium"
-  max_duration: 3600
-  cleanup_after_days: 30
-
-snapshots:
-  format: "jpg"
-  quality: 85
-  cleanup_after_days: 7
-EOF
+    # Generate JWT secret first
+    JWT_SECRET=$(openssl rand -hex 32)
+    
+    # Create camera service configuration from template
+    log_info "Creating camera service configuration from template..."
+    
+    # Copy template and substitute variables
+    cp config/templates/camera-service.yaml.template "$INSTALL_DIR/config/camera-service.yaml"
+    
+    # Substitute deployment-specific variables
+    sed -i "s/\${CAMERA_SERVICE_JWT_SECRET}/$JWT_SECRET/g" "$INSTALL_DIR/config/camera-service.yaml"
+    sed -i "s|\${API_KEYS_FILE}|$INSTALL_DIR/security/api-keys.json|g" "$INSTALL_DIR/config/camera-service.yaml"
+    sed -i "s|\${SSL_CERT_FILE}|$INSTALL_DIR/security/ssl/cert.pem|g" "$INSTALL_DIR/config/camera-service.yaml"
+    sed -i "s|\${SSL_KEY_FILE}|$INSTALL_DIR/security/ssl/key.pem|g" "$INSTALL_DIR/config/camera-service.yaml"
+    
+    # Validate generated YAML
+    if python3 -c "import yaml; yaml.safe_load(open('$INSTALL_DIR/config/camera-service.yaml'))" 2>/dev/null; then
+        log_success "Configuration file generated and validated successfully"
+    else
+        log_error "Generated YAML configuration is invalid"
+        exit 1
+    fi
     
     # Create security directories
     mkdir -p "$INSTALL_DIR/security/api-keys"
-    
-    # Generate JWT secret
-    JWT_SECRET=$(openssl rand -hex 32)
     echo "CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET" > "$INSTALL_DIR/.env"
     
     # Create API keys file

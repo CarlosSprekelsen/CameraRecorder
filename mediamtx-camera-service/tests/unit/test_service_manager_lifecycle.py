@@ -54,8 +54,15 @@ def temp_dirs() -> Dict[str, str]:
 
 @pytest.fixture
 def real_config(temp_dirs: Dict[str, str]) -> Config:
+    """Create real configuration with free ports for testing."""
+    from tests.utils.port_utils import find_free_port
+    
+    # Use free ports to avoid conflicts with live server
+    free_websocket_port = find_free_port()
+    free_health_port = find_free_port()
+    
     return Config(
-        server=ServerConfig(host="localhost", port=8002, websocket_path="/ws", max_connections=10),
+        server=ServerConfig(host="localhost", port=free_websocket_port, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(
             host="127.0.0.1",
             api_port=9997,  # Use real MediaMTX service port
@@ -69,6 +76,7 @@ def real_config(temp_dirs: Dict[str, str]) -> Config:
         logging=LoggingConfig(),
         recording=RecordingConfig(),
         snapshots=SnapshotConfig(),
+        health_port=free_health_port,  # Use free port for health server
     )
 
 

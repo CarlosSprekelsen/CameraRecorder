@@ -257,7 +257,8 @@ async def test_get_streams_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test get_streams through WebSocket (not direct method call)
@@ -327,7 +328,8 @@ async def test_take_snapshot_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {operator_user['user_id']} with role {operator_user['role']}")
 
         # Step 1: Verify camera is detected
@@ -406,7 +408,8 @@ async def test_take_snapshot_negative():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
 
         # Test with invalid device
         params = {
@@ -450,7 +453,8 @@ async def test_start_recording_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {operator_user['user_id']} with role {operator_user['role']}")
 
         # Step 1: Verify camera is detected
@@ -545,7 +549,8 @@ async def test_start_recording_negative():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
 
         # Test with invalid device
         params = {
@@ -577,17 +582,26 @@ async def test_start_recording_negative():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_ping_method():
-    """Test ping method (no authentication required)."""
-    print("\nTesting ping method - No Authentication Required")
+    """Test ping method (requires viewer authentication)."""
+    print("\nTesting ping method - Requires Viewer Authentication")
 
     setup = IntegrationTestSetup()
     try:
         await setup.setup()
 
-        # Test ping without authentication (should work)
+        # Create viewer user for testing (required for ping)
+        viewer_user = setup.user_factory.create_viewer_user()
+        
+        # Authenticate with WebSocket server
+        auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
+        print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
+
+        # Test ping with authentication (should work)
         result = await setup.websocket_client.call_protected_method("ping", {})
         
-        print(f"✅ Success: ping method works without authentication")
+        print(f"✅ Success: ping method works with authentication")
         print(f"   Response: {json.dumps(result, indent=2)}")
 
         # Validate response
@@ -615,7 +629,8 @@ async def test_list_recordings_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test list_recordings with pagination parameters
@@ -629,7 +644,7 @@ async def test_list_recordings_success():
         print(f"✅ Success: list_recordings completed")
         print(f"   Response: {json.dumps(result, indent=2)}")
 
-        # Validate response structure per API specification
+        # Validate response structure per frozen API specification
         assert "result" in result, "Response should contain 'result' field"
         recordings_result = result["result"]
         assert "files" in recordings_result, "Response should contain 'files' field"
@@ -689,7 +704,8 @@ async def test_get_metrics_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(admin_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {admin_user['user_id']} with role {admin_user['role']}")
 
         # Test get_metrics
@@ -702,7 +718,7 @@ async def test_get_metrics_success():
         assert "result" in result, "Response should contain 'result' field"
         metrics_result = result["result"]
         
-        # Validate metrics fields
+        # Validate metrics fields per frozen API specification
         assert "active_connections" in metrics_result, "Should contain 'active_connections'"
         assert "total_requests" in metrics_result, "Should contain 'total_requests'"
         assert "average_response_time" in metrics_result, "Should contain 'average_response_time'"
@@ -731,7 +747,8 @@ async def test_get_metrics_insufficient_permissions():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Try to call get_metrics with insufficient permissions
@@ -763,7 +780,8 @@ async def test_list_snapshots_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test list_snapshots with pagination parameters
@@ -777,7 +795,7 @@ async def test_list_snapshots_success():
         print(f"✅ Success: list_snapshots completed")
         print(f"   Response: {json.dumps(result, indent=2)}")
 
-        # Validate response structure per API specification
+        # Validate response structure per frozen API specification
         assert "result" in result, "Response should contain 'result' field"
         snapshots_result = result["result"]
         assert "files" in snapshots_result, "Response should contain 'files' field"
@@ -813,7 +831,8 @@ async def test_get_recording_info_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test get_recording_info with filename parameter
@@ -856,7 +875,8 @@ async def test_get_snapshot_info_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test get_snapshot_info with filename parameter
@@ -899,7 +919,8 @@ async def test_delete_recording_success():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(operator_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {operator_user['user_id']} with role {operator_user['role']}")
 
         # Test delete_recording with filename parameter
@@ -940,7 +961,8 @@ async def test_delete_recording_insufficient_permissions():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Try to call delete_recording with insufficient permissions
@@ -975,7 +997,8 @@ async def test_http_download_endpoints():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         import aiohttp
@@ -1021,7 +1044,8 @@ async def test_websocket_notifications():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
         print(f"✅ Authenticated as {viewer_user['user_id']} with role {viewer_user['role']}")
 
         # Test notification subscription and delivery
@@ -1052,7 +1076,8 @@ async def test_api_response_time_limits():
         
         # Authenticate with WebSocket server
         auth_result = await setup.websocket_client.authenticate(viewer_user["token"])
-        assert auth_result["authenticated"] is True, "Authentication failed"
+        assert "result" in auth_result, "Authentication response should contain 'result' field"
+        assert auth_result["result"]["authenticated"] is True, "Authentication failed"
 
         import time
 

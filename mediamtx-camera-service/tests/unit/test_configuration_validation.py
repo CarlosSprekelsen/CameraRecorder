@@ -167,6 +167,11 @@ class TestConfigurationSchemaValidation:
         # Create config object
         config = Config(**config_data)
         
+        # Use free port for health server to avoid conflicts
+        from tests.utils.port_utils import find_free_port
+        free_health_port = find_free_port()
+        config.health_port = free_health_port
+        
         # Test that ServiceManager can be instantiated with this config
         # without parameter mismatches
         try:
@@ -361,3 +366,167 @@ class TestConfigurationFileValidation:
         assert len(only_in_controller) == 0, (
             f"MediaMTXController has parameters not in MediaMTXConfig: {only_in_controller}"
         )
+
+    def test_configuration_template_yaml_syntax(self):
+        """Test that the configuration template has valid YAML syntax."""
+        
+        import yaml
+        import os
+        
+        # Path to the configuration template
+        template_path = "config/templates/camera-service.yaml.template"
+        
+        # Check if template file exists
+        assert os.path.exists(template_path), f"Configuration template not found: {template_path}"
+        
+        # Try to load and parse the YAML template
+        try:
+            with open(template_path, 'r') as f:
+                yaml_content = f.read()
+            
+            # Parse YAML to check syntax
+            yaml.safe_load(yaml_content)
+            
+        except yaml.YAMLError as e:
+            pytest.fail(f"Configuration template has invalid YAML syntax: {e}")
+        except Exception as e:
+            pytest.fail(f"Failed to read configuration template: {e}")
+
+    def test_configuration_template_variable_substitution(self):
+        """Test that the configuration template can be processed with variable substitution."""
+        
+        import yaml
+        import tempfile
+        import os
+        
+        # Path to the configuration template
+        template_path = "config/templates/camera-service.yaml.template"
+        
+        # Check if template file exists
+        assert os.path.exists(template_path), f"Configuration template not found: {template_path}"
+        
+        # Create temporary directory for testing
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Copy template to temporary location
+            import shutil
+            test_config_path = os.path.join(temp_dir, "camera-service.yaml")
+            shutil.copy2(template_path, test_config_path)
+            
+            # Test variables for substitution
+            test_variables = {
+                "CAMERA_SERVICE_JWT_SECRET": "test_jwt_secret_1234567890abcdef",
+                "API_KEYS_FILE": "/opt/camera-service/security/api-keys.json",
+                "SSL_CERT_FILE": "/opt/camera-service/security/ssl/cert.pem",
+                "SSL_KEY_FILE": "/opt/camera-service/security/ssl/key.pem"
+            }
+            
+            # Perform variable substitution (simulating installation script)
+            with open(test_config_path, 'r') as f:
+                content = f.read()
+            
+            # Substitute variables
+            for var_name, var_value in test_variables.items():
+                content = content.replace(f"${{{var_name}}}", var_value)
+            
+            # Write back the substituted content
+            with open(test_config_path, 'w') as f:
+                f.write(content)
+            
+            # Validate that the substituted YAML is still valid
+            try:
+                with open(test_config_path, 'r') as f:
+                    yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                pytest.fail(f"Configuration template has invalid YAML after variable substitution: {e}")
+            
+            # Verify that variables were actually substituted
+            with open(test_config_path, 'r') as f:
+                final_content = f.read()
+            
+            for var_name, var_value in test_variables.items():
+                assert var_value in final_content, f"Variable {var_name} was not substituted"
+                assert f"${{{var_name}}}" not in final_content, f"Variable placeholder {var_name} still exists"
+
+    def test_configuration_template_completeness(self):
+        """Test that the configuration template contains all required configuration sections."""
+        
+        import yaml
+        import os
+        
+        # Path to the configuration template
+        template_path = "config/templates/camera-service.yaml.template"
+        
+        # Check if template file exists
+        assert os.path.exists(template_path), f"Configuration template not found: {template_path}"
+        
+        # Load the template
+        with open(template_path, 'r') as f:
+            config_data = yaml.safe_load(f)
+        
+        # Required top-level sections
+        required_sections = [
+            'server',
+            'security',
+            'mediamtx',
+            'ffmpeg',
+            'notifications',
+            'performance',
+            'camera',
+            'logging',
+            'recording',
+            'snapshots'
+        ]
+        
+        for section in required_sections:
+            assert section in config_data, f"Missing required configuration section: {section}"
+        
+        # Required security subsections
+        security_sections = ['jwt', 'api_keys', 'ssl', 'rate_limiting', 'health']
+        for section in security_sections:
+            assert section in config_data['security'], f"Missing security subsection: {section}"
+        
+        # Required mediamtx subsections
+        mediamtx_sections = ['codec', 'health_check_interval', 'stream_readiness']
+        for section in mediamtx_sections:
+            assert section in config_data['mediamtx'], f"Missing mediamtx subsection: {section}"
+        
+        # Required performance subsections
+        performance_sections = ['response_time_targets', 'snapshot_tiers', 'optimization']
+        for section in performance_sections:
+            assert section in config_data['performance'], f"Missing performance subsection: {section}"
+
+    def test_configuration_template_variable_placeholders(self):
+        """Test that the configuration template contains expected variable placeholders."""
+        
+        import os
+        
+        # Path to the configuration template
+        template_path = "config/templates/camera-service.yaml.template"
+        
+        # Check if template file exists
+        assert os.path.exists(template_path), f"Configuration template not found: {template_path}"
+        
+        # Read template content
+        with open(template_path, 'r') as f:
+            content = f.read()
+        
+        # Expected variable placeholders
+        expected_placeholders = [
+            "${CAMERA_SERVICE_JWT_SECRET}",
+            "${API_KEYS_FILE}",
+            "${SSL_CERT_FILE}",
+            "${SSL_KEY_FILE}"
+        ]
+        
+        # Check that all expected placeholders are present
+        for placeholder in expected_placeholders:
+            assert placeholder in content, f"Missing expected variable placeholder: {placeholder}"
+        
+        # Check that there are no malformed placeholders
+        import re
+        placeholder_pattern = r'\$\{[^}]+\}'
+        found_placeholders = re.findall(placeholder_pattern, content)
+        
+        # All found placeholders should be in our expected list
+        for placeholder in found_placeholders:
+            assert placeholder in expected_placeholders, f"Unexpected variable placeholder found: {placeholder}"

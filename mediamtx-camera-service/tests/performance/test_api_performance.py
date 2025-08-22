@@ -82,6 +82,11 @@ class PerformanceTestSetup:
         
     def _build_test_config(self) -> Config:
         """Build test configuration for performance testing."""
+        from tests.utils.port_utils import find_free_port
+        
+        # Use free port for health server to avoid conflicts
+        free_health_port = find_free_port()
+        
         return Config(
             server=ServerConfig(host="127.0.0.1", port=8005, websocket_path="/ws", max_connections=100),
             mediamtx=MediaMTXConfig(
@@ -102,6 +107,7 @@ class PerformanceTestSetup:
             logging=LoggingConfig(),
             recording=RecordingConfig(),
             snapshots=SnapshotConfig(),
+            health_port=free_health_port,  # Use free port for health server
         )
     
     async def setup(self):

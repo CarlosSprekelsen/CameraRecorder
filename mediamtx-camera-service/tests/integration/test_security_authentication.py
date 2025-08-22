@@ -85,11 +85,11 @@ class TestJWTAuthenticationFlow:
         
         REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
         """
-        # Generate token for test user using non-hardcoded secret
-        token = auth_manager.generate_test_token("test_user", "admin")
+        # Generate token for test user using existing method
+        token = auth_manager.generate_jwt_token("test_user", "admin")
         
-        # Validate token
-        result = auth_manager.auth_manager.authenticate(token, "jwt")
+        # Validate token using proper authentication call
+        result = auth_manager.authenticate(token, "jwt")
         
         # Verify authentication success
         assert result.authenticated is True
@@ -102,18 +102,18 @@ class TestJWTAuthenticationFlow:
         
         REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
         """
-        # Generate token with short expiry
-        token = auth_manager.generate_test_token("expiry_user", "viewer", expiry_hours=0.0001)
+        # Generate token with short expiry (1 second)
+        token = auth_manager.generate_jwt_token("expiry_user", "viewer", expiry_hours=1/3600)  # 1 second
         
         # Token should be valid initially
-        result = auth_manager.auth_manager.authenticate(token, "jwt")
+        result = auth_manager.authenticate(token, "jwt")
         assert result.authenticated is True
         
         # Wait for token to expire
-        time.sleep(1)
+        time.sleep(2)
         
         # Token should be invalid after expiry
-        result = auth_manager.auth_manager.authenticate(token, "jwt")
+        result = auth_manager.authenticate(token, "jwt")
         assert result.authenticated is False
         assert "expired" in result.error_message.lower()
     
@@ -123,7 +123,7 @@ class TestJWTAuthenticationFlow:
         REQ-SEC-001: JWT Authentication - Token generation, validation, and expiry
         """
         # Generate valid token
-        valid_token = auth_manager.generate_test_token("tamper_user", "admin")
+        valid_token = auth_manager.generate_jwt_token("tamper_user", "admin")
         
         # Tamper with token (modify payload)
         parts = valid_token.split('.')
@@ -133,17 +133,17 @@ class TestJWTAuthenticationFlow:
             tampered_token = f"{parts[0]}.{tampered_payload}.{parts[2]}"
             
             # Tampered token should be rejected
-            result = auth_manager.auth_manager.authenticate(tampered_token, "jwt")
+            result = auth_manager.authenticate(tampered_token, "jwt")
             assert result.authenticated is False
             assert result.error_message is not None
     
     def test_jwt_auto_authentication_fallback(self, auth_manager):
         """Test auto authentication with JWT fallback."""
-        # Generate JWT token using non-hardcoded secret
-        jwt_token = auth_manager.generate_test_token("auto_user", "operator")
+        # Generate JWT token using existing method
+        jwt_token = auth_manager.generate_jwt_token("auto_user", "operator")
         
         # Test auto authentication (should try JWT first)
-        result = auth_manager.auth_manager.authenticate(jwt_token, "auto")
+        result = auth_manager.authenticate(jwt_token, "auto")
         assert result.authenticated is True
         assert result.auth_method == "jwt"
         assert result.user_id == "auto_user"
@@ -151,16 +151,16 @@ class TestJWTAuthenticationFlow:
     
     def test_jwt_concurrent_authentication(self, auth_manager):
         """Test concurrent JWT authentication requests."""
-        # Generate multiple tokens using non-hardcoded secret
+        # Generate multiple tokens using existing method
         tokens = []
         for i in range(10):
-            token = auth_manager.generate_test_token(f"user_{i}", "viewer")
+            token = auth_manager.generate_jwt_token(f"user_{i}", "viewer")
             tokens.append(token)
         
         # Authenticate all tokens concurrently
         results = []
         for token in tokens:
-            result = auth_manager.auth_manager.authenticate(token, "jwt")
+            result = auth_manager.authenticate(token, "jwt")
             results.append(result)
         
         # Verify all authentications succeeded
@@ -170,19 +170,19 @@ class TestJWTAuthenticationFlow:
     
     def test_jwt_performance_benchmark(self, auth_manager):
         """Test JWT authentication performance."""
-        # Generate token using non-hardcoded secret
-        token = auth_manager.generate_test_token("perf_user", "admin")
+        # Generate token using existing method
+        token = auth_manager.generate_jwt_token("perf_user", "admin")
         
         # Measure authentication time
         start_time = time.time()
         for _ in range(100):
-            result = auth_manager.auth_manager.authenticate(token, "jwt")
+            result = auth_manager.authenticate(token, "jwt")
             assert result.authenticated is True
         
         end_time = time.time()
         avg_time = (end_time - start_time) / 100
         
-        # Performance should be under 1ms per authentication
+        # Authentication should be fast (< 1ms per request)
         assert avg_time < 0.001, f"Authentication too slow: {avg_time:.6f}s per request"
 
 
@@ -196,31 +196,31 @@ class TestAuthenticationErrorHandling:
     
     def test_authentication_with_empty_token(self, auth_manager):
         """Test authentication with empty token."""
-        result = auth_manager.auth_manager.authenticate("", "jwt")
+        result = auth_manager.authenticate("", "jwt")
         assert result.authenticated is False
         assert result.error_message is not None
         assert result.auth_method == "jwt"
     
     def test_authentication_with_none_token(self, auth_manager):
         """Test authentication with None token."""
-        result = auth_manager.auth_manager.authenticate(None, "jwt")
+        result = auth_manager.authenticate(None, "jwt")
         assert result.authenticated is False
         assert result.error_message is not None
         assert result.auth_method == "jwt"
     
     def test_authentication_with_invalid_auth_type(self, auth_manager):
         """Test authentication with invalid auth type."""
-        token = auth_manager.generate_test_token("test_user", "viewer")
+        token = auth_manager.generate_jwt_token("test_user", "viewer")
         
         # Should fall back to auto authentication
-        result = auth_manager.auth_manager.authenticate(token, "invalid_type")
+        result = auth_manager.authenticate(token, "invalid_type")
         assert result.authenticated is True
         assert result.auth_method == "jwt"
     
     def test_authentication_with_malformed_token(self, auth_manager):
         """Test authentication with malformed JWT token."""
         malformed_token = "not.a.valid.jwt.token"
-        result = auth_manager.auth_manager.authenticate(malformed_token, "jwt")
+        result = auth_manager.authenticate(malformed_token, "jwt")
         assert result.authenticated is False
         assert result.error_message is not None
 
@@ -272,15 +272,18 @@ class TestRoleBasedAccessControl:
         """Test admin role permissions."""
         admin_user = user_factory.create_admin_user()
         
-        # Admin should have access to all methods
+        # Admin should have access to all methods according to API documentation
         assert "get_camera_list" in admin_user["permissions"]
         assert "get_camera_status" in admin_user["permissions"]
         assert "get_streams" in admin_user["permissions"]
         assert "take_snapshot" in admin_user["permissions"]
         assert "start_recording" in admin_user["permissions"]
         assert "stop_recording" in admin_user["permissions"]
-        assert "delete_camera" in admin_user["permissions"]
-        assert "modify_config" in admin_user["permissions"]
+        assert "list_recordings" in admin_user["permissions"]
+        assert "list_snapshots" in admin_user["permissions"]
+        assert "get_metrics" in admin_user["permissions"]
+        assert "get_status" in admin_user["permissions"]
+        assert "get_server_info" in admin_user["permissions"]
 
 
 # Cleanup function for pytest
