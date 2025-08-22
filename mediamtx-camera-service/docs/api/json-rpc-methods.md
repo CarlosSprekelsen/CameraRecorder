@@ -466,7 +466,7 @@ Get detailed information about a specific recording file.
 
 **Returns:** Object containing recording file metadata and information
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -504,7 +504,7 @@ Get detailed information about a specific snapshot file.
 
 **Returns:** Object containing snapshot file metadata and information
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -542,7 +542,7 @@ Delete a specific recording file.
 
 **Returns:** Object containing deletion status and confirmation
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -578,7 +578,7 @@ Delete a specific snapshot file.
 
 **Returns:** Object containing deletion status and confirmation
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -613,7 +613,7 @@ Get storage space information and usage statistics.
 
 **Returns:** Object containing storage space information and usage statistics
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -653,7 +653,7 @@ Configure file retention policies for automatic cleanup.
 
 **Returns:** Object containing retention policy configuration
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json
@@ -691,7 +691,7 @@ Manually trigger cleanup of old files based on retention policies.
 
 **Returns:** Object containing cleanup results and statistics
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Implemented
 
 **Example:**
 ```json

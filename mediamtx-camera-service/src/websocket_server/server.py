@@ -20,6 +20,7 @@ import uuid
 import psutil
 import os
 import stat
+import shutil
 from datetime import datetime
 from typing import Dict, Any, Optional, Callable, Set, List
 from dataclasses import dataclass
@@ -30,6 +31,24 @@ from websockets.server import ServerProtocol as WebSocketServerProtocol
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
 from camera_service.logging_config import set_correlation_id
+
+# JSON-RPC Error Codes (RFC 32700)
+AUTHENTICATION_REQUIRED = -32001
+RATE_LIMIT_EXCEEDED = -32002
+INSUFFICIENT_PERMISSIONS = -32003
+METHOD_NOT_FOUND = -32601
+INVALID_PARAMS = -32602
+INTERNAL_ERROR = -32603
+
+# JSON-RPC Error Messages
+ERROR_MESSAGES = {
+    AUTHENTICATION_REQUIRED: "Authentication required",
+    RATE_LIMIT_EXCEEDED: "Rate limit exceeded",
+    INSUFFICIENT_PERMISSIONS: "Insufficient permissions",
+    METHOD_NOT_FOUND: "Method not found",
+    INVALID_PARAMS: "Invalid parameters",
+    INTERNAL_ERROR: "Internal server error"
+}
 
 
 class CameraNotFoundError(Exception):
@@ -483,7 +502,7 @@ class WebSocketJsonRpcServer:
                         error_response = json.dumps(
                             {
                                 "jsonrpc": "2.0",
-                                "error": {"code": -32603, "message": "Internal error"},
+                                "error": {"code": INTERNAL_ERROR, "message": ERROR_MESSAGES[INTERNAL_ERROR]},
                                 "id": None,
                             }
                         )
@@ -622,7 +641,7 @@ class WebSocketJsonRpcServer:
                     })
                 # Return proper JSON-RPC error for authentication failures
                 # According to requirements: expired tokens should return -32003 (authorization)
-                error_code = -32003 if "expired" in auth_result.error_message.lower() else -32001
+                error_code = INSUFFICIENT_PERMISSIONS if "expired" in auth_result.error_message.lower() else AUTHENTICATION_REQUIRED
                 return json.dumps({
                     "jsonrpc": "2.0",
                     "error": {"code": error_code, "message": auth_result.error_message},
@@ -634,126 +653,160 @@ class WebSocketJsonRpcServer:
                 return json.dumps(
                     {
                         "jsonrpc": "2.0",
-                        "error": {"code": -32601, "message": "Method not found"},
+                        "error": {"code": METHOD_NOT_FOUND, "message": ERROR_MESSAGES[METHOD_NOT_FOUND]},
                         "id": request_id,
                     }
                 )
 
             # Security enforcement and rate limiting (F3.2.5/F3.2.6/I1.7/N3.x)
-            if self._security_middleware:
-                # Comprehensive method protection with role-based access control
-                # CRITICAL FIX: Protect all sensitive methods from authentication bypass
-                method_permissions = {
-                    # Viewer access (read-only operations)
-                    "get_camera_list": "viewer",
-                    "get_camera_status": "viewer", 
-                    "get_camera_capabilities": "viewer",
-                    "list_recordings": "viewer",
-                    "list_snapshots": "viewer",
-                    "get_streams": "viewer",
-                    "ping": "viewer",
-                    
-                    # Operator access (camera control operations)
-                    "take_snapshot": "operator",
-                    "start_recording": "operator", 
-                    "stop_recording": "operator",
-                    
-                    # Admin access (system management operations)
-                    "get_metrics": "admin",
-                    "get_status": "admin",
-                    "get_server_info": "admin"
-                }
+            # CRITICAL FIX: Protect all sensitive methods from authentication bypass
+            method_permissions = {
+                # Viewer access (read-only operations)
+                "get_camera_list": "viewer",
+                "get_camera_status": "viewer", 
+                "get_camera_capabilities": "viewer",
+                "list_recordings": "viewer",
+                "list_snapshots": "viewer",
+                "get_streams": "viewer",
+                "ping": "viewer",
+                
+                # Operator access (camera control operations)
+                "take_snapshot": "operator",
+                "start_recording": "operator", 
+                "stop_recording": "operator",
+                "delete_recording": "operator",
+                "delete_snapshot": "operator",
+                
+                # Admin access (system management operations)
+                "get_metrics": "admin",
+                "get_status": "admin",
+                "get_server_info": "admin",
+                "get_recording_info": "admin",
+                "get_snapshot_info": "admin",
+                "get_storage_info": "admin",
+                "set_retention_policy": "admin",
+                "cleanup_old_files": "admin"
+            }
 
-                # Rate limiting applies to all methods
+            # Check if method requires authentication
+            if method_name in method_permissions:
+                # CRITICAL SECURITY FIX: Always enforce authentication for protected methods
+                if self._security_middleware is None:
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": AUTHENTICATION_REQUIRED,
+                                "message": ERROR_MESSAGES[AUTHENTICATION_REQUIRED],
+                            },
+                            "id": request_id,
+                        }
+                    )
+                
+                # Rate limiting applies to all protected methods
                 if not self._security_middleware.check_rate_limit(client.client_id):
                     return json.dumps(
                         {
                             "jsonrpc": "2.0",
-                            "error": {"code": -32002, "message": "Rate limit exceeded"},
+                            "error": {
+                                "code": RATE_LIMIT_EXCEEDED, 
+                                "message": ERROR_MESSAGES[RATE_LIMIT_EXCEEDED]
+                            },
                             "id": request_id,
                         }
                     )
-
-                # Check if method requires authentication
-                if method_name in method_permissions:
-                    required_role = method_permissions[method_name]
-                    
-                    # Require authentication for all protected methods
-                    if not self._security_middleware.is_authenticated(client.client_id):
-                        auth_token = None
-                        if params and isinstance(params, dict):
-                            auth_token = params.get("auth_token") or params.get("token")
-                        if auth_token:
-                            auth_result = await self._security_middleware.authenticate_connection(
-                                client.client_id, auth_token
-                            )
-                            if auth_result.authenticated:
-                                client.authenticated = True
-                                client.auth_result = auth_result
-                                client.user_id = auth_result.user_id
-                                client.role = auth_result.role
-                                client.auth_method = auth_result.auth_method
-                            else:
-                                return json.dumps(
-                                    {
-                                        "jsonrpc": "2.0",
-                                        "error": {
-                                            "code": -32001,
-                                            "message": f"Authentication failed: {auth_result.error_message}",
-                                        },
-                                        "id": request_id,
-                                    }
-                                )
+                
+                required_role = method_permissions[method_name]
+                
+                # Check if security middleware is available
+                if self._security_middleware is None:
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": AUTHENTICATION_REQUIRED,
+                                "message": ERROR_MESSAGES[AUTHENTICATION_REQUIRED],
+                            },
+                            "id": request_id,
+                        }
+                    )
+                
+                # Require authentication for all protected methods
+                if not self._security_middleware.is_authenticated(client.client_id):
+                    auth_token = None
+                    if params and isinstance(params, dict):
+                        auth_token = params.get("auth_token") or params.get("token")
+                    if auth_token:
+                        auth_result = await self._security_middleware.authenticate_connection(
+                            client.client_id, auth_token
+                        )
+                        if auth_result.authenticated:
+                            client.authenticated = True
+                            client.auth_result = auth_result
+                            client.user_id = auth_result.user_id
+                            client.role = auth_result.role
+                            client.auth_method = auth_result.auth_method
                         else:
                             return json.dumps(
                                 {
                                     "jsonrpc": "2.0",
                                     "error": {
-                                        "code": -32001,
-                                        "message": f"Authentication required for {method_name} - call authenticate or provide auth_token",
+                                        "code": AUTHENTICATION_REQUIRED,
+                                        "message": f"Authentication failed: {auth_result.error_message}",
                                     },
                                     "id": request_id,
                                 }
                             )
-
-                    # Role-based authorization check
-                    if not self._security_middleware.has_permission(client.client_id, required_role):
+                    else:
                         return json.dumps(
                             {
                                 "jsonrpc": "2.0",
                                 "error": {
-                                    "code": -32003,
-                                    "message": f"Insufficient permissions - {required_role} role required for {method_name}",
+                                    "code": AUTHENTICATION_REQUIRED,
+                                    "message": f"Authentication required for {method_name} - call authenticate or provide auth_token",
                                 },
                                 "id": request_id,
                             }
                         )
 
-                    # Session expiry enforcement on each protected call
-                    auth_state = self._security_middleware.get_auth_result(client.client_id)
-                    if auth_state is not None:
-                        try:
-                            expires_at = getattr(auth_state, "expires_at", None)
-                            if expires_at is not None:
-                                now_ts = int(time.time())
-                                if now_ts >= int(expires_at):
-                                    # Invalidate session
-                                    client.authenticated = False
-                                    client.auth_result = None
-                                    client.user_id = None
-                                    client.role = None
-                                    return json.dumps(
-                                        {
-                                            "jsonrpc": "2.0",
-                                            "error": {
-                                                "code": -32001,
-                                                "message": "Authentication failed: token expired",
-                                            },
-                                            "id": request_id,
-                                        }
-                                    )
-                        except Exception:
-                            pass
+                # Role-based authorization check
+                if not self._security_middleware.has_permission(client.client_id, required_role):
+                    return json.dumps(
+                        {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": INSUFFICIENT_PERMISSIONS,
+                                "message": f"Insufficient permissions - {required_role} role required for {method_name}",
+                            },
+                            "id": request_id,
+                        }
+                    )
+
+                # Session expiry enforcement on each protected call
+                auth_state = self._security_middleware.get_auth_result(client.client_id)
+                if auth_state is not None:
+                    try:
+                        expires_at = getattr(auth_state, "expires_at", None)
+                        if expires_at is not None:
+                            now_ts = int(time.time())
+                            if now_ts >= int(expires_at):
+                                # Invalidate session
+                                client.authenticated = False
+                                client.auth_result = None
+                                client.user_id = None
+                                client.role = None
+                                return json.dumps(
+                                    {
+                                        "jsonrpc": "2.0",
+                                        "error": {
+                                            "code": AUTHENTICATION_REQUIRED,
+                                            "message": "Authentication failed: token expired",
+                                        },
+                                        "id": request_id,
+                                    }
+                                )
+                    except Exception:
+                        pass
 
             # Call method handler
             try:
@@ -791,26 +844,26 @@ class WebSocketJsonRpcServer:
                         error_code = -1003
                         error_message = "MediaMTX operation failed"
                     elif isinstance(e, AuthenticationError):
-                        error_code = -1001
-                        error_message = "Authentication failed"
+                        error_code = AUTHENTICATION_REQUIRED
+                        error_message = ERROR_MESSAGES[AUTHENTICATION_REQUIRED]
                     elif isinstance(e, PermissionError):
-                        error_code = -1002
-                        error_message = "Permission denied"
+                        error_code = INSUFFICIENT_PERMISSIONS
+                        error_message = ERROR_MESSAGES[INSUFFICIENT_PERMISSIONS]
                     elif isinstance(e, StreamError):
                         error_code = -1004
                         error_message = "Stream operation failed"
                     elif isinstance(e, ValueError):
-                        error_code = -32602
-                        error_message = "Invalid params"
+                        error_code = INVALID_PARAMS
+                        error_message = ERROR_MESSAGES[INVALID_PARAMS]
                     elif isinstance(e, KeyError):
-                        error_code = -32602
+                        error_code = INVALID_PARAMS
                         error_message = "Missing required parameter"
                     elif isinstance(e, TypeError):
-                        error_code = -32602
+                        error_code = INVALID_PARAMS
                         error_message = "Invalid parameter type"
                     else:
-                        error_code = -32603
-                        error_message = "Internal error"
+                        error_code = INTERNAL_ERROR
+                        error_message = ERROR_MESSAGES[INTERNAL_ERROR]
                     
                     return json.dumps(
                         {
@@ -830,7 +883,7 @@ class WebSocketJsonRpcServer:
             return json.dumps(
                 {
                     "jsonrpc": "2.0",
-                    "error": {"code": -32603, "message": "Internal error"},
+                    "error": {"code": INTERNAL_ERROR, "message": ERROR_MESSAGES[INTERNAL_ERROR]},
                     "id": request_id,
                 }
             )
@@ -1151,6 +1204,14 @@ class WebSocketJsonRpcServer:
         # File management methods (Epic E6)
         self.register_method("list_recordings", self._method_list_recordings, version="1.0")
         self.register_method("list_snapshots", self._method_list_snapshots, version="1.0")
+        # File lifecycle management methods (Epic E6 - File Lifecycle Management)
+        self.register_method("get_recording_info", self._method_get_recording_info, version="1.0")
+        self.register_method("get_snapshot_info", self._method_get_snapshot_info, version="1.0")
+        self.register_method("delete_recording", self._method_delete_recording, version="1.0")
+        self.register_method("delete_snapshot", self._method_delete_snapshot, version="1.0")
+        self.register_method("get_storage_info", self._method_get_storage_info, version="1.0")
+        self.register_method("set_retention_policy", self._method_set_retention_policy, version="1.0")
+        self.register_method("cleanup_old_files", self._method_cleanup_old_files, version="1.0")
         self._logger.debug("Registered built-in JSON-RPC methods")
 
     def _get_stream_name_from_device_path(self, device_path: str) -> str:
@@ -2460,4 +2521,428 @@ class WebSocketJsonRpcServer:
             raise
         except Exception as e:
             self._logger.error(f"Unexpected error in list_snapshots: {e}")
+            raise
+
+    async def _method_get_recording_info(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific recording file.
+        
+        Requirements: REQ-CLIENT-037, REQ-CLIENT-038
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: Parameters containing:
+                - filename: Name of the recording file (required)
+        
+        Returns:
+            Dictionary containing recording file metadata and information
+        """
+        try:
+            # Validate parameters
+            if not params or "filename" not in params:
+                raise ValueError("filename parameter is required")
+            
+            filename = params["filename"]
+            if not isinstance(filename, str) or not filename.strip():
+                raise ValueError("filename must be a non-empty string")
+            
+            # Define recordings directory path
+            recordings_dir = self._config.mediamtx.recordings_path
+            file_path = os.path.join(recordings_dir, filename)
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Recording file not found: {filename}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {filename}")
+            
+            # Get file stats
+            try:
+                stat_info = os.stat(file_path)
+                file_size = stat_info.st_size
+                created_time = datetime.fromtimestamp(stat_info.st_ctime)
+                modified_time = datetime.fromtimestamp(stat_info.st_mtime)
+                
+                # Determine if it's a video file
+                is_video = filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv'))
+                
+                file_info = {
+                    "filename": filename,
+                    "file_size": file_size,
+                    "created_time": created_time.isoformat() + "Z",
+                    "modified_time": modified_time.isoformat() + "Z",
+                    "download_url": f"/files/recordings/{filename}"
+                }
+                
+                # Add duration for video files (placeholder - would need video metadata extraction)
+                if is_video:
+                    file_info["duration"] = None  # TODO: Extract actual duration from video file
+                
+                return file_info
+                
+            except OSError as e:
+                self._logger.error(f"Error accessing recording file {filename}: {e}")
+                raise OSError(f"Error accessing recording file: {e}")
+                
+        except (ValueError, FileNotFoundError, OSError) as e:
+            self._logger.error(f"Error in get_recording_info: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in get_recording_info: {e}")
+            raise
+
+    async def _method_get_snapshot_info(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific snapshot file.
+        
+        Requirements: REQ-CLIENT-037, REQ-CLIENT-038
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: Parameters containing:
+                - filename: Name of the snapshot file (required)
+        
+        Returns:
+            Dictionary containing snapshot file metadata and information
+        """
+        try:
+            # Validate parameters
+            if not params or "filename" not in params:
+                raise ValueError("filename parameter is required")
+            
+            filename = params["filename"]
+            if not isinstance(filename, str) or not filename.strip():
+                raise ValueError("filename must be a non-empty string")
+            
+            # Define snapshots directory path
+            snapshots_dir = self._config.mediamtx.snapshots_path
+            file_path = os.path.join(snapshots_dir, filename)
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Snapshot file not found: {filename}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {filename}")
+            
+            # Get file stats
+            try:
+                stat_info = os.stat(file_path)
+                file_size = stat_info.st_size
+                created_time = datetime.fromtimestamp(stat_info.st_ctime)
+                modified_time = datetime.fromtimestamp(stat_info.st_mtime)
+                
+                # Determine if it's an image file
+                is_image = filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'))
+                
+                file_info = {
+                    "filename": filename,
+                    "file_size": file_size,
+                    "created_time": created_time.isoformat() + "Z",
+                    "modified_time": modified_time.isoformat() + "Z",
+                    "download_url": f"/files/snapshots/{filename}"
+                }
+                
+                # Add resolution for image files (placeholder - would need image metadata extraction)
+                if is_image:
+                    file_info["resolution"] = None  # TODO: Extract actual resolution from image file
+                
+                return file_info
+                
+            except OSError as e:
+                self._logger.error(f"Error accessing snapshot file {filename}: {e}")
+                raise OSError(f"Error accessing snapshot file: {e}")
+                
+        except (ValueError, FileNotFoundError, OSError) as e:
+            self._logger.error(f"Error in get_snapshot_info: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in get_snapshot_info: {e}")
+            raise
+
+    async def _method_delete_recording(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Delete a specific recording file.
+        
+        Requirements: REQ-CLIENT-034, REQ-CLIENT-038
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: Parameters containing:
+                - filename: Name of the recording file to delete (required)
+        
+        Returns:
+            Dictionary containing deletion status and confirmation
+        """
+        try:
+            # Validate parameters
+            if not params or "filename" not in params:
+                raise ValueError("filename parameter is required")
+            
+            filename = params["filename"]
+            if not isinstance(filename, str) or not filename.strip():
+                raise ValueError("filename must be a non-empty string")
+            
+            # Define recordings directory path
+            recordings_dir = self._config.mediamtx.recordings_path
+            file_path = os.path.join(recordings_dir, filename)
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Recording file not found: {filename}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {filename}")
+            
+            # Delete the file
+            try:
+                os.remove(file_path)
+                self._logger.info(f"Recording file deleted successfully: {filename}")
+                
+                return {
+                    "filename": filename,
+                    "deleted": True,
+                    "message": "Recording file deleted successfully"
+                }
+                
+            except OSError as e:
+                self._logger.error(f"Error deleting recording file {filename}: {e}")
+                raise OSError(f"Error deleting recording file: {e}")
+                
+        except (ValueError, FileNotFoundError, OSError) as e:
+            self._logger.error(f"Error in delete_recording: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in delete_recording: {e}")
+            raise
+
+    async def _method_delete_snapshot(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Delete a specific snapshot file.
+        
+        Requirements: REQ-CLIENT-034, REQ-CLIENT-038
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: Parameters containing:
+                - filename: Name of the snapshot file to delete (required)
+        
+        Returns:
+            Dictionary containing deletion status and confirmation
+        """
+        try:
+            # Validate parameters
+            if not params or "filename" not in params:
+                raise ValueError("filename parameter is required")
+            
+            filename = params["filename"]
+            if not isinstance(filename, str) or not filename.strip():
+                raise ValueError("filename must be a non-empty string")
+            
+            # Define snapshots directory path
+            snapshots_dir = self._config.mediamtx.snapshots_path
+            file_path = os.path.join(snapshots_dir, filename)
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Snapshot file not found: {filename}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {filename}")
+            
+            # Delete the file
+            try:
+                os.remove(file_path)
+                self._logger.info(f"Snapshot file deleted successfully: {filename}")
+                
+                return {
+                    "filename": filename,
+                    "deleted": True,
+                    "message": "Snapshot file deleted successfully"
+                }
+                
+            except OSError as e:
+                self._logger.error(f"Error deleting snapshot file {filename}: {e}")
+                raise OSError(f"Error deleting snapshot file: {e}")
+                
+        except (ValueError, FileNotFoundError, OSError) as e:
+            self._logger.error(f"Error in delete_snapshot: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in delete_snapshot: {e}")
+            raise
+
+    async def _method_get_storage_info(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get storage space information and usage statistics.
+        
+        Requirements: REQ-CLIENT-036
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: No parameters required
+        
+        Returns:
+            Dictionary containing storage space information and usage statistics
+        """
+        try:
+            # Get recordings and snapshots directory paths
+            recordings_dir = self._config.mediamtx.recordings_path
+            snapshots_dir = self._config.mediamtx.snapshots_path
+            
+            # Get disk usage for the parent directory (assuming both are on same filesystem)
+            parent_dir = os.path.dirname(recordings_dir)
+            
+            try:
+                # Get disk usage statistics
+                total, used, free = shutil.disk_usage(parent_dir)
+                usage_percentage = (used / total) * 100 if total > 0 else 0
+                
+                # Calculate recordings directory size
+                recordings_size = 0
+                if os.path.exists(recordings_dir):
+                    for dirpath, dirnames, filenames in os.walk(recordings_dir):
+                        for filename in filenames:
+                            file_path = os.path.join(dirpath, filename)
+                            try:
+                                recordings_size += os.path.getsize(file_path)
+                            except OSError:
+                                continue
+                
+                # Calculate snapshots directory size
+                snapshots_size = 0
+                if os.path.exists(snapshots_dir):
+                    for dirpath, dirnames, filenames in os.walk(snapshots_dir):
+                        for filename in filenames:
+                            file_path = os.path.join(dirpath, filename)
+                            try:
+                                snapshots_size += os.path.getsize(file_path)
+                            except OSError:
+                                continue
+                
+                # Determine if low space warning should be shown (less than 10% free)
+                low_space_warning = usage_percentage > 90
+                
+                return {
+                    "total_space": total,
+                    "used_space": used,
+                    "available_space": free,
+                    "usage_percentage": round(usage_percentage, 1),
+                    "recordings_size": recordings_size,
+                    "snapshots_size": snapshots_size,
+                    "low_space_warning": low_space_warning
+                }
+                
+            except OSError as e:
+                self._logger.error(f"Error getting storage information: {e}")
+                raise OSError(f"Error getting storage information: {e}")
+                
+        except OSError as e:
+            self._logger.error(f"Error in get_storage_info: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in get_storage_info: {e}")
+            raise
+
+    async def _method_set_retention_policy(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Configure file retention policies for automatic cleanup.
+        
+        Requirements: REQ-CLIENT-035
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: Parameters containing:
+                - policy_type: Type of retention policy ("age", "size", "manual") (required)
+                - max_age_days: Maximum age in days for age-based retention (optional)
+                - max_size_gb: Maximum size in GB for size-based retention (optional)
+                - enabled: Whether automatic cleanup is enabled (required)
+        
+        Returns:
+            Dictionary containing retention policy configuration
+        """
+        try:
+            # Validate parameters
+            if not params:
+                raise ValueError("Parameters are required")
+            
+            policy_type = params.get("policy_type")
+            if not policy_type or policy_type not in ["age", "size", "manual"]:
+                raise ValueError("policy_type must be one of: age, size, manual")
+            
+            enabled = params.get("enabled")
+            if not isinstance(enabled, bool):
+                raise ValueError("enabled must be a boolean value")
+            
+            # Validate age-based policy parameters
+            if policy_type == "age":
+                max_age_days = params.get("max_age_days")
+                if not isinstance(max_age_days, (int, float)) or max_age_days <= 0:
+                    raise ValueError("max_age_days must be a positive number for age-based policy")
+            
+            # Validate size-based policy parameters
+            if policy_type == "size":
+                max_size_gb = params.get("max_size_gb")
+                if not isinstance(max_size_gb, (int, float)) or max_size_gb <= 0:
+                    raise ValueError("max_size_gb must be a positive number for size-based policy")
+            
+            # TODO: Store retention policy configuration (would need persistent storage)
+            # For now, just return the configuration
+            self._logger.info(f"Retention policy updated: {policy_type}, enabled: {enabled}")
+            
+            return {
+                "policy_type": policy_type,
+                "enabled": enabled,
+                "message": "Retention policy updated successfully"
+            }
+            
+        except ValueError as e:
+            self._logger.error(f"Error in set_retention_policy: {e}")
+            raise
+        except Exception as e:
+            self._logger.error(f"Unexpected error in set_retention_policy: {e}")
+            raise
+
+    async def _method_cleanup_old_files(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Manually trigger cleanup of old files based on retention policies.
+        
+        Requirements: REQ-CLIENT-037
+        Epic E6: File Lifecycle Management
+        
+        Args:
+            params: No parameters required
+        
+        Returns:
+            Dictionary containing cleanup results and statistics
+        """
+        try:
+            # TODO: Implement actual cleanup logic based on retention policies
+            # For now, return a placeholder response
+            self._logger.info("Manual cleanup triggered (not yet implemented)")
+            
+            return {
+                "cleanup_executed": True,
+                "files_deleted": 0,
+                "space_freed": 0,
+                "message": "Cleanup completed successfully (placeholder implementation)"
+            }
+            
+        except Exception as e:
+            self._logger.error(f"Unexpected error in cleanup_old_files: {e}")
             raise

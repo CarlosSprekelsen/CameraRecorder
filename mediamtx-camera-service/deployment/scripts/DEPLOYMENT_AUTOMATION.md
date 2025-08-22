@@ -55,6 +55,13 @@ sudo ./deployment/scripts/deploy.sh --force-uninstall --skip-validation
 - `--skip-validation`: Skip deployment validation
 - `--help`: Show usage information
 
+### Uninstall Script Options
+
+The uninstall script (`uninstall.sh`) supports:
+- `--force`: Skip confirmation prompt
+- `--remove-user`: Remove service users (use with caution)
+- `--help`: Show usage information
+
 ## Before vs After
 
 ### Before (Manual Process)
@@ -78,10 +85,20 @@ systemctl status mediamtx
 curl http://localhost:8003/health/ready
 ```
 
+### Alternative: Automated Uninstall
+```bash
+# Automated uninstall without confirmation
+sudo ./deployment/scripts/uninstall.sh --force
+```
+
 ### After (Automated Process)
 ```bash
 # Single command handles everything
 sudo ./deployment/scripts/deploy.sh --force-uninstall
+
+# Or use individual scripts with automation
+sudo ./deployment/scripts/uninstall.sh --force
+sudo ./deployment/scripts/install.sh
 ```
 
 ## Benefits

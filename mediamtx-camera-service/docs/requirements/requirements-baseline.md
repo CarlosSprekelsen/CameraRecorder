@@ -271,6 +271,20 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-TECH-031 | Performance Targets: 5x response time improvement, 10x scalability improvement | Medium | REQ-TECH-006 |
 | REQ-TECH-032 | Migration Strategy: Gradual migration with rollback capability | Medium | REQ-TECH-006 |
 
+### 4.5 Startup and Error Handling Requirements
+
+| REQ-ID | Description | Priority | Source Reference |
+|--------|-------------|----------|------------------|
+| REQ-TECH-033 | The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError | High | REQ-TECH-023 |
+| REQ-TECH-034 | The system SHALL return "unknown" version when package metadata is unavailable | High | REQ-TECH-023 |
+| REQ-TECH-035 | The system SHALL ensure service startup continues even when version detection fails | Critical | REQ-TECH-023 |
+| REQ-TECH-036 | The system SHALL log version information and any version detection errors | High | REQ-TECH-023 |
+| REQ-TECH-037 | The system SHALL implement comprehensive error handling during startup sequence with graceful degradation | Critical | REQ-TECH-024 |
+| REQ-TECH-038 | The system SHALL implement fallback mechanisms for critical startup failures | Critical | REQ-TECH-024 |
+| REQ-TECH-039 | The system SHALL clean up partially initialized state when startup fails | Critical | REQ-TECH-024 |
+| REQ-TECH-040 | The system SHALL provide clear error messages and logging for startup failures | High | REQ-TECH-024 |
+| REQ-TECH-041 | The system SHALL validate each startup step before proceeding to the next | High | REQ-TECH-024 |
+
 ---
 
 ## 5. API Requirements

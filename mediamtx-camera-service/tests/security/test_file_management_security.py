@@ -78,7 +78,9 @@ class FileManagementSecurityTestSetup:
         self.server = WebSocketJsonRpcServer(
             host=self.config.server.host,
             port=self.config.server.port,
-            websocket_path=self.config.server.websocket_path
+            websocket_path=self.config.server.websocket_path,
+            max_connections=100,
+            config=self.config  # Add config parameter
         )
         
         # Create and set security middleware
@@ -95,6 +97,10 @@ class FileManagementSecurityTestSetup:
         
         # Create temporary directory for test files
         self.temp_dir = tempfile.mkdtemp(prefix="file_mgmt_security_test_")
+        
+        # Update config to use temporary directories
+        self.config.mediamtx.recordings_path = self.temp_dir
+        self.config.mediamtx.snapshots_path = self.temp_dir
         
         # Create test files
         await self._create_test_files()

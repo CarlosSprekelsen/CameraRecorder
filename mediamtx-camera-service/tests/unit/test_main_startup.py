@@ -23,10 +23,64 @@ class TestGetVersion:
             assert get_version() == '1.2.3'
     
     def test_get_version_without_package(self):
-        """Test version retrieval when package is not found."""
+        """
+        Test version retrieval when package is not found.
+        
+        Requirements Coverage:
+        - REQ-TECH-033: The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError
+        - REQ-TECH-034: The system SHALL return "unknown" version when package metadata is unavailable
+        - REQ-TECH-035: The system SHALL ensure service startup continues even when version detection fails
+        - REQ-TECH-036: The system SHALL log version information and any version detection errors
+        
+        Test Categories: Unit/Startup/Error Handling
+        """
         from importlib.metadata import PackageNotFoundError
-        with patch('importlib.metadata.version', side_effect=PackageNotFoundError):
+        with patch('camera_service.main.version', side_effect=PackageNotFoundError("mediamtx-camera-service")):
             assert get_version() == 'unknown'
+    
+    def test_get_version_import_error(self):
+        """
+        Test version retrieval when import system fails.
+        
+        Requirements Coverage:
+        - REQ-TECH-033: The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError
+        - REQ-TECH-034: The system SHALL return "unknown" version when package metadata is unavailable
+        - REQ-TECH-035: The system SHALL ensure service startup continues even when version detection fails
+        - REQ-TECH-036: The system SHALL log version information and any version detection errors
+        
+        Test Categories: Unit/Startup/Error Handling
+        """
+        with patch('camera_service.main.version', side_effect=ImportError("Import system failure")):
+            assert get_version() == 'unknown'
+    
+    def test_get_version_general_exception(self):
+        """
+        Test version retrieval when unexpected errors occur.
+        
+        Requirements Coverage:
+        - REQ-TECH-033: The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError
+        - REQ-TECH-034: The system SHALL return "unknown" version when package metadata is unavailable
+        - REQ-TECH-035: The system SHALL ensure service startup continues even when version detection fails
+        - REQ-TECH-036: The system SHALL log version information and any version detection errors
+        
+        Test Categories: Unit/Startup/Error Handling
+        """
+        with patch('camera_service.main.version', side_effect=Exception("Unexpected error")):
+            assert get_version() == 'unknown'
+    
+    def test_get_version_success(self):
+        """
+        Test version retrieval when package metadata is available.
+        
+        Requirements Coverage:
+        - REQ-TECH-033: The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError
+        - REQ-TECH-036: The system SHALL log version information and any version detection errors
+        
+        Test Categories: Unit/Startup/Error Handling
+        """
+        expected_version = "1.2.3"
+        with patch('camera_service.main.version', return_value=expected_version):
+            assert get_version() == expected_version
 
 
 class TestServiceCoordinator:

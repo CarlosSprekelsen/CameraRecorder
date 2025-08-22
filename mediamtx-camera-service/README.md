@@ -24,8 +24,14 @@ A lightweight WebSocket JSON-RPC 2.0 service that provides real-time USB camera 
 git clone https://github.com/your-org/mediamtx-camera-service
 cd mediamtx-camera-service
 
-# Run installation script
+# Basic installation
 sudo ./deployment/scripts/install.sh
+
+# Production installation
+sudo PRODUCTION_MODE=true ./deployment/scripts/install.sh
+
+# Automated deployment cycle (uninstall + install)
+sudo ./deployment/scripts/deploy.sh --force-uninstall
 ```
 
 ### Validation
@@ -55,6 +61,9 @@ sudo systemctl status camera-service
 
 # View logs
 sudo journalctl -u camera-service -f
+
+# Uninstall (if needed)
+sudo ./deployment/scripts/uninstall.sh --force
 ```
 
 ## Architecture

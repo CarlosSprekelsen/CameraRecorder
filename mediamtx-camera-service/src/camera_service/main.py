@@ -24,10 +24,28 @@ except ImportError:
 
 
 def get_version() -> str:
-    """Get the service version from package metadata."""
+    """
+    Get the service version from package metadata.
+    
+    Requirements Coverage:
+    - REQ-TECH-033: The system SHALL implement robust version handling with graceful error recovery for both PackageNotFoundError and ImportError
+    - REQ-TECH-034: The system SHALL return "unknown" version when package metadata is unavailable
+    - REQ-TECH-035: The system SHALL ensure service startup continues even when version detection fails
+    - REQ-TECH-036: The system SHALL log version information and any version detection errors
+    """
     try:
         return version("mediamtx-camera-service")
-    except PackageNotFoundError:
+    except (PackageNotFoundError, ImportError) as e:
+        # Log the error for debugging purposes
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Version detection failed: {e}. Returning 'unknown' version.")
+        return "unknown"
+    except Exception as e:
+        # Handle any other unexpected errors gracefully
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error during version detection: {e}. Returning 'unknown' version.")
         return "unknown"
 
 

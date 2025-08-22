@@ -216,20 +216,37 @@ setup_backup_procedures() {
         mkdir -p "$INSTALL_DIR/backups"
         chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/backups"
         
-        # Create backup script
+        # Create backup script with encryption
         cat > "$INSTALL_DIR/backups/backup.sh" << 'EOF'
 #!/bin/bash
 BACKUP_DIR="/opt/camera-service/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 
-tar -czf "$BACKUP_DIR/camera-service-$DATE.tar.gz" \
+# Generate encryption key for this backup
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# Create encrypted backup
+tar -cz /opt/camera-service \
     --exclude="$BACKUP_DIR" \
     --exclude="venv" \
-    /opt/camera-service
+    --exclude="*.log" \
+    | openssl enc -aes-256-cbc -salt -k "$ENCRYPTION_KEY" \
+    > "$BACKUP_DIR/camera-service-$DATE.tar.gz.enc"
 
-find "$BACKUP_DIR" -name "camera-service-*.tar.gz" -mtime +7 -delete
+# Store encryption key securely (in production, use proper secret management)
+echo "$ENCRYPTION_KEY" > "$BACKUP_DIR/camera-service-$DATE.key"
 
-echo "Backup completed: camera-service-$DATE.tar.gz"
+# Set secure permissions
+chmod 600 "$BACKUP_DIR/camera-service-$DATE.tar.gz.enc"
+chmod 600 "$BACKUP_DIR/camera-service-$DATE.key"
+
+# Clean up old backups (older than 7 days)
+find "$BACKUP_DIR" -name "camera-service-*.tar.gz.enc" -mtime +7 -delete
+find "$BACKUP_DIR" -name "camera-service-*.key" -mtime +7 -delete
+
+echo "Encrypted backup completed: camera-service-$DATE.tar.gz.enc"
+echo "Encryption key stored: camera-service-$DATE.key"
+echo "To restore: openssl enc -d -aes-256-cbc -k \$(cat camera-service-$DATE.key) -in camera-service-$DATE.tar.gz.enc | tar -xz"
 EOF
         
         chmod +x "$INSTALL_DIR/backups/backup.sh"
@@ -239,9 +256,50 @@ EOF
     fi
 }
 
+# Function to check network connectivity
+check_network_connectivity() {
+    log_message "Checking network connectivity..."
+    
+    # Test basic internet connectivity
+    if ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then
+        log_success "Network connectivity verified"
+    else
+        log_warning "Network connectivity issues detected"
+        log_warning "Some features may not work without internet access"
+    fi
+    
+    # Test DNS resolution
+    if nslookup google.com >/dev/null 2>&1; then
+        log_success "DNS resolution working"
+    else
+        log_warning "DNS resolution issues detected"
+    fi
+}
+
+# Function to check disk space
+check_disk_space() {
+    log_message "Checking available disk space..."
+    
+    # Get available space in KB
+    available_space=$(df /opt | awk 'NR==2 {print $4}')
+    required_space=1048576  # 1GB in KB
+    
+    if [ "$available_space" -lt "$required_space" ]; then
+        log_error "Insufficient disk space. Available: ${available_space}KB, Required: ${required_space}KB"
+        log_error "Please free up at least 1GB of disk space before installation"
+        exit 1
+    fi
+    
+    log_success "Sufficient disk space available: ${available_space}KB"
+}
+
 # Function to install system dependencies
 install_system_dependencies() {
     log_message "Installing system dependencies..."
+    
+    # Check system requirements before installation
+    check_network_connectivity
+    check_disk_space
     
     # Update package list
     apt-get update
@@ -272,6 +330,8 @@ create_service_user() {
         log_success "Service user created: $SERVICE_USER"
     else
         log_message "Service user already exists: $SERVICE_USER"
+        # Update user properties if needed
+        usermod -s /bin/false -d "$INSTALL_DIR" "$SERVICE_USER" 2>/dev/null || true
     fi
     
     # Ensure video group exists and add service user to it
@@ -364,10 +424,24 @@ SyslogIdentifier=mediamtx
 WantedBy=multi-user.target
 EOF
     
-    # Enable and start MediaMTX service
+    # Enable and start MediaMTX service (idempotent)
     systemctl daemon-reload
-    systemctl enable mediamtx
-    systemctl start mediamtx
+    
+    # Check if service is already enabled
+    if ! systemctl is-enabled --quiet mediamtx 2>/dev/null; then
+        systemctl enable mediamtx
+        log_success "MediaMTX service enabled"
+    else
+        log_message "MediaMTX service already enabled"
+    fi
+    
+    # Check if service is already running
+    if ! systemctl is-active --quiet mediamtx 2>/dev/null; then
+        systemctl start mediamtx
+        log_success "MediaMTX service started"
+    else
+        log_message "MediaMTX service already running"
+    fi
     
     # Return to original directory
     cd "$ORIGINAL_DIR"
@@ -426,11 +500,11 @@ install_camera_service() {
     chmod 755 "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
     log_success "Required directories created with proper permissions"
     
-    # Generate JWT secret first
-    JWT_SECRET=$(openssl rand -hex 32)
+    # Generate JWT secret first (using Python secrets module for better entropy)
+    JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     
     # Create camera service configuration from template
-    log_info "Creating camera service configuration from template..."
+    log_message "Creating camera service configuration from template..."
     
     # Copy template and substitute variables
     cp config/templates/camera-service.yaml.template "$INSTALL_DIR/config/camera-service.yaml"
@@ -441,16 +515,43 @@ install_camera_service() {
     sed -i "s|\${SSL_CERT_FILE}|$INSTALL_DIR/security/ssl/cert.pem|g" "$INSTALL_DIR/config/camera-service.yaml"
     sed -i "s|\${SSL_KEY_FILE}|$INSTALL_DIR/security/ssl/key.pem|g" "$INSTALL_DIR/config/camera-service.yaml"
     
-    # Validate generated YAML
-    if python3 -c "import yaml; yaml.safe_load(open('$INSTALL_DIR/config/camera-service.yaml'))" 2>/dev/null; then
+    # Validate generated YAML with comprehensive error checking
+    if python3 -c "
+import yaml
+import sys
+try:
+    with open('$INSTALL_DIR/config/camera-service.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+    if config is None:
+        print('Configuration is empty')
+        sys.exit(1)
+    # Validate required sections
+    required_sections = ['server', 'security', 'mediamtx', 'camera', 'logging']
+    for section in required_sections:
+        if section not in config:
+            print(f'Missing required section: {section}')
+            sys.exit(1)
+    print('Configuration validation successful')
+except Exception as e:
+    print(f'Configuration validation failed: {e}')
+    sys.exit(1)
+" 2>/dev/null; then
         log_success "Configuration file generated and validated successfully"
     else
         log_error "Generated YAML configuration is invalid"
         exit 1
     fi
     
-    # Create security directories
+    # Create security directories with proper permissions
     mkdir -p "$INSTALL_DIR/security/api-keys"
+    mkdir -p "$INSTALL_DIR/keys"  # Create the keys directory that the code expects
+    
+    # Set proper ownership and permissions for security directories
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/security"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/keys"
+    chmod 700 "$INSTALL_DIR/security"
+    chmod 700 "$INSTALL_DIR/keys"
+    
     echo "CAMERA_SERVICE_JWT_SECRET=$JWT_SECRET" > "$INSTALL_DIR/.env"
     
     # Create API keys file
@@ -462,10 +563,21 @@ install_camera_service() {
 }
 EOF
     
+    # Create the keys file that the code expects
+    cat > "$INSTALL_DIR/keys/api-keys.json" << EOF
+{
+  "version": "1.0",
+  "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "keys": []
+}
+EOF
+    
     # Set secure permissions
     chown -R "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR"
     chmod 700 "$INSTALL_DIR/security"
+    chmod 700 "$INSTALL_DIR/keys"  # Set proper permissions for keys directory
     chmod 600 "$INSTALL_DIR/security/api-keys.json"
+    chmod 600 "$INSTALL_DIR/keys/api-keys.json"  # Set proper permissions for keys file
     chmod 600 "$INSTALL_DIR/.env"
     
     # Create log directory
@@ -506,10 +618,24 @@ SyslogIdentifier=camera-service
 WantedBy=multi-user.target
 EOF
     
-    # Enable and start camera service
+    # Enable and start camera service (idempotent)
     systemctl daemon-reload
-    systemctl enable camera-service
-    systemctl start camera-service
+    
+    # Check if service is already enabled
+    if ! systemctl is-enabled --quiet camera-service 2>/dev/null; then
+        systemctl enable camera-service
+        log_success "Camera service enabled"
+    else
+        log_message "Camera service already enabled"
+    fi
+    
+    # Check if service is already running
+    if ! systemctl is-active --quiet camera-service 2>/dev/null; then
+        systemctl start camera-service
+        log_success "Camera service started"
+    else
+        log_message "Camera service already running"
+    fi
     
     log_success "Camera Service installed and started"
 }

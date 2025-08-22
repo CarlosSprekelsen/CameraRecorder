@@ -145,14 +145,25 @@ remove_data_directories() {
 
 # Function to remove service user (optional)
 remove_service_user() {
+    local remove_user=${1:-false}
+    
     log_message "Checking service user..."
     
     if id "$SERVICE_USER" &>/dev/null; then
-        log_warning "Service user $SERVICE_USER exists"
-        log_warning "Consider whether to remove the user:"
-        log_warning "  - If this is a test environment: userdel -r $SERVICE_USER"
-        log_warning "  - If this is production: Keep the user for security"
-        log_message "Service user $SERVICE_USER preserved (manual removal required if needed)"
+        if [[ "$remove_user" == true ]]; then
+            log_message "Removing service user $SERVICE_USER..."
+            userdel -r "$SERVICE_USER" 2>/dev/null || {
+                log_error "Failed to remove service user $SERVICE_USER"
+                return 1
+            }
+            log_success "Service user $SERVICE_USER removed"
+        else
+            log_warning "Service user $SERVICE_USER exists"
+            log_warning "Consider whether to remove the user:"
+            log_warning "  - If this is a test environment: userdel -r $SERVICE_USER"
+            log_warning "  - If this is production: Keep the user for security"
+            log_message "Service user $SERVICE_USER preserved (manual removal required if needed)"
+        fi
     else
         log_message "Service user $SERVICE_USER not found"
     fi
@@ -165,6 +176,10 @@ remove_configuration_files() {
     local config_files=(
         "/etc/mediamtx/mediamtx.yml"
         "/etc/mediamtx/mediamtx.yml.backup"
+        "/etc/systemd/system/camera-service.env"
+        "/etc/systemd/system/camera-monitoring.service"
+        "/etc/logrotate.d/camera-service"
+        "/etc/cron.d/camera-service-backup"
     )
     
     for config_file in "${config_files[@]}"; do
@@ -175,6 +190,12 @@ remove_configuration_files() {
             log_message "Configuration file not found: $config_file"
         fi
     done
+    
+    # Remove systemd service symlinks
+    if [[ -L "/etc/systemd/system/multi-user.target.wants/camera-monitoring.service" ]]; then
+        rm -f "/etc/systemd/system/multi-user.target.wants/camera-monitoring.service"
+        log_success "Systemd service symlink removed: camera-monitoring.service"
+    fi
     
     # Remove MediaMTX config directory if empty
     if [[ -d "/etc/mediamtx" ]]; then
@@ -350,28 +371,73 @@ generate_uninstall_report() {
     echo "$report_file"
 }
 
+# Function to show usage
+show_usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --force        Skip confirmation prompt"
+    echo "  --remove-user  Remove service user (use with caution)"
+    echo "  --help         Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Interactive uninstall with confirmation"
+    echo "  $0 --force            # Automated uninstall without confirmation"
+    echo "  $0 --force --remove-user  # Automated uninstall with user removal"
+}
+
 # Main uninstall function
 main() {
+    local force_uninstall=false
+    local remove_user=false
+    
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --force)
+                force_uninstall=true
+                shift
+                ;;
+            --remove-user)
+                remove_user=true
+                shift
+                ;;
+            --help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+    done
+    
     log_message "Starting MediaMTX Camera Service uninstallation..."
     log_message "================================================"
     
     # Check if running as root
     check_root
     
-    # Confirm uninstallation
-    echo -e "${YELLOW}WARNING: This will completely remove the MediaMTX Camera Service installation.${NC}"
-    echo -e "${YELLOW}This includes:${NC}"
-    echo -e "${YELLOW}- Camera service and all its data${NC}"
-    echo -e "${YELLOW}- MediaMTX server and configuration${NC}"
-    echo -e "${YELLOW}- All recordings and snapshots${NC}"
-    echo -e "${YELLOW}- Service configuration files${NC}"
-    echo ""
-    read -p "Are you sure you want to continue? (y/N): " -n 1 -r
-    echo
-    
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_message "Uninstallation cancelled by user"
-        exit 0
+    # Confirm uninstallation (skip if --force is used)
+    if [[ "$force_uninstall" == false ]]; then
+        echo -e "${YELLOW}WARNING: This will completely remove the MediaMTX Camera Service installation.${NC}"
+        echo -e "${YELLOW}This includes:${NC}"
+        echo -e "${YELLOW}- Camera service and all its data${NC}"
+        echo -e "${YELLOW}- MediaMTX server and configuration${NC}"
+        echo -e "${YELLOW}- All recordings and snapshots${NC}"
+        echo -e "${YELLOW}- Service configuration files${NC}"
+        echo ""
+        read -p "Are you sure you want to continue? (y/N): " -n 1 -r
+        echo
+        
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_message "Uninstallation cancelled by user"
+            exit 0
+        fi
+    else
+        log_message "Force uninstall mode - skipping confirmation"
     fi
     
     # Perform uninstallation steps
@@ -380,7 +446,7 @@ main() {
     remove_installation_directory
     remove_mediamtx
     remove_data_directories
-    remove_service_user
+    remove_service_user "$remove_user"
     remove_configuration_files
     check_port_residues
     reload_systemd

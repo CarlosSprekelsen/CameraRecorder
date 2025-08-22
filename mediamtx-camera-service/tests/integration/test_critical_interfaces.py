@@ -143,28 +143,11 @@ class IntegrationTestSetup:
             camera_monitor=self.camera_monitor
         )
         
-        # Start service manager (this starts the HealthServer with HTTP endpoints)
+        # Start service manager (this starts the WebSocket server with proper initialization)
         await self.service_manager.start()
         
-        # Initialize WebSocket server with security middleware
-        self.server = WebSocketJsonRpcServer(
-            host=self.config.server.host,
-            port=self.config.server.port,
-            websocket_path=self.config.server.websocket_path,
-            max_connections=self.config.server.max_connections,
-            mediamtx_controller=self.mediamtx_controller,
-            camera_monitor=self.camera_monitor,
-            config=self.config
-        )
-        
-        # Create and set security middleware
-        from src.security.middleware import SecurityMiddleware
-        security_middleware = SecurityMiddleware(self.auth_manager, max_connections=10, requests_per_minute=120)
-        self.server.set_security_middleware(security_middleware)
-        self.server.set_service_manager(self.service_manager)
-        
-        # Start server
-        await self.server.start()
+        # Use the service manager's properly initialized WebSocket server
+        self.server = self.service_manager._websocket_server
         
         # Create WebSocket client for testing
         websocket_url = f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}"
@@ -176,8 +159,9 @@ class IntegrationTestSetup:
         if self.websocket_client:
             await self.websocket_client.disconnect()
         
-        if self.server:
-            await self.server.stop()
+        # Don't stop the server - it's managed by the service manager
+        # if self.server:
+        #     await self.server.stop()
         
         if self.service_manager:
             await self.service_manager.stop()
@@ -839,8 +823,27 @@ async def test_get_recording_info_success():
     print("\nTesting get_recording_info - Success Case (Authenticated)")
 
     setup = IntegrationTestSetup()
+    test_filename = "test_recording.mp4"
+    test_file_path = None
+    
     try:
         await setup.setup()
+
+        # Create test recording file in the recordings directory
+        import os
+        import tempfile
+        
+        recordings_dir = setup.config.mediamtx.recordings_path
+        os.makedirs(recordings_dir, exist_ok=True)
+        test_file_path = os.path.join(recordings_dir, test_filename)
+        
+        # Create a mock MP4 file with some content for testing
+        with open(test_file_path, 'wb') as f:
+            # Write a minimal MP4 header (this is just for testing, not a real MP4)
+            f.write(b'\x00\x00\x00\x20ftypmp42')  # Minimal MP4 signature
+            f.write(b'\x00' * 1000)  # Add some content to make it a reasonable size
+        
+        print(f"✅ Created test recording file: {test_file_path}")
 
         # Create viewer user for testing (required for get_recording_info)
         viewer_user = setup.user_factory.create_viewer_user()
@@ -853,7 +856,7 @@ async def test_get_recording_info_success():
 
         # Test get_recording_info with filename parameter
         params = {
-            "filename": "test_recording.mp4"
+            "filename": test_filename
         }
 
         result = await setup.websocket_client.call_protected_method("get_recording_info", params)
@@ -869,10 +872,23 @@ async def test_get_recording_info_success():
         assert "duration" in recording_info, "Should contain 'duration' field"
         assert "created_time" in recording_info, "Should contain 'created_time' field"
         assert "download_url" in recording_info, "Should contain 'download_url' field"
+        
+        # Validate specific values
+        assert recording_info["filename"] == test_filename, "Filename should match"
+        assert recording_info["file_size"] > 0, "File size should be positive"
+        assert recording_info["download_url"] == f"/files/recordings/{test_filename}", "Download URL should be correct"
 
         return result
 
     finally:
+        # Clean up test file
+        if test_file_path and os.path.exists(test_file_path):
+            try:
+                os.remove(test_file_path)
+                print(f"✅ Cleaned up test file: {test_file_path}")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not clean up test file {test_file_path}: {e}")
+        
         await setup.cleanup()
 
 
@@ -890,8 +906,27 @@ async def test_get_snapshot_info_success():
     print("\nTesting get_snapshot_info - Success Case (Authenticated)")
 
     setup = IntegrationTestSetup()
+    test_filename = "test_snapshot.jpg"
+    test_file_path = None
+    
     try:
         await setup.setup()
+
+        # Create test snapshot file in the snapshots directory
+        import os
+        
+        snapshots_dir = setup.config.mediamtx.snapshots_path
+        os.makedirs(snapshots_dir, exist_ok=True)
+        test_file_path = os.path.join(snapshots_dir, test_filename)
+        
+        # Create a mock JPEG file with some content for testing
+        with open(test_file_path, 'wb') as f:
+            # Write a minimal JPEG header (this is just for testing, not a real JPEG)
+            f.write(b'\xff\xd8\xff\xe0')  # JPEG SOI + APP0 markers
+            f.write(b'\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00')  # Minimal JPEG header
+            f.write(b'\x00' * 500)  # Add some content to make it a reasonable size
+        
+        print(f"✅ Created test snapshot file: {test_file_path}")
 
         # Create viewer user for testing (required for get_snapshot_info)
         viewer_user = setup.user_factory.create_viewer_user()
@@ -904,7 +939,7 @@ async def test_get_snapshot_info_success():
 
         # Test get_snapshot_info with filename parameter
         params = {
-            "filename": "test_snapshot.jpg"
+            "filename": test_filename
         }
 
         result = await setup.websocket_client.call_protected_method("get_snapshot_info", params)
@@ -920,10 +955,23 @@ async def test_get_snapshot_info_success():
         assert "resolution" in snapshot_info, "Should contain 'resolution' field"
         assert "created_time" in snapshot_info, "Should contain 'created_time' field"
         assert "download_url" in snapshot_info, "Should contain 'download_url' field"
+        
+        # Validate specific values
+        assert snapshot_info["filename"] == test_filename, "Filename should match"
+        assert snapshot_info["file_size"] > 0, "File size should be positive"
+        assert snapshot_info["download_url"] == f"/files/snapshots/{test_filename}", "Download URL should be correct"
 
         return result
 
     finally:
+        # Clean up test file
+        if test_file_path and os.path.exists(test_file_path):
+            try:
+                os.remove(test_file_path)
+                print(f"✅ Cleaned up test file: {test_file_path}")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not clean up test file {test_file_path}: {e}")
+        
         await setup.cleanup()
 
 

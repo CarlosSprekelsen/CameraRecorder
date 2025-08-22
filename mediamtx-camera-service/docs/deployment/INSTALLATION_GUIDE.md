@@ -72,6 +72,8 @@ sudo apt upgrade -y
 sudo apt install -y curl wget git software-properties-common
 ```
 
+**Note:** The installation script performs these steps automatically and includes additional system validation.
+
 ### Step 2: Install Required System Packages
 
 Install the necessary system packages for the camera service:
@@ -107,9 +109,32 @@ python3 --version
 
 ### Method 1: Automated Installation (Recommended)
 
-The automated installation script handles all dependencies and configuration automatically.
+The automated installation script handles all dependencies and configuration automatically:
 
-### Method 2: Manual Installation
+```bash
+# Basic installation
+sudo ./deployment/scripts/install.sh
+
+# Production installation with enhanced features
+sudo PRODUCTION_MODE=true ./deployment/scripts/install.sh
+```
+
+### Method 2: Automated Deployment Cycle
+
+For development and testing cycles, use the deployment automation script:
+
+```bash
+# Full deployment cycle (uninstall + install)
+sudo ./deployment/scripts/deploy.sh --force-uninstall
+
+# Install only (skip uninstall)
+sudo ./deployment/scripts/deploy.sh --skip-uninstall
+
+# Show available options
+sudo ./deployment/scripts/deploy.sh --help
+```
+
+### Method 3: Manual Installation
 
 For advanced users who want to understand each step or customize the installation.
 
@@ -897,38 +922,43 @@ watch -n 5 'netstat -tlnp | grep -E ":(8002|8554|8889|8888|9997)"'
 
 ## Uninstallation
 
-### Complete Uninstallation
+### Automated Uninstallation (Recommended)
 
-To completely remove the MediaMTX Camera Service system:
+The uninstall script provides automated cleanup with options for different scenarios:
 
 ```bash
-# Stop and disable services
-sudo systemctl stop camera-service mediamtx
-sudo systemctl disable camera-service mediamtx
+# Interactive uninstall with confirmation
+sudo ./deployment/scripts/uninstall.sh
 
-# Remove service files
-sudo rm /etc/systemd/system/camera-service.service
-sudo rm /etc/systemd/system/mediamtx.service
-sudo rm /etc/systemd/system/camera-service.env
-sudo rm /etc/logrotate.d/camera-service
+# Automated uninstall without confirmation
+sudo ./deployment/scripts/uninstall.sh --force
 
-# Remove installation directories
-sudo rm -rf /opt/camera-service
-sudo rm -rf /opt/mediamtx
+# Automated uninstall with service user removal
+sudo ./deployment/scripts/uninstall.sh --force --remove-user
 
-# Remove service users
-sudo userdel camera-service
-sudo userdel mediamtx
-
-# Remove symbolic links
-sudo rm -f /usr/local/bin/mediamtx
-
-# Reload systemd
-sudo systemctl daemon-reload
-
-# Clean up temporary files
-sudo rm -f /tmp/mediamtx_v1.13.1_linux_amd64.tar.gz
+# Show available options
+sudo ./deployment/scripts/uninstall.sh --help
 ```
+
+### Uninstall Script Options
+
+- `--force`: Skip confirmation prompt for automated deployment
+- `--remove-user`: Remove service users (use with caution in production)
+- `--help`: Display usage information
+
+### What Gets Removed
+
+The uninstall script removes:
+- Camera service and MediaMTX services
+- Installation directories (`/opt/camera-service`, `/opt/mediamtx`)
+- Systemd service files and configuration
+- Log files and data directories
+- System configuration files (logrotate, cron jobs)
+- Service users (if `--remove-user` is specified)
+
+### Manual Uninstallation (Alternative)
+
+For manual removal without the script:
 
 ### Partial Uninstallation
 

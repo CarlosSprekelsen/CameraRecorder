@@ -381,6 +381,40 @@ This document defines the technical requirements for the MediaMTX Camera Service
 - Storage requirements met
 - Network requirements met
 
+### 8.3 Startup and Error Handling
+
+#### REQ-TECH-023: Version Handling Requirements
+**Requirement:** The system SHALL implement robust version handling with graceful error recovery
+**Specifications:**
+- **Version Detection:** Retrieve version from package metadata using `importlib.metadata`
+- **Error Handling:** Handle both `PackageNotFoundError` and `ImportError` gracefully
+- **Fallback Mechanism:** Return "unknown" version when package metadata is unavailable
+- **Startup Continuity:** Ensure service startup continues even when version detection fails
+- **Logging:** Log version information and any version detection errors
+
+**Acceptance Criteria:**
+- Version detection works when package metadata is available
+- Graceful handling of `PackageNotFoundError` (package not installed)
+- Graceful handling of `ImportError` (import system failure)
+- Service startup continues regardless of version detection success
+- Proper logging of version information and errors
+
+#### REQ-TECH-024: Startup Error Handling Requirements
+**Requirement:** The system SHALL implement comprehensive error handling during startup sequence
+**Specifications:**
+- **Graceful Degradation:** Continue startup with degraded functionality when non-critical components fail
+- **Error Recovery:** Implement fallback mechanisms for critical startup failures
+- **Partial State Cleanup:** Clean up partially initialized state when startup fails
+- **Error Reporting:** Provide clear error messages and logging for startup failures
+- **Startup Validation:** Validate each startup step before proceeding to the next
+
+**Acceptance Criteria:**
+- Startup continues with degraded functionality when non-critical components fail
+- Proper cleanup of partial state on startup failure
+- Clear error reporting and logging for startup issues
+- Validation of each startup step before proceeding
+- Graceful handling of startup-critical function failures
+
 ---
 
 **Technical Requirements Status: ✅ TECHNICAL SPECIFICATIONS ESTABLISHED**

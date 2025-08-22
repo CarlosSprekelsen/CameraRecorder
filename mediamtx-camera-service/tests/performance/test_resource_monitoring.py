@@ -569,8 +569,8 @@ def test_api_operations_throughput():
     print("=== Testing API Operations Throughput ===")
     
     api_throughput_range = {
-        "min": 50,
-        "max": 100,
+        "min": 1000,
+        "max": 5000,
     }
     
     api_operations = [
@@ -645,8 +645,8 @@ def test_file_operations_throughput():
     print("=== Testing File Operations Throughput ===")
     
     file_operations_range = {
-        "min": 10,
-        "max": 20,
+        "min": 100,
+        "max": 500,
     }
     
     file_operations = [
