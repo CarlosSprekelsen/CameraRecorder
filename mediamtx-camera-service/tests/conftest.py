@@ -112,9 +112,16 @@ def pytest_configure(config):
     # Check if sudo is available for sudo_required tests
     import subprocess
     try:
-        subprocess.run(["sudo", "-n", "true"], check=True, timeout=5)
-        config.sudo_available = True
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        # Use capture_output=True to suppress any output and prevent hanging
+        result = subprocess.run(
+            ["sudo", "-n", "true"], 
+            check=False,  # Don't raise exception on failure
+            timeout=2,    # Shorter timeout
+            capture_output=True,  # Suppress output to prevent hanging
+            text=True
+        )
+        config.sudo_available = result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
         config.sudo_available = False
 
 # Test markers for different test types

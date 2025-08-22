@@ -74,34 +74,14 @@ def real_config(temp_dirs: Dict[str, str]) -> Config:
 
 @pytest.fixture
 def service_manager(real_config: Config, temp_dirs: Dict[str, str]) -> ServiceManager:
-    """Create service manager with test servers to avoid port conflicts."""
-    from tests.utils.port_utils import create_test_health_server, find_free_port
-    from websocket_server.server import WebSocketJsonRpcServer
+    """Create service manager with proper configuration for testing."""
+    # ServiceManager creates its own health server and WebSocket server internally
+    # We just need to ensure the config has proper paths for the health server
+    real_config.mediamtx.recordings_path = temp_dirs["recordings"]
+    real_config.mediamtx.snapshots_path = temp_dirs["snapshots"]
     
-    # Create test health server with free port
-    test_health_server = create_test_health_server(
-        recordings_path=temp_dirs["recordings"],
-        snapshots_path=temp_dirs["snapshots"]
-    )
-    
-    # Create test WebSocket server with free port
-    test_websocket_port = find_free_port()
-    test_websocket_server = WebSocketJsonRpcServer(
-        host="127.0.0.1",  # Use localhost for tests
-        port=test_websocket_port,
-        websocket_path="/ws",
-        max_connections=10,
-        mediamtx_controller=None,  # Will be set by service manager
-        camera_monitor=None,       # Will be set by service manager
-        config=real_config,
-    )
-    
-    # Create service manager with injected test servers
-    return ServiceManager(
-        config=real_config,
-        health_server=test_health_server,
-        websocket_server=test_websocket_server
-    )
+    # Create service manager - it will create its own components
+    return ServiceManager(config=real_config)
 
 
 @pytest.fixture

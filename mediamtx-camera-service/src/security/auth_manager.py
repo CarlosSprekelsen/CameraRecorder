@@ -138,12 +138,14 @@ class AuthManager:
             else:
                 return AuthResult(
                     authenticated=False,
+                    auth_method="jwt",
                     error_message="Invalid or expired JWT token"
                 )
         except Exception as e:
             self.logger.error("JWT authentication error: %s", e)
             return AuthResult(
                 authenticated=False,
+                auth_method="jwt",
                 error_message="JWT authentication failed"
             )
     
@@ -169,12 +171,14 @@ class AuthManager:
             else:
                 return AuthResult(
                     authenticated=False,
+                    auth_method="api_key",
                     error_message="Invalid or expired API key"
                 )
         except Exception as e:
             self.logger.error("API key authentication error: %s", e)
             return AuthResult(
                 authenticated=False,
+                auth_method="api_key",
                 error_message="API key authentication failed"
             )
     
