@@ -819,7 +819,14 @@ async def test_list_snapshots_success():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_recording_info_success():
-    """Test get_recording_info success case with proper authentication."""
+    """
+    REQ-API-024: Test get_recording_info method for individual recording metadata.
+    REQ-CLIENT-040: Test file metadata viewing capabilities.
+    
+    Validates that the get_recording_info method returns detailed metadata
+    for a specific recording file including filename, size, duration, and
+    creation timestamp.
+    """
     print("\nTesting get_recording_info - Success Case (Authenticated)")
 
     setup = IntegrationTestSetup()
@@ -863,7 +870,14 @@ async def test_get_recording_info_success():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_get_snapshot_info_success():
-    """Test get_snapshot_info success case with proper authentication."""
+    """
+    REQ-API-025: Test get_snapshot_info method for individual snapshot metadata.
+    REQ-CLIENT-040: Test file metadata viewing capabilities.
+    
+    Validates that the get_snapshot_info method returns detailed metadata
+    for a specific snapshot file including filename, size, resolution, and
+    creation timestamp.
+    """
     print("\nTesting get_snapshot_info - Success Case (Authenticated)")
 
     setup = IntegrationTestSetup()
@@ -907,7 +921,14 @@ async def test_get_snapshot_info_success():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_delete_recording_success():
-    """Test delete_recording success case with operator authentication."""
+    """
+    REQ-API-026: Test delete_recording method for recording file deletion.
+    REQ-CLIENT-034: Test file deletion capabilities for recordings via service API.
+    REQ-CLIENT-041: Test role-based access control for file deletion (operator role).
+    
+    Validates that the delete_recording method successfully deletes recording
+    files and requires proper operator role authentication.
+    """
     print("\nTesting delete_recording - Success Case (Operator Authenticated)")
 
     setup = IntegrationTestSetup()
