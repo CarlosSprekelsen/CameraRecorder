@@ -5,9 +5,76 @@
  */
 
 /**
- * Camera connection status
+ * Camera device information
+ * Aligned with server get_camera_list and get_camera_status responses
+ */
+export interface CameraDevice {
+  device: string;
+  status: CameraStatus;
+  name: string;
+  resolution: string;
+  fps: number;
+  streams: CameraStreams;
+  metrics?: CameraMetrics;
+  capabilities?: CameraCapabilities;
+}
+
+/**
+ * Camera status values
+ * Aligned with server API status values
  */
 export type CameraStatus = 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+
+/**
+ * Camera streams configuration
+ * Aligned with server API streams object
+ */
+export interface CameraStreams {
+  rtsp: string;
+  webrtc: string;
+  hls: string;
+}
+
+/**
+ * Camera metrics information
+ * Aligned with server API metrics object
+ */
+export interface CameraMetrics {
+  bytes_sent: number;
+  readers: number;
+  uptime: number;
+}
+
+/**
+ * Camera capabilities information
+ * Aligned with server API capabilities object
+ */
+export interface CameraCapabilities {
+  formats: string[];
+  resolutions: string[];
+}
+
+/**
+ * Stream information from MediaMTX
+ * Aligned with server get_streams response
+ */
+export interface StreamInfo {
+  name: string;
+  source: string;
+  ready: boolean;
+  readers: number;
+  bytes_sent: number;
+}
+
+/**
+ * Stream list response
+ * Aligned with server get_streams response
+ */
+export interface StreamListResponse {
+  streams: StreamInfo[];
+  total: number;
+  active: number;
+}
 
 /**
  * Camera capabilities validation status
@@ -33,58 +100,6 @@ export type SnapshotFormat = 'jpg' | 'png';
  * Recording status
  */
 export type RecordingStatus = 'STARTED' | 'RECORDING' | 'STOPPED' | 'ERROR';
-
-/**
- * Camera device capabilities
- */
-export interface CameraCapabilities {
-  formats: VideoFormat[];
-  resolutions: string[];
-  resolution?: string; // Current resolution
-  fps?: number; // Current FPS
-}
-
-/**
- * Camera streaming endpoints
- */
-export interface CameraStreams {
-  rtsp: string;
-  webrtc: string;
-  hls: string;
-}
-
-/**
- * Camera device metrics
- */
-export interface CameraMetrics {
-  bytes_sent: number;
-  readers: number;
-  uptime: number;
-}
-
-/**
- * Core camera device information
- * Aligned with server get_camera_list and get_camera_status responses
- */
-export interface CameraDevice {
-  device: string;
-  status: CameraStatus;
-  name: string;
-  resolution: string;
-  fps: number;
-  streams: CameraStreams;
-  metrics?: CameraMetrics;
-  capabilities?: CameraCapabilities;
-}
-
-/**
- * Camera list response from get_camera_list
- */
-export interface CameraListResponse {
-  cameras: CameraDevice[];
-  total: number;
-  connected: number;
-}
 
 /**
  * Recording session information

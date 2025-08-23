@@ -18,13 +18,24 @@ import {
   CircularProgress,
   Alert,
   Pagination,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Tooltip,
+  Chip,
+  Grid,
 } from '@mui/material';
 import {
   Download,
   Refresh,
   VideoFile,
-  Image
+  Image,
+  Delete,
+  Info,
+  Warning,
 } from '@mui/icons-material';
 import { useFileStore } from '../../stores/fileStore';
 import type { FileItem, FileType } from '../../types';
@@ -55,17 +66,28 @@ const FileManager: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fileInfoDialogOpen, setFileInfoDialogOpen] = useState(false);
+  const [localSelectedFile, setLocalSelectedFile] = useState<FileItem | null>(null);
 
   const {
     recordings,
     snapshots,
+    selectedFile: storeSelectedFile,
     isLoading,
+    isDeleting,
+    isLoadingFileInfo,
     error,
     loadRecordings,
     loadSnapshots,
     downloadFile,
-    isDownloading
+    deleteRecording,
+    deleteSnapshot,
+    getRecordingInfo,
+    getSnapshotInfo,
+    setSelectedFile: setStoreSelectedFile,
+    isDownloading,
+    canDeleteFiles,
   } = useFileStore();
 
   const currentFiles = tabValue === 0 ? recordings : snapshots;
@@ -90,6 +112,41 @@ const FileManager: React.FC = () => {
       await downloadFile(fileType, filename);
     } catch (err) {
       console.error('Download failed:', err);
+    }
+  };
+
+  const handleDelete = (file: FileItem) => {
+    setStoreSelectedFile(file);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!storeSelectedFile) return;
+
+    try {
+      if (fileType === 'recordings') {
+        await deleteRecording(storeSelectedFile.filename);
+      } else {
+        await deleteSnapshot(storeSelectedFile.filename);
+      }
+      setDeleteDialogOpen(false);
+      setStoreSelectedFile(null);
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
+
+  const handleViewInfo = async (file: FileItem) => {
+    setStoreSelectedFile(file);
+    try {
+      if (fileType === 'recordings') {
+        await getRecordingInfo(file.filename);
+      } else {
+        await getSnapshotInfo(file.filename);
+      }
+      setFileInfoDialogOpen(true);
+    } catch (err) {
+      console.error('Failed to get file info:', err);
     }
   };
 
@@ -145,6 +202,11 @@ const FileManager: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Browse and download recordings and snapshots
         </Typography>
+        {!canDeleteFiles && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            You have read-only access. Admin or operator permissions required for file deletion.
+          </Alert>
+        )}
       </Box>
 
       {error && (
@@ -182,7 +244,11 @@ const FileManager: React.FC = () => {
               fileType="recordings"
               isLoading={isLoading}
               onDownload={handleDownload}
+              onDelete={handleDelete}
+              onViewInfo={handleViewInfo}
               isDownloading={isDownloading}
+              isDeleting={isDeleting}
+              canDeleteFiles={canDeleteFiles}
               formatFileSize={formatFileSize}
               formatDuration={formatDuration}
               formatDate={formatDate}
@@ -195,7 +261,11 @@ const FileManager: React.FC = () => {
               fileType="snapshots"
               isLoading={isLoading}
               onDownload={handleDownload}
+              onDelete={handleDelete}
+              onViewInfo={handleViewInfo}
               isDownloading={isDownloading}
+              isDeleting={isDeleting}
+              canDeleteFiles={canDeleteFiles}
               formatFileSize={formatFileSize}
               formatDuration={formatDuration}
               formatDate={formatDate}
@@ -220,6 +290,112 @@ const FileManager: React.FC = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Confirm File Deletion
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete "{selectedFile?.filename}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={handleConfirmDelete} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* File Info Dialog */}
+      <Dialog
+        open={fileInfoDialogOpen}
+        onClose={() => setFileInfoDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          File Information
+        </DialogTitle>
+        <DialogContent>
+          {isLoadingFileInfo ? (
+            <Box display="flex" justifyContent="center" p={2}>
+              <CircularProgress />
+            </Box>
+          ) : fileInfo ? (
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  {fileInfo.filename}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  File Size
+                </Typography>
+                <Typography variant="body1">
+                  {formatFileSize(fileInfo.file_size)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Created
+                </Typography>
+                <Typography variant="body1">
+                  {formatDate(fileInfo.created_time)}
+                </Typography>
+              </Grid>
+              {fileType === 'recordings' && fileInfo.duration && (
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Duration
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatDuration(fileInfo.duration)}
+                  </Typography>
+                </Grid>
+              )}
+              {fileType === 'snapshots' && fileInfo.resolution && (
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Resolution
+                  </Typography>
+                  <Typography variant="body1">
+                    {fileInfo.resolution}
+                  </Typography>
+                </Grid>
+              )}
+              <Grid item xs={12}>
+                <Typography variant="body2" color="text.secondary">
+                  Download URL
+                </Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                  {fileInfo.download_url}
+                </Typography>
+              </Grid>
+            </Grid>
+          ) : (
+            <Typography color="text.secondary">
+              No file information available
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFileInfoDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
@@ -229,7 +405,11 @@ interface FileTableProps {
   fileType: FileType;
   isLoading: boolean;
   onDownload: (filename: string) => void;
+  onDelete: (file: FileItem) => void;
+  onViewInfo: (file: FileItem) => void;
   isDownloading: boolean;
+  isDeleting: boolean;
+  canDeleteFiles: boolean;
   formatFileSize: (bytes: number) => string;
   formatDuration: (seconds: number) => string;
   formatDate: (dateString: string) => string;
@@ -240,7 +420,11 @@ const FileTable: React.FC<FileTableProps> = ({
   fileType,
   isLoading,
   onDownload,
+  onDelete,
+  onViewInfo,
   isDownloading,
+  isDeleting,
+  canDeleteFiles,
   formatFileSize,
   formatDuration,
   formatDate
@@ -292,14 +476,41 @@ const FileTable: React.FC<FileTableProps> = ({
               )}
               <TableCell>{formatDate(file.created_at)}</TableCell>
               <TableCell align="right">
-                <IconButton
-                  onClick={() => onDownload(file.filename)}
-                  disabled={isDownloading}
-                  color="primary"
-                  aria-label={`Download ${file.filename}`}
-                >
-                  <Download />
-                </IconButton>
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  <Tooltip title="View file information">
+                    <IconButton
+                      onClick={() => onViewInfo(file)}
+                      color="primary"
+                      size="small"
+                    >
+                      <Info />
+                    </IconButton>
+                  </Tooltip>
+                  
+                  <Tooltip title="Download file">
+                    <IconButton
+                      onClick={() => onDownload(file.filename)}
+                      disabled={isDownloading}
+                      color="primary"
+                      size="small"
+                    >
+                      <Download />
+                    </IconButton>
+                  </Tooltip>
+                  
+                  {canDeleteFiles && (
+                    <Tooltip title="Delete file">
+                      <IconButton
+                        onClick={() => onDelete(file)}
+                        disabled={isDeleting}
+                        color="error"
+                        size="small"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
               </TableCell>
             </TableRow>
           ))}

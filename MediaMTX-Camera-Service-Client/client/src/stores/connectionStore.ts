@@ -714,7 +714,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       testConnection: async (): Promise<boolean> => {
         try {
           const { wsService } = get();
-          if (!wsService || !wsService.isConnected) {
+          if (!wsService || !wsService.isConnected()) {
             return false;
           }
 

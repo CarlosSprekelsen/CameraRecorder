@@ -7,6 +7,8 @@
  * - File download functionality
  * - File metadata management
  * - Real-time file updates
+ * - File deletion (admin/operator only)
+ * - File info retrieval
  */
 
 import { create } from 'zustand';
@@ -17,6 +19,27 @@ import { createWebSocketService, type WebSocketService } from '../services/webso
 import { normalizeFileListResponse } from '../services/apiNormalizer';
 
 /**
+ * File info response from server
+ */
+export interface FileInfoResponse {
+  filename: string;
+  file_size: number;
+  duration?: number; // Only for recordings
+  created_time: string;
+  download_url: string;
+  resolution?: string; // Only for snapshots
+}
+
+/**
+ * File deletion response from server
+ */
+export interface FileDeletionResponse {
+  filename: string;
+  deleted: boolean;
+  message: string;
+}
+
+/**
  * File store state interface
  */
 interface FileState {
@@ -24,9 +47,14 @@ interface FileState {
   recordings: FileItem[] | null;
   snapshots: FileItem[] | null;
   
+  // File details
+  selectedFile: FileInfoResponse | null;
+  
   // Loading states
   isLoading: boolean;
   isDownloading: boolean;
+  isDeleting: boolean;
+  isLoadingFileInfo: boolean;
   
   // Error state
   error: string | null;
@@ -36,6 +64,9 @@ interface FileState {
   
   // Connection state
   isConnected: boolean;
+  
+  // User permissions
+  canDeleteFiles: boolean;
 }
 
 /**
@@ -51,11 +82,21 @@ interface FileActions {
   loadSnapshots: (limit?: number, offset?: number) => Promise<void>;
   downloadFile: (fileType: FileType, filename: string) => Promise<void>;
   
+  // File info operations
+  getRecordingInfo: (filename: string) => Promise<FileInfoResponse>;
+  getSnapshotInfo: (filename: string) => Promise<FileInfoResponse>;
+  
+  // File deletion operations
+  deleteRecording: (filename: string) => Promise<FileDeletionResponse>;
+  deleteSnapshot: (filename: string) => Promise<FileDeletionResponse>;
+  
   // State management
   setError: (error: string | null) => void;
   clearError: () => void;
   setConnectionStatus: (isConnected: boolean) => void;
   updateFileList: (fileType: FileType, files: FileItem[]) => void;
+  setSelectedFile: (file: FileInfoResponse | null) => void;
+  setCanDeleteFiles: (canDelete: boolean) => void;
 }
 
 /**
@@ -72,11 +113,15 @@ export const useFileStore = create<FileStore>()(
       // Initial state
       recordings: null,
       snapshots: null,
+      selectedFile: null,
       isLoading: false,
       isDownloading: false,
+      isDeleting: false,
+      isLoadingFileInfo: false,
       error: null,
       wsService: null,
       isConnected: false,
+      canDeleteFiles: false,
 
       // Initialization
       initialize: async (wsUrl = 'ws://localhost:8002/ws') => {
@@ -127,7 +172,8 @@ export const useFileStore = create<FileStore>()(
           wsService: null, 
           isConnected: false,
           recordings: null,
-          snapshots: null 
+          snapshots: null,
+          selectedFile: null
         });
       },
 
@@ -146,7 +192,7 @@ export const useFileStore = create<FileStore>()(
           const response = await wsService.call(RPC_METHODS.LIST_RECORDINGS, {
             limit,
             offset
-          }, true);
+          });
 
           const normalized = normalizeFileListResponse(response);
           set({ recordings: normalized.files as FileItem[] });
@@ -175,7 +221,7 @@ export const useFileStore = create<FileStore>()(
           const response = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, {
             limit,
             offset
-          }, true);
+          });
 
           const normalized = normalizeFileListResponse(response);
           set({ snapshots: normalized.files as FileItem[] });
@@ -245,6 +291,164 @@ export const useFileStore = create<FileStore>()(
         }
       },
 
+      // File info operations
+      getRecordingInfo: async (filename: string): Promise<FileInfoResponse> => {
+        const { wsService } = get();
+        
+        if (!wsService) {
+          throw new Error('WebSocket not connected');
+        }
+
+        set({ isLoadingFileInfo: true, error: null });
+
+        try {
+          const response = await wsService.call('get_recording_info', {
+            filename
+          });
+
+          const fileInfo: FileInfoResponse = {
+            filename: response.filename,
+            file_size: response.file_size,
+            duration: response.duration,
+            created_time: response.created_time,
+            download_url: response.download_url,
+          };
+
+          set({ selectedFile: fileInfo });
+          return fileInfo;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to get recording info';
+          set({ error: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingFileInfo: false });
+        }
+      },
+
+      getSnapshotInfo: async (filename: string): Promise<FileInfoResponse> => {
+        const { wsService } = get();
+        
+        if (!wsService) {
+          throw new Error('WebSocket not connected');
+        }
+
+        set({ isLoadingFileInfo: true, error: null });
+
+        try {
+          const response = await wsService.call('get_snapshot_info', {
+            filename
+          });
+
+          const fileInfo: FileInfoResponse = {
+            filename: response.filename,
+            file_size: response.file_size,
+            created_time: response.created_time,
+            download_url: response.download_url,
+            resolution: response.resolution,
+          };
+
+          set({ selectedFile: fileInfo });
+          return fileInfo;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to get snapshot info';
+          set({ error: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isLoadingFileInfo: false });
+        }
+      },
+
+      // File deletion operations
+      deleteRecording: async (filename: string): Promise<FileDeletionResponse> => {
+        const { wsService, canDeleteFiles } = get();
+        
+        if (!canDeleteFiles) {
+          throw new Error('Insufficient permissions to delete files');
+        }
+        
+        if (!wsService) {
+          throw new Error('WebSocket not connected');
+        }
+
+        set({ isDeleting: true, error: null });
+
+        try {
+          const response = await wsService.call('delete_recording', {
+            filename
+          });
+
+          const deletionResponse: FileDeletionResponse = {
+            filename: response.filename,
+            deleted: response.deleted,
+            message: response.message,
+          };
+
+          // Refresh recordings list after deletion
+          if (deletionResponse.deleted) {
+            const { recordings } = get();
+            if (recordings) {
+              const updatedRecordings = recordings.filter(file => file.filename !== filename);
+              set({ recordings: updatedRecordings });
+            }
+          }
+
+          return deletionResponse;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to delete recording';
+          set({ error: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isDeleting: false });
+        }
+      },
+
+      deleteSnapshot: async (filename: string): Promise<FileDeletionResponse> => {
+        const { wsService, canDeleteFiles } = get();
+        
+        if (!canDeleteFiles) {
+          throw new Error('Insufficient permissions to delete files');
+        }
+        
+        if (!wsService) {
+          throw new Error('WebSocket not connected');
+        }
+
+        set({ isDeleting: true, error: null });
+
+        try {
+          const response = await wsService.call('delete_snapshot', {
+            filename
+          });
+
+          const deletionResponse: FileDeletionResponse = {
+            filename: response.filename,
+            deleted: response.deleted,
+            message: response.message,
+          };
+
+          // Refresh snapshots list after deletion
+          if (deletionResponse.deleted) {
+            const { snapshots } = get();
+            if (snapshots) {
+              const updatedSnapshots = snapshots.filter(file => file.filename !== filename);
+              set({ snapshots: updatedSnapshots });
+            }
+          }
+
+          return deletionResponse;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to delete snapshot';
+          set({ error: errorMessage });
+          throw new Error(errorMessage);
+        } finally {
+          set({ isDeleting: false });
+        }
+      },
+
       // State management
       setError: (error: string | null) => {
         set({ error });
@@ -264,6 +468,14 @@ export const useFileStore = create<FileStore>()(
         } else {
           set({ snapshots: files });
         }
+      },
+
+      setSelectedFile: (file: FileInfoResponse | null) => {
+        set({ selectedFile: file });
+      },
+
+      setCanDeleteFiles: (canDelete: boolean) => {
+        set({ canDeleteFiles: canDelete });
       },
     }),
     {

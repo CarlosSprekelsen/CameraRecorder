@@ -34,11 +34,14 @@ def _free_port() -> int:
 
 
 def _build_config(api_port: int, ws_port: int) -> Config:
+    from tests.utils.port_utils import find_free_port
+    
     return Config(
         server=ServerConfig(host="127.0.0.1", port=ws_port, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(host="127.0.0.1", api_port=api_port, rtsp_port=8554, webrtc_port=8889, hls_port=8888, recordings_path="./.tmp_recordings", snapshots_path="./.tmp_snapshots"),
         camera=CameraConfig(device_range=[0,1,2], enable_capability_detection=True, detection_timeout=0.5),
         logging=LoggingConfig(), recording=RecordingConfig(), snapshots=SnapshotConfig(),
+        health_port=find_free_port(),  # Dynamic health port to avoid conflicts
     )
 
 

@@ -397,16 +397,8 @@ class TestFileMetadataTracking:
         
         REQ-API-036: Comprehensive file metadata tracking and retrieval
         """
-        # Create unauthenticated client
-        from tests.fixtures.auth_utils import WebSocketAuthTestClient
-        unauthenticated_client = WebSocketAuthTestClient(
-            metadata_setup.websocket_client.websocket_url,
-            None  # No user = unauthenticated
-        )
-        await unauthenticated_client.connect()
-        
-        # Try to get metadata without authentication
-        response = await unauthenticated_client.send_request(
+        # Create unauthenticated client by using send_unauthenticated_request
+        response = await metadata_setup.websocket_client.send_unauthenticated_request(
             "get_recording_info",
             {
                 "filename": "test_recording_1.mp4"
@@ -423,16 +415,8 @@ class TestFileMetadataTracking:
         
         REQ-API-036: Comprehensive file metadata tracking and retrieval
         """
-        # Create unauthenticated client
-        from tests.fixtures.auth_utils import WebSocketAuthTestClient
-        unauthenticated_client = WebSocketAuthTestClient(
-            metadata_setup.websocket_client.websocket_url,
-            None  # No user = unauthenticated
-        )
-        await unauthenticated_client.connect()
-        
-        # Try to get metadata without authentication
-        response = await unauthenticated_client.send_request(
+        # Create unauthenticated client by using send_unauthenticated_request
+        response = await metadata_setup.websocket_client.send_unauthenticated_request(
             "get_snapshot_info",
             {
                 "filename": "test_snapshot_1.jpg"
@@ -441,8 +425,6 @@ class TestFileMetadataTracking:
         
         assert response.get("error") is not None
         assert response["error"]["code"] == -32001  # Authentication error
-        
-        await unauthenticated_client.disconnect()
     
     async def test_get_recording_info_viewer_permissions(self, metadata_setup):
         """Test recording metadata retrieval with viewer permissions.

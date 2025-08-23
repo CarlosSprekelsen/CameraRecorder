@@ -154,6 +154,9 @@ class PerformanceTestSetup:
         assert "result" in auth_result, "Authentication response should contain 'result' field per JSON-RPC 2.0"
         assert auth_result["result"]["authenticated"] is True, "Authentication failed for performance tests"
         
+        # Store auth token in client for future requests
+        self.websocket_client.auth_token = self.test_token
+        
         print(f"✅ Performance test setup completed")
     
     def _generate_test_token(self) -> str:
@@ -226,10 +229,18 @@ class WebSocketPerformanceClient:
         if not self.connected:
             raise RuntimeError("WebSocket client not connected")
         
+        # Include authentication token in params
+        if params is None:
+            params = {}
+        
+        # Add auth token to params if we have one
+        if hasattr(self, 'auth_token') and self.auth_token:
+            params["auth_token"] = self.auth_token
+        
         message = {
             "jsonrpc": "2.0",
             "method": method,
-            "params": params or {},
+            "params": params,
             "id": self.message_id_counter
         }
         self.message_id_counter += 1

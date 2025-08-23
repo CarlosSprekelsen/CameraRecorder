@@ -1,96 +1,84 @@
 /**
- * Central export point for all type definitions
- * Import types using: import { CameraDevice, JSONRPCRequest } from '@/types'
- * Aligned with MediaMTX Camera Service API specification
+ * Central export point for all types
+ * Provides unified access to all type definitions
  */
 
 // Camera types
 export type {
+  CameraDevice,
   CameraStatus,
-  ValidationStatus,
-  VideoFormat,
-  RecordingFormat,
-  SnapshotFormat,
-  RecordingStatus,
-  CameraCapabilities,
   CameraStreams,
   CameraMetrics,
-  CameraDevice,
-  CameraListResponse,
+  CameraCapabilities,
+  StreamInfo,
+  StreamListResponse,
+} from './camera';
+
+// Recording types
+export type {
   RecordingSession,
+  RecordingStatus,
   StartRecordingParams,
   StopRecordingParams,
+  RecordingFormat,
+} from './camera';
+
+// Snapshot types
+export type {
   SnapshotResult,
   TakeSnapshotParams,
-  FileInfo,
+  SnapshotFormat,
+} from './camera';
+
+// File types
+export type {
+  FileItem,
+  FileType,
   FileListResponse,
   FileListParams,
-  FileType,
-  FileItem,
-  CameraStatusUpdateParams,
-  RecordingStatusUpdateParams,
-  // Legacy types (deprecated)
-  RecordingRequest,
-  RecordingResponse,
-  SnapshotRequest,
-  SnapshotResponse,
-  ServerInfo,
 } from './camera';
+
+// Server types
+export type {
+  ServerInfo,
+  CameraListResponse,
+} from './camera';
+
+// Settings types
+export type {
+  AppSettings,
+  ConnectionSettings,
+  RecordingSettings,
+  SnapshotSettings,
+  UISettings,
+  NotificationSettings,
+  SecuritySettings,
+  PerformanceSettings,
+  SettingsValidation,
+  SettingsChangeEvent,
+  SettingsCategory,
+} from './settings';
+
+export { DEFAULT_SETTINGS, SETTINGS_CATEGORIES } from './settings';
 
 // RPC types
 export type {
   JSONRPCRequest,
-  JSONRPCError,
   JSONRPCResponse,
   JSONRPCNotification,
+  JSONRPCError,
   WebSocketMessage,
   ErrorCode,
   RPCMethod,
-  NotificationMethod,
-  CameraStatusNotification,
-  RecordingStatusNotification,
-  NotificationMessage,
-  WebSocketConfig,
-  RPCCallOptions,
 } from './rpc';
 
-// Export RPC constants
-export {
-  ERROR_CODES,
-  RPC_METHODS,
-  NOTIFICATION_METHODS,
-  PERFORMANCE_TARGETS,
-  isNotification,
-  isResponse,
-  isErrorResponse,
-} from './rpc';
+export { RPC_METHODS, ERROR_CODES, NOTIFICATION_METHODS } from './rpc';
 
 // UI types
 export type {
   ViewMode,
-  ThemeMode,
-  LoadingState,
-  ErrorState,
   ConnectionStatus,
-  UIState,
-  NotificationType,
-  NotificationState,
-  CameraCardProps,
-  CameraDetailProps,
-  CameraListProps,
-  DashboardProps,
-  AppShellProps,
-  ConnectionStatusProps,
-  ErrorBoundaryState,
-  CameraOperations,
-  FormField,
-  RecordingSettings,
-  SnapshotSettings,
+  RecordingSettings as UIRecordingSettings,
+  SnapshotSettings as UISnapshotSettings,
   SettingsFormState,
-  TableColumn,
-  TableProps,
-  ModalProps,
-  ButtonProps,
-  DialogResult,
-  ConfirmDialogProps,
 } from './ui';

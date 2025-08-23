@@ -1,13 +1,22 @@
 /**
  * Central export point for all stores
- * Provides unified access to camera, connection, and UI stores
+ * Provides unified access to all Zustand stores
  */
 
-// Export individual stores
+// Core stores
 export { useCameraStore } from './cameraStore';
 export { useConnectionStore } from './connectionStore';
-export { useUIStore, initializeUIStore } from './uiStore';
+export { useHealthStore } from './healthStore';
+export { useAdminStore } from './adminStore';
 export { useFileStore } from './fileStore';
+export { useAuthStore } from './authStore';
+export { useSettingsStore } from './settingsStore';
 
-// TODO: Fix store initialization in Sprint 3
-// Temporarily disabled to complete Sprint 2 
+// Store types
+export type { CameraState } from './cameraStore';
+export type { ConnectionState } from './connectionStore';
+export type { HealthState } from './healthStore';
+export type { AdminState } from './adminStore';
+export type { FileState } from './fileStore';
+export type { AuthState } from './authStore';
+export type { SettingsState } from './settingsStore'; 

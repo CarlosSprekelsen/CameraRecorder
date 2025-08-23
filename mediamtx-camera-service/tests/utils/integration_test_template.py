@@ -514,19 +514,21 @@ class TestCameraServiceIntegration(TestSystemIntegration):
     @pytest.fixture
     def integration_config(self, temp_test_directory) -> Config:
         """Create camera service integration test configuration."""
+        from tests.utils.port_utils import find_free_port
+        
         return Config(
             server=ServerConfig(
                 host="127.0.0.1",
-                port=8003,  # Different port for integration tests
+                port=find_free_port(),  # Dynamic port to avoid conflicts
                 websocket_path="/ws",
                 max_connections=20
             ),
             mediamtx=MediaMTXConfig(
                 host="127.0.0.1",
-                api_port=9998,  # Different port for integration tests
-                rtsp_port=8555,
-                webrtc_port=8890,
-                hls_port=8889,
+                api_port=9997,  # Fixed systemd service port
+                rtsp_port=8554,  # Fixed systemd service port
+                webrtc_port=8889,  # Fixed systemd service port
+                hls_port=8888,  # Fixed systemd service port
                 config_path=os.path.join(temp_test_directory, "mediamtx_integration.yml"),
                 recordings_path=os.path.join(temp_test_directory, "recordings"),
                 snapshots_path=os.path.join(temp_test_directory, "snapshots"),
@@ -535,7 +537,8 @@ class TestCameraServiceIntegration(TestSystemIntegration):
                 device_range=[0, 1, 2],
                 enable_capability_detection=True,
                 detection_timeout=3.0
-            )
+            ),
+            health_port=find_free_port(),  # Dynamic health port to avoid conflicts
         )
     
     # Add your specific integration test methods here

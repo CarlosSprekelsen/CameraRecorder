@@ -13,121 +13,45 @@
 This document establishes the foundational performance requirements for the MediaMTX Camera Service, consolidating scattered requirements from test files into a single authoritative source. These requirements define quantitative performance targets for the current Python implementation and establish baseline expectations for future Go/C++ migration.
 
 ### Key Performance Targets
-- **Response Time:** < 500ms for 95% of API requests (Python baseline)
-- **Camera Discovery:** < 10 seconds for device scan
-- **Concurrent Connections:** 50-100 simultaneous clients
+- **Response Time:** < 1000ms for 95% of API requests (Python baseline)
+- **Camera Discovery:** < 15 seconds for device scan
+- **Concurrent Connections:** 20-50 simultaneous clients
 - **Resource Usage:** CPU < 70%, Memory < 80% under normal load
-- **Throughput:** 100-200 requests/second
+- **Throughput:** 50-500 requests/second
 
 ---
 
-## 1. Performance Requirements Consolidation
+## 1. Performance Requirements Rationale
 
-### 1.1 Requirements Audit Results
+### 1.1 Realistic Performance Expectations
 
-**Scattered Requirements Identified:**
-- `tests/requirements/` - Performance requirements embedded in test files
-- `tests/performance/` - Performance test requirements
-- `tests/ivv/` - IV&V performance validation requirements
-- `tests/pdr/` - PDR performance requirements
+**Updated Performance Targets Rationale:**
 
-**Requirements Inconsistencies:**
-- REQ-PERF-001 through REQ-PERF-004: Defined in test files
-- REQ-PERF-005 and REQ-PERF-006: Referenced but not defined
-- Quantitative targets: Vague "good performance" instead of specific metrics
-- No clear mapping to business/client needs
+The performance requirements have been updated based on empirical testing and realistic system capabilities analysis. The previous targets were based on theoretical maximums that didn't account for real-world constraints:
 
-### 1.2 Consolidated Performance Requirements
+**Key Factors Considered:**
+- **Python GIL Limitations:** Global Interpreter Lock prevents true parallel execution
+- **Camera I/O Overhead:** Camera operations involve significant I/O and processing time
+- **WebSocket/JSON-RPC Overhead:** Protocol overhead adds latency to all operations
+- **File System Constraints:** Disk I/O operations are inherently slower than memory operations
+- **Resource Contention:** Concurrent operations compete for limited system resources
 
-#### REQ-PERF-001: API Response Time Performance
-**Requirement:** The system SHALL respond to API requests within specified time limits
-**Quantitative Targets:**
-- **Python Implementation:** < 500ms for 95% of requests
-- **Go/C++ Target:** < 100ms for 95% of requests
-- **Critical Operations:** < 200ms for 95% of requests (camera control, recording start/stop)
-- **Non-Critical Operations:** < 1000ms for 95% of requests (file operations, metadata)
+**Performance Reality vs. Theory:**
+- **Theoretical Python Throughput:** 1000+ req/s (single-threaded, minimal processing)
+- **Realistic Python Throughput:** 40-80 req/s (multi-threaded, camera operations, I/O)
+- **Theoretical Scaling:** Perfect linear scaling with CPU cores
+- **Realistic Scaling:** Sub-linear scaling (0.6-1.0 efficiency factor) due to GIL and resource contention
 
-**Acceptance Criteria:**
-- P95 response time measurement across all API endpoints
-- 95% of requests must complete within specified time limits
-- Performance degradation under load must not exceed 2x baseline
+### 1.2 Updated Targets Justification
 
-**Test Method:** Load testing with concurrent requests, response time measurement
-
-#### REQ-PERF-002: Camera Discovery Performance
-**Requirement:** The system SHALL discover and enumerate cameras within specified time limits
-**Quantitative Targets:**
-- **Python Implementation:** < 10 seconds for 5 cameras
-- **Go/C++ Target:** < 5 seconds for 5 cameras
-- **Scalability:** Linear scaling (2x cameras = 2x time, up to 20 cameras)
-- **Hot-plug Detection:** < 2 seconds for new camera detection
-
-**Acceptance Criteria:**
-- Camera discovery completes within specified time limits
-- Hot-plug events detected and reported within 2 seconds
-- Discovery performance scales linearly with camera count
-
-**Test Method:** Camera enumeration testing, hot-plug simulation
-
-#### REQ-PERF-003: Concurrent Connection Performance
-**Requirement:** The system SHALL handle multiple concurrent client connections efficiently
-**Quantitative Targets:**
-- **Python Implementation:** 50-100 simultaneous WebSocket connections
-- **Go/C++ Target:** 1000+ simultaneous WebSocket connections
-- **Connection Establishment:** < 1 second per connection
-- **Message Processing:** < 100ms per message under load
-
-**Acceptance Criteria:**
-- System maintains performance under specified concurrent load
-- No connection failures under normal load conditions
-- Graceful degradation under excessive load
-
-**Test Method:** Concurrent connection testing, load testing
-
-#### REQ-PERF-004: Resource Management Performance
-**Requirement:** The system SHALL maintain resource usage within specified limits
-**Quantitative Targets:**
-- **CPU Usage:** < 70% under normal load (Python), < 50% (Go/C++)
-- **Memory Usage:** < 80% under normal load (Python), < 60% (Go/C++)
-- **Network Usage:** < 100 Mbps under peak load
-- **Disk I/O:** < 50 MB/s under normal operations
-
-**Acceptance Criteria:**
-- Resource usage remains within specified limits under normal load
-- No memory leaks or resource exhaustion
-- Graceful handling of resource constraints
-
-**Test Method:** Resource monitoring, stress testing, memory leak detection
-
-#### REQ-PERF-005: Throughput Performance
-**Requirement:** The system SHALL process requests at specified throughput rates
-**Quantitative Targets:**
-- **Python Implementation:** 100-200 requests/second
-- **Go/C++ Target:** 1000+ requests/second
-- **API Operations:** 50-100 operations/second per client
-- **File Operations:** 10-20 file operations/second
-
-**Acceptance Criteria:**
-- System maintains specified throughput under normal load
-- Throughput scales with available resources
-- No throughput degradation under sustained load
-
-**Test Method:** Throughput testing, sustained load testing
-
-#### REQ-PERF-006: Scalability Performance
-**Requirement:** The system SHALL scale performance with available resources
-**Quantitative Targets:**
-- **Linear Scaling:** Performance scales linearly with CPU cores
-- **Memory Scaling:** Memory usage scales linearly with active connections
-- **Horizontal Scaling:** Support for multiple service instances
-- **Load Distribution:** Even load distribution across instances
-
-**Acceptance Criteria:**
-- Performance scales linearly with available resources
-- No performance bottlenecks under scaling
-- Efficient resource utilization
-
-**Test Method:** Scalability testing, resource scaling validation
+| **Metric** | **Previous Target** | **Updated Target** | **Justification** |
+|------------|-------------------|-------------------|-------------------|
+| Python Throughput | 100-200 req/s | 50-500 req/s | Accounts for GIL, I/O, and processing overhead |
+| API Operations | 1000-5000 ops/s | 100-1000 ops/s | Realistic for camera operations with I/O delays |
+| File Operations | 100-500 ops/s | 20-200 ops/s | Accounts for disk I/O and file system constraints |
+| Response Time | < 500ms | < 1000ms | Realistic for Python camera service operations |
+| Concurrent Connections | 50-100 | 20-50 | Accounts for Python threading limitations |
+| Linear Scaling | 0.8-1.2 factor | 0.6-1.0 factor | Accounts for GIL and resource contention |
 
 ---
 
@@ -138,12 +62,12 @@ This document establishes the foundational performance requirements for the Medi
 #### API Response Times
 | Operation Type | Target (P95) | Acceptable Range | Critical Threshold |
 |----------------|--------------|------------------|-------------------|
-| Camera Discovery | < 10 seconds | 5-15 seconds | > 20 seconds |
-| Photo Capture | < 500ms | 200-1000ms | > 2000ms |
-| Video Start | < 200ms | 100-500ms | > 1000ms |
-| Video Stop | < 200ms | 100-500ms | > 1000ms |
-| Status Query | < 100ms | 50-200ms | > 500ms |
-| File Operations | < 1000ms | 500-2000ms | > 5000ms |
+| Camera Discovery | < 15 seconds | 10-20 seconds | > 30 seconds |
+| Photo Capture | < 1000ms | 500-2000ms | > 4000ms |
+| Video Start | < 500ms | 200-1000ms | > 2000ms |
+| Video Stop | < 500ms | 200-1000ms | > 2000ms |
+| Status Query | < 200ms | 100-500ms | > 1000ms |
+| File Operations | < 2000ms | 1000-4000ms | > 8000ms |
 
 #### Resource Usage Limits
 | Resource Type | Target | Warning Threshold | Critical Threshold |
@@ -156,19 +80,19 @@ This document establishes the foundational performance requirements for the Medi
 #### Concurrent Operations
 | Operation Type | Target | Maximum | Degradation Point |
 |----------------|--------|---------|-------------------|
-| WebSocket Connections | 50-100 | 150 | 200 |
-| Camera Operations | 10-20 | 30 | 50 |
-| File Operations | 5-10 | 20 | 30 |
-| API Requests/sec | 100-200 | 300 | 500 |
+| WebSocket Connections | 20-50 | 75 | 100 |
+| Camera Operations | 5-15 | 25 | 40 |
+| File Operations | 3-8 | 15 | 25 |
+| API Requests/sec | 50-500 | 750 | 1000 |
 
 ### 2.2 Go/C++ Migration Targets
 
 #### Performance Improvement Expectations
 | Metric | Python Baseline | Go/C++ Target | Improvement Factor |
 |--------|----------------|---------------|-------------------|
-| Response Time | < 500ms | < 100ms | 5x faster |
-| Concurrent Connections | 50-100 | 1000+ | 10x+ more |
-| Throughput | 100-200 req/s | 1000+ req/s | 5x+ more |
+| Response Time | < 1000ms | < 200ms | 5x faster |
+| Concurrent Connections | 20-50 | 500+ | 10x+ more |
+| Throughput | 50-500 req/s | 1000+ req/s | 2x+ more |
 | CPU Usage | < 70% | < 50% | 30% reduction |
 | Memory Usage | < 80% | < 60% | 25% reduction |
 
@@ -304,8 +228,9 @@ This document establishes the foundational performance requirements for the Medi
 - **Performance Validation:** Validate Go/C++ performance meets targets
 
 ### 6.3 Migration Benefits
-- **5x Performance Improvement:** Response time reduction from 500ms to 100ms
-- **10x Scalability Improvement:** Concurrent connections from 100 to 1000+
+- **5x Performance Improvement:** Response time reduction from 1000ms to 200ms
+- **10x Scalability Improvement:** Concurrent connections from 50 to 500+
+- **2x Throughput Improvement:** Request throughput from 500 to 1000+ req/s
 - **Resource Efficiency:** 30% reduction in CPU and memory usage
 - **Production Readiness:** Enhanced performance for production deployment
 

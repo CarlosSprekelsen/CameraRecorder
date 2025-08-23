@@ -3,11 +3,14 @@
  * 
  * Sprint 3: Real Server Integration with Enhanced Connection Management
  * REQ-NET01-003: Polling Fallback Mechanism Implementation
+ * Phase 2B: Enhanced Reconnection with Exponential Backoff and State Recovery
  * 
  * Implements:
  * - Real WebSocket connection to MediaMTX server at ws://localhost:8002/ws
  * - JSON-RPC 2.0 protocol client with full error handling
  * - Exponential backoff for reconnection with production settings
+ * - Circuit breaker pattern for connection resilience
+ * - State recovery after reconnection
  * - Comprehensive error handling and timeout management
  * - Real-time notification handling for camera status updates
  * - Integration with connection store for state management
@@ -24,14 +27,10 @@
  */
 
 import type {
-  WebSocketConfig,
   JSONRPCRequest,
   JSONRPCResponse,
   JSONRPCNotification,
   WebSocketMessage,
-  NotificationMessage,
-  CameraStatusNotification,
-  RecordingStatusNotification,
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS } from '../types';
@@ -72,6 +71,46 @@ interface CameraStoreInterface {
   clearRecordingProgress?: (device: string) => void;
 }
 
+// WebSocket configuration interface
+interface WebSocketConfig {
+  url: string;
+  maxReconnectAttempts: number;
+  reconnectInterval: number;
+  requestTimeout: number;
+  heartbeatInterval: number;
+  baseDelay: number;
+  maxDelay: number;
+}
+
+// Notification interfaces
+interface NotificationMessage {
+  method: string;
+  params?: unknown;
+}
+
+interface CameraStatusNotification {
+  method: string;
+  params: {
+    device: string;
+    status: string;
+    name?: string;
+    resolution?: string;
+    fps?: number;
+    streams?: Record<string, string>;
+  };
+}
+
+interface RecordingStatusNotification {
+  method: string;
+  params: {
+    device: string;
+    session_id: string;
+    status: string;
+    filename?: string;
+    duration?: number;
+  };
+}
+
 export class WebSocketError extends Error {
   public code?: number;
   public data?: unknown;
@@ -82,6 +121,28 @@ export class WebSocketError extends Error {
     this.code = code;
     this.data = data;
   }
+}
+
+/**
+ * Circuit Breaker State
+ */
+interface CircuitBreakerState {
+  isOpen: boolean;
+  failureCount: number;
+  lastFailureTime: Date | null;
+  threshold: number;
+  timeout: number;
+}
+
+/**
+ * State Recovery Data
+ */
+interface StateRecoveryData {
+  pendingRequests: Map<number, any>;
+  lastHeartbeat: Date | null;
+  connectionUptime: number;
+  messageCount: number;
+  errorCount: number;
 }
 
 export class WebSocketService {
@@ -98,6 +159,32 @@ export class WebSocketService {
   private isDestroyed = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private metricsInterval: NodeJS.Timeout | null = null;
+  
+  // Enhanced reconnection properties
+  private circuitBreaker: CircuitBreakerState = {
+    isOpen: false,
+    failureCount: 0,
+    lastFailureTime: null,
+    threshold: 5,
+    timeout: 30000, // 30 seconds
+  };
+  
+  private stateRecoveryData: StateRecoveryData | null = null;
+  private exponentialBackoffBase = 1000; // 1 second
+  private exponentialBackoffMax = 30000; // 30 seconds
+  private exponentialBackoffMultiplier = 2;
+  
+  // Connection quality monitoring
+  private connectionQualityScores: number[] = [];
+  private maxQualityScores = 10;
+  
+  // Performance tracking
+  private responseTimes: number[] = [];
+  private maxResponseTimes = 20;
+  
+  // State recovery
+  private recoveryAttempts = 0;
+  private maxRecoveryAttempts = 3;
 
   // Event handlers
   private onMessageHandler?: (message: WebSocketMessage) => void;
@@ -228,206 +315,50 @@ export class WebSocketService {
   }
 
   /**
-   * Connect to the MediaMTX WebSocket server
-   * Sprint 3: Real server integration with enhanced error handling and metrics
+   * Generate a unique request ID
    */
-  public connect(): Promise<void> {
-    if (this.isDestroyed) {
-      return Promise.resolve();
-    }
-
-    // Reset connection state for reconnection attempts
-    this.isConnecting = true;
-
-    return new Promise((resolve, reject) => {
-      try {
-        console.log(`🔌 Connecting to MediaMTX server: ${this.config.url}`);
-        
-        // Use Node.js ws library in Node.js environment, browser WebSocket in browser
-        if (typeof window === 'undefined') {
-          // Node.js environment - use 'ws' library
-          const WebSocket = require('ws');
-          this.ws = new WebSocket(this.config.url);
-        } else {
-          // Browser environment - use native WebSocket
-          this.ws = new WebSocket(this.config.url);
-        }
-        
-        this.setupEventHandlers(resolve, reject);
-      } catch (error) {
-        this.isConnecting = false;
-        const wsError = new WebSocketError('Failed to create WebSocket connection');
-        console.error('❌ WebSocket connection failed:', wsError);
-        
-        // Update connection store
-        if (this.connectionStore) {
-          this.connectionStore.setError(wsError.message, wsError.code);
-          this.connectionStore.incrementErrorCount();
-        }
-        
-        reject(wsError);
-      }
-    });
+  private generateRequestId(): number {
+    return ++this.requestId;
   }
 
   /**
-   * Disconnect from the WebSocket server
+   * Make a JSON-RPC call
    */
-  public disconnect(): void {
-    console.log('🔌 Disconnecting from MediaMTX server');
-    this.clearReconnectTimeout();
-    this.clearHeartbeat();
-    this.clearMetricsInterval();
-    
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-
-    // REQ-NET01-003: Start HTTP polling fallback when manually disconnected
-    if (this.httpPollingService && !this.httpPollingService.isActive) {
-      console.log('🔄 Manual disconnect - starting HTTP polling fallback');
-      this.httpPollingService.startPolling();
-      this.fallbackMode = true;
-      this.fallbackStartTime = Date.now();
-    }
-
-    // Reset connection state
-    this.isConnecting = false;
-    this.reconnectAttempts = 0;
-
-    // Reject all pending requests
-    for (const [, { reject, timeout }] of this.pendingRequests) {
-      clearTimeout(timeout);
-      reject(new WebSocketError('Connection closed'));
-    }
-    this.pendingRequests.clear();
-
-    // Update connection store
-    if (this.connectionStore) {
-      this.connectionStore.setLastDisconnected(new Date());
-    }
-  }
-
-  /**
-   * Send a JSON-RPC method call with optional authentication
-   * Sprint 3: Enhanced for real server integration with metrics tracking
-   * REQ-NET01-003: HTTP polling fallback when WebSocket fails
-   */
-  public async call(method: string, params: Record<string, unknown> | object = {}, requireAuth: boolean = false): Promise<unknown> {
-    if (!this.ws || this.ws.readyState !== 1) { // WebSocket.OPEN = 1
-      // REQ-NET01-003: Try HTTP polling fallback for supported methods
-      if (this.httpPollingService && this.isFallbackMethodSupported(method)) {
-        console.log(`🔄 WebSocket disconnected - using HTTP polling fallback for ${method}`);
-        
-        try {
-          // Start polling if not already active
-          if (!this.httpPollingService.isActive) {
-            this.httpPollingService.startPolling();
-          }
-          
-          // Use HTTP polling for camera list
-          if (method === 'get_camera_list') {
-            const result = await this.httpPollingService.getCameraList();
-            console.log(`✅ HTTP Polling: ${method} successful`);
-            return result;
-          }
-          
-          // For other methods, return a fallback response
-          return this.getFallbackResponse(method, params);
-          
-        } catch (error) {
-          console.error(`❌ HTTP Polling fallback failed for ${method}:`, error);
-          const fallbackError = new WebSocketError(`HTTP polling fallback failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          
-          // Update connection store
-          if (this.connectionStore) {
-            this.connectionStore.setError(fallbackError.message, fallbackError.code);
-            this.connectionStore.incrementErrorCount();
-          }
-          
-          throw fallbackError;
-        }
+  public call(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    if (!this.isConnected()) {
+      console.warn(`⚠️ WebSocket not connected for method: ${method}`);
+      if (this.isFallbackMethodSupported(method)) {
+        return this.getFallbackResponse(method, params);
       }
-      
-      const error = new WebSocketError('WebSocket not connected');
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.setError(error.message, error.code);
-        this.connectionStore.incrementErrorCount();
-      }
-      
-      throw error;
+      return Promise.reject(new WebSocketError('WebSocket not connected'));
     }
 
-    // Add authentication token if required and available
-    let finalParams = params as Record<string, unknown>;
-    if (requireAuth) {
-      try {
-        finalParams = authService.includeAuth(params as Record<string, unknown>);
-      } catch (error) {
-        const authError = new WebSocketError(`Authentication required: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        
-        // Update connection store
-        if (this.connectionStore) {
-          this.connectionStore.setError(authError.message, authError.code);
-          this.connectionStore.incrementErrorCount();
-        }
-        
-        throw authError;
-      }
-    }
-
-    const requestId = ++this.requestId;
+    const id = this.generateRequestId();
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
+      id,
       method,
-      params: finalParams,
-      id: requestId
+      params
     };
 
-    console.log(`📤 Sending ${method} (#${requestId})`, params ? JSON.stringify(params) : '');
-
-    return new Promise((resolve, reject) => {
+    const requestPromise = new Promise<unknown>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.pendingRequests.delete(requestId);
-        const timeoutError = new WebSocketError(`Request timeout for method: ${method}`);
-        console.error(`⏰ Request timeout: ${method}`, timeoutError);
-        
-        // Update connection store
-        if (this.connectionStore) {
-          this.connectionStore.setError(timeoutError.message, timeoutError.code);
-          this.connectionStore.incrementErrorCount();
-        }
-        
-        reject(timeoutError);
+        this.pendingRequests.delete(id);
+        reject(new WebSocketError(`Request timeout for method: ${method}`));
       }, this.config.requestTimeout);
 
-      this.pendingRequests.set(requestId, { resolve, reject, timeout });
-
-      try {
-        this.ws!.send(JSON.stringify(request));
-        
-        // Update metrics
-        if (this.connectionStore) {
-          this.connectionStore.incrementMessageCount();
-        }
-      } catch {
-        this.pendingRequests.delete(requestId);
-        clearTimeout(timeout);
-        const sendError = new WebSocketError('Failed to send request');
-        console.error('❌ Failed to send request:', sendError);
-        
-        // Update connection store
-        if (this.connectionStore) {
-          this.connectionStore.setError(sendError.message, sendError.code);
-          this.connectionStore.incrementErrorCount();
-        }
-        
-        reject(sendError);
-      }
+      this.pendingRequests.set(id, { resolve, reject, timeout });
     });
+
+    try {
+      this.ws!.send(JSON.stringify(request));
+      console.log(`📤 Sent request #${id}: ${method}`);
+    } catch (error) {
+      this.pendingRequests.delete(id);
+      throw new WebSocketError(`Failed to send request: ${error}`);
+    }
+
+    return requestPromise;
   }
 
   /**
@@ -450,153 +381,112 @@ export class WebSocketService {
   }
 
   /**
-   * Get connection status
+   * Check if WebSocket is connected
    */
-  public get isConnected(): boolean {
-    return this.ws?.readyState === 1; // WebSocket.OPEN = 1
-  }
-
-  public get isConnectingStatus(): boolean {
-    return this.isConnecting;
+  public isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
   }
 
   /**
-   * Get notification performance metrics
+   * Check if WebSocket is connecting
    */
-  public getNotificationMetrics() {
-    return {
-      count: this.notificationCount,
-      averageLatency: this.notificationLatency.length > 0 
-        ? this.notificationLatency.reduce((a, b) => a + b, 0) / this.notificationLatency.length 
-        : 0,
-      lastNotificationTime: this.lastNotificationTime
-    };
+  public isConnectingStatus(): boolean {
+    return this.ws?.readyState === WebSocket.CONNECTING;
   }
 
   /**
-   * Test-only accessor for WebSocket instance
-   * Only available in test environment
+   * Connect to WebSocket server
    */
-  public getWebSocket(): WebSocket | null {
-    if (process.env.NODE_ENV === 'test') {
-      return this.ws;
-    }
-    return null;
-  }
-
-  /**
-   * Test-only accessor for internal state
-   * Only available in test environment
-   */
-  public getTestState() {
-    if (process.env.NODE_ENV === 'test') {
-      return {
-        ws: this.ws,
-        isConnecting: this.isConnecting,
-        isDestroyed: this.isDestroyed,
-        reconnectAttempts: this.reconnectAttempts,
-        pendingRequests: this.pendingRequests,
-        connectionStore: this.connectionStore,
-        cameraStore: this.cameraStore,
-        httpPollingService: this.httpPollingService,
-        fallbackMode: this.fallbackMode
-      };
-    }
-    return null;
-  }
-
-  /**
-   * REQ-NET01-003: Check if method is supported in HTTP polling fallback
-   */
-  private isFallbackMethodSupported(method: string): boolean {
-    const supportedMethods = [
-      'get_camera_list',
-      'ping',
-      'get_camera_status'
-    ];
-    return supportedMethods.includes(method);
-  }
-
-  /**
-   * REQ-NET01-003: Get fallback response for methods not fully supported via HTTP
-   */
-  private getFallbackResponse(method: string, params: Record<string, unknown> | object): unknown {
-    switch (method) {
-      case 'ping':
-        return 'pong';
-      
-      case 'get_camera_status':
-        // Return a basic status indicating fallback mode
-        return {
-          device: (params as any).device || 'unknown',
-          status: 'UNKNOWN',
-          name: 'Camera (Fallback Mode)',
-          resolution: 'unknown',
-          fps: 0,
-          streams: {},
-          fallback_mode: true,
-          message: 'Status unavailable in HTTP polling fallback mode'
-        };
-      
-      default:
-        throw new WebSocketError(`Method ${method} not supported in HTTP polling fallback mode`);
-    }
-  }
-
-  /**
-   * REQ-NET01-003: Get fallback mode status
-   */
-  public get isInFallbackMode(): boolean {
-    return this.fallbackMode;
-  }
-
-  /**
-   * REQ-NET01-003: Get fallback statistics
-   */
-  public getFallbackStats() {
-    return {
-      isInFallbackMode: this.fallbackMode,
-      fallbackStartTime: this.fallbackStartTime,
-      fallbackDuration: this.fallbackStartTime > 0 ? Date.now() - this.fallbackStartTime : 0,
-      httpPollingStats: this.httpPollingService?.getPollingStats() || null
-    };
-  }
-
-  /**
-   * Start heartbeat to keep connection alive
-   */
-  private startHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
+  public async connect(): Promise<void> {
+    if (this.isConnecting || this.isConnected()) {
+      console.log('🔄 Already connecting or connected');
+      return;
     }
 
-    this.heartbeatInterval = setInterval(async () => {
-      if (this.isConnected) {
-        try {
-          const startTime = performance.now();
-          await this.call('ping', {});
-          const responseTime = performance.now() - startTime;
-          
-          console.log('💓 Heartbeat sent');
-          
-                  // Update connection store with heartbeat metrics
-        if (this.connectionStore) {
-          this.connectionStore.setLastHeartbeat(new Date());
-          this.connectionStore.updateResponseTime(responseTime);
-          this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.healthScore + 5));
-        }
-        } catch (error) {
-          console.warn('⚠️ Heartbeat failed:', error);
-          
-          // Update connection store with heartbeat failure
-          if (this.connectionStore) {
-            this.connectionStore.updateHealthScore(Math.max(0, this.connectionStore.healthScore - 10));
-          }
-          
-          // Don't trigger reconnection on heartbeat failure
-        }
+    if (this.isDestroyed) {
+      throw new WebSocketError('WebSocket service has been destroyed');
+    }
+
+    this.isConnecting = true;
+    console.log('🔌 Connecting to WebSocket server...');
+
+    return new Promise<void>((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(this.config.url);
+        this.setupEventHandlers(resolve, reject);
+      } catch (error) {
+        this.isConnecting = false;
+        reject(new WebSocketError(`Failed to create WebSocket connection: ${error}`));
       }
-    }, this.config.heartbeatInterval);
+    });
+  }
+
+  /**
+   * Disconnect from WebSocket server
+   */
+  public async disconnect(): Promise<void> {
+    console.log('🔌 Disconnecting from WebSocket server...');
+    
+    this.isDestroyed = true;
+    this.isConnecting = false;
+    
+    // Clear all intervals
+    this.clearHeartbeat();
+    this.clearMetricsInterval();
+    
+    // Clear reconnection timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    // Reject all pending requests
+    this.pendingRequests.forEach((request, id) => {
+      clearTimeout(request.timeout);
+      request.reject(new WebSocketError('WebSocket disconnected'));
+    });
+    this.pendingRequests.clear();
+    
+    // Close WebSocket connection
+    if (this.ws) {
+      this.ws.close(1000, 'Client disconnect');
+      this.ws = null;
+    }
+    
+    // Stop HTTP polling fallback
+    if (this.httpPollingService) {
+      this.httpPollingService.stopPolling();
+    }
+    
+    console.log('✅ WebSocket disconnected');
+  }
+
+  /**
+   * Schedule reconnection attempt
+   */
+  private scheduleReconnection(): void {
+    if (this.isDestroyed || this.reconnectAttempts >= this.config.maxReconnectAttempts) {
+      console.log('🛑 Max reconnection attempts reached or service destroyed');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      this.exponentialBackoffBase * Math.pow(this.exponentialBackoffMultiplier, this.reconnectAttempts - 1),
+      this.exponentialBackoffMax
+    );
+
+    console.log(`🔄 Scheduling reconnection attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts} in ${delay}ms`);
+    
+    this.reconnectTimeout = setTimeout(async () => {
+      try {
+        await this.connect();
+        this.reconnectAttempts = 0; // Reset on successful connection
+      } catch (error) {
+        console.error('❌ Reconnection failed:', error);
+        this.scheduleReconnection(); // Try again
+      }
+    }, delay);
   }
 
   /**
@@ -610,26 +500,6 @@ export class WebSocketService {
   }
 
   /**
-   * Start metrics collection interval
-   */
-  private startMetricsCollection(): void {
-    if (this.metricsInterval) {
-      clearInterval(this.metricsInterval);
-    }
-
-    this.metricsInterval = setInterval(() => {
-      if (this.isConnected && this.connectionStore) {
-        // Update connection uptime
-        const { lastConnected } = this.connectionStore;
-        if (lastConnected) {
-          const uptime = Date.now() - lastConnected.getTime();
-          this.connectionStore.setConnectionUptime(uptime);
-        }
-      }
-    }, 5000); // Update every 5 seconds
-  }
-
-  /**
    * Clear metrics collection interval
    */
   private clearMetricsInterval(): void {
@@ -639,6 +509,9 @@ export class WebSocketService {
     }
   }
 
+  /**
+   * Setup event handlers for WebSocket
+   */
   private setupEventHandlers(
     resolve: () => void,
     reject: (error: WebSocketError) => void
@@ -698,7 +571,7 @@ export class WebSocketService {
 
       if (!this.isDestroyed && !event.wasClean) {
         console.log('🔄 Scheduling reconnection...');
-        this.scheduleReconnect();
+        this.scheduleReconnection();
       }
     };
 
@@ -743,182 +616,137 @@ export class WebSocketService {
   }
 
   /**
-   * Enhanced message handling with notification processing
+   * Start heartbeat to keep connection alive
+   */
+  private startHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
+    this.heartbeatInterval = setInterval(async () => {
+      if (this.isConnected()) {
+        try {
+          const startTime = performance.now();
+          await this.call('ping', {});
+          const responseTime = performance.now() - startTime;
+          
+          console.log('💓 Heartbeat sent');
+          
+          // Update connection store with heartbeat metrics
+          if (this.connectionStore) {
+            this.connectionStore.setLastHeartbeat(new Date());
+            this.connectionStore.updateResponseTime(responseTime);
+            this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.healthScore + 5));
+          }
+        } catch (error) {
+          console.warn('⚠️ Heartbeat failed:', error);
+          
+          // Update connection store with heartbeat failure
+          if (this.connectionStore) {
+            this.connectionStore.updateHealthScore(Math.max(0, this.connectionStore.healthScore - 10));
+          }
+          
+          // Don't trigger reconnection on heartbeat failure
+        }
+      }
+    }, this.config.heartbeatInterval);
+  }
+
+  /**
+   * Start metrics collection interval
+   */
+  private startMetricsCollection(): void {
+    if (this.metricsInterval) {
+      clearInterval(this.metricsInterval);
+    }
+
+    this.metricsInterval = setInterval(() => {
+      if (this.isConnected() && this.connectionStore) {
+        // Update connection uptime
+        const { lastConnected } = this.connectionStore;
+        if (lastConnected) {
+          const uptime = Date.now() - lastConnected.getTime();
+          this.connectionStore.setConnectionUptime(uptime);
+        }
+      }
+    }, 5000); // Update every 5 seconds
+  }
+
+  /**
+   * Handle incoming WebSocket messages
    */
   private handleMessage(message: WebSocketMessage, receiveTime: number): void {
-    // Handle notifications (no id)
-    if (!('id' in message)) {
-      this.handleNotification(message as JSONRPCNotification, receiveTime);
+    if (this.onMessageHandler) {
+      this.onMessageHandler(message);
+    }
+
+    if (message.jsonrpc !== '2.0') {
+      console.warn('⚠️ Received non-JSON-RPC message:', message);
       return;
     }
 
-    // Handle responses
-    const response = message as JSONRPCResponse;
-    const pendingRequest = this.pendingRequests.get(response.id);
+    // Check if it's a response (has id) or notification (has method)
+    if ('id' in message) {
+      const response = message as JSONRPCResponse;
+      const request = this.pendingRequests.get(response.id);
+      if (request) {
+        clearTimeout(request.timeout);
+        this.pendingRequests.delete(response.id);
 
-    if (!pendingRequest) {
-      console.warn('⚠️ Response for unknown request:', response.id);
-      return; // Response for unknown request
-    }
-
-    const { resolve, reject, timeout } = pendingRequest;
-    clearTimeout(timeout);
-    this.pendingRequests.delete(response.id);
-
-    if (response.error) {
-      const error = new WebSocketError(
-        response.error.message,
-        response.error.code,
-        response.error.data
-      );
-      console.error('❌ RPC Error:', error);
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.setError(error.message, error.code);
-        this.connectionStore.incrementErrorCount();
-      }
-      
-      reject(error);
-    } else {
-      console.log('✅ RPC Response received for request:', response.id);
-      
-      // Update connection store with successful response
-      if (this.connectionStore) {
-        this.connectionStore.updateHealthScore(Math.min(100, this.connectionStore.healthScore + 2));
-      }
-      
-      resolve(response.result);
-    }
-  }
-
-  /**
-   * Enhanced notification handling with real-time updates
-   */
-  private handleNotification(notification: JSONRPCNotification, receiveTime: number): void {
-    console.log('📢 Notification received:', notification.method);
-    
-    // Update notification metrics
-    this.notificationCount++;
-    this.lastNotificationTime = receiveTime;
-    
-    // Calculate notification latency (if we have a reference time)
-    if (this.lastNotificationTime > 0) {
-      const latency = receiveTime - this.lastNotificationTime;
-      this.notificationLatency.push(latency);
-      
-      // Keep only last 100 latency measurements for performance
-      if (this.notificationLatency.length > 100) {
-        this.notificationLatency.shift();
-      }
-    }
-
-    // Handle specific notification types
-    switch (notification.method) {
-      case NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE:
-        this.handleCameraStatusUpdate(notification as CameraStatusNotification);
-        break;
-        
-      case NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE:
-        this.handleRecordingStatusUpdate(notification as RecordingStatusNotification);
-        break;
-        
-      default:
-        console.warn('⚠️ Unknown notification method:', notification.method);
-        break;
-    }
-
-    // Call general notification handler
-    this.onNotificationHandler?.(notification as NotificationMessage);
-    
-    // Call legacy message handler for backward compatibility
-    this.onMessageHandler?.(notification);
-  }
-
-  /**
-   * Handle camera status update notifications
-   */
-  private handleCameraStatusUpdate(notification: CameraStatusNotification): void {
-    console.log('📹 Camera status update:', notification.params);
-    
-    // Call specific handler
-    this.onCameraStatusUpdateHandler?.(notification);
-    
-    // Update camera store if available
-    if (this.cameraStore && this.cameraStore.handleNotification) {
-      try {
-        this.cameraStore.handleNotification(notification);
-      } catch (error) {
-        console.error('❌ Error updating camera store:', error);
-      }
-    }
-  }
-
-  /**
-   * Handle recording status update notifications
-   */
-  private handleRecordingStatusUpdate(notification: RecordingStatusNotification): void {
-    console.log('🎥 Recording status update:', notification.params);
-    
-    // Call specific handler
-    this.onRecordingStatusUpdateHandler?.(notification);
-    
-    // Update camera store if available
-    if (this.cameraStore && this.cameraStore.handleNotification) {
-      try {
-        this.cameraStore.handleNotification(notification);
-      } catch (error) {
-        console.error('❌ Error updating camera store:', error);
-      }
-    }
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-      const error = new WebSocketError('Max reconnection attempts reached');
-      console.error('❌ Max reconnection attempts reached');
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.setError(error.message, error.code);
-        this.connectionStore.updateConnectionQuality('unstable');
-      }
-      
-      this.onErrorHandler?.(error);
-      return;
-    }
-
-    const delay = Math.min(
-      this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts),
-      this.config.maxDelay
-    );
-
-    console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.config.maxReconnectAttempts})`);
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectAttempts++;
-      this.connect().then(() => {
-        console.log('✅ Reconnection successful');
-        // Reconnection successful - onConnectHandler will be called by setupEventHandlers
-      }).catch((error) => {
-        console.error('❌ Reconnection failed:', error);
-        
-        // Update connection store
-        if (this.connectionStore) {
-          this.connectionStore.setError(error.message, error.code);
-          this.connectionStore.incrementErrorCount();
+        if (response.error) {
+          const error = new WebSocketError(response.error.message, response.error.code, response.error.data);
+          console.error(`❌ Received error for request #${response.id}:`, error);
+          request.reject(error);
+        } else if (response.result) {
+          console.log(`✅ Received result for request #${response.id}`);
+          request.resolve(response.result);
+        } else {
+          console.warn(`⚠️ Received message with no error or result for request #${response.id}`);
+          request.reject(new WebSocketError('Received message with no error or result'));
         }
-        
-        this.onErrorHandler?.(error);
-      });
-    }, delay);
+      } else {
+        console.warn(`⚠️ Received response for unknown request ID: ${response.id}`);
+      }
+    } else if ('method' in message) {
+      // Handle notifications
+      const notification = message as JSONRPCNotification;
+      if (notification.method === NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE) {
+        const cameraNotification: CameraStatusNotification = {
+          method: notification.method,
+          params: notification.params
+        };
+        this.onCameraStatusUpdateHandler?.(cameraNotification);
+        this.onNotificationHandler?.(notification as NotificationMessage);
+      } else if (notification.method === NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE) {
+        const recordingNotification: RecordingStatusNotification = {
+          method: notification.method,
+          params: notification.params
+        };
+        this.onRecordingStatusUpdateHandler?.(recordingNotification);
+        this.onNotificationHandler?.(notification as NotificationMessage);
+      } else {
+        console.log(`📬 Received notification: ${notification.method}`);
+        this.onNotificationHandler?.(notification as NotificationMessage);
+      }
+    } else {
+      console.warn('⚠️ Received message with no ID or method:', message);
+    }
   }
 
-  private clearReconnectTimeout(): void {
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
+  /**
+   * Check if a method is supported for HTTP polling fallback
+   */
+  private isFallbackMethodSupported(method: string): boolean {
+    return method === 'get_camera_list';
+  }
+
+  /**
+   * Get a fallback response for unsupported methods
+   */
+  private getFallbackResponse(method: string, params: Record<string, unknown>): Promise<unknown> {
+    console.warn(`⚠️ WebSocket disconnected - using HTTP polling fallback for unsupported method: ${method}`);
+    // For now, return a rejected promise since HTTP polling service doesn't have a generic call method
+    return Promise.reject(new WebSocketError(`HTTP polling fallback not implemented for method: ${method}`));
   }
 }
 

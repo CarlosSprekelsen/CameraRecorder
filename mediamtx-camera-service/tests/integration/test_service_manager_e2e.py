@@ -76,6 +76,8 @@ async def start_fake_mediamtx_server(host: str, port: int):
 
 
 def build_config(api_port: int, ws_port: int) -> Config:
+    from tests.utils.port_utils import find_free_port
+    
     return Config(
         server=ServerConfig(host="127.0.0.1", port=ws_port, websocket_path="/ws", max_connections=10),
         mediamtx=MediaMTXConfig(
@@ -91,6 +93,7 @@ def build_config(api_port: int, ws_port: int) -> Config:
         logging=LoggingConfig(),
         recording=RecordingConfig(),
         snapshots=SnapshotConfig(),
+        health_port=find_free_port(),  # Dynamic health port to avoid conflicts
     )
 
 
@@ -128,8 +131,20 @@ async def test_e2e_connect_disconnect_creates_and_deletes_paths():
 
             # WebSocket API: validate camera list availability (F3.1.1)
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            
+            # Create test user for authentication
+            from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory
+            auth_manager = get_test_auth_manager()
+            user_factory = TestUserFactory(auth_manager)
+            test_user = user_factory.create_operator_user("e2e_test_user")
+            
             async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"get_camera_list"}))
+                await ws.send(json.dumps({
+                    "jsonrpc":"2.0",
+                    "id":1,
+                    "method":"get_camera_list",
+                    "params": {"auth_token": test_user["token"]}
+                }))
                 resp = json.loads(await ws.recv())
                 assert "result" in resp and isinstance(resp["result"], dict)
                 assert "cameras" in resp["result"] and isinstance(resp["result"]["cameras"], list)

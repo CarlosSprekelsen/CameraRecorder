@@ -400,3 +400,26 @@ class WebSocketAuthTestClient:
     async def call_protected_method(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """Call a protected method on WebSocket server."""
         return await self.send_request(method, params)
+    
+    async def send_unauthenticated_request(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+        """Send JSON-RPC request without authentication for negative testing."""
+        if not self.websocket:
+            raise ConnectionError("WebSocket not connected")
+        
+        # Don't include authentication token in params
+        if params is None:
+            params = {}
+        
+        request = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": self.request_id
+        }
+        
+        self.request_id += 1
+        
+        import json
+        await self.websocket.send(json.dumps(request))
+        response = await self.websocket.recv()
+        return json.loads(response)

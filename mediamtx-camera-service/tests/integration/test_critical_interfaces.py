@@ -219,7 +219,7 @@ async def test_get_camera_list_negative():
         await setup.setup()
 
         # Try to call get_camera_list without authentication
-        result = await setup.websocket_client.call_protected_method("get_camera_list", {})
+        result = await setup.websocket_client.send_unauthenticated_request("get_camera_list", {})
         
         # Should fail with authentication error
         assert "error" in result, "Should return error for unauthenticated request"
@@ -282,7 +282,7 @@ async def test_get_streams_negative():
         await setup.setup()
 
         # Try to call get_streams without authentication
-        result = await setup.websocket_client.call_protected_method("get_streams", {})
+        result = await setup.websocket_client.send_unauthenticated_request("get_streams", {})
         
         print(f"✅ Success: get_streams properly rejected unauthenticated request")
         print(f"   Response: {json.dumps(result, indent=2)}")
@@ -832,7 +832,7 @@ async def test_get_recording_info_success():
         
         print(f"✅ Created test recording file: {test_file_path}")
 
-        # Create viewer user for testing (required for get_recording_info)
+        # Create viewer user for testing (API implementation now correctly requires viewer role)
         viewer_user = setup.user_factory.create_viewer_user()
         
         # Authenticate with WebSocket server
@@ -848,10 +848,11 @@ async def test_get_recording_info_success():
 
         result = await setup.websocket_client.call_protected_method("get_recording_info", params)
         
-        print(f"✅ Success: get_recording_info completed")
+        print(f"✅ get_recording_info completed")
         print(f"   Response: {json.dumps(result, indent=2)}")
 
-        # Validate response structure per API specification
+        # API implementation now correctly requires viewer role for get_recording_info
+        # According to API documentation, this should only require viewer role
         assert "result" in result, "Response should contain 'result' field"
         recording_info = result["result"]
         assert "filename" in recording_info, "Should contain 'filename' field"
@@ -864,6 +865,8 @@ async def test_get_recording_info_success():
         assert recording_info["filename"] == test_filename, "Filename should match"
         assert recording_info["file_size"] > 0, "File size should be positive"
         assert recording_info["download_url"] == f"/files/recordings/{test_filename}", "Download URL should be correct"
+        
+        # API implementation now correctly matches documentation (viewer role)
 
         return result
 
@@ -915,7 +918,7 @@ async def test_get_snapshot_info_success():
         
         print(f"✅ Created test snapshot file: {test_file_path}")
 
-        # Create viewer user for testing (required for get_snapshot_info)
+        # Create viewer user for testing (API implementation now correctly requires viewer role)
         viewer_user = setup.user_factory.create_viewer_user()
         
         # Authenticate with WebSocket server
@@ -931,10 +934,11 @@ async def test_get_snapshot_info_success():
 
         result = await setup.websocket_client.call_protected_method("get_snapshot_info", params)
         
-        print(f"✅ Success: get_snapshot_info completed")
+        print(f"✅ get_snapshot_info completed")
         print(f"   Response: {json.dumps(result, indent=2)}")
 
-        # Validate response structure per API specification
+        # API implementation now correctly requires viewer role for get_snapshot_info
+        # According to API documentation, this should only require viewer role
         assert "result" in result, "Response should contain 'result' field"
         snapshot_info = result["result"]
         assert "filename" in snapshot_info, "Should contain 'filename' field"
@@ -947,6 +951,8 @@ async def test_get_snapshot_info_success():
         assert snapshot_info["filename"] == test_filename, "Filename should match"
         assert snapshot_info["file_size"] > 0, "File size should be positive"
         assert snapshot_info["download_url"] == f"/files/snapshots/{test_filename}", "Download URL should be correct"
+        
+        # API implementation now correctly matches documentation (viewer role)
 
         return result
 
@@ -1269,6 +1275,233 @@ async def run_all_critical_interface_tests():
     finally:
         # Clean up global authentication manager
         cleanup_test_auth_manager()
+
+
+# Comprehensive Role Validation Tests
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_recording_info_role_validation():
+    """
+    Comprehensive role validation for get_recording_info method.
+    
+    Tests all role combinations to validate proper RBAC implementation.
+    """
+    print("\n=== Testing get_recording_info Role Validation ===")
+    
+    setup = IntegrationTestSetup()
+    test_filename = "test_recording.mp4"
+    test_file_path = None
+    
+    try:
+        await setup.setup()
+        
+        # Create test recording file
+        import os
+        recordings_dir = setup.config.mediamtx.recordings_path
+        os.makedirs(recordings_dir, exist_ok=True)
+        test_file_path = os.path.join(recordings_dir, test_filename)
+        
+        with open(test_file_path, 'wb') as f:
+            f.write(b'\x00\x00\x00\x20ftypmp42')
+            f.write(b'\x00' * 1000)
+        
+        params = {"filename": test_filename}
+        
+        # Test 1: Viewer role (should work according to API documentation, but currently fails)
+        print("Testing viewer role access...")
+        viewer_user = setup.user_factory.create_viewer_user("viewer_test_user")
+        await setup.websocket_client.authenticate(viewer_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_recording_info", params)
+        
+        # API implementation now correctly requires viewer role
+        # According to API documentation, viewer should have access
+        print("✅ Viewer access succeeded (API implementation correct)")
+        assert "result" in result, "Should return success response"
+        recording_info = result["result"]
+        assert "filename" in recording_info, "Should contain filename field"
+        assert recording_info["filename"] == test_filename, "Filename should match"
+        
+        # Test 2: Operator role (should work according to API documentation, but currently fails)
+        print("Testing operator role access...")
+        operator_user = setup.user_factory.create_operator_user("operator_test_user")
+        await setup.websocket_client.authenticate(operator_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_recording_info", params)
+        
+        # API implementation now correctly requires viewer role
+        # According to API documentation, operator should have access
+        print("✅ Operator access succeeded (API implementation correct)")
+        assert "result" in result, "Should return success response"
+        recording_info = result["result"]
+        assert "filename" in recording_info, "Should contain filename field"
+        assert recording_info["filename"] == test_filename, "Filename should match"
+        
+        # Test 3: Admin role (should work and does work)
+        print("Testing admin role access...")
+        admin_user = setup.user_factory.create_admin_user("admin_test_user")
+        await setup.websocket_client.authenticate(admin_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_recording_info", params)
+        
+        print("✅ Admin access succeeded (as expected)")
+        assert "result" in result, "Admin should have access"
+        recording_info = result["result"]
+        assert "filename" in recording_info, "Should contain filename field"
+        assert recording_info["filename"] == test_filename, "Filename should match"
+        
+        print("✅ get_recording_info role validation completed")
+        
+    finally:
+        if test_file_path and os.path.exists(test_file_path):
+            os.remove(test_file_path)
+        await setup.cleanup()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_snapshot_info_role_validation():
+    """
+    Comprehensive role validation for get_snapshot_info method.
+    
+    Tests all role combinations to validate proper RBAC implementation.
+    """
+    print("\n=== Testing get_snapshot_info Role Validation ===")
+    
+    setup = IntegrationTestSetup()
+    test_filename = "test_snapshot.jpg"
+    test_file_path = None
+    
+    try:
+        await setup.setup()
+        
+        # Create test snapshot file
+        import os
+        snapshots_dir = setup.config.mediamtx.snapshots_path
+        os.makedirs(snapshots_dir, exist_ok=True)
+        test_file_path = os.path.join(snapshots_dir, test_filename)
+        
+        with open(test_file_path, 'wb') as f:
+            f.write(b'\xff\xd8\xff\xe0')
+            f.write(b'\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00')
+            f.write(b'\x00' * 500)
+        
+        params = {"filename": test_filename}
+        
+        # Test 1: Viewer role (should work according to API documentation, but currently fails)
+        print("Testing viewer role access...")
+        viewer_user = setup.user_factory.create_viewer_user("viewer_test_user")
+        await setup.websocket_client.authenticate(viewer_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_snapshot_info", params)
+        
+        # API implementation now correctly requires viewer role
+        # According to API documentation, viewer should have access
+        print("✅ Viewer access succeeded (API implementation correct)")
+        assert "result" in result, "Should return success response"
+        snapshot_info = result["result"]
+        assert "filename" in snapshot_info, "Should contain filename field"
+        assert snapshot_info["filename"] == test_filename, "Filename should match"
+        
+        # Test 2: Operator role (should work according to API documentation, but currently fails)
+        print("Testing operator role access...")
+        operator_user = setup.user_factory.create_operator_user("operator_test_user")
+        await setup.websocket_client.authenticate(operator_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_snapshot_info", params)
+        
+        # API implementation now correctly requires viewer role
+        # According to API documentation, operator should have access
+        print("✅ Operator access succeeded (API implementation correct)")
+        assert "result" in result, "Should return success response"
+        snapshot_info = result["result"]
+        assert "filename" in snapshot_info, "Should contain filename field"
+        assert snapshot_info["filename"] == test_filename, "Filename should match"
+        
+        # Test 3: Admin role (should work and does work)
+        print("Testing admin role access...")
+        admin_user = setup.user_factory.create_admin_user("admin_test_user")
+        await setup.websocket_client.authenticate(admin_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_snapshot_info", params)
+        
+        print("✅ Admin access succeeded (as expected)")
+        assert "result" in result, "Admin should have access"
+        snapshot_info = result["result"]
+        assert "filename" in snapshot_info, "Should contain filename field"
+        assert snapshot_info["filename"] == test_filename, "Filename should match"
+        
+        print("✅ get_snapshot_info role validation completed")
+        
+    finally:
+        if test_file_path and os.path.exists(test_file_path):
+            os.remove(test_file_path)
+        await setup.cleanup()
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_get_storage_info_role_validation():
+    """
+    Comprehensive role validation for get_storage_info method.
+    
+    Tests all role combinations to validate proper RBAC implementation.
+    """
+    print("\n=== Testing get_storage_info Role Validation ===")
+    
+    setup = IntegrationTestSetup()
+    
+    try:
+        await setup.setup()
+        
+        params = {}
+        
+        # Test 1: Viewer role (should fail according to API documentation - admin role required)
+        print("Testing viewer role access...")
+        viewer_user = setup.user_factory.create_viewer_user("viewer_test_user")
+        await setup.websocket_client.authenticate(viewer_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_storage_info", params)
+        
+        # API implementation correctly requires admin role
+        # According to API documentation, viewer should NOT have access
+        print("✅ Viewer access correctly denied (API implementation correct)")
+        assert "error" in result, "Should return error response"
+        assert result["error"]["code"] == -32003, "Should return insufficient permissions error"
+        assert "admin role required" in result["error"]["message"], "Should indicate admin role required"
+        
+        # Test 2: Operator role (should fail according to API documentation - admin role required)
+        print("Testing operator role access...")
+        operator_user = setup.user_factory.create_operator_user("operator_test_user")
+        await setup.websocket_client.authenticate(operator_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_storage_info", params)
+        
+        # API implementation correctly requires admin role
+        # According to API documentation, operator should NOT have access
+        print("✅ Operator access correctly denied (API implementation correct)")
+        assert "error" in result, "Should return error response"
+        assert result["error"]["code"] == -32003, "Should return insufficient permissions error"
+        assert "admin role required" in result["error"]["message"], "Should indicate admin role required"
+        
+        # Test 3: Admin role (should work and does work)
+        print("Testing admin role access...")
+        admin_user = setup.user_factory.create_admin_user("admin_test_user")
+        await setup.websocket_client.authenticate(admin_user["token"])
+        
+        result = await setup.websocket_client.call_protected_method("get_storage_info", params)
+        
+        print("✅ Admin access succeeded (as expected)")
+        assert "result" in result, "Admin should have access"
+        storage_info = result["result"]
+        assert "total_space" in storage_info, "Should contain total_space field"
+        assert "used_space" in storage_info, "Should contain used_space field"
+        assert "available_space" in storage_info, "Should contain available_space field"
+        
+        print("✅ get_storage_info role validation completed")
+        
+    finally:
+        await setup.cleanup()
 
 
 if __name__ == "__main__":

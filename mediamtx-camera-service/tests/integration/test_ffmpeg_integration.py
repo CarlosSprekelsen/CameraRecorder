@@ -18,7 +18,7 @@ import tempfile
 import pytest
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from camera_service.config import Config, MediaMTXConfig
+from camera_service.config import Config, MediaMTXConfig, ServerConfig
 from camera_service.service_manager import ServiceManager
 
 # Configure logging
@@ -40,17 +40,29 @@ async def test_ffmpeg_integration():
         os.makedirs(recordings_dir, exist_ok=True)
         os.makedirs(snapshots_dir, exist_ok=True)
         
-        # Create configuration with temporary directories
+        # Use free ports to avoid conflicts
+        from tests.utils.port_utils import find_free_port
+        free_websocket_port = find_free_port()
+        free_health_port = find_free_port()
+        
+        # Create configuration with temporary directories and dynamic ports
         mediamtx_config = MediaMTXConfig(
             recordings_path=recordings_dir,
             snapshots_path=snapshots_dir
         )
         
-        # Use free port for health server to avoid conflicts
-        from tests.utils.port_utils import find_free_port
-        free_health_port = find_free_port()
+        server_config = ServerConfig(
+            host="127.0.0.1",
+            port=free_websocket_port,
+            websocket_path="/ws",
+            max_connections=10
+        )
         
-        config = Config(mediamtx=mediamtx_config, health_port=free_health_port)
+        config = Config(
+            server=server_config,
+            mediamtx=mediamtx_config, 
+            health_port=free_health_port
+        )
         
         # Create service manager
         service_manager = ServiceManager(config)

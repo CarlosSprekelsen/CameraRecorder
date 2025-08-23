@@ -91,6 +91,9 @@ export const RPC_METHODS = {
   // File management methods
   LIST_RECORDINGS: 'list_recordings',
   LIST_SNAPSHOTS: 'list_snapshots',
+  
+  // Stream management methods
+  GET_STREAMS: 'get_streams',
 } as const;
 
 /**

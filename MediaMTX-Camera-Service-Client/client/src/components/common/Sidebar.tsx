@@ -16,6 +16,8 @@ import {
   Settings as SettingsIcon,
   Videocam as CameraIcon,
   Folder as FolderIcon,
+  MonitorHeart as HealthIcon,
+  AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -104,6 +106,34 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
                 <FolderIcon />
               </ListItemIcon>
               <ListItemText primary="File Manager" />
+            </ListItemButton>
+          </ListItem>
+        </List>
+        
+        <Divider />
+        
+        <List>
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => handleNavigation('/health')}
+              selected={isActive('/health')}
+            >
+              <ListItemIcon>
+                <HealthIcon />
+              </ListItemIcon>
+              <ListItemText primary="Health Monitor" />
+            </ListItemButton>
+          </ListItem>
+          
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => handleNavigation('/admin')}
+              selected={isActive('/admin')}
+            >
+              <ListItemIcon>
+                <AdminIcon />
+              </ListItemIcon>
+              <ListItemText primary="Admin Dashboard" />
             </ListItemButton>
           </ListItem>
         </List>

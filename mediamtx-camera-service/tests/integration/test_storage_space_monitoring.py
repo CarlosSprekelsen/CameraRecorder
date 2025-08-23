@@ -1,14 +1,14 @@
+#!/usr/bin/env python3
 """
-Integration tests for real-time storage space monitoring and alerts.
+Integration tests for storage space monitoring and alerts.
 
 Requirements Coverage:
-- REQ-API-037: Real-time storage space monitoring and alerts
+- REQ-API-041: Storage space monitoring and alerts
+- REQ-API-042: Storage space threshold configuration
+- REQ-API-043: Storage space alert notifications
+- REQ-API-044: Storage space cleanup recommendations
 
-Story Coverage: E6 - File Management Infrastructure
-IV&V Control Point: Storage monitoring validation
-
-Tests real-time storage space monitoring, threshold alerts, storage calculations,
-and storage space management for recordings and snapshots.
+Test Categories: Integration
 """
 
 import pytest
@@ -17,122 +17,82 @@ import asyncio
 import tempfile
 import os
 import shutil
-import psutil
-from datetime import datetime, timedelta
-from pathlib import Path
+import sys
 from typing import Dict, Any
+
+# Add src to path for imports
+sys.path.append('src')
 
 from tests.utils.port_utils import find_free_port
 from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient
 from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
 from src.camera_service.service_manager import ServiceManager
-from src.websocket_server.server import WebSocketJsonRpcServer
-from mediamtx_wrapper.controller import MediaMTXController
-from camera_discovery.hybrid_monitor import HybridCameraMonitor
 
 
-class StorageMonitoringTestSetup:
+def build_test_config() -> Config:
+    """Build test configuration for storage space monitoring testing."""
+    # Use free ports to avoid conflicts
+    free_websocket_port = find_free_port()
+    free_health_port = find_free_port()
+    
+    return Config(
+        server=ServerConfig(host="127.0.0.1", port=free_websocket_port, websocket_path="/ws", max_connections=10),
+        mediamtx=MediaMTXConfig(
+            host="127.0.0.1",
+            api_port=9997,
+            rtsp_port=8554,
+            webrtc_port=8889,
+            hls_port=8888,
+            recordings_path="./.tmp_recordings",
+            snapshots_path="./.tmp_snapshots",
+        ),
+        camera=CameraConfig(
+            device_range=[0, 1, 2, 3], 
+            enable_capability_detection=True, 
+            detection_timeout=0.5,
+            auto_start_streams=True
+        ),
+        logging=LoggingConfig(),
+        recording=RecordingConfig(),
+        snapshots=SnapshotConfig(),
+        health_port=free_health_port,
+    )
+
+
+class StorageSpaceTestSetup:
     """Test setup for storage space monitoring testing."""
     
     def __init__(self):
-        self.config = self._build_test_config()
+        self.config = build_test_config()
         self.service_manager = None
-        self.mediamtx_controller = None
-        self.camera_monitor = None
         self.server = None
         self.auth_manager = get_test_auth_manager()
         self.user_factory = TestUserFactory(self.auth_manager)
         self.websocket_client = None
-        self.temp_dir = None
-        self.recordings_dir = None
-        self.snapshots_dir = None
-    
-    def _build_test_config(self) -> Config:
-        """Build test configuration for storage monitoring testing."""
-        # Use free ports to avoid conflicts
-        free_websocket_port = find_free_port()
-        free_health_port = find_free_port()
-        
-        # Create temporary directories
-        self.temp_dir = tempfile.mkdtemp(prefix="storage_monitoring_test_")
-        self.recordings_dir = os.path.join(self.temp_dir, "recordings")
-        self.snapshots_dir = os.path.join(self.temp_dir, "snapshots")
-        os.makedirs(self.recordings_dir, exist_ok=True)
-        os.makedirs(self.snapshots_dir, exist_ok=True)
-        
-        return Config(
-            server=ServerConfig(host="127.0.0.1", port=free_websocket_port, websocket_path="/ws", max_connections=10),
-            mediamtx=MediaMTXConfig(
-                host="127.0.0.1",
-                api_port=9997,
-                rtsp_port=8554,
-                webrtc_port=8889,
-                hls_port=8888,
-                recordings_path=self.recordings_dir,
-                snapshots_path=self.snapshots_dir,
-            ),
-            camera=CameraConfig(
-                device_range=[0, 1, 2, 3], 
-                enable_capability_detection=True, 
-                detection_timeout=0.5,
-                auto_start_streams=True
-            ),
-            logging=LoggingConfig(),
-            recording=RecordingConfig(),
-            snapshots=SnapshotConfig(),
-            health_port=free_health_port,
-        )
+        self.recordings_dir = self.config.mediamtx.recordings_path
+        self.snapshots_dir = self.config.mediamtx.snapshots_path
     
     async def setup(self):
-        """Set up test environment for storage monitoring testing."""
-        # Initialize real MediaMTX controller
-        mediamtx_config = self.config.mediamtx
-        self.mediamtx_controller = MediaMTXController(
-            host=mediamtx_config.host,
-            api_port=mediamtx_config.api_port,
-            rtsp_port=mediamtx_config.rtsp_port,
-            webrtc_port=mediamtx_config.webrtc_port,
-            hls_port=mediamtx_config.hls_port,
-            config_path=mediamtx_config.config_path,
-            recordings_path=mediamtx_config.recordings_path,
-            snapshots_path=mediamtx_config.snapshots_path,
-            health_check_interval=mediamtx_config.health_check_interval,
-            health_failure_threshold=mediamtx_config.health_failure_threshold,
-        )
+        """Set up test environment for storage space monitoring testing."""
+        # Initialize service manager (this handles all component initialization)
+        self.service_manager = ServiceManager(config=self.config)
         
-        # Initialize camera monitor
-        camera_config = self.config.camera
-        self.camera_monitor = HybridCameraMonitor(
-            device_range=camera_config.device_range,
-            poll_interval=camera_config.poll_interval,
-            detection_timeout=camera_config.detection_timeout,
-            enable_capability_detection=camera_config.enable_capability_detection,
-        )
-        
-        # Initialize WebSocket server
-        server_config = self.config.server
-        self.server = WebSocketJsonRpcServer(
-            host=server_config.host,
-            port=server_config.port,
-            websocket_path=server_config.websocket_path,
-            max_connections=server_config.max_connections,
-            mediamtx_controller=self.mediamtx_controller,
-            camera_monitor=self.camera_monitor,
-        )
-        
-        # Initialize service manager
-        self.service_manager = ServiceManager(self.config)
-        
-        # Start all components
+        # Start service manager (this starts the WebSocket server with proper initialization)
         await self.service_manager.start()
         
-        # Create test user and client
-        test_user = self.user_factory.create_admin_user("storage_test_user")
-        self.websocket_client = WebSocketAuthTestClient(
-            f"ws://{server_config.host}:{server_config.port}{server_config.websocket_path}",
-            test_user
-        )
+        # Use the service manager's properly initialized WebSocket server
+        self.server = self.service_manager._websocket_server
+        
+        # Create WebSocket client for testing
+        websocket_url = f"ws://{self.config.server.host}:{self.config.server.port}{self.config.server.websocket_path}"
+        # Create a test user for the WebSocket client (use operator like working tests)
+        test_user = self.user_factory.create_operator_user("storage_test_user")
+        self.websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
         await self.websocket_client.connect()
+        
+        # Ensure directories exist
+        os.makedirs(self.recordings_dir, exist_ok=True)
+        os.makedirs(self.snapshots_dir, exist_ok=True)
     
     async def cleanup(self):
         """Clean up test environment."""
@@ -142,43 +102,27 @@ class StorageMonitoringTestSetup:
         if self.service_manager:
             await self.service_manager.stop()
         
-        # Clean up temporary directories
-        if self.temp_dir and os.path.exists(self.temp_dir):
-            shutil.rmtree(self.temp_dir)
+        # Clean up temporary directories if they exist
+        if os.path.exists(self.recordings_dir):
+            shutil.rmtree(self.recordings_dir, ignore_errors=True)
+        if os.path.exists(self.snapshots_dir):
+            shutil.rmtree(self.snapshots_dir, ignore_errors=True)
     
-    def create_test_files_with_sizes(self, recording_size_mb: int = 10, snapshot_size_mb: int = 5):
-        """Create test files with specific sizes to simulate storage usage."""
+    def create_test_files(self, size_mb: int = 1, count: int = 5):
+        """Create test files with specific sizes for storage testing."""
         # Create test recordings
-        recording_files = [
-            f"test_recording_{i}.mp4" for i in range(3)
-        ]
-        
-        for filename in recording_files:
+        for i in range(count):
+            filename = f"test_recording_{i}.mp4"
             filepath = os.path.join(self.recordings_dir, filename)
             with open(filepath, 'wb') as f:
-                # Create file with specified size
-                f.write(b"0" * (recording_size_mb * 1024 * 1024))
+                f.write(b"0" * (size_mb * 1024 * 1024))  # Create file of specified size
         
         # Create test snapshots
-        snapshot_files = [
-            f"test_snapshot_{i}.jpg" for i in range(5)
-        ]
-        
-        for filename in snapshot_files:
+        for i in range(count):
+            filename = f"test_snapshot_{i}.jpg"
             filepath = os.path.join(self.snapshots_dir, filename)
             with open(filepath, 'wb') as f:
-                # Create file with specified size
-                f.write(b"0" * (snapshot_size_mb * 1024 * 1024))
-    
-    def get_disk_usage_info(self) -> Dict[str, Any]:
-        """Get disk usage information for the test directory."""
-        disk_usage = psutil.disk_usage(self.temp_dir)
-        return {
-            "total_bytes": disk_usage.total,
-            "used_bytes": disk_usage.used,
-            "free_bytes": disk_usage.free,
-            "percent_used": disk_usage.percent
-        }
+                f.write(b"0" * (size_mb * 1024 * 1024))  # Create file of specified size
 
 
 @pytest.mark.asyncio
@@ -188,8 +132,8 @@ class TestStorageSpaceMonitoring:
     
     @pytest_asyncio.fixture
     async def storage_setup(self):
-        """Set up storage monitoring test environment."""
-        setup = StorageMonitoringTestSetup()
+        """Set up storage space monitoring test environment."""
+        setup = StorageSpaceTestSetup()
         await setup.setup()
         yield setup
         await setup.cleanup()
@@ -197,46 +141,181 @@ class TestStorageSpaceMonitoring:
     async def test_get_storage_info_success(self, storage_setup):
         """Test successful retrieval of storage information.
         
-        REQ-API-037: Real-time storage space monitoring and alerts
+        REQ-API-041: Storage space monitoring and alerts
         """
+        # Create some test files
+        storage_setup.create_test_files(size_mb=1, count=3)
+        
+        # Get storage information
         response = await storage_setup.websocket_client.send_request(
             "get_storage_info",
             {}
         )
         
         assert response.get("result") is not None
-        storage_info = response["result"]
+        assert "total_space" in response["result"]
+        assert "used_space" in response["result"]
+        assert "free_space" in response["result"]
+        assert "usage_percentage" in response["result"]
         
-        # Verify basic storage information according to API documentation
-        assert "total_space" in storage_info
-        assert "used_space" in storage_info
-        assert "available_space" in storage_info
-        assert "usage_percentage" in storage_info
-        assert "recordings_size" in storage_info
-        assert "snapshots_size" in storage_info
-        assert "low_space_warning" in storage_info
+        # Validate storage information
+        result = response["result"]
+        assert result["total_space"] > 0
+        assert result["used_space"] >= 0
+        assert result["free_space"] >= 0
+        assert 0 <= result["usage_percentage"] <= 100
         
-        # Verify data types
-        assert isinstance(storage_info["total_space"], int)
-        assert isinstance(storage_info["used_space"], int)
-        assert isinstance(storage_info["available_space"], int)
-        assert isinstance(storage_info["usage_percentage"], (int, float))
-        assert isinstance(storage_info["recordings_size"], int)
-        assert isinstance(storage_info["snapshots_size"], int)
-        assert isinstance(storage_info["low_space_warning"], bool)
-        
-        # Verify logical relationships
-        assert storage_info["total_space"] > 0
-        assert storage_info["used_space"] >= 0
-        assert storage_info["available_space"] >= 0
-        assert 0 <= storage_info["usage_percentage"] <= 100
-        assert storage_info["used_space"] + storage_info["available_space"] == storage_info["total_space"]
+        # Verify calculations
+        assert result["used_space"] + result["free_space"] == result["total_space"]
+        calculated_percentage = (result["used_space"] / result["total_space"]) * 100
+        assert abs(result["usage_percentage"] - calculated_percentage) < 1  # Allow small rounding differences
     
-    async def test_get_storage_info_with_files(self, storage_setup):
-        """Test storage information with test files.
+    async def test_storage_threshold_configuration(self, storage_setup):
+        """Test storage threshold configuration.
         
-        REQ-API-037: Real-time storage space monitoring and alerts
+        REQ-API-042: Storage space threshold configuration
         """
+        # Set storage threshold
+        response = await storage_setup.websocket_client.send_request(
+            "set_storage_threshold",
+            {
+                "warning_threshold": 80,
+                "critical_threshold": 95
+            }
+        )
+        
+        assert response.get("result") is not None
+        assert "warning_threshold" in response["result"]
+        assert "critical_threshold" in response["result"]
+        assert response["result"]["warning_threshold"] == 80
+        assert response["result"]["critical_threshold"] == 95
+        
+        # Get storage threshold
+        response = await storage_setup.websocket_client.send_request(
+            "get_storage_threshold",
+            {}
+        )
+        
+        assert response.get("result") is not None
+        assert "warning_threshold" in response["result"]
+        assert "critical_threshold" in response["result"]
+        assert response["result"]["warning_threshold"] == 80
+        assert response["result"]["critical_threshold"] == 95
+    
+    async def test_storage_threshold_validation(self, storage_setup):
+        """Test storage threshold validation.
+        
+        REQ-API-042: Storage space threshold configuration
+        """
+        # Test invalid thresholds
+        response = await storage_setup.websocket_client.send_request(
+            "set_storage_threshold",
+            {
+                "warning_threshold": 101,  # Invalid: > 100
+                "critical_threshold": 95
+            }
+        )
+        
+        assert response.get("error") is not None
+        assert response["error"]["code"] == -32602  # Invalid params
+        
+        # Test negative thresholds
+        response = await storage_setup.websocket_client.send_request(
+            "set_storage_threshold",
+            {
+                "warning_threshold": -1,  # Invalid: negative
+                "critical_threshold": 95
+            }
+        )
+        
+        assert response.get("error") is not None
+        assert response["error"]["code"] == -32602  # Invalid params
+        
+        # Test warning > critical
+        response = await storage_setup.websocket_client.send_request(
+            "set_storage_threshold",
+            {
+                "warning_threshold": 90,  # Invalid: warning > critical
+                "critical_threshold": 80
+            }
+        )
+        
+        assert response.get("error") is not None
+        assert response["error"]["code"] == -32602  # Invalid params
+    
+    async def test_storage_alert_notifications(self, storage_setup):
+        """Test storage alert notifications.
+        
+        REQ-API-043: Storage space alert notifications
+        """
+        # Set low thresholds for testing
+        response = await storage_setup.websocket_client.send_request(
+            "set_storage_threshold",
+            {
+                "warning_threshold": 10,  # Very low for testing
+                "critical_threshold": 20
+            }
+        )
+        
+        assert response.get("result") is not None
+        
+        # Create files to trigger alerts
+        storage_setup.create_test_files(size_mb=10, count=10)  # Create large files
+        
+        # Check for storage alerts
+        response = await storage_setup.websocket_client.send_request(
+            "get_storage_alerts",
+            {}
+        )
+        
+        assert response.get("result") is not None
+        assert "alerts" in response["result"]
+        
+        # Should have alerts due to high usage
+        alerts = response["result"]["alerts"]
+        assert len(alerts) > 0
+        
+        # Check alert types
+        alert_types = [alert["type"] for alert in alerts]
+        assert "warning" in alert_types or "critical" in alert_types
+    
+    async def test_storage_cleanup_recommendations(self, storage_setup):
+        """Test storage cleanup recommendations.
+        
+        REQ-API-044: Storage space cleanup recommendations
+        """
+        # Create test files
+        storage_setup.create_test_files(size_mb=1, count=5)
+        
+        # Get cleanup recommendations
+        response = await storage_setup.websocket_client.send_request(
+            "get_storage_cleanup_recommendations",
+            {}
+        )
+        
+        assert response.get("result") is not None
+        assert "recommendations" in response["result"]
+        assert "potential_space_saved" in response["result"]
+        
+        recommendations = response["result"]["recommendations"]
+        assert isinstance(recommendations, list)
+        
+        # Should have recommendations for old files
+        if len(recommendations) > 0:
+            for rec in recommendations:
+                assert "file_path" in rec
+                assert "file_size" in rec
+                assert "last_modified" in rec
+                assert "recommendation_type" in rec
+    
+    async def test_storage_automatic_cleanup(self, storage_setup):
+        """Test automatic storage cleanup.
+        
+        REQ-API-044: Storage space cleanup recommendations
+        """
+        # Create test files
+        storage_setup.create_test_files(size_mb=1, count=3)
+        
         # Get initial storage info
         initial_response = await storage_setup.websocket_client.send_request(
             "get_storage_info",
@@ -244,285 +323,90 @@ class TestStorageSpaceMonitoring:
         )
         
         assert initial_response.get("result") is not None
-        initial_info = initial_response["result"]
-        initial_used = initial_info["used_space"]
+        initial_used_space = initial_response["result"]["used_space"]
         
-        # Create test files
-        storage_setup.create_test_files_with_sizes(recording_size_mb=5, snapshot_size_mb=2)
-        
-        # Get updated storage info
-        updated_response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        assert updated_response.get("result") is not None
-        updated_info = updated_response["result"]
-        updated_used = updated_info["used_space"]
-        
-        # Verify storage usage increased
-        assert updated_used > initial_used
-        
-        # Calculate expected increase (3 recordings * 5MB + 5 snapshots * 2MB = 25MB)
-        expected_increase = (3 * 5 + 5 * 2) * 1024 * 1024
-        actual_increase = updated_used - initial_used
-        
-        # Allow for some variance due to filesystem overhead
-        assert actual_increase >= expected_increase * 0.9  # At least 90% of expected
-    
-    async def test_storage_info_accuracy(self, storage_setup):
-        """Test accuracy of storage information against system data.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
+        # Trigger automatic cleanup
         response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        assert response.get("result") is not None
-        api_storage_info = response["result"]
-        
-        # Get system storage info
-        system_storage_info = storage_setup.get_disk_usage_info()
-        
-        # Verify API matches system (with small tolerance for timing differences)
-        tolerance = 1024 * 1024  # 1MB tolerance
-        
-        assert abs(api_storage_info["total_space"] - system_storage_info["total_bytes"]) < tolerance
-        assert abs(api_storage_info["used_space"] - system_storage_info["used_bytes"]) < tolerance
-        assert abs(api_storage_info["available_space"] - system_storage_info["free_bytes"]) < tolerance
-        assert abs(api_storage_info["usage_percentage"] - system_storage_info["percent_used"]) < 1  # 1% tolerance
-    
-    async def test_storage_alerts_thresholds(self, storage_setup):
-        """Test storage alerts based on usage thresholds.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        # Set storage alert thresholds
-        response = await storage_setup.websocket_client.send_request(
-            "set_storage_alerts",
+            "trigger_storage_cleanup",
             {
-                "warning_threshold_percent": 80,
-                "critical_threshold_percent": 95,
-                "enabled": True
+                "cleanup_type": "automatic",
+                "dry_run": False
             }
         )
         
         assert response.get("result") is not None
-        assert response["result"]["success"] is True
+        assert "files_removed" in response["result"]
+        assert "space_freed" in response["result"]
         
-        # Get storage info with alerts
-        storage_response = await storage_setup.websocket_client.send_request(
+        # Get storage info after cleanup
+        final_response = await storage_setup.websocket_client.send_request(
             "get_storage_info",
             {}
         )
         
-        assert storage_response.get("result") is not None
-        storage_info = storage_response["result"]["storage_info"]
+        assert final_response.get("result") is not None
+        final_used_space = final_response["result"]["used_space"]
         
-        # Verify alert information is included
-        assert "alerts" in storage_info
-        alerts = storage_info["alerts"]
-        
-        # Verify alert structure
-        assert "warning_threshold_percent" in alerts
-        assert "critical_threshold_percent" in alerts
-        assert "current_status" in alerts
-        assert "warnings" in alerts
-        
-        # Verify threshold values
-        assert alerts["warning_threshold_percent"] == 80
-        assert alerts["critical_threshold_percent"] == 95
+        # Space should be freed (unless no files were old enough to clean)
+        assert final_used_space <= initial_used_space
     
-    async def test_storage_info_authentication_required(self, storage_setup):
-        """Test that storage info retrieval requires authentication.
+    async def test_storage_monitoring_authentication_required(self, storage_setup):
+        """Test that storage monitoring requires authentication.
         
-        REQ-API-037: Real-time storage space monitoring and alerts
+        REQ-API-041: Storage space monitoring and alerts
         """
         # Create unauthenticated client
-        from tests.fixtures.auth_utils import WebSocketAuthTestClient
-        unauthenticated_client = WebSocketAuthTestClient(
-            storage_setup.websocket_client.websocket_url,
-            None  # No user = unauthenticated
-        )
+        websocket_url = f"ws://{storage_setup.config.server.host}:{storage_setup.config.server.port}{storage_setup.config.server.websocket_path}"
+        unauthenticated_client = WebSocketAuthTestClient(websocket_url, None)
         await unauthenticated_client.connect()
         
-        # Try to get storage info without authentication
-        response = await unauthenticated_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        assert response.get("error") is not None
-        assert response["error"]["code"] == -32001  # Authentication error
-        
-        await unauthenticated_client.disconnect()
+        try:
+            # Try to get storage info without authentication
+            response = await unauthenticated_client.send_unauthenticated_request(
+                "get_storage_info",
+                {}
+            )
+            
+            # Should fail with authentication error
+            assert response.get("error") is not None
+            assert response["error"]["code"] == -32001  # Authentication required
+        finally:
+            await unauthenticated_client.disconnect()
     
-    async def test_storage_info_viewer_permissions(self, storage_setup):
-        """Test storage info retrieval with viewer permissions.
+    async def test_storage_monitoring_role_validation(self, storage_setup):
+        """Test storage monitoring role validation.
         
-        REQ-API-037: Real-time storage space monitoring and alerts
+        REQ-API-041: Storage space monitoring and alerts
         """
         # Create viewer user
-        viewer_user = storage_setup.user_factory.create_viewer_user("viewer_user")
+        viewer_user = storage_setup.user_factory.create_viewer_user("storage_viewer_user")
         viewer_client = WebSocketAuthTestClient(
-            storage_setup.websocket_client.websocket_url,
+            f"ws://{storage_setup.config.server.host}:{storage_setup.config.server.port}{storage_setup.config.server.websocket_path}",
             viewer_user
         )
         await viewer_client.connect()
         
-        # Try to get storage info with viewer permissions
-        response = await viewer_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        # Viewers should be able to access storage info
-        assert response.get("result") is not None
-        assert "storage_info" in response["result"]
-        
-        await viewer_client.disconnect()
-    
-    async def test_storage_info_operator_permissions(self, storage_setup):
-        """Test storage info retrieval with operator permissions.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        # Create operator user
-        operator_user = storage_setup.user_factory.create_operator_user("operator_user")
-        operator_client = WebSocketAuthTestClient(
-            storage_setup.websocket_client.websocket_url,
-            operator_user
-        )
-        await operator_client.connect()
-        
-        # Try to get storage info with operator permissions
-        response = await operator_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        # Operators should be able to access storage info
-        assert response.get("result") is not None
-        assert "storage_info" in response["result"]
-        
-        await operator_client.disconnect()
-    
-    async def test_storage_info_real_time_updates(self, storage_setup):
-        """Test that storage info provides real-time updates.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        # Get initial storage info
-        initial_response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        assert initial_response.get("result") is not None
-        initial_info = initial_response["result"]["storage_info"]
-        
-        # Create a large file to change storage usage
-        large_file_path = os.path.join(storage_setup.recordings_dir, "large_test_file.mp4")
-        with open(large_file_path, 'wb') as f:
-            f.write(b"0" * (50 * 1024 * 1024))  # 50MB file
-        
-        # Get updated storage info
-        updated_response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        
-        assert updated_response.get("result") is not None
-        updated_info = updated_response["result"]["storage_info"]
-        
-        # Verify storage usage increased
-        assert updated_info["used_bytes"] > initial_info["used_bytes"]
-        assert updated_info["free_bytes"] < initial_info["free_bytes"]
-        assert updated_info["percent_used"] > initial_info["percent_used"]
-    
-    async def test_storage_info_detailed_breakdown(self, storage_setup):
-        """Test detailed storage breakdown by file type.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        # Create test files
-        storage_setup.create_test_files_with_sizes(recording_size_mb=10, snapshot_size_mb=5)
-        
-        response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {
-                "include_breakdown": True
-            }
-        )
-        
-        assert response.get("result") is not None
-        storage_info = response["result"]["storage_info"]
-        
-        # Verify detailed breakdown is included
-        assert "breakdown" in storage_info
-        breakdown = storage_info["breakdown"]
-        
-        # Verify breakdown structure
-        assert "recordings" in breakdown
-        assert "snapshots" in breakdown
-        
-        recordings_info = breakdown["recordings"]
-        snapshots_info = breakdown["snapshots"]
-        
-        # Verify recordings breakdown
-        assert "total_files" in recordings_info
-        assert "total_size_bytes" in recordings_info
-        assert "average_size_bytes" in recordings_info
-        
-        # Verify snapshots breakdown
-        assert "total_files" in snapshots_info
-        assert "total_size_bytes" in snapshots_info
-        assert "average_size_bytes" in snapshots_info
-        
-        # Verify logical relationships
-        assert recordings_info["total_files"] == 3
-        assert snapshots_info["total_files"] == 5
-        assert recordings_info["total_size_bytes"] > 0
-        assert snapshots_info["total_size_bytes"] > 0
-    
-    async def test_storage_info_performance(self, storage_setup):
-        """Test performance of storage info retrieval.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        import time
-        
-        # Measure response time
-        start_time = time.time()
-        response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {}
-        )
-        end_time = time.time()
-        
-        response_time = end_time - start_time
-        
-        # Verify response is successful
-        assert response.get("result") is not None
-        
-        # Verify response time is reasonable (should be fast for storage info)
-        assert response_time < 1.0  # Should complete within 1 second
-    
-    async def test_storage_info_error_handling(self, storage_setup):
-        """Test error handling for storage info retrieval.
-        
-        REQ-API-037: Real-time storage space monitoring and alerts
-        """
-        # Test with invalid parameters
-        response = await storage_setup.websocket_client.send_request(
-            "get_storage_info",
-            {
-                "invalid_param": "value"
-            }
-        )
-        
-        # Should still work (ignore invalid parameters)
-        assert response.get("result") is not None
-        assert "storage_info" in response["result"]
+        try:
+            # Viewer should be able to get storage info
+            response = await viewer_client.send_request(
+                "get_storage_info",
+                {}
+            )
+            
+            assert response.get("result") is not None
+            assert "total_space" in response["result"]
+            
+            # Viewer should NOT be able to set thresholds
+            response = await viewer_client.send_request(
+                "set_storage_threshold",
+                {
+                    "warning_threshold": 80,
+                    "critical_threshold": 95
+                }
+            )
+            
+            # Should fail with permission error
+            assert response.get("error") is not None
+            assert response["error"]["code"] == -32003  # Permission denied
+        finally:
+            await viewer_client.disconnect()

@@ -26,7 +26,8 @@ import type {
   FileListResponse,
   FileListParams,
   FileItem,
-
+  StreamInfo,
+  StreamListResponse,
   ServerInfo,
   RecordingStatus,
 } from '../types';
@@ -44,6 +45,9 @@ interface CameraState {
   // File management
   recordings: FileItem[];
   snapshots: FileItem[];
+  
+  // Stream management
+  streams: StreamInfo[];
   
   // Server info
   serverInfo: ServerInfo | null;
@@ -73,6 +77,9 @@ interface CameraState {
   // Camera operations
   getCameraList: () => Promise<CameraListResponse | null>;
   getCameraStatus: (device: string) => Promise<CameraDevice | null>;
+  
+  // Stream operations
+  getStreams: () => Promise<StreamListResponse | null>;
   
   // Recording operations
   startRecording: (device: string, duration?: number, format?: string) => Promise<RecordingSession | null>;
@@ -125,6 +132,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
   activeRecordings: new Map(),
   recordings: [],
   snapshots: [],
+  streams: [],
   serverInfo: null,
   loading: false,
   isLoading: false, // Alias for loading
@@ -148,35 +156,60 @@ export const useCameraStore = create<CameraState>((set, get) => ({
   },
 
   // CONSOLIDATION: Added missing scaffolding methods
-  initialize: async (): Promise<void> => {
+  initialize: async () => {
+    const { wsService } = get();
+    
+    if (wsService) {
+      return; // Already initialized
+    }
+
     try {
-      set({ loading: true, isLoading: true, error: null });
+      set({ isConnecting: true, error: null });
       
-      // Get initial camera list
-      await get().getCameraList();
-      
-      // Get server info
-      await get().getServerInfo();
-      
-      set({ 
-        loading: false, 
-        isLoading: false,
-        isConnected: true 
+      // Initialize WebSocket service
+      const { createWebSocketService } = await import('../services/websocket');
+      const newWsService = await createWebSocketService({
+        url: 'ws://localhost:8002/ws',
+        reconnectInterval: 5000,
+        maxReconnectAttempts: 5,
       });
+
+      set({ wsService: newWsService });
+
+      // Set up event handlers
+      newWsService.onConnect(() => {
+        set({ isConnected: true, error: null });
+      });
+
+      newWsService.onDisconnect(() => {
+        set({ isConnected: false });
+      });
+
+      newWsService.onError((error) => {
+        set({ error: error.message, isConnected: false });
+      });
+
+      // Connect to WebSocket
+      await newWsService.connect();
+      
+      // Load initial data
+      await get().refreshCameras();
+      
     } catch (error) {
       set({ 
-        loading: false, 
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to initialize',
-        isConnected: false
+        error: error instanceof Error ? error.message : 'Failed to initialize camera store',
+        isConnected: false 
       });
+    } finally {
+      set({ isConnecting: false });
     }
   },
 
-  refreshCameras: async (): Promise<void> => {
+  refreshCameras: async () => {
     try {
       set({ isRefreshing: true, error: null });
       await get().getCameraList();
+      await get().getStreams();
       set({ isRefreshing: false });
     } catch (error) {
       set({ 
@@ -186,21 +219,24 @@ export const useCameraStore = create<CameraState>((set, get) => ({
     }
   },
 
-  disconnect: (): void => {
+  disconnect: () => {
     const { wsService } = get();
     if (wsService) {
       wsService.disconnect();
     }
     set({ 
+      wsService: null, 
       isConnected: false,
-      isConnecting: false,
-      loading: false,
-      isLoading: false
+      cameras: [],
+      selectedCamera: null,
+      activeRecordings: new Map(),
+      streams: []
     });
   },
 
-  selectCamera: (device: string): void => {
-    const camera = get().cameras.find(c => c.device === device);
+  selectCamera: (device: string) => {
+    const { cameras } = get();
+    const camera = cameras.find(c => c.device === device);
     set({ selectedCamera: camera || null });
   },
 
@@ -213,27 +249,19 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
       console.log('📷 Getting camera list');
-      const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}, true) as CameraListResponse;
-      
-      set({ 
-        cameras: result.cameras,
-        lastUpdate: new Date(),
-        updateCount: get().updateCount + 1,
-        isConnected: true
-      });
-      
+      const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+      set({ cameras: result.cameras });
       return result;
       
     } catch (error) {
       console.error('❌ Failed to get camera list:', error);
       set({ 
-        error: error instanceof Error ? error.message : 'Failed to get camera list',
-        isConnected: false
+        error: error instanceof Error ? error.message : 'Failed to get camera list' 
       });
       return null;
     }
@@ -247,28 +275,53 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`📷 Getting status for camera ${device}`);
-      const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }, true) as CameraDevice;
+      console.log(`📷 Getting camera status for ${device}`);
+      const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }) as CameraDevice;
       
       // Update camera in list
       set((state) => ({
         cameras: state.cameras.map(camera => 
           camera.device === device ? result : camera
-        ),
-        lastUpdate: new Date(),
-        updateCount: state.updateCount + 1
+        )
       }));
       
       return result;
       
     } catch (error) {
-      console.error(`❌ Failed to get status for camera ${device}:`, error);
+      console.error(`❌ Failed to get camera status for ${device}:`, error);
       set({ 
-        error: error instanceof Error ? error.message : `Failed to get status for camera ${device}` 
+        error: error instanceof Error ? error.message : 'Failed to get camera status' 
+      });
+      return null;
+    }
+  },
+
+  // Stream operations
+  getStreams: async (): Promise<StreamListResponse | null> => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log('📺 Getting stream list');
+      const result = await wsService.call(RPC_METHODS.GET_STREAMS, {}) as StreamListResponse;
+      set({ streams: result.streams });
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Failed to get stream list:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to get stream list' 
       });
       return null;
     }
@@ -283,7 +336,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
@@ -294,7 +347,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       };
 
       console.log(`🎬 Starting recording for camera ${device}`);
-      const result = await wsService.call(RPC_METHODS.START_RECORDING, params as unknown as Record<string, unknown>, true) as RecordingSession;
+      const result = await wsService.call(RPC_METHODS.START_RECORDING, params as unknown as Record<string, unknown>) as RecordingSession;
 
       // Add to active recordings
       set((state) => {
@@ -323,14 +376,14 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
       const params: StopRecordingParams = { device };
 
       console.log(`⏹️ Stopping recording for camera ${device}`);
-      const result = await wsService.call(RPC_METHODS.STOP_RECORDING, params as unknown as Record<string, unknown>, true) as RecordingSession;
+      const result = await wsService.call(RPC_METHODS.STOP_RECORDING, params as unknown as Record<string, unknown>) as RecordingSession;
 
       // Remove from active recordings
       set((state) => {
@@ -365,7 +418,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
@@ -388,7 +441,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         ...(filename && { filename })
       };
 
-      const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>, true) as SnapshotResult;
+      const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
 
       console.log(`✅ Snapshot taken for camera ${device}:`, result);
       return result;
@@ -411,12 +464,12 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
       console.log('ℹ️ Getting server information');
-      const result = await wsService.call('get_server_info', {}, true) as ServerInfo;
+      const result = await wsService.call('get_server_info', {}) as ServerInfo;
       set({ serverInfo: result });
       return result;
       
@@ -437,12 +490,12 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         return false;
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         return false;
       }
 
       console.log('🏓 Pinging server');
-      const result = await wsService.call('ping', {}, true);
+      const result = await wsService.call('ping', {});
       return result === 'pong';
       
     } catch (error) {
@@ -498,7 +551,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
@@ -508,7 +561,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       // Normalize file data
       const normalized = {
         ...result,
-        files: result.files.map(file => ({
+        files: result.files.map((file: any) => ({
           ...file,
           created_at: file.modified_time // Use modified_time as created_at fallback
         }))
@@ -534,7 +587,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
         throw new Error('WebSocket service not initialized');
       }
 
-      if (!wsService.isConnected) {
+      if (!wsService.isConnected()) {
         throw new Error('WebSocket not connected');
       }
 
@@ -544,7 +597,7 @@ export const useCameraStore = create<CameraState>((set, get) => ({
       // Normalize file data
       const normalized = {
         ...result,
-        files: result.files.map(file => ({
+        files: result.files.map((file: any) => ({
           ...file,
           created_at: file.modified_time // Use modified_time as created_at fallback
         }))

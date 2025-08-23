@@ -667,6 +667,8 @@ class WebSocketJsonRpcServer:
                 "get_camera_capabilities": "viewer",
                 "list_recordings": "viewer",
                 "list_snapshots": "viewer",
+                "get_recording_info": "viewer",
+                "get_snapshot_info": "viewer",
                 "get_streams": "viewer",
                 "ping": "viewer",
                 
@@ -681,8 +683,6 @@ class WebSocketJsonRpcServer:
                 "get_metrics": "admin",
                 "get_status": "admin",
                 "get_server_info": "admin",
-                "get_recording_info": "admin",
-                "get_snapshot_info": "admin",
                 "get_storage_info": "admin",
                 "set_retention_policy": "admin",
                 "cleanup_old_files": "admin"
