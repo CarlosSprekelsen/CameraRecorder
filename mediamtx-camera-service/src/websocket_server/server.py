@@ -809,6 +809,9 @@ class WebSocketJsonRpcServer:
                     elif isinstance(e, MediaMTXError):
                         error_code = -1003
                         error_message = "MediaMTX operation failed"
+                    elif isinstance(e, FileNotFoundError):
+                        error_code = -1005
+                        error_message = str(e)
                     elif isinstance(e, AuthenticationError):
                         error_code = AUTHENTICATION_REQUIRED
                         error_message = ERROR_MESSAGES[AUTHENTICATION_REQUIRED]
@@ -1421,50 +1424,45 @@ class WebSocketJsonRpcServer:
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Get performance metrics for the WebSocket server.
+        Get system performance metrics and statistics.
+        
+        Follows ground truth format from docs/api/json-rpc-methods.md exactly.
+        Returns system metrics as documented in API specification.
 
         Args:
             params: Method parameters (unused)
 
         Returns:
-            Dict containing performance metrics
+            Dict containing system metrics with fields: active_connections, total_requests, 
+            average_response_time, error_rate, memory_usage, cpu_usage
         """
         # Get base performance metrics
         base_metrics = self.get_performance_metrics()
         
-        # Add enhanced monitoring data
-        enhanced_metrics = {
-            **base_metrics,
-            "enhanced_monitoring": {
-                "server_info": {
-                    "host": self._host,
-                    "port": self._port,
-                    "websocket_path": self._websocket_path,
-                    "max_connections": self._max_connections,
-                    "current_connections": len(self._clients)
-                },
-                "method_performance": {},
-                "resource_usage": {
-                    "memory_mb": psutil.Process().memory_info().rss / 1024 / 1024,
-                    "cpu_percent": psutil.Process().cpu_percent(),
-                    "thread_count": psutil.Process().num_threads()
-                },
-                "connection_stats": {
-                    "total_connections": len(self._clients),
-                    "authenticated_connections": len([c for c in self._clients.values() if c.authenticated]),
-                    "average_connection_time": self._calculate_average_connection_time()
-                }
-            }
+        # Extract required fields per API documentation
+        active_connections = len(self._clients)
+        total_requests = base_metrics.get("total_requests", 0)
+        average_response_time = base_metrics.get("average_response_time", 0.0)
+        error_rate = base_metrics.get("error_rate", 0.0)
+        
+        # Get system resource usage
+        try:
+            process = psutil.Process()
+            memory_usage = process.memory_info().rss / 1024 / 1024  # MB
+            cpu_usage = process.cpu_percent()
+        except Exception:
+            memory_usage = 0.0
+            cpu_usage = 0.0
+        
+        # Return API-compliant response structure
+        return {
+            "active_connections": active_connections,
+            "total_requests": total_requests,
+            "average_response_time": average_response_time,
+            "error_rate": error_rate,
+            "memory_usage": memory_usage,
+            "cpu_usage": cpu_usage
         }
-        
-        # Add detailed method performance statistics
-        for method_name, method_metrics in base_metrics.get("methods", {}).items():
-            enhanced_metrics["enhanced_monitoring"]["method_performance"][method_name] = {
-                **method_metrics,
-                "performance_status": "good" if method_metrics.get("avg_ms", 0) < 100 else "warning" if method_metrics.get("avg_ms", 0) < 200 else "poor"
-            }
-        
-        return enhanced_metrics
     
     def _calculate_average_connection_time(self) -> float:
         """Calculate average connection time for active connections."""
@@ -1640,23 +1638,26 @@ class WebSocketJsonRpcServer:
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Get detailed status for a specific camera device with aggregated real data.
-
-        Combines data from camera discovery monitor (with provisional/confirmed capability logic),
-        MediaMTX controller (stream status and metrics), and provides graceful fallbacks.
+        Get status for a specific camera device.
+        
+        Follows ground truth format from docs/api/json-rpc-methods.md exactly.
+        Returns camera status information as documented in API specification.
 
         Args:
             params: Method parameters containing:
-                - device (str): Camera device path
+                - device (str): Camera device path (required) - must be string per API documentation
 
         Returns:
-            Dict containing comprehensive camera status per API specification:
-                - device, status, name, resolution, fps, streams, metrics, capabilities
+            Dict containing camera status with fields: device, status, name, resolution, fps, streams, metrics, capabilities
         """
         if not params or "device" not in params:
             raise ValueError("device parameter is required")
 
         device_path = params["device"]
+        
+        # Validate device parameter type per API documentation (ground truth)
+        if not isinstance(device_path, str):
+            raise ValueError("device parameter must be a string (device path) per API documentation")
 
         # Initialize response with architecture defaults
         camera_status = {
@@ -1906,6 +1907,7 @@ class WebSocketJsonRpcServer:
                 "status": "FAILED",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
+                "file_path": "",
                 "error": "MediaMTX controller not available",
             }
 
@@ -1936,8 +1938,7 @@ class WebSocketJsonRpcServer:
                         "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     ),
                     "file_size": snapshot_result.get("file_size", 0),
-                    "format": format_type,
-                    "quality": quality,
+                    "file_path": snapshot_result.get("file_path", ""),
                     "error": snapshot_result.get("error", "MediaMTX operation failed"),
                 }
             else:
@@ -1949,8 +1950,7 @@ class WebSocketJsonRpcServer:
                         "timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                     ),
                     "file_size": snapshot_result.get("file_size", 0),
-                    "format": format_type,
-                    "quality": quality,
+                    "file_path": snapshot_result.get("file_path", ""),
                 }
 
         except Exception as e:
@@ -1961,6 +1961,7 @@ class WebSocketJsonRpcServer:
                 "status": "FAILED",
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "file_size": 0,
+                "file_path": "",
                 "error": f"MediaMTX operation failed: {e}",
             }
 
@@ -2040,10 +2041,32 @@ class WebSocketJsonRpcServer:
             stream_name = self._get_stream_name_from_device_path(device_path)
             session_id = str(uuid.uuid4())
 
+            # Step 1: Call MediaMTX controller
             recording_result = await mediamtx_controller.start_recording(
                 stream_name=stream_name, duration=effective_duration, format=format_type
             )
 
+            # Step 2: Validate MediaMTX controller response
+            if not recording_result or recording_result.get("status") == "failed":
+                error_msg = recording_result.get("error", "MediaMTX operation failed") if recording_result else "MediaMTX operation failed"
+                self._logger.error(f"MediaMTX controller failed to start recording for {device_path}: {error_msg}")
+                raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+            
+            # Step 3: Additional validation: Check if the stream is actually ready for recording
+            # The MediaMTX controller might return success even when stream is not ready
+            try:
+                stream_status = await mediamtx_controller.get_stream_status(stream_name)
+                if not stream_status or not stream_status.get("ready", False):
+                    error_msg = "Stream is not ready for recording"
+                    self._logger.error(f"MediaMTX controller returned success but stream is not ready for {device_path}")
+                    raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+            except Exception as e:
+                # If we can't validate stream status, treat it as a failure
+                error_msg = f"Could not validate stream status: {e}"
+                self._logger.error(f"Stream validation failed for {device_path}: {error_msg}")
+                raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+
+            # Step 4: All validations passed - create success response
             response = {
                 "device": device_path,
                 "session_id": session_id,
@@ -2056,7 +2079,8 @@ class WebSocketJsonRpcServer:
                 "format": format_type,
             }
 
-            # Send recording status update notification
+            # Step 5: Send recording status update notification only after all validations pass
+            # Only send notification if we reach this point (all validations passed)
             try:
                 await self.notify_recording_status_update({
                     "device": device_path,
@@ -2067,7 +2091,7 @@ class WebSocketJsonRpcServer:
             except Exception as e:
                 self._logger.warning(f"Failed to send recording start notification: {e}")
 
-            # Schedule auto-stop if timed recording requested
+            # Step 6: Schedule auto-stop if timed recording requested
             if effective_duration and effective_duration > 0:
                 async def _auto_stop():
                     try:
@@ -2088,6 +2112,7 @@ class WebSocketJsonRpcServer:
 
         except Exception as e:
             self._logger.error(f"Error starting recording for {device_path}: {e}")
+            # Do NOT send any notifications on error - let the JSON-RPC error response be sent
             raise MediaMTXError(f"MediaMTX operation failed: {e}") from e
 
     async def _method_stop_recording(
@@ -2121,7 +2146,8 @@ class WebSocketJsonRpcServer:
                 "session_id": None,
                 "filename": None,
                 "status": "FAILED",
-                "stop_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "start_time": None,
+                "end_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "duration": None,
                 "file_size": 0,
                 "error": "MediaMTX controller not available",
@@ -2132,19 +2158,26 @@ class WebSocketJsonRpcServer:
 
             recording_result = await mediamtx_controller.stop_recording(stream_name=stream_name)
 
+            # Validate MediaMTX controller response
+            if not recording_result or recording_result.get("status") == "failed":
+                error_msg = recording_result.get("error", "MediaMTX operation failed") if recording_result else "MediaMTX operation failed"
+                self._logger.error(f"MediaMTX controller failed to stop recording for {device_path}: {error_msg}")
+                raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+
             response = {
                 "device": device_path,
                 "session_id": recording_result.get("session_id"),
                 "filename": recording_result.get("filename"),
                 "status": "STOPPED",
-                "stop_time": recording_result.get(
+                "start_time": recording_result.get("start_time"),
+                "end_time": recording_result.get(
                     "stop_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")
                 ),
                 "duration": recording_result.get("duration"),
                 "file_size": recording_result.get("file_size", 0),
             }
 
-            # Send recording status update notification
+            # Send recording status update notification only on success
             try:
                 await self.notify_recording_status_update({
                     "device": device_path,
@@ -2165,60 +2198,73 @@ class WebSocketJsonRpcServer:
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Get general server status information.
+        Get system status and health information.
+        
+        Returns system status information exactly as documented in API specification.
+        Follows ground truth format from docs/api/json-rpc-methods.md.
 
         Returns:
-            Dict containing server status information
+            Dict containing system status with fields: status, uptime, version, components
         """
         import time
         
-        status = {
-            "server": {
-                "status": "running",
-                "uptime": time.time() - getattr(self, '_start_time', time.time()),
-                "version": "1.0.0",
-                "connections": len(self._clients)
-            },
-            "mediamtx": {
-                "status": "unknown",
-                "connected": False
-            }
-        }
+        # Calculate uptime as positive integer (seconds since start)
+        start_time = getattr(self, '_start_time', time.time())
+        uptime = max(0, int(time.time() - start_time))
         
-        # Check MediaMTX status if available
+        # Determine overall system status
+        system_status = "healthy"
+        
+        # Check component statuses
+        websocket_server_status = "running"
+        camera_monitor_status = "running"
+        mediamtx_controller_status = "unknown"
+        
+        # Check MediaMTX controller status if available
         if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
             mediamtx_controller = self._service_manager._mediamtx_controller
             if mediamtx_controller:
                 try:
                     health = await mediamtx_controller.health_check()
-                    status["mediamtx"]["status"] = health.get("status", "unknown")
-                    status["mediamtx"]["connected"] = health.get("status") == "healthy"
-                except:
-                    pass
+                    mediamtx_controller_status = health.get("status", "unknown")
+                    if mediamtx_controller_status != "healthy":
+                        system_status = "degraded"
+                except Exception as e:
+                    self._logger.warning(f"MediaMTX health check failed: {e}")
+                    mediamtx_controller_status = "error"
+                    system_status = "degraded"
         
-        return status
+        # Return format EXACTLY as documented in API specification
+        return {
+            "status": system_status,
+            "uptime": uptime,
+            "version": "1.0.0",
+            "components": {
+                "websocket_server": websocket_server_status,
+                "camera_monitor": camera_monitor_status,
+                "mediamtx_controller": mediamtx_controller_status
+            }
+        }
 
     async def _method_get_server_info(
         self, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Get server information and capabilities.
+        Get server configuration and capability information.
+        
+        Returns server information exactly as documented in API specification.
+        Follows ground truth format from docs/api/json-rpc-methods.md.
 
         Returns:
-            Dict containing server information
+            Dict containing server configuration with fields: name, version, capabilities, supported_formats, max_cameras
         """
+        # Return format EXACTLY as documented in API specification
         return {
             "name": "MediaMTX Camera Service",
             "version": "1.0.0",
-            "api_version": "1.0",
-            "supported_methods": list(self._methods.keys()),
-            "capabilities": [
-                "camera_monitoring",
-                "video_recording",
-                "snapshot_capture",
-                "rtsp_streaming",
-                "websocket_notifications"
-            ]
+            "capabilities": ["snapshots", "recordings", "streaming"],
+            "supported_formats": ["mp4", "mkv", "jpg"],
+            "max_cameras": 10
         }
 
     async def _method_get_streams(
@@ -2491,8 +2537,8 @@ class WebSocketJsonRpcServer:
                         self._logger.warning(f"Error accessing file {filename}: {e}")
                         continue
                 
-                # Sort files by timestamp (newest first)
-                files.sort(key=lambda x: x["timestamp"], reverse=True)
+                # Sort files by modified_time (newest first)
+                files.sort(key=lambda x: x["modified_time"], reverse=True)
                 
                 # Apply pagination
                 total_count = len(files)
@@ -2592,8 +2638,8 @@ class WebSocketJsonRpcServer:
                         self._logger.warning(f"Error accessing file {filename}: {e}")
                         continue
                 
-                # Sort files by timestamp (newest first)
-                files.sort(key=lambda x: x["timestamp"], reverse=True)
+                # Sort files by modified_time (newest first)
+                files.sort(key=lambda x: x["modified_time"], reverse=True)
                 
                 # Apply pagination
                 total_count = len(files)

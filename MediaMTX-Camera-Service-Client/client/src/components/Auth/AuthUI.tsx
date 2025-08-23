@@ -59,13 +59,13 @@ const AuthUI: React.FC<AuthUIProps> = ({
   onLogout,
 }) => {
   const {
-    isAuthenticated,
-    user,
-    isLoading,
-    error,
-    login,
-    logout,
-    clearError,
+    isAuthenticated: storeIsAuthenticated,
+    user: storeUser,
+    isLoading: storeIsLoading,
+    error: storeError,
+    login: storeLogin,
+    logout: storeLogout,
+    clearError: storeClearError,
   } = useAuthStore();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -77,14 +77,14 @@ const AuthUI: React.FC<AuthUIProps> = ({
   // Auto-login if token exists in storage
   useEffect(() => {
     const storedToken = authService.getToken();
-    if (storedToken && !isAuthenticated) {
+    if (storedToken && !storeIsAuthenticated) {
       handleAutoLogin(storedToken);
     }
-  }, [isAuthenticated]);
+  }, [storeIsAuthenticated]);
 
   const handleAutoLogin = async (storedToken: string) => {
     try {
-      await login(storedToken);
+      await storeLogin(storedToken);
       onLoginSuccess?.();
     } catch (error) {
       // Auto-login failed, clear invalid token
@@ -100,7 +100,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
     }
 
     try {
-      await login(authToken);
+      await storeLogin(authToken);
       onLoginSuccess?.();
     } catch (error) {
       // Error is handled by the store
@@ -108,7 +108,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
   };
 
   const handleLogout = () => {
-    logout();
+    storeLogout();
     setToken('');
     setApiKey('');
     onLogout?.();
@@ -144,7 +144,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
     }
   };
 
-  if (isAuthenticated && user) {
+      if (storeIsAuthenticated && storeUser) {
     return (
       <Card>
         <CardContent>
@@ -157,8 +157,8 @@ const AuthUI: React.FC<AuthUIProps> = ({
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Chip
-                    label={user.role}
-                    color={getRoleColor(user.role)}
+                    label={storeUser.role}
+                    color={getRoleColor(storeUser.role)}
                     size="small"
                   />
                   <Tooltip title="Role information">
@@ -167,11 +167,11 @@ const AuthUI: React.FC<AuthUIProps> = ({
                     </IconButton>
                   </Tooltip>
                 </Stack>
-                {user.user_id && (
-                  <Typography variant="body2" color="text.secondary">
-                    User ID: {user.user_id}
-                  </Typography>
-                )}
+                            {storeUser.user_id && (
+              <Typography variant="body2" color="text.secondary">
+                User ID: {storeUser.user_id}
+              </Typography>
+            )}
               </Box>
             </Stack>
             
@@ -252,11 +252,11 @@ const AuthUI: React.FC<AuthUIProps> = ({
             </Typography>
           </Box>
 
-          {error && (
-            <Alert severity="error" onClose={clearError}>
-              {error}
-            </Alert>
-          )}
+                {storeError && (
+        <Alert severity="error" onClose={storeClearError}>
+          {storeError}
+        </Alert>
+      )}
 
           <FormControl fullWidth>
             <InputLabel>Authentication Method</InputLabel>
@@ -297,10 +297,10 @@ const AuthUI: React.FC<AuthUIProps> = ({
             variant="contained"
             size="large"
             onClick={handleLogin}
-            disabled={isLoading || (!token.trim() && !apiKey.trim())}
-            startIcon={isLoading ? <CircularProgress size={20} /> : <LoginIcon />}
+            disabled={storeIsLoading || (!token.trim() && !apiKey.trim())}
+                          startIcon={storeIsLoading ? <CircularProgress size={20} /> : <LoginIcon />}
           >
-            {isLoading ? 'Authenticating...' : 'Login'}
+                          {storeIsLoading ? 'Authenticating...' : 'Login'}
           </Button>
 
           <Divider>

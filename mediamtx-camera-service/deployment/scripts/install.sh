@@ -188,7 +188,7 @@ harden_production_environment() {
         if ! command_exists ufw; then
             apt-get install -y ufw
         fi
-        
+        ufw allow 22/tcp   # SSH
         ufw allow 443/tcp  # HTTPS
         ufw allow 80/tcp   # HTTP redirect
         ufw allow 8554/tcp # RTSP

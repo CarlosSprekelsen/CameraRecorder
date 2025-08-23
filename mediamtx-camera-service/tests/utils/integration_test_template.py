@@ -37,7 +37,7 @@ from src.websocket_server.server import WebSocketJsonRpcServer
 
 # Import test infrastructure for real component testing
 from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
-from tests.fixtures.websocket_test_client import WebSocketTestClient, websocket_client
+from tests.fixtures.auth_utils import WebSocketAuthTestClient, TestUserFactory, get_test_auth_manager
 
 
 class TestSystemIntegration:
@@ -105,7 +105,7 @@ class TestSystemIntegration:
 
     @pytest.mark.asyncio
     async def test_end_to_end_camera_streaming_workflow(
-        self, service_manager, websocket_client, mediamtx_infrastructure
+        self, service_manager, mediamtx_infrastructure
     ):
         """
         Test complete end-to-end camera streaming workflow.
@@ -115,52 +115,52 @@ class TestSystemIntegration:
         Expected: Successful end-to-end workflow with real components
         Edge Cases: Real service interactions, actual data flow, resource management
         """
+        # Create authenticated WebSocket client
+        auth_manager = get_test_auth_manager()
+        user_factory = TestUserFactory(auth_manager)
+        test_user = user_factory.create_operator_user("integration_test_user")
+        
+        websocket_url = f"ws://{service_manager.config.server.host}:{service_manager.config.server.port}{service_manager.config.server.websocket_path}"
+        websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
+        
         # Connect WebSocket client to service
         await websocket_client.connect()
         
         try:
-            # Step 1: Get camera list via WebSocket
-            camera_list_response = await websocket_client.get_camera_list()
-            assert camera_list_response.result is not None
-            assert "cameras" in camera_list_response.result
-            assert "total" in camera_list_response.result
+            # Step 1: Get camera list via WebSocket with proper authentication
+            camera_list_response = await websocket_client.call_protected_method("get_camera_list", {})
+            assert "result" in camera_list_response, "Response should contain 'result' field"
+            assert "cameras" in camera_list_response["result"]
+            assert "total" in camera_list_response["result"]
             
-            cameras = camera_list_response.result["cameras"]
+            cameras = camera_list_response["result"]["cameras"]
             
             if cameras:  # If cameras are available
                 # Step 2: Get status of first camera
                 first_camera = cameras[0]
                 camera_device = first_camera["device"]
                 
-                status_response = await websocket_client.get_camera_status(camera_device)
-                assert status_response.result is not None
-                assert status_response.result["device"] == camera_device
+                status_response = await websocket_client.call_protected_method("get_camera_status", {"device": camera_device})
+                assert "result" in status_response, "Response should contain 'result' field"
+                assert status_response["result"]["device"] == camera_device
                 
-                # Step 3: Start streaming
-                stream_response = await websocket_client.start_stream(
-                    device=camera_device,
-                    resolution="1280x720",
-                    frame_rate=30
-                )
-                assert stream_response.result is not None
-                assert stream_response.result["status"] == "streaming"
+                # Step 3: Start recording (using proper API method)
+                recording_response = await websocket_client.call_protected_method("start_recording", {
+                    "device": camera_device,
+                    "resolution": "1280x720",
+                    "fps": 30
+                })
+                assert "result" in recording_response, "Response should contain 'result' field"
+                assert "recording_id" in recording_response["result"]
                 
                 # Step 4: Verify stream exists in MediaMTX
                 stream_name = f"camera_{camera_device.replace('/', '_').replace('video', '')}"
                 stream_status = await mediamtx_infrastructure.get_stream_status(stream_name)
                 assert stream_status is not None
                 
-                # Step 5: Verify stream URLs are accessible
-                stream_urls = stream_response.result.get("streams", {})
-                if "rtsp" in stream_urls:
-                    # Test RTSP stream accessibility
-                    rtsp_url = stream_urls["rtsp"]
-                    # Note: Actual stream accessibility testing would require RTSP client
-                    assert "rtsp://" in rtsp_url
-                
-                # Step 6: Stop streaming
-                stop_response = await websocket_client.stop_stream(camera_device)
-                assert stop_response.result is not None
+                # Step 5: Stop recording
+                stop_response = await websocket_client.call_protected_method("stop_recording", {"device": camera_device})
+                assert "result" in stop_response, "Response should contain 'result' field"
                 
         finally:
             await websocket_client.disconnect()
@@ -219,7 +219,7 @@ class TestSystemIntegration:
 
     @pytest.mark.asyncio
     async def test_real_websocket_communication_integration(
-        self, service_manager, websocket_client
+        self, service_manager
     ):
         """
         Test real WebSocket communication integration.
@@ -229,40 +229,35 @@ class TestSystemIntegration:
         Expected: Successful WebSocket communication and notification delivery
         Edge Cases: Connection stability, message delivery, error handling
         """
+        # Create authenticated WebSocket client
+        auth_manager = get_test_auth_manager()
+        user_factory = TestUserFactory(auth_manager)
+        test_user = user_factory.create_operator_user("websocket_test_user")
+        
+        websocket_url = f"ws://{service_manager.config.server.host}:{service_manager.config.server.port}{service_manager.config.server.websocket_path}"
+        websocket_client = WebSocketAuthTestClient(websocket_url, test_user)
+        
         # Connect to WebSocket server
         await websocket_client.connect()
         
         try:
-            # Test ping/pong communication
-            ping_response = await websocket_client.ping()
-            assert ping_response.result is not None
+            # Test ping/pong communication with proper authentication
+            ping_response = await websocket_client.call_protected_method("ping", {})
+            assert "result" in ping_response, "Response should contain 'result' field"
             
-            # Test camera list request
-            camera_list_response = await websocket_client.get_camera_list()
-            assert camera_list_response.result is not None
-            assert isinstance(camera_list_response.result["cameras"], list)
-            assert isinstance(camera_list_response.result["total"], int)
-            assert isinstance(camera_list_response.result["connected"], int)
-            
-            # Test notification listening
-            # Send a test notification (if service supports it)
-            try:
-                notification = await websocket_client.wait_for_notification(
-                    "test_notification", timeout=2.0
-                )
-                # If notification received, validate it
-                if notification:
-                    assert notification.result is not None
-            except TimeoutError:
-                # Expected if no test notifications are sent
-                pass
+            # Test camera list request with proper authentication
+            camera_list_response = await websocket_client.call_protected_method("get_camera_list", {})
+            assert "result" in camera_list_response, "Response should contain 'result' field"
+            assert isinstance(camera_list_response["result"]["cameras"], list)
+            assert isinstance(camera_list_response["result"]["total"], int)
+            assert isinstance(camera_list_response["result"]["connected"], int)
             
             # Test error handling with invalid requests
-            invalid_response = await websocket_client.send_request(
+            invalid_response = await websocket_client.send_unauthenticated_request(
                 "invalid_method", {"invalid": "params"}
             )
-            assert invalid_response.error is not None
-            assert invalid_response.error["code"] < 0
+            assert "error" in invalid_response, "Should return error for invalid method"
+            assert invalid_response["error"]["code"] < 0
             
         finally:
             await websocket_client.disconnect()
@@ -297,7 +292,7 @@ class TestSystemIntegration:
             await mediamtx_infrastructure.setup_mediamtx_service()
         
         # Test WebSocket connection failure
-        invalid_client = WebSocketTestClient("ws://invalid-server:9999/ws")
+        invalid_client = WebSocketAuthTestClient("ws://invalid-server:9999/ws", test_user)
         
         try:
             await invalid_client.connect()

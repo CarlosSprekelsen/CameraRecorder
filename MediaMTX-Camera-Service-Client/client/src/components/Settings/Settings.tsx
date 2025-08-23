@@ -60,24 +60,24 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   const { showSuccess, showError } = useNotifications();
 
   const {
-    settings,
-    isLoading,
-    isSaving,
-    error,
-    hasUnsavedChanges,
-    loadSettings,
-    saveSettings,
-    resetSettings,
-    updateSettings,
-    exportSettings,
-    importSettings,
-    clearError,
+    settings: storeSettings,
+    isLoading: storeIsLoading,
+    isSaving: storeIsSaving,
+    error: storeError,
+    hasUnsavedChanges: storeHasUnsavedChanges,
+    loadSettings: storeLoadSettings,
+    saveSettings: storeSaveSettings,
+    resetSettings: storeResetSettings,
+    updateSettings: storeUpdateSettings,
+    exportSettings: storeExportSettings,
+    importSettings: storeImportSettings,
+    clearError: storeClearError,
   } = useSettingsStore();
 
   // Load settings on mount
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    storeLoadSettings();
+  }, [storeLoadSettings]);
 
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: SettingsCategory) => {
@@ -87,7 +87,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
   // Handle save settings
   const handleSave = async () => {
     try {
-      await saveSettings();
+      await storeSaveSettings();
       showSuccess('Settings Saved', 'Your settings have been saved successfully');
     } catch (error) {
       showError('Save Failed', error instanceof Error ? error.message : 'Failed to save settings');
@@ -96,14 +96,14 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
 
   // Handle reset settings
   const handleReset = () => {
-    resetSettings();
+    storeResetSettings();
     setShowResetDialog(false);
     showSuccess('Settings Reset', 'Settings have been reset to defaults');
   };
 
   // Handle export settings
   const handleExport = () => {
-    const exportedSettings = exportSettings();
+    const exportedSettings = storeExportSettings();
     const blob = new Blob([exportedSettings], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,7 +124,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
     }
 
     try {
-      const success = await importSettings(importText);
+      const success = await storeImportSettings(importText);
       if (success) {
         setShowImportDialog(false);
         setImportText('');
@@ -135,7 +135,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
     }
   };
 
-  if (isLoading) {
+  if (storeIsLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -160,9 +160,9 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
       </Box>
 
       {/* Error Display */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
-          {error}
+      {storeError && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={storeClearError}>
+          {storeError}
         </Alert>
       )}
 
@@ -173,39 +173,39 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
+            disabled={storeIsSaving || !storeHasUnsavedChanges}
           >
-            {isSaving ? <CircularProgress size={20} /> : 'Save Settings'}
+                          {storeIsSaving ? <CircularProgress size={20} /> : 'Save Settings'}
           </Button>
           
-          <Button
-            variant="outlined"
-            startIcon={<ResetIcon />}
-            onClick={() => setShowResetDialog(true)}
-            disabled={isSaving}
-          >
+                      <Button
+              variant="outlined"
+              startIcon={<ResetIcon />}
+              onClick={() => setShowResetDialog(true)}
+              disabled={storeIsSaving}
+            >
             Reset to Defaults
           </Button>
           
-          <Button
-            variant="outlined"
-            startIcon={<ExportIcon />}
-            onClick={handleExport}
-            disabled={isSaving}
-          >
+                      <Button
+              variant="outlined"
+              startIcon={<ExportIcon />}
+              onClick={handleExport}
+              disabled={storeIsSaving}
+            >
             Export
           </Button>
           
-          <Button
-            variant="outlined"
-            startIcon={<ImportIcon />}
-            onClick={() => setShowImportDialog(true)}
-            disabled={isSaving}
-          >
+                      <Button
+              variant="outlined"
+              startIcon={<ImportIcon />}
+              onClick={() => setShowImportDialog(true)}
+              disabled={storeIsSaving}
+            >
             Import
           </Button>
 
-          {hasUnsavedChanges && (
+          {storeHasUnsavedChanges && (
             <Chip
               label="Unsaved Changes"
               color="warning"
@@ -251,57 +251,57 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             
             {/* Connection Settings */}
             {activeTab === 'connection' && (
-              <ConnectionSettingsForm 
-                settings={settings.connection}
-                onChange={(connectionSettings) => updateSettings('connection', connectionSettings)}
-              />
+                          <ConnectionSettingsForm
+              settings={storeSettings.connection}
+              onChange={(connectionSettings) => storeUpdateSettings('connection', connectionSettings)}
+            />
             )}
 
             {/* Recording Settings */}
             {activeTab === 'recording' && (
-              <RecordingSettingsForm 
-                settings={settings.recording}
-                onChange={(recordingSettings) => updateSettings('recording', recordingSettings)}
-              />
+                          <RecordingSettingsForm
+              settings={storeSettings.recording}
+              onChange={(recordingSettings) => storeUpdateSettings('recording', recordingSettings)}
+            />
             )}
 
             {/* Snapshot Settings */}
             {activeTab === 'snapshot' && (
               <SnapshotSettingsForm 
-                settings={settings.snapshot}
-                onChange={(snapshotSettings) => updateSettings('snapshot', snapshotSettings)}
+                settings={storeSettings.snapshot}
+                onChange={(snapshotSettings) => storeUpdateSettings('snapshot', snapshotSettings)}
               />
             )}
 
             {/* Interface Settings */}
             {activeTab === 'ui' && (
               <InterfaceSettingsForm 
-                settings={settings.ui}
-                onChange={(uiSettings) => updateSettings('ui', uiSettings)}
+                settings={storeSettings.ui}
+                onChange={(uiSettings) => storeUpdateSettings('ui', uiSettings)}
               />
             )}
 
             {/* Notification Settings */}
             {activeTab === 'notifications' && (
               <NotificationSettingsForm 
-                settings={settings.notifications}
-                onChange={(notificationSettings) => updateSettings('notifications', notificationSettings)}
+                settings={storeSettings.notifications}
+                onChange={(notificationSettings) => storeUpdateSettings('notifications', notificationSettings)}
               />
             )}
 
             {/* Security Settings */}
             {activeTab === 'security' && (
               <SecuritySettingsForm 
-                settings={settings.security}
-                onChange={(securitySettings) => updateSettings('security', securitySettings)}
+                settings={storeSettings.security}
+                onChange={(securitySettings) => storeUpdateSettings('security', securitySettings)}
               />
             )}
 
             {/* Performance Settings */}
             {activeTab === 'performance' && (
               <PerformanceSettingsForm 
-                settings={settings.performance}
-                onChange={(performanceSettings) => updateSettings('performance', performanceSettings)}
+                settings={storeSettings.performance}
+                onChange={(performanceSettings) => storeUpdateSettings('performance', performanceSettings)}
               />
             )}
           </Box>

@@ -82,7 +82,7 @@ export interface CleanupResults {
 /**
  * Admin store state interface
  */
-interface AdminState {
+export interface AdminStoreState {
   // System information
   systemMetrics: SystemMetrics | null;
   systemStatus: SystemStatus | null;

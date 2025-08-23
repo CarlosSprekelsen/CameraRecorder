@@ -88,6 +88,58 @@ export class AuthService {
     return this.authState.token;
   }
 
+  /**
+   * Set authentication token (for external token sources)
+   * @param token JWT token to set
+   */
+  setToken(token: string): void {
+    if (!this.isValidJWTFormat(token)) {
+      throw new Error('Invalid JWT token format');
+    }
+    if (this.isTokenExpired(token)) {
+      throw new Error('JWT token is expired');
+    }
+    
+    this.authState.token = token;
+    this.authState.authenticated = true;
+    this.authState.auth_method = 'jwt';
+    this.setupTokenRefresh(token);
+  }
+
+  /**
+   * Authenticate with existing token
+   * @param token Optional JWT token (uses stored token if not provided)
+   * @returns Promise<AuthenticateResponse> Authentication result
+   */
+  async authenticate(token?: string): Promise<AuthenticateResponse> {
+    const authToken = token || this.authState.token;
+    
+    if (!authToken) {
+      throw new Error('No token available for authentication');
+    }
+    
+    if (!this.isValidJWTFormat(authToken)) {
+      throw new Error('Invalid JWT token format');
+    }
+    
+    if (this.isTokenExpired(authToken)) {
+      throw new Error('JWT token is expired');
+    }
+
+    // Set token if provided
+    if (token) {
+      this.authState.token = token;
+      this.authState.authenticated = true;
+      this.authState.auth_method = 'jwt';
+      this.setupTokenRefresh(token);
+    }
+
+    return {
+      authenticated: true,
+      auth_method: 'jwt'
+    };
+  }
+
 
 
   /**

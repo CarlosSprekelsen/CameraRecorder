@@ -378,6 +378,29 @@ interface CacheManager {
 - **User Feedback**: Clear error messages with recovery guidance
 - **Logging**: Comprehensive error logging for debugging
 
+### **ErrorRecoveryService Architecture**
+The ErrorRecoveryService follows a **pure utility service pattern**:
+
+- **Design Pattern**: Dependency injection with function parameters
+- **Separation of Concerns**: Service layer isolated from state management
+- **No Circular Dependencies**: Service doesn't import stores or components
+- **Usage Pattern**: Stores inject their operations into the service
+
+**Example Usage:**
+```typescript
+// Store calls ErrorRecoveryService with operation function
+const result = await errorRecoveryService.executeWithRetry(
+  () => wsService.call('get_camera_list', {}),
+  'get_camera_list'
+);
+```
+
+**Key Benefits:**
+- ✅ Testable: Easy to mock operations
+- ✅ Reusable: Works with any async operation
+- ✅ Type Safe: Full TypeScript support
+- ✅ SOLID Compliant: Single responsibility and dependency inversion
+
 ## **Testing Architecture**
 
 ### **Test Strategy**

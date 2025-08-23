@@ -33,50 +33,50 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   showConnectionMetrics = false
 }) => {
     const {
-    status,
-    isConnected,
-    isConnecting,
-    connectionQuality,
-    healthScore,
-    notificationCount,
-    averageNotificationLatency,
-    lastNotificationTime,
-    realTimeUpdatesEnabled,
-    componentSyncStatus,
-    updateComponentSyncStatus
+    status: storeStatus,
+    isConnected: storeIsConnected,
+    isConnecting: storeIsConnecting,
+    connectionQuality: storeConnectionQuality,
+    healthScore: storeHealthScore,
+    notificationCount: storeNotificationCount,
+    averageNotificationLatency: storeAverageNotificationLatency,
+    lastNotificationTime: storeLastNotificationTime,
+    realTimeUpdatesEnabled: storeRealTimeUpdatesEnabled,
+    componentSyncStatus: storeComponentSyncStatus,
+    updateComponentSyncStatus: storeUpdateComponentSyncStatus
   } = useConnectionStore();
 
   const {
-    cameras,
-    activeRecordings,
-    recordingProgress,
-    notificationCount: cameraNotificationCount,
-    realTimeUpdatesEnabled: cameraRealTimeEnabled
+    cameras: storeCameras,
+    activeRecordings: storeActiveRecordings,
+    recordingProgress: storeRecordingProgress,
+    notificationCount: storeCameraNotificationCount,
+    realTimeUpdatesEnabled: storeCameraRealTimeEnabled
   } = useCameraStore();
 
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Update component sync status
   useEffect(() => {
-    updateComponentSyncStatus('real-time-status', true);
-    return () => updateComponentSyncStatus('real-time-status', false);
-  }, [updateComponentSyncStatus]);
+    storeUpdateComponentSyncStatus('real-time-status', true);
+    return () => storeUpdateComponentSyncStatus('real-time-status', false);
+  }, [storeUpdateComponentSyncStatus]);
 
   // Update last update time when notifications are received
   useEffect(() => {
-    if (notificationCount > 0 || cameraNotificationCount > 0) {
+    if (storeNotificationCount > 0 || storeCameraNotificationCount > 0) {
       setLastUpdate(new Date());
     }
-  }, [notificationCount, cameraNotificationCount]);
+  }, [storeNotificationCount, storeCameraNotificationCount]);
 
   // Note: handleRecordingStatusUpdate is handled by the connection store
   // This callback is not needed in this component
 
   const getConnectionStatusColor = () => {
-    switch (status) {
+    switch (storeStatus) {
       case 'connected':
-        return connectionQuality === 'excellent' ? 'success' : 
-               connectionQuality === 'good' ? 'primary' : 'warning';
+        return storeConnectionQuality === 'excellent' ? 'success' : 
+               storeConnectionQuality === 'good' ? 'primary' : 'warning';
       case 'connecting':
         return 'info';
       case 'disconnected':
@@ -87,15 +87,15 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   };
 
   const getConnectionStatusIcon = () => {
-    if (isConnecting) return <Refresh sx={{ animation: 'spin 1s linear infinite' }} />;
-    if (isConnected) return <Wifi />;
+    if (storeIsConnecting) return <Refresh sx={{ animation: 'spin 1s linear infinite' }} />;
+    if (storeIsConnected) return <Wifi />;
     return <WifiOff />;
   };
 
   const getHealthScoreColor = () => {
-    if (healthScore >= 90) return 'success';
-    if (healthScore >= 70) return 'primary';
-    if (healthScore >= 30) return 'warning';
+    if (storeHealthScore >= 90) return 'success';
+    if (storeHealthScore >= 70) return 'primary';
+    if (storeHealthScore >= 30) return 'warning';
     return 'error';
   };
 
@@ -105,11 +105,11 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   };
 
   const getActiveRecordingsCount = () => {
-    return activeRecordings.size;
+    return storeActiveRecordings.size;
   };
 
   const getConnectedCamerasCount = () => {
-    return cameras.filter(camera => camera.status === 'CONNECTED').length;
+    return storeCameras.filter(camera => camera.status === 'CONNECTED').length;
   };
 
   return (
@@ -121,11 +121,11 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Chip
             icon={getConnectionStatusIcon()}
-            label={status.toUpperCase()}
+            label={storeStatus.toUpperCase()}
             color={getConnectionStatusColor()}
             size="small"
           />
-          {realTimeUpdatesEnabled && (
+          {storeRealTimeUpdatesEnabled && (
             <Chip
               label="LIVE"
               color="success"

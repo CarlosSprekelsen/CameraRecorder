@@ -41,26 +41,26 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   const [showAdvancedDetails, setShowAdvancedDetails] = React.useState(false);
   
   const {
-    status,
-    isConnecting,
-    isReconnecting,
-    isHealthy,
-    error,
-    errorCode,
-    errorTimestamp,
-    reconnectAttempts,
-    maxReconnectAttempts,
-    nextReconnectTime,
-    lastConnected,
-    lastDisconnected,
-    url,
-    healthScore,
-    connectionQuality,
-    latency,
-    messageCount,
-    errorCount,
-    connectionUptime,
-    autoReconnect
+    status: storeStatus,
+    isConnecting: storeIsConnecting,
+    isReconnecting: storeIsReconnecting,
+    isHealthy: storeIsHealthy,
+    error: storeError,
+    errorCode: storeErrorCode,
+    errorTimestamp: storeErrorTimestamp,
+    reconnectAttempts: storeReconnectAttempts,
+    maxReconnectAttempts: storeMaxReconnectAttempts,
+    nextReconnectTime: storeNextReconnectTime,
+    lastConnected: storeLastConnected,
+    lastDisconnected: storeLastDisconnected,
+    url: storeUrl,
+    healthScore: storeHealthScore,
+    connectionQuality: storeConnectionQuality,
+    latency: storeLatency,
+    messageCount: storeMessageCount,
+    errorCount: storeErrorCount,
+    connectionUptime: storeConnectionUptime,
+    autoReconnect: storeAutoReconnect
   } = useConnectionStore();
 
   const handleRefresh = () => {
@@ -73,13 +73,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const handleToggleAutoReconnect = () => {
-    useConnectionStore.getState().setAutoReconnect(!autoReconnect);
+    useConnectionStore.getState().setAutoReconnect(!storeAutoReconnect);
   };
 
   const getStatusColor = () => {
-    switch (status) {
+    switch (storeStatus) {
       case 'connected':
-        return isHealthy ? 'success' : 'warning';
+        return storeIsHealthy ? 'success' : 'warning';
       case 'connecting':
         return 'warning';
       case 'error':
@@ -90,10 +90,10 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const getStatusIcon = () => {
-    switch (status) {
+    switch (storeStatus) {
       case 'connected':
-        if (isHealthy) {
-          switch (connectionQuality) {
+        if (storeIsHealthy) {
+          switch (storeConnectionQuality) {
             case 'excellent': return <ExcellentIcon />;
             case 'good': return <GoodIcon />;
             case 'poor': return <PoorIcon />;

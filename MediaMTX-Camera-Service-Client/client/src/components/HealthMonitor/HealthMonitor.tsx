@@ -81,21 +81,21 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
   showDetails = true,
 }) => {
   const {
-    systemHealth,
-    cameraHealth,
-    mediamtxHealth,
-    readinessStatus,
-    isMonitoring,
-    lastUpdate,
-    getOverallHealth,
-    getHealthScore,
-    isSystemReady,
-    setSystemHealth,
-    setCameraHealth,
-    setMediaMTXHealth,
-    setReadinessStatus,
-    startMonitoring,
-    stopMonitoring,
+    systemHealth: storeSystemHealth,
+    cameraHealth: storeCameraHealth,
+    mediamtxHealth: storeMediaMTXHealth,
+    readinessStatus: storeReadinessStatus,
+    isMonitoring: storeIsMonitoring,
+    lastUpdate: storeLastUpdate,
+    getOverallHealth: storeGetOverallHealth,
+    getHealthScore: storeGetHealthScore,
+    isSystemReady: storeIsSystemReady,
+    setSystemHealth: storeSetSystemHealth,
+    setCameraHealth: storeSetCameraHealth,
+    setMediaMTXHealth: storeSetMediaMTXHealth,
+    setReadinessStatus: storeSetReadinessStatus,
+    startMonitoring: storeStartMonitoring,
+    stopMonitoring: storeStopMonitoring,
   } = useHealthStore();
 
   const [expanded, setExpanded] = React.useState(false);
@@ -111,46 +111,46 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
     try {
       const health = await healthService.getAllHealth();
       
-      setSystemHealth(health.system);
-      setCameraHealth(health.cameras);
-      setMediaMTXHealth(health.mediamtx);
-      setReadinessStatus(health.readiness);
+      storeSetSystemHealth(health.system);
+      storeSetCameraHealth(health.cameras);
+      storeSetMediaMTXHealth(health.mediamtx);
+      storeSetReadinessStatus(health.readiness);
     } catch (error) {
       console.error('Failed to refresh health data:', error);
     } finally {
       setIsRefreshing(false);
     }
-  }, [isRefreshing, setSystemHealth, setCameraHealth, setMediaMTXHealth, setReadinessStatus]);
+  }, [isRefreshing, storeSetSystemHealth, storeSetCameraHealth, storeSetMediaMTXHealth, storeSetReadinessStatus]);
 
   /**
    * Start health monitoring
    */
   useEffect(() => {
     if (autoRefresh) {
-      startMonitoring();
-      healthService.startPolling(refreshInterval, (health) => {
-        setSystemHealth(health.system);
-        setCameraHealth(health.cameras);
-        setMediaMTXHealth(health.mediamtx);
-        setReadinessStatus(health.readiness);
-      });
+      storeStartMonitoring();
+              healthService.startPolling(refreshInterval, (health) => {
+          storeSetSystemHealth(health.system);
+          storeSetCameraHealth(health.cameras);
+          storeSetMediaMTXHealth(health.mediamtx);
+          storeSetReadinessStatus(health.readiness);
+        });
 
       // Initial load
       refreshHealth();
 
       return () => {
-        stopMonitoring();
+        storeStopMonitoring();
         healthService.stopPolling();
       };
     }
-  }, [autoRefresh, refreshInterval, startMonitoring, stopMonitoring, setSystemHealth, setCameraHealth, setMediaMTXHealth, setReadinessStatus, refreshHealth]);
+  }, [autoRefresh, refreshInterval, storeStartMonitoring, storeStopMonitoring, storeSetSystemHealth, storeSetCameraHealth, storeSetMediaMTXHealth, storeSetReadinessStatus, refreshHealth]);
 
   /**
    * Get overall health status
    */
-  const overallHealth = getOverallHealth();
-  const healthScoreValue = getHealthScore();
-  const systemReady = isSystemReady();
+  const overallHealth = storeGetOverallHealth();
+  const healthScoreValue = storeGetHealthScore();
+  const systemReady = storeIsSystemReady();
 
   /**
    * Format timestamp
@@ -248,8 +248,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Monitoring
                 </Typography>
                 <Chip
-                  label={isMonitoring ? 'Active' : 'Inactive'}
-                  color={isMonitoring ? 'success' : 'default'}
+                                label={storeIsMonitoring ? 'Active' : 'Inactive'}
+              color={storeIsMonitoring ? 'success' : 'default'}
                   size="small"
                   sx={{ mt: 0.5 }}
                 />
@@ -261,7 +261,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Last Update
                 </Typography>
                 <Typography variant="caption" display="block">
-                  {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Never'}
+                  {storeLastUpdate ? storeLastUpdate.toLocaleTimeString() : 'Never'}
                 </Typography>
               </Box>
             </Grid>
@@ -273,7 +273,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       <Collapse in={expanded && showDetails}>
         <Grid container spacing={2}>
           {/* System Health */}
-          {systemHealth && (
+          {storeSystemHealth && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -281,7 +281,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     System Components
                   </Typography>
                   <Box>
-                    {Object.entries(systemHealth.components).map(([component, health]) => (
+                    {Object.entries(storeSystemHealth.components).map(([component, health]) => (
                       <Box key={component} display="flex" alignItems="center" gap={1} mb={1}>
                         {getHealthIcon(health.status)}
                         <Typography variant="body2" flex={1}>
@@ -296,7 +296,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     ))}
                   </Box>
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                    Updated: {formatTimestamp(systemHealth.timestamp)}
+                    Updated: {formatTimestamp(storeSystemHealth.timestamp)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -304,7 +304,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
           )}
 
           {/* Camera Health */}
-          {cameraHealth && (
+          {storeCameraHealth && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -312,18 +312,18 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     Camera System
                   </Typography>
                   <Box display="flex" alignItems="center" gap={1} mb={1}>
-                    {getHealthIcon(cameraHealth.status)}
-                    <Chip
-                      label={cameraHealth.status}
-                      color={getHealthColor(cameraHealth.status)}
+                                    {getHealthIcon(storeCameraHealth.status)}
+                <Chip
+                  label={storeCameraHealth.status}
+                  color={getHealthColor(storeCameraHealth.status)}
                       size="small"
                     />
                   </Box>
                   <Typography variant="body2" color="text.secondary">
-                    {cameraHealth.details}
+                    {storeCameraHealth.details}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                    Updated: {formatTimestamp(cameraHealth.timestamp)}
+                    Updated: {formatTimestamp(storeCameraHealth.timestamp)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -331,7 +331,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
           )}
 
           {/* MediaMTX Health */}
-          {mediamtxHealth && (
+          {storeMediaMTXHealth && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -339,18 +339,18 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     MediaMTX Integration
                   </Typography>
                   <Box display="flex" alignItems="center" gap={1} mb={1}>
-                    {getHealthIcon(mediamtxHealth.status)}
-                    <Chip
-                      label={mediamtxHealth.status}
-                      color={getHealthColor(mediamtxHealth.status)}
+                                    {getHealthIcon(storeMediaMTXHealth.status)}
+                <Chip
+                  label={storeMediaMTXHealth.status}
+                  color={getHealthColor(storeMediaMTXHealth.status)}
                       size="small"
                     />
                   </Box>
                   <Typography variant="body2" color="text.secondary">
-                    {mediamtxHealth.details}
+                    {storeMediaMTXHealth.details}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                    Updated: {formatTimestamp(mediamtxHealth.timestamp)}
+                    Updated: {formatTimestamp(storeMediaMTXHealth.timestamp)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -358,7 +358,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
           )}
 
           {/* Readiness Status */}
-          {readinessStatus && (
+          {storeReadinessStatus && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -366,16 +366,16 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     Kubernetes Readiness
                   </Typography>
                   <Box display="flex" alignItems="center" gap={1} mb={1}>
-                    {getHealthIcon(readinessStatus.status)}
-                    <Chip
-                      label={readinessStatus.status}
-                      color={getHealthColor(readinessStatus.status)}
+                                    {getHealthIcon(storeReadinessStatus.status)}
+                <Chip
+                  label={storeReadinessStatus.status}
+                  color={getHealthColor(storeReadinessStatus.status)}
                       size="small"
                     />
                   </Box>
-                  {readinessStatus.details && (
+                  {storeReadinessStatus.details && (
                     <Box mt={1}>
-                      {Object.entries(readinessStatus.details).map(([component, status]) => (
+                                              {Object.entries(storeReadinessStatus.details).map(([component, status]) => (
                         <Typography key={component} variant="body2" color="text.secondary">
                           {component}: {status}
                         </Typography>
@@ -383,7 +383,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                     </Box>
                   )}
                   <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                    Updated: {formatTimestamp(readinessStatus.timestamp)}
+                    Updated: {formatTimestamp(storeReadinessStatus.timestamp)}
                   </Typography>
                 </CardContent>
               </Card>

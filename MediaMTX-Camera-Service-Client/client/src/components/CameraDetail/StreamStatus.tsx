@@ -45,11 +45,11 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
   autoRefresh = true,
   refreshInterval = 10000, // 10 seconds
 }) => {
-  const { streams, getStreams, isLoading, error } = useCameraStore();
+  const { streams: storeStreams, getStreams: storeGetStreams, isLoading: storeIsLoading, error: storeError } = useCameraStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Find stream for this device
-  const deviceStream = streams.find(stream => stream.name === deviceId);
+  const deviceStream = storeStreams.find(stream => stream.name === deviceId);
 
   /**
    * Refresh stream data
@@ -59,7 +59,7 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
     
     setIsRefreshing(true);
     try {
-      await getStreams();
+      await storeGetStreams();
     } catch (error) {
       console.error('Failed to refresh streams:', error);
     } finally {
@@ -109,7 +109,7 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
     return ready ? <ActiveIcon /> : <InactiveIcon />;
   };
 
-  if (isLoading && !deviceStream) {
+  if (storeIsLoading && !deviceStream) {
     return (
       <Card>
         <CardContent>
@@ -123,7 +123,7 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
     );
   }
 
-  if (error && !deviceStream) {
+  if (storeError && !deviceStream) {
     return (
       <Card>
         <CardContent>
@@ -132,7 +132,7 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
             <Typography variant="h6">Stream Status</Typography>
           </Box>
           <Alert severity="error">
-            Failed to load stream information: {error}
+            Failed to load stream information: {storeError}
           </Alert>
         </CardContent>
       </Card>

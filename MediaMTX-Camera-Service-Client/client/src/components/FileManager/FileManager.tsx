@@ -71,37 +71,36 @@ const FileManager: React.FC = () => {
   const [localSelectedFile, setLocalSelectedFile] = useState<FileItem | null>(null);
 
   const {
-    recordings,
-    snapshots,
+    recordings: storeRecordings,
+    snapshots: storeSnapshots,
     selectedFile: storeSelectedFile,
-    fileInfo: storeFileInfo,
-    isLoading,
-    isDeleting,
-    isLoadingFileInfo,
-    error,
-    loadRecordings,
-    loadSnapshots,
-    downloadFile,
-    deleteRecording,
-    deleteSnapshot,
-    getRecordingInfo,
-    getSnapshotInfo,
+    isLoading: storeIsLoading,
+    isDeleting: storeIsDeleting,
+    isLoadingFileInfo: storeIsLoadingFileInfo,
+    error: storeError,
+    loadRecordings: storeLoadRecordings,
+    loadSnapshots: storeLoadSnapshots,
+    downloadFile: storeDownloadFile,
+    deleteRecording: storeDeleteRecording,
+    deleteSnapshot: storeDeleteSnapshot,
+    getRecordingInfo: storeGetRecordingInfo,
+    getSnapshotInfo: storeGetSnapshotInfo,
     setSelectedFile: setStoreSelectedFile,
-    isDownloading,
-    canDeleteFiles,
+    isDownloading: storeIsDownloading,
+    canDeleteFiles: storeCanDeleteFiles,
   } = useFileStore();
 
-  const currentFiles = tabValue === 0 ? recordings : snapshots;
+  const currentFiles = tabValue === 0 ? storeRecordings : storeSnapshots;
   const fileType: FileType = tabValue === 0 ? 'recordings' : 'snapshots';
 
   useEffect(() => {
     const offset = (page - 1) * limit;
     if (tabValue === 0) {
-      loadRecordings(limit, offset);
+      storeLoadRecordings(limit, offset);
     } else {
-      loadSnapshots(limit, offset);
+      storeLoadSnapshots(limit, offset);
     }
-  }, [tabValue, page, limit, loadRecordings, loadSnapshots]);
+  }, [tabValue, page, limit, storeLoadRecordings, storeLoadSnapshots]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -110,7 +109,7 @@ const FileManager: React.FC = () => {
 
   const handleDownload = async (filename: string) => {
     try {
-      await downloadFile(fileType, filename);
+      await storeDownloadFile(fileType, filename);
     } catch (err) {
       console.error('Download failed:', err);
     }
@@ -126,9 +125,9 @@ const FileManager: React.FC = () => {
 
     try {
       if (fileType === 'recordings') {
-        await deleteRecording(storeSelectedFile.filename);
+        await storeDeleteRecording(storeSelectedFile.filename);
       } else {
-        await deleteSnapshot(storeSelectedFile.filename);
+        await storeDeleteSnapshot(storeSelectedFile.filename);
       }
       setDeleteDialogOpen(false);
       setStoreSelectedFile(null);
@@ -141,9 +140,9 @@ const FileManager: React.FC = () => {
     setStoreSelectedFile(file);
     try {
       if (fileType === 'recordings') {
-        await getRecordingInfo(file.filename);
+        await storeGetRecordingInfo(file.filename);
       } else {
-        await getSnapshotInfo(file.filename);
+        await storeGetSnapshotInfo(file.filename);
       }
       setFileInfoDialogOpen(true);
     } catch (err) {
@@ -154,9 +153,9 @@ const FileManager: React.FC = () => {
   const handleRefresh = () => {
     const offset = (page - 1) * limit;
     if (tabValue === 0) {
-      loadRecordings(limit, offset);
+      storeLoadRecordings(limit, offset);
     } else {
-      loadSnapshots(limit, offset);
+      storeLoadSnapshots(limit, offset);
     }
   };
 
@@ -241,15 +240,15 @@ const FileManager: React.FC = () => {
 
           <TabPanel value={tabValue} index={0}>
             <FileTable 
-              files={recordings}
+              files={storeRecordings}
               fileType="recordings"
-              isLoading={isLoading}
+              isLoading={storeIsLoading}
               onDownload={handleDownload}
               onDelete={handleDelete}
               onViewInfo={handleViewInfo}
-              isDownloading={isDownloading}
-              isDeleting={isDeleting}
-              canDeleteFiles={canDeleteFiles}
+              isDownloading={storeIsDownloading}
+              isDeleting={storeIsDeleting}
+              canDeleteFiles={storeCanDeleteFiles}
               formatFileSize={formatFileSize}
               formatDuration={formatDuration}
               formatDate={formatDate}
@@ -258,15 +257,15 @@ const FileManager: React.FC = () => {
 
           <TabPanel value={tabValue} index={1}>
             <FileTable 
-              files={snapshots}
+              files={storeSnapshots}
               fileType="snapshots"
-              isLoading={isLoading}
+              isLoading={storeIsLoading}
               onDownload={handleDownload}
               onDelete={handleDelete}
               onViewInfo={handleViewInfo}
-              isDownloading={isDownloading}
-              isDeleting={isDeleting}
-              canDeleteFiles={canDeleteFiles}
+              isDownloading={storeIsDownloading}
+              isDeleting={storeIsDeleting}
+              canDeleteFiles={storeCanDeleteFiles}
               formatFileSize={formatFileSize}
               formatDuration={formatDuration}
               formatDate={formatDate}
@@ -277,7 +276,7 @@ const FileManager: React.FC = () => {
             <Button
               startIcon={<Refresh />}
               onClick={handleRefresh}
-              disabled={isLoading}
+              disabled={storeIsLoading}
             >
               Refresh
             </Button>
@@ -286,7 +285,7 @@ const FileManager: React.FC = () => {
               count={Math.ceil((currentFiles?.length || 0) / limit)}
               page={page}
               onChange={(_event, value) => setPage(value)}
-              disabled={isLoading}
+              disabled={storeIsLoading}
             />
           </Box>
         </CardContent>
@@ -315,7 +314,7 @@ const FileManager: React.FC = () => {
             variant="contained"
             disabled={isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {storeIsDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -331,15 +330,15 @@ const FileManager: React.FC = () => {
           File Information
         </DialogTitle>
         <DialogContent>
-          {isLoadingFileInfo ? (
+          {storeIsLoadingFileInfo ? (
             <Box display="flex" justifyContent="center" p={2}>
               <CircularProgress />
             </Box>
-          ) : storeFileInfo ? (
+          ) : storeSelectedFile ? (
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="h6" gutterBottom>
-                  {storeFileInfo.filename}
+                  {selectedFile.filename}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -347,7 +346,7 @@ const FileManager: React.FC = () => {
                   File Size
                 </Typography>
                 <Typography variant="body1">
-                  {formatFileSize(storeFileInfo.file_size)}
+                  {formatFileSize(storeSelectedFile.file_size)}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -355,26 +354,26 @@ const FileManager: React.FC = () => {
                   Created
                 </Typography>
                 <Typography variant="body1">
-                  {formatDate(storeFileInfo.created_time)}
+                  {formatDate(selectedFile.created_time)}
                 </Typography>
               </Grid>
-              {fileType === 'recordings' && storeFileInfo.duration && (
+              {fileType === 'recordings' && selectedFile.duration && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Duration
                   </Typography>
                   <Typography variant="body1">
-                    {formatDuration(storeFileInfo.duration)}
+                    {formatDuration(selectedFile.duration)}
                   </Typography>
                 </Grid>
               )}
-              {fileType === 'snapshots' && storeFileInfo.resolution && (
+              {fileType === 'snapshots' && selectedFile.resolution && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Resolution
                   </Typography>
                   <Typography variant="body1">
-                    {storeFileInfo.resolution}
+                    {selectedFile.resolution}
                   </Typography>
                 </Grid>
               )}
@@ -383,7 +382,7 @@ const FileManager: React.FC = () => {
                   Download URL
                 </Typography>
                 <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                  {storeFileInfo.download_url}
+                  {selectedFile.download_url}
                 </Typography>
               </Grid>
             </Grid>

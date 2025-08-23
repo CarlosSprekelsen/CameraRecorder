@@ -35,7 +35,7 @@ export interface AuthResponse {
 /**
  * Auth store state interface
  */
-interface AuthState {
+export interface AuthStoreState {
   // Authentication state
   isAuthenticated: boolean;
   user: User | null;
@@ -75,7 +75,7 @@ interface AuthActions {
 /**
  * Auth store type
  */
-type AuthStore = AuthState & AuthActions;
+type AuthStore = AuthStoreState & AuthActions;
 
 /**
  * Create auth store

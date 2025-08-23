@@ -27,11 +27,11 @@ interface CameraCardProps {
 const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
   const navigate = useNavigate();
   const { 
-    activeRecordings, 
-    takeSnapshot, 
-    startRecording, 
-    stopRecording,
-    selectCamera 
+    activeRecordings: storeActiveRecordings, 
+    takeSnapshot: storeTakeSnapshot, 
+    startRecording: storeStartRecording, 
+    stopRecording: storeStopRecording,
+    selectCamera: storeSelectCamera 
   } = useCameraStore();
 
   const [isSnapshotLoading, setIsSnapshotLoading] = React.useState(false);
@@ -53,7 +53,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
   };
 
   const handleCardClick = () => {
-    selectCamera(camera.device);
+    storeSelectCamera(camera.device);
     navigate(`/camera/${encodeURIComponent(camera.device)}`);
   };
 
@@ -62,7 +62,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     setIsSnapshotLoading(true);
     
     try {
-      const result = await takeSnapshot(camera.device);
+      const result = await storeTakeSnapshot(camera.device);
       if (result?.status === 'completed') {
         console.log('Snapshot taken successfully:', result);
         // TODO: Show success notification
@@ -84,7 +84,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     
     try {
       if (isRecording) {
-        const result = await stopRecording(camera.device);
+        const result = await storeStopRecording(camera.device);
         if (result?.status === 'STOPPED') {
           console.log('Recording stopped successfully:', result);
           // TODO: Show success notification
@@ -93,7 +93,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
           // TODO: Show error notification
         }
       } else {
-        const result = await startRecording(camera.device);
+        const result = await storeStartRecording(camera.device);
         if (result?.status === 'STARTED') {
           console.log('Recording started successfully:', result);
           // TODO: Show success notification
@@ -110,7 +110,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     }
   };
 
-  const isRecording = activeRecordings.has(camera.device) || camera.status.toLowerCase() === 'recording';
+  const isRecording = storeActiveRecordings.has(camera.device) || camera.status.toLowerCase() === 'recording';
 
   return (
     <Card

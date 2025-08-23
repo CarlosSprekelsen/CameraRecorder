@@ -30,7 +30,7 @@ import type {
 /**
  * Enhanced connection state interface
  */
-interface ConnectionState {
+export interface ConnectionStoreState {
   // Connection status
   status: ConnectionStatus;
   isConnecting: boolean;
@@ -180,7 +180,7 @@ interface ConnectionActions {
 /**
  * Connection store type
  */
-type ConnectionStore = ConnectionState & ConnectionActions;
+type ConnectionStore = ConnectionStoreState & ConnectionActions;
 
 /**
  * Create enhanced connection store

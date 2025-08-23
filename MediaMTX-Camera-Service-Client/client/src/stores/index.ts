@@ -13,10 +13,10 @@ export { useAuthStore } from './authStore';
 export { useSettingsStore } from './settingsStore';
 
 // Store types
-export type { CameraState } from './cameraStore';
-export type { ConnectionState } from './connectionStore';
-export type { HealthState } from './healthStore';
-export type { AdminState } from './adminStore';
-export type { FileState } from './fileStore';
-export type { AuthState } from './authStore';
-export type { SettingsState } from './settingsStore'; 
+export type { CameraStoreState } from './cameraStore';
+export type { ConnectionStoreState } from './connectionStore';
+export type { HealthStoreState } from './healthStore';
+export type { AdminStoreState } from './adminStore';
+export type { FileStoreState } from './fileStore';
+export type { AuthStoreState } from './authStore';
+export type { SettingsStoreState } from './settingsStore'; 

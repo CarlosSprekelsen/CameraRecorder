@@ -47,24 +47,24 @@ const CameraDetail: React.FC = () => {
   const { showSuccess, showError } = useNotifications();
 
   const {
-    cameras,
-    error,
-    selectCamera,
-    takeSnapshot,
-    startRecording,
-    stopRecording,
-    getCameraStatus,
-    activeRecordings,
-    isConnected,
+    cameras: storeCameras,
+    error: storeError,
+    selectCamera: storeSelectCamera,
+    takeSnapshot: storeTakeSnapshot,
+    startRecording: storeStartRecording,
+    stopRecording: storeStopRecording,
+    getCameraStatus: storeGetCameraStatus,
+    activeRecordings: storeActiveRecordings,
+    isConnected: storeIsConnected,
   } = useCameraStore();
 
-  const camera = cameras.find(c => c.device === deviceId);
+  const camera = storeCameras.find(c => c.device === deviceId);
 
   useEffect(() => {
     if (deviceId) {
-      selectCamera(deviceId);
+      storeSelectCamera(deviceId);
     }
-  }, [deviceId, selectCamera]);
+  }, [deviceId, storeSelectCamera]);
 
   const handleTakeSnapshot = async () => {
     if (!deviceId) return;
@@ -73,7 +73,7 @@ const CameraDetail: React.FC = () => {
     setLocalError(null);
     
     try {
-      const result = await takeSnapshot(deviceId, snapshotFormat, snapshotQuality);
+      const result = await storeTakeSnapshot(deviceId, snapshotFormat, snapshotQuality);
       if (result) {
         console.log('Snapshot taken:', result);
         const notification = notificationUtils.camera.snapshotTaken(camera?.name || deviceId);
@@ -97,7 +97,7 @@ const CameraDetail: React.FC = () => {
     
     try {
       const duration = isUnlimitedRecording ? undefined : recordingDuration;
-      const result = await startRecording(deviceId, duration, recordingFormat);
+      const result = await storeStartRecording(deviceId, duration, recordingFormat);
       if (result) {
         console.log('Recording started:', result);
         const notification = notificationUtils.camera.recordingStarted(camera?.name || deviceId);
@@ -120,7 +120,7 @@ const CameraDetail: React.FC = () => {
     setLocalError(null);
     
     try {
-      const result = await stopRecording(deviceId);
+      const result = await storeStopRecording(deviceId);
       if (result) {
         console.log('Recording stopped:', result);
         // TODO: Show success notification
@@ -139,7 +139,7 @@ const CameraDetail: React.FC = () => {
     setLocalError(null);
     
     try {
-      const updatedCamera = await getCameraStatus(deviceId);
+      const updatedCamera = await storeGetCameraStatus(deviceId);
       if (updatedCamera) {
         console.log('Camera status refreshed:', updatedCamera);
         // TODO: Show success notification
@@ -151,7 +151,7 @@ const CameraDetail: React.FC = () => {
     }
   };
 
-  const isRecording = activeRecordings.has(deviceId || '');
+  const isRecording = storeActiveRecordings.has(deviceId || '');
 
   if (!deviceId) {
     return <Navigate to="/" replace />;
@@ -189,9 +189,9 @@ const CameraDetail: React.FC = () => {
         </Stack>
       </Box>
 
-      {(error || localError) && (
+      {(storeError || localError) && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error || localError}
+          {storeError || localError}
         </Alert>
       )}
 

@@ -68,7 +68,7 @@ export interface ReadinessStatus {
 /**
  * Health store state interface
  */
-interface HealthState {
+export interface HealthStoreState {
   // System health
   systemHealth: SystemHealth | null;
   cameraHealth: CameraHealth | null;

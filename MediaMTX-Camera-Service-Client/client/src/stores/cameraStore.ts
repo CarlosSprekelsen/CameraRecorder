@@ -34,7 +34,7 @@ import type {
 import { RPC_METHODS, NOTIFICATION_METHODS } from '../types';
 import type { WebSocketService } from '../services/websocket';
 
-interface CameraState {
+export interface CameraStoreState {
   // Camera data
   cameras: CameraDevice[];
   selectedCamera: CameraDevice | null;
@@ -125,7 +125,7 @@ interface CameraState {
   selectCamera: (device: string) => void;
 }
 
-export const useCameraStore = create<CameraState>((set, get) => ({
+export const useCameraStore = create<CameraStoreState>((set, get) => ({
   // Initial state
   cameras: [],
   selectedCamera: null,

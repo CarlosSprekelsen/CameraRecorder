@@ -7,21 +7,21 @@ import RealTimeStatus from '../common/RealTimeStatus';
 
 const Dashboard: React.FC = () => {
   const {
-    cameras,
-    isLoading,
-    isRefreshing,
-    isConnected,
-    error,
-    serverInfo,
-    initialize,
-    refreshCameras,
-    disconnect,
+    cameras: storeCameras,
+    isLoading: storeIsLoading,
+    isRefreshing: storeIsRefreshing,
+    isConnected: storeIsConnected,
+    error: storeError,
+    serverInfo: storeServerInfo,
+    initialize: storeInitialize,
+    refreshCameras: storeRefreshCameras,
+    disconnect: storeDisconnect,
   } = useCameraStore();
 
   useEffect(() => {
     // Initialize connection on component mount
     try {
-      initialize();
+      storeInitialize();
     } catch (err) {
       console.error('Failed to initialize camera store:', err);
     }
@@ -29,16 +29,16 @@ const Dashboard: React.FC = () => {
     // Cleanup on unmount
     return () => {
       try {
-        disconnect();
+        storeDisconnect();
       } catch (err) {
         console.error('Failed to disconnect:', err);
       }
     };
-  }, [initialize, disconnect]);
+  }, [storeInitialize, storeDisconnect]);
 
   const handleRefresh = () => {
     try {
-      refreshCameras();
+      storeRefreshCameras();
     } catch (err) {
       console.error('Failed to refresh cameras:', err);
     }
@@ -64,49 +64,49 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Error Display */}
-      {error && (
+      {storeError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {storeError}
         </Alert>
       )}
 
       {/* Server Info */}
-      {serverInfo && (
+      {storeServerInfo && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Server Information
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Version: {serverInfo.version} | Connected: {serverInfo.cameras_connected}
+            Version: {storeServerInfo.version} | Connected: {storeServerInfo.cameras_connected}
           </Typography>
         </Paper>
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {storeIsLoading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
         </Box>
       )}
 
       {/* Camera Grid */}
-      {!isLoading && (
+      {!storeIsLoading && (
         <Box>
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              Available Cameras ({cameras?.length || 0})
-            </Typography>
-            {isRefreshing && <CircularProgress size={20} />}
+                      <Typography variant="h6">
+            Available Cameras ({storeCameras?.length || 0})
+          </Typography>
+          {storeIsRefreshing && <CircularProgress size={20} />}
           </Box>
           
-          {(!cameras || cameras.length === 0) && isConnected ? (
+          {(!storeCameras || storeCameras.length === 0) && storeIsConnected ? (
             <Paper sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="body1" color="text.secondary">
                 No cameras found. Please check your camera connections.
               </Typography>
             </Paper>
           ) : (
-            <CameraGrid cameras={cameras || []} />
+            <CameraGrid cameras={storeCameras || []} />
           )}
         </Box>
       )}

@@ -13,7 +13,7 @@ import type {
 } from '../types/settings';
 import { DEFAULT_SETTINGS } from '../types/settings';
 
-interface SettingsState {
+export interface SettingsStoreState {
   // Settings data
   settings: AppSettings;
   

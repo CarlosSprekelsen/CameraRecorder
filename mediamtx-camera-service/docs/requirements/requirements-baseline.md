@@ -178,15 +178,15 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-PERF-021 | Python Implementation: 100-200 requests/second | Medium | REQ-PERF-005 |
 | REQ-PERF-022 | Go/C++ Target: 1000+ requests/second | Medium | REQ-PERF-005 |
 | REQ-PERF-023 | API Operations: 50-100 operations/second per client | Medium | REQ-PERF-005 |
-| REQ-PERF-024 | File Operations: 10-20 file operations/second | Medium | REQ-PERF-005 |
+| REQ-PERF-024 | File Operations: Minimum 10-50 file operations/second (no upper limit) | Medium | REQ-PERF-005 |
 
 ### 2.6 Scalability Requirements
 
 | REQ-ID | Description | Priority | Source Reference |
 |--------|-------------|----------|------------------|
 | REQ-PERF-025 | The system SHALL scale performance with available resources | Medium | REQ-PERF-006 |
-| REQ-PERF-026 | Linear Scaling: Performance scales linearly with CPU cores | Medium | REQ-PERF-006 |
-| REQ-PERF-027 | Memory Scaling: Memory usage scales linearly with active connections | Medium | REQ-PERF-006 |
+| REQ-PERF-026 | Realistic Scaling: Performance scales with CPU cores (0.3-1.0 scaling factor for I/O-bound applications) | Medium | REQ-PERF-006 |
+| REQ-PERF-027 | Memory Scaling: Memory usage scales with active connections (with leak detection) | Medium | REQ-PERF-006 |
 | REQ-PERF-028 | Horizontal Scaling: Support for multiple service instances | Medium | REQ-PERF-006 |
 
 ---

@@ -42,7 +42,7 @@ export interface FileDeletionResponse {
 /**
  * File store state interface
  */
-interface FileState {
+export interface FileStoreState {
   // File data
   recordings: FileItem[] | null;
   snapshots: FileItem[] | null;
@@ -102,7 +102,7 @@ interface FileActions {
 /**
  * File store type
  */
-type FileStore = FileState & FileActions;
+type FileStore = FileStoreState & FileActions;
 
 /**
  * Create file store

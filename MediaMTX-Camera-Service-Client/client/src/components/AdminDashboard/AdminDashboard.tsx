@@ -176,37 +176,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   refreshInterval = 60000, // 1 minute
 }) => {
   const {
-    systemMetrics,
-    systemStatus,
-    serverInfo,
-    storageInfo,
-    retentionPolicy,
-    isPerformingCleanup,
-    lastCleanupResults,
-    isAdmin,
-    hasAdminPermissions,
-    isLoadingMetrics,
-    isLoadingStatus,
-    isLoadingStorage,
-    error,
-    setSystemMetrics,
-    setSystemStatus,
-    setServerInfo,
-    setStorageInfo,
-    setRetentionPolicy,
-    setCleanupResults,
-    setPerformingCleanup,
-    setAdminStatus,
-    setLoadingMetrics,
-    setLoadingStatus,
-    setLoadingStorage,
-    setError,
-    clearError,
-    getStorageUsagePercentage,
-    getStorageUsageColor,
-    isLowSpace,
-    formatBytes,
-    formatUptime,
+    systemMetrics: storeSystemMetrics,
+    systemStatus: storeSystemStatus,
+    serverInfo: storeServerInfo,
+    storageInfo: storeStorageInfo,
+    retentionPolicy: storeRetentionPolicy,
+    isPerformingCleanup: storeIsPerformingCleanup,
+    lastCleanupResults: storeLastCleanupResults,
+    isAdmin: storeIsAdmin,
+    hasAdminPermissions: storeHasAdminPermissions,
+    isLoadingMetrics: storeIsLoadingMetrics,
+    isLoadingStatus: storeIsLoadingStatus,
+    isLoadingStorage: storeIsLoadingStorage,
+    error: storeError,
+    setSystemMetrics: storeSetSystemMetrics,
+    setSystemStatus: storeSetSystemStatus,
+    setServerInfo: storeSetServerInfo,
+    setStorageInfo: storeSetStorageInfo,
+    setRetentionPolicy: storeSetRetentionPolicy,
+    setCleanupResults: storeSetCleanupResults,
+    setPerformingCleanup: storeSetPerformingCleanup,
+    setAdminStatus: storeSetAdminStatus,
+    setLoadingMetrics: storeSetLoadingMetrics,
+    setLoadingStatus: storeSetLoadingStatus,
+    setLoadingStorage: storeSetLoadingStorage,
+    setError: storeSetError,
+    clearError: storeClearError,
+    getStorageUsagePercentage: storeGetStorageUsagePercentage,
+    getStorageUsageColor: storeGetStorageUsageColor,
+    isLowSpace: storeIsLowSpace,
+    formatBytes: storeFormatBytes,
+    formatUptime: storeFormatUptime,
   } = useAdminStore();
 
   const [retentionDialogOpen, setRetentionDialogOpen] = React.useState(false);
@@ -220,44 +220,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setIsRefreshing(true);
     try {
-      setLoadingMetrics(true);
-      setLoadingStatus(true);
-      setLoadingStorage(true);
+      storeSetLoadingMetrics(true);
+      storeSetLoadingStatus(true);
+      storeSetLoadingStorage(true);
 
       const systemInfo = await adminService.getAllSystemInfo();
       
-      setSystemMetrics(systemInfo.metrics);
-      setSystemStatus(systemInfo.status);
-      setServerInfo(systemInfo.serverInfo);
-      setStorageInfo(systemInfo.storageInfo);
+      storeSetSystemMetrics(systemInfo.metrics);
+      storeSetSystemStatus(systemInfo.status);
+      storeSetServerInfo(systemInfo.serverInfo);
+      storeSetStorageInfo(systemInfo.storageInfo);
       
-      clearError();
+      storeClearError();
     } catch (error) {
       console.error('Failed to refresh system info:', error);
-      setError('Failed to load system information');
+      storeSetError('Failed to load system information');
     } finally {
       setIsRefreshing(false);
-      setLoadingMetrics(false);
-      setLoadingStatus(false);
-      setLoadingStorage(false);
+      storeSetLoadingMetrics(false);
+      storeSetLoadingStatus(false);
+      storeSetLoadingStorage(false);
     }
-  }, [isRefreshing, setSystemMetrics, setSystemStatus, setServerInfo, setStorageInfo, setLoadingMetrics, setLoadingStatus, setLoadingStorage, setError, clearError]);
+  }, [isRefreshing, storeSetSystemMetrics, storeSetSystemStatus, storeSetServerInfo, storeSetStorageInfo, storeSetLoadingMetrics, storeSetLoadingStatus, storeSetLoadingStorage, storeSetError, storeClearError]);
 
   /**
    * Perform cleanup operation
    */
   const performCleanup = useCallback(async () => {
     try {
-      setPerformingCleanup(true);
+      storeSetPerformingCleanup(true);
       const results = await adminService.cleanupOldFiles();
-      setCleanupResults(results);
+      storeSetCleanupResults(results);
     } catch (error) {
       console.error('Cleanup failed:', error);
-      setError('Cleanup operation failed');
+      storeSetError('Cleanup operation failed');
     } finally {
-      setPerformingCleanup(false);
+      storeSetPerformingCleanup(false);
     }
-  }, [setPerformingCleanup, setCleanupResults, setError]);
+  }, [storeSetPerformingCleanup, storeSetCleanupResults, storeSetError]);
 
   /**
    * Save retention policy
@@ -270,19 +270,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }) => {
     try {
       const updatedPolicy = await adminService.setRetentionPolicy(policy);
-      setRetentionPolicy(updatedPolicy);
+      storeSetRetentionPolicy(updatedPolicy);
     } catch (error) {
       console.error('Failed to save retention policy:', error);
-      setError('Failed to save retention policy');
+      storeSetError('Failed to save retention policy');
     }
-  }, [setRetentionPolicy, setError]);
+  }, [storeSetRetentionPolicy, storeSetError]);
 
   /**
    * Check admin permissions on mount
    */
   useEffect(() => {
     const hasPermissions = adminService.hasAdminPermissions();
-    setAdminStatus(true, hasPermissions);
+    storeSetAdminStatus(true, hasPermissions);
   }, [setAdminStatus]);
 
   /**
