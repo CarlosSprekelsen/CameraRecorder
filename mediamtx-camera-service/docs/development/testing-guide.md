@@ -6,6 +6,27 @@
 
 ## 1. Core Principles
 
+### 🚨 **CRITICAL: STOP and Authorization Required**
+- **STOP before modifying any code** - Investigate and understand the issue first
+- **Ask for explicit authorization** before making any code changes
+- **No working in isolation** - Coordinate with team before implementation
+- **Present options and recommendations** for team decision
+- **Do not create document over population** onnly greate erquested reports do not offer free reports ouside the chat unles requested. 
+
+### 🚨 **CRITICAL: API Documentation is Ground Truth**
+- **API Documentation**: `docs/api/json-rpc-methods.md` is the ONLY source of truth for API behavior
+- **Health Endpoints**: `docs/api/health-endpoints.md` is the ONLY source of truth for health API
+- **NEVER use server implementation as reference** - Only use documented API
+- **Tests must validate against API documentation** - Not against server implementation
+- **If test fails, check API documentation first** - Don't adapt test to broken implementation
+
+### **Ground Truth Enforcement Rules**
+1. **API Documentation is FROZEN** - Changes require formal approval process
+2. **Server Implementation follows API Documentation** - Not the other way around
+3. **Tests validate API compliance** - Not implementation details
+4. **Test failures indicate API/implementation mismatch** - Not test bugs
+5. **No "accommodation" of broken implementations** - Test do not fix the implementation - it is ok if a test fails thats theiir purpose, to find real bugs not accomodate them we ensure quality test suites aligned stru=ictly with ground truth.
+
 ### Real System Testing Over Mocking
 - **MediaMTX:** Use systemd-managed service, never mock
 - **File System:** Use `tempfile`, never mock
@@ -16,6 +37,15 @@
 ### Strategic Mocking Rules
 **MOCK:** External APIs, time operations, expensive hardware simulation  
 **NEVER MOCK:** MediaMTX service, filesystem, internal WebSocket, JWT auth, config loading
+
+### **Authorization Process**
+1. **Investigate First**: Understand the issue, root cause, and impact
+2. **Document Findings**: Write clear investigation report with evidence
+3. **Present Options**: Provide multiple solutions with pros/cons
+4. **Request Authorization**: Ask for explicit approval before implementation
+5. **Wait for Approval**: Do not proceed without team authorization
+6. **Implement Approved Solution**: Follow approved approach exactly
+7. **Document Changes**: Update documentation and create issues as needed
 
 ## 2. Test Organization - STRICT STRUCTURE GUIDELINES
 
@@ -152,7 +182,62 @@ markers =
     network: network-dependent tests (mocked)
 ```
 
-## 4. Requirements Traceability
+## 4. API Compliance Testing - MANDATORY
+
+### **🚨 CRITICAL: API Documentation Compliance**
+Every test that calls server APIs MUST validate against API documentation, not implementation.
+
+### **Mandatory API Compliance Rules**
+1. **Test against documented API format** - Use exact request/response formats from `json-rpc-methods.md`
+2. **Validate documented error codes** - Use error codes and messages from API documentation
+3. **Test documented authentication flow** - Follow authentication flow exactly as documented
+4. **Verify documented response fields** - Check all required fields are present and correct
+5. **No implementation-specific testing** - Don't test server internals, only documented behavior
+
+### **API Compliance Test Template**
+```python
+"""
+API Compliance Test for [Method Name]
+
+API Documentation Reference: docs/api/json-rpc-methods.md
+Method: [method_name]
+Expected Request Format: [documented format]
+Expected Response Format: [documented format]
+Expected Error Codes: [documented codes]
+"""
+
+@pytest.mark.integration
+@pytest.mark.api_compliance
+async def test_method_name_api_compliance():
+    """Validate [method_name] against API documentation."""
+    
+    # 1. Use documented request format
+    request = {
+        "jsonrpc": "2.0",
+        "method": "[method_name]",
+        "params": {
+            # Use exact parameter names from API documentation
+        },
+        "id": 1
+    }
+    
+    # 2. Validate documented response format
+    response = await send_request(request)
+    
+    # 3. Check all documented fields are present
+    assert "result" in response, "Response must contain 'result' field per API documentation"
+    result = response["result"]
+    
+    # 4. Validate documented response structure
+    required_fields = ["field1", "field2"]  # From API documentation
+    for field in required_fields:
+        assert field in result, f"Missing required field '{field}' per API documentation"
+    
+    # 5. Validate documented error handling
+    # Test error cases exactly as documented
+```
+
+## 5. Requirements Traceability
 
 ### Mandatory Format for Test Files
 ```python
@@ -164,6 +249,7 @@ Requirements Coverage:
 - REQ-XXX-002: Additional requirement
 
 Test Categories: Unit/Integration/Security/Performance/Health
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 @pytest.mark.unit
@@ -265,25 +351,8 @@ source .test_env
 - ✅ **`setup_test_environment.py`**: Modified to include `CAMERA_SERVICE_API_KEYS_PATH` in generated files
 - ✅ **Test Environment**: Automatically maintained across deployments
 
-## 8. Quality Assurance
 
-### Requirements Coverage Monitoring
-- **Baseline**: 161 requirements (frozen ground truth)
-- **Target**: 100% coverage for critical requirements
-- **Current**: 93% critical requirements coverage
-- **Gaps**: Performance testing (67% coverage) - **IMMEDIATE PRIORITY**
-
-### Critical Gaps Identified
-1. **Performance Testing**: 3 critical requirements missing
-2. **API Method Coverage**: 9 high-priority methods missing
-3. **Notification Testing**: 4 high-priority requirements missing
-
-### Improvement Priorities
-1. **Phase 1**: Implement performance test suite (CRITICAL)
-2. **Phase 2**: Complete API method coverage (HIGH)
-3. **Phase 3**: Add notification testing (HIGH)
-
-## 9. Documentation Standards
+## 8. Documentation Standards
 
 ### Test File Documentation
 - **Requirements Coverage**: Mandatory in every test file docstring
@@ -300,7 +369,18 @@ source .test_env
 - **Updates**: After major test changes
 - **Focus**: Critical and high-priority requirements gaps
 
-## 10. Compliance and Validation
+## 9. Compliance and Validation
+
+### **🚨 MANDATORY: API Compliance**
+Every test that calls server APIs MUST be audited against API documentation.
+
+### **Audit Requirements**
+1. **Pre-commit Audit**: All API tests must be validated against `json-rpc-methods.md`
+2. **Response Format Validation**: Verify all response fields match API documentation
+3. **Error Code Validation**: Verify error codes and messages match API documentation
+4. **Authentication Flow Validation**: Verify authentication follows documented flow
+5. **Parameter Validation**: Verify parameter names and types match API documentation
+
 
 ### Testing Guide Compliance
 - **Test Files**: Must follow requirements traceability format
@@ -308,15 +388,17 @@ source .test_env
 - **Coverage Analysis**: Must be updated after major changes
 - **Directory Structure**: Must follow strict structure guidelines
 - **Markers**: Must be properly defined and used
+- **API Compliance**: Must validate against API documentation
 
 ### Quality Gates
+- **Authorization Required**: All code changes must be explicitly authorized
 - **Critical Requirements**: 100% coverage required
 - **High Priority Requirements**: 95% coverage required
 - **Overall Coverage**: 90% coverage required
 - **Performance Testing**: Must be implemented for critical requirements
 - **Structure Compliance**: No unauthorized directory creation
 - **Marker Compliance**: All markers defined and properly used
+- **API Compliance**: All tests must validate against API documentation
 
----
 
-**Status**: **UPDATED** - Reflects strict structure guidelines, comprehensive markers section, and enhanced compliance requirements.
+**Status**: **UPDATED** - Reflects strict structure guidelines, comprehensive markers section, enhanced compliance requirements, and critical authorization rules.

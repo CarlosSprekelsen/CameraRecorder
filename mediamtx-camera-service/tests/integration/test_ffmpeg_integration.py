@@ -8,6 +8,7 @@ Requirements Traceability:
 - REQ-FFMPEG-003: System shall validate FFmpeg integration functionality
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

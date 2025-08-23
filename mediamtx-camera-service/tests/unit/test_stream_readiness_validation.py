@@ -17,6 +17,8 @@ PDR Condition Coverage:
 
 Story Coverage: PDR Conditions Resolution
 IV&V Control Point: Stream readiness validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

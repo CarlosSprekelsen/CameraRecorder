@@ -13,6 +13,8 @@ Requirements Traceability:
 
 Story Coverage: S1 - Service Manager Integration
 IV&V Control Point: Real end-to-end service manager validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import socket

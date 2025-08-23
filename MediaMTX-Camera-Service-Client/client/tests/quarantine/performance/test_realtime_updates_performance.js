@@ -357,21 +357,103 @@ class RealTimeUpdateTester {
   }
 
   sendTestRequest() {
+    // Validate request format against API documentation
     const request = {
       jsonrpc: '2.0',
       method: 'ping',
       id: 1
     };
+    
+    // API compliance validation
+    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+      throw new Error('Invalid JSON-RPC version per API documentation');
+    }
+    if (!request.method) {
+      throw new Error('Missing method per API documentation');
+    }
+    if (request.id === undefined) {
+      throw new Error('Missing id per API documentation');
+    }
+    
     this.ws.send(JSON.stringify(request));
   }
 
   sendCameraListRequest() {
+    // Validate request format against API documentation
     const request = {
       jsonrpc: '2.0',
       method: 'get_camera_list',
       id: 2
     };
+    
+    // API compliance validation
+    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+      throw new Error('Invalid JSON-RPC version per API documentation');
+    }
+    if (!request.method) {
+      throw new Error('Missing method per API documentation');
+    }
+    if (request.id === undefined) {
+      throw new Error('Missing id per API documentation');
+    }
+    
     this.ws.send(JSON.stringify(request));
+  }
+
+  sendStartRecordingRequest() {
+    // Validate request format against API documentation
+    const startRequest = {
+      jsonrpc: '2.0',
+      method: 'start_recording',
+      params: {
+        device: '/dev/video0'
+      },
+      id: 3
+    };
+    
+    // API compliance validation
+    if (!startRequest.jsonrpc || startRequest.jsonrpc !== '2.0') {
+      throw new Error('Invalid JSON-RPC version per API documentation');
+    }
+    if (!startRequest.method) {
+      throw new Error('Missing method per API documentation');
+    }
+    if (!startRequest.params || !startRequest.params.device) {
+      throw new Error('start_recording method requires device parameter per API documentation');
+    }
+    if (startRequest.id === undefined) {
+      throw new Error('Missing id per API documentation');
+    }
+    
+    this.ws.send(JSON.stringify(startRequest));
+  }
+
+  sendStopRecordingRequest() {
+    // Validate request format against API documentation
+    const stopRequest = {
+      jsonrpc: '2.0',
+      method: 'stop_recording',
+      params: {
+        device: '/dev/video0'
+      },
+      id: 4
+    };
+    
+    // API compliance validation
+    if (!stopRequest.jsonrpc || stopRequest.jsonrpc !== '2.0') {
+      throw new Error('Invalid JSON-RPC version per API documentation');
+    }
+    if (!stopRequest.method) {
+      throw new Error('Missing method per API documentation');
+    }
+    if (!stopRequest.params || !stopRequest.params.device) {
+      throw new Error('stop_recording method requires device parameter per API documentation');
+    }
+    if (stopRequest.id === undefined) {
+      throw new Error('Missing id per API documentation');
+    }
+    
+    this.ws.send(JSON.stringify(stopRequest));
   }
 
   simulateRecordingOperations() {

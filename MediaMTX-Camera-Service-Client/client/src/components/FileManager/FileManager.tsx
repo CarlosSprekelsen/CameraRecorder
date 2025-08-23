@@ -74,6 +74,7 @@ const FileManager: React.FC = () => {
     recordings,
     snapshots,
     selectedFile: storeSelectedFile,
+    fileInfo: storeFileInfo,
     isLoading,
     isDeleting,
     isLoadingFileInfo,
@@ -303,7 +304,7 @@ const FileManager: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete "{selectedFile?.filename}"? This action cannot be undone.
+            Are you sure you want to delete "{storeSelectedFile?.filename}"? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -334,11 +335,11 @@ const FileManager: React.FC = () => {
             <Box display="flex" justifyContent="center" p={2}>
               <CircularProgress />
             </Box>
-          ) : fileInfo ? (
+          ) : storeFileInfo ? (
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="h6" gutterBottom>
-                  {fileInfo.filename}
+                  {storeFileInfo.filename}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -346,7 +347,7 @@ const FileManager: React.FC = () => {
                   File Size
                 </Typography>
                 <Typography variant="body1">
-                  {formatFileSize(fileInfo.file_size)}
+                  {formatFileSize(storeFileInfo.file_size)}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -354,26 +355,26 @@ const FileManager: React.FC = () => {
                   Created
                 </Typography>
                 <Typography variant="body1">
-                  {formatDate(fileInfo.created_time)}
+                  {formatDate(storeFileInfo.created_time)}
                 </Typography>
               </Grid>
-              {fileType === 'recordings' && fileInfo.duration && (
+              {fileType === 'recordings' && storeFileInfo.duration && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Duration
                   </Typography>
                   <Typography variant="body1">
-                    {formatDuration(fileInfo.duration)}
+                    {formatDuration(storeFileInfo.duration)}
                   </Typography>
                 </Grid>
               )}
-              {fileType === 'snapshots' && fileInfo.resolution && (
+              {fileType === 'snapshots' && storeFileInfo.resolution && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Resolution
                   </Typography>
                   <Typography variant="body1">
-                    {fileInfo.resolution}
+                    {storeFileInfo.resolution}
                   </Typography>
                 </Grid>
               )}
@@ -382,7 +383,7 @@ const FileManager: React.FC = () => {
                   Download URL
                 </Typography>
                 <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                  {fileInfo.download_url}
+                  {storeFileInfo.download_url}
                 </Typography>
               </Grid>
             </Grid>
@@ -474,7 +475,7 @@ const FileTable: React.FC<FileTableProps> = ({
                   {file.duration ? formatDuration(file.duration) : 'N/A'}
                 </TableCell>
               )}
-              <TableCell>{formatDate(file.created_at)}</TableCell>
+                              <TableCell>{formatDate(file.created_time)}</TableCell>
               <TableCell align="right">
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Tooltip title="View file information">

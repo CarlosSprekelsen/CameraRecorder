@@ -347,99 +347,33 @@ export class ErrorRecoveryService {
 export const errorRecoveryService = new ErrorRecoveryService();
 
 /**
- * Utility functions for common error recovery patterns
+ * Usage Examples for stores:
+ * 
+ * Camera Store:
+ * ```typescript
+ * const result = await errorRecoveryService.executeWithRetry(
+ *   () => wsService.call('get_camera_list', {}),
+ *   'get_camera_list'
+ * );
+ * ```
+ * 
+ * File Store:
+ * ```typescript
+ * const result = await errorRecoveryService.executeWithRetry(
+ *   () => wsService.call('delete_recording', { filename }),
+ *   `delete_recording_${filename}`,
+ *   { maxAttempts: 2 }
+ * );
+ * ```
+ * 
+ * Connection Store:
+ * ```typescript
+ * const result = await errorRecoveryService.executeWithRetry(
+ *   () => wsService.connect(),
+ *   'websocket_connect',
+ *   { maxAttempts: 5, baseDelay: 2000 }
+ * );
+ * ```
  */
-export const errorRecoveryUtils = {
-  /**
-   * Retry camera operations
-   */
-  camera: {
-    getCameraList: () => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual camera store call
-        throw new Error('Not implemented');
-      },
-      'get_camera_list'
-    ),
-
-    getCameraStatus: (device: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual camera store call
-        throw new Error('Not implemented');
-      },
-      `get_camera_status_${device}`
-    ),
-
-    takeSnapshot: (device: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual camera store call
-        throw new Error('Not implemented');
-      },
-      `take_snapshot_${device}`,
-      { maxAttempts: 2 } // Fewer retries for snapshot operations
-    ),
-
-    startRecording: (device: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual camera store call
-        throw new Error('Not implemented');
-      },
-      `start_recording_${device}`
-    ),
-
-    stopRecording: (device: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual camera store call
-        throw new Error('Not implemented');
-      },
-      `stop_recording_${device}`
-    ),
-  },
-
-  /**
-   * Retry file operations
-   */
-  file: {
-    downloadFile: (filename: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual file download call
-        throw new Error('Not implemented');
-      },
-      `download_file_${filename}`,
-      { maxAttempts: 2 } // Fewer retries for downloads
-    ),
-
-    deleteFile: (filename: string) => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual file delete call
-        throw new Error('Not implemented');
-      },
-      `delete_file_${filename}`
-    ),
-  },
-
-  /**
-   * Retry connection operations
-   */
-  connection: {
-    connect: () => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual connection call
-        throw new Error('Not implemented');
-      },
-      'websocket_connect',
-      { maxAttempts: 5, baseDelay: 2000 } // More attempts for connection
-    ),
-
-    authenticate: () => errorRecoveryService.executeWithRetry(
-      async () => {
-        // This would be replaced with actual authentication call
-        throw new Error('Not implemented');
-      },
-      'authenticate',
-      { maxAttempts: 2 } // Fewer retries for auth
-    ),
-  },
-};
 
 export default errorRecoveryService;

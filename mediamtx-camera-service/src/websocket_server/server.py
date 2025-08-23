@@ -606,49 +606,8 @@ class WebSocketJsonRpcServer:
                 }
             )
 
-            # Allow authenticate method without prior enforcement and handle here to bind to correct client
-            if method_name == "authenticate":
-                if not self._security_middleware:
-                    return json.dumps({
-                        "jsonrpc": "2.0",
-                        "result": {"authenticated": False, "error": "Security not configured"},
-                        "id": request_id,
-                    })
-                token = None
-                auth_type = "auto"
-                if params and isinstance(params, dict):
-                    token = params.get("token") or params.get("auth_token")
-                    auth_type = params.get("auth_type", "auto")
-                if not token:
-                    return json.dumps({
-                        "jsonrpc": "2.0",
-                        "result": {"authenticated": False, "error": "Missing token"},
-                        "id": request_id,
-                    })
-                auth_result = await self._security_middleware.authenticate_connection(
-                    client.client_id, token, auth_type
-                )
-                if auth_result.authenticated:
-                    client.authenticated = True
-                    client.auth_result = auth_result
-                    client.user_id = auth_result.user_id
-                    client.role = auth_result.role
-                    client.auth_method = auth_result.auth_method
-                    return json.dumps({
-                        "jsonrpc": "2.0",
-                        "result": {"authenticated": True, "role": auth_result.role, "auth_method": auth_result.auth_method},
-                        "id": request_id,
-                    })
-                # Return proper JSON-RPC error for authentication failures
-                # According to requirements: expired tokens should return -32003 (authorization)
-                error_code = INSUFFICIENT_PERMISSIONS if "expired" in auth_result.error_message.lower() else AUTHENTICATION_REQUIRED
-                return json.dumps({
-                    "jsonrpc": "2.0",
-                    "error": {"code": error_code, "message": auth_result.error_message},
-                    "id": request_id,
-                })
 
-            # Check if method exists (after special authenticate handling)
+            # Check if method exists
             if method_name not in self._method_handlers:
                 return json.dumps(
                     {
@@ -661,6 +620,9 @@ class WebSocketJsonRpcServer:
             # Security enforcement and rate limiting (F3.2.5/F3.2.6/I1.7/N3.x)
             # CRITICAL FIX: Protect all sensitive methods from authentication bypass
             method_permissions = {
+                # Authentication method (no auth required)
+                "authenticate": None,  # No authentication required for authenticate method
+                
                 # Viewer access (read-only operations)
                 "get_camera_list": "viewer",
                 "get_camera_status": "viewer", 
@@ -718,59 +680,63 @@ class WebSocketJsonRpcServer:
                 
                 required_role = method_permissions[method_name]
                 
-                # Check if security middleware is available
-                if self._security_middleware is None:
-                    return json.dumps(
-                        {
-                            "jsonrpc": "2.0",
-                            "error": {
-                                "code": AUTHENTICATION_REQUIRED,
-                                "message": ERROR_MESSAGES[AUTHENTICATION_REQUIRED],
-                            },
-                            "id": request_id,
-                        }
-                    )
-                
-                # Require authentication for all protected methods
-                if not self._security_middleware.is_authenticated(client.client_id):
-                    auth_token = None
-                    if params and isinstance(params, dict):
-                        auth_token = params.get("auth_token") or params.get("token")
-                    if auth_token:
-                        auth_result = await self._security_middleware.authenticate_connection(
-                            client.client_id, auth_token
+                # Skip authentication for methods that don't require it (like authenticate)
+                if required_role is None:
+                    pass  # No authentication required
+                else:
+                    # Check if security middleware is available
+                    if self._security_middleware is None:
+                        return json.dumps(
+                            {
+                                "jsonrpc": "2.0",
+                                "error": {
+                                    "code": AUTHENTICATION_REQUIRED,
+                                    "message": ERROR_MESSAGES[AUTHENTICATION_REQUIRED],
+                                },
+                                "id": request_id,
+                            }
                         )
-                        if auth_result.authenticated:
-                            client.authenticated = True
-                            client.auth_result = auth_result
-                            client.user_id = auth_result.user_id
-                            client.role = auth_result.role
-                            client.auth_method = auth_result.auth_method
+                    
+                    # Require authentication for all protected methods
+                    if not self._security_middleware.is_authenticated(client.client_id):
+                        auth_token = None
+                        if params and isinstance(params, dict):
+                            auth_token = params.get("auth_token") or params.get("token")
+                        if auth_token:
+                            auth_result = await self._security_middleware.authenticate_connection(
+                                client.client_id, auth_token
+                            )
+                            if auth_result.authenticated:
+                                client.authenticated = True
+                                client.auth_result = auth_result
+                                client.user_id = auth_result.user_id
+                                client.role = auth_result.role
+                                client.auth_method = auth_result.auth_method
+                            else:
+                                return json.dumps(
+                                    {
+                                        "jsonrpc": "2.0",
+                                        "error": {
+                                            "code": AUTHENTICATION_REQUIRED,
+                                            "message": f"Authentication failed: {auth_result.error_message}",
+                                        },
+                                        "id": request_id,
+                                    }
+                                )
                         else:
                             return json.dumps(
                                 {
                                     "jsonrpc": "2.0",
                                     "error": {
                                         "code": AUTHENTICATION_REQUIRED,
-                                        "message": f"Authentication failed: {auth_result.error_message}",
+                                        "message": f"Authentication required for {method_name} - call authenticate or provide auth_token",
                                     },
                                     "id": request_id,
                                 }
                             )
-                    else:
-                        return json.dumps(
-                            {
-                                "jsonrpc": "2.0",
-                                "error": {
-                                    "code": AUTHENTICATION_REQUIRED,
-                                    "message": f"Authentication required for {method_name} - call authenticate or provide auth_token",
-                                },
-                                "id": request_id,
-                            }
-                        )
 
-                # Role-based authorization check
-                if not self._security_middleware.has_permission(client.client_id, required_role):
+                # Role-based authorization check (skip if no role required)
+                if required_role is not None and not self._security_middleware.has_permission(client.client_id, required_role):
                     return json.dumps(
                         {
                             "jsonrpc": "2.0",
@@ -1196,8 +1162,7 @@ class WebSocketJsonRpcServer:
             "stop_recording", self._method_stop_recording, version="1.0"
         )
         # Security and observability
-        # authenticate method is handled directly in main request handler
-        # self.register_method("authenticate", self._method_authenticate, version="1.0")
+        self.register_method("authenticate", self._method_authenticate, version="1.0")
         self.register_method("get_metrics", self._method_get_metrics, version="1.0")
         self.register_method("get_status", self._method_get_status, version="1.0")
         self.register_method("get_server_info", self._method_get_server_info, version="1.0")
@@ -1376,17 +1341,21 @@ class WebSocketJsonRpcServer:
     ) -> Dict[str, Any]:
         """
         Authenticate the current WebSocket connection using a JWT or API key.
-        Params: { token: string, auth_type: "jwt"|"api_key" (optional) }
+        Params: { auth_token: string, auth_type: "jwt"|"api_key" (optional) }
+        
+        Returns: Authentication result with user role, permissions, session information
         """
         if not self._security_middleware:
             return {"authenticated": False, "error": "Security not configured"}
+        
         token = None
         auth_type = "auto"
         if params and isinstance(params, dict):
-            token = params.get("token") or params.get("auth_token")
+            token = params.get("auth_token") or params.get("token")
             auth_type = params.get("auth_type", "auto")
+        
         if not token:
-            return {"authenticated": False, "error": "Missing token"}
+            return {"authenticated": False, "error": "Missing auth_token"}
 
         # Identify caller client by scanning connections for this task's websocket
         # Fallback to first client if exact match not determinable (keeps server stable)
@@ -1395,25 +1364,57 @@ class WebSocketJsonRpcServer:
             if self._clients:
                 # Take the most recently added as heuristic
                 client = next(reversed(self._clients.values()))
+        
         if client is None:
             return {"authenticated": False, "error": "Client context unavailable"}
 
         auth_result = await self._security_middleware.authenticate_connection(
             client.client_id, token, auth_type
         )
+        
         if auth_result.authenticated:
+            # Set up client authentication state
             client.authenticated = True
             client.auth_result = auth_result
             client.user_id = auth_result.user_id
             client.role = auth_result.role
             client.auth_method = auth_result.auth_method
+            
+            # Generate session ID and expiration
+            import uuid
+            import time
+            from datetime import datetime, timezone
+            
+            session_id = str(uuid.uuid4())
+            expires_at = auth_result.expires_at if hasattr(auth_result, 'expires_at') else None
+            
+            # Convert expires_at to ISO format if it exists
+            if expires_at:
+                if isinstance(expires_at, int):
+                    expires_at_iso = datetime.fromtimestamp(expires_at, tz=timezone.utc).isoformat()
+                else:
+                    expires_at_iso = expires_at
+            else:
+                # Default to 24 hours from now
+                expires_at_iso = datetime.fromtimestamp(time.time() + 86400, tz=timezone.utc).isoformat()
+            
+            # Determine permissions based on role
+            permissions = []
+            if auth_result.role == "viewer":
+                permissions = ["view"]
+            elif auth_result.role == "operator":
+                permissions = ["view", "control"]
+            elif auth_result.role == "admin":
+                permissions = ["view", "control", "admin"]
+            
             return {
                 "authenticated": True,
                 "role": auth_result.role,
-                "auth_method": auth_result.auth_method,
+                "permissions": permissions,
+                "expires_at": expires_at_iso,
+                "session_id": session_id
             }
-        # This method is handled specially in the main request handler
-        # The main handler will return proper JSON-RPC error responses
+        
         return {"authenticated": False, "error": auth_result.error_message}
 
     async def _method_get_metrics(

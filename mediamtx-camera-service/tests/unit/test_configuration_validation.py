@@ -10,6 +10,7 @@ Requirements Coverage:
 - REQ-TEST-010: Error handling and edge case test coverage
 
 Test Categories: Unit
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

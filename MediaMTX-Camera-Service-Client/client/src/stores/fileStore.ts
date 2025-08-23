@@ -307,11 +307,11 @@ export const useFileStore = create<FileStore>()(
           });
 
           const fileInfo: FileInfoResponse = {
-            filename: response.filename,
-            file_size: response.file_size,
-            duration: response.duration,
-            created_time: response.created_time,
-            download_url: response.download_url,
+            filename: (response as any).filename,
+            file_size: (response as any).file_size,
+            duration: (response as any).duration,
+            created_time: (response as any).created_time,
+            download_url: (response as any).download_url,
           };
 
           set({ selectedFile: fileInfo });
@@ -341,11 +341,11 @@ export const useFileStore = create<FileStore>()(
           });
 
           const fileInfo: FileInfoResponse = {
-            filename: response.filename,
-            file_size: response.file_size,
-            created_time: response.created_time,
-            download_url: response.download_url,
-            resolution: response.resolution,
+            filename: (response as any).filename,
+            file_size: (response as any).file_size,
+            created_time: (response as any).created_time,
+            download_url: (response as any).download_url,
+            resolution: (response as any).resolution,
           };
 
           set({ selectedFile: fileInfo });
@@ -380,9 +380,9 @@ export const useFileStore = create<FileStore>()(
           });
 
           const deletionResponse: FileDeletionResponse = {
-            filename: response.filename,
-            deleted: response.deleted,
-            message: response.message,
+            filename: (response as any).filename,
+            deleted: (response as any).deleted,
+            message: (response as any).message,
           };
 
           // Refresh recordings list after deletion
@@ -424,9 +424,9 @@ export const useFileStore = create<FileStore>()(
           });
 
           const deletionResponse: FileDeletionResponse = {
-            filename: response.filename,
-            deleted: response.deleted,
-            message: response.message,
+            filename: (response as any).filename,
+            deleted: (response as any).deleted,
+            message: (response as any).message,
           };
 
           // Refresh snapshots list after deletion

@@ -8,6 +8,8 @@ Requirements Coverage:
 
 Story Coverage: S8.3 - SDK Development
 IV&V Control Point: SDK validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

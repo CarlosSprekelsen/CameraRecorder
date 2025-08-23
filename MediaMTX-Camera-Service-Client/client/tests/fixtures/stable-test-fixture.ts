@@ -1,6 +1,22 @@
 /**
  * Stable Test Fixtures for MediaMTX Camera Service Integration Tests
- * Provides consistent, authenticated testing against real MediaMTX server
+ * 
+ * Ground Truth References:
+ * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
+ * - Client Architecture: ../docs/architecture/client-architecture.md
+ * - Client Requirements: ../docs/requirements/client-requirements.md
+ * 
+ * API Compliance Rules:
+ * - All requests must match documented format from API documentation
+ * - All responses must be validated against API documentation
+ * - No adaptation to implementation flaws
+ * - Ground truth validation only
+ * 
+ * Single Source of Truth for:
+ * - Authentication flow and token management
+ * - JSON-RPC request/response validation
+ * - API compliance checking
+ * - Error response validation
  */
 
 import { TEST_CONFIG, getWebSocketUrl, getHealthUrl, validateTestEnvironment } from '../config/test-config';
@@ -18,12 +34,22 @@ export interface TestResults {
 }
 
 /**
- * Base test fixture with common functionality
+ * API Compliance validation interface
  */
-export class StableTestFixture {
+interface ApiComplianceValidator {
+  validateRequestFormat(request: any, method: string): void;
+  validateResponseFormat(response: any, method: string): void;
+  validateErrorResponse(error: any, method: string): void;
+}
+
+/**
+ * Base test fixture with common functionality and API compliance validation
+ */
+export class StableTestFixture implements ApiComplianceValidator {
   protected results: TestResults;
   protected ws: WebSocket | null = null;
   protected timeout: number;
+  protected authToken: string | null = null;
 
   constructor() {
     this.results = {
@@ -37,13 +63,33 @@ export class StableTestFixture {
   }
 
   /**
-   * Initialize test environment
+   * Initialize test environment and generate authentication token
    */
   async initialize(): Promise<boolean> {
     if (!validateTestEnvironment()) {
       throw new Error('Test environment validation failed. Run ./set-test-env.sh first.');
     }
+    
+    // Generate authentication token once for the fixture
+    await this.generateAuthToken();
     return true;
+  }
+
+  /**
+   * Generate authentication token using environment configuration
+   */
+  private async generateAuthToken(): Promise<void> {
+    const jwt = require('jsonwebtoken');
+    const secret = process.env.CAMERA_SERVICE_JWT_SECRET;
+    if (!secret) {
+      throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable required');
+    }
+    
+    this.authToken = jwt.sign(
+      { user_id: 'test_user', role: 'operator' },
+      secret,
+      { expiresIn: '1h' }
+    );
   }
 
   /**
@@ -106,49 +152,68 @@ export class StableTestFixture {
   }
 
   /**
-   * Authenticate WebSocket connection
+   * Authenticate WebSocket connection using API-compliant format
+   * 
+   * Ground Truth: API documentation requires auth_token parameter
    */
   private async authenticateWebSocket(): Promise<void> {
     if (!this.ws) {
       throw new Error('WebSocket not connected');
     }
 
-    const jwt = require('jsonwebtoken');
-    const token = jwt.sign(
-      { 
-        user_id: 'test-user', 
-        role: 'operator',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
-      },
-      TEST_CONFIG.auth.jwtSecret,
-      { algorithm: 'HS256' }
-    );
+    if (!this.authToken) {
+      throw new Error('Authentication token not generated');
+    }
 
+    // Use API-compliant authentication format per documentation
     const id = Math.floor(Math.random() * 1000000);
-    this.sendRequest(this.ws, 'authenticate', id, { token });
+    const authRequest = {
+      jsonrpc: '2.0',
+      method: 'authenticate',
+      params: {
+        auth_token: this.authToken  // ✅ CORRECT: matches API documentation
+      },
+      id: id
+    };
+
+    // Validate request format against API documentation
+    this.validateRequestFormat(authRequest, 'authenticate');
+    
+    this.ws.send(JSON.stringify(authRequest));
     
     try {
-      await this.waitForResponse(this.ws, id);
+      const response = await this.waitForResponse(this.ws, id);
+      
+      // Validate response format against API documentation
+      this.validateResponseFormat(response, 'authenticate');
+      
+      // Verify authentication was successful
+      if (!response.authenticated) {
+        throw new Error('Authentication failed: not authenticated');
+      }
     } catch (error) {
       throw new Error(`Authentication failed: ${error}`);
     }
   }
 
   /**
-   * Send JSON-RPC request
+   * Send JSON-RPC request with API compliance validation
    */
   sendRequest(ws: WebSocket, method: string, id: number, params: any = undefined): void {
-    const req: any = { jsonrpc: '2.0', method, id };
-    if (params) req.params = params;
+    const request: any = { jsonrpc: '2.0', method, id };
+    if (params) request.params = params;
+    
+    // Validate request format against API documentation
+    this.validateRequestFormat(request, method);
+    
     console.log(`📤 Sending ${method} (#${id})`, params ? JSON.stringify(params) : '');
-    ws.send(JSON.stringify(req));
+    ws.send(JSON.stringify(request));
   }
 
   /**
-   * Wait for JSON-RPC response
+   * Wait for JSON-RPC response with API compliance validation
    */
-  waitForResponse(ws: WebSocket, id: number): Promise<any> {
+  async waitForResponse(ws: WebSocket, id: number): Promise<any> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error(`Response timeout for request #${id}`));
@@ -161,9 +226,14 @@ export class StableTestFixture {
           if (data.id === id) {
             clearTimeout(timeout);
             ws.onmessage = originalOnMessage;
+            
             if (data.error) {
+              // Validate error response format against API documentation
+              this.validateErrorResponse(data.error, 'unknown');
               reject(new Error(data.error.message));
             } else {
+              // Validate response format against API documentation
+              this.validateResponseFormat(data.result, 'unknown');
               resolve(data.result);
             }
           }
@@ -172,6 +242,253 @@ export class StableTestFixture {
         }
       };
     });
+  }
+
+  /**
+   * Validate request format against API documentation
+   * 
+   * Ground Truth: API documentation format requirements
+   */
+  validateRequestFormat(request: any, method: string): void {
+    // Basic JSON-RPC 2.0 validation
+    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+      throw new Error(`Invalid JSON-RPC version for ${method}`);
+    }
+    
+    if (!request.method) {
+      throw new Error(`Missing method for ${method}`);
+    }
+    
+    if (request.id === undefined) {
+      throw new Error(`Missing id for ${method}`);
+    }
+
+    // Method-specific validation based on API documentation
+    switch (method) {
+      case 'authenticate':
+        if (!request.params || !request.params.auth_token) {
+          throw new Error('authenticate method requires auth_token parameter per API documentation');
+        }
+        break;
+      case 'get_camera_status':
+        if (!request.params || !request.params.device) {
+          throw new Error('get_camera_status method requires device parameter per API documentation');
+        }
+        break;
+      case 'take_snapshot':
+        if (!request.params || !request.params.device) {
+          throw new Error('take_snapshot method requires device parameter per API documentation');
+        }
+        break;
+      case 'start_recording':
+        if (!request.params || !request.params.device) {
+          throw new Error('start_recording method requires device parameter per API documentation');
+        }
+        break;
+      case 'stop_recording':
+        if (!request.params || !request.params.device) {
+          throw new Error('stop_recording method requires device parameter per API documentation');
+        }
+        break;
+    }
+  }
+
+  /**
+   * Validate response format against API documentation
+   * 
+   * Ground Truth: API documentation response format requirements
+   */
+  validateResponseFormat(result: any, method: string): void {
+    if (!result) {
+      throw new Error(`Empty response for ${method}`);
+    }
+
+    // Method-specific validation based on API documentation
+    switch (method) {
+      case 'authenticate':
+        this.validateAuthenticateResponse(result);
+        break;
+      case 'get_camera_list':
+        this.validateCameraListResponse(result);
+        break;
+      case 'get_camera_status':
+        this.validateCameraStatusResponse(result);
+        break;
+      case 'take_snapshot':
+        this.validateSnapshotResponse(result);
+        break;
+      case 'start_recording':
+        this.validateRecordingResponse(result);
+        break;
+      case 'stop_recording':
+        this.validateStopRecordingResponse(result);
+        break;
+      case 'list_recordings':
+        this.validateListRecordingsResponse(result);
+        break;
+      case 'list_snapshots':
+        this.validateListSnapshotsResponse(result);
+        break;
+    }
+  }
+
+  /**
+   * Validate error response format against API documentation
+   * 
+   * Ground Truth: API documentation error format requirements
+   */
+  validateErrorResponse(error: any, method: string): void {
+    if (!error.code) {
+      throw new Error(`Error response missing code for ${method}`);
+    }
+    
+    if (!error.message) {
+      throw new Error(`Error response missing message for ${method}`);
+    }
+    
+    // Validate specific error codes per API documentation
+    if (error.code === -32001 && !error.message.includes('Authentication failed')) {
+      throw new Error(`Invalid authentication error message for ${method}`);
+    }
+  }
+
+  /**
+   * Validate authenticate response format per API documentation
+   */
+  private validateAuthenticateResponse(result: any): void {
+    const requiredFields = ['authenticated', 'role', 'permissions', 'expires_at', 'session_id'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in authenticate response per API documentation`);
+      }
+    });
+    
+    if (typeof result.authenticated !== 'boolean') {
+      throw new Error('authenticated field must be boolean per API documentation');
+    }
+    
+    if (typeof result.role !== 'string') {
+      throw new Error('role field must be string per API documentation');
+    }
+    
+    if (!Array.isArray(result.permissions)) {
+      throw new Error('permissions field must be array per API documentation');
+    }
+  }
+
+  /**
+   * Validate get_camera_list response format per API documentation
+   */
+  private validateCameraListResponse(result: any): void {
+    const requiredFields = ['cameras', 'total', 'connected'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in get_camera_list response per API documentation`);
+      }
+    });
+    
+    if (!Array.isArray(result.cameras)) {
+      throw new Error('cameras field must be array per API documentation');
+    }
+    
+    if (typeof result.total !== 'number') {
+      throw new Error('total field must be number per API documentation');
+    }
+    
+    if (typeof result.connected !== 'number') {
+      throw new Error('connected field must be number per API documentation');
+    }
+  }
+
+  /**
+   * Validate get_camera_status response format per API documentation
+   */
+  private validateCameraStatusResponse(result: any): void {
+    const requiredFields = ['device', 'status', 'name', 'resolution', 'fps', 'streams'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in get_camera_status response per API documentation`);
+      }
+    });
+    
+    if (!result.streams || typeof result.streams !== 'object') {
+      throw new Error('streams field must be object per API documentation');
+    }
+    
+    const streamFields = ['rtsp', 'webrtc', 'hls'];
+    streamFields.forEach(field => {
+      if (!(field in result.streams)) {
+        throw new Error(`Missing required stream field '${field}' per API documentation`);
+      }
+    });
+  }
+
+  /**
+   * Validate take_snapshot response format per API documentation
+   */
+  private validateSnapshotResponse(result: any): void {
+    const requiredFields = ['status', 'filename', 'file_size', 'format', 'quality'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in take_snapshot response per API documentation`);
+      }
+    });
+  }
+
+  /**
+   * Validate start_recording response format per API documentation
+   */
+  private validateRecordingResponse(result: any): void {
+    const requiredFields = ['session_id', 'status', 'start_time'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in start_recording response per API documentation`);
+      }
+    });
+  }
+
+  /**
+   * Validate stop_recording response format per API documentation
+   */
+  private validateStopRecordingResponse(result: any): void {
+    const requiredFields = ['session_id', 'status', 'start_time', 'end_time', 'duration', 'file_size'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in stop_recording response per API documentation`);
+      }
+    });
+  }
+
+  /**
+   * Validate list_recordings response format per API documentation
+   */
+  private validateListRecordingsResponse(result: any): void {
+    const requiredFields = ['files', 'total', 'limit', 'offset'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in list_recordings response per API documentation`);
+      }
+    });
+    
+    if (!Array.isArray(result.files)) {
+      throw new Error('files field must be array per API documentation');
+    }
+  }
+
+  /**
+   * Validate list_snapshots response format per API documentation
+   */
+  private validateListSnapshotsResponse(result: any): void {
+    const requiredFields = ['files', 'total', 'limit', 'offset'];
+    requiredFields.forEach(field => {
+      if (!(field in result)) {
+        throw new Error(`Missing required field '${field}' in list_snapshots response per API documentation`);
+      }
+    });
+    
+    if (!Array.isArray(result.files)) {
+      throw new Error('files field must be array per API documentation');
+    }
   }
 
   /**

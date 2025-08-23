@@ -88,6 +88,8 @@ export class AuthService {
     return this.authState.token;
   }
 
+
+
   /**
    * Include authentication token in JSON-RPC parameters
    * @param params Original JSON-RPC parameters

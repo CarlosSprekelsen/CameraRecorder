@@ -18,6 +18,7 @@ Requirements Coverage:
 - REQ-API-011: API methods respond within specified time limits: Status methods <50ms, Control methods <100ms
 
 Test Categories: Performance
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

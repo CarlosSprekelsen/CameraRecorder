@@ -19,6 +19,7 @@ Requirements Coverage:
 - REQ-PERF-028: Horizontal scaling: Support for multiple service instances
 
 Test Categories: Performance
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import sys

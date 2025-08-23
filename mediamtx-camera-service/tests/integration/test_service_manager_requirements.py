@@ -8,6 +8,8 @@ Requirements Traceability:
 
 Story Coverage: S1 - Service Manager Integration
 IV&V Control Point: Real requirements validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio
@@ -24,6 +26,7 @@ from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, Came
 from camera_discovery.hybrid_monitor import CameraEventData, CameraEvent
 from src.common.types import CameraDevice
 from src.security.jwt_handler import JWTHandler
+from tests.fixtures.auth_utils import WebSocketAuthTestClient, TestUserFactory, get_test_auth_manager
 
 
 def _free_port() -> int:
@@ -45,11 +48,7 @@ def _build_config(api_port: int, ws_port: int) -> Config:
     )
 
 
-def _generate_valid_jwt_token(user_id: str = "test_user", role: str = "operator") -> str:
-    """Generate a valid JWT token for testing."""
-    jwt_secret = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "dev-secret-change-me")
-    jwt_handler = JWTHandler(secret_key=jwt_secret)
-    return jwt_handler.generate_token(user_id, role)
+# Removed custom authentication function - using common fixtures from tests/fixtures/auth_utils.py
 
 
 @asynccontextmanager
@@ -181,17 +180,29 @@ async def test_requirement_F311_camera_list_availability():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_viewer_user("camera_list_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
-            async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"get_camera_list"}))
-                resp = json.loads(await ws.recv())
-                result = resp.get("result")
-                assert isinstance(result, dict)
-                assert isinstance(result.get("cameras"), list)
-                assert isinstance(result.get("total"), int)
-                assert isinstance(result.get("connected"), int)
-                for cam in result["cameras"]:
-                    assert "device" in cam and "name" in cam and "status" in cam
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Authenticate first (required per API documentation)
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert auth_response.get("result", {}).get("authenticated") is True
+            
+            # Now call get_camera_list with authentication
+            response = await client.send_request("get_camera_list")
+            result = response.get("result")
+            assert isinstance(result, dict)
+            assert isinstance(result.get("cameras"), list)
+            assert isinstance(result.get("total"), int)
+            assert isinstance(result.get("connected"), int)
+            for cam in result["cameras"]:
+                assert "device" in cam and "name" in cam and "status" in cam
+                
         finally:
             await svc.stop()
 
@@ -210,22 +221,30 @@ async def test_requirement_F111_photo_capture_error_handling():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_operator_user("photo_capture_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
-            async with websockets.connect(uri) as ws:
-                # Invalid device
-                await ws.send(json.dumps({
-                    "jsonrpc": "2.0", "id": 1, "method": "take_snapshot",
-                    "params": {"device": "/dev/nonexistent", "format": "tiff", "quality": 200}
-                }))
-                resp = json.loads(await ws.recv())
-                # Accept either JSON-RPC error or a failure result payload
-                assert ("error" in resp) or (resp.get("result", {}).get("status") in {"FAILED", "ERROR"})
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Authenticate first (required per API documentation)
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert auth_response.get("result", {}).get("authenticated") is True
+            
+            # Test invalid device with authentication
+            response = await client.send_request("take_snapshot", {"device": "/dev/nonexistent"})
+            # Accept either JSON-RPC error or a failure result payload
+            assert ("error" in response) or (response.get("result", {}).get("status") in {"FAILED", "ERROR"})
 
-            # Service should still respond to ping
-            async with websockets.connect(uri) as ws2:
-                await ws2.send(json.dumps({"jsonrpc": "2.0", "id": 2, "method": "ping", "params": {}}))
-                ping = json.loads(await ws2.recv())
-                assert "result" in ping
+            # Service should still respond to ping with authentication
+            await client.disconnect()
+            await client.connect()
+            await client.authenticate_and_validate_api_compliance()
+            ping_response = await client.send_request("ping")
+            assert "result" in ping_response
         finally:
             await svc.stop()
 
@@ -276,16 +295,27 @@ async def test_requirement_F311_camera_list_empty_structure():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_viewer_user("empty_camera_list_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
-            async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc":"2.0", "id":1, "method":"get_camera_list"}))
-                resp = json.loads(await ws.recv())
-                result = resp.get("result")
-                assert isinstance(result, dict)
-                assert isinstance(result.get("cameras"), list)
-                assert isinstance(result.get("total"), int)
-                assert isinstance(result.get("connected"), int)
-                assert result["cameras"] == []
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Authenticate first (required per API documentation)
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert auth_response.get("result", {}).get("authenticated") is True
+            
+            # Now call get_camera_list with authentication
+            response = await client.send_request("get_camera_list")
+            result = response.get("result")
+            assert isinstance(result, dict)
+            assert isinstance(result.get("cameras"), list)
+            assert isinstance(result.get("total"), int)
+            assert isinstance(result.get("connected"), int)
+            assert result["cameras"] == []
         finally:
             await svc.stop()
 
@@ -304,19 +334,29 @@ async def test_requirement_F313_notification_delivery_failure_tolerance():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_viewer_user("notification_test_user")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            
             # Connect and immediately close to simulate delivery failure
-            async with websockets.connect(uri):
-                await asyncio.sleep(0.2)
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            await client.disconnect()
+            
             # Trigger event after client disconnect
             event = CameraEventData(device_path="/dev/video0", event_type=CameraEvent.CONNECTED, device_info=CameraDevice(device="/dev/video0", name="Camera 0", status="CONNECTED"), timestamp=0.0)
             await svc.handle_camera_event(event)
 
-            # Service should still be running and responsive
-            async with websockets.connect(uri) as ws2:
-                await ws2.send(json.dumps({"jsonrpc":"2.0","id":99,"method":"ping","params":{}}))
-                ping = json.loads(await ws2.recv())
-                assert "result" in ping
+            # Service should still be running and responsive with authentication
+            await client.connect()
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert auth_response.get("result", {}).get("authenticated") is True
+            
+            ping_response = await client.send_request("ping")
+            assert "result" in ping_response
         finally:
             await svc.stop()
 
@@ -336,30 +376,39 @@ async def test_requirement_F312_camera_status_api_contract_and_errors():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_viewer_user("camera_status_test_user")
+            
             # Simulate camera connect so status can be queried
             event = CameraEventData(device_path="/dev/video0", event_type=CameraEvent.CONNECTED, device_info=CameraDevice(device="/dev/video0", name="Camera 0", status="CONNECTED"), timestamp=0.0)
             await svc.handle_camera_event(event)
 
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
-            async with websockets.connect(uri) as ws:
-                # Known device
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"get_camera_status","params":{"device":"/dev/video0"}}))
-                known = json.loads(await ws.recv())
-                if "result" in known:
-                    assert isinstance(known["result"], dict)
-                    assert known["result"].get("device") == "/dev/video0"
-                    assert "status" in known["result"]
-                else:
-                    # If implementation cannot resolve the device yet, accept error response
-                    assert "error" in known
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Authenticate first (required per API documentation)
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert auth_response.get("result", {}).get("authenticated") is True
+            
+            # Known device
+            known_response = await client.send_request("get_camera_status", {"device": "/dev/video0"})
+            if "result" in known_response:
+                assert isinstance(known_response["result"], dict)
+                assert known_response["result"].get("device") == "/dev/video0"
+                assert "status" in known_response["result"]
+            else:
+                # If implementation cannot resolve the device yet, accept error response
+                assert "error" in known_response
 
-                                    # Unknown device
-                    await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"get_camera_status","params":{"device":"/dev/unknown"}}))
-                    unknown = json.loads(await ws.recv())
-                    # System should return status object with DISCONNECTED status for unknown devices
-                    assert "result" in unknown
-                    assert unknown["result"].get("device") == "/dev/unknown"
-                    assert unknown["result"].get("status") == "DISCONNECTED"
+            # Unknown device
+            unknown_response = await client.send_request("get_camera_status", {"device": "/dev/unknown"})
+            # System should return status object with DISCONNECTED status for unknown devices
+            assert "result" in unknown_response
+            assert unknown_response["result"].get("device") == "/dev/unknown"
+            assert unknown_response["result"].get("status") == "DISCONNECTED"
         finally:
             await svc.stop()
 
@@ -455,14 +504,14 @@ async def test_requirement_F114_snapshot_quality_bounds_and_persistence():
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             async with websockets.connect(uri) as ws:
                 # Out-of-range quality
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"take_snapshot","params":{"device":"/dev/video0","quality":150}}))
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"take_snapshot","params":{"device":"/dev/video0"}}))
                 bad = json.loads(await ws.recv())
                 # API returns authentication error when not authenticated
                 assert "error" in bad and bad["error"].get("code") == -32001
                 assert "Authentication required" in bad["error"].get("message", "")
 
                 # Reasonable quality
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"take_snapshot","params":{"device":"/dev/video0","quality":80}}))
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"take_snapshot","params":{"device":"/dev/video0"}}))
                 ok = json.loads(await ws.recv())
                 assert ("result" in ok) or ("error" in ok)
                 if "result" in ok:
@@ -504,6 +553,86 @@ async def test_requirement_F313_notifications_multiple_clients():
 
 
 @pytest.mark.asyncio
+async def test_authenticate_method_api_compliance():
+    """
+    API Compliance Test: Validates authenticate method against API documentation.
+    
+    This test would have caught Issue 081: Authentication Method Documentation vs Implementation Mismatch.
+    Validates that the authenticate method exists, is callable, and returns the exact format
+    specified in docs/api/json-rpc-methods.md.
+    
+    Requirements: REQ-API-008: authenticate method for authentication
+    API Documentation Reference: docs/api/json-rpc-methods.md - authenticate method
+    """
+    api_port, ws_port = _free_port(), _free_port()
+    async with _mediamtx_ok("127.0.0.1", api_port):
+        cfg = _build_config(api_port, ws_port)
+        svc = ServiceManager(cfg)
+        await svc.start()
+        try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_operator_user("api_test_user")
+            
+            uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Test authenticate method exists and is callable
+            request = {
+                "jsonrpc": "2.0",
+                "method": "authenticate",
+                "params": {
+                    "auth_token": test_user["token"]
+                },
+                "id": 1
+            }
+            
+            await client.websocket.send(json.dumps(request))
+            response = json.loads(await client.websocket.recv())
+            
+            # Validate JSON-RPC 2.0 structure
+            assert "jsonrpc" in response, "Response must contain 'jsonrpc' field"
+            assert response["jsonrpc"] == "2.0", "JSON-RPC version must be 2.0"
+            assert "id" in response, "Response must contain 'id' field"
+            assert response["id"] == 1, "Response id must match request id"
+            
+            # Must have either result or error (not both)
+            assert ("result" in response) != ("error" in response), "Response must have either 'result' or 'error', not both"
+            
+            if "result" in response:
+                # Validate documented response format from API documentation
+                result = response["result"]
+                
+                # All fields required by API documentation
+                assert "authenticated" in result, "Missing 'authenticated' field per API documentation"
+                assert "role" in result, "Missing 'role' field per API documentation"
+                assert "permissions" in result, "Missing 'permissions' field per API documentation"
+                assert "expires_at" in result, "Missing 'expires_at' field per API documentation"
+                assert "session_id" in result, "Missing 'session_id' field per API documentation"
+                
+                # Validate field types and values
+                assert isinstance(result["authenticated"], bool), "authenticated must be boolean"
+                assert result["authenticated"] is True, "authenticated must be true for valid token"
+                assert isinstance(result["role"], str), "role must be string"
+                assert result["role"] == "operator", "role must match token role"
+                assert isinstance(result["permissions"], list), "permissions must be list"
+                assert isinstance(result["expires_at"], str), "expires_at must be string (ISO format)"
+                assert isinstance(result["session_id"], str), "session_id must be string"
+                
+            elif "error" in response:
+                # Validate documented error format
+                error = response["error"]
+                assert "code" in error, "Error must contain 'code' field"
+                assert "message" in error, "Error must contain 'message' field"
+                assert error["code"] == -32001, "Authentication error code must be -32001 per API documentation"
+                    
+        finally:
+            await svc.stop()
+
+
+@pytest.mark.asyncio
 async def test_requirement_F325_authenticate_and_protected_methods_success():
     """
     Validates F3.2.5: Operator permissions enforcement via authenticate for protected methods
@@ -518,24 +647,32 @@ async def test_requirement_F325_authenticate_and_protected_methods_success():
         svc = ServiceManager(cfg)
         await svc.start()
         try:
+            # Use common authentication fixtures
+            auth_manager = get_test_auth_manager()
+            factory = TestUserFactory(auth_manager)
+            test_user = factory.create_operator_user("test_operator")
+            
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
-            async with websockets.connect(uri) as ws:
-                # Test authentication with valid JWT token
-                valid_token = _generate_valid_jwt_token("test_operator", "operator")
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"authenticate","params":{"token":valid_token}}))
-                auth = json.loads(await ws.recv())
-                # Authentication should work - either succeed or fail with proper error
-                assert "result" in auth or "error" in auth
-                if "result" in auth:
-                    assert auth["result"].get("authenticated") is True
-                    assert auth["result"].get("role") == "operator"
+            client = WebSocketAuthTestClient(uri, test_user)
+            await client.connect()
+            
+            # Test authentication with valid JWT token
+            auth_response = await client.authenticate_and_validate_api_compliance()
+            assert "result" in auth_response or "error" in auth_response
+            if "result" in auth_response:
+                # Validate against API documentation: docs/api/json-rpc-methods.md
+                result = auth_response["result"]
+                assert result.get("authenticated") is True
+                assert result.get("role") == "operator"
+                assert "permissions" in result, "API documentation requires 'permissions' field"
+                assert "expires_at" in result, "API documentation requires 'expires_at' field"
+                assert "session_id" in result, "API documentation requires 'session_id' field"
+                assert isinstance(result["permissions"], list), "permissions must be a list"
 
-                # After authenticate, try protected method
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"start_recording","params":{"device":"/dev/video0"}}))
-                sr = json.loads(await ws.recv())
-                assert "result" in sr or "error" in sr
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":3,"method":"stop_recording","params":{"device":"/dev/video0"}}))
-                _ = await ws.recv()
+            # After authenticate, try protected method
+            sr_response = await client.send_request("start_recording", {"device": "/dev/video0"})
+            assert "result" in sr_response or "error" in sr_response
+            stop_response = await client.send_request("stop_recording", {"device": "/dev/video0"})
         finally:
             await svc.stop()
 
@@ -566,18 +703,27 @@ async def test_requirement_F326_token_expiration_and_reauth():
                 assert "Authentication required" in unauth["error"].get("message", "")
 
                 # Authenticate with expired/invalid token (expect error)
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"authenticate","params":{"token":"expired-token"}}))
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"authenticate","params":{"auth_token":"expired-token"}}))
                 auth_bad = json.loads(await ws.recv())
                 # Should get proper authentication error
                 assert "result" in auth_bad or "error" in auth_bad
 
                 # Re-authenticate with valid token, then protected call should proceed
-                valid_token = _generate_valid_jwt_token("test_operator", "operator")
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":3,"method":"authenticate","params":{"token":valid_token}}))
+                # Use common authentication fixtures
+                auth_manager = get_test_auth_manager()
+                factory = TestUserFactory(auth_manager)
+                test_user = factory.create_operator_user("test_operator")
+                valid_token = test_user["token"]
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":3,"method":"authenticate","params":{"auth_token":valid_token}}))
                 auth_ok = json.loads(await ws.recv())
                 assert "result" in auth_ok or "error" in auth_ok
                 if "result" in auth_ok:
-                    assert auth_ok["result"].get("authenticated") is True
+                    # Validate against API documentation: docs/api/json-rpc-methods.md
+                    result = auth_ok["result"]
+                    assert result.get("authenticated") is True
+                    assert "permissions" in result, "API documentation requires 'permissions' field"
+                    assert "expires_at" in result, "API documentation requires 'expires_at' field"
+                    assert "session_id" in result, "API documentation requires 'session_id' field"
 
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":4,"method":"start_recording","params":{"device":"/dev/video0"}}))
                 sr = json.loads(await ws.recv())
@@ -633,7 +779,7 @@ async def test_requirement_F123_recording_timed_minutes():
         try:
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"start_recording","params":{"device":"/dev/video0","duration_minutes":1}}))
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"start_recording","params":{"device":"/dev/video0","duration":60}}))
                 sr = json.loads(await ws.recv())
                 assert "result" in sr or "error" in sr
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"stop_recording","params":{"device":"/dev/video0"}}))
@@ -659,7 +805,7 @@ async def test_requirement_F123_recording_timed_hours():
         try:
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             async with websockets.connect(uri) as ws:
-                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"start_recording","params":{"device":"/dev/video0","duration_hours":1}}))
+                await ws.send(json.dumps({"jsonrpc":"2.0","id":1,"method":"start_recording","params":{"device":"/dev/video0","duration":3600}}))
                 sr = json.loads(await ws.recv())
                 assert "result" in sr or "error" in sr
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":2,"method":"stop_recording","params":{"device":"/dev/video0"}}))

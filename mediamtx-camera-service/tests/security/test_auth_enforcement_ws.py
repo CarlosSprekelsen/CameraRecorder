@@ -17,6 +17,8 @@ Requirements:
 - REQ-ERROR-006: System shall handle logging configuration failures gracefully
 - REQ-ERROR-007: System shall handle WebSocket connection failures gracefully
 - REQ-ERROR-008: System shall handle MediaMTX service failures gracefully
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import json

@@ -23,6 +23,7 @@ Requirements Coverage:
 - REQ-API-030: cleanup_old_files method for automatic file cleanup
 
 Test Categories: Integration, Security, Real System
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

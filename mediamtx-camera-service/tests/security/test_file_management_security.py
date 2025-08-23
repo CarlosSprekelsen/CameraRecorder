@@ -23,6 +23,7 @@ Requirements Coverage:
 - REQ-SEC-023: Parameter Validation: Validation of parameter types and ranges
 
 Test Categories: Security, Authentication, Authorization, Input Validation
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

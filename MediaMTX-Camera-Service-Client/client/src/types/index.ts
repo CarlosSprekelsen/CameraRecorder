@@ -70,6 +70,9 @@ export type {
   WebSocketMessage,
   ErrorCode,
   RPCMethod,
+  CameraStatusNotification,
+  RecordingStatusNotification,
+  NotificationMessage,
 } from './rpc';
 
 export { RPC_METHODS, ERROR_CODES, NOTIFICATION_METHODS } from './rpc';

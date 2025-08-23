@@ -1,173 +1,115 @@
 /**
- * REQ-AUTH01-001: [Primary requirement being tested]
- * REQ-AUTH01-002: [Secondary requirements covered]
+ * REQ-AUTH01-001: Authentication flow validation against API documentation
+ * REQ-AUTH01-002: Authentication parameter format compliance
  * Coverage: INTEGRATION
  * Quality: HIGH
+ * 
+ * Ground Truth References:
+ * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
+ * - Client Architecture: ../docs/architecture/client-architecture.md
+ * - Client Requirements: ../docs/requirements/client-requirements.md
+ * 
+ * Test Categories: Integration/Authentication
+ * API Documentation Reference: docs/api/json-rpc-methods.md
+ * 
+ * Uses StableTestFixture as single source of truth for authentication
  */
+
+const { StableTestFixture } = require('../fixtures/stable-test-fixture');
+
 /**
  * Authentication Setup Integration Test
- * Verifies that the JWT authentication works with the correct environment variable name
+ * Uses StableTestFixture for API-compliant authentication validation
  */
 
-const WebSocket = require('ws');
-const jwt = require('jsonwebtoken');
-
-const CONFIG = {
-  serverUrl: process.env.TEST_SERVER_URL || 'ws://localhost:8002/ws',
-  device: process.env.TEST_CAMERA_DEVICE || '/dev/video0',
-  timeout: parseInt(process.env.TEST_TIMEOUT) || 10000,
-  jwtSecret: process.env.CAMERA_SERVICE_JWT_SECRET
-};
-
-function generateValidToken() {
-  if (!CONFIG.jwtSecret) {
-    throw new Error('CAMERA_SERVICE_JWT_SECRET environment variable not set. Run: ./set-test-env.sh');
-  }
-  
-  const payload = {
-    user_id: 'test-user',
-    role: 'operator',
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-  };
-  
-  return jwt.sign(payload, CONFIG.jwtSecret, { algorithm: 'HS256' });
-}
-
-function sendRequest(ws, method, params = {}) {
-  return new Promise((resolve, reject) => {
-    const id = Math.floor(Math.random() * 10000);
-    const request = {
-      jsonrpc: '2.0',
-      method: method,
-      params: params,
-      id: id
-    };
-    
-    console.log(`📤 ${method}:`, JSON.stringify(params));
-    
-    const timeout = setTimeout(() => {
-      reject(new Error(`Request timeout for ${method}`));
-    }, CONFIG.timeout);
-    
-    const messageHandler = (data) => {
-      try {
-        const response = JSON.parse(data.toString());
-        if (response.id === id) {
-          clearTimeout(timeout);
-          ws.removeListener('message', messageHandler);
-          
-          if (response.error) {
-            console.log(`❌ ${method} error:`, response.error);
-            reject(new Error(response.error.message || 'RPC error'));
-          } else {
-            console.log(`✅ ${method} success:`, response.result);
-            resolve(response.result);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Failed to parse response:', error);
-        reject(error);
-      }
-    };
-    
-    ws.on('message', messageHandler);
-    ws.send(JSON.stringify(request));
-  });
-}
-
-async function testInstallationFix() {
-  console.log('🔧 Testing Installation Fix');
-  console.log('==========================');
-  console.log('Environment Variable: CAMERA_SERVICE_JWT_SECRET');
-  console.log('Expected Behavior: Authentication should work correctly');
-  console.log('');
-  
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(CONFIG.serverUrl);
-    
-    ws.on('open', async () => {
-      console.log('✅ WebSocket connected');
-      
-      try {
-        // Generate a valid token
-        const token = generateValidToken();
-        console.log('\n🔑 Generated valid JWT token');
-        console.log('Token:', token);
-        
-        // Test authentication
-        console.log('\n🔐 Testing authentication with CAMERA_SERVICE_JWT_SECRET');
-        const authResult = await sendRequest(ws, 'authenticate', {
-          token: token
-        });
-        
-        if (authResult.authenticated) {
-          console.log('✅ Authentication successful with correct environment variable');
-          console.log('Authenticated:', authResult.authenticated);
-          console.log('Role:', authResult.role);
-          console.log('Auth method:', authResult.auth_method);
-          
-          console.log('\n🎉 Installation fix verified!');
-          console.log('✅ Environment variable naming is now consistent');
-          console.log('✅ Fresh installations will work correctly');
-          console.log('✅ No more authentication issues');
-          
-          ws.close();
-          resolve();
-        } else {
-          throw new Error('Authentication failed');
-        }
-        
-      } catch (error) {
-        console.error('❌ Test failed:', error);
-        ws.close();
-        reject(error);
-      }
-    });
-    
-    ws.on('error', (error) => {
-      console.error('❌ WebSocket error:', error);
-      reject(error);
-    });
-  });
-}
-
-/**
- * Jest test suite for authentication setup
- */
 describe('Authentication Setup Integration Tests', () => {
-  let ws;
+  let fixture;
 
   beforeAll(async () => {
-    // Setup WebSocket connection
-    ws = new WebSocket(CONFIG.serverUrl);
-    await new Promise((resolve, reject) => {
-      ws.on('open', resolve);
-      ws.on('error', reject);
-    });
-    console.log('✅ WebSocket connected for authentication setup test suite');
+    fixture = new StableTestFixture();
+    await fixture.initialize();
   });
 
   afterAll(async () => {
-    if (ws) {
-      ws.close();
+    if (fixture) {
+      fixture.cleanup();
     }
   });
 
-  test('should verify installation fix with correct environment variable', async () => {
-    await expect(testInstallationFix()).resolves.not.toThrow();
-  }, CONFIG.timeout);
-
-  test('should generate valid JWT token', () => {
-    const token = generateValidToken();
-    expect(token).toBeDefined();
-    expect(typeof token).toBe('string');
-    expect(token.split('.').length).toBe(3); // JWT has 3 parts
+  test('REQ-AUTH01-001: should authenticate successfully using compliant fixture', async () => {
+    // Use the stable test fixture as single source of truth for authentication
+    const ws = await fixture.connectWebSocketWithAuth();
+    
+    // The fixture handles all authentication validation against API documentation
+    // If authentication fails, the fixture will throw an error with proper validation
+    expect(ws).toBeDefined();
+    expect(ws.readyState).toBe(1); // WebSocket.OPEN
+    
+    // Verify authentication was successful by testing a protected method
+    const id = Math.floor(Math.random() * 1000000);
+    fixture.sendRequest(ws, 'ping', id);
+    
+    const response = await fixture.waitForResponse(ws, id);
+    expect(response).toBe('pong');
+    
+    ws.close();
   });
 
-  test('should authenticate successfully', async () => {
-    const token = generateValidToken();
-    const authResult = await sendRequest(ws, 'authenticate', { token });
-    expect(authResult.authenticated).toBe(true);
-  }, CONFIG.timeout);
+  test('REQ-AUTH01-002: should handle authentication errors properly', async () => {
+    // Test that the fixture properly validates authentication errors
+    const ws = await fixture.connectWebSocket();
+    
+    // Try to call a protected method without authentication
+    const id = Math.floor(Math.random() * 1000000);
+    fixture.sendRequest(ws, 'get_camera_list', id);
+    
+    // The fixture should validate the error response format against API documentation
+    await expect(fixture.waitForResponse(ws, id)).rejects.toThrow();
+    
+    ws.close();
+  });
+
+  test('REQ-AUTH01-003: should validate authentication response format against API documentation', async () => {
+    // The fixture automatically validates authentication response format
+    // This test ensures the fixture is working correctly
+    const ws = await fixture.connectWebSocketWithAuth();
+    
+    // The fixture.validateResponseFormat() is called automatically during authentication
+    // If the response doesn't match API documentation, the fixture will throw an error
+    expect(ws).toBeDefined();
+    
+    ws.close();
+  });
 });
+
+/**
+ * Legacy test function for backward compatibility
+ * Now uses the stable test fixture instead of custom implementation
+ */
+async function testInstallationFix() {
+  console.log('🔧 Testing Installation Fix with Compliant Fixture');
+  console.log('================================================');
+  console.log('Environment Variable: CAMERA_SERVICE_JWT_SECRET');
+  console.log('Expected Behavior: Authentication should work correctly using stable fixture');
+  console.log('');
+  
+  const fixture = new StableTestFixture();
+  
+  try {
+    await fixture.initialize();
+    const ws = await fixture.connectWebSocketWithAuth();
+    
+    console.log('✅ Authentication successful using compliant fixture');
+    console.log('✅ API compliance validation passed');
+    console.log('✅ Ground truth validation working correctly');
+    
+    ws.close();
+    return 'Authentication test passed using stable fixture';
+  } catch (error) {
+    console.error('❌ Authentication failed:', error.message);
+    throw error;
+  }
+}
+
+// Export for backward compatibility
+module.exports = { testInstallationFix };

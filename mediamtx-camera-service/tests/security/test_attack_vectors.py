@@ -14,6 +14,7 @@ Requirements Coverage:
 - REQ-SEC-028: Secure Storage: Secure storage of uploaded files
 
 Test Categories: Security
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

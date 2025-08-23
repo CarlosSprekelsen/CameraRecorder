@@ -26,6 +26,7 @@ Requirements Coverage:
 - REQ-TEST-012: Security test coverage for all security requirements
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

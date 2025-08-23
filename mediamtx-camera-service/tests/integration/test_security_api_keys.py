@@ -15,6 +15,8 @@ IV&V Control Point: Real API key authentication validation against MediaMTX serv
 
 Tests complete API key scenarios including creation, validation,
 rotation, and concurrent usage against the real systemd-managed MediaMTX service instance.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

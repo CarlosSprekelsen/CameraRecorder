@@ -10,6 +10,8 @@ Requirements Coverage:
 - REQ-API-033: The system SHALL implement real-time storage space monitoring and alerts
 
 Test Categories: Health, File Management
+API Documentation Reference: docs/api/json-rpc-methods.md
+Health Endpoints Reference: docs/api/health-endpoints.md
 """
 
 import asyncio

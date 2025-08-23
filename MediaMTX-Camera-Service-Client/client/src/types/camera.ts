@@ -77,6 +77,16 @@ export interface StreamListResponse {
 }
 
 /**
+ * Camera list response
+ * Aligned with server get_camera_list response
+ */
+export interface CameraListResponse {
+  cameras: CameraDevice[];
+  total: number;
+  connected: number;
+}
+
+/**
  * Camera capabilities validation status
  */
 export type ValidationStatus = 'provisional' | 'confirmed';
@@ -222,7 +232,7 @@ export type FileType = 'recordings' | 'snapshots';
 export interface FileItem {
   filename: string;
   file_size: number;
-  created_at: string;
+  created_time: string;
   modified_time: string;
   download_url: string;
   duration?: number; // Only for recordings

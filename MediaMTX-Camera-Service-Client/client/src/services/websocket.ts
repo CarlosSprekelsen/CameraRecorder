@@ -31,6 +31,8 @@ import type {
   JSONRPCResponse,
   JSONRPCNotification,
   WebSocketMessage,
+  CameraStatusNotification,
+  RecordingStatusNotification,
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS } from '../types';
@@ -82,33 +84,10 @@ interface WebSocketConfig {
   maxDelay: number;
 }
 
-// Notification interfaces
+// Notification message interface
 interface NotificationMessage {
   method: string;
   params?: unknown;
-}
-
-interface CameraStatusNotification {
-  method: string;
-  params: {
-    device: string;
-    status: string;
-    name?: string;
-    resolution?: string;
-    fps?: number;
-    streams?: Record<string, string>;
-  };
-}
-
-interface RecordingStatusNotification {
-  method: string;
-  params: {
-    device: string;
-    session_id: string;
-    status: string;
-    filename?: string;
-    duration?: number;
-  };
 }
 
 export class WebSocketError extends Error {
@@ -737,16 +716,50 @@ export class WebSocketService {
    * Check if a method is supported for HTTP polling fallback
    */
   private isFallbackMethodSupported(method: string): boolean {
-    return method === 'get_camera_list';
+    const supportedMethods = [
+      'get_camera_list',
+      'get_camera_status',
+      'ping'
+    ];
+    return supportedMethods.includes(method);
   }
 
   /**
-   * Get a fallback response for unsupported methods
+   * Get a fallback response using HTTP polling service
    */
-  private getFallbackResponse(method: string, params: Record<string, unknown>): Promise<unknown> {
-    console.warn(`⚠️ WebSocket disconnected - using HTTP polling fallback for unsupported method: ${method}`);
-    // For now, return a rejected promise since HTTP polling service doesn't have a generic call method
-    return Promise.reject(new WebSocketError(`HTTP polling fallback not implemented for method: ${method}`));
+  private async getFallbackResponse(method: string, params: Record<string, unknown>): Promise<unknown> {
+    console.warn(`⚠️ WebSocket disconnected - using HTTP polling fallback for method: ${method}`);
+    
+    if (!this.httpPollingService) {
+      throw new WebSocketError('HTTP polling service not available for fallback');
+    }
+
+    try {
+      switch (method) {
+        case 'get_camera_list':
+          return await this.httpPollingService.getCameraList();
+        
+        case 'get_camera_status':
+          // HTTP polling service doesn't have individual camera status
+          // Return camera list and filter by device if needed
+          const cameraList = await this.httpPollingService.getCameraList();
+          const device = params.device as string;
+          if (device && cameraList.cameras) {
+            return cameraList.cameras.find(camera => camera.device === device) || null;
+          }
+          return cameraList;
+        
+        case 'ping':
+          // Use health endpoint as ping alternative
+          const health = await this.httpPollingService.getSystemHealth();
+          return { status: 'healthy', health };
+        
+        default:
+          throw new WebSocketError(`HTTP polling fallback not implemented for method: ${method}`);
+      }
+    } catch (error) {
+      throw new WebSocketError(`HTTP polling fallback failed for method: ${method}: ${error}`);
+    }
   }
 }
 

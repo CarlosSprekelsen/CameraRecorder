@@ -28,6 +28,8 @@ Each concept tested with:
 - Success case: Valid authentication/authorization
 - Negative case: Invalid authentication/authorization
 - Real system validation: Against actual MediaMTX service
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import sys

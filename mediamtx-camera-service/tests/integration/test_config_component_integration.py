@@ -13,6 +13,8 @@ Replaces smoke/instantiation-only checks with tests that:
 - Trace to requirements
 - Exercise real component orchestration
 - Validate error/edge-case behavior and business logic
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

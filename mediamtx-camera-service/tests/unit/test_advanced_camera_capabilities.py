@@ -18,6 +18,8 @@ IV&V Control Point: Advanced camera capability validation
 Created: 2025-01-15
 Related: S3 Camera Discovery hardening, docs/roadmap.md
 Evidence: src/camera_discovery/hybrid_monitor.py (capability detection)
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

@@ -6,6 +6,7 @@ Requirements Coverage:
 - REQ-API-035: HTTP file download endpoints for secure file access
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

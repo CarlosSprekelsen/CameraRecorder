@@ -47,11 +47,33 @@ const testResults = {
 };
 
 /**
- * Utility function to send JSON-RPC requests
+ * Utility function to send JSON-RPC requests with API compliance validation
  */
 function send(ws, method, id, params = undefined) {
   const req = { jsonrpc: '2.0', method, id };
   if (params) req.params = params;
+  
+  // API compliance validation
+  if (!req.jsonrpc || req.jsonrpc !== '2.0') {
+    throw new Error('Invalid JSON-RPC version per API documentation');
+  }
+  if (!req.method) {
+    throw new Error('Missing method per API documentation');
+  }
+  if (req.id === undefined) {
+    throw new Error('Missing id per API documentation');
+  }
+  
+  // Method-specific parameter validation based on API documentation
+  if (method === 'list_recordings' || method === 'list_snapshots') {
+    if (!req.params) {
+      throw new Error(`${method} method requires params per API documentation`);
+    }
+    if (req.params.limit === undefined || req.params.offset === undefined) {
+      throw new Error(`${method} method requires limit and offset parameters per API documentation`);
+    }
+  }
+  
   console.log(`📤 Sending ${method} (#${id})`, params ? JSON.stringify(params) : '');
   ws.send(JSON.stringify(req));
 }

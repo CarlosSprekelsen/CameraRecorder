@@ -10,6 +10,8 @@ Requirements Traceability:
 
 Story Coverage: S8.1 - Client Usage Examples
 IV&V Control Point: Client examples validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

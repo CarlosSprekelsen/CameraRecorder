@@ -14,6 +14,7 @@ Requirements Coverage:
 - REQ-TEST-006: Verify MediaMTX service is running via systemd before execution
 
 Test Categories: Unit
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import json

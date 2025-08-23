@@ -9,10 +9,10 @@ Requirements Traceability:
 Story Coverage: S7 - Security Implementation
 IV&V Control Point: Real WebSocket security validation
 
-
-
 Tests WebSocket authentication, permission checking, rate limiting,
 and connection control as specified in Sprint 2 Task S7.1.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

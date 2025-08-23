@@ -14,6 +14,8 @@ IV&V Control Point: Real component orchestration validation with MediaMTX servic
 
 Test policy: Use real systemd-managed MediaMTX service (AD-001) instead of mock HTTP servers
 to validate actual system integration and discover real interface issues.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

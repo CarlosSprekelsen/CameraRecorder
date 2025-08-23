@@ -19,6 +19,8 @@ This test suite focuses on critical error conditions that could break the system
 - Resource constraints and exhaustion
 - Graceful degradation and recovery mechanisms
 - Error logging and monitoring validation
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

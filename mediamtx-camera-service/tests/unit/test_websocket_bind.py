@@ -6,6 +6,7 @@ Requirements Coverage:
 - REQ-API-002: ping method for health checks
 
 Test Categories: Unit
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import json

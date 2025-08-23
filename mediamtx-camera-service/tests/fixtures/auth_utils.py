@@ -360,7 +360,7 @@ class WebSocketAuthTestClient:
         request = {
             "jsonrpc": "2.0",
             "method": "authenticate",
-            "params": {"token": token},
+            "params": {"auth_token": token},
             "id": self.request_id
         }
         
@@ -370,6 +370,53 @@ class WebSocketAuthTestClient:
         await self.websocket.send(json.dumps(request))
         response = await self.websocket.recv()
         return json.loads(response)
+    
+    async def authenticate_and_validate_api_compliance(self, token: str = None) -> Dict[str, Any]:
+        """
+        Authenticate and validate response against API documentation.
+        
+        This method would have caught Issue 081: Authentication Method Documentation vs Implementation Mismatch.
+        Validates the authenticate method response format matches docs/api/json-rpc-methods.md exactly.
+        
+        API Documentation Reference: docs/api/json-rpc-methods.md - authenticate method
+        """
+        response = await self.authenticate(token)
+        
+        # Validate JSON-RPC 2.0 structure
+        assert "jsonrpc" in response, "Response must contain 'jsonrpc' field per JSON-RPC 2.0"
+        assert response["jsonrpc"] == "2.0", "JSON-RPC version must be 2.0"
+        assert "id" in response, "Response must contain 'id' field per JSON-RPC 2.0"
+        
+        # Must have either result or error (not both)
+        assert ("result" in response) != ("error" in response), "Response must have either 'result' or 'error', not both"
+        
+        if "result" in response:
+            # Validate documented response format from API documentation
+            result = response["result"]
+            
+            # All fields required by API documentation
+            assert "authenticated" in result, "Missing 'authenticated' field per API documentation"
+            assert "role" in result, "Missing 'role' field per API documentation" 
+            assert "permissions" in result, "Missing 'permissions' field per API documentation"
+            assert "expires_at" in result, "Missing 'expires_at' field per API documentation"
+            assert "session_id" in result, "Missing 'session_id' field per API documentation"
+            
+            # Validate field types per API documentation
+            assert isinstance(result["authenticated"], bool), "authenticated must be boolean"
+            assert isinstance(result["role"], str), "role must be string"
+            assert isinstance(result["permissions"], list), "permissions must be list per API documentation"
+            assert isinstance(result["expires_at"], str), "expires_at must be string (ISO format)"
+            assert isinstance(result["session_id"], str), "session_id must be string"
+            
+        elif "error" in response:
+            # Validate documented error format
+            error = response["error"]
+            assert "code" in error, "Error must contain 'code' field"
+            assert "message" in error, "Error must contain 'message' field"
+            assert isinstance(error["code"], int), "Error code must be integer"
+            assert isinstance(error["message"], str), "Error message must be string"
+        
+        return response
     
     async def send_request(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """Send JSON-RPC request with authentication."""

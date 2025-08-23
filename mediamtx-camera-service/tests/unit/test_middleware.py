@@ -11,6 +11,8 @@ IV&V Control Point: Real security middleware validation
 
 Tests WebSocket security middleware including authentication,
 rate limiting, and connection control as specified in Architecture Decision AD-7.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

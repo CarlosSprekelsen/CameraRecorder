@@ -9,6 +9,7 @@ Requirements Traceability:
 - REQ-MEDIA-001: MediaMTX integration shall use single systemd-managed service
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio
@@ -290,7 +291,7 @@ async def test_running_server_camera_detection():
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "authenticate",
-                "params": {"token": token, "auth_type": "jwt"}
+                "params": {"auth_token": token, "auth_type": "jwt"}
             }
             await websocket.send(json.dumps(auth_request))
             auth_response = await websocket.recv()

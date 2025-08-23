@@ -9,6 +9,7 @@ Requirements Coverage:
 - REQ-API-044: Storage space cleanup recommendations
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

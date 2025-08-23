@@ -9,6 +9,8 @@ IV&V Control Point: File lifecycle management validation
 
 Tests file retention policy configuration, automatic cleanup based on age/size,
 and manual cleanup operations for recordings and snapshots.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

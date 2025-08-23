@@ -18,6 +18,7 @@ Requirements Coverage:
 - REQ-SEC-035: Data encryption at rest for sensitive data storage
 
 Test Categories: Security
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import sys

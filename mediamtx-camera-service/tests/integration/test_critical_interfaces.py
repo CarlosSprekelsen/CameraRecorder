@@ -39,6 +39,7 @@ Requirements Coverage:
 - REQ-TEST-010: Error handling and edge case test coverage
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import asyncio

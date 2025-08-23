@@ -9,6 +9,8 @@ IV&V Control Point: File metadata management validation
 
 Tests file metadata extraction, storage, retrieval, and comprehensive
 metadata tracking for recordings and snapshots.
+
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import pytest

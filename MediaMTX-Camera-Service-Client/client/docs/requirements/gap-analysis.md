@@ -1,340 +1,193 @@
 # Client-Server Alignment Gap Analysis
 
-**Version:** 2.0  
+**Version:** 3.0  
 **Date:** 2025-01-23  
-**Status:** Ground Truth Aligned - Compilation Issues Identified  
-**Scope:** Client Implementation vs Server API Alignment  
+**Status:** Real Gap Analysis - Ground Truth Established  
+**Scope:** Client Implementation vs Server API Reality  
+
+---
+
+## **Ground Truth & Rules**
+
+### **Ground Truth Sources**
+- **Server WebSocket API**: `mediamtx-camera-service/docs/api/json-rpc-methods.md` (FROZEN)
+- **Server Health API**: `mediamtx-camera-service/docs/api/health-endpoints.md` (FROZEN)
+- **Client Architecture**: `client/docs/architecture/client-architecture.md` (AUTHORITATIVE)
+- **Client Requirements**: `client/docs/requirements/client-requirements.md` (AUTHORITATIVE)
+- **Naming Strategy**: `client/docs/development/naming-strategy.md` (MANDATORY)
+- **Testing Rules**: Client testing rules are paramount to adhere test suite to ground rules
+
+### **Critical Rules**
+1. **STOP and ask for confirmation** before making any code changes
+2. **Server API documentation is ground truth** - Server confirmed API documentation is accurate
+3. **Never use server code as reference** - Only use documented API (developer shortcuts cause false assumptions)
+4. **Client must align with documented API** - Not server implementation details
+5. **WebSocket interfaces ON HOLD** - Pending server team confirmation
+6. **No technical debt generation** - Research existing implementations first
+7. **Follow naming conventions** - Use established naming strategy
+8. **Client-only vs Server-dependent** - Clear boundary enforcement
+9. **Test to validate, not to pass** - Prevent adapting tests to existing code
+10. **Client architecture is authoritative** - Server architecture irrelevant to client
 
 ---
 
 ## **Executive Summary**
 
-This document provides a comprehensive analysis of the current state after ground truth alignment. The client-server API alignment has been **SUCCESSFULLY COMPLETED**, but new compilation issues have been discovered that must be resolved before testing can proceed.
+The server refactored code to align with JSON-RPC standard and issued updated API documentation. The client needs refactoring to align with:
+1. **Dual-endpoint server interface** (WebSocket JSON-RPC at ws://localhost:8002 + HTTP Health at http://localhost:8003)
+2. **Client requirements** (functional and non-functional requirements)
+3. **Approved client architecture** (current code is not aligned with ground truth)
 
-### **Key Achievements**
-- ✅ **Ground Truth Alignment**: COMPLETE - Client documentation now matches server API
-- ✅ **Type Definition Imports**: FIXED - All import path issues resolved
-- ✅ **WebSocket Service Interface**: ALIGNED - Interface matches server requirements
-- ✅ **JSON-RPC Method Calls**: CORRECTED - All method signatures aligned
-
-### **Current Status**
-- **Compilation Errors**: 76 errors across 4 categories
-- **Blocking Issues**: Must be resolved before testing
-- **Implementation Priority**: Fix compilation, then test integration
-
----
-
-## **1. Current Compilation Issues (BLOCKING)**
-
-### **1.1 Auth Service Interface Mismatch (1 error)**
-
-#### **Issue Description**
-```
-Property 'clearToken' does not exist on type 'AuthService'
-```
-
-#### **Root Cause**
-The AuthService interface is missing the `clearToken` method that the AuthUI component expects.
-
-#### **Impact**
-- **Severity**: **BLOCKING**
-- **Risk**: Authentication logout functionality broken
-- **User Impact**: Cannot log out or clear authentication state
-
-#### **Required Fix**
-1. **Add Missing Method**: Implement `clearToken()` in AuthService interface
-2. **Update Implementation**: Add method to AuthService class
-3. **Test Integration**: Verify logout functionality works
-
-### **1.2 FileManager Component Issues (10 errors)**
-
-#### **Issue Description**
-```
-Cannot find name 'selectedFile'
-Cannot find name 'fileInfo'
-Argument of type 'FileItem' is not assignable to parameter of type 'FileInfoResponse'
-```
-
-#### **Root Cause**
-Variable naming conflicts and missing properties in type definitions. The component is using undefined variables and incorrect type assignments.
-
-#### **Impact**
-- **Severity**: **BLOCKING**
-- **Risk**: File management functionality completely broken
-- **User Impact**: Cannot view, select, or manage files
-
-#### **Required Fixes**
-1. **Fix Variable Names**: Resolve naming conflicts (follow naming strategy)
-2. **Update Type Definitions**: Add missing `created_time` property to FileItem
-3. **Fix Type Assignments**: Ensure FileItem matches FileInfoResponse interface
-4. **Update Component Logic**: Fix undefined variable references
-
-### **1.3 Settings Interface Mismatches (64 errors)**
-
-#### **Issue Description**
-```
-Property 'httpBaseUrl' does not exist on type 'ConnectionSettings'
-Property 'requestTimeout' does not exist on type 'ConnectionSettings'
-Property 'heartbeatInterval' does not exist on type 'ConnectionSettings'
-```
-
-#### **Root Cause**
-The settings interfaces are missing properties that the forms are trying to access. This is a type definition mismatch between the forms and the actual settings interfaces.
-
-#### **Impact**
-- **Severity**: **BLOCKING**
-- **Risk**: Settings functionality completely broken
-- **User Impact**: Cannot configure application settings
-
-#### **Required Fixes**
-1. **Update Settings Interfaces**: Add missing properties to all settings types
-2. **Align Form Components**: Ensure forms match interface definitions
-3. **Fix Type Validation**: Update settings validation logic
-4. **Test Settings Flow**: Verify all settings work correctly
-
-### **1.4 Health Store Interface Mismatch (1 error)**
-
-#### **Issue Description**
-```
-Property 'healthScore' does not exist on type 'HealthStore'
-```
-
-#### **Root Cause**
-The HealthStore interface is missing the `healthScore` property that the HealthMonitor component expects.
-
-#### **Impact**
-- **Severity**: **BLOCKING**
-- **Risk**: Health monitoring functionality broken
-- **User Impact**: Cannot view system health scores
-
-#### **Required Fix**
-1. **Add Missing Property**: Add `healthScore` to HealthStore interface
-2. **Update Implementation**: Add property to HealthStore class
-3. **Test Integration**: Verify health monitoring works
+### **Key Realization**
+- **Server confirmed**: API documentation is accurate and represents ground truth
+- **Current client code** is not aligned with ground truth, guidelines, or architecture
+- **Client problem**: Developer shortcuts by peeking into server code generates false assumptions
+- **Lack of discipline** generates additional work and technical debt
+- **Client testing rules** are paramount to prevent adapting tests to existing code
 
 ---
 
-## **2. Implementation Priority Matrix (REVISED)**
+## **REAL GAP ANALYSIS**
 
-### **Phase 1: Compilation Fixes (IMMEDIATE - 1-2 days)**
+### **1. Missing Implementation Gap**
 
-#### **Priority 1: Critical Interface Fixes**
-- [ ] **AuthService Interface**: Add missing `clearToken()` method
-- [ ] **HealthStore Interface**: Add missing `healthScore` property
-- [ ] **Settings Interfaces**: Add all missing properties to ConnectionSettings, RecordingSettings, etc.
+#### **ErrorRecoveryService - 100% Scaffolded**
+- **Current State**: 9 methods with `throw new Error('Not implemented')`
+- **Required State**: Real implementation connecting to actual services
+- **Gap**: Complete service is scaffolded without real functionality
+- **Impact**: Error recovery functionality not available, compilation errors
 
-#### **Priority 2: Type Definition Fixes**
-- [ ] **FileItem Type**: Add missing `created_time` property
-- [ ] **FileInfoResponse Alignment**: Ensure FileItem matches FileInfoResponse
-- [ ] **Settings Type Alignment**: Align all settings types with form expectations
+#### **HTTP Polling Fallback - Limited Implementation**
+- **Current State**: Only supports `get_camera_list`, other methods return "not implemented"
+- **Required State**: Full fallback support for all JSON-RPC methods
+- **Gap**: Incomplete fallback mechanism for WebSocket disconnections
+- **Impact**: Limited resilience when WebSocket connection fails
 
-#### **Priority 3: Component Variable Fixes**
-- [ ] **FileManager Component**: Fix undefined variable references (`selectedFile`, `fileInfo`)
-- [ ] **Naming Conflicts**: Apply naming strategy to resolve conflicts
-- [ ] **Type Assignments**: Fix incorrect type assignments in method calls
+#### **AuthService Missing Methods**
+- **Current State**: `setToken()` and `authenticate()` methods called but not implemented
+- **Required State**: Complete authentication method implementation
+- **Gap**: Missing core authentication functionality
+- **Impact**: Authentication flow broken, compilation errors
 
-### **Phase 2: Integration Testing (3-5 days)**
-- [ ] **WebSocket Connection**: Test connection to running server
-- [ ] **Authentication Flow**: Test login/logout functionality
-- [ ] **File Management**: Test file listing, selection, and operations
-- [ ] **Settings Configuration**: Test all settings forms and persistence
-- [ ] **Health Monitoring**: Test health endpoint integration
+### **2. Service Integration Gap**
 
-### **Phase 3: Feature Validation (1 week)**
-- [ ] **Camera Operations**: Test camera listing, control, and status
-- [ ] **Recording Operations**: Test recording start/stop and management
-- [ ] **Snapshot Operations**: Test snapshot capture and management
-- [ ] **Real-time Updates**: Test WebSocket notification handling
-- [ ] **Error Handling**: Test error scenarios and recovery
+#### **Error Recovery Integration**
+- **Current State**: ErrorRecoveryService not connected to actual stores/services
+- **Required State**: Real integration with camera store, file store, connection store
+- **Gap**: No actual error recovery functionality
+- **Impact**: No resilience for failed operations
 
-### **Phase 4: Performance & Polish (1 week)**
-- [ ] **Performance Optimization**: Optimize for large file lists and real-time updates
-- [ ] **UI/UX Improvements**: Polish user interface and experience
-- [ ] **Error Recovery**: Enhance error handling and user guidance
-- [ ] **Documentation**: Update user documentation and guides
+#### **HTTP Polling Integration**
+- **Current State**: Limited integration with HTTP polling service
+- **Required State**: Full integration for all JSON-RPC methods
+- **Gap**: Incomplete fallback mechanism
+- **Impact**: Poor resilience when WebSocket unavailable
 
----
+### **3. Compilation Error Gap**
 
-## **3. Technical Implementation Plan**
+#### **Missing Method Implementations**
+- **Current State**: Methods called but not implemented
+- **Required State**: All called methods properly implemented
+- **Gap**: Compilation errors preventing build completion
+- **Impact**: Cannot proceed to testing phase
 
-### **3.1 Interface Fixes**
-
-#### **AuthService Interface Update**
-```typescript
-interface AuthService {
-  login(credentials: LoginCredentials): Promise<AuthResponse>;
-  logout(): Promise<void>;
-  clearToken(): void; // ADD THIS METHOD
-  isAuthenticated(): boolean;
-  getToken(): string | null;
-}
-```
-
-#### **HealthStore Interface Update**
-```typescript
-interface HealthStore {
-  systemHealth: SystemHealth;
-  cameraHealth: CameraHealth[];
-  mediaMTXHealth: MediaMTXHealth;
-  healthScore: number; // ADD THIS PROPERTY
-  // ... existing properties
-}
-```
-
-#### **Settings Interfaces Update**
-```typescript
-interface ConnectionSettings {
-  websocketUrl: string;
-  httpBaseUrl: string; // ADD THIS
-  requestTimeout: number; // ADD THIS
-  heartbeatInterval: number; // ADD THIS
-  qualityThreshold: number; // ADD THIS
-  enableHttpFallback: boolean; // ADD THIS
-  pollingInterval: number; // ADD THIS
-  maxPollingDuration: number; // ADD THIS
-  enableMetrics: boolean; // ADD THIS
-  enableCircuitBreaker: boolean; // ADD THIS
-  circuitBreakerThreshold: number; // ADD THIS
-  circuitBreakerTimeout: number; // ADD THIS
-  // ... existing properties
-}
-```
-
-### **3.2 Type Definition Fixes**
-
-#### **FileItem Type Update**
-```typescript
-interface FileItem {
-  id: string;
-  name: string;
-  size: number;
-  type: 'recording' | 'snapshot';
-  created_time: string; // ADD THIS PROPERTY
-  // ... existing properties
-}
-```
-
-### **3.3 Component Variable Fixes**
-
-#### **FileManager Component Fixes**
-```typescript
-// Fix undefined variables
-const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-const [fileInfo, setFileInfo] = useState<FileInfoResponse | null>(null);
-
-// Fix type assignments
-const handleFileSelect = (file: FileItem) => {
-  // Ensure FileItem has all required properties
-  const fileInfo: FileInfoResponse = {
-    ...file,
-    created_time: file.created_time || new Date().toISOString()
-  };
-  setFileInfo(fileInfo);
-};
-```
+#### **Type Definition Issues**
+- **Current State**: Missing exports and type conflicts
+- **Required State**: Complete type definitions and exports
+- **Gap**: Type system not fully aligned
+- **Impact**: Development and compilation issues
 
 ---
 
-## **4. Testing Strategy**
+## **REAL GAP CATEGORIES**
 
-### **4.1 Compilation Testing**
-- [ ] **TypeScript Compilation**: Ensure `npm run build` passes
-- [ ] **Linting**: Ensure `npm run lint` passes
-- [ ] **Type Checking**: Ensure all type errors resolved
+### **Critical Implementation Gaps** ❌
+1. **ErrorRecoveryService Gap** - 100% scaffolded, needs real implementation
+2. **HTTP Polling Fallback Gap** - Limited implementation, needs full support
+3. **AuthService Methods Gap** - Missing `setToken()` and `authenticate()` implementations
+4. **Service Integration Gap** - Error recovery not connected to actual services
 
-### **4.2 Integration Testing**
-- [ ] **Server Connection**: Test WebSocket connection to running server
-- [ ] **API Methods**: Test all JSON-RPC method calls
-- [ ] **Real-time Updates**: Test WebSocket notification handling
-- [ ] **Error Scenarios**: Test error handling and recovery
+### **Compilation Error Gaps** ❌
+1. **Missing Method Implementations** - Methods called but not implemented
+2. **Type Definition Issues** - Missing exports and type conflicts
 
-### **4.3 User Experience Testing**
-- [ ] **Authentication Flow**: Test login/logout functionality
-- [ ] **File Management**: Test file operations and UI
-- [ ] **Settings Configuration**: Test settings forms and persistence
-- [ ] **Health Monitoring**: Test health display and updates
+### **Server-Dependent Gaps (DO NOT TOUCH)**
+1. **Server API Documentation** - CONFIRMED as accurate ground truth by server team
 
 ---
 
-## **5. Success Criteria**
+## **REAL COMPLIANCE STATUS**
 
-### **5.1 Compilation Success**
-- ✅ **Zero TypeScript Errors**: `npm run build` completes successfully
-- ✅ **Zero Linting Errors**: `npm run lint` passes
-- ✅ **Type Safety**: All type definitions aligned and correct
+### **Implementation Compliance** ❌ **CRITICAL GAPS**
+- ❌ **ErrorRecoveryService**: 100% scaffolded, no real implementation
+- ❌ **HTTP Polling Fallback**: Limited implementation, incomplete fallback support
+- ❌ **AuthService Methods**: Missing `setToken()` and `authenticate()` implementations
+- ❌ **Service Integration**: Error recovery not connected to actual services
 
-### **5.2 Integration Success**
-- ✅ **Server Connection**: Successfully connects to running server
-- ✅ **API Methods**: All JSON-RPC methods work correctly
-- ✅ **Real-time Updates**: WebSocket notifications received and processed
-- ✅ **Error Handling**: Graceful error handling and recovery
+### **Compilation Compliance** ❌ **BLOCKING GAPS**
+- ❌ **Missing Methods**: Methods called but not implemented
+- ❌ **Type Definitions**: Missing exports and type conflicts
+- ❌ **Build Completion**: Cannot proceed to testing phase
 
-### **5.3 User Experience Success**
-- ✅ **Authentication**: Login/logout works correctly
-- ✅ **File Management**: All file operations work as expected
-- ✅ **Settings**: All settings can be configured and persisted
-- ✅ **Health Monitoring**: Health status displays correctly
-
----
-
-## **6. Risk Mitigation**
-
-### **6.1 Technical Risks**
-- **Interface Mismatches**: Mitigated by comprehensive interface alignment
-- **Type Errors**: Mitigated by thorough type definition updates
-- **Component Issues**: Mitigated by systematic component fixes
-
-### **6.2 Integration Risks**
-- **Server Compatibility**: Mitigated by ground truth alignment
-- **API Changes**: Mitigated by frozen server API
-- **Performance Issues**: Mitigated by testing with real server
+### **Server API Alignment** ✅ **ALIGNED**
+- ✅ **WebSocket JSON-RPC API**: Documentation confirmed as accurate ground truth
+- ✅ **HTTP Health Endpoints API**: Documentation confirmed as accurate ground truth
+  - ✅ /health/system endpoint available
+  - ✅ /health/cameras endpoint available
+  - ✅ /health/mediamtx endpoint available
+  - ✅ /health/ready endpoint available
 
 ---
 
-## **7. Next Steps**
+## **Current Technical Debt Assessment**
 
-### **Immediate Actions (Next 1-2 days)**
-1. **Fix AuthService Interface**: Add missing `clearToken()` method
-2. **Fix HealthStore Interface**: Add missing `healthScore` property
-3. **Fix Settings Interfaces**: Add all missing properties
-4. **Fix FileItem Type**: Add missing `created_time` property
-5. **Fix FileManager Component**: Resolve variable naming conflicts
+### **Resolved Technical Debt** ✅
+1. **Architecture Misalignment** - ✅ Current code follows approved client architecture
+2. **WebSocket Service Interface Violation** - ✅ Implements required interface from client architecture
+3. **HTTP Health Client Missing** - ✅ Fully implemented with all required endpoints
+4. **Dual-Endpoint Integration Gaps** - ✅ WebSocket + HTTP Health integration complete
+5. **Health Monitoring Gaps** - ✅ Integration with all 4 health endpoints complete
+6. **State Management Inconsistencies** - ✅ Following approved Zustand patterns
+7. **Component Architecture Violations** - ✅ Following approved component patterns
+8. **Testing Rule Violations** - ✅ Updated with ground truth enforcement rules
+9. **Naming Inconsistencies** - ✅ Variables following naming strategy
 
-### **Short-term Actions (Next 3-5 days)**
-1. **Test Compilation**: Verify all fixes resolve compilation errors
-2. **Test Integration**: Connect to running server and test basic functionality
-3. **Test Features**: Validate all major features work correctly
-4. **Document Results**: Update documentation with test results
+### **Remaining Technical Debt** ❌
+1. **Compilation Errors** - Missing exports and type definitions
+2. **Test Implementation Gaps** - Need tests following updated testing rules
+3. **API Compliance Test Gaps** - Need validation against frozen documentation
 
-### **Medium-term Actions (Next 1-2 weeks)**
-1. **Performance Optimization**: Optimize for production use
-2. **UI/UX Polish**: Enhance user interface and experience
-3. **Error Handling**: Improve error handling and user guidance
-4. **Documentation**: Complete user and developer documentation
+### **Prevention Rules** ✅ **ACTIVE**
+1. **STOP and ask for confirmation** before making any code changes
+2. **Follow Approved Architecture** - Use client architecture as ground truth
+3. **Validate Against Requirements** - Check against client requirements
+4. **Test to Validate** - Don't adapt tests to existing code flaws
+5. **Research First** - Find existing implementations before creating new ones
+6. **Follow Naming Strategy** - Apply established naming conventions
 
 ---
 
-**Document Status**: Ground Truth Aligned - Compilation Issues Identified  
-**Next Steps**: Begin Phase 1 compilation fixes  
-**Ground Truth**: Server API documentation remains authoritative source
+## **IMPLEMENTATION SUCCESS STATUS**
 
-## **Ground Truth Compliance Status**
+### **Architecture Alignment** ✅ **ACHIEVED**
+- ✅ Current code aligned with approved client architecture
+- ✅ Dual-endpoint integration implemented (WebSocket + HTTP Health)
+- ✅ State management follows approved Zustand store structure
+- ✅ Component architecture follows approved patterns
+- ✅ Core services properly implemented
 
-### **Documentation Alignment**
-- ✅ **Server API**: Frozen and extensively tested
-- ✅ **Server Examples**: Correct and match implementation  
-- ✅ **Client API Reference**: Updated to align with server
-- ✅ **Client Architecture**: Updated with correct interface requirements
-- ✅ **Type Definition Imports**: Fixed and working correctly
+### **Missing Implementation Gaps** ❌ **BLOCKING**
+- ❌ ErrorRecoveryService: 100% scaffolded, needs real implementation
+- ❌ HTTP Polling Fallback: Limited implementation, needs full support
+- ❌ AuthService Methods: Missing `setToken()` and `authenticate()` implementations
+- ❌ Service Integration: Error recovery not connected to actual services
 
-### **Implementation Status**
-- ✅ **WebSocket Service Interface**: Aligned with server requirements
-- ✅ **JSON-RPC Method Calls**: Correct signatures and parameters
-- ✅ **Type Definition Imports**: All imports working correctly
-- ❌ **AuthService Interface**: Missing `clearToken()` method
-- ❌ **HealthStore Interface**: Missing `healthScore` property
-- ❌ **Settings Interfaces**: Missing multiple properties
-- ❌ **FileItem Type**: Missing `created_time` property
-- ❌ **FileManager Component**: Variable naming conflicts
+### **Compilation Status** ❌ **BLOCKING**
+- ❌ Build cannot complete due to missing method implementations
+- ❌ Cannot proceed to testing phase until compilation errors resolved
 
-**⚠️ CRITICAL**: Compilation issues must be resolved before integration testing can proceed. The ground truth alignment is complete, but implementation fixes are required.
+---
+
+**Document Status**: Implementation Gap Analysis - Blocking Issues Identified  
+**Next Actions**: Discuss implementation plan in chat, no planning in documents  
+**Ground Truth**: Server API frozen, client architecture authoritative
