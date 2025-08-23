@@ -315,6 +315,14 @@ export class AuthService {
       authenticated: false
     };
   }
+
+  /**
+   * Clear authentication token and state
+   * Public method for external use
+   */
+  clearToken(): void {
+    this.clearAuthState();
+  }
 }
 
 /**

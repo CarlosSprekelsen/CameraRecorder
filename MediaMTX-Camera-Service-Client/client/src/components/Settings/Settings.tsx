@@ -68,7 +68,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
     loadSettings,
     saveSettings,
     resetSettings,
-    updateSetting,
+    updateSettings,
     exportSettings,
     importSettings,
     clearError,
@@ -253,7 +253,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'connection' && (
               <ConnectionSettingsForm 
                 settings={settings.connection}
-                onChange={(connectionSettings) => updateSetting('connection', connectionSettings, 'connection')}
+                onChange={(connectionSettings) => updateSettings('connection', connectionSettings)}
               />
             )}
 
@@ -261,7 +261,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'recording' && (
               <RecordingSettingsForm 
                 settings={settings.recording}
-                onChange={(recordingSettings) => updateSetting('recording', recordingSettings, 'recording')}
+                onChange={(recordingSettings) => updateSettings('recording', recordingSettings)}
               />
             )}
 
@@ -269,7 +269,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'snapshot' && (
               <SnapshotSettingsForm 
                 settings={settings.snapshot}
-                onChange={(snapshotSettings) => updateSetting('snapshot', snapshotSettings, 'snapshot')}
+                onChange={(snapshotSettings) => updateSettings('snapshot', snapshotSettings)}
               />
             )}
 
@@ -277,7 +277,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'ui' && (
               <InterfaceSettingsForm 
                 settings={settings.ui}
-                onChange={(uiSettings) => updateSetting('ui', uiSettings, 'ui')}
+                onChange={(uiSettings) => updateSettings('ui', uiSettings)}
               />
             )}
 
@@ -285,7 +285,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'notifications' && (
               <NotificationSettingsForm 
                 settings={settings.notifications}
-                onChange={(notificationSettings) => updateSetting('notifications', notificationSettings, 'notifications')}
+                onChange={(notificationSettings) => updateSettings('notifications', notificationSettings)}
               />
             )}
 
@@ -293,7 +293,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'security' && (
               <SecuritySettingsForm 
                 settings={settings.security}
-                onChange={(securitySettings) => updateSetting('security', securitySettings, 'security')}
+                onChange={(securitySettings) => updateSettings('security', securitySettings)}
               />
             )}
 
@@ -301,7 +301,7 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
             {activeTab === 'performance' && (
               <PerformanceSettingsForm 
                 settings={settings.performance}
-                onChange={(performanceSettings) => updateSetting('performance', performanceSettings, 'performance')}
+                onChange={(performanceSettings) => updateSettings('performance', performanceSettings)}
               />
             )}
           </Box>

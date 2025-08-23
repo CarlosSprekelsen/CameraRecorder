@@ -107,8 +107,36 @@ const validateRecordingSettings = (settings: AppSettings['recording']): string[]
     errors.push('Default duration must be at least 1 second or null for unlimited');
   }
   
+  if (settings.maxDuration < 1) {
+    errors.push('Max duration must be at least 1 second');
+  }
+  
+  if (settings.defaultFrameRate < 1 || settings.defaultFrameRate > 60) {
+    errors.push('Default frame rate must be between 1 and 60 fps');
+  }
+  
+  if (settings.defaultBitrate < 100 || settings.defaultBitrate > 10000) {
+    errors.push('Default bitrate must be between 100 and 10000 kbps');
+  }
+  
   if (settings.maxFileSize < 1) {
     errors.push('Max file size must be at least 1MB');
+  }
+  
+  if (settings.maxStorageSize < 1) {
+    errors.push('Max storage size must be at least 1GB');
+  }
+  
+  if (settings.autoCleanupAge < 1) {
+    errors.push('Auto cleanup age must be at least 1 day');
+  }
+  
+  if (!settings.storageDirectory) {
+    errors.push('Storage directory is required');
+  }
+  
+  if (!settings.storagePath) {
+    errors.push('Storage path is required');
   }
   
   return errors;
@@ -117,12 +145,28 @@ const validateRecordingSettings = (settings: AppSettings['recording']): string[]
 const validateSnapshotSettings = (settings: AppSettings['snapshot']): string[] => {
   const errors: string[] = [];
   
-  if (!['jpg', 'png'].includes(settings.defaultFormat)) {
-    errors.push('Default format must be jpg or png');
+  if (!['jpg', 'png', 'jpeg', 'bmp', 'webp'].includes(settings.defaultFormat)) {
+    errors.push('Default format must be jpg, png, jpeg, bmp, or webp');
+  }
+  
+  if (settings.jpegQuality < 1 || settings.jpegQuality > 100) {
+    errors.push('JPEG quality must be between 1 and 100');
   }
   
   if (settings.defaultQuality < 1 || settings.defaultQuality > 100) {
     errors.push('Default quality must be between 1 and 100');
+  }
+  
+  if (settings.defaultWidth < 320 || settings.defaultWidth > 7680) {
+    errors.push('Default width must be between 320 and 7680 pixels');
+  }
+  
+  if (settings.defaultHeight < 240 || settings.defaultHeight > 4320) {
+    errors.push('Default height must be between 240 and 4320 pixels');
+  }
+  
+  if (!settings.storagePath) {
+    errors.push('Storage path is required');
   }
   
   return errors;

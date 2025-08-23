@@ -167,7 +167,7 @@ export interface FormField<T = string> {
 /**
  * Recording settings form
  */
-export interface RecordingSettings {
+export interface RecordingSettingsForm {
   duration: FormField<number>;
   format: FormField<string>;
   autoStop: FormField<boolean>;
@@ -176,7 +176,7 @@ export interface RecordingSettings {
 /**
  * Snapshot settings form
  */
-export interface SnapshotSettings {
+export interface SnapshotSettingsForm {
   format: FormField<string>;
   quality: FormField<number>;
   filename: FormField<string>;
@@ -186,8 +186,8 @@ export interface SnapshotSettings {
  * Settings form state
  */
 export interface SettingsFormState {
-  recording: RecordingSettings;
-  snapshot: SnapshotSettings;
+  recording: RecordingSettingsForm;
+  snapshot: SnapshotSettingsForm;
   notifications: FormField<boolean>;
   autoRefresh: FormField<boolean>;
   refreshInterval: FormField<number>;

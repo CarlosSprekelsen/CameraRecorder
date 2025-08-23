@@ -87,7 +87,6 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
     readinessStatus,
     isMonitoring,
     lastUpdate,
-    healthScore,
     getOverallHealth,
     getHealthScore,
     isSystemReady,

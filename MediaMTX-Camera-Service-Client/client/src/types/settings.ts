@@ -9,10 +9,21 @@
 export interface ConnectionSettings {
   websocketUrl: string;
   healthUrl: string;
+  httpBaseUrl: string;
   connectionTimeout: number;
+  requestTimeout: number;
   reconnectInterval: number;
   maxReconnectAttempts: number;
   pingInterval: number;
+  heartbeatInterval: number;
+  qualityThreshold: number;
+  enableHttpFallback: boolean;
+  pollingInterval: number;
+  maxPollingDuration: number;
+  enableMetrics: boolean;
+  enableCircuitBreaker: boolean;
+  circuitBreakerThreshold: number;
+  circuitBreakerTimeout: number;
 }
 
 /**
@@ -22,19 +33,35 @@ export interface RecordingSettings {
   defaultFormat: 'mp4' | 'mkv';
   defaultQuality: number;
   defaultDuration: number | null; // null for unlimited
+  maxDuration: number; // maximum allowed duration in seconds
+  defaultFrameRate: number; // fps
+  defaultBitrate: number; // kbps
   autoStartOnConnect: boolean;
   maxFileSize: number; // in MB
   storagePath: string;
+  storageDirectory: string; // storage directory path
+  maxStorageSize: number; // maximum storage size in GB
+  autoCleanupAge: number; // auto cleanup age in days
+  enableAutoCleanup: boolean;
+  enableAudio: boolean;
+  enableWatermark: boolean;
+  watermarkText: string;
+  enableCompression: boolean;
 }
 
 /**
  * Snapshot settings
  */
 export interface SnapshotSettings {
-  defaultFormat: 'jpg' | 'png';
-  defaultQuality: number;
+  defaultFormat: 'jpg' | 'png' | 'jpeg' | 'bmp' | 'webp';
+  jpegQuality: number; // quality setting for JPEG images (1-100)
+  defaultQuality: number; // general quality setting
+  defaultWidth: number; // default image width in pixels
+  defaultHeight: number; // default image height in pixels
   autoSave: boolean;
   storagePath: string;
+  enableTimestamp: boolean; // add timestamp to images
+  enableWatermark: boolean; // add watermark to images
 }
 
 /**
@@ -130,24 +157,51 @@ export const DEFAULT_SETTINGS: AppSettings = {
   connection: {
     websocketUrl: 'ws://localhost:8002/ws',
     healthUrl: 'http://localhost:8003',
+    httpBaseUrl: 'http://localhost:8003',
     connectionTimeout: 10000,
+    requestTimeout: 15000,
     reconnectInterval: 5000,
     maxReconnectAttempts: 5,
     pingInterval: 30000,
+    heartbeatInterval: 30000,
+    qualityThreshold: 80,
+    enableHttpFallback: true,
+    pollingInterval: 5000,
+    maxPollingDuration: 30000,
+    enableMetrics: true,
+    enableCircuitBreaker: true,
+    circuitBreakerThreshold: 5,
+    circuitBreakerTimeout: 60000,
   },
   recording: {
     defaultFormat: 'mp4',
     defaultQuality: 85,
     defaultDuration: null, // unlimited
+    maxDuration: 3600, // 1 hour max
+    defaultFrameRate: 30,
+    defaultBitrate: 2000, // 2 Mbps
     autoStartOnConnect: false,
     maxFileSize: 1024, // 1GB
     storagePath: '/downloads',
+    storageDirectory: '/downloads/recordings',
+    maxStorageSize: 10, // 10GB
+    autoCleanupAge: 30, // 30 days
+    enableAutoCleanup: true,
+    enableAudio: true,
+    enableWatermark: false,
+    watermarkText: 'Camera Recording',
+    enableCompression: true,
   },
   snapshot: {
     defaultFormat: 'jpg',
+    jpegQuality: 85,
     defaultQuality: 80,
+    defaultWidth: 1920,
+    defaultHeight: 1080,
     autoSave: true,
     storagePath: '/downloads/snapshots',
+    enableTimestamp: true,
+    enableWatermark: false,
   },
   ui: {
     theme: 'auto',

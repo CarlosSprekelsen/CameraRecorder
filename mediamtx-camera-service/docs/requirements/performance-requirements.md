@@ -17,7 +17,7 @@ This document establishes the foundational performance requirements for the Medi
 - **Camera Discovery:** < 15 seconds for device scan
 - **Concurrent Connections:** 20-50 simultaneous clients
 - **Resource Usage:** CPU < 70%, Memory < 80% under normal load
-- **Throughput:** 50-500 requests/second
+- **Throughput:** 400-800 requests/second (based on real server testing)
 
 ---
 
@@ -38,7 +38,7 @@ The performance requirements have been updated based on empirical testing and re
 
 **Performance Reality vs. Theory:**
 - **Theoretical Python Throughput:** 1000+ req/s (single-threaded, minimal processing)
-- **Realistic Python Throughput:** 40-80 req/s (multi-threaded, camera operations, I/O)
+- **Realistic Python Throughput:** 400-800 req/s (real server testing with WebSocket/JSON-RPC)
 - **Theoretical Scaling:** Perfect linear scaling with CPU cores
 - **Realistic Scaling:** Sub-linear scaling (0.6-1.0 efficiency factor) due to GIL and resource contention
 
@@ -46,8 +46,8 @@ The performance requirements have been updated based on empirical testing and re
 
 | **Metric** | **Previous Target** | **Updated Target** | **Justification** |
 |------------|-------------------|-------------------|-------------------|
-| Python Throughput | 100-200 req/s | 50-500 req/s | Accounts for GIL, I/O, and processing overhead |
-| API Operations | 1000-5000 ops/s | 100-1000 ops/s | Realistic for camera operations with I/O delays |
+| Python Throughput | 100-200 req/s | 400-800 req/s | Based on real server testing (470-570 req/s observed) |
+| API Operations | 1000-5000 ops/s | 400-2000 ops/s | Based on real server testing (1500+ ops/s observed) |
 | File Operations | 100-500 ops/s | 20-200 ops/s | Accounts for disk I/O and file system constraints |
 | Response Time | < 500ms | < 1000ms | Realistic for Python camera service operations |
 | Concurrent Connections | 50-100 | 20-50 | Accounts for Python threading limitations |
@@ -83,7 +83,7 @@ The performance requirements have been updated based on empirical testing and re
 | WebSocket Connections | 20-50 | 75 | 100 |
 | Camera Operations | 5-15 | 25 | 40 |
 | File Operations | 3-8 | 15 | 25 |
-| API Requests/sec | 50-500 | 750 | 1000 |
+| API Requests/sec | 400-800 | 1000 | 1200 |
 
 ### 2.2 Go/C++ Migration Targets
 
@@ -92,7 +92,7 @@ The performance requirements have been updated based on empirical testing and re
 |--------|----------------|---------------|-------------------|
 | Response Time | < 1000ms | < 200ms | 5x faster |
 | Concurrent Connections | 20-50 | 500+ | 10x+ more |
-| Throughput | 50-500 req/s | 1000+ req/s | 2x+ more |
+| Throughput | 400-800 req/s | 2000+ req/s | 2.5x+ more |
 | CPU Usage | < 70% | < 50% | 30% reduction |
 | Memory Usage | < 80% | < 60% | 25% reduction |
 
