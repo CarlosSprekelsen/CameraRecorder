@@ -283,22 +283,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   useEffect(() => {
     const hasPermissions = adminService.hasAdminPermissions();
     storeSetAdminStatus(true, hasPermissions);
-  }, [setAdminStatus]);
+  }, [storeSetAdminStatus]);
 
   /**
    * Auto-refresh system information
    */
   useEffect(() => {
-    if (autoRefresh && hasAdminPermissions) {
+    if (autoRefresh && storeHasAdminPermissions) {
       refreshSystemInfo();
       
       const interval = setInterval(refreshSystemInfo, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval, hasAdminPermissions, refreshSystemInfo]);
+  }, [autoRefresh, refreshInterval, storeHasAdminPermissions, refreshSystemInfo]);
 
   // Don't render if user doesn't have admin permissions
-  if (!hasAdminPermissions) {
+  if (!storeHasAdminPermissions) {
     return (
       <Alert severity="warning">
         You don't have permission to access the admin dashboard.
@@ -323,9 +323,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </Box>
 
       {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
-          {error}
+      {storeError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={storeClearError}>
+          {storeError}
         </Alert>
       )}
 
@@ -340,16 +340,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Typography variant="h6">System Performance</Typography>
               </Box>
               
-              {isLoadingMetrics ? (
+              {storeIsLoadingMetrics ? (
                 <LinearProgress />
-              ) : systemMetrics ? (
+              ) : storeSystemMetrics ? (
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">
                       Active Connections
                     </Typography>
                     <Typography variant="h6">
-                      {systemMetrics.active_connections}
+                      {storeSystemMetrics.active_connections}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -357,7 +357,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Total Requests
                     </Typography>
                     <Typography variant="h6">
-                      {systemMetrics.total_requests.toLocaleString()}
+                      {storeSystemMetrics.total_requests.toLocaleString()}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -365,7 +365,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Avg Response Time
                     </Typography>
                     <Typography variant="h6">
-                      {systemMetrics.average_response_time.toFixed(1)}ms
+                      {storeSystemMetrics.average_response_time.toFixed(1)}ms
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -373,7 +373,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Error Rate
                     </Typography>
                     <Typography variant="h6">
-                      {(systemMetrics.error_rate * 100).toFixed(2)}%
+                      {(storeSystemMetrics.error_rate * 100).toFixed(2)}%
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -381,7 +381,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       CPU Usage
                     </Typography>
                     <Typography variant="h6">
-                      {systemMetrics.cpu_usage.toFixed(1)}%
+                      {storeSystemMetrics.cpu_usage.toFixed(1)}%
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -389,7 +389,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Memory Usage
                     </Typography>
                     <Typography variant="h6">
-                      {systemMetrics.memory_usage.toFixed(1)}%
+                      {storeSystemMetrics.memory_usage.toFixed(1)}%
                     </Typography>
                   </Grid>
                 </Grid>
@@ -407,23 +407,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <StorageIcon />
                 <Typography variant="h6">Storage Status</Typography>
-                {isLowSpace() && <WarningIcon color="warning" />}
+                {storeIsLowSpace() && <WarningIcon color="warning" />}
               </Box>
               
-              {isLoadingStorage ? (
+              {storeIsLoadingStorage ? (
                 <LinearProgress />
-              ) : storageInfo ? (
+              ) : storeStorageInfo ? (
                 <Box>
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography variant="body2">Storage Usage</Typography>
                     <Typography variant="body2">
-                      {getStorageUsagePercentage().toFixed(1)}%
+                      {storeGetStorageUsagePercentage().toFixed(1)}%
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={getStorageUsagePercentage()}
-                    color={getStorageUsageColor()}
+                    value={storeGetStorageUsagePercentage()}
+                    color={storeGetStorageUsageColor()}
                     sx={{ height: 8, borderRadius: 4, mb: 2 }}
                   />
                   
@@ -433,7 +433,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Total Space
                       </Typography>
                       <Typography variant="body1">
-                        {formatBytes(storageInfo.total_space)}
+                        {storeFormatBytes(storeStorageInfo.total_space)}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -441,7 +441,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Available Space
                       </Typography>
                       <Typography variant="body1">
-                        {formatBytes(storageInfo.available_space)}
+                        {storeFormatBytes(storeStorageInfo.available_space)}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -449,7 +449,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Recordings
                       </Typography>
                       <Typography variant="body1">
-                        {formatBytes(storageInfo.recordings_size)}
+                        {storeFormatBytes(storeStorageInfo.recordings_size)}
                       </Typography>
                     </Grid>
                     <Grid item xs={6}>
@@ -457,12 +457,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Snapshots
                       </Typography>
                       <Typography variant="body1">
-                        {formatBytes(storageInfo.snapshots_size)}
+                        {storeFormatBytes(storeStorageInfo.snapshots_size)}
                       </Typography>
                     </Grid>
                   </Grid>
                   
-                  {isLowSpace() && (
+                  {storeIsLowSpace() && (
                     <Alert severity="warning" sx={{ mt: 2 }}>
                       Low storage space detected. Consider cleaning up old files.
                     </Alert>
@@ -484,7 +484,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Typography variant="h6">System Status</Typography>
               </Box>
               
-              {isLoadingStatus ? (
+              {storeIsLoadingStatus ? (
                 <LinearProgress />
               ) : systemStatus ? (
                 <Box>

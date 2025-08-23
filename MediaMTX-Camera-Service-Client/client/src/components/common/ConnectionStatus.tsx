@@ -111,66 +111,66 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const getStatusLabel = () => {
-    if (isConnecting) return 'Connecting...';
-    if (isReconnecting) return `Reconnecting (${reconnectAttempts}/${maxReconnectAttempts})`;
-    if (status === 'connected') {
-      if (isHealthy) {
-        return `${connectionQuality.charAt(0).toUpperCase() + connectionQuality.slice(1)} (${healthScore}%)`;
+    if (storeIsConnecting) return 'Connecting...';
+    if (storeIsReconnecting) return `Reconnecting (${storeReconnectAttempts}/${storeMaxReconnectAttempts})`;
+    if (storeStatus === 'connected') {
+      if (storeIsHealthy) {
+        return `${storeConnectionQuality.charAt(0).toUpperCase() + storeConnectionQuality.slice(1)} (${storeHealthScore}%)`;
       }
       return 'Connected (Unhealthy)';
     }
-    if (status === 'error') return 'Connection Error';
+    if (storeStatus === 'error') return 'Connection Error';
     return 'Disconnected';
   };
 
   const getTooltipText = () => {
-    let tooltip = `Status: ${status}`;
+    let tooltip = `Status: ${storeStatus}`;
     
-    if (url) {
-      tooltip += `\nServer: ${url}`;
+    if (storeUrl) {
+      tooltip += `\nServer: ${storeUrl}`;
     }
     
-    if (lastConnected) {
-      tooltip += `\nLast Connected: ${lastConnected.toLocaleTimeString()}`;
+    if (storeLastConnected) {
+      tooltip += `\nLast Connected: ${storeLastConnected.toLocaleTimeString()}`;
     }
     
-    if (lastDisconnected) {
-      tooltip += `\nLast Disconnected: ${lastDisconnected.toLocaleTimeString()}`;
+    if (storeLastDisconnected) {
+      tooltip += `\nLast Disconnected: ${storeLastDisconnected.toLocaleTimeString()}`;
     }
     
-    if (connectionUptime) {
-      const uptimeMinutes = Math.floor(connectionUptime / 60000);
+    if (storeConnectionUptime) {
+      const uptimeMinutes = Math.floor(storeConnectionUptime / 60000);
       tooltip += `\nUptime: ${uptimeMinutes} minutes`;
     }
     
-    if (healthScore !== null) {
-      tooltip += `\nHealth Score: ${healthScore}%`;
+    if (storeHealthScore !== null) {
+      tooltip += `\nHealth Score: ${storeHealthScore}%`;
     }
     
-    if (latency !== null) {
-      tooltip += `\nLatency: ${latency.toFixed(1)}ms`;
+    if (storeLatency !== null) {
+      tooltip += `\nLatency: ${storeLatency.toFixed(1)}ms`;
     }
     
-    if (messageCount > 0) {
-      tooltip += `\nMessages: ${messageCount}`;
+    if (storeMessageCount > 0) {
+      tooltip += `\nMessages: ${storeMessageCount}`;
     }
     
-    if (errorCount > 0) {
-      tooltip += `\nErrors: ${errorCount}`;
+    if (storeErrorCount > 0) {
+      tooltip += `\nErrors: ${storeErrorCount}`;
     }
     
-    if (reconnectAttempts > 0) {
-      tooltip += `\nReconnection Attempts: ${reconnectAttempts}/${maxReconnectAttempts}`;
+    if (storeReconnectAttempts > 0) {
+      tooltip += `\nReconnection Attempts: ${storeReconnectAttempts}/${storeMaxReconnectAttempts}`;
     }
     
-    if (nextReconnectTime) {
-      tooltip += `\nNext Reconnect: ${nextReconnectTime.toLocaleTimeString()}`;
+    if (storeNextReconnectTime) {
+      tooltip += `\nNext Reconnect: ${storeNextReconnectTime.toLocaleTimeString()}`;
     }
     
-    if (error) {
-      tooltip += `\nError: ${error}`;
-      if (errorCode) {
-        tooltip += ` (Code: ${errorCode})`;
+    if (storeError) {
+      tooltip += `\nError: ${storeError}`;
+      if (storeErrorCode) {
+        tooltip += ` (Code: ${storeErrorCode})`;
       }
     }
     
@@ -194,7 +194,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const getQualityColor = () => {
-    switch (connectionQuality) {
+    switch (storeConnectionQuality) {
       case 'excellent': return 'success';
       case 'good': return 'info';
       case 'poor': return 'warning';
