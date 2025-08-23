@@ -263,7 +263,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       </Box>
 
       {/* Error Alert */}
-      {error && (
+      {storeError && (
         <Collapse in={true}>
           <Alert 
             severity="error" 
@@ -275,12 +275,12 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             }
           >
             <Typography variant="body2">
-              {error}
-              {errorCode && ` (Code: ${errorCode})`}
+              {storeError}
+              {storeErrorCode && ` (Code: ${storeErrorCode})`}
             </Typography>
-            {errorTimestamp && (
+            {storeErrorTimestamp && (
               <Typography variant="caption" display="block">
-                {errorTimestamp.toLocaleTimeString()}
+                {storeErrorTimestamp.toLocaleTimeString()}
               </Typography>
             )}
           </Alert>
@@ -310,11 +310,11 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LinearProgress 
                     variant="determinate" 
-                    value={healthScore} 
+                    value={storeHealthScore} 
                     sx={{ flexGrow: 1, height: 8, borderRadius: 4 }}
-                    color={healthScore >= 90 ? 'success' : healthScore >= 70 ? 'info' : 'warning'}
+                    color={storeHealthScore >= 90 ? 'success' : storeHealthScore >= 70 ? 'info' : 'warning'}
                   />
-                  <Typography variant="body2">{healthScore}%</Typography>
+                  <Typography variant="body2">{storeHealthScore}%</Typography>
                 </Box>
               </Box>
               
@@ -323,7 +323,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                   Quality
                 </Typography>
                 <Chip 
-                  label={connectionQuality} 
+                  label={storeConnectionQuality} 
                   size="small" 
                   color={getQualityColor()}
                   variant="outlined"

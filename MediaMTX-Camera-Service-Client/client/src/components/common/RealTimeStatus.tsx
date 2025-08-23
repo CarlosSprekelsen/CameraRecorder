@@ -143,12 +143,12 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             Connection Health
           </Typography>
           <Typography variant="body2" color={`${getHealthScoreColor()}.main`}>
-            {healthScore}%
+            {storeHealthScore}%
           </Typography>
         </Box>
         <LinearProgress
           variant="determinate"
-          value={healthScore}
+          value={storeHealthScore}
           color={getHealthScoreColor()}
           sx={{ height: 6, borderRadius: 3 }}
         />
@@ -161,9 +161,9 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Chip
-            icon={realTimeUpdatesEnabled ? <CheckCircle /> : <Error />}
-            label={realTimeUpdatesEnabled ? 'Enabled' : 'Disabled'}
-            color={realTimeUpdatesEnabled ? 'success' : 'error'}
+            icon={storeRealTimeUpdatesEnabled ? <CheckCircle /> : <Error />}
+            label={storeRealTimeUpdatesEnabled ? 'Enabled' : 'Disabled'}
+            color={storeRealTimeUpdatesEnabled ? 'success' : 'error'}
             size="small"
           />
           <Chip

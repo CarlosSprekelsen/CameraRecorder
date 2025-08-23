@@ -486,12 +486,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               
               {storeIsLoadingStatus ? (
                 <LinearProgress />
-              ) : systemStatus ? (
+              ) : storeSystemStatus ? (
                 <Box>
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
                     <Chip
-                      label={systemStatus.status}
-                      color={systemStatus.status === 'healthy' ? 'success' : 'warning'}
+                      label={storeSystemStatus.status}
+                      color={storeSystemStatus.status === 'healthy' ? 'success' : 'warning'}
                       size="small"
                     />
                     <Typography variant="body2" color="text.secondary">
