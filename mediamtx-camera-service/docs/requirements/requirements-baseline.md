@@ -127,6 +127,28 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-AUTH-003 | Authentication SHALL handle token expiration and refresh mechanisms | High | Implementation Analysis |
 | REQ-AUTH-004 | Authentication SHALL provide clear error messages for authentication failures | High | Implementation Analysis |
 
+### 1.13 Recording Management Requirements
+
+| REQ-ID | Description | Priority | Source Reference |
+|--------|-------------|----------|------------------|
+| REQ-REC-001.1 | The system SHALL prevent multiple simultaneous recordings on the same camera device | Critical | Recording Management Requirements |
+| REQ-REC-001.2 | The system SHALL return error code -1006 with user-friendly message for recording conflicts | Critical | Recording Management Requirements |
+| REQ-REC-001.3 | The system SHALL integrate recording status into camera information responses | High | Recording Management Requirements |
+| REQ-REC-002.1 | The system SHALL create new recording files at configurable intervals (default: 30 minutes) | High | Recording Management Requirements |
+| REQ-REC-002.2 | The system SHALL generate timestamped filenames for recording files | High | Recording Management Requirements |
+| REQ-REC-002.3 | The system SHALL maintain recording continuity across file rotations | Critical | Recording Management Requirements |
+| REQ-REC-003.1 | The system SHALL validate available storage space before starting recordings | Critical | Recording Management Requirements |
+| REQ-REC-003.2 | The system SHALL implement configurable storage thresholds (80% warn, 90% block) | Critical | Recording Management Requirements |
+| REQ-REC-003.3 | The system SHALL return appropriate error codes for storage-related issues | Critical | Recording Management Requirements |
+| REQ-REC-003.4 | The system SHALL NOT automatically delete any recording files | High | Recording Management Requirements |
+| REQ-REC-004.1 | The system SHALL monitor disk space usage during recording operations | High | Recording Management Requirements |
+| REQ-REC-004.2 | The system SHALL provide storage usage information via API | High | Recording Management Requirements |
+| REQ-REC-004.3 | The system SHALL integrate storage status into health monitoring | High | Recording Management Requirements |
+| REQ-REC-005.1 | The system SHALL provide user-friendly error messages without technical details | High | Recording Management Requirements |
+| REQ-REC-005.2 | The system SHALL provide comprehensive recording progress information | High | Recording Management Requirements |
+| REQ-REC-005.3 | The system SHALL provide real-time recording status notifications | High | Recording Management Requirements |
+| REQ-REC-006.1 | The system SHALL support configurable recording management parameters via environment variables | High | Recording Management Requirements |
+
 ---
 
 ## 2. Performance Requirements
@@ -502,16 +524,17 @@ This document serves as the master requirements register for the MediaMTX Camera
 | Testing | 16 | 8 | 7 | 1 | 16 |
 | Health Monitoring | 10 | 5 | 4 | 1 | 10 |
 | Operational | 8 | 1 | 6 | 1 | 8 |
-| **TOTAL** | **238** | **85** | **133** | **20** | **238** |
+| Recording Management | 17 | 8 | 9 | 0 | 17 |
+| **TOTAL** | **255** | **93** | **142** | **20** | **255** |
 
 ### 9.2 Requirements by Priority
 
 | Priority | Count | Percentage |
 |----------|-------|------------|
-| Critical | 85 | 35.7% |
-| High | 133 | 55.9% |
-| Medium | 20 | 8.4% |
-| **TOTAL** | **238** | **100%** |
+| Critical | 93 | 36.5% |
+| High | 142 | 55.7% |
+| Medium | 20 | 7.8% |
+| **TOTAL** | **255** | **100%** |
 
 ---
 
@@ -600,7 +623,16 @@ This section documents features that have been implemented in the codebase but a
 | Configuration Sync | `src/mediamtx_wrapper/controller.py` | Real-time MediaMTX configuration synchronization | High | Implemented |
 | Health Monitoring | `src/mediamtx_wrapper/controller.py` | MediaMTX service health monitoring and recovery | High | Implemented |
 
-### 10.10 Summary of Implemented Features
+### 10.10 Recording Management Features
+
+| Feature | Implementation Location | Description | Priority | Status |
+|---------|------------------------|-------------|----------|---------|
+| Recording State Management | `src/websocket_server/server.py` | Per-device recording state tracking and conflict prevention | Critical | To Be Implemented |
+| File Rotation Management | `src/mediamtx_wrapper/controller.py` | Configurable file rotation with timestamped naming | High | To Be Implemented |
+| Storage Protection | `src/websocket_server/server.py` | Storage space validation and threshold management | Critical | To Be Implemented |
+| Resource Monitoring | `src/camera_service/service_manager.py` | Real-time storage monitoring and alerting | High | To Be Implemented |
+
+### 10.11 Summary of Implemented Features
 
 | Category | Count | Critical | High | Medium | Total |
 |----------|-------|----------|------|--------|-------|
@@ -613,7 +645,8 @@ This section documents features that have been implemented in the codebase but a
 | SDK/Client | 4 | 0 | 2 | 2 | 4 |
 | Camera Discovery | 4 | 1 | 3 | 0 | 4 |
 | Integration | 4 | 2 | 2 | 0 | 4 |
-| **TOTAL** | **36** | **11** | **21** | **4** | **36** |
+| Recording Management | 4 | 2 | 2 | 0 | 4 |
+| **TOTAL** | **40** | **13** | **23** | **4** | **40** |
 
 ---
 

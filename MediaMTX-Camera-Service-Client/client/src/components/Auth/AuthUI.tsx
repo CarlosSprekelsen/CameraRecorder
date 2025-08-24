@@ -191,10 +191,10 @@ const AuthUI: React.FC<AuthUIProps> = ({
           <DialogTitle>Role Information</DialogTitle>
           <DialogContent>
             <Typography variant="body1" gutterBottom>
-              <strong>Current Role:</strong> {user.role}
+              <strong>Current Role:</strong> {storeUser.role}
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              {getRoleDescription(user.role)}
+              {getRoleDescription(storeUser.role)}
             </Typography>
             
             <Divider sx={{ my: 2 }} />

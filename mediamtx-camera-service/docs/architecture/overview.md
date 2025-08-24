@@ -108,6 +108,10 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 - Path lifecycle management (create/delete/verify)
 - Error handling and recovery for path operations
 - Automatic path creation on camera detection
+- **Recording session management and state tracking**
+- **File rotation management with configurable intervals**
+- **Storage space validation and threshold management**
+- **Resource monitoring during recording operations**
 
 #### Health & Monitoring
 - Service component health verification
@@ -136,10 +140,14 @@ The MediaMTX Camera Service is a lightweight wrapper around MediaMTX, providing:
 ### Recording Flow
 1. Client requests recording start via JSON-RPC
 2. Authorization validates recording permissions
-3. Controller enables recording in MediaMTX
-4. Health Monitor tracks recording status
-5. MediaMTX captures video to file
-6. Server notifies client of completion or failure
+3. **System validates storage space and recording state**
+4. **System checks for existing recording conflicts**
+5. Controller enables recording in MediaMTX
+6. **System initiates file rotation management**
+7. Health Monitor tracks recording status
+8. MediaMTX captures video to file with rotation
+9. **System monitors storage usage and applies thresholds**
+10. Server notifies client of completion or failure
 
 ## Error Recovery and Resilience
 

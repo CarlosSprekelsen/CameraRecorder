@@ -148,6 +148,11 @@ class RecordingConfig:
     max_size: int = 10737418240
     max_duration: int = 3600
     cleanup_after_days: int = 30
+    
+    # Recording Management Configuration
+    rotation_minutes: int = 30
+    storage_warn_percent: int = 80
+    storage_block_percent: int = 90
 
 
 @dataclass
@@ -787,6 +792,18 @@ class ConfigManager:
             "CAMERA_SERVICE_RECORDING_CLEANUP_AFTER_DAYS": (
                 "recording",
                 "cleanup_after_days",
+            ),
+            "CAMERA_SERVICE_RECORDING_ROTATION_MINUTES": (
+                "recording",
+                "rotation_minutes",
+            ),
+            "CAMERA_SERVICE_RECORDING_STORAGE_WARN_PERCENT": (
+                "recording",
+                "storage_warn_percent",
+            ),
+            "CAMERA_SERVICE_RECORDING_STORAGE_BLOCK_PERCENT": (
+                "recording",
+                "storage_block_percent",
             ),
             "CAMERA_SERVICE_SNAPSHOTS_FORMAT": ("snapshots", "format"),
             "CAMERA_SERVICE_SNAPSHOTS_QUALITY": ("snapshots", "quality"),

@@ -1024,6 +1024,11 @@ Standard JSON-RPC 2.0 error codes plus service-specific codes:
 - **-32007**: Insufficient storage space
 - **-32008**: Camera capability not supported
 
+### Enhanced Recording Management Error Codes
+- **-1006**: Camera is currently recording (device already has active recording)
+- **-1008**: Storage space is low (available storage below 10%)
+- **-1010**: Storage space is critical (available storage below 5%)
+
 ---
 
 **API Version:** 1.0  

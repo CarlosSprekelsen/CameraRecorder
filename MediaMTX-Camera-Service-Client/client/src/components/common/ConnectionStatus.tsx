@@ -385,12 +385,12 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     color="warning"
                   />
                   <Typography variant="body2">
-                    {reconnectAttempts}/{maxReconnectAttempts}
+                    {storeReconnectAttempts}/{storeMaxReconnectAttempts}
                   </Typography>
                 </Box>
-                {nextReconnectTime && (
+                {storeNextReconnectTime && (
                   <Typography variant="caption" color="text.secondary">
-                    Next attempt: {nextReconnectTime.toLocaleTimeString()}
+                    Next attempt: {storeNextReconnectTime.toLocaleTimeString()}
                   </Typography>
                 )}
               </Box>
@@ -402,9 +402,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 variant="outlined"
                 startIcon={<SettingsIcon />}
                 onClick={handleToggleAutoReconnect}
-                color={autoReconnect ? 'success' : 'primary'}
+                color={storeAutoReconnect ? 'success' : 'primary'}
               >
-                Auto-reconnect {autoReconnect ? 'ON' : 'OFF'}
+                Auto-reconnect {storeAutoReconnect ? 'ON' : 'OFF'}
               </Button>
               
               <Button
@@ -422,34 +422,34 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       {/* Compact Details */}
       {showDetails && compact && (
         <Box sx={{ ml: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {url && (
+          {storeUrl && (
             <Typography variant="caption" color="text.secondary">
-              Server: {url}
+              Server: {storeUrl}
             </Typography>
           )}
-          {lastConnected && (
+          {storeLastConnected && (
             <Typography variant="caption" color="text.secondary">
-              Connected: {lastConnected.toLocaleTimeString()}
+              Connected: {storeLastConnected.toLocaleTimeString()}
             </Typography>
           )}
-          {healthScore !== null && (
+          {storeHealthScore !== null && (
             <Typography variant="caption" color="text.secondary">
-              Health: {healthScore}%
+              Health: {storeHealthScore}%
             </Typography>
           )}
-          {latency !== null && (
+          {storeLatency !== null && (
             <Typography variant="caption" color="text.secondary">
-              Latency: {formatLatency(latency)}
+              Latency: {formatLatency(storeLatency)}
             </Typography>
           )}
-          {reconnectAttempts > 0 && (
+          {storeReconnectAttempts > 0 && (
             <Typography variant="caption" color="text.secondary">
-              Reconnections: {reconnectAttempts}/{maxReconnectAttempts}
+              Reconnections: {storeReconnectAttempts}/{storeMaxReconnectAttempts}
             </Typography>
           )}
-          {error && (
+          {storeError && (
             <Typography variant="caption" color="error">
-              Error: {error}
+              Error: {storeError}
             </Typography>
           )}
         </Box>

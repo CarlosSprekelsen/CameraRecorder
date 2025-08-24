@@ -551,7 +551,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     Supported Formats:
                   </Typography>
                   <Box display="flex" gap={0.5} flexWrap="wrap" mb={1}>
-                    {serverInfo.supported_formats.map((format) => (
+                    {storeServerInfo.supported_formats.map((format) => (
                       <Chip key={format} label={format} size="small" />
                     ))}
                   </Box>
@@ -560,7 +560,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     Capabilities:
                   </Typography>
                   <Box display="flex" gap={0.5} flexWrap="wrap">
-                    {serverInfo.capabilities.map((capability) => (
+                    {storeServerInfo.capabilities.map((capability) => (
                       <Chip key={capability} label={capability} size="small" variant="outlined" />
                     ))}
                   </Box>
@@ -597,22 +597,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 variant="outlined"
                 startIcon={<DeleteIcon />}
                 onClick={performCleanup}
-                disabled={isPerformingCleanup}
+                disabled={storeIsPerformingCleanup}
                 fullWidth
               >
-                {isPerformingCleanup ? 'Cleaning...' : 'Cleanup Old Files'}
+                {storeIsPerformingCleanup ? 'Cleaning...' : 'Cleanup Old Files'}
               </Button>
             </Grid>
           </Grid>
           
           {/* Cleanup Results */}
-          {lastCleanupResults && (
+          {storeLastCleanupResults && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              {lastCleanupResults.message}
-              {lastCleanupResults.files_deleted > 0 && (
+              {storeLastCleanupResults.message}
+              {storeLastCleanupResults.files_deleted > 0 && (
                 <Typography variant="body2">
-                  Files deleted: {lastCleanupResults.files_deleted} | 
-                  Space freed: {formatBytes(lastCleanupResults.space_freed)}
+                  Files deleted: {storeLastCleanupResults.files_deleted} | 
+                  Space freed: {storeFormatBytes(storeLastCleanupResults.space_freed)}
                 </Typography>
               )}
             </Alert>
@@ -625,7 +625,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         open={retentionDialogOpen}
         onClose={() => setRetentionDialogOpen(false)}
         onSave={saveRetentionPolicy}
-        currentPolicy={retentionPolicy || undefined}
+        currentPolicy={storeRetentionPolicy || undefined}
       />
     </Box>
   );

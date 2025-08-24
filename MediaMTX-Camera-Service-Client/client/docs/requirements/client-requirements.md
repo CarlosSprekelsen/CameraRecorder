@@ -1,16 +1,19 @@
 # Client Application Requirements Document
 
-**Version:** 1.1  
+**Version:** 2.0  
 **Authors:** System Architect  
-**Date:** 2025-08-04  
-**Status:** Approved  
-**Related Epic:** Client Applications Development
+**Date:** 2025-01-23  
+**Status:** 🚨 UPDATED - Ground Truth Alignment Required  
+**Related Epic:** Client Applications Development  
+**Ground Truth:** Aligned with `mediamtx-camera-service/docs/requirements/recording-management-requirements.md`
 
 ---
 
 ## Purpose
 
 This document specifies the functional and non-functional requirements for the client applications that will interface with the MediaMTX Camera Service. The client applications consist of a Web interface accessible via web browser and an Android APK application, both designed for TWT and TT camera operations.
+
+**🚨 CRITICAL UPDATE:** This document has been updated to align with the new recording management ground truth established by the server team. The client must now support enhanced recording management, storage protection, and error handling as defined in the server requirements.
 
 ## Scope
 
@@ -27,12 +30,14 @@ The client applications will provide camera control functionality by communicati
 - **Real-time Notifications:** Subscribe to camera status updates and recording events
 
 ### Supported Service Methods
-- `get_camera_list` - Enumerate available cameras
-- `get_camera_status` - Get specific camera status
+- `get_camera_list` - Enumerate available cameras (enhanced with recording status)
+- `get_camera_status` - Get specific camera status (enhanced with recording info)
 - `take_snapshot` - Capture still images
-- `start_recording` - Begin video recording
+- `start_recording` - Begin video recording (with conflict prevention)
 - `stop_recording` - End video recording
+- `get_storage_info` - Get storage usage and threshold information
 - Real-time notifications for camera and recording status updates
+- Enhanced error handling for recording conflicts and storage issues
 
 ---
 
@@ -66,6 +71,30 @@ The client applications will provide camera control functionality by communicati
 - **F1.3.3:** The application SHALL notify users when video recording is completed
 - **F1.3.4:** The application SHALL provide visual indicators for active recording state
 
+#### F1.4: Enhanced Recording Management (NEW)
+- **F1.4.1:** The application SHALL prevent multiple simultaneous recordings on the same camera device
+  - **API Contract:** Service returns error code -1006 "Camera is currently recording" for conflicts
+  - **UI Behavior:** Display user-friendly message and prevent recording start
+  - **Session Tracking:** Track active recording sessions per camera with session IDs
+- **F1.4.2:** The application SHALL validate storage space before starting recordings
+  - **API Contract:** Service returns error code -1008 "Storage space is low" (below 10% available)
+  - **API Contract:** Service returns error code -1010 "Storage space is critical" (below 5% available)
+  - **UI Behavior:** Display storage warnings and prevent recording when space is critical
+- **F1.4.3:** The application SHALL display comprehensive recording progress information
+  - **Current File:** Show current recording file name and path
+  - **Elapsed Time:** Display accurate recording elapsed time
+  - **File Size:** Monitor and display current file size
+  - **Session Information:** Show complete session details
+- **F1.4.4:** The application SHALL handle file rotation seamlessly
+  - **Rotation Interval:** Support configurable rotation intervals (default: 30 minutes)
+  - **Continuity:** Maintain recording continuity across file rotations
+  - **User Experience:** No interruption to user during file rotation
+- **F1.4.5:** The application SHALL provide real-time recording status notifications
+  - **WebSocket Integration:** Receive real-time status updates via WebSocket
+  - **Status Changes:** Notify on all recording status changes
+  - **Progress Updates:** Provide periodic progress updates
+  - **Error Notifications:** Notify on recording errors and issues
+
 ### F2: File Management Requirements
 
 #### F2.1: Metadata Management
@@ -97,6 +126,28 @@ The client applications will provide camera control functionality by communicati
 - **F2.4.7:** The application SHALL provide file metadata viewing capabilities (size, duration, creation date, etc.)
 - **F2.4.8:** The application SHALL implement role-based access control for file deletion (admin/operator roles only)
 
+#### F2.5: Enhanced Storage Management (NEW)
+- **F2.5.1:** The application SHALL integrate with service storage monitoring
+  - **API Integration:** Use `get_storage_info` method for storage information
+  - **Threshold Monitoring:** Monitor storage usage against configurable thresholds
+  - **Real-time Updates:** Receive storage status updates via WebSocket notifications
+  - **Health Integration:** Include storage status in health monitoring
+- **F2.5.2:** The application SHALL provide user-friendly storage warnings
+  - **Warning Threshold:** Display warnings when storage usage exceeds 80%
+  - **Critical Threshold:** Block operations when storage usage exceeds 90%
+  - **User Guidance:** Provide clear guidance for resolving storage issues
+  - **No Technical Details:** Avoid technical device path information in user messages
+- **F2.5.3:** The application SHALL support configurable storage thresholds
+  - **Environment Variables:** Support `STORAGE_WARN_PERCENT` and `STORAGE_BLOCK_PERCENT`
+  - **Default Values:** Use 80% for warnings and 90% for blocking
+  - **Configuration Validation:** Validate threshold values on startup
+  - **Dynamic Updates:** Support configuration changes without restart
+- **F2.5.4:** The application SHALL respect no auto-deletion policy
+  - **User Control:** Users maintain full control over their recording data
+  - **No Automatic Cleanup:** No automatic deletion of recordings based on age or size
+  - **Manual Management:** Users responsible for managing their recording storage
+  - **Data Preservation:** All recording data preserved until user action
+
 ### F3: User Interface Requirements
 
 #### F3.1: Camera Selection
@@ -124,8 +175,32 @@ The client applications will provide camera control functionality by communicati
   - Default storage location
   - Recording quality preferences
   - Notification preferences
+  - Storage threshold configuration
+  - File rotation settings
 - **F3.3.2:** The application SHALL validate and persist user settings
 - **F3.3.3:** The application SHALL provide settings reset to defaults
+
+#### F3.4: Enhanced Error Handling (NEW)
+- **F3.4.1:** The application SHALL handle recording conflict errors gracefully
+  - **Error Code -1006:** Display "Camera is currently recording" message
+  - **User Guidance:** Provide clear instructions to stop current recording first
+  - **Session Information:** Show active recording session details when available
+  - **Prevention:** Disable recording controls for cameras already recording
+- **F3.4.2:** The application SHALL handle storage-related errors appropriately
+  - **Error Code -1008:** Display "Storage space is low" warning with guidance
+  - **Error Code -1010:** Display "Storage space is critical" and block operations
+  - **User Guidance:** Provide clear steps for freeing up storage space
+  - **Actionable Information:** Show available space and usage percentages
+- **F3.4.3:** The application SHALL provide user-friendly error messages
+  - **Non-Technical Language:** Use user-friendly language in all error messages
+  - **No Device Details:** Avoid technical device path information in user messages
+  - **Actionable Guidance:** Provide clear guidance for resolving issues
+  - **Consistent Format:** Use consistent error message format across the application
+- **F3.4.4:** The application SHALL implement comprehensive error recovery
+  - **Automatic Retry:** Implement retry mechanisms for transient errors
+  - **Graceful Degradation:** Provide alternative functionality when possible
+  - **Error Logging:** Log detailed error information for debugging
+  - **User Feedback:** Provide clear feedback on error resolution progress
 
 ---
 
@@ -187,6 +262,7 @@ The client applications will provide camera control functionality by communicati
 ## Revision History
 
 - 1.1 (2025-08-09): Clarified F1.2.2 unlimited duration API contract; specified F1.2.3 time unit semantics for timed recording; added F3.2.5/F3.2.6 security enforcement and authentication flow for protected methods.
+- 2.0 (2025-01-23): 🚨 CRITICAL UPDATE - Aligned with new recording management ground truth. Added 17 new requirements for enhanced recording management, storage protection, and error handling. Added F1.4 (Enhanced Recording Management), F2.5 (Enhanced Storage Management), F3.4 (Enhanced Error Handling), and Configuration Management sections. Updated implementation priorities to include Phase 3 (Recording Management) as critical priority.
 
 ### N4: Usability Requirements
 - **N4.1:** Application SHALL provide clear error messages and recovery guidance
@@ -201,7 +277,8 @@ The client applications will provide camera control functionality by communicati
 ### T1: Communication Protocol
 - **Protocol:** WebSocket JSON-RPC 2.0
 - **Message Format:** JSON with correlation ID support
-- **Error Handling:** Standard JSON-RPC error codes plus service-specific codes
+- **Error Handling:** Standard JSON-RPC error codes plus enhanced service-specific codes
+- **Enhanced Error Codes:** -1006 (recording conflict), -1008 (storage low), -1010 (storage critical)
 - **Heartbeat:** Ping every 30 seconds to maintain connection
 
 ### T2: Data Flow Architecture
@@ -221,14 +298,42 @@ The client applications will provide camera control functionality by communicati
 ### T3: State Management
 - **Connection State:** Connected, Disconnected, Connecting, Error
 - **Camera State:** Available, Recording, Capturing, Error
-- **Recording State:** Idle, Recording, Stopping, Paused
-- **Application State:** Settings, User Preferences, File Storage
+- **Recording State:** Idle, Recording, Stopping, Paused, Conflict (NEW)
+- **Storage State:** Normal, Warning, Critical, Blocked (NEW)
+- **Application State:** Settings, User Preferences, File Storage, Configuration
 
 ### T4: Error Recovery Patterns
 - **Connection Failures:** Automatic retry with exponential backoff (1s, 2s, 4s, 8s, max 30s)
 - **Service Errors:** Display user-friendly error messages with suggested actions
 - **Camera Errors:** Graceful fallback to available cameras or manual refresh
 - **Storage Errors:** Alternative storage options or user guidance
+- **Recording Conflicts:** Prevent conflicts and provide clear user guidance (NEW)
+- **Storage Threshold Errors:** Display warnings and block operations appropriately (NEW)
+
+---
+
+## Configuration Management (NEW)
+
+### C1: Recording Management Configuration
+- **C1.1:** The application SHALL support configurable recording management parameters
+  - **RECORDING_ROTATION_MINUTES:** File rotation interval (default: 30 minutes)
+  - **Configuration Validation:** Validate configuration values on startup
+  - **Dynamic Updates:** Support configuration changes without restart
+  - **User Interface:** Provide configuration interface for user customization
+
+### C2: Storage Management Configuration
+- **C2.1:** The application SHALL support configurable storage thresholds
+  - **STORAGE_WARN_PERCENT:** Storage warning threshold (default: 80%)
+  - **STORAGE_BLOCK_PERCENT:** Storage blocking threshold (default: 90%)
+  - **Configuration Validation:** Validate threshold values on startup
+  - **User Interface:** Provide storage threshold configuration interface
+
+### C3: Environment Variable Support
+- **C3.1:** The application SHALL read configuration from environment variables
+  - **Default Values:** Use sensible defaults when environment variables not set
+  - **Configuration Validation:** Validate all configuration values on startup
+  - **Error Handling:** Provide clear error messages for invalid configuration
+  - **Documentation:** Document all supported environment variables
 
 ---
 
@@ -247,7 +352,14 @@ The client applications will provide camera control functionality by communicati
 3. Recording progress and status indicators
 4. Enhanced error handling and recovery
 
-### Phase 3: Advanced Features
+### Phase 3: Recording Management (NEW - CRITICAL)
+1. Recording conflict prevention and error handling
+2. Storage monitoring and threshold management
+3. Enhanced recording state tracking
+4. File rotation support and continuity
+5. Real-time recording status notifications
+
+### Phase 4: Advanced Features
 1. Camera preview integration
 2. Background recording (Android)
 3. PWA installation (Web)

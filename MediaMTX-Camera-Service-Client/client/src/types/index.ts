@@ -12,12 +12,28 @@ export type {
   CameraCapabilities,
   StreamInfo,
   StreamListResponse,
+  // Enhanced recording management types (NEW)
+  StorageInfo,
+  ThresholdStatus,
+  StorageUsage,
+  StorageValidationResult,
+  EnhancedRecordingStatus,
+  RecordingConflict,
+  RecordingProgress,
+  RecordingConfig,
+  StorageConfig,
+  AppConfig,
+  EnvironmentConfig,
+  ConfigValidationResult,
 } from './camera';
 
 // Recording types
 export type {
   RecordingSession,
   RecordingStatus,
+  EnhancedRecordingStatus,
+  RecordingConflict,
+  RecordingProgress,
   StartRecordingParams,
   StopRecordingParams,
   RecordingFormat,
@@ -67,11 +83,15 @@ export type {
   JSONRPCResponse,
   JSONRPCNotification,
   JSONRPCError,
+  EnhancedJSONRPCError,
+  RecordingConflictErrorData,
+  StorageErrorData,
   WebSocketMessage,
   ErrorCode,
   RPCMethod,
   CameraStatusNotification,
   RecordingStatusNotification,
+  StorageStatusNotification,
   NotificationMessage,
 } from './rpc';
 
@@ -81,7 +101,11 @@ export { RPC_METHODS, ERROR_CODES, NOTIFICATION_METHODS } from './rpc';
 export type {
   ViewMode,
   ConnectionStatus,
-  RecordingSettings as UIRecordingSettings,
-  SnapshotSettings as UISnapshotSettings,
   SettingsFormState,
 } from './ui';
+
+// Settings types (re-exported for UI compatibility)
+export type {
+  RecordingSettings as UIRecordingSettings,
+  SnapshotSettings as UISnapshotSettings,
+} from './settings';

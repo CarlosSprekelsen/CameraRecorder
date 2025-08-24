@@ -489,10 +489,15 @@ async def test_start_recording_success():
             assert isinstance(recording_result["format"], str), "format must be string per API documentation"
             
             # Validate specific values per API documentation
-            assert recording_result["status"] == "STARTED", "Status should be 'STARTED' per API documentation"
+            assert recording_result["status"] == "recording", "Status should be 'recording' per API documentation"
             assert recording_result["device"] == "/dev/video0", "Device should match request parameter"
             assert recording_result["duration"] == 30, "Duration should match request parameter"
             assert recording_result["format"] == "mp4", "Format should match request parameter"
+            
+            # Validate filename has timestamp format per new API structure
+            filename = recording_result["filename"]
+            assert "_" in filename, "Filename should contain timestamp per API documentation"
+            assert ".mp4" in filename, "Filename should have correct extension per API documentation"
 
             # Step 4: Verify on-demand activation occurred
             # Wait a moment for FFmpeg process to start

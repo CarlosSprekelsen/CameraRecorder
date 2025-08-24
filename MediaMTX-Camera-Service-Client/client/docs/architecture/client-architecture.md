@@ -11,13 +11,17 @@ The client integrates with the MediaMTX Camera Service which provides **two dist
 1. **WebSocket JSON-RPC Endpoint** (`ws://localhost:8002/ws`) - Primary API for camera operations
 2. **HTTP Health Endpoints** (`http://localhost:8003`) - System monitoring and health checks
 
+**🚨 CRITICAL UPDATE:** The service now includes enhanced recording management capabilities with storage protection, conflict prevention, and real-time monitoring features.
+
 ### **Project Objectives**
 1. **Real-time Camera Management**: Provide instant visibility into camera status and capabilities
-2. **Recording Control**: Enable snapshot capture and recording start/stop operations
-3. **Mobile-First Design**: Responsive PWA that works seamlessly on smartphones and desktops
-4. **Intuitive UX**: Clean, modern interface that requires minimal training
-5. **Reliable Communication**: WebSocket-based real-time updates with polling fallback
-6. **System Health Monitoring**: Integration with health endpoints for operational visibility
+2. **Enhanced Recording Control**: Enable snapshot capture and recording start/stop operations with conflict prevention
+3. **Storage Protection**: Monitor storage usage and prevent system resource exhaustion
+4. **Mobile-First Design**: Responsive PWA that works seamlessly on smartphones and desktops
+5. **Intuitive UX**: Clean, modern interface that requires minimal training
+6. **Reliable Communication**: WebSocket-based real-time updates with polling fallback
+7. **System Health Monitoring**: Integration with health endpoints for operational visibility
+8. **Configuration Management**: Dynamic configuration with environment variable support
 
 ### **Target Users**
 - **System Administrators**: Monitor camera health and manage recordings
@@ -53,12 +57,17 @@ The client integrates with the MediaMTX Camera Service which provides **two dist
 │     • Settings (server configuration, PWA settings)       │
 │     • Notifications (real-time status updates)            │
 │     • Health Monitor (system status, component health)    │
+│     • Recording Manager (recording state, conflicts)      │
+│     • Storage Monitor (storage usage, thresholds)         │
 ├─────────────────────────────────────────────────────────────┤
 │                State Management (Zustand)                  │
 │     • Camera state (connected devices, status, metadata)  │
 │     • UI state (selected camera, view mode, settings)     │
 │     • Connection state (WebSocket status, error handling)  │
 │     • Health state (system status, component health)      │
+│     • Recording state (sessions, conflicts, progress)     │
+│     • Storage state (usage, thresholds, warnings)         │
+│     • Configuration state (settings, environment vars)    │
 └─────────────────────┬───────────────────────────────────────┘
                       │ Dual-Endpoint Service Integration
 ┌─────────────────────▼───────────────────────────────────────┐
@@ -92,6 +101,9 @@ The client integrates with the MediaMTX Camera Service which provides **two dist
 - **HTTP Health Client**: REST client for system monitoring
 - **Authentication Service**: JWT token management and role-based access
 - **File Download Service**: HTTP client for media file downloads
+- **Recording State Manager**: Recording session management and conflict prevention
+- **Storage Monitor**: Storage usage monitoring and threshold management
+- **Configuration Manager**: Environment variable and dynamic configuration management
 
 #### **UI Framework**
 - **Material-UI (MUI)**: Comprehensive component library
@@ -103,12 +115,17 @@ The client integrates with the MediaMTX Camera Service which provides **two dist
 - **React Query**: Server state management and caching
 - **Connection State**: WebSocket connection status and health monitoring
 - **Authentication State**: JWT token management and role-based access
+- **Recording State**: Recording sessions, conflicts, and progress tracking
+- **Storage State**: Storage usage, thresholds, and warning management
+- **Configuration State**: Environment variables and dynamic settings
 
 #### **Communication**
 - **WebSocket**: Real-time bidirectional communication with JSON-RPC 2.0
 - **HTTP Health**: REST endpoints for system monitoring and health checks
 - **JSON-RPC 2.0**: Standard protocol with 2-parameter method calls (method, params)
 - **HTTP Client**: Health endpoint monitoring and file downloads
+- **Enhanced Error Codes**: Support for -1006 (recording conflict), -1008 (storage low), -1010 (storage critical)
+- **Real-time Notifications**: Enhanced recording status and storage monitoring notifications
 
 ### **WebSocket Service Interface Requirements**
 
@@ -143,6 +160,82 @@ interface WebSocketService {
 - **React Testing Library**: Component testing
 - **MSW (Mock Service Worker)**: API mocking
 - **Cypress**: End-to-end testing
+
+## **Enhanced Recording Management Architecture (NEW)**
+
+### **Recording State Management**
+The client implements comprehensive recording state management to support the new ground truth requirements:
+
+```typescript
+interface RecordingStateManager {
+  // Session tracking
+  activeRecordings: Map<string, RecordingSession>;
+  
+  // State management
+  startRecording(device: string): Promise<void>;
+  stopRecording(device: string): Promise<void>;
+  isRecording(device: string): boolean;
+  getRecordingSession(device: string): RecordingSession | null;
+  
+  // Conflict prevention
+  canStartRecording(device: string): boolean;
+  validateRecordingRequest(device: string): ValidationResult;
+  
+  // Real-time updates
+  onRecordingStatusChange(callback: (status: RecordingStatus) => void): void;
+  onRecordingConflict(callback: (conflict: RecordingConflict) => void): void;
+}
+```
+
+### **Storage Monitoring Architecture**
+The client implements real-time storage monitoring with configurable thresholds:
+
+```typescript
+interface StorageMonitor {
+  // Storage information
+  getStorageInfo(): Promise<StorageInfo>;
+  getStorageUsage(): Promise<StorageUsage>;
+  
+  // Threshold management
+  checkStorageThresholds(): Promise<ThresholdStatus>;
+  isStorageAvailable(): Promise<boolean>;
+  
+  // Validation
+  validateStorageForRecording(): Promise<ValidationResult>;
+  validateStorageForOperation(operation: string): Promise<ValidationResult>;
+  
+  // Monitoring
+  startStorageMonitoring(interval: number): void;
+  stopStorageMonitoring(): void;
+  
+  // Event handling
+  onStorageThresholdExceeded(callback: (threshold: ThresholdStatus) => void): void;
+  onStorageCritical(callback: (status: StorageStatus) => void): void;
+}
+```
+
+### **Configuration Management Architecture**
+The client supports dynamic configuration management with environment variable support:
+
+```typescript
+interface ConfigurationManager {
+  // Environment variables
+  getRecordingRotationMinutes(): number;
+  getStorageWarnPercent(): number;
+  getStorageBlockPercent(): number;
+  
+  // Configuration validation
+  validateConfiguration(): ValidationResult;
+  getConfigurationErrors(): string[];
+  
+  // Dynamic updates
+  updateConfiguration(config: Partial<AppConfig>): void;
+  reloadConfiguration(): Promise<void>;
+  
+  // Default values
+  getDefaultConfiguration(): AppConfig;
+}
+```
 
 ## **Component Architecture**
 
@@ -195,6 +288,26 @@ interface WebSocketService {
 - File Metadata Display
 - Download Functionality
 - File Deletion (with role-based permissions)
+```
+
+#### **6. Recording Manager (NEW)**
+```typescript
+// RecordingManager.tsx - Enhanced recording management
+- Recording State Display (active sessions, conflicts)
+- Recording Progress Tracking (elapsed time, file info)
+- Conflict Prevention Interface (disable controls for active recordings)
+- Session Management (start, stop, pause operations)
+- Real-time Status Updates (WebSocket notifications)
+```
+
+#### **7. Storage Monitor (NEW)**
+```typescript
+// StorageMonitor.tsx - Storage monitoring and management
+- Storage Usage Display (total, used, available space)
+- Threshold Status Indicators (warning, critical levels)
+- Storage Warnings and Alerts (user-friendly messages)
+- Storage Validation (pre-operation checks)
+- Configuration Interface (threshold settings)
 ```
 
 ## **Service Integration Architecture**
@@ -441,6 +554,25 @@ const result = await errorRecoveryService.executeWithRetry(
 - **Component Health**: Individual service component status
 - **Operational Metrics**: Performance and availability metrics
 - **Alerting**: Proactive notification of system issues
+
+---
+
+## **Architecture Update Notes**
+
+### **Ground Truth Alignment**
+This architecture has been updated to align with the new recording management ground truth requirements. The following enhancements have been integrated:
+
+1. **Enhanced Recording Management**: Comprehensive recording state management with conflict prevention
+2. **Storage Protection**: Real-time storage monitoring with configurable thresholds
+3. **Configuration Management**: Dynamic configuration with environment variable support
+4. **Enhanced Error Handling**: Support for new error codes and user-friendly messages
+5. **Real-time Notifications**: Enhanced WebSocket notifications for recording and storage status
+
+### **Implementation Priority**
+The new architecture components should be implemented in the following order:
+1. **Phase 1**: Recording State Manager and Storage Monitor services
+2. **Phase 2**: Enhanced Error Handling and Configuration Management
+3. **Phase 3**: UI Components and integration
 
 ---
 

@@ -33,9 +33,13 @@ import type {
   WebSocketMessage,
   CameraStatusNotification,
   RecordingStatusNotification,
+  StorageStatusNotification,
+  EnhancedJSONRPCError,
+  RecordingConflictErrorData,
+  StorageErrorData,
 } from '../types';
 import { authService } from './authService';
-import { NOTIFICATION_METHODS } from '../types';
+import { NOTIFICATION_METHODS, ERROR_CODES } from '../types';
 import { HTTPPollingService, HTTPPollingConfig, HTTPPollingError } from './httpPollingService';
 
 // Store interface types for better type safety
@@ -174,6 +178,7 @@ export class WebSocketService {
   // Enhanced notification handlers
   private onCameraStatusUpdateHandler?: (notification: CameraStatusNotification) => void;
   private onRecordingStatusUpdateHandler?: (notification: RecordingStatusNotification) => void;
+  private onStorageStatusUpdateHandler?: (notification: StorageStatusNotification) => void;
   private onNotificationHandler?: (notification: NotificationMessage) => void;
 
   // Connection store integration
@@ -289,6 +294,13 @@ export class WebSocketService {
     this.onRecordingStatusUpdateHandler = handler;
   }
 
+  /**
+   * Set handler for storage status update notifications
+   */
+  public onStorageStatusUpdate(handler: (notification: StorageStatusNotification) => void): void {
+    this.onStorageStatusUpdateHandler = handler;
+  }
+
   public onNotification(handler: (notification: NotificationMessage) => void): void {
     this.onNotificationHandler = handler;
   }
@@ -357,6 +369,114 @@ export class WebSocketService {
 
   public onError(handler: (error: WebSocketError) => void): void {
     this.onErrorHandler = handler;
+  }
+
+  /**
+   * Enhanced error handling for recording management error codes
+   */
+  private handleEnhancedError(error: EnhancedJSONRPCError): void {
+    console.log(`🔍 Handling enhanced error: ${error.code} - ${error.message}`);
+    
+    switch (error.code) {
+      case ERROR_CODES.CAMERA_ALREADY_RECORDING:
+        this.handleRecordingConflict(error.data as RecordingConflictErrorData);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_LOW:
+        this.handleStorageWarning(error.data as StorageErrorData);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_CRITICAL:
+        this.handleStorageCritical(error.data as StorageErrorData);
+        break;
+      default:
+        this.handleStandardError(error);
+    }
+  }
+
+  /**
+   * Handle recording conflict errors
+   */
+  private handleRecordingConflict(data: RecordingConflictErrorData): void {
+    console.warn(`⚠️ Recording conflict detected for camera: ${data.camera_id}`);
+    console.warn(`⚠️ Active session: ${data.session_id}`);
+    
+    // Update connection store with conflict information
+    if (this.connectionStore) {
+      this.connectionStore.setError(`Camera ${data.camera_id} is currently recording`, ERROR_CODES.CAMERA_ALREADY_RECORDING);
+    }
+    
+    // Notify UI components about the conflict
+    this.onErrorHandler?.(new WebSocketError(
+      `Camera ${data.camera_id} is currently recording (Session: ${data.session_id})`,
+      ERROR_CODES.CAMERA_ALREADY_RECORDING,
+      data
+    ));
+  }
+
+  /**
+   * Handle storage warning errors
+   */
+  private handleStorageWarning(data: StorageErrorData): void {
+    console.warn(`⚠️ Storage space low: ${data.usage_percent.toFixed(1)}% used`);
+    console.warn(`⚠️ Available space: ${this.formatBytes(data.available_space)}`);
+    
+    // Update connection store with storage warning
+    if (this.connectionStore) {
+      this.connectionStore.setError(`Storage space is low (${data.usage_percent.toFixed(1)}% used)`, ERROR_CODES.STORAGE_SPACE_LOW);
+    }
+    
+    // Notify UI components about storage warning
+    this.onErrorHandler?.(new WebSocketError(
+      `Storage space is low. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
+      ERROR_CODES.STORAGE_SPACE_LOW,
+      data
+    ));
+  }
+
+  /**
+   * Handle storage critical errors
+   */
+  private handleStorageCritical(data: StorageErrorData): void {
+    console.error(`🚨 Storage space critical: ${data.usage_percent.toFixed(1)}% used`);
+    console.error(`🚨 Available space: ${this.formatBytes(data.available_space)}`);
+    
+    // Update connection store with critical storage error
+    if (this.connectionStore) {
+      this.connectionStore.setError(`Storage space is critical (${data.usage_percent.toFixed(1)}% used)`, ERROR_CODES.STORAGE_SPACE_CRITICAL);
+    }
+    
+    // Notify UI components about critical storage
+    this.onErrorHandler?.(new WebSocketError(
+      `Storage space is critical. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
+      ERROR_CODES.STORAGE_SPACE_CRITICAL,
+      data
+    ));
+  }
+
+  /**
+   * Handle standard errors (fallback)
+   */
+  private handleStandardError(error: EnhancedJSONRPCError): void {
+    console.error(`❌ Standard error: ${error.code} - ${error.message}`);
+    
+    // Update connection store with standard error
+    if (this.connectionStore) {
+      this.connectionStore.setError(error.message, error.code);
+      this.connectionStore.incrementErrorCount();
+    }
+    
+    // Notify UI components about standard error
+    this.onErrorHandler?.(new WebSocketError(error.message, error.code, error.data));
+  }
+
+  /**
+   * Format bytes to human readable format
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   /**
@@ -673,6 +793,10 @@ export class WebSocketService {
         this.pendingRequests.delete(response.id);
 
         if (response.error) {
+          // Use enhanced error handling for new recording management error codes
+          const enhancedError = response.error as EnhancedJSONRPCError;
+          this.handleEnhancedError(enhancedError);
+          
           const error = new WebSocketError(response.error.message, response.error.code, response.error.data);
           console.error(`❌ Received error for request #${response.id}:`, error);
           request.reject(error);
@@ -691,17 +815,27 @@ export class WebSocketService {
       const notification = message as JSONRPCNotification;
       if (notification.method === NOTIFICATION_METHODS.CAMERA_STATUS_UPDATE) {
         const cameraNotification: CameraStatusNotification = {
+          jsonrpc: '2.0',
           method: notification.method,
-          params: notification.params
+          params: notification.params as { device: string; status: string; name: string; resolution: string; fps: number; streams: { rtsp: string; webrtc: string; hls: string; }; }
         };
         this.onCameraStatusUpdateHandler?.(cameraNotification);
         this.onNotificationHandler?.(notification as NotificationMessage);
       } else if (notification.method === NOTIFICATION_METHODS.RECORDING_STATUS_UPDATE) {
         const recordingNotification: RecordingStatusNotification = {
+          jsonrpc: '2.0',
           method: notification.method,
-          params: notification.params
+          params: notification.params as { device: string; status: string; filename: string; duration: number; }
         };
         this.onRecordingStatusUpdateHandler?.(recordingNotification);
+        this.onNotificationHandler?.(notification as NotificationMessage);
+      } else if (notification.method === NOTIFICATION_METHODS.STORAGE_STATUS_UPDATE) {
+        const storageNotification: StorageStatusNotification = {
+          jsonrpc: '2.0',
+          method: notification.method,
+          params: notification.params as { total_space: number; used_space: number; available_space: number; usage_percent: number; threshold_status: 'normal' | 'warning' | 'critical'; }
+        };
+        this.onStorageStatusUpdateHandler?.(storageNotification);
         this.onNotificationHandler?.(notification as NotificationMessage);
       } else {
         console.log(`📬 Received notification: ${notification.method}`);
@@ -740,14 +874,57 @@ export class WebSocketService {
           return await this.httpPollingService.getCameraList();
         
         case 'get_camera_status':
-          // HTTP polling service doesn't have individual camera status
-          // Return camera list and filter by device if needed
-          const cameraList = await this.httpPollingService.getCameraList();
           const device = params.device as string;
-          if (device && cameraList.cameras) {
-            return cameraList.cameras.find(camera => camera.device === device) || null;
-          }
-          return cameraList;
+          return await this.httpPollingService.getCameraStatus(device);
+        
+        case 'take_snapshot':
+          const snapshotDevice = params.device as string;
+          return await this.httpPollingService.takeSnapshot(snapshotDevice);
+        
+        case 'start_recording':
+          const recordingDevice = params.device as string;
+          return await this.httpPollingService.startRecording(recordingDevice);
+        
+        case 'stop_recording':
+          const stopDevice = params.device as string;
+          return await this.httpPollingService.stopRecording(stopDevice);
+        
+        case 'list_recordings':
+          return await this.httpPollingService.listRecordings();
+        
+        case 'list_snapshots':
+          return await this.httpPollingService.listSnapshots();
+        
+        case 'get_recording_info':
+          const recordingFilename = params.filename as string;
+          return await this.httpPollingService.getRecordingInfo(recordingFilename);
+        
+        case 'get_snapshot_info':
+          const snapshotFilename = params.filename as string;
+          return await this.httpPollingService.getSnapshotInfo(snapshotFilename);
+        
+        case 'delete_recording':
+          const deleteRecordingFilename = params.filename as string;
+          return await this.httpPollingService.deleteRecording(deleteRecordingFilename);
+        
+        case 'delete_snapshot':
+          const deleteSnapshotFilename = params.filename as string;
+          return await this.httpPollingService.deleteSnapshot(deleteSnapshotFilename);
+        
+        case 'get_storage_info':
+          return await this.httpPollingService.getStorageInfo();
+        
+        case 'get_metrics':
+          return await this.httpPollingService.getMetrics();
+        
+        case 'get_status':
+          return await this.httpPollingService.getStatus();
+        
+        case 'get_server_info':
+          return await this.httpPollingService.getServerInfo();
+        
+        case 'get_streams':
+          return await this.httpPollingService.getStreams();
         
         case 'ping':
           // Use health endpoint as ping alternative

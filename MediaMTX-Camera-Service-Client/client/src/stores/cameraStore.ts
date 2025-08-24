@@ -255,14 +255,15 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
 
     console.log('📷 Getting camera list with error recovery');
     
-    return await errorRecoveryService.executeWithRetry(
+    const result = await errorRecoveryService.executeWithRetry(
       async () => {
-        const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
-        set({ cameras: result.cameras });
-        return result;
+        const response = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+        set({ cameras: response.cameras });
+        return response;
       },
       'getCameraList'
     );
+    return result as unknown as CameraListResponse;
   },
 
   getCameraStatus: async (device: string): Promise<CameraDevice | null> => {
@@ -438,14 +439,15 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       ...(filename && { filename })
     };
 
-    return await errorRecoveryService.executeWithRetry(
+    const result = await errorRecoveryService.executeWithRetry(
       async () => {
-        const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
-        console.log(`✅ Snapshot taken for camera ${device}:`, result);
-        return result;
+        const response = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
+        console.log(`✅ Snapshot taken for camera ${device}:`, response);
+        return response;
       },
       'takeSnapshot'
     );
+    return result as unknown as SnapshotResult;
   },
 
   // Server operations

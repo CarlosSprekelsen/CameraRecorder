@@ -217,7 +217,7 @@ const validatePerformanceSettings = (settings: AppSettings['performance']): stri
 /**
  * Settings store implementation
  */
-export const useSettingsStore = create<SettingsState>()(
+export const useSettingsStore = create<SettingsStoreState>()(
   persist(
     (set, get) => ({
       // Initial state
@@ -291,7 +291,7 @@ export const useSettingsStore = create<SettingsState>()(
       ) => {
         const { settings, changeHistory } = get();
         const oldCategorySettings = settings[category];
-        const newCategorySettings = { ...oldCategorySettings, ...updates };
+        const newCategorySettings = { ...(oldCategorySettings as Record<string, any> || {}), ...updates };
         
         const newChangeHistory: SettingsChangeEvent[] = Object.keys(updates).map(key => ({
           category,
@@ -326,7 +326,7 @@ export const useSettingsStore = create<SettingsState>()(
             settings: {
               ...settings,
               [category]: {
-                ...settings[category],
+                ...(settings[category] as Record<string, any> || {}),
                 [key]: value,
               },
               lastUpdated: new Date(),

@@ -24,7 +24,7 @@ import type {
   NotificationMessage, 
   CameraStatusNotification, 
   RecordingStatusNotification 
-} from '../types';
+} from '../types/rpc';
 import { errorRecoveryService } from '../services/errorRecoveryService';
 
 
@@ -135,7 +135,7 @@ interface ConnectionActions {
   setShowConnectionAlerts: (enabled: boolean) => void;
   
   // Connection quality
-  updateConnectionQuality: (quality: ConnectionState['connectionQuality']) => void;
+  updateConnectionQuality: (quality: ConnectionStoreState['connectionQuality']) => void;
   updateLatency: (latency: number) => void;
   updatePacketLoss: (loss: number) => void;
   
@@ -474,7 +474,7 @@ export const useConnectionStore = create<ConnectionStore>()(
         const { showConnectionAlerts } = get();
         
         // Update connection quality based on error type
-        let quality: ConnectionState['connectionQuality'] = 'poor';
+        let quality: ConnectionStoreState['connectionQuality'] = 'poor';
         if (error.message.includes('timeout')) {
           quality = 'unstable';
         } else if (error.message.includes('network')) {
@@ -542,7 +542,7 @@ export const useConnectionStore = create<ConnectionStore>()(
         set({ healthScore: clampedScore });
         
         // Update connection quality based on health score
-        let quality: ConnectionState['connectionQuality'] = 'unstable';
+        let quality: ConnectionStoreState['connectionQuality'] = 'unstable';
         if (clampedScore >= 90) quality = 'excellent';
         else if (clampedScore >= 70) quality = 'good';
         else if (clampedScore >= 30) quality = 'poor';
@@ -584,7 +584,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       },
 
       // Connection quality
-      updateConnectionQuality: (quality: ConnectionState['connectionQuality']) => {
+      updateConnectionQuality: (quality: ConnectionStoreState['connectionQuality']) => {
         set({ connectionQuality: quality });
       },
 

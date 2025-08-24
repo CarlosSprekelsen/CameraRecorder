@@ -102,6 +102,11 @@ class MediaMTXController:
         self._backoff_jitter_range = backoff_jitter_range
         self._process_termination_timeout = process_termination_timeout
         self._process_kill_timeout = process_kill_timeout
+        
+        # Recording management configuration
+        self._recording_rotation_minutes = 30  # Default 30 minutes
+        self._storage_warn_percent = 80  # Default 80%
+        self._storage_block_percent = 90  # Default 90%
 
         # FFmpeg configuration with defaults
         self._ffmpeg_config = ffmpeg_config or {
@@ -145,6 +150,24 @@ class MediaMTXController:
             "circuit_breaker_active": False,  # Persist circuit breaker state across restarts
             "circuit_breaker_start_time": 0.0,  # Persist circuit breaker start time
         }
+
+    def update_recording_config(self, rotation_minutes: int = None, storage_warn_percent: int = None, storage_block_percent: int = None) -> None:
+        """
+        Update recording management configuration.
+        
+        Args:
+            rotation_minutes: File rotation interval in minutes
+            storage_warn_percent: Storage warning threshold percentage
+            storage_block_percent: Storage blocking threshold percentage
+        """
+        if rotation_minutes is not None:
+            self._recording_rotation_minutes = rotation_minutes
+        if storage_warn_percent is not None:
+            self._storage_warn_percent = storage_warn_percent
+        if storage_block_percent is not None:
+            self._storage_block_percent = storage_block_percent
+        
+        self._logger.info(f"Updated recording config: rotation={self._recording_rotation_minutes}m, warn={self._storage_warn_percent}%, block={self._storage_block_percent}%")
 
     # Public read-only properties for integration tests and API consumers
     @property
@@ -766,18 +789,30 @@ class MediaMTXController:
             # Start external FFmpeg recording process
             rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
             
-            # Build FFmpeg command
+            # Build FFmpeg command with file rotation support
+            # REQ-REC-002.1: Support configurable file rotation
+            rotation_minutes = getattr(self, '_recording_rotation_minutes', 30)
+            rotation_seconds = rotation_minutes * 60
+            
+            # Use segment format for file rotation
+            base_filename = f"{stream_name}_%Y-%m-%d_%H-%M-%S"
+            segment_pattern = os.path.join(output_dir, f"{base_filename}.{format}")
+            
             ffmpeg_cmd = [
                 "ffmpeg",
                 "-i", rtsp_url,
                 "-c:v", "copy",  # Copy video codec without re-encoding
                 "-c:a", "copy",  # Copy audio codec without re-encoding
-                "-f", format,
+                "-f", "segment",
+                "-segment_time", str(rotation_seconds),
+                "-strftime", "1",
+                "-reset_timestamps", "1",
+                "-segment_start_number", "0",
                 "-y",  # Overwrite output file
-                record_path
+                segment_pattern
             ]
             
-            # Add duration limit if specified
+            # Add duration limit if specified (for timed recordings)
             if duration:
                 ffmpeg_cmd.extend(["-t", str(duration)])
 
@@ -788,7 +823,8 @@ class MediaMTXController:
                 stderr=asyncio.subprocess.PIPE
             )
 
-            # Store recording session for tracking
+            # Store recording session for tracking with file rotation support
+            # REQ-REC-002.3: Maintain recording continuity across file rotations
             self._recording_sessions[stream_name] = {
                 "filename": filename,
                 "start_time": start_time,
@@ -798,7 +834,12 @@ class MediaMTXController:
                 "duration": duration,
                 "correlation_id": correlation_id,
                 "process": process,
-                "rtsp_url": rtsp_url
+                "rtsp_url": rtsp_url,
+                "rotation_enabled": True,
+                "rotation_minutes": rotation_minutes,
+                "segment_pattern": segment_pattern,
+                "current_segment": 0,
+                "created_files": []  # Track all created files
             }
 
             self._logger.info(
@@ -2244,13 +2285,49 @@ class MediaMTXController:
         """
         try:
             # Try to access the stream to trigger on-demand activation
-            # We'll use a short timeout since we just want to trigger the activation
-            async with self._session.get(
-                f"http://{self._host}:{self._rtsp_port}/{stream_name}", 
-                timeout=1
-            ) as trigger_response:
-                # We don't care about the response, just triggering the activation
-                pass
+            # We need to use RTSP to trigger the on-demand activation
+            # Use aiohttp to make an RTSP request (this will trigger the runOnDemand command)
+            rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
+            
+            # Use a subprocess to make a quick RTSP request that will trigger on-demand activation
+            # This is the most reliable way to trigger MediaMTX's runOnDemand
+            import subprocess
+            import asyncio
+            
+            # Run ffprobe with a very short timeout to just trigger the stream
+            cmd = [
+                "ffprobe", 
+                "-v", "quiet", 
+                "-print_format", "json", 
+                "-show_format", 
+                "-show_streams",
+                "-timeout", "1000000",  # 1 second timeout in microseconds
+                rtsp_url
+            ]
+            
+            # Run the command asynchronously with a short timeout
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            try:
+                # Wait for a very short time - we just want to trigger the activation
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                # Kill the process if it takes too long
+                process.kill()
+                await process.wait()
+            
+            self._logger.debug(
+                f"Triggered on-demand activation for {stream_name} via RTSP",
+                extra={
+                    "correlation_id": correlation_id,
+                    "stream_name": stream_name,
+                    "rtsp_url": rtsp_url,
+                },
+            )
         except Exception as e:
             # Ignore errors from the trigger request - the important thing is that it was attempted
             self._logger.debug(

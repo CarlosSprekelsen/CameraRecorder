@@ -109,12 +109,12 @@ export const useAuthStore = create<AuthStore>()(
           const user: User = {
             role: response.role as 'viewer' | 'operator' | 'admin',
             user_id: response.user_id,
-            permissions: response.permissions,
-            expires_at: response.expires_at,
-            session_id: response.session_id,
+            permissions: [], // Default empty permissions
+            expires_at: undefined, // Not provided by server
+            session_id: undefined, // Not provided by server
           };
 
-          const tokenExpiry = response.expires_at ? new Date(response.expires_at) : null;
+          const tokenExpiry = null; // Not provided by server
 
           set({
             isAuthenticated: true,

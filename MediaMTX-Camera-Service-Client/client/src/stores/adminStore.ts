@@ -150,7 +150,7 @@ interface AdminActions {
 /**
  * Admin store type
  */
-type AdminStore = AdminState & AdminActions;
+type AdminStore = AdminStoreState & AdminActions;
 
 /**
  * Create admin store

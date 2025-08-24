@@ -251,9 +251,9 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
                 variant="outlined"
               />
             )}
-            {lastNotificationTime && (
+            {storeLastNotificationTime && (
               <Chip
-                label={`Last: ${lastNotificationTime.toLocaleTimeString()}`}
+                label={`Last: ${storeLastNotificationTime.toLocaleTimeString()}`}
                 color="info"
                 size="small"
                 variant="outlined"
@@ -270,7 +270,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             Component Sync Status
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {Array.from(componentSyncStatus.entries()).map(([componentId, synced]) => (
+            {Array.from(storeComponentSyncStatus.entries()).map(([componentId, synced]) => (
               <Chip
                 key={componentId}
                 icon={synced ? <CheckCircle /> : <Warning />}
@@ -290,12 +290,12 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
           Last update: {lastUpdate.toLocaleTimeString()}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          Quality: {connectionQuality}
+          Quality: {storeConnectionQuality}
         </Typography>
       </Box>
 
       {/* Alerts */}
-      {!realTimeUpdatesEnabled && (
+      {!storeRealTimeUpdatesEnabled && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           Real-time updates are disabled. Some features may not work correctly.
         </Alert>

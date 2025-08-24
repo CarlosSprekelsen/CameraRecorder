@@ -23,9 +23,16 @@ import type {
   SnapshotResult,
   RecordingSession,
   StreamInfo,
-  ServerInfo
+  ServerInfo,
+  StorageInfo
 } from '../types/camera';
+import type {
+  EnhancedJSONRPCError,
+  RecordingConflictErrorData,
+  StorageErrorData
+} from '../types/rpc';
 import { authService } from './authService';
+import { ERROR_CODES } from '../types/rpc';
 
 export interface HTTPPollingConfig {
   baseUrl: string;
@@ -312,14 +319,7 @@ export class HTTPPollingService {
       this.config.timeout
     );
 
-    if (!response.ok) {
-      throw new HTTPPollingError(
-        `HTTP ${response.status}: ${response.statusText}`,
-        response.status
-      );
-    }
-
-    const data = await response.json();
+    const data = await this.handleHTTPResponse(response, 'start_recording');
     return {
       device: deviceId,
       session_id: data.session_id || '',
@@ -343,14 +343,7 @@ export class HTTPPollingService {
       this.config.timeout
     );
 
-    if (!response.ok) {
-      throw new HTTPPollingError(
-        `HTTP ${response.status}: ${response.statusText}`,
-        response.status
-      );
-    }
-
-    const data = await response.json();
+    const data = await this.handleHTTPResponse(response, 'stop_recording');
     return {
       device: deviceId,
       session_id: data.session_id || '',
@@ -544,10 +537,10 @@ export class HTTPPollingService {
    */
   public async getStorageInfo(): Promise<{
     total_space: number;
+    used_space: number;
     available_space: number;
-    recordings_size: number;
-    snapshots_size: number;
-    usage_percentage: number;
+    usage_percent: number;
+    threshold_status: 'normal' | 'warning' | 'critical';
   }> {
     const response = await this.fetchWithTimeout(
       `${this.config.baseUrl}/api/storage`,
@@ -558,20 +551,28 @@ export class HTTPPollingService {
       this.config.timeout
     );
 
-    if (!response.ok) {
-      throw new HTTPPollingError(
-        `HTTP ${response.status}: ${response.statusText}`,
-        response.status
-      );
+    const data = await this.handleHTTPResponse(response, 'get_storage_info');
+    
+    // Calculate used space and threshold status
+    const total_space = data.total_space || 0;
+    const available_space = data.available_space || 0;
+    const used_space = total_space - available_space;
+    const usage_percent = total_space > 0 ? (used_space / total_space) * 100 : 0;
+    
+    // Determine threshold status based on usage percentage
+    let threshold_status: 'normal' | 'warning' | 'critical' = 'normal';
+    if (usage_percent >= 90) {
+      threshold_status = 'critical';
+    } else if (usage_percent >= 80) {
+      threshold_status = 'warning';
     }
-
-    const data = await response.json();
+    
     return {
-      total_space: data.total_space || 0,
-      available_space: data.available_space || 0,
-      recordings_size: data.recordings_size || 0,
-      snapshots_size: data.snapshots_size || 0,
-      usage_percentage: data.usage_percentage || 0
+      total_space,
+      used_space,
+      available_space,
+      usage_percent,
+      threshold_status
     };
   }
 
@@ -753,6 +754,118 @@ export class HTTPPollingService {
 
   public onError(handler: (error: HTTPPollingError) => void): void {
     this.onErrorHandler = handler;
+  }
+
+  /**
+   * Enhanced error handling for recording management error codes
+   */
+  private handleEnhancedError(error: EnhancedJSONRPCError): void {
+    console.log(`🔍 HTTP Polling: Handling enhanced error: ${error.code} - ${error.message}`);
+    
+    switch (error.code) {
+      case ERROR_CODES.CAMERA_ALREADY_RECORDING:
+        this.handleRecordingConflict(error.data as RecordingConflictErrorData);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_LOW:
+        this.handleStorageWarning(error.data as StorageErrorData);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_CRITICAL:
+        this.handleStorageCritical(error.data as StorageErrorData);
+        break;
+      default:
+        this.handleStandardError(error);
+    }
+  }
+
+  /**
+   * Handle recording conflict errors
+   */
+  private handleRecordingConflict(data: RecordingConflictErrorData): void {
+    console.warn(`⚠️ HTTP Polling: Recording conflict detected for camera: ${data.camera_id}`);
+    console.warn(`⚠️ HTTP Polling: Active session: ${data.session_id}`);
+    
+    // Notify error handler about the conflict
+    this.onErrorHandler?.(new HTTPPollingError(
+      `Camera ${data.camera_id} is currently recording (Session: ${data.session_id})`,
+      409, // Conflict status code
+      data
+    ));
+  }
+
+  /**
+   * Handle storage warning errors
+   */
+  private handleStorageWarning(data: StorageErrorData): void {
+    console.warn(`⚠️ HTTP Polling: Storage space low: ${data.usage_percent.toFixed(1)}% used`);
+    console.warn(`⚠️ HTTP Polling: Available space: ${this.formatBytes(data.available_space)}`);
+    
+    // Notify error handler about storage warning
+    this.onErrorHandler?.(new HTTPPollingError(
+      `Storage space is low. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
+      507, // Insufficient Storage status code
+      data
+    ));
+  }
+
+  /**
+   * Handle storage critical errors
+   */
+  private handleStorageCritical(data: StorageErrorData): void {
+    console.error(`🚨 HTTP Polling: Storage space critical: ${data.usage_percent.toFixed(1)}% used`);
+    console.error(`🚨 HTTP Polling: Available space: ${this.formatBytes(data.available_space)}`);
+    
+    // Notify error handler about critical storage
+    this.onErrorHandler?.(new HTTPPollingError(
+      `Storage space is critical. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
+      507, // Insufficient Storage status code
+      data
+    ));
+  }
+
+  /**
+   * Handle standard errors (fallback)
+   */
+  private handleStandardError(error: EnhancedJSONRPCError): void {
+    console.error(`❌ HTTP Polling: Standard error: ${error.code} - ${error.message}`);
+    
+    // Notify error handler about standard error
+    this.onErrorHandler?.(new HTTPPollingError(error.message, error.code, error.data));
+  }
+
+  /**
+   * Format bytes to human readable format
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  /**
+   * Handle HTTP response with enhanced error checking
+   */
+  private async handleHTTPResponse(response: Response, context: string): Promise<any> {
+    if (!response.ok) {
+      // Try to parse error response for enhanced error codes
+      try {
+        const errorData = await response.json();
+        if (errorData.error && typeof errorData.error === 'object') {
+          const enhancedError = errorData.error as EnhancedJSONRPCError;
+          this.handleEnhancedError(enhancedError);
+        }
+      } catch (parseError) {
+        // If we can't parse the error response, continue with standard error handling
+      }
+      
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText} (${context})`,
+        response.status
+      );
+    }
+
+    return await response.json();
   }
 
   public onPollingStart(handler: () => void): void {

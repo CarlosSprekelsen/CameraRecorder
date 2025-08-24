@@ -127,7 +127,7 @@ interface HealthActions {
 /**
  * Health store type
  */
-type HealthStore = HealthState & HealthActions;
+type HealthStore = HealthStoreState & HealthActions;
 
 /**
  * Create health store

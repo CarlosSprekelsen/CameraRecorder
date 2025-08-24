@@ -24,6 +24,30 @@ export interface JSONRPCError {
 }
 
 /**
+ * Enhanced error response data for recording management (NEW)
+ */
+export interface RecordingConflictErrorData {
+  camera_id: string;
+  session_id: string;
+}
+
+/**
+ * Enhanced error response data for storage issues (NEW)
+ */
+export interface StorageErrorData {
+  available_space: number;
+  total_space: number;
+  usage_percent: number;
+}
+
+/**
+ * Enhanced error response with specific data types (NEW)
+ */
+export interface EnhancedJSONRPCError extends JSONRPCError {
+  data?: RecordingConflictErrorData | StorageErrorData | unknown;
+}
+
+/**
  * JSON-RPC 2.0 response
  */
 export interface JSONRPCResponse {
@@ -66,6 +90,11 @@ export const ERROR_CODES = {
   AUTHENTICATION_REQUIRED: -32004,
   INSUFFICIENT_STORAGE_SPACE: -32005,
   CAMERA_CAPABILITY_NOT_SUPPORTED: -32006,
+  
+  // Enhanced recording management error codes (NEW)
+  CAMERA_ALREADY_RECORDING: -1006,        // "Camera is currently recording"
+  STORAGE_SPACE_LOW: -1008,               // "Storage space is low" (below 10% available)
+  STORAGE_SPACE_CRITICAL: -1010,          // "Storage space is critical" (below 5% available)
 } as const;
 
 /**
@@ -94,6 +123,9 @@ export const RPC_METHODS = {
   
   // Stream management methods
   GET_STREAMS: 'get_streams',
+  
+  // Enhanced recording management methods (NEW)
+  GET_STORAGE_INFO: 'get_storage_info',   // Storage monitoring
 } as const;
 
 /**
@@ -108,6 +140,7 @@ export type RPCMethod = typeof RPC_METHODS[keyof typeof RPC_METHODS];
 export const NOTIFICATION_METHODS = {
   CAMERA_STATUS_UPDATE: 'camera_status_update',
   RECORDING_STATUS_UPDATE: 'recording_status_update',
+  STORAGE_STATUS_UPDATE: 'storage_status_update',  // NEW
 } as const;
 
 /**
@@ -150,9 +183,24 @@ export interface RecordingStatusNotification {
 }
 
 /**
+ * Storage status update notification (NEW)
+ */
+export interface StorageStatusNotification {
+  jsonrpc: '2.0';
+  method: 'storage_status_update';
+  params: {
+    total_space: number;
+    used_space: number;
+    available_space: number;
+    usage_percent: number;
+    threshold_status: 'normal' | 'warning' | 'critical';
+  };
+}
+
+/**
  * Union type for all notification messages
  */
-export type NotificationMessage = CameraStatusNotification | RecordingStatusNotification;
+export type NotificationMessage = CameraStatusNotification | RecordingStatusNotification | StorageStatusNotification;
 
 /**
  * WebSocket configuration

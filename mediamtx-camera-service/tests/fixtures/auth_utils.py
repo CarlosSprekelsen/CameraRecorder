@@ -10,8 +10,11 @@ Requirements Coverage:
 - REQ-SEC-003: Token Expiration: Configurable expiration time (default: 24 hours)
 - REQ-SEC-004: Token Refresh: Support for token refresh mechanism
 - REQ-SEC-005: Token Validation: Proper signature validation and claim verification
+- REQ-REC-001.2: Error handling for recording conflicts
+- REQ-REC-003.3: Storage error handling
 
 Test Categories: Integration
+API Documentation Reference: docs/api/json-rpc-methods.md
 """
 
 import os
@@ -100,6 +103,7 @@ class TestUserFactory:
     """Factory for creating test users with different roles and permissions.
     
     Provides convenient methods to create test users for integration testing.
+    Updated for new API structure with enhanced role-based access control.
     """
     
     def __init__(self, auth_manager: AuthManager):
@@ -123,7 +127,7 @@ class TestUserFactory:
                 "take_snapshot", "start_recording", "stop_recording",
                 "list_recordings", "list_snapshots", "get_metrics",
                 "get_status", "get_server_info", "delete_recording",
-                "get_recording_info", "get_snapshot_info"
+                "get_recording_info", "get_snapshot_info", "get_storage_info"
             ]
         }
     
@@ -142,7 +146,7 @@ class TestUserFactory:
             "permissions": [
                 "get_camera_list", "get_camera_status", "get_streams",
                 "take_snapshot", "start_recording", "stop_recording",
-                "list_recordings", "list_snapshots"
+                "list_recordings", "list_snapshots", "get_storage_info"
             ]
         }
     
@@ -160,7 +164,7 @@ class TestUserFactory:
             "token": token,
             "permissions": [
                 "get_camera_list", "get_camera_status", "get_streams",
-                "list_recordings", "list_snapshots"
+                "list_recordings", "list_snapshots", "get_storage_info"
             ]
         }
     
@@ -209,6 +213,7 @@ class RealAuthTestBase:
     
     Provides real JWT tokens and authentication testing without mocking.
     Follows testing guide: NEVER mock JWT authentication.
+    Updated for new API structure with enhanced error codes.
     """
     
     @pytest_asyncio.fixture(autouse=True)
@@ -329,7 +334,10 @@ class RealAuthTestBase:
 
 
 class WebSocketAuthTestClient:
-    """Real WebSocket client for authentication testing."""
+    """Real WebSocket client for authentication testing.
+    
+    Updated for new API structure with enhanced error codes and response validation.
+    """
     
     def __init__(self, websocket_url: str, test_user: Dict[str, Any]):
         self.websocket_url = websocket_url
@@ -379,6 +387,7 @@ class WebSocketAuthTestClient:
         Validates the authenticate method response format matches docs/api/json-rpc-methods.md exactly.
         
         API Documentation Reference: docs/api/json-rpc-methods.md - authenticate method
+        Updated for new API structure with enhanced response validation.
         """
         response = await self.authenticate(token)
         
@@ -408,6 +417,10 @@ class WebSocketAuthTestClient:
             assert isinstance(result["expires_at"], str), "expires_at must be string (ISO format)"
             assert isinstance(result["session_id"], str), "session_id must be string"
             
+            # Validate role values per API documentation
+            valid_roles = ["viewer", "operator", "admin"]
+            assert result["role"] in valid_roles, f"Role must be one of {valid_roles} per API documentation"
+            
         elif "error" in response:
             # Validate documented error format
             error = response["error"]
@@ -415,6 +428,10 @@ class WebSocketAuthTestClient:
             assert "message" in error, "Error must contain 'message' field"
             assert isinstance(error["code"], int), "Error code must be integer"
             assert isinstance(error["message"], str), "Error message must be string"
+            
+            # Validate error codes per API documentation
+            valid_error_codes = [-32700, -32600, -32601, -32602, -32603, -32001, -32002, -32003, -32004, -32005, -32006, -32007, -32008, -1006, -1008, -1010]
+            assert error["code"] in valid_error_codes, f"Error code {error['code']} not in valid codes: {valid_error_codes}"
         
         return response
     
@@ -427,7 +444,7 @@ class WebSocketAuthTestClient:
         if params is None:
             params = {}
         
-        # Add auth token to params
+        # Add auth token to params (new API requirement)
         params["auth_token"] = self.test_user["token"]
         
         request = {
@@ -470,3 +487,108 @@ class WebSocketAuthTestClient:
         await self.websocket.send(json.dumps(request))
         response = await self.websocket.recv()
         return json.loads(response)
+    
+    def validate_error_response(self, response: Dict[str, Any], expected_code: int, expected_message: str = None):
+        """
+        Validate error response against new API error codes.
+        
+        Updated for new recording management error codes:
+        - -1006: "Camera is currently recording" (recording conflict)
+        - -1008: "Storage space is low" (below 10% available)
+        - -1010: "Storage space is critical" (below 5% available)
+        """
+        assert "error" in response, "Response must contain 'error' field"
+        error = response["error"]
+        
+        assert "code" in error, "Error must contain 'code' field"
+        assert "message" in error, "Error must contain 'message' field"
+        assert error["code"] == expected_code, f"Expected error code {expected_code}, got {error['code']}"
+        
+        if expected_message:
+            assert expected_message in error["message"], f"Expected message containing '{expected_message}', got '{error['message']}'"
+        
+        # Validate error code is in documented range
+        valid_error_codes = [-32700, -32600, -32601, -32602, -32603, -32001, -32002, -32003, -32004, -32005, -32006, -32007, -32008, -1006, -1008, -1010]
+        assert error["code"] in valid_error_codes, f"Error code {error['code']} not in valid codes: {valid_error_codes}"
+    
+    def validate_recording_conflict_error(self, response: Dict[str, Any]):
+        """Validate recording conflict error (-1006)."""
+        self.validate_error_response(response, -1006, "Camera is currently recording")
+    
+    def validate_storage_error(self, response: Dict[str, Any], expected_code: int):
+        """Validate storage error codes (-1008, -1010)."""
+        if expected_code == -1008:
+            self.validate_error_response(response, -1008, "Storage space is low")
+        elif expected_code == -1010:
+            self.validate_error_response(response, -1010, "Storage space is critical")
+        else:
+            raise ValueError(f"Invalid storage error code: {expected_code}")
+    
+    def validate_camera_status_response(self, response: Dict[str, Any]):
+        """
+        Validate enhanced camera status response format.
+        
+        Updated for new API structure with recording information.
+        """
+        assert "result" in response, "Response must contain 'result' field"
+        result = response["result"]
+        
+        # Required fields per API documentation
+        required_fields = ["camera_id", "device", "status", "recording"]
+        for field in required_fields:
+            assert field in result, f"Missing required field '{field}' in camera status response"
+        
+        # Validate recording-related fields
+        if result.get("recording", False):
+            assert "recording_session" in result, "Recording session must be present when recording is true"
+            assert "current_file" in result, "Current file must be present when recording is true"
+            assert "elapsed_time" in result, "Elapsed time must be present when recording is true"
+    
+    def validate_recording_response(self, response: Dict[str, Any]):
+        """
+        Validate recording response with new fields.
+        
+        Updated for new API structure with enhanced metadata.
+        """
+        assert "result" in response, "Response must contain 'result' field"
+        result = response["result"]
+        
+        # Required fields per API documentation
+        required_fields = ["device", "session_id", "filename", "status", "start_time", "duration", "format"]
+        for field in required_fields:
+            assert field in result, f"Missing required field '{field}' in recording response"
+        
+        # Validate field types
+        assert isinstance(result["device"], str), "device must be string"
+        assert isinstance(result["session_id"], str), "session_id must be string"
+        assert isinstance(result["filename"], str), "filename must be string"
+        assert isinstance(result["status"], str), "status must be string"
+        assert isinstance(result["start_time"], str), "start_time must be string (ISO format)"
+        assert isinstance(result["duration"], (int, float)), "duration must be number"
+        assert isinstance(result["format"], str), "format must be string"
+    
+    def validate_storage_info_response(self, response: Dict[str, Any]):
+        """
+        Validate storage information response.
+        
+        Updated for new API structure with threshold information.
+        """
+        assert "result" in response, "Response must contain 'result' field"
+        result = response["result"]
+        
+        # Required fields per API documentation
+        required_fields = ["total_space", "used_space", "available_space", "usage_percent"]
+        for field in required_fields:
+            assert field in result, f"Missing required field '{field}' in storage info response"
+        
+        # Validate field types
+        assert isinstance(result["total_space"], (int, float)), "total_space must be number"
+        assert isinstance(result["used_space"], (int, float)), "used_space must be number"
+        assert isinstance(result["available_space"], (int, float)), "available_space must be number"
+        assert isinstance(result["usage_percent"], (int, float)), "usage_percent must be number"
+        
+        # Validate logical constraints
+        assert result["total_space"] >= 0, "total_space must be non-negative"
+        assert result["used_space"] >= 0, "used_space must be non-negative"
+        assert result["available_space"] >= 0, "available_space must be non-negative"
+        assert 0 <= result["usage_percent"] <= 100, "usage_percent must be between 0 and 100"

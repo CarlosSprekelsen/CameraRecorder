@@ -202,16 +202,16 @@ const FileManager: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Browse and download recordings and snapshots
         </Typography>
-        {!canDeleteFiles && (
+        {!storeCanDeleteFiles && (
           <Alert severity="info" sx={{ mt: 2 }}>
             You have read-only access. Admin or operator permissions required for file deletion.
           </Alert>
         )}
       </Box>
 
-      {error && (
+      {storeError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {storeError}
         </Alert>
       )}
 
@@ -223,7 +223,7 @@ const FileManager: React.FC = () => {
                 label={
                   <Stack direction="row" spacing={1} alignItems="center">
                     <VideoFile />
-                    <span>Recordings ({recordings?.length || 0})</span>
+                    <span>Recordings ({storeRecordings?.length || 0})</span>
                   </Stack>
                 } 
               />
@@ -231,7 +231,7 @@ const FileManager: React.FC = () => {
                 label={
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Image />
-                    <span>Snapshots ({snapshots?.length || 0})</span>
+                    <span>Snapshots ({storeSnapshots?.length || 0})</span>
                   </Stack>
                 } 
               />
@@ -312,7 +312,7 @@ const FileManager: React.FC = () => {
             onClick={handleConfirmDelete} 
             color="error" 
             variant="contained"
-            disabled={isDeleting}
+            disabled={storeIsDeleting}
           >
             {storeIsDeleting ? 'Deleting...' : 'Delete'}
           </Button>
@@ -338,7 +338,7 @@ const FileManager: React.FC = () => {
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="h6" gutterBottom>
-                  {selectedFile.filename}
+                  {storeSelectedFile.filename}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
@@ -354,26 +354,26 @@ const FileManager: React.FC = () => {
                   Created
                 </Typography>
                 <Typography variant="body1">
-                  {formatDate(selectedFile.created_time)}
+                  {formatDate(storeSelectedFile.created_time)}
                 </Typography>
               </Grid>
-              {fileType === 'recordings' && selectedFile.duration && (
+              {fileType === 'recordings' && storeSelectedFile.duration && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Duration
                   </Typography>
                   <Typography variant="body1">
-                    {formatDuration(selectedFile.duration)}
+                    {formatDuration(storeSelectedFile.duration)}
                   </Typography>
                 </Grid>
               )}
-              {fileType === 'snapshots' && selectedFile.resolution && (
+              {fileType === 'snapshots' && storeSelectedFile.resolution && (
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Resolution
                   </Typography>
                   <Typography variant="body1">
-                    {selectedFile.resolution}
+                    {storeSelectedFile.resolution}
                   </Typography>
                 </Grid>
               )}
@@ -382,7 +382,7 @@ const FileManager: React.FC = () => {
                   Download URL
                 </Typography>
                 <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                  {selectedFile.download_url}
+                  {storeSelectedFile.download_url}
                 </Typography>
               </Grid>
             </Grid>

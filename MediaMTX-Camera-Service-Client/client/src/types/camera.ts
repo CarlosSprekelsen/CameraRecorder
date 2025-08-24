@@ -17,6 +17,11 @@ export interface CameraDevice {
   streams: CameraStreams;
   metrics?: CameraMetrics;
   capabilities?: CameraCapabilities;
+  // Enhanced recording status (NEW)
+  recording?: boolean;
+  recording_session?: string;
+  current_file?: string;
+  elapsed_time?: number;
 }
 
 /**
@@ -102,6 +107,44 @@ export type VideoFormat = 'YUYV' | 'MJPEG' | 'H264';
 export type RecordingFormat = 'mp4' | 'mkv';
 
 /**
+ * Storage information (NEW)
+ * Aligned with server get_storage_info response
+ */
+export interface StorageInfo {
+  total_space: number;
+  used_space: number;
+  available_space: number;
+  usage_percent: number;
+  threshold_status: ThresholdStatus;
+}
+
+/**
+ * Storage threshold status (NEW)
+ */
+export type ThresholdStatus = 'normal' | 'warning' | 'critical';
+
+/**
+ * Storage usage information (NEW)
+ */
+export interface StorageUsage {
+  total_space: number;
+  used_space: number;
+  available_space: number;
+  usage_percent: number;
+}
+
+/**
+ * Storage validation result (NEW)
+ */
+export interface StorageValidationResult {
+  isValid: boolean;
+  canRecord: boolean;
+  canSnapshot: boolean;
+  warnings: string[];
+  errors: string[];
+}
+
+/**
  * Supported snapshot formats
  */
 export type SnapshotFormat = 'jpg' | 'png';
@@ -110,6 +153,36 @@ export type SnapshotFormat = 'jpg' | 'png';
  * Recording status
  */
 export type RecordingStatus = 'STARTED' | 'RECORDING' | 'STOPPED' | 'ERROR';
+
+/**
+ * Enhanced recording status (NEW)
+ * Includes conflict and progress states
+ */
+export type EnhancedRecordingStatus = RecordingStatus | 'CONFLICT' | 'PAUSED' | 'ROTATING';
+
+/**
+ * Recording conflict information (NEW)
+ */
+export interface RecordingConflict {
+  device: string;
+  session_id: string;
+  current_file: string;
+  elapsed_time: number;
+  conflict_type: 'already_recording' | 'storage_full' | 'permission_denied';
+}
+
+/**
+ * Recording progress information (NEW)
+ */
+export interface RecordingProgress {
+  device: string;
+  session_id: string;
+  current_file: string;
+  elapsed_time: number;
+  file_size: number;
+  rotation_count: number;
+  is_continuous: boolean;
+}
 
 /**
  * Recording session information
@@ -181,6 +254,44 @@ export interface FileInfo {
   file_size: number;
   modified_time: string;
   download_url: string;
+}
+
+/**
+ * Configuration management types (NEW)
+ */
+export interface RecordingConfig {
+  rotation_minutes: number;
+  default_format: RecordingFormat;
+  auto_rotation: boolean;
+}
+
+export interface StorageConfig {
+  warn_percent: number;
+  block_percent: number;
+  critical_percent: number;
+  monitoring_enabled: boolean;
+}
+
+export interface AppConfig {
+  recording: RecordingConfig;
+  storage: StorageConfig;
+  environment: EnvironmentConfig;
+}
+
+export interface EnvironmentConfig {
+  RECORDING_ROTATION_MINUTES?: string;
+  STORAGE_WARN_PERCENT?: string;
+  STORAGE_BLOCK_PERCENT?: string;
+}
+
+/**
+ * Configuration validation result (NEW)
+ */
+export interface ConfigValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  config: AppConfig;
 }
 
 /**

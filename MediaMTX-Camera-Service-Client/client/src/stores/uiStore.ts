@@ -11,7 +11,7 @@ import type {
   NotificationState,
   LoadingState,
   ErrorState,
-} from '../types';
+} from '../types/ui';
 
 /**
  * UI store state interface

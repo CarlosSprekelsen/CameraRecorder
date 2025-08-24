@@ -40,6 +40,11 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
+# Enhanced Recording Management Error Codes
+ERROR_CAMERA_ALREADY_RECORDING = -1006
+ERROR_STORAGE_LOW = -1008
+ERROR_STORAGE_CRITICAL = -1010
+
 # JSON-RPC Error Messages
 ERROR_MESSAGES = {
     AUTHENTICATION_REQUIRED: "Authentication required",
@@ -47,7 +52,10 @@ ERROR_MESSAGES = {
     INSUFFICIENT_PERMISSIONS: "Insufficient permissions",
     METHOD_NOT_FOUND: "Method not found",
     INVALID_PARAMS: "Invalid parameters",
-    INTERNAL_ERROR: "Internal server error"
+    INTERNAL_ERROR: "Internal server error",
+    ERROR_CAMERA_ALREADY_RECORDING: "Camera is currently recording",
+    ERROR_STORAGE_LOW: "Storage space is low",
+    ERROR_STORAGE_CRITICAL: "Storage space is critical"
 }
 
 
@@ -255,6 +263,56 @@ class WebSocketJsonRpcServer:
 
         # Scheduled auto-stop tasks per stream name
         self._recording_stop_tasks: Dict[str, asyncio.Task] = {}
+        
+        # Recording state management
+        self._active_recordings: Dict[str, Dict[str, Any]] = {}  # device_path -> session_info
+        
+        # Recording management configuration (defaults)
+        self._recording_rotation_minutes = 30
+        self._storage_warn_percent = 80
+        self._storage_block_percent = 90
+        
+        # Load configuration if available
+        self._load_recording_config()
+
+    def _load_recording_config(self) -> None:
+        """
+        Load recording management configuration from config or environment variables.
+        """
+        try:
+            if self._config and hasattr(self._config, 'recording'):
+                recording_config = self._config.recording
+                self._recording_rotation_minutes = getattr(recording_config, 'rotation_minutes', 30)
+                self._storage_warn_percent = getattr(recording_config, 'storage_warn_percent', 80)
+                self._storage_block_percent = getattr(recording_config, 'storage_block_percent', 90)
+                self._logger.info(f"Loaded recording config: rotation={self._recording_rotation_minutes}m, warn={self._storage_warn_percent}%, block={self._storage_block_percent}%")
+                
+                # Update MediaMTX controller configuration
+                self._update_controller_recording_config()
+        except Exception as e:
+            self._logger.warning(f"Failed to load recording config, using defaults: {e}")
+
+    def _update_controller_recording_config(self) -> None:
+        """
+        Update MediaMTX controller with current recording configuration.
+        """
+        try:
+            if self._mediamtx_controller and hasattr(self._mediamtx_controller, 'update_recording_config'):
+                self._mediamtx_controller.update_recording_config(
+                    rotation_minutes=self._recording_rotation_minutes,
+                    storage_warn_percent=self._storage_warn_percent,
+                    storage_block_percent=self._storage_block_percent
+                )
+            elif self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+                controller = self._service_manager._mediamtx_controller
+                if controller and hasattr(controller, 'update_recording_config'):
+                    controller.update_recording_config(
+                        rotation_minutes=self._recording_rotation_minutes,
+                        storage_warn_percent=self._storage_warn_percent,
+                        storage_block_percent=self._storage_block_percent
+                    )
+        except Exception as e:
+            self._logger.warning(f"Failed to update controller recording config: {e}")
 
     def set_mediamtx_controller(self, controller) -> None:
         """
@@ -302,6 +360,35 @@ class WebSocketJsonRpcServer:
         metrics = self._performance_metrics.get_metrics()
         metrics["active_connections"] = len(self._clients)
         return metrics
+
+    def check_storage_space(self) -> Optional[Dict[str, Any]]:
+        """
+        Check available storage space and return status.
+        
+        Returns:
+            Dict containing storage information or None if check fails
+        """
+        try:
+            # Get storage path from config or use default
+            storage_path = "/opt/camera-service/recordings"
+            if self._config and hasattr(self._config, 'mediamtx') and hasattr(self._config.mediamtx, 'recordings_path'):
+                storage_path = self._config.mediamtx.recordings_path
+            
+            statvfs = os.statvfs(storage_path)
+            total_space = statvfs.f_frsize * statvfs.f_blocks
+            available_space = statvfs.f_frsize * statvfs.f_bavail
+            used_percent = ((total_space - available_space) / total_space) * 100
+            
+            return {
+                "total_space": total_space,
+                "available_space": available_space,
+                "used_percent": used_percent,
+                "warn_threshold": self._storage_warn_percent,
+                "block_threshold": self._storage_block_percent
+            }
+        except Exception as e:
+            self._logger.error(f"Storage check failed: {e}")
+            return None
 
     async def start(self) -> None:
         """
@@ -807,8 +894,20 @@ class WebSocketJsonRpcServer:
                         error_code = -1000
                         error_message = "Camera device not found"
                     elif isinstance(e, MediaMTXError):
-                        error_code = -1003
-                        error_message = "MediaMTX operation failed"
+                        # Check for specific recording management errors
+                        error_msg = str(e)
+                        if "Camera is currently recording" in error_msg:
+                            error_code = ERROR_CAMERA_ALREADY_RECORDING
+                            error_message = ERROR_MESSAGES[ERROR_CAMERA_ALREADY_RECORDING]
+                        elif "Storage space is critical" in error_msg:
+                            error_code = ERROR_STORAGE_CRITICAL
+                            error_message = ERROR_MESSAGES[ERROR_STORAGE_CRITICAL]
+                        elif "Storage space is low" in error_msg:
+                            error_code = ERROR_STORAGE_LOW
+                            error_message = ERROR_MESSAGES[ERROR_STORAGE_LOW]
+                        else:
+                            error_code = -1003
+                            error_message = "MediaMTX operation failed"
                     elif isinstance(e, FileNotFoundError):
                         error_code = -1005
                         error_message = str(e)
@@ -1602,6 +1701,23 @@ class WebSocketJsonRpcServer:
                     "streams": streams,
                 }
 
+                # REQ-REC-001.3: Add recording status to camera list
+                if device_path in self._active_recordings:
+                    recording_info = self._active_recordings[device_path]
+                    camera_info.update({
+                        "recording": True,
+                        "recording_session": recording_info.get("session_id"),
+                        "current_file": recording_info.get("current_file"),
+                        "elapsed_time": recording_info.get("elapsed_time", 0)
+                    })
+                else:
+                    camera_info.update({
+                        "recording": False,
+                        "recording_session": None,
+                        "current_file": None,
+                        "elapsed_time": 0
+                    })
+
                 cameras.append(camera_info)
 
                 if camera_device.status == "CONNECTED":
@@ -1774,6 +1890,23 @@ class WebSocketJsonRpcServer:
                     self._logger.debug(
                         f"Could not get MediaMTX status for {device_path}: {e}"
                     )
+
+            # REQ-REC-001.3: Add recording status to camera response
+            if device_path in self._active_recordings:
+                recording_info = self._active_recordings[device_path]
+                camera_status.update({
+                    "recording": True,
+                    "recording_session": recording_info.get("session_id"),
+                    "current_file": recording_info.get("current_file"),
+                    "elapsed_time": recording_info.get("elapsed_time", 0)
+                })
+            else:
+                camera_status.update({
+                    "recording": False,
+                    "recording_session": None,
+                    "current_file": None,
+                    "elapsed_time": 0
+                })
 
             return camera_status
 
@@ -2018,6 +2151,19 @@ class WebSocketJsonRpcServer:
             # Unlimited mode when no duration provided
             effective_duration = None
 
+        # REQ-REC-001.1: Check for recording conflicts
+        if device_path in self._active_recordings:
+            existing_session = self._active_recordings[device_path]
+            raise MediaMTXError(f"Camera is currently recording (session: {existing_session.get('session_id', 'unknown')})")
+
+        # REQ-REC-003.1: Validate storage space before starting recording
+        storage_info = self.check_storage_space()
+        if storage_info:
+            if storage_info["used_percent"] >= self._storage_block_percent:
+                raise MediaMTXError(f"Storage space is critical ({storage_info['used_percent']:.1f}% used)")
+            elif storage_info["used_percent"] >= self._storage_warn_percent:
+                self._logger.warning(f"Storage usage high: {storage_info['used_percent']:.1f}%")
+
         # Get MediaMTX controller from service manager if available
         mediamtx_controller = None
         if self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
@@ -2041,29 +2187,28 @@ class WebSocketJsonRpcServer:
             stream_name = self._get_stream_name_from_device_path(device_path)
             session_id = str(uuid.uuid4())
 
-            # Step 1: Call MediaMTX controller
+            # Step 1: Ensure stream is ready (this will trigger on-demand activation if needed)
+            # This aligns with API documentation - client provides device path, server handles everything internally
+            try:
+                stream_ready = await mediamtx_controller.check_stream_readiness(stream_name, timeout=15.0)
+                if not stream_ready:
+                    error_msg = f"Failed to activate stream for device {device_path} within timeout"
+                    self._logger.error(f"Stream readiness check failed for {device_path}: {error_msg}")
+                    raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+            except Exception as e:
+                error_msg = f"Failed to ensure stream readiness for {device_path}: {e}"
+                self._logger.error(f"Stream readiness check failed for {device_path}: {error_msg}")
+                raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
+
+            # Step 2: Start recording now that stream is ready
             recording_result = await mediamtx_controller.start_recording(
                 stream_name=stream_name, duration=effective_duration, format=format_type
             )
 
-            # Step 2: Validate MediaMTX controller response
+            # Step 3: Validate MediaMTX controller response
             if not recording_result or recording_result.get("status") == "failed":
                 error_msg = recording_result.get("error", "MediaMTX operation failed") if recording_result else "MediaMTX operation failed"
                 self._logger.error(f"MediaMTX controller failed to start recording for {device_path}: {error_msg}")
-                raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
-            
-            # Step 3: Additional validation: Check if the stream is actually ready for recording
-            # The MediaMTX controller might return success even when stream is not ready
-            try:
-                stream_status = await mediamtx_controller.get_stream_status(stream_name)
-                if not stream_status or not stream_status.get("ready", False):
-                    error_msg = "Stream is not ready for recording"
-                    self._logger.error(f"MediaMTX controller returned success but stream is not ready for {device_path}")
-                    raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
-            except Exception as e:
-                # If we can't validate stream status, treat it as a failure
-                error_msg = f"Could not validate stream status: {e}"
-                self._logger.error(f"Stream validation failed for {device_path}: {error_msg}")
                 raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
 
             # Step 4: All validations passed - create success response
@@ -2079,19 +2224,16 @@ class WebSocketJsonRpcServer:
                 "format": format_type,
             }
 
-            # Step 5: Send recording status update notification only after all validations pass
-            # Only send notification if we reach this point (all validations passed)
-            try:
-                await self.notify_recording_status_update({
-                    "device": device_path,
-                    "status": "STARTED",
-                    "filename": recording_result.get("filename"),
-                    "duration": effective_duration,
-                })
-            except Exception as e:
-                self._logger.warning(f"Failed to send recording start notification: {e}")
+            # REQ-REC-001.1: Track recording state
+            self._active_recordings[device_path] = {
+                "session_id": session_id,
+                "start_time": response["start_time"],
+                "current_file": recording_result.get("filename"),
+                "elapsed_time": 0,
+                "stream_name": stream_name
+            }
 
-            # Step 6: Schedule auto-stop if timed recording requested
+            # Step 5: Schedule auto-stop if timed recording requested
             if effective_duration and effective_duration > 0:
                 async def _auto_stop():
                     try:
@@ -2108,6 +2250,22 @@ class WebSocketJsonRpcServer:
                 task = asyncio.create_task(_auto_stop())
                 self._recording_stop_tasks[stream_name] = task
 
+            # Send notification asynchronously after returning the response
+            # This ensures the JSON-RPC response is sent first, then the notification
+            async def _send_notification():
+                try:
+                    await self.notify_recording_status_update({
+                        "device": device_path,
+                        "status": "STARTED",
+                        "filename": recording_result.get("filename"),
+                        "duration": effective_duration,
+                    })
+                except Exception as e:
+                    self._logger.warning(f"Failed to send recording start notification: {e}")
+            
+            # Schedule notification to be sent after response is returned
+            asyncio.create_task(_send_notification())
+            
             return response
 
         except Exception as e:
@@ -2176,6 +2334,11 @@ class WebSocketJsonRpcServer:
                 "duration": recording_result.get("duration"),
                 "file_size": recording_result.get("file_size", 0),
             }
+
+            # REQ-REC-001.1: Clean up recording state
+            if device_path in self._active_recordings:
+                self._active_recordings.pop(device_path)
+                self._logger.info(f"Cleaned up recording state for {device_path}")
 
             # Send recording status update notification only on success
             try:
@@ -2930,7 +3093,7 @@ class WebSocketJsonRpcServer:
         """
         Get storage space information and usage statistics.
         
-        Requirements: REQ-CLIENT-036
+        Requirements: REQ-CLIENT-036, REQ-REC-004.2
         Epic E6: File Lifecycle Management
         
         Args:
@@ -2940,56 +3103,46 @@ class WebSocketJsonRpcServer:
             Dictionary containing storage space information and usage statistics
         """
         try:
+            # Use the new storage checking method
+            storage_info = self.check_storage_space()
+            if not storage_info:
+                raise OSError("Storage information unavailable")
+            
             # Get recordings and snapshots directory paths
             recordings_dir = self._config.mediamtx.recordings_path
             snapshots_dir = self._config.mediamtx.snapshots_path
             
-            # Get disk usage for the parent directory (assuming both are on same filesystem)
-            parent_dir = os.path.dirname(recordings_dir)
+            # Calculate recordings directory size
+            recordings_size = 0
+            if os.path.exists(recordings_dir):
+                for dirpath, dirnames, filenames in os.walk(recordings_dir):
+                    for filename in filenames:
+                        file_path = os.path.join(dirpath, filename)
+                        try:
+                            recordings_size += os.path.getsize(file_path)
+                        except OSError:
+                            continue
             
-            try:
-                # Get disk usage statistics
-                total, used, free = shutil.disk_usage(parent_dir)
-                usage_percentage = (used / total) * 100 if total > 0 else 0
-                
-                # Calculate recordings directory size
-                recordings_size = 0
-                if os.path.exists(recordings_dir):
-                    for dirpath, dirnames, filenames in os.walk(recordings_dir):
-                        for filename in filenames:
-                            file_path = os.path.join(dirpath, filename)
-                            try:
-                                recordings_size += os.path.getsize(file_path)
-                            except OSError:
-                                continue
-                
-                # Calculate snapshots directory size
-                snapshots_size = 0
-                if os.path.exists(snapshots_dir):
-                    for dirpath, dirnames, filenames in os.walk(snapshots_dir):
-                        for filename in filenames:
-                            file_path = os.path.join(dirpath, filename)
-                            try:
-                                snapshots_size += os.path.getsize(file_path)
-                            except OSError:
-                                continue
-                
-                # Determine if low space warning should be shown (less than 10% free)
-                low_space_warning = usage_percentage > 90
-                
-                return {
-                    "total_space": total,
-                    "used_space": used,
-                    "available_space": free,
-                    "usage_percentage": round(usage_percentage, 1),
-                    "recordings_size": recordings_size,
-                    "snapshots_size": snapshots_size,
-                    "low_space_warning": low_space_warning
-                }
-                
-            except OSError as e:
-                self._logger.error(f"Error getting storage information: {e}")
-                raise OSError(f"Error getting storage information: {e}")
+            # Calculate snapshots directory size
+            snapshots_size = 0
+            if os.path.exists(snapshots_dir):
+                for dirpath, dirnames, filenames in os.walk(snapshots_dir):
+                    for filename in filenames:
+                        file_path = os.path.join(dirpath, filename)
+                        try:
+                            snapshots_size += os.path.getsize(file_path)
+                        except OSError:
+                            continue
+            
+            # Add threshold status to storage info
+            storage_info.update({
+                "recordings_size": recordings_size,
+                "snapshots_size": snapshots_size,
+                "low_space_warning": storage_info["used_percent"] >= self._storage_warn_percent,
+                "critical_space_warning": storage_info["used_percent"] >= self._storage_block_percent
+            })
+            
+            return storage_info
                 
         except OSError as e:
             self._logger.error(f"Error in get_storage_info: {e}")

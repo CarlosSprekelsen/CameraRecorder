@@ -208,7 +208,7 @@ const CameraDetail: React.FC = () => {
                   <Tooltip title="Refresh camera status">
                     <IconButton 
                       onClick={handleRefreshCameraStatus}
-                      disabled={isLoading || !isConnected}
+                      disabled={isLoading || !storeIsConnected}
                       size="small"
                     >
                       <Refresh />
@@ -313,7 +313,7 @@ const CameraDetail: React.FC = () => {
                     variant="contained"
                     startIcon={<CameraAlt />}
                     onClick={handleTakeSnapshot}
-                    disabled={isLoading || !isConnected || camera.status !== 'CONNECTED'}
+                    disabled={isLoading || !storeIsConnected || camera.status !== 'CONNECTED'}
                     fullWidth
                   >
                     {isLoading ? <CircularProgress size={20} /> : 'Take Snapshot'}
@@ -370,7 +370,7 @@ const CameraDetail: React.FC = () => {
                       color="primary"
                       startIcon={<Videocam />}
                       onClick={handleStartRecording}
-                      disabled={isLoading || isRecording || !isConnected || camera.status !== 'CONNECTED'}
+                      disabled={isLoading || isRecording || !storeIsConnected || camera.status !== 'CONNECTED'}
                       fullWidth
                     >
                       {isLoading ? <CircularProgress size={20} /> : 'Start Recording'}
@@ -381,7 +381,7 @@ const CameraDetail: React.FC = () => {
                       color="error"
                       startIcon={<Stop />}
                       onClick={handleStopRecording}
-                      disabled={isLoading || !isRecording || !isConnected}
+                      disabled={isLoading || !isRecording || !storeIsConnected}
                       fullWidth
                     >
                       {isLoading ? <CircularProgress size={20} /> : 'Stop Recording'}
