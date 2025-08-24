@@ -338,7 +338,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 </Typography>
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <SpeedIcon fontSize="small" />
-                  {formatLatency(latency)}
+                  {formatLatency(storeLatency)}
                 </Typography>
               </Box>
               
@@ -347,7 +347,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                   Uptime
                 </Typography>
                 <Typography variant="body2">
-                  {formatUptime(connectionUptime)}
+                  {formatUptime(storeConnectionUptime)}
                 </Typography>
               </Box>
             </Box>
@@ -358,7 +358,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                   Messages
                 </Typography>
                 <Typography variant="body2">
-                  {messageCount} sent
+                  {storeMessageCount} sent
                 </Typography>
               </Box>
               
@@ -366,13 +366,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <Typography variant="caption" color="text.secondary">
                   Errors
                 </Typography>
-                <Typography variant="body2" color={errorCount > 0 ? 'error' : 'text.primary'}>
-                  {errorCount} errors
+                <Typography variant="body2" color={storeErrorCount > 0 ? 'error' : 'text.primary'}>
+                  {storeErrorCount} errors
                 </Typography>
               </Box>
             </Box>
 
-            {reconnectAttempts > 0 && (
+            {storeReconnectAttempts > 0 && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary">
                   Reconnection Progress
@@ -380,7 +380,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <LinearProgress 
                     variant="determinate" 
-                    value={(reconnectAttempts / maxReconnectAttempts) * 100}
+                    value={(storeReconnectAttempts / storeMaxReconnectAttempts) * 100}
                     sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
                     color="warning"
                   />

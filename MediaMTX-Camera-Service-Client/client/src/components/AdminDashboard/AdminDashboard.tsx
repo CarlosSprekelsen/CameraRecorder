@@ -495,19 +495,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       size="small"
                     />
                     <Typography variant="body2" color="text.secondary">
-                      Uptime: {formatUptime(systemStatus.uptime)}
+                      Uptime: {storeFormatUptime(storeSystemStatus.uptime)}
                     </Typography>
                   </Box>
                   
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Version: {systemStatus.version}
+                    Version: {storeSystemStatus.version}
                   </Typography>
                   
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Components:
                   </Typography>
                   <Box>
-                    {Object.entries(systemStatus.components).map(([component, status]) => (
+                    {Object.entries(storeSystemStatus.components).map(([component, status]) => (
                       <Box key={component} display="flex" justifyContent="space-between" mb={0.5}>
                         <Typography variant="body2">
                           {component.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -537,14 +537,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Typography variant="h6">Server Information</Typography>
               </Box>
               
-              {serverInfo ? (
+              {storeServerInfo ? (
                 <Box>
                   <Typography variant="body1" gutterBottom>
-                    {serverInfo.name} v{serverInfo.version}
+                    {storeServerInfo.name} v{storeServerInfo.version}
                   </Typography>
                   
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Max Cameras: {serverInfo.max_cameras}
+                    Max Cameras: {storeServerInfo.max_cameras}
                   </Typography>
                   
                   <Typography variant="body2" color="text.secondary" gutterBottom>

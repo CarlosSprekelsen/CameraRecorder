@@ -15,7 +15,16 @@
  * No mocking - uses real server endpoints
  */
 
-import type { CameraDevice, CameraListResponse } from '../types/camera';
+import type { 
+  CameraDevice, 
+  CameraListResponse, 
+  FileListResponse,
+  FileItem,
+  SnapshotResult,
+  RecordingSession,
+  StreamInfo,
+  ServerInfo
+} from '../types/camera';
 import { authService } from './authService';
 
 export interface HTTPPollingConfig {
@@ -172,8 +181,36 @@ export class HTTPPollingService {
     }
   }
 
+  // ============================================================================
+  // JSON-RPC METHOD FALLBACKS - FULL IMPLEMENTATION
+  // ============================================================================
+
   /**
-   * Get camera list via HTTP (single request)
+   * ping - Health check method
+   */
+  public async ping(): Promise<{ pong: string }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/ping`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return { pong: data.pong || 'pong' };
+  }
+
+  /**
+   * get_camera_list - Get list of available cameras
    */
   public async getCameraList(): Promise<CameraListResponse> {
     const response = await this.fetchWithTimeout(
@@ -194,6 +231,474 @@ export class HTTPPollingService {
 
     const data = await response.json();
     return this.parseCameraListResponse(data);
+  }
+
+  /**
+   * get_camera_status - Get status of specific camera
+   */
+  public async getCameraStatus(deviceId: string): Promise<CameraDevice> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/cameras/${encodeURIComponent(deviceId)}/status`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      device: deviceId,
+      status: data.status || 'DISCONNECTED',
+      name: data.name || deviceId,
+      resolution: data.resolution || 'unknown',
+      fps: data.fps || 0,
+      streams: data.streams || { rtsp: '', webrtc: '', hls: '' },
+      metrics: data.metrics,
+      capabilities: data.capabilities
+    };
+  }
+
+  /**
+   * take_snapshot - Take snapshot from camera
+   */
+  public async takeSnapshot(deviceId: string): Promise<SnapshotResult> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/cameras/${encodeURIComponent(deviceId)}/snapshot`,
+      {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      device: deviceId,
+      filename: data.filename || '',
+      status: data.status === 'completed' ? 'completed' : 'FAILED',
+      timestamp: new Date().toISOString(),
+      file_size: data.file_size || 0,
+      format: data.format || 'jpg',
+      quality: data.quality || 85,
+      error: data.error || undefined
+    };
+  }
+
+  /**
+   * start_recording - Start recording from camera
+   */
+  public async startRecording(deviceId: string): Promise<RecordingSession> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/cameras/${encodeURIComponent(deviceId)}/recording/start`,
+      {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      device: deviceId,
+      session_id: data.session_id || '',
+      filename: data.filename || '',
+      status: data.status || 'STARTED',
+      start_time: new Date().toISOString(),
+      format: data.format || 'mp4'
+    };
+  }
+
+  /**
+   * stop_recording - Stop recording from camera
+   */
+  public async stopRecording(deviceId: string): Promise<RecordingSession> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/cameras/${encodeURIComponent(deviceId)}/recording/stop`,
+      {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      device: deviceId,
+      session_id: data.session_id || '',
+      filename: data.filename || '',
+      status: data.status || 'STOPPED',
+      start_time: data.start_time || new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      duration: data.duration || 0,
+      format: data.format || 'mp4',
+      file_size: data.file_size
+    };
+  }
+
+  /**
+   * list_recordings - Get list of recordings
+   */
+  public async listRecordings(): Promise<FileListResponse> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/recordings`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      files: data.files || [],
+      total: data.total || 0,
+      limit: data.limit || 100,
+      offset: data.offset || 0
+    };
+  }
+
+  /**
+   * list_snapshots - Get list of snapshots
+   */
+  public async listSnapshots(): Promise<FileListResponse> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/snapshots`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      files: data.files || [],
+      total: data.total || 0,
+      limit: data.limit || 100,
+      offset: data.offset || 0
+    };
+  }
+
+  /**
+   * get_recording_info - Get information about specific recording
+   */
+  public async getRecordingInfo(filename: string): Promise<FileItem> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/recordings/${encodeURIComponent(filename)}/info`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      filename: data.filename || filename,
+      file_size: data.file_size || 0,
+      created_time: data.created_time || new Date().toISOString(),
+      modified_time: data.modified_time || new Date().toISOString(),
+      download_url: data.download_url || '',
+      duration: data.duration || 0,
+      format: data.format || 'mp4'
+    };
+  }
+
+  /**
+   * get_snapshot_info - Get information about specific snapshot
+   */
+  public async getSnapshotInfo(filename: string): Promise<FileItem> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/snapshots/${encodeURIComponent(filename)}/info`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      filename: data.filename || filename,
+      file_size: data.file_size || 0,
+      created_time: data.created_time || new Date().toISOString(),
+      modified_time: data.modified_time || new Date().toISOString(),
+      download_url: data.download_url || '',
+      format: data.format || 'jpg'
+    };
+  }
+
+  /**
+   * delete_recording - Delete specific recording
+   */
+  public async deleteRecording(filename: string): Promise<{ status: string; error?: string }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/recordings/${encodeURIComponent(filename)}`,
+      {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      status: data.status || 'deleted',
+      error: data.error || undefined
+    };
+  }
+
+  /**
+   * delete_snapshot - Delete specific snapshot
+   */
+  public async deleteSnapshot(filename: string): Promise<{ status: string; error?: string }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/files/snapshots/${encodeURIComponent(filename)}`,
+      {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      status: data.status || 'deleted',
+      error: data.error || undefined
+    };
+  }
+
+  /**
+   * get_storage_info - Get storage information
+   */
+  public async getStorageInfo(): Promise<{
+    total_space: number;
+    available_space: number;
+    recordings_size: number;
+    snapshots_size: number;
+    usage_percentage: number;
+  }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/storage`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      total_space: data.total_space || 0,
+      available_space: data.available_space || 0,
+      recordings_size: data.recordings_size || 0,
+      snapshots_size: data.snapshots_size || 0,
+      usage_percentage: data.usage_percentage || 0
+    };
+  }
+
+  /**
+   * get_metrics - Get system metrics
+   */
+  public async getMetrics(): Promise<{
+    active_connections: number;
+    total_requests: number;
+    average_response_time: number;
+    error_rate: number;
+    cpu_usage: number;
+    memory_usage: number;
+  }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/metrics`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      active_connections: data.active_connections || 0,
+      total_requests: data.total_requests || 0,
+      average_response_time: data.average_response_time || 0,
+      error_rate: data.error_rate || 0,
+      cpu_usage: data.cpu_usage || 0,
+      memory_usage: data.memory_usage || 0
+    };
+  }
+
+  /**
+   * get_status - Get system status
+   */
+  public async getStatus(): Promise<{
+    status: string;
+    uptime: number;
+    version: string;
+    components: Record<string, string>;
+  }> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/status`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      status: data.status || 'unknown',
+      uptime: data.uptime || 0,
+      version: data.version || 'unknown',
+      components: data.components || {}
+    };
+  }
+
+  /**
+   * get_server_info - Get server information
+   */
+  public async getServerInfo(): Promise<ServerInfo> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/server/info`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return {
+      version: data.version || 'unknown',
+      uptime: data.uptime || 0,
+      cameras_connected: data.cameras_connected || 0,
+      total_recordings: data.total_recordings || 0,
+      total_snapshots: data.total_snapshots || 0
+    };
+  }
+
+  /**
+   * get_streams - Get MediaMTX stream information
+   */
+  public async getStreams(): Promise<StreamInfo[]> {
+    const response = await this.fetchWithTimeout(
+      `${this.config.baseUrl}/api/streams`,
+      {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      },
+      this.config.timeout
+    );
+
+    if (!response.ok) {
+      throw new HTTPPollingError(
+        `HTTP ${response.status}: ${response.statusText}`,
+        response.status
+      );
+    }
+
+    const data = await response.json();
+    return data.streams || [];
   }
 
   /**

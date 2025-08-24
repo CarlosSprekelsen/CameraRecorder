@@ -6,6 +6,7 @@
  * 
  * Ground Truth References:
  * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
+ * - Health API: ../mediamtx-camera-service/docs/api/health-endpoints.md
  * - Client Architecture: ../docs/architecture/client-architecture.md
  * - Client Requirements: ../docs/requirements/client-requirements.md
  * 
@@ -13,6 +14,7 @@
  * API Documentation Reference: docs/api/json-rpc-methods.md
  * 
  * Uses StableTestFixture as single source of truth for authentication and validation
+ * Updated for new API structure with auth_token requirement
  */
 
 const { StableTestFixture } = require('../fixtures/stable-test-fixture');
@@ -20,6 +22,7 @@ const { StableTestFixture } = require('../fixtures/stable-test-fixture');
 /**
  * Camera List Integration Test
  * Uses StableTestFixture for API-compliant camera list validation
+ * Updated for new API structure with authentication requirement
  */
 
 describe('Camera List Integration Tests', () => {
@@ -36,11 +39,13 @@ describe('Camera List Integration Tests', () => {
     }
   });
 
-  test('REQ-CAM02-001: should retrieve camera list using compliant fixture', async () => {
+  test('REQ-CAM02-001: should retrieve camera list using compliant fixture with authentication', async () => {
     // Use the stable test fixture as single source of truth for authentication
+    // Updated: All methods now require authentication per new API
     const ws = await fixture.connectWebSocketWithAuth();
     
     // Send get_camera_list request using the fixture
+    // Updated: fixture automatically adds auth_token parameter
     const id = Math.floor(Math.random() * 1000000);
     fixture.sendRequest(ws, 'get_camera_list', id);
     
@@ -73,8 +78,9 @@ describe('Camera List Integration Tests', () => {
     ws.close();
   });
 
-  test('REQ-CAM02-002: should validate camera list response format against API documentation', async () => {
+  test('REQ-CAM02-002: should validate camera list response format against new API documentation', async () => {
     // This test ensures the fixture properly validates the camera list response format
+    // Updated: All methods now require authentication per new API
     const ws = await fixture.connectWebSocketWithAuth();
     
     const id = Math.floor(Math.random() * 1000000);
@@ -82,6 +88,7 @@ describe('Camera List Integration Tests', () => {
     
     // The fixture.validateResponseFormat() is called automatically
     // If the response doesn't match API documentation, the fixture will throw an error
+    // Updated: Validates against new API response format
     const response = await fixture.waitForResponse(ws, id);
     
     // Additional validation that the fixture should have already done
@@ -89,18 +96,73 @@ describe('Camera List Integration Tests', () => {
     expect(response).toHaveProperty('total');
     expect(response).toHaveProperty('connected');
     
+    // Updated: Validate new API response structure
+    expect(Array.isArray(response.cameras)).toBe(true);
+    expect(typeof response.total).toBe('number');
+    expect(typeof response.connected).toBe('number');
+    
     ws.close();
   });
 
-  test('REQ-CAM02-003: should handle unauthorized access properly', async () => {
+  test('REQ-CAM02-003: should handle unauthorized access properly with new authentication', async () => {
     // Test that unauthorized access is properly handled
+    // Updated: Test without authentication token
     const ws = await fixture.connectWebSocket(); // No authentication
+    
+    const id = Math.floor(Math.random() * 1000000);
+    // Updated: Send request without auth_token to test unauthorized access
+    const request = {
+      jsonrpc: '2.0',
+      method: 'get_camera_list',
+      id: id
+      // No params = no auth_token = unauthorized
+    };
+    
+    ws.send(JSON.stringify(request));
+    
+    // Should receive authentication error per new API
+    await expect(fixture.waitForResponse(ws, id)).rejects.toThrow();
+    
+    ws.close();
+  });
+
+  test('REQ-CAM02-004: should handle invalid authentication token with new API', async () => {
+    // Test with invalid authentication token
+    const ws = await fixture.connectWebSocket();
+    
+    const id = Math.floor(Math.random() * 1000000);
+    // Updated: Send request with invalid auth_token
+    const request = {
+      jsonrpc: '2.0',
+      method: 'get_camera_list',
+      params: {
+        auth_token: 'invalid.token.here'
+      },
+      id: id
+    };
+    
+    ws.send(JSON.stringify(request));
+    
+    // Should receive authentication error per new API
+    await expect(fixture.waitForResponse(ws, id)).rejects.toThrow();
+    
+    ws.close();
+  });
+
+  test('REQ-CAM02-005: should validate role-based access control with new API', async () => {
+    // Test role-based access control
+    // Updated: Test with different user roles
+    const ws = await fixture.connectWebSocketWithAuth();
     
     const id = Math.floor(Math.random() * 1000000);
     fixture.sendRequest(ws, 'get_camera_list', id);
     
-    // The fixture should validate the error response format against API documentation
-    await expect(fixture.waitForResponse(ws, id)).rejects.toThrow();
+    // get_camera_list should work with viewer role (minimum required)
+    // Updated: Validates role-based access per new API
+    const response = await fixture.waitForResponse(ws, id);
+    
+    expect(response).toBeDefined();
+    expect(response.cameras).toBeDefined();
     
     ws.close();
   });

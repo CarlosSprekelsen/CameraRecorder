@@ -33,6 +33,7 @@ import type {
 } from '../types';
 import { RPC_METHODS, NOTIFICATION_METHODS } from '../types';
 import type { WebSocketService } from '../services/websocket';
+import { errorRecoveryService } from '../services/errorRecoveryService';
 
 export interface CameraStoreState {
   // Camera data
@@ -242,29 +243,26 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
 
   // Camera operations
   getCameraList: async (): Promise<CameraListResponse | null> => {
-    try {
-      const { wsService } = get();
-      
-      if (!wsService) {
-        throw new Error('WebSocket service not initialized');
-      }
-
-      if (!wsService.isConnected()) {
-        throw new Error('WebSocket not connected');
-      }
-
-      console.log('📷 Getting camera list');
-      const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
-      set({ cameras: result.cameras });
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Failed to get camera list:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to get camera list' 
-      });
-      return null;
+    const { wsService } = get();
+    
+    if (!wsService) {
+      throw new Error('WebSocket service not initialized');
     }
+
+    if (!wsService.isConnected()) {
+      throw new Error('WebSocket not connected');
+    }
+
+    console.log('📷 Getting camera list with error recovery');
+    
+    return await errorRecoveryService.executeWithRetry(
+      async () => {
+        const result = await wsService.call(RPC_METHODS.GET_CAMERA_LIST, {}) as CameraListResponse;
+        set({ cameras: result.cameras });
+        return result;
+      },
+      'getCameraList'
+    );
   },
 
   getCameraStatus: async (device: string): Promise<CameraDevice | null> => {
@@ -411,48 +409,43 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     quality: number = 85,
     filename?: string
   ): Promise<SnapshotResult | null> => {
-    try {
-      const { wsService } = get();
-      
-      if (!wsService) {
-        throw new Error('WebSocket service not initialized');
-      }
-
-      if (!wsService.isConnected()) {
-        throw new Error('WebSocket not connected');
-      }
-
-      // Validate quality parameter
-      if (quality < 1 || quality > 100) {
-        throw new Error('Quality must be between 1 and 100');
-      }
-
-      // Validate format parameter
-      if (format !== 'jpg' && format !== 'png') {
-        throw new Error('Format must be either "jpg" or "png"');
-      }
-
-      console.log(`📸 Taking snapshot for camera ${device} (format: ${format}, quality: ${quality})`);
-      
-      const params: TakeSnapshotParams = {
-        device,
-        format,
-        quality,
-        ...(filename && { filename })
-      };
-
-      const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
-
-      console.log(`✅ Snapshot taken for camera ${device}:`, result);
-      return result;
-      
-    } catch (error) {
-      console.error(`❌ Failed to take snapshot for camera ${device}:`, error);
-      set({ 
-        error: error instanceof Error ? error.message : `Failed to take snapshot for camera ${device}` 
-      });
-      return null;
+    const { wsService } = get();
+    
+    if (!wsService) {
+      throw new Error('WebSocket service not initialized');
     }
+
+    if (!wsService.isConnected()) {
+      throw new Error('WebSocket not connected');
+    }
+
+    // Validate quality parameter
+    if (quality < 1 || quality > 100) {
+      throw new Error('Quality must be between 1 and 100');
+    }
+
+    // Validate format parameter
+    if (format !== 'jpg' && format !== 'png') {
+      throw new Error('Format must be either "jpg" or "png"');
+    }
+
+    console.log(`📸 Taking snapshot for camera ${device} with error recovery (format: ${format}, quality: ${quality})`);
+    
+    const params: TakeSnapshotParams = {
+      device,
+      format,
+      quality,
+      ...(filename && { filename })
+    };
+
+    return await errorRecoveryService.executeWithRetry(
+      async () => {
+        const result = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
+        console.log(`✅ Snapshot taken for camera ${device}:`, result);
+        return result;
+      },
+      'takeSnapshot'
+    );
   },
 
   // Server operations

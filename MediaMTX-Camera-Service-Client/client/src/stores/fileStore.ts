@@ -17,6 +17,7 @@ import type { FileItem, FileType } from '../types';
 import { RPC_METHODS } from '../types';
 import { createWebSocketService, type WebSocketService } from '../services/websocket';
 import { normalizeFileListResponse } from '../services/apiNormalizer';
+import { errorRecoveryService } from '../services/errorRecoveryService';
 
 /**
  * File info response from server
@@ -189,10 +190,15 @@ export const useFileStore = create<FileStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await wsService.call(RPC_METHODS.LIST_RECORDINGS, {
-            limit,
-            offset
-          });
+          const response = await errorRecoveryService.executeWithRetry(
+            async () => {
+              return await wsService.call(RPC_METHODS.LIST_RECORDINGS, {
+                limit,
+                offset
+              });
+            },
+            'loadRecordings'
+          );
 
           const normalized = normalizeFileListResponse(response);
           set({ recordings: normalized.files as FileItem[] });
@@ -218,10 +224,15 @@ export const useFileStore = create<FileStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, {
-            limit,
-            offset
-          });
+          const response = await errorRecoveryService.executeWithRetry(
+            async () => {
+              return await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, {
+                limit,
+                offset
+              });
+            },
+            'loadSnapshots'
+          );
 
           const normalized = normalizeFileListResponse(response);
           set({ snapshots: normalized.files as FileItem[] });

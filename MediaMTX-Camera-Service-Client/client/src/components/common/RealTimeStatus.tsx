@@ -167,14 +167,14 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             size="small"
           />
           <Chip
-            icon={cameraRealTimeEnabled ? <CheckCircle /> : <Error />}
+            icon={storeCameraRealTimeEnabled ? <CheckCircle /> : <Error />}
             label="Camera Updates"
-            color={cameraRealTimeEnabled ? 'success' : 'error'}
+            color={storeCameraRealTimeEnabled ? 'success' : 'error'}
             size="small"
           />
-          {notificationCount > 0 && (
+          {storeNotificationCount > 0 && (
             <Chip
-              label={`${notificationCount} updates`}
+              label={`${storeNotificationCount} updates`}
               color="info"
               size="small"
               variant="outlined"
@@ -191,7 +191,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Chip
             icon={<Camera />}
-            label={`${getConnectedCamerasCount()}/${cameras.length} Connected`}
+            label={`${getConnectedCamerasCount()}/${storeCameras.length} Connected`}
             color={getConnectedCamerasCount() > 0 ? 'success' : 'warning'}
             size="small"
           />
@@ -212,8 +212,8 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Recording Progress
           </Typography>
-          {Array.from(activeRecordings.entries()).map(([device, _recording]) => {
-            const progress = recordingProgress.get(device) || 0;
+          {Array.from(storeActiveRecordings.entries()).map(([device, _recording]) => {
+            const progress = storeRecordingProgress.get(device) || 0;
             return (
               <Box key={device} sx={{ mb: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
@@ -243,9 +243,9 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             Connection Metrics
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {averageNotificationLatency > 0 && (
+            {storeAverageNotificationLatency > 0 && (
               <Chip
-                label={`${formatLatency(averageNotificationLatency)} avg latency`}
+                label={`${formatLatency(storeAverageNotificationLatency)} avg latency`}
                 color="info"
                 size="small"
                 variant="outlined"

@@ -25,6 +25,7 @@ import type {
   CameraStatusNotification, 
   RecordingStatusNotification 
 } from '../types';
+import { errorRecoveryService } from '../services/errorRecoveryService';
 
 
 /**
@@ -227,33 +228,34 @@ export const useConnectionStore = create<ConnectionStore>()(
 
       // Connection management
       connect: async (url = defaultWebSocketConfig.url) => {
-        try {
-          set({ 
-            isConnecting: true, 
-            error: null,
-            errorCode: null,
-            errorTimestamp: null,
-            url,
-            status: 'connecting' 
-          });
+        set({ 
+          isConnecting: true, 
+          error: null,
+          errorCode: null,
+          errorTimestamp: null,
+          url,
+          status: 'connecting' 
+        });
 
-          const { wsService } = get();
-          if (!wsService) {
-            // Initialize WebSocket service if not available
-            get().initializeWebSocketService(url);
-            const { wsService: newService } = get();
-            if (!newService) {
-              throw new Error('Failed to initialize WebSocket service');
+        await errorRecoveryService.executeWithRetry(
+          async () => {
+            const { wsService } = get();
+            if (!wsService) {
+              // Initialize WebSocket service if not available
+              get().initializeWebSocketService(url);
+              const { wsService: newService } = get();
+              if (!newService) {
+                throw new Error('Failed to initialize WebSocket service');
+              }
             }
-          }
 
-          const { wsService: service } = get();
-          if (!service) {
-            throw new Error('WebSocket service not available');
-          }
+            const { wsService: service } = get();
+            if (!service) {
+              throw new Error('WebSocket service not available');
+            }
 
-          // Set up enhanced event handlers with real-time update support
-          service.onConnect(() => {
+            // Set up enhanced event handlers with real-time update support
+            service.onConnect(() => {
             const now = new Date();
             set({ 
               isConnecting: false,
@@ -331,9 +333,10 @@ export const useConnectionStore = create<ConnectionStore>()(
             get().handleRecordingStatusUpdate(notification);
           });
 
-          await service.connect();
-          
-        } catch (error) {
+            await service.connect();
+          },
+          'connect'
+        ).catch((error) => {
           const now = new Date();
           const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
           set({ 
@@ -349,7 +352,7 @@ export const useConnectionStore = create<ConnectionStore>()(
           
           get().incrementErrorCount();
           throw error;
-        }
+        });
       },
 
       disconnect: () => {
