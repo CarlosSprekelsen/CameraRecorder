@@ -245,20 +245,9 @@ class ErrorHandlerService {
     }
   }
 
-  private getUserFriendlyMessageForGeneric(error: Error, context: string): string {
-    if (error.message.includes('Network') || error.message.includes('fetch')) {
-      return 'Network connection error. Please check your internet connection and try again.';
-    }
-    
-    if (error.message.includes('timeout')) {
-      return 'Operation timed out. Please try again.';
-    }
-    
-    if (error.message.includes('WebSocket')) {
-      return 'Connection lost. Attempting to reconnect...';
-    }
-    
-    return `An error occurred while ${context}. Please try again.`;
+  private getUserFriendlyMessageForGeneric(error: JSONRPCError | Error, context: string): string {
+    const message = error.message || 'An unknown error occurred';
+    return `${message} (${context})`;
   }
 
   private getSeverityForCode(code: number): 'info' | 'warning' | 'error' | 'critical' {

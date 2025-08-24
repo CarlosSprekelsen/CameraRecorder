@@ -34,6 +34,9 @@ interface StorageStoreState {
   // Warning states
   hasWarnings: boolean;
   hasCriticalIssues: boolean;
+  
+  // Warnings array for component compatibility
+  warnings: string[]; // Added for component compatibility
 }
 
 /**
@@ -64,6 +67,7 @@ interface StorageStoreActions {
   
   // Storage operations
   refreshStorageInfo: () => Promise<void>;
+  refreshStorage: () => Promise<void>; // Added for component compatibility
   checkThresholds: () => Promise<void>;
   startMonitoring: (interval?: number) => void;
   stopMonitoring: () => void;
@@ -98,6 +102,7 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
   monitoringInterval: 30000,
   isLoading: false,
   isCheckingThresholds: false,
+  warnings: [], // Added for component compatibility
   error: null,
   lastError: null,
   hasWarnings: false,
@@ -248,6 +253,41 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
   isStorageWarning: () => {
     const status = get().thresholdStatus;
     return status ? status.is_warning : false;
+  },
+
+  // Storage refresh method for component compatibility
+  refreshStorage: async () => {
+    const { setLoading, setError } = get();
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Refresh storage info and check thresholds
+      await get().refreshStorageInfo();
+      await get().checkThresholds();
+      
+      // Update warnings based on threshold status
+      const status = get().thresholdStatus;
+      const warnings: string[] = [];
+      
+      if (status) {
+        if (status.current_status === 'critical') {
+          warnings.push('Storage space is critical');
+        } else if (status.current_status === 'warning') {
+          warnings.push('Storage space is low');
+        }
+      }
+      
+      // Update warnings in state
+      set({ warnings });
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh storage';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   },
 
   // Service integration

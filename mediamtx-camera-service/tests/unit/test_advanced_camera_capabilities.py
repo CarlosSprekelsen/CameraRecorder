@@ -68,12 +68,12 @@ class AdvancedCameraCapabilitiesValidator:
         """Set up test environment for advanced capability testing."""
         temp_dir = tempfile.mkdtemp(prefix="advanced_cap_test_")
         
-        # Create test configuration
+        # Use production-like configuration to prevent hanging
         test_config = {
-            "device_range": [0, 1, 2],  # Reduced range
-            "poll_interval": 1.0,  # Less aggressive polling
+            "device_range": [0, 1, 2],  # Limited range for testing
+            "poll_interval": 0.1,  # Fast polling like production (was 1.0)
             "enable_capability_detection": True,
-            "detection_timeout": 3.0
+            "detection_timeout": 1.0  # Fast timeout like production (was 3.0)
         }
         
         return {
@@ -508,12 +508,12 @@ class TestAdvancedCameraCapabilities:
         import tempfile
         temp_dir = tempfile.mkdtemp(prefix="advanced_cap_test_")
         
-        # Create test configuration
+        # Use production-like configuration to prevent hanging
         test_config = {
-            "device_range": [0, 1, 2],  # Reduced range
-            "poll_interval": 1.0,  # Less aggressive polling
+            "device_range": [0, 1, 2],  # Limited range for testing
+            "poll_interval": 0.1,  # Fast polling like production (was 1.0)
             "enable_capability_detection": True,
-            "detection_timeout": 3.0
+            "detection_timeout": 1.0  # Fast timeout like production (was 3.0)
         }
         
         # Test basic initialization without complex scenarios

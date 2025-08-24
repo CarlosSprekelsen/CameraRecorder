@@ -165,7 +165,7 @@ const RecordingDialog: React.FC<RecordingDialogProps> = ({
             <Select
               value={durationType}
               label="Duration Type"
-              onChange={(e) => setDurationType(e.target.value as any)}
+              onChange={(e) => setDurationType(e.target.value as 'seconds' | 'minutes' | 'hours' | 'unlimited')}
               disabled={loading}
             >
               <MenuItem value="seconds">Seconds</MenuItem>

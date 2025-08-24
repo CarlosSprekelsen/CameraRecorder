@@ -77,6 +77,7 @@ export interface HealthStoreState {
   
   // Health monitoring state
   isMonitoring: boolean;
+  isLoading: boolean; // Added for component compatibility
   lastUpdate: Date | null;
   updateInterval: number; // milliseconds
   
@@ -85,6 +86,9 @@ export interface HealthStoreState {
   pollCount: number;
   errorCount: number;
   lastPollTime: Date | null;
+  
+  // Error state
+  error: string | null; // Added for component compatibility
   
   // Health history
   healthHistory: SystemHealth[];
@@ -112,6 +116,9 @@ interface HealthActions {
   incrementPollCount: () => void;
   incrementErrorCount: () => void;
   setLastPollTime: (time: Date) => void;
+  
+  // Health refresh
+  refreshHealth: () => Promise<void>; // Added for component compatibility
   
   // Health history
   addToHistory: (health: SystemHealth) => void;
@@ -142,6 +149,7 @@ export const useHealthStore = create<HealthStore>()(
       readinessStatus: null,
       
       isMonitoring: false,
+      isLoading: false, // Added for component compatibility
       lastUpdate: null,
       updateInterval: 30000, // 30 seconds
       
@@ -149,6 +157,8 @@ export const useHealthStore = create<HealthStore>()(
       pollCount: 0,
       errorCount: 0,
       lastPollTime: null,
+      
+      error: null, // Added for component compatibility
       
       healthHistory: [],
       maxHistorySize: 100,
@@ -324,6 +334,37 @@ export const useHealthStore = create<HealthStore>()(
       isSystemReady: () => {
         const { readinessStatus } = get();
         return readinessStatus?.status === 'ready';
+      },
+      
+      // Health refresh method for component compatibility
+      refreshHealth: async () => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          // Import health service dynamically to avoid circular dependencies
+          const { healthService } = await import('../services/healthService');
+          
+          // Get all health information
+          const health = await healthService.getAllHealth();
+          
+          // Update store with health data
+          set({
+            systemHealth: health.system,
+            cameraHealth: health.cameras,
+            mediamtxHealth: health.mediamtx,
+            readinessStatus: health.readiness,
+            lastUpdate: new Date(),
+            isLoading: false,
+            error: null,
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health';
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw new Error(errorMessage);
+        }
       },
     }),
     {

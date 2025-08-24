@@ -146,8 +146,10 @@ class ConfigurationManagerService {
     }
 
     const result: ValidationResult = {
-      valid: errors.length === 0,
-      reason: errors.length === 0 ? 'Configuration is valid' : errors.join('; ')
+      isValid: errors.length === 0,
+      errors: errors,
+      warnings: [],
+      config: this.currentConfig
     };
 
     // Notify validation callbacks
@@ -161,10 +163,10 @@ class ConfigurationManagerService {
    */
   getConfigurationErrors(): string[] {
     const validation = this.validateConfiguration();
-    if (validation.valid) {
+    if (validation.isValid) {
       return [];
     }
-    return validation.reason.split('; ');
+    return validation.errors;
   }
 
   /**
@@ -195,33 +197,33 @@ class ConfigurationManagerService {
   getDefaultConfiguration(): AppConfig {
     return {
       recording: {
+        rotation_minutes: 60,
         rotationMinutes: 60,
+        default_format: 'mp4',
+        auto_rotation: true,
         maxFilesPerCamera: 10,
         autoDelete: true
       },
       storage: {
+        warn_percent: 80,
         warnPercent: 80,
+        block_percent: 95,
         blockPercent: 95,
+        critical_percent: 90,
+        monitoring_enabled: true,
         maxUsagePercent: 90
       },
       connection: {
         websocketUrl: 'ws://localhost:8002/ws',
         healthUrl: 'http://localhost:8003',
-        timeout: 30000,
-        reconnectInterval: 5000,
-        maxReconnectAttempts: 10
+        timeout: 30000
       },
       system: {
         logLevel: 'info',
         autoRefresh: true,
         refreshInterval: 5000
       },
-      ui: {
-        theme: 'light',
-        language: 'en',
-        notifications: true,
-        soundEnabled: false
-      }
+      environment: {}
     };
   }
 
@@ -272,33 +274,33 @@ class ConfigurationManagerService {
   private loadConfiguration(): void {
     this.currentConfig = {
       recording: {
+        rotation_minutes: this.getRecordingRotationMinutes(),
         rotationMinutes: this.getRecordingRotationMinutes(),
+        default_format: 'mp4',
+        auto_rotation: true,
         maxFilesPerCamera: 10,
         autoDelete: true
       },
       storage: {
+        warn_percent: this.getStorageWarnPercent(),
         warnPercent: this.getStorageWarnPercent(),
+        block_percent: this.getStorageBlockPercent(),
         blockPercent: this.getStorageBlockPercent(),
+        critical_percent: 90,
+        monitoring_enabled: true,
         maxUsagePercent: 90
       },
       connection: {
         websocketUrl: this.getWebSocketUrl(),
         healthUrl: this.getHealthUrl(),
-        timeout: this.getApiTimeout(),
-        reconnectInterval: 5000,
-        maxReconnectAttempts: 10
+        timeout: this.getApiTimeout()
       },
       system: {
-        logLevel: this.getLogLevel(),
+        logLevel: this.getLogLevel() as 'debug' | 'info' | 'warn' | 'error',
         autoRefresh: true,
         refreshInterval: 5000
       },
-      ui: {
-        theme: 'light',
-        language: 'en',
-        notifications: true,
-        soundEnabled: false
-      }
+      environment: {}
     };
   }
 

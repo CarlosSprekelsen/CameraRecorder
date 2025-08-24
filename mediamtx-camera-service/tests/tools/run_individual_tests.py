@@ -45,7 +45,7 @@ class TestExecutor:
         try:
             # Run the test with timeout
             result = subprocess.run(
-                ['python', '-m', 'pytest', test_path, '-v', '--tb=short'],
+                ['python3', '-m', 'pytest', test_path, '-v', '--tb=short'],
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds

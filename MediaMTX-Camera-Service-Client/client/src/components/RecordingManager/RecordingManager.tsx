@@ -33,6 +33,17 @@ import { useCameraStore } from '../../stores/cameraStore';
 import { RecordingSession, RecordingStatus } from '../../types/camera';
 import { JSONRPCError } from '../../types/rpc';
 
+// Error handling utility function
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unknown error occurred';
+};
+
 const RecordingManager: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -60,8 +71,8 @@ const RecordingManager: React.FC = () => {
     setLocalError(null);
     try {
       await startRecording(device);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start recording';
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
       setLocalError(errorMessage);
     } finally {
       setLocalLoading(false);
@@ -73,8 +84,8 @@ const RecordingManager: React.FC = () => {
     setLocalError(null);
     try {
       await stopRecording(device);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to stop recording';
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error);
       setLocalError(errorMessage);
     } finally {
       setLocalLoading(false);
@@ -239,9 +250,9 @@ const RecordingManager: React.FC = () => {
                       {recordingError && (
                         <Alert severity="error" sx={{ mb: 2 }}>
                           <Typography variant="body2">
-                            {recordingError.message}
+                            {recordingError.message || 'Recording error occurred'}
                           </Typography>
-                          {recordingError.data && (
+                          {recordingError.code && (
                             <Typography variant="caption" display="block">
                               Code: {recordingError.code}
                             </Typography>
