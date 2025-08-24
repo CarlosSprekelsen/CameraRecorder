@@ -291,7 +291,7 @@ export const useSettingsStore = create<SettingsStoreState>()(
       ) => {
         const { settings, changeHistory } = get();
         const oldCategorySettings = settings[category];
-        const newCategorySettings = { ...(oldCategorySettings as Record<string, any> || {}), ...updates };
+        const newCategorySettings = { ...(oldCategorySettings as Record<string, unknown> || {}), ...updates };
         
         const newChangeHistory: SettingsChangeEvent[] = Object.keys(updates).map(key => ({
           category,
@@ -326,7 +326,7 @@ export const useSettingsStore = create<SettingsStoreState>()(
             settings: {
               ...settings,
               [category]: {
-                ...(settings[category] as Record<string, any> || {}),
+                ...(settings[category] as Record<string, unknown> || {}),
                 [key]: value,
               },
               lastUpdated: new Date(),

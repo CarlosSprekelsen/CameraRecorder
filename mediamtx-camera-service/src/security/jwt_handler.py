@@ -167,7 +167,7 @@ class JWTHandler:
         """
         try:
             # Decode without verification to check expiry
-            payload = jwt.decode(token, options={"verify_signature": False})
+            payload: Any = jwt.decode(token, options={"verify_signature": False})
             exp = payload.get("exp")
             if exp is None:
                 return True

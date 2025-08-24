@@ -236,7 +236,7 @@ class Config:
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
     health_port: Optional[int] = None  # Configurable health server port for testing
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize configuration with proper dataclass conversion."""
         # Create default instances
         self.server = ServerConfig()
@@ -346,7 +346,7 @@ class Config:
             }
         except Exception as e:
             # Fallback to manual conversion if asdict fails
-            def _to_dict(obj):
+            def _to_dict(obj: Any) -> Any:
                 if hasattr(obj, '__dataclass_fields__'):
                     return {k: getattr(obj, k) for k in obj.__dataclass_fields__}
                 elif isinstance(obj, dict):
@@ -430,12 +430,12 @@ class ConfigManager:
     comprehensive validation, and safe hot reload functionality.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._logger = logging.getLogger(__name__)
         self._config: Optional[Config] = None
         self._config_path: Optional[str] = None
         self._update_callbacks: List[Callable[[Config], None]] = []
-        self._observer: Optional[Observer] = None
+        self._observer: Optional[Any] = None
         self._lock = threading.Lock()
         self._default_config = Config()  # Fallback configuration
 
@@ -571,7 +571,7 @@ class ConfigManager:
             self._logger.warning("Hot reload not started - no configuration file path")
             return
 
-        if self._observer:
+        if self._observer is not None:
             self._logger.warning("Hot reload already started")
             return
 
@@ -580,10 +580,10 @@ class ConfigManager:
         class ConfigFileHandler(FileSystemEventHandler):
             def __init__(self, manager: ConfigManager):
                 self.manager = manager
-                self._last_reload_time = 0
+                self._last_reload_time: float = 0.0
 
-            def on_modified(self, event):
-                if not event.is_directory and Path(event.src_path) == Path(
+            def on_modified(self, event: Any) -> None:
+                if not event.is_directory and self.manager._config_path is not None and Path(event.src_path) == Path(
                     self.manager._config_path
                 ):
                     # Debounce rapid file changes
@@ -602,8 +602,10 @@ class ConfigManager:
                     except Exception as e:
                         self.manager._logger.error(f"Hot reload failed: {e}")
 
-            def _wait_for_file_stable(self):
+            def _wait_for_file_stable(self) -> None:
                 """Wait for file to be stable (no size changes)."""
+                if self.manager._config_path is None:
+                    return
                 config_path = Path(self.manager._config_path)
                 if not config_path.exists():
                     return
@@ -638,7 +640,7 @@ class ConfigManager:
 
     def stop_hot_reload(self) -> None:
         """Stop hot reload monitoring."""
-        if self._observer:
+        if self._observer is not None:
             self._observer.stop()
             self._observer.join()
             self._observer = None

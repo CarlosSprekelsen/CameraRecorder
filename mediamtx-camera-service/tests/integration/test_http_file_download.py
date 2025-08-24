@@ -25,7 +25,7 @@ from typing import Dict, Any
 sys.path.append('src')
 
 from tests.utils.port_utils import find_free_port
-from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient
+from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory, WebSocketAuthTestClient
 from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
 from src.camera_service.service_manager import ServiceManager
 
@@ -68,7 +68,7 @@ class HTTPFileDownloadTestSetup:
         self.service_manager = None
         self.server = None
         self.auth_manager = get_test_auth_manager()
-        self.user_factory = TestUserFactory(self.auth_manager)
+        self.user_factory = UserFactory(self.auth_manager)
         self.websocket_client = None
         self.recordings_dir = self.config.mediamtx.recordings_path
         self.snapshots_dir = self.config.mediamtx.snapshots_path

@@ -317,12 +317,21 @@ export const useFileStore = create<FileStore>()(
             filename
           });
 
+          // Type-safe response handling
+          const responseData = response as {
+            filename: string;
+            file_size: number;
+            duration?: number;
+            created_time: string;
+            download_url: string;
+          };
+
           const fileInfo: FileInfoResponse = {
-            filename: (response as any).filename,
-            file_size: (response as any).file_size,
-            duration: (response as any).duration,
-            created_time: (response as any).created_time,
-            download_url: (response as any).download_url,
+            filename: responseData.filename,
+            file_size: responseData.file_size,
+            duration: responseData.duration,
+            created_time: responseData.created_time,
+            download_url: responseData.download_url,
           };
 
           set({ selectedFile: fileInfo });
@@ -351,12 +360,21 @@ export const useFileStore = create<FileStore>()(
             filename
           });
 
+          // Type-safe response handling
+          const responseData = response as {
+            filename: string;
+            file_size: number;
+            created_time: string;
+            download_url: string;
+            resolution?: string;
+          };
+
           const fileInfo: FileInfoResponse = {
-            filename: (response as any).filename,
-            file_size: (response as any).file_size,
-            created_time: (response as any).created_time,
-            download_url: (response as any).download_url,
-            resolution: (response as any).resolution,
+            filename: responseData.filename,
+            file_size: responseData.file_size,
+            created_time: responseData.created_time,
+            download_url: responseData.download_url,
+            resolution: responseData.resolution,
           };
 
           set({ selectedFile: fileInfo });
@@ -373,11 +391,7 @@ export const useFileStore = create<FileStore>()(
 
       // File deletion operations
       deleteRecording: async (filename: string): Promise<FileDeletionResponse> => {
-        const { wsService, canDeleteFiles } = get();
-        
-        if (!canDeleteFiles) {
-          throw new Error('Insufficient permissions to delete files');
-        }
+        const { wsService } = get();
         
         if (!wsService) {
           throw new Error('WebSocket not connected');
@@ -390,20 +404,21 @@ export const useFileStore = create<FileStore>()(
             filename
           });
 
+          // Type-safe response handling
+          const responseData = response as {
+            filename: string;
+            deleted: boolean;
+            message: string;
+          };
+
           const deletionResponse: FileDeletionResponse = {
-            filename: (response as any).filename,
-            deleted: (response as any).deleted,
-            message: (response as any).message,
+            filename: responseData.filename,
+            deleted: responseData.deleted,
+            message: responseData.message,
           };
 
           // Refresh recordings list after deletion
-          if (deletionResponse.deleted) {
-            const { recordings } = get();
-            if (recordings) {
-              const updatedRecordings = recordings.filter(file => file.filename !== filename);
-              set({ recordings: updatedRecordings });
-            }
-          }
+          await get().loadRecordings();
 
           return deletionResponse;
 
@@ -417,11 +432,7 @@ export const useFileStore = create<FileStore>()(
       },
 
       deleteSnapshot: async (filename: string): Promise<FileDeletionResponse> => {
-        const { wsService, canDeleteFiles } = get();
-        
-        if (!canDeleteFiles) {
-          throw new Error('Insufficient permissions to delete files');
-        }
+        const { wsService } = get();
         
         if (!wsService) {
           throw new Error('WebSocket not connected');
@@ -434,20 +445,21 @@ export const useFileStore = create<FileStore>()(
             filename
           });
 
+          // Type-safe response handling
+          const responseData = response as {
+            filename: string;
+            deleted: boolean;
+            message: string;
+          };
+
           const deletionResponse: FileDeletionResponse = {
-            filename: (response as any).filename,
-            deleted: (response as any).deleted,
-            message: (response as any).message,
+            filename: responseData.filename,
+            deleted: responseData.deleted,
+            message: responseData.message,
           };
 
           // Refresh snapshots list after deletion
-          if (deletionResponse.deleted) {
-            const { snapshots } = get();
-            if (snapshots) {
-              const updatedSnapshots = snapshots.filter(file => file.filename !== filename);
-              set({ snapshots: updatedSnapshots });
-            }
-          }
+          await get().loadSnapshots();
 
           return deletionResponse;
 

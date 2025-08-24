@@ -3,6 +3,21 @@ title: "Client Coding Standards"
 description: "ESLint/Prettier config, TypeScript best-practices, and React patterns for the client."
 date: "2025-08-05"
 ---
+STRICT RULES - HIGHEST PRIORITY
+🚫 ABSOLUTE DO NOTS:
+DO NOT COMPILE without explicit authorization
+DO NOT FIX CODE without explicit authorization
+DO NOT VIOLATE coding standards and naming strategy
+DO NOT CREATE .md artifacts unless explicitly asked
+DO NOT TAKE INITIATIVE - always ask for authorization first
+DO NOT GET SIDE-TRACKED by error fixing or reactive work
+✅ ABSOLUTE MUSTS:
+ALWAYS ASK for authorization before any action
+FOLLOW CODING STANDARDS strictly (ESLint/Prettier, TypeScript best-practices)
+FOLLOW NAMING STRATEGY strictly (store prefixes, local prefixes, service prefixes)
+FOLLOW ESTABLISHED PRIORITIES exactly as defined
+FOCUS ON SYSTEMATIC APPROACH - not reactive error fixing
+RESPECT GROUND TRUTH - architecture and requirements are authoritative
 
 # Coding Standards
 

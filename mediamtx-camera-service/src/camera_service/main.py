@@ -57,7 +57,7 @@ class ServiceCoordinator:
     initialized state on failure.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.service_manager: Optional[ServiceManager] = None
         self.logger: Optional[logging.Logger] = None
         self._shutdown_requested = asyncio.Event()
@@ -89,10 +89,12 @@ class ServiceCoordinator:
             # Step 5: Start services
             await self.service_manager.start()
 
-            self.logger.info("Camera service started successfully")
+            if self.logger:
+                self.logger.info("Camera service started successfully")
 
         except KeyboardInterrupt:
-            self.logger.info("Received keyboard interrupt during startup")
+            if self.logger:
+                self.logger.info("Received keyboard interrupt during startup")
             raise
         except Exception as e:
             if self.logger:

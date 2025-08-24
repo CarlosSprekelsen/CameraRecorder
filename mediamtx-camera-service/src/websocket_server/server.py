@@ -87,19 +87,19 @@ class StreamError(Exception):
 class PerformanceMetrics:
     """Performance metrics collection for WebSocket server."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.request_count = 0
         self.response_times = defaultdict(list)
         self.error_count = 0
         self.active_connections = 0
         self.start_time = time.time()
     
-    def record_request(self, method: str, response_time: float):
+    def record_request(self, method: str, response_time: float) -> None:
         """Record a request with its response time."""
         self.request_count += 1
         self.response_times[method].append(response_time)
     
-    def record_error(self):
+    def record_error(self) -> None:
         """Record an error occurrence."""
         self.error_count += 1
     
@@ -200,7 +200,7 @@ class ClientConnection:
         self.auth_method = None
 
 
-class WebSocketJsonRpcServer:
+class WebSocketJsonRpcServer:  # type: ignore[misc]
     """
     WebSocket JSON-RPC 2.0 server for camera control and real-time notifications.
 
@@ -220,9 +220,9 @@ class WebSocketJsonRpcServer:
         port: int,
         websocket_path: str,
         max_connections: int,
-        mediamtx_controller=None,
-        camera_monitor=None,
-        config=None,
+        mediamtx_controller: Optional[Any] = None,
+        camera_monitor: Optional[Any] = None,
+        config: Optional[Any] = None,
     ):
         """
         Initialize WebSocket JSON-RPC server.
@@ -275,6 +275,20 @@ class WebSocketJsonRpcServer:
         # Load configuration if available
         self._load_recording_config()
 
+    def _get_config_safe(self) -> Any:
+        """
+        Safely get configuration with null check.
+        
+        Returns:
+            Configuration object
+            
+        Raises:
+            RuntimeError: If configuration is not available
+        """
+        if self._config is None:
+            raise RuntimeError("Configuration not available")
+        return self._config
+
     def _load_recording_config(self) -> None:
         """
         Load recording management configuration from config or environment variables.
@@ -297,15 +311,15 @@ class WebSocketJsonRpcServer:
         Update MediaMTX controller with current recording configuration.
         """
         try:
-            if self._mediamtx_controller and hasattr(self._mediamtx_controller, 'update_recording_config'):
+            if self._mediamtx_controller is not None and hasattr(self._mediamtx_controller, 'update_recording_config'):  # type: ignore[unreachable]
                 self._mediamtx_controller.update_recording_config(
                     rotation_minutes=self._recording_rotation_minutes,
                     storage_warn_percent=self._storage_warn_percent,
                     storage_block_percent=self._storage_block_percent
                 )
-            elif self._service_manager and hasattr(self._service_manager, '_mediamtx_controller'):
+            elif self._service_manager is not None and hasattr(self._service_manager, '_mediamtx_controller'):  # type: ignore[unreachable]
                 controller = self._service_manager._mediamtx_controller
-                if controller and hasattr(controller, 'update_recording_config'):
+                if controller is not None and hasattr(controller, 'update_recording_config'):
                     controller.update_recording_config(
                         rotation_minutes=self._recording_rotation_minutes,
                         storage_warn_percent=self._storage_warn_percent,
@@ -314,7 +328,7 @@ class WebSocketJsonRpcServer:
         except Exception as e:
             self._logger.warning(f"Failed to update controller recording config: {e}")
 
-    def set_mediamtx_controller(self, controller) -> None:
+    def set_mediamtx_controller(self, controller: Any) -> None:
         """
         Set the MediaMTX controller for stream operations.
 
@@ -323,7 +337,7 @@ class WebSocketJsonRpcServer:
         """
         self._mediamtx_controller = controller
 
-    def set_camera_monitor(self, monitor) -> None:
+    def set_camera_monitor(self, monitor: Any) -> None:
         """
         Set the camera monitor for device information.
 
@@ -332,7 +346,7 @@ class WebSocketJsonRpcServer:
         """
         self._camera_monitor = monitor
 
-    def set_service_manager(self, service_manager) -> None:
+    def set_service_manager(self, service_manager: Any) -> None:
         """
         Set the service manager for lifecycle coordination.
 
@@ -341,7 +355,7 @@ class WebSocketJsonRpcServer:
         """
         self._service_manager = service_manager
     
-    def set_security_middleware(self, security_middleware) -> None:
+    def set_security_middleware(self, security_middleware: Any) -> None:
         """
         Set the security middleware for authentication and rate limiting.
 
@@ -412,7 +426,7 @@ class WebSocketJsonRpcServer:
             # In some environments, binding specifically to "localhost" may select
             # only the IPv6 or IPv4 loopback, while client resolution prefers the
             # opposite family, causing connection issues during handshake.
-            bind_host = self._host
+            bind_host: Optional[str] = self._host
             if self._host in ("localhost", "127.0.0.1", "::1"):
                 # Bind on all interfaces (both stacks) to avoid family mismatch.
                 bind_host = None
@@ -482,7 +496,7 @@ class WebSocketJsonRpcServer:
             self._logger.error(f"Error during WebSocket server shutdown: {e}")
             raise
 
-    async def _process_request(self, path: str, request_headers) -> Optional[tuple]:
+    async def _process_request(self, path: str, request_headers: Any) -> Optional[tuple]:
         """
         Process incoming WebSocket request to validate path and enforce limits.
 
@@ -554,7 +568,7 @@ class WebSocketJsonRpcServer:
 
         try:
             # Security middleware connection check
-            if self._security_middleware:
+            if self._security_middleware is not None:
                 if not self._security_middleware.can_accept_connection(client_id):
                     self._logger.warning(f"Connection rejected for client {client_id} - limit reached")
                     return
@@ -606,7 +620,7 @@ class WebSocketJsonRpcServer:
             self._logger.error(f"Unexpected error handling client {client_id}: {e}")
         finally:
             # Security middleware cleanup
-            if self._security_middleware:
+            if self._security_middleware is not None:
                 self._security_middleware.unregister_connection(client_id)
             
             # Cleanup on disconnect
@@ -753,7 +767,7 @@ class WebSocketJsonRpcServer:
                     )
                 
                 # Rate limiting applies to all protected methods
-                if not self._security_middleware.check_rate_limit(client.client_id):
+                if self._security_middleware is not None and not self._security_middleware.check_rate_limit(client.client_id):
                     return json.dumps(
                         {
                             "jsonrpc": "2.0",
@@ -1447,7 +1461,7 @@ class WebSocketJsonRpcServer:
         
         Returns: Authentication result with user role, permissions, session information
         """
-        if not self._security_middleware:
+        if self._security_middleware is None:
             return {"authenticated": False, "error": "Security not configured"}
         
         token = None
@@ -1683,9 +1697,12 @@ class WebSocketJsonRpcServer:
                         try:
                             stream_status = task.result()
                             # Log stream status for debugging but don't modify URLs
-                            self._logger.debug(
-                                f"Stream {stream_name} status: {stream_status.get('status', 'unknown')}"
-                            )
+                            if stream_status is not None:
+                                self._logger.debug(
+                                    f"Stream {stream_name} status: {stream_status.get('status', 'unknown')}"
+                                )
+                            else:
+                                self._logger.debug(f"Stream {stream_name} status: unknown (no status available)")
                         except Exception as e:
                             self._logger.debug(
                                 f"Error processing stream status for {stream_name}: {e}"
@@ -1733,7 +1750,7 @@ class WebSocketJsonRpcServer:
             self._logger.error(f"Error getting camera list: {e}")
             return {"cameras": [], "total": 0, "connected": 0}
 
-    async def _get_stream_status_safe(self, mediamtx_controller, stream_name: str) -> Optional[Dict[str, Any]]:
+    async def _get_stream_status_safe(self, mediamtx_controller: Any, stream_name: str) -> Optional[Dict[str, Any]]:
         """
         Safely get stream status with error handling and timeout.
         
@@ -1837,13 +1854,13 @@ class WebSocketJsonRpcServer:
 
                                 # Update capabilities with real detected data
                                 if capability_metadata.get("formats"):
-                                    camera_status["capabilities"]["formats"] = (
-                                        capability_metadata["formats"]
-                                    )
+                                    capabilities = camera_status["capabilities"]
+                                    if isinstance(capabilities, dict):
+                                        capabilities["formats"] = capability_metadata["formats"]
                                 if capability_metadata.get("all_resolutions"):
-                                    camera_status["capabilities"]["resolutions"] = (
-                                        capability_metadata["all_resolutions"]
-                                    )
+                                    capabilities = camera_status["capabilities"]
+                                    if isinstance(capabilities, dict):
+                                        capabilities["resolutions"] = capability_metadata["all_resolutions"]
 
                                 # Log validation status for monitoring
                                 validation_status = capability_metadata.get(
@@ -2172,16 +2189,7 @@ class WebSocketJsonRpcServer:
             mediamtx_controller = self._mediamtx_controller
 
         if not mediamtx_controller:
-            return {
-                "device": device_path,
-                "session_id": None,
-                "filename": None,
-                "status": "FAILED",
-                "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "duration": duration,
-                "format": format_type,
-                "error": "MediaMTX controller not available",
-            }
+            raise MediaMTXError("MediaMTX controller not available")
 
         try:
             stream_name = self._get_stream_name_from_device_path(device_path)
@@ -2212,14 +2220,20 @@ class WebSocketJsonRpcServer:
                 raise MediaMTXError(f"MediaMTX operation failed: {error_msg}")
 
             # Step 4: All validations passed - create success response
+            # Ensure start_time is in proper ISO format with Z suffix
+            start_time = recording_result.get("start_time")
+            if not start_time:
+                start_time = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            elif not start_time.endswith("Z"):
+                # Convert to ISO format if not already
+                start_time = start_time + "Z" if "T" in start_time else time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            
             response = {
                 "device": device_path,
                 "session_id": session_id,
                 "filename": recording_result.get("filename"),
-                "status": "STARTED",
-                "start_time": recording_result.get(
-                    "start_time", time.strftime("%Y-%m-%dT%H:%M:%SZ")
-                ),
+                "status": "STARTED",  # Per API documentation
+                "start_time": start_time,
                 "duration": effective_duration,
                 "format": format_type,
             }
@@ -2235,7 +2249,7 @@ class WebSocketJsonRpcServer:
 
             # Step 5: Schedule auto-stop if timed recording requested
             if effective_duration and effective_duration > 0:
-                async def _auto_stop():
+                async def _auto_stop() -> None:
                     try:
                         await asyncio.sleep(effective_duration)
                         # Stop via controller; ignore errors
@@ -2252,7 +2266,7 @@ class WebSocketJsonRpcServer:
 
             # Send notification asynchronously after returning the response
             # This ensures the JSON-RPC response is sent first, then the notification
-            async def _send_notification():
+            async def _send_notification() -> None:
                 try:
                     await self.notify_recording_status_update({
                         "device": device_path,
@@ -2648,7 +2662,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("Invalid offset parameter: must be non-negative integer")
             
             # Define recordings directory path
-            recordings_dir = self._config.mediamtx.recordings_path
+            config = self._get_config()
+            recordings_dir = config.mediamtx.recordings_path
             
             # Check if directory exists and is accessible
             if not os.path.exists(recordings_dir):
@@ -2756,6 +2771,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("Invalid offset parameter: must be non-negative integer")
             
             # Define snapshots directory path
+            if self._config is None:
+                raise RuntimeError("Configuration not available")
             snapshots_dir = self._config.mediamtx.snapshots_path
             
             # Check if directory exists and is accessible
@@ -2854,7 +2871,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("filename must be a non-empty string")
             
             # Define recordings directory path
-            recordings_dir = self._config.mediamtx.recordings_path
+            config = self._get_config()
+            recordings_dir = config.mediamtx.recordings_path
             file_path = os.path.join(recordings_dir, filename)
             
             # Check if file exists
@@ -2926,7 +2944,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("filename must be a non-empty string")
             
             # Define snapshots directory path
-            snapshots_dir = self._config.mediamtx.snapshots_path
+            config = self._get_config()
+            snapshots_dir = config.mediamtx.snapshots_path
             file_path = os.path.join(snapshots_dir, filename)
             
             # Check if file exists
@@ -2997,7 +3016,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("filename must be a non-empty string")
             
             # Define recordings directory path
-            recordings_dir = self._config.mediamtx.recordings_path
+            config = self._get_config()
+            recordings_dir = config.mediamtx.recordings_path
             file_path = os.path.join(recordings_dir, filename)
             
             # Check if file exists
@@ -3055,7 +3075,8 @@ class WebSocketJsonRpcServer:
                 raise ValueError("filename must be a non-empty string")
             
             # Define snapshots directory path
-            snapshots_dir = self._config.mediamtx.snapshots_path
+            config = self._get_config()
+            snapshots_dir = config.mediamtx.snapshots_path
             file_path = os.path.join(snapshots_dir, filename)
             
             # Check if file exists
@@ -3109,8 +3130,9 @@ class WebSocketJsonRpcServer:
                 raise OSError("Storage information unavailable")
             
             # Get recordings and snapshots directory paths
-            recordings_dir = self._config.mediamtx.recordings_path
-            snapshots_dir = self._config.mediamtx.snapshots_path
+            config = self._get_config()
+            recordings_dir = config.mediamtx.recordings_path
+            snapshots_dir = config.mediamtx.snapshots_path
             
             # Calculate recordings directory size
             recordings_size = 0

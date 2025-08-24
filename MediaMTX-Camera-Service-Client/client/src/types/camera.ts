@@ -120,8 +120,13 @@ export interface StorageInfo {
 
 /**
  * Storage threshold status (NEW)
+ * Aligned with server API threshold_status object
  */
-export type ThresholdStatus = 'normal' | 'warning' | 'critical';
+export interface ThresholdStatus {
+  warning_threshold: number;
+  critical_threshold: number;
+  current_status: 'normal' | 'warning' | 'critical';
+}
 
 /**
  * Storage usage information (NEW)
@@ -160,19 +165,11 @@ export type RecordingStatus = 'STARTED' | 'RECORDING' | 'STOPPED' | 'ERROR';
  */
 export type EnhancedRecordingStatus = RecordingStatus | 'CONFLICT' | 'PAUSED' | 'ROTATING';
 
-/**
- * Recording conflict information (NEW)
- */
-export interface RecordingConflict {
-  device: string;
-  session_id: string;
-  current_file: string;
-  elapsed_time: number;
-  conflict_type: 'already_recording' | 'storage_full' | 'permission_denied';
-}
+
 
 /**
  * Recording progress information (NEW)
+ * Enhanced with comprehensive progress tracking (F1.4.3)
  */
 export interface RecordingProgress {
   device: string;
@@ -182,6 +179,13 @@ export interface RecordingProgress {
   file_size: number;
   rotation_count: number;
   is_continuous: boolean;
+  // Enhanced progress information (F1.4.3)
+  file_path?: string;
+  recording_quality?: string;
+  bitrate?: number;
+  frame_rate?: number;
+  resolution?: string;
+  file_rotation_timestamp?: number;
 }
 
 /**
@@ -261,27 +265,47 @@ export interface FileInfo {
  */
 export interface RecordingConfig {
   rotation_minutes: number;
+  rotationMinutes: number; // Alias for component compatibility
   default_format: RecordingFormat;
   auto_rotation: boolean;
+  maxFilesPerCamera: number;
+  autoDelete: boolean;
 }
 
 export interface StorageConfig {
   warn_percent: number;
+  warnPercent: number; // Alias for component compatibility
   block_percent: number;
+  blockPercent: number; // Alias for component compatibility
   critical_percent: number;
   monitoring_enabled: boolean;
+  maxUsagePercent: number;
 }
 
 export interface AppConfig {
   recording: RecordingConfig;
   storage: StorageConfig;
   environment: EnvironmentConfig;
+  connection: ConnectionConfig;
+  system: SystemConfig;
 }
 
 export interface EnvironmentConfig {
   RECORDING_ROTATION_MINUTES?: string;
   STORAGE_WARN_PERCENT?: string;
   STORAGE_BLOCK_PERCENT?: string;
+}
+
+export interface ConnectionConfig {
+  websocketUrl: string;
+  healthUrl: string;
+  timeout: number;
+}
+
+export interface SystemConfig {
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+  autoRefresh: boolean;
+  refreshInterval: number;
 }
 
 /**

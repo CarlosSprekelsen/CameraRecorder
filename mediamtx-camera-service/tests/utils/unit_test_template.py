@@ -29,7 +29,7 @@ from src.your_module.types import YourComponentConfig
 
 # Import test infrastructure for real component testing
 from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
-from tests.fixtures.auth_utils import WebSocketAuthTestClient, TestUserFactory, get_test_auth_manager
+from tests.fixtures.auth_utils import WebSocketAuthTestClient, UserFactory, get_test_auth_manager
 
 
 class TestYourComponent:
@@ -109,7 +109,7 @@ class TestYourComponent:
         """
         # Create authenticated WebSocket client
         auth_manager = get_test_auth_manager()
-        user_factory = TestUserFactory(auth_manager)
+        user_factory = UserFactory(auth_manager)
         test_user = user_factory.create_operator_user("test_user")
         
         websocket_url = "ws://localhost:8002/ws"

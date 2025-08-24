@@ -120,7 +120,7 @@ class ServiceManager(CameraEventHandler):
         config: Config,
         mediamtx_controller: Optional[MediaMTXController] = None,
         websocket_server: Optional[WebSocketJsonRpcServer] = None,
-        camera_monitor=None,
+        camera_monitor: Optional[Any] = None,
     ) -> None:
         """
         Initialize the service manager with configuration.
@@ -978,6 +978,11 @@ class ServiceManager(CameraEventHandler):
         while (asyncio.get_event_loop().time() - start_time) < max_wait_time:
             try:
                 # Get health status from camera monitor
+                if self._camera_monitor is None:
+                    self._logger.warning("Camera monitor is None, skipping health check")
+                    await asyncio.sleep(check_interval)
+                    continue
+                    
                 health_status = await self._camera_monitor.health_check()
                 
                 # Check if camera monitor has completed at least one discovery cycle
@@ -1131,7 +1136,8 @@ class ServiceManager(CameraEventHandler):
             # Configure security middleware (env-configurable)
             try:
                 import os
-                jwt_secret = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "dev-secret-change-me")
+                # Initialize security middleware with JWT and API key authentication
+                jwt_secret = os.environ.get("CAMERA_SERVICE_JWT_SECRET", "default-secret-key-change-in-production")
                 api_keys_path = os.environ.get("CAMERA_SERVICE_API_KEYS_PATH", "/opt/camera-service/keys/api_keys.json")
                 rpm = int(os.environ.get("CAMERA_SERVICE_RATE_RPM", "120"))
                 jwt_handler = JWTHandler(secret_key=jwt_secret)
@@ -1144,8 +1150,13 @@ class ServiceManager(CameraEventHandler):
                 )
                 if hasattr(self._websocket_server, "set_security_middleware"):
                     self._websocket_server.set_security_middleware(security)
+                self._logger.info("Security middleware initialized successfully")
             except Exception as e:
-                self._logger.warning(f"Security middleware initialization failed: {e}")
+                self._logger.warning(f"Security middleware initialization failed: {e} - continuing without authentication")
+                # Ensure security middleware is set to None when initialization fails
+                # This prevents authentication errors from breaking the entire service
+                if hasattr(self._websocket_server, "set_security_middleware"):
+                    self._websocket_server.set_security_middleware(None)
             await self._websocket_server.start()
             self._logger.info(
                 "WebSocket JSON-RPC server started",

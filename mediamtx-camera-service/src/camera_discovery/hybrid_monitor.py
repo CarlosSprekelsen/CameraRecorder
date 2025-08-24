@@ -63,7 +63,7 @@ class CapabilityDetectionResult:
     probe_timestamp: float = 0.0
     structured_diagnostics: Optional[Dict[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.formats is None:
             self.formats = []
         if self.resolutions is None:
@@ -95,7 +95,7 @@ class DeviceCapabilityState:
     frame_rate_frequency: Optional[Dict[str, int]] = None
     stability_threshold: int = 3  # Require N detections for stable capability
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.validation_history is None:
             self.validation_history = []
         if self.format_frequency is None:
@@ -428,7 +428,7 @@ class HybridCameraMonitor:
                 f"Critical error in udev monitoring loop: {e}", exc_info=True
             )
 
-    async def _process_udev_device_event(self, device) -> None:
+    async def _process_udev_device_event(self, device: Any) -> None:
         """Process individual udev device events with enhanced filtering and diagnostics."""
         device_node = getattr(device, "device_node", None)
         action = getattr(device, "action", None)
@@ -635,7 +635,7 @@ class HybridCameraMonitor:
         # Determine status based on basic accessibility with timeout
         try:
             # Use asyncio to make the file operation non-blocking with timeout
-            def check_device_access():
+            def check_device_access() -> str:
                 try:
                     with open(device_path, "rb"):
                         return "CONNECTED"
@@ -1470,6 +1470,9 @@ class HybridCameraMonitor:
             "resolutions_count": len(new_result.resolutions) if new_result.resolutions else 0,
             "frame_rates_count": len(new_result.frame_rates) if new_result.frame_rates else 0,
         }
+        if state.validation_history is None:
+            state.validation_history = []
+            
         state.validation_history.append(history_entry)
 
         # Keep history manageable
@@ -1494,6 +1497,14 @@ class HybridCameraMonitor:
                 if state.consecutive_successes >= state.confirmation_threshold:
                     if not state.confirmed_data:
                         self._stats["provisional_confirmations"] += 1
+                        # Ensure frequency dictionaries are initialized
+                        if state.format_frequency is None:
+                            state.format_frequency = {}
+                        if state.resolution_frequency is None:
+                            state.resolution_frequency = {}
+                        if state.frame_rate_frequency is None:
+                            state.frame_rate_frequency = {}
+                            
                         stable_formats = len(
                             [
                                 f
@@ -2123,7 +2134,7 @@ class HybridCameraMonitor:
                                 resolution = f"{width}x{height}"
                                 current_format["resolutions"].append(resolution)
                                 resolutions.add(resolution)
-                            break
+                            break  # type: ignore[unreachable]
 
             # Fallback resolution extraction if no format-specific parsing worked
             if not resolutions:
@@ -2153,7 +2164,7 @@ class HybridCameraMonitor:
             return None
 
     # Test interface methods (enhanced)
-    def _get_capability_probe_interface(self):
+    def _get_capability_probe_interface(self) -> Dict[str, Any]:
         """Test hook: Enhanced capability probing interface for comprehensive testing."""
         return {
             "probe_device_info": self._probe_device_info_robust,
@@ -2249,7 +2260,7 @@ class HybridCameraMonitor:
         device_num = int(match.group(1))
         return device_num in self._device_range
 
-    async def _handle_udev_event(self, device) -> None:
+    async def _handle_udev_event(self, device: Any) -> None:
         """
         Handle udev event for a device.
         

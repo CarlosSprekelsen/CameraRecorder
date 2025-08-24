@@ -89,13 +89,19 @@ class TestRunner:
     
     def __init__(self, args: argparse.Namespace):
         self.args = args
-        self.project_root = Path(__file__).parent
+        # FIX: Use project root, not tools directory
+        # Maintain test guidelines: tools stay in tests/tools/, but execute from project root
+        self.tools_dir = Path(__file__).parent  # tests/tools/
+        self.project_root = self.tools_dir.parent.parent  # project root
         self.artifacts_dir = self._create_artifacts_dir()
         self.stages: List[TestStage] = []
         self.overall_start_time = time.time()
         
         # Detect virtual environment
         self.venv_active = self._detect_virtual_environment()
+        
+        # FIX: Setup environment PATH for virtual environment tools
+        self._setup_environment_path()
         
     def _create_artifacts_dir(self) -> Path:
         """Create timestamped artifacts directory."""
@@ -111,6 +117,16 @@ class TestRunner:
             (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix) or
             os.environ.get('VIRTUAL_ENV') is not None
         )
+        
+    def _setup_environment_path(self):
+        """Setup environment PATH to include virtual environment tools."""
+        venv_bin = self.project_root / "venv" / "bin"
+        if venv_bin.exists():
+            # Add virtual environment bin to PATH
+            current_path = os.environ.get('PATH', '')
+            if str(venv_bin) not in current_path:
+                os.environ['PATH'] = f"{venv_bin}:{current_path}"
+                print(f"Added {venv_bin} to PATH")
         
     def _setup_test_environment(self) -> bool:
         """Setup test environment and validate dependencies."""
@@ -140,8 +156,11 @@ class TestRunner:
         missing_tools = []
         
         for tool in required_tools:
-            if not shutil.which(tool):
+            tool_path = shutil.which(tool)
+            if not tool_path:
                 missing_tools.append(tool)
+            else:
+                print(f"Found {tool} at: {tool_path}")
         
         if missing_tools:
             print(f"ERROR: Missing required tools: {', '.join(missing_tools)}")
@@ -285,7 +304,8 @@ class TestRunner:
         """Run unit tests with coverage."""
         stage = TestStage("Unit Tests", "Unit tests with coverage measurement")
         
-        cmd = [sys.executable, "-m", "pytest", "tests/unit/", "tests/unit/test_security/", "-v"]
+        # FIX: Use markers as per testing guidelines, not hardcoded directories
+        cmd = [sys.executable, "-m", "pytest", "-m", "unit", "-v"]
         
         # Add coverage options if not disabled
         if not self.args.no_coverage:
@@ -298,9 +318,6 @@ class TestRunner:
                 f"--cov-report=html:{self.artifacts_dir}/htmlcov",
                 f"--cov-fail-under={coverage_threshold}"
             ])
-            
-        # Add unit test marker
-        # cmd.extend(["-m", "unit"])
         
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
@@ -316,19 +333,8 @@ class TestRunner:
             
         stage = TestStage("Integration Tests", "Integration and smoke tests")
         
-        # Look for integration tests or smoke test patterns
-        cmd = [sys.executable, "-m", "pytest", "-v"]
-        
-        # Try integration directory first, fall back to smoke marker
-        integration_dir = self.project_root / "tests" / "integration"
-        if integration_dir.exists() and any(integration_dir.glob("test_*.py")):
-            cmd.append("tests/integration/")
-        else:
-            # Use smoke test marker if available
-            cmd.extend(["-k", "smoke", "tests/"])
-            
-        # Add integration marker if available
-        # cmd.extend(["-m", "integration"])
+        # FIX: Use markers as per testing guidelines, not hardcoded directories
+        cmd = [sys.executable, "-m", "pytest", "-m", "integration", "-v"]
         
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
@@ -344,14 +350,9 @@ class TestRunner:
             
         stage = TestStage("Validation Tests", "Deployment validation tests")
         
-        # Run validation script
-        validation_script = self.project_root / "scripts" / "validate_deployment.py"
-        if validation_script.exists():
-            cmd = [sys.executable, str(validation_script)]
-        else:
-            # Fallback to pytest for validation tests
-            cmd = [sys.executable, "-m", "pytest", "-v", "tests/unit/test_configuration_validation.py"]
-            
+        # FIX: Use markers as per testing guidelines, not hardcoded files
+        cmd = [sys.executable, "-m", "pytest", "-m", "validation", "-v"]
+        
         success = self._run_stage(stage, cmd)
         self.stages.append(stage)
         return success

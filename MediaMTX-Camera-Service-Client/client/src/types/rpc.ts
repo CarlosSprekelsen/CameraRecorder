@@ -24,7 +24,7 @@ export interface JSONRPCError {
 }
 
 /**
- * Enhanced error response data for recording management (NEW)
+ * Error response data for recording conflicts
  */
 export interface RecordingConflictErrorData {
   camera_id: string;
@@ -32,19 +32,12 @@ export interface RecordingConflictErrorData {
 }
 
 /**
- * Enhanced error response data for storage issues (NEW)
+ * Error response data for storage issues
  */
 export interface StorageErrorData {
   available_space: number;
   total_space: number;
   usage_percent: number;
-}
-
-/**
- * Enhanced error response with specific data types (NEW)
- */
-export interface EnhancedJSONRPCError extends JSONRPCError {
-  data?: RecordingConflictErrorData | StorageErrorData | unknown;
 }
 
 /**

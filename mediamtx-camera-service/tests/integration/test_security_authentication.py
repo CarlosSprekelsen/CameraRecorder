@@ -41,7 +41,7 @@ from typing import Dict, Any
 from src.security.jwt_handler import JWTHandler
 from src.security.auth_manager import AuthManager
 from src.security.api_key_handler import APIKeyHandler
-from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, cleanup_test_auth_manager
+from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory, cleanup_test_auth_manager
 
 
 class TestJWTAuthenticationFlow:
@@ -55,7 +55,7 @@ class TestJWTAuthenticationFlow:
     @pytest.fixture
     def user_factory(self, auth_manager):
         """Create user factory for testing."""
-        return TestUserFactory(auth_manager)
+        return UserFactory(auth_manager)
     
     @pytest.fixture
     def real_mediamtx_service(self):
@@ -237,7 +237,7 @@ class TestRoleBasedAccessControl:
     @pytest.fixture
     def user_factory(self, auth_manager):
         """Create user factory for RBAC testing."""
-        return TestUserFactory(auth_manager)
+        return UserFactory(auth_manager)
     
     def test_viewer_role_permissions(self, user_factory):
         """Test viewer role permissions."""

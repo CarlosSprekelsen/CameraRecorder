@@ -10,11 +10,44 @@ This configuration provides:
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 import tempfile
+import warnings
 from unittest.mock import Mock, AsyncMock, patch
 from pathlib import Path
 from camera_discovery.hybrid_monitor import HybridCameraMonitor
+
+
+@pytest.fixture(scope="function")
+def event_loop():
+    """Create an instance of the default event loop for each test case."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    
+    # Proper cleanup of pending tasks
+    pending = asyncio.all_tasks(loop)
+    if pending:
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+    
+    loop.close()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup_async_resources():
+    """Clean up async resources after each test."""
+    yield
+    
+    # Clean up any remaining tasks
+    try:
+        loop = asyncio.get_running_loop()
+        pending = asyncio.all_tasks(loop)
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+    except RuntimeError:
+        # No running loop
+        pass
 
 
 @pytest.fixture
@@ -151,11 +184,36 @@ def mock_subprocess_process():
             self.stdout = stdout
             self.stderr = stderr
             self.returncode = returncode
+            self._closed = False
+            self._transport = None
         
         async def communicate(self):
             return (self.stdout, self.stderr)
+        
+        def close(self):
+            self._closed = True
+            if self._transport:
+                try:
+                    self._transport.close()
+                except Exception:
+                    pass
+        
+        def __del__(self):
+            try:
+                if not self._closed:
+                    self.close()
+            except Exception:
+                pass
     
     return MockSubprocessProcess
+
+
+@pytest.fixture(autouse=True)
+def suppress_event_loop_warnings():
+    """Suppress event loop closed warnings during test cleanup."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*", category=RuntimeWarning)
+        yield
 
 
 @pytest.fixture

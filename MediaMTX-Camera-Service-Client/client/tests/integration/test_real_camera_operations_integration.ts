@@ -457,8 +457,8 @@ describe('Real Camera Operations Integration', () => {
         expect(secondPage.total).toBe(recordings.total);
 
         // Files should be different between pages
-        const firstPageFilenames = recordings.files.map((f: any) => f.filename);
-        const secondPageFilenames = secondPage.files.map((f: any) => f.filename);
+        const firstPageFilenames = recordings.files.map((f: Record<string, unknown>) => f.filename as string);
+        const secondPageFilenames = secondPage.files.map((f: Record<string, unknown>) => f.filename as string);
         const intersection = firstPageFilenames.filter((name: string) => secondPageFilenames.includes(name));
         expect(intersection.length).toBe(0);
 

@@ -26,7 +26,7 @@ from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, Came
 from camera_discovery.hybrid_monitor import CameraEventData, CameraEvent
 from src.common.types import CameraDevice
 from src.security.jwt_handler import JWTHandler
-from tests.fixtures.auth_utils import WebSocketAuthTestClient, TestUserFactory, get_test_auth_manager
+from tests.fixtures.auth_utils import WebSocketAuthTestClient, UserFactory, get_test_auth_manager
 
 
 def _free_port() -> int:
@@ -182,7 +182,7 @@ async def test_requirement_F311_camera_list_availability():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_viewer_user("camera_list_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -223,7 +223,7 @@ async def test_requirement_F111_photo_capture_error_handling():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_operator_user("photo_capture_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -297,7 +297,7 @@ async def test_requirement_F311_camera_list_empty_structure():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_viewer_user("empty_camera_list_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -336,7 +336,7 @@ async def test_requirement_F313_notification_delivery_failure_tolerance():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_viewer_user("notification_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -378,7 +378,7 @@ async def test_requirement_F312_camera_status_api_contract_and_errors():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_viewer_user("camera_status_test_user")
             
             # Simulate camera connect so status can be queried
@@ -572,7 +572,7 @@ async def test_authenticate_method_api_compliance():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_operator_user("api_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -649,7 +649,7 @@ async def test_requirement_F325_authenticate_and_protected_methods_success():
         try:
             # Use common authentication fixtures
             auth_manager = get_test_auth_manager()
-            factory = TestUserFactory(auth_manager)
+            factory = UserFactory(auth_manager)
             test_user = factory.create_operator_user("test_operator")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -711,7 +711,7 @@ async def test_requirement_F326_token_expiration_and_reauth():
                 # Re-authenticate with valid token, then protected call should proceed
                 # Use common authentication fixtures
                 auth_manager = get_test_auth_manager()
-                factory = TestUserFactory(auth_manager)
+                factory = UserFactory(auth_manager)
                 test_user = factory.create_operator_user("test_operator")
                 valid_token = test_user["token"]
                 await ws.send(json.dumps({"jsonrpc":"2.0","id":3,"method":"authenticate","params":{"auth_token":valid_token}}))

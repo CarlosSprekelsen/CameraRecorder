@@ -34,6 +34,8 @@ import { errorRecoveryService } from '../services/errorRecoveryService';
 export interface ConnectionStoreState {
   // Connection status
   status: ConnectionStatus;
+  websocketStatus: ConnectionStatus; // Added for component compatibility
+  healthStatus: 'healthy' | 'degraded' | 'unhealthy'; // Added for component compatibility
   isConnecting: boolean;
   isReconnecting: boolean;
   isConnected: boolean;
@@ -52,6 +54,7 @@ export interface ConnectionStoreState {
   error: string | null;
   errorCode: number | null;
   errorTimestamp: Date | null;
+  lastError: string | null; // Added for component compatibility
   
   // WebSocket service reference
   wsService: WebSocketService | null;
@@ -192,6 +195,8 @@ export const useConnectionStore = create<ConnectionStore>()(
     (set, get) => ({
       // Initial state
       status: 'disconnected',
+      websocketStatus: 'disconnected', // Added for component compatibility
+      healthStatus: 'unhealthy', // Added for component compatibility
       isConnecting: false,
       isReconnecting: false,
       isConnected: false,
@@ -204,6 +209,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       error: null,
       errorCode: null,
       errorTimestamp: null,
+      lastError: null, // Added for component compatibility
       wsService: null,
       isHealthy: false,
       lastHeartbeat: null,

@@ -15,7 +15,7 @@
  * No mocking - uses real server endpoints
  */
 
-import type { 
+import type {
   CameraDevice, 
   CameraListResponse, 
   FileListResponse,
@@ -27,7 +27,7 @@ import type {
   StorageInfo
 } from '../types/camera';
 import type {
-  EnhancedJSONRPCError,
+  JSONRPCError,
   RecordingConflictErrorData,
   StorageErrorData
 } from '../types/rpc';
@@ -757,80 +757,108 @@ export class HTTPPollingService {
   }
 
   /**
-   * Enhanced error handling for recording management error codes
+   * Handle error with specific error code processing
    */
-  private handleEnhancedError(error: EnhancedJSONRPCError): void {
-    console.log(`🔍 HTTP Polling: Handling enhanced error: ${error.code} - ${error.message}`);
+  private handleError(error: JSONRPCError): void {
+    console.log(`🔍 HTTP Polling: Handling error: ${error.code} - ${error.message}`);
     
+    // Process specific error codes with enhanced handling
     switch (error.code) {
       case ERROR_CODES.CAMERA_ALREADY_RECORDING:
-        this.handleRecordingConflict(error.data as RecordingConflictErrorData);
+        console.warn(`⚠️ HTTP Polling: Recording conflict detected: ${error.message}`);
+        this.handleRecordingConflict(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_LOW:
-        this.handleStorageWarning(error.data as StorageErrorData);
+        console.warn(`⚠️ HTTP Polling: Storage space low: ${error.message}`);
+        this.handleStorageWarning(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_CRITICAL:
-        this.handleStorageCritical(error.data as StorageErrorData);
+        console.error(`🚨 HTTP Polling: Storage space critical: ${error.message}`);
+        this.handleStorageCritical(error);
+        break;
+      case ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED:
+        console.error(`❌ HTTP Polling: Camera not found or disconnected: ${error.message}`);
+        break;
+      case ERROR_CODES.RECORDING_ALREADY_IN_PROGRESS:
+        console.warn(`⚠️ HTTP Polling: Recording already in progress: ${error.message}`);
+        break;
+      case ERROR_CODES.MEDIAMTX_SERVICE_UNAVAILABLE:
+        console.error(`❌ HTTP Polling: MediaMTX service unavailable: ${error.message}`);
+        break;
+      case ERROR_CODES.AUTHENTICATION_REQUIRED:
+        console.error(`❌ HTTP Polling: Authentication required: ${error.message}`);
+        break;
+      case ERROR_CODES.INSUFFICIENT_STORAGE_SPACE:
+        console.error(`❌ HTTP Polling: Insufficient storage space: ${error.message}`);
+        break;
+      case ERROR_CODES.CAMERA_CAPABILITY_NOT_SUPPORTED:
+        console.warn(`⚠️ HTTP Polling: Camera capability not supported: ${error.message}`);
         break;
       default:
-        this.handleStandardError(error);
+        console.error(`❌ HTTP Polling: Standard error: ${error.code} - ${error.message}`);
     }
+    
+    // Notify error handler about the error
+    this.onErrorHandler?.(new HTTPPollingError(error.message, error.code, error.data));
   }
 
   /**
    * Handle recording conflict errors
    */
-  private handleRecordingConflict(data: RecordingConflictErrorData): void {
-    console.warn(`⚠️ HTTP Polling: Recording conflict detected for camera: ${data.camera_id}`);
-    console.warn(`⚠️ HTTP Polling: Active session: ${data.session_id}`);
+  private handleRecordingConflict(error: JSONRPCError): void {
+    const conflictData = error.data as RecordingConflictErrorData;
+    console.warn(`⚠️ HTTP Polling: Recording conflict for camera: ${conflictData?.camera_id || 'unknown'}`);
+    console.warn(`⚠️ HTTP Polling: Active session: ${conflictData?.session_id || 'unknown'}`);
     
     // Notify error handler about the conflict
     this.onErrorHandler?.(new HTTPPollingError(
-      `Camera ${data.camera_id} is currently recording (Session: ${data.session_id})`,
-      409, // Conflict status code
-      data
+      `Camera ${conflictData?.camera_id || 'unknown'} is currently recording (Session: ${conflictData?.session_id || 'unknown'})`,
+      ERROR_CODES.CAMERA_ALREADY_RECORDING,
+      conflictData
     ));
   }
 
   /**
    * Handle storage warning errors
    */
-  private handleStorageWarning(data: StorageErrorData): void {
-    console.warn(`⚠️ HTTP Polling: Storage space low: ${data.usage_percent.toFixed(1)}% used`);
-    console.warn(`⚠️ HTTP Polling: Available space: ${this.formatBytes(data.available_space)}`);
+  private handleStorageWarning(error: JSONRPCError): void {
+    const storageData = error.data as StorageErrorData;
+    const usagePercent = storageData?.usage_percent || 0;
+    const availableSpace = storageData?.available_space || 0;
+    
+    console.warn(`⚠️ HTTP Polling: Storage space low: ${usagePercent.toFixed(1)}% used`);
+    console.warn(`⚠️ HTTP Polling: Available space: ${this.formatBytes(availableSpace)}`);
     
     // Notify error handler about storage warning
     this.onErrorHandler?.(new HTTPPollingError(
-      `Storage space is low. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
-      507, // Insufficient Storage status code
-      data
+      `Storage space is low (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+      ERROR_CODES.STORAGE_SPACE_LOW,
+      storageData
     ));
   }
 
   /**
    * Handle storage critical errors
    */
-  private handleStorageCritical(data: StorageErrorData): void {
-    console.error(`🚨 HTTP Polling: Storage space critical: ${data.usage_percent.toFixed(1)}% used`);
-    console.error(`🚨 HTTP Polling: Available space: ${this.formatBytes(data.available_space)}`);
+  private handleStorageCritical(error: JSONRPCError): void {
+    const storageData = error.data as StorageErrorData;
+    const usagePercent = storageData?.usage_percent || 0;
+    const availableSpace = storageData?.available_space || 0;
+    
+    console.error(`🚨 HTTP Polling: Storage space critical: ${usagePercent.toFixed(1)}% used`);
+    console.error(`🚨 HTTP Polling: Available space: ${this.formatBytes(availableSpace)}`);
     
     // Notify error handler about critical storage
     this.onErrorHandler?.(new HTTPPollingError(
-      `Storage space is critical. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
-      507, // Insufficient Storage status code
-      data
+      `Storage space is critical (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+      ERROR_CODES.STORAGE_SPACE_CRITICAL,
+      storageData
     ));
   }
 
-  /**
-   * Handle standard errors (fallback)
-   */
-  private handleStandardError(error: EnhancedJSONRPCError): void {
-    console.error(`❌ HTTP Polling: Standard error: ${error.code} - ${error.message}`);
-    
-    // Notify error handler about standard error
-    this.onErrorHandler?.(new HTTPPollingError(error.message, error.code, error.data));
-  }
+
+
+
 
   /**
    * Format bytes to human readable format
@@ -844,16 +872,16 @@ export class HTTPPollingService {
   }
 
   /**
-   * Handle HTTP response with enhanced error checking
+   * Handle HTTP response with error checking
    */
   private async handleHTTPResponse(response: Response, context: string): Promise<any> {
     if (!response.ok) {
-      // Try to parse error response for enhanced error codes
+      // Try to parse error response for specific error codes
       try {
         const errorData = await response.json();
         if (errorData.error && typeof errorData.error === 'object') {
-          const enhancedError = errorData.error as EnhancedJSONRPCError;
-          this.handleEnhancedError(enhancedError);
+          const error = errorData.error as JSONRPCError;
+          this.handleError(error);
         }
       } catch (parseError) {
         // If we can't parse the error response, continue with standard error handling

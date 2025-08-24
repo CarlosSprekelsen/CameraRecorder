@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import aiohttp
 
 from camera_service.logging_config import set_correlation_id, get_correlation_id
+from .stream_lifecycle_manager import StreamLifecycleManager, StreamUseCase
 
 
 @dataclass
@@ -135,6 +136,9 @@ class MediaMTXController:
         self._running = False
         self._recording_sessions: Dict[str, Dict[str, Any]] = {}
         self._last_health_status = None
+        
+        # Stream lifecycle management
+        self._stream_lifecycle_manager: Optional[StreamLifecycleManager] = None
 
         # Enhanced tracking for health monitoring
         self._health_state = {
@@ -151,7 +155,7 @@ class MediaMTXController:
             "circuit_breaker_start_time": 0.0,  # Persist circuit breaker start time
         }
 
-    def update_recording_config(self, rotation_minutes: int = None, storage_warn_percent: int = None, storage_block_percent: int = None) -> None:
+    def update_recording_config(self, rotation_minutes: Optional[int] = None, storage_warn_percent: Optional[int] = None, storage_block_percent: Optional[int] = None) -> None:
         """
         Update recording management configuration.
         
@@ -189,6 +193,43 @@ class MediaMTXController:
     @property
     def hls_port(self) -> int:
         return self._hls_port
+    
+    @property
+    def stream_lifecycle_manager(self) -> Optional[StreamLifecycleManager]:
+        """Get the stream lifecycle manager instance."""
+        return self._stream_lifecycle_manager
+    
+    def _get_device_path_from_stream_name(self, stream_name: str) -> Optional[str]:
+        """
+        Extract device path from stream name.
+        
+        Args:
+            stream_name: MediaMTX stream name (e.g., "camera0", "camera1")
+            
+        Returns:
+            Device path (e.g., "/dev/video0", "/dev/video1") or None if not found
+        """
+        # Handle camera stream names (e.g., "camera0" -> "/dev/video0")
+        if stream_name.startswith("camera"):
+            try:
+                camera_num = int(stream_name[6:])  # Remove "camera" prefix
+                return f"/dev/video{camera_num}"
+            except (ValueError, IndexError):
+                pass
+        
+        # Handle direct video device names (e.g., "video0" -> "/dev/video0")
+        if stream_name.startswith("video"):
+            try:
+                video_num = int(stream_name[5:])  # Remove "video" prefix
+                return f"/dev/video{video_num}"
+            except (ValueError, IndexError):
+                pass
+        
+        # Handle full device paths
+        if stream_name.startswith("/dev/"):
+            return stream_name
+        
+        return None
 
     async def start(self) -> None:
         """
@@ -220,6 +261,14 @@ class MediaMTXController:
                 headers={"Content-Type": "application/json"},
             )
 
+            # Initialize stream lifecycle manager
+            self._stream_lifecycle_manager = StreamLifecycleManager(
+                mediamtx_api_url=self._base_url,
+                mediamtx_config_path=self._config_path,
+                logger=self._logger
+            )
+            await self._stream_lifecycle_manager.__aenter__()
+            
             # Start health monitoring task
             self._health_check_task = asyncio.create_task(self._health_monitor_loop())
             self._running = True
@@ -261,6 +310,12 @@ class MediaMTXController:
             except asyncio.CancelledError:
                 pass
 
+        # Clean up stream lifecycle manager
+        if self._stream_lifecycle_manager:
+            await self._stream_lifecycle_manager.cleanup()
+            await self._stream_lifecycle_manager.__aexit__(None, None, None)
+            self._stream_lifecycle_manager = None
+        
         # Close aiohttp ClientSession
         if self._session:
             await self._session.close()
@@ -785,6 +840,31 @@ class MediaMTXController:
                     "stream_ready": True,
                 },
             )
+            
+            # Start recording-optimized stream using StreamLifecycleManager
+            if self._stream_lifecycle_manager:
+                # Extract device path from stream name (e.g., "camera0" -> "/dev/video0")
+                device_path = self._get_device_path_from_stream_name(stream_name)
+                if device_path:
+                    stream_started = await self._stream_lifecycle_manager.start_recording_stream(device_path)
+                    if stream_started:
+                        self._logger.info(
+                            f"Started recording-optimized stream for {device_path}",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "device_path": device_path,
+                                "stream_name": stream_name,
+                            },
+                        )
+                    else:
+                        self._logger.warning(
+                            f"Failed to start recording-optimized stream for {device_path}, continuing with existing stream",
+                            extra={
+                                "correlation_id": correlation_id,
+                                "device_path": device_path,
+                                "stream_name": stream_name,
+                            },
+                        )
 
             # Start external FFmpeg recording process
             rtsp_url = f"rtsp://{self._host}:{self._rtsp_port}/{stream_name}"
@@ -1228,6 +1308,23 @@ class MediaMTXController:
                          extra={"correlation_id": correlation_id, "stream_name": stream_name, "tier": 2})
         
         capture_methods_tried.append("rtsp_immediate")
+        
+        # Try to start snapshot-optimized stream using StreamLifecycleManager
+        if self._stream_lifecycle_manager:
+            device_path = self._get_device_path_from_stream_name(stream_name)
+            if device_path:
+                try:
+                    snapshot_stream_started = await self._stream_lifecycle_manager.start_snapshot_stream(device_path)
+                    if snapshot_stream_started:
+                        self._logger.info(f"Tier 2: Started snapshot-optimized stream for {device_path}", 
+                                         extra={"correlation_id": correlation_id, "device_path": device_path, "stream_name": stream_name, "tier": 2})
+                    else:
+                        self._logger.warning(f"Tier 2: Failed to start snapshot-optimized stream for {device_path}, checking existing stream", 
+                                           extra={"correlation_id": correlation_id, "device_path": device_path, "stream_name": stream_name, "tier": 2})
+                except Exception as e:
+                    self._logger.warning(f"Tier 2: Exception starting snapshot stream for {device_path}: {e}", 
+                                       extra={"correlation_id": correlation_id, "device_path": device_path, "stream_name": stream_name, "tier": 2})
+        
         stream_ready = await self.check_stream_readiness(stream_name, timeout=tier2_timeout)
         
         if stream_ready:
@@ -2125,7 +2222,7 @@ class MediaMTXController:
                         # consecutive_failures already reset above in health state transition logic
                     else:
                         # Use safe backoff calculation - consecutive_failures already incremented above
-                        sleep_interval = self._calculate_backoff_interval(consecutive_failures)
+                        sleep_interval: float = self._calculate_backoff_interval(consecutive_failures)
 
                         self._logger.debug(
                             f"Health monitoring backoff: {sleep_interval:.1f}s (failure #{consecutive_failures})",
@@ -2168,11 +2265,11 @@ class MediaMTXController:
 
 
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "MediaMTXController":
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         # Clean up any resources if needed
         pass
@@ -2355,10 +2452,12 @@ class MediaMTXController:
         
         while waited_time < timeout:
             await asyncio.sleep(wait_interval)
-            waited_time += wait_interval
+            waited_time: float = waited_time + wait_interval
             
             try:
                 # Check if stream is now ready
+                if self._session is None:
+                    raise ConnectionError("MediaMTX controller session not available")
                 async with self._session.get(f"{self._base_url}/v3/paths/list") as check_response:
                     if check_response.status == 200:
                         check_paths = await check_response.json()

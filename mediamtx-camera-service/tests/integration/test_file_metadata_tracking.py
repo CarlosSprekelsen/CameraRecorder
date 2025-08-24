@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from tests.utils.port_utils import find_free_port
-from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory, WebSocketAuthTestClient
+from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory, WebSocketAuthTestClient
 from src.camera_service.config import Config, ServerConfig, MediaMTXConfig, CameraConfig, LoggingConfig, RecordingConfig, SnapshotConfig
 from src.camera_service.service_manager import ServiceManager
 from src.websocket_server.server import WebSocketJsonRpcServer
@@ -42,7 +42,7 @@ class FileMetadataTestSetup:
         self.camera_monitor = None
         self.server = None
         self.auth_manager = get_test_auth_manager()
-        self.user_factory = TestUserFactory(self.auth_manager)
+        self.user_factory = UserFactory(self.auth_manager)
         self.websocket_client = None
         self.temp_dir = None
         self.recordings_dir = None

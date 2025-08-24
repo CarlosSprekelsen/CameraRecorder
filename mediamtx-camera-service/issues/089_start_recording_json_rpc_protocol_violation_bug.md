@@ -1,22 +1,23 @@
-# Issue 089: start_recording JSON-RPC Protocol Violation
+# Issue 089: start_recording MediaMTX Operation Failure
 
 **Status:** OPEN ❌  
 **Priority:** CRITICAL  
 **Type:** Server Implementation Bug  
 **Created:** 2025-01-27  
+**Updated:** 2025-01-27  
 **Discovered By:** Solid Test Infrastructure API Compliance Validation  
 **Assigned To:** Server Team  
 
 ## Description
 
-**CRITICAL SERVER BUG**: The `start_recording` method violates the JSON-RPC 2.0 specification by returning a WebSocket notification instead of a JSON-RPC result.
+**CRITICAL SERVER BUG**: The `start_recording` method fails due to MediaMTX operation issues, preventing successful recording operations. The server correctly returns JSON-RPC error format, but the underlying MediaMTX stream activation is failing.
 
 ## Root Cause Analysis
 
-### **Ground Truth Violation**
-- **API Documentation**: `docs/api/json-rpc-methods.md` specifies JSON-RPC result format
-- **Server Implementation**: Returns WebSocket notification format
-- **Impact**: Breaks JSON-RPC 2.0 protocol compliance
+### **MediaMTX Operation Failure**
+- **API Documentation**: `docs/api/json-rpc-methods.md` specifies successful recording operation
+- **Server Implementation**: Correctly returns JSON-RPC error format when MediaMTX fails
+- **Impact**: Recording operations fail due to MediaMTX stream activation issues
 
 ### **Technical Analysis**
 
@@ -28,7 +29,7 @@
     "device": "/dev/video0",
     "session_id": "550e8400-e29b-41d4-a716-446655440000",
     "filename": "camera0_2025-01-15_14-30-00.mp4",
-    "status": "STARTED",
+    "status": "recording",
     "start_time": "2025-01-15T14:30:00Z",
     "duration": 3600,
     "format": "mp4"
@@ -37,33 +38,30 @@
 }
 ```
 
-**Actual Server Response**:
+**Actual Server Response (Error Case)**:
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "recording_status_update",
-  "params": {
-    "device": "/dev/video0",
-    "status": "STARTED",
-    "filename": "camera0_2025-08-23_16-46-03.mp4",
-    "duration": 30
-  }
+  "error": {
+    "code": -1003,
+    "message": "MediaMTX operation failed"
+  },
+  "id": 2
 }
 ```
 
-### **Protocol Violations**
-1. **Missing `result` field** - Required by JSON-RPC 2.0 for success responses
-2. **Has `method` field** - Indicates notification, not response
-3. **Has `params` field** - Notifications use params, responses use result
-4. **Missing `id` field** - Required for matching request/response
-5. **Missing required fields** - No `session_id`, `start_time`, `format` fields
+### **MediaMTX Operation Issues**
+1. **Stream activation timeout** - MediaMTX stream does not become ready within 15.0 seconds
+2. **FFmpeg process failure** - Stream activation fails during MediaMTX operation
+3. **Timeout configuration** - Current timeout may be insufficient for hardware initialization
+4. **Hardware detection** - Camera device may not be properly detected or accessible
 
 ## Impact Assessment
 
 **Severity**: CRITICAL
-- **Protocol Compliance**: Violates JSON-RPC 2.0 specification
-- **Client Integration**: Clients cannot process response correctly
-- **API Contract**: Breaks documented API interface
+- **Recording Functionality**: Core recording feature is non-functional
+- **MediaMTX Integration**: Stream activation failures prevent recording
+- **Hardware Access**: Camera device access issues
 - **Test Infrastructure**: Correctly identifies this as server bug
 
 ## Server Error Context

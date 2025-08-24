@@ -135,9 +135,9 @@ async def test_e2e_connect_disconnect_creates_and_deletes_paths():
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
             
             # Create test user for authentication
-            from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory
+            from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory
             auth_manager = get_test_auth_manager()
-            user_factory = TestUserFactory(auth_manager)
+            user_factory = UserFactory(auth_manager)
             test_user = user_factory.create_operator_user("e2e_test_user")
             
             async with websockets.connect(uri) as ws:

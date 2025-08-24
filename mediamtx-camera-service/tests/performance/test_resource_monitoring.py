@@ -403,13 +403,13 @@ async def test_throughput_validation_real_server():
     }
     
     # Import required components for real server testing
-    from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
+    from tests.fixtures.auth_utils import UserFactory, get_test_auth_manager
     import websockets
     import json
     
     # Create test user for authentication
     auth_manager = get_test_auth_manager()
-    user_factory = TestUserFactory(auth_manager)
+    user_factory = UserFactory(auth_manager)
     test_user = user_factory.create_operator_user("throughput_test_user")
     
     # Real server connection details
@@ -483,13 +483,13 @@ async def test_python_throughput_validation_real_server():
     }
     
     # Import required components for real server testing
-    from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
+    from tests.fixtures.auth_utils import UserFactory, get_test_auth_manager
     import websockets
     import json
     
     # Create test user for authentication
     auth_manager = get_test_auth_manager()
-    user_factory = TestUserFactory(auth_manager)
+    user_factory = UserFactory(auth_manager)
     test_user = user_factory.create_operator_user("python_throughput_test_user")
     
     # Real server connection details
@@ -579,13 +579,13 @@ async def test_gocpp_throughput_baseline_real_server():
     gocpp_throughput_target = 1000
     
     # Import required components for real server testing
-    from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
+    from tests.fixtures.auth_utils import UserFactory, get_test_auth_manager
     import websockets
     import json
     
     # Create test user for authentication
     auth_manager = get_test_auth_manager()
-    user_factory = TestUserFactory(auth_manager)
+    user_factory = UserFactory(auth_manager)
     test_user = user_factory.create_operator_user("gocpp_baseline_test_user")
     
     # Real server connection details
@@ -661,13 +661,13 @@ async def test_api_operations_throughput_real_server():
     }
     
     # Import required components for real server testing
-    from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
+    from tests.fixtures.auth_utils import UserFactory, get_test_auth_manager
     import websockets
     import json
     
     # Create test user for authentication
     auth_manager = get_test_auth_manager()
-    user_factory = TestUserFactory(auth_manager)
+    user_factory = UserFactory(auth_manager)
     test_user = user_factory.create_operator_user("api_operations_test_user")
     
     # Real server connection details

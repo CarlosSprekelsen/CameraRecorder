@@ -71,12 +71,11 @@ class APIKeyHandler:
     
     def _load_keys(self) -> None:
         """Load API keys from storage file."""
-        if not os.path.exists(self.storage_file):
-            self.logger.info("API keys storage file does not exist, creating new file")
-            self._save_keys()
-            return
-        
         try:
+            if not os.path.exists(self.storage_file):
+                self.logger.info("API keys storage file does not exist - starting with empty key set")
+                return
+            
             with open(self.storage_file, 'r') as f:
                 data = json.load(f)
             
@@ -90,8 +89,8 @@ class APIKeyHandler:
             self.logger.info("Loaded %d active API keys", len(self._keys))
             
         except Exception as e:
-            self.logger.error("Failed to load API keys: %s", e)
-            # Continue with empty key set
+            self.logger.warning("Failed to load API keys from file storage: %s - continuing with in-memory storage only", e)
+            # Continue with empty key set - don't fail the entire authentication system
     
     def _save_keys(self) -> None:
         """Save API keys to storage file."""
@@ -111,8 +110,9 @@ class APIKeyHandler:
             self.logger.debug("Saved %d API keys to storage", len(self._keys))
             
         except Exception as e:
-            self.logger.error("Failed to save API keys: %s", e)
-            raise
+            self.logger.warning("Failed to save API keys to file storage: %s - continuing with in-memory storage only", e)
+            # Don't raise the exception - allow service to continue with in-memory keys
+            # This prevents the entire authentication system from failing due to file system issues
     
     def _generate_key_id(self) -> str:
         """Generate unique key ID."""

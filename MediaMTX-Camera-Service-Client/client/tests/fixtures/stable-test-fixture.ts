@@ -450,7 +450,7 @@ export class StableTestFixture implements ApiComplianceValidator {
   /**
    * Validate recording response format
    */
-  private validateRecordingResponse(result: any): void {
+  private validateRecordingResponse(result: Record<string, unknown>): void {
     const requiredFields = ['device', 'session_id', 'filename', 'status', 'start_time', 'duration', 'format'];
     requiredFields.forEach(field => {
       if (!(field in result)) {

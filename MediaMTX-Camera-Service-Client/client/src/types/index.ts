@@ -18,22 +18,16 @@ export type {
   StorageUsage,
   StorageValidationResult,
   EnhancedRecordingStatus,
-  RecordingConflict,
+
   RecordingProgress,
   RecordingConfig,
   StorageConfig,
   AppConfig,
   EnvironmentConfig,
   ConfigValidationResult,
-} from './camera';
-
-// Recording types
-export type {
+  // Recording types
   RecordingSession,
   RecordingStatus,
-  EnhancedRecordingStatus,
-  RecordingConflict,
-  RecordingProgress,
   StartRecordingParams,
   StopRecordingParams,
   RecordingFormat,
@@ -83,7 +77,6 @@ export type {
   JSONRPCResponse,
   JSONRPCNotification,
   JSONRPCError,
-  EnhancedJSONRPCError,
   RecordingConflictErrorData,
   StorageErrorData,
   WebSocketMessage,

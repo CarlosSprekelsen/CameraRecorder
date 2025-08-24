@@ -30,13 +30,14 @@ import type {
   JSONRPCRequest,
   JSONRPCResponse,
   JSONRPCNotification,
+  JSONRPCError,
   WebSocketMessage,
   CameraStatusNotification,
   RecordingStatusNotification,
   StorageStatusNotification,
-  EnhancedJSONRPCError,
   RecordingConflictErrorData,
   StorageErrorData,
+  RecordingProgress,
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS, ERROR_CODES } from '../types';
@@ -66,6 +67,17 @@ interface ConnectionStoreInterface {
   // Direct state properties (from getState())
   healthScore: number;
   lastConnected: Date | null;
+  isConnected: boolean;
+  status: string;
+  error: string | null;
+  errorCode: number | null;
+  lastHeartbeat: Date | null;
+  connectionUptime: number | null;
+  messageCount: number;
+  errorCount: number;
+  connectionQuality: 'excellent' | 'good' | 'poor' | 'unstable';
+  latency: number | null;
+  packetLoss: number | null;
 }
 
 interface CameraStoreInterface {
@@ -73,7 +85,7 @@ interface CameraStoreInterface {
   updateCameraStatus?: (device: string, status: import('../types/camera').CameraStatus) => void;
   addRecording?: (device: string, recording: import('../types/camera').RecordingSession) => void;
   removeRecording?: (device: string) => void;
-  updateRecordingProgress?: (device: string, progress: number) => void;
+  updateRecordingProgress?: (device: string, progress: RecordingProgress) => void;
   clearRecordingProgress?: (device: string) => void;
 }
 
@@ -129,7 +141,7 @@ interface StateRecoveryData {
 }
 
 export class WebSocketService {
-  private ws: any | null = null;
+  private ws: WebSocket | null = null;
   private requestId = 0;
   private pendingRequests = new Map<number, {
     resolve: (value: unknown) => void;
@@ -372,100 +384,112 @@ export class WebSocketService {
   }
 
   /**
-   * Enhanced error handling for recording management error codes
+   * Handle error with specific error code processing
    */
-  private handleEnhancedError(error: EnhancedJSONRPCError): void {
-    console.log(`🔍 Handling enhanced error: ${error.code} - ${error.message}`);
+  private handleError(error: JSONRPCError): void {
+    console.log(`🔍 Handling error: ${error.code} - ${error.message}`);
     
-    switch (error.code) {
-      case ERROR_CODES.CAMERA_ALREADY_RECORDING:
-        this.handleRecordingConflict(error.data as RecordingConflictErrorData);
-        break;
-      case ERROR_CODES.STORAGE_SPACE_LOW:
-        this.handleStorageWarning(error.data as StorageErrorData);
-        break;
-      case ERROR_CODES.STORAGE_SPACE_CRITICAL:
-        this.handleStorageCritical(error.data as StorageErrorData);
-        break;
-      default:
-        this.handleStandardError(error);
-    }
-  }
-
-  /**
-   * Handle recording conflict errors
-   */
-  private handleRecordingConflict(data: RecordingConflictErrorData): void {
-    console.warn(`⚠️ Recording conflict detected for camera: ${data.camera_id}`);
-    console.warn(`⚠️ Active session: ${data.session_id}`);
-    
-    // Update connection store with conflict information
-    if (this.connectionStore) {
-      this.connectionStore.setError(`Camera ${data.camera_id} is currently recording`, ERROR_CODES.CAMERA_ALREADY_RECORDING);
-    }
-    
-    // Notify UI components about the conflict
-    this.onErrorHandler?.(new WebSocketError(
-      `Camera ${data.camera_id} is currently recording (Session: ${data.session_id})`,
-      ERROR_CODES.CAMERA_ALREADY_RECORDING,
-      data
-    ));
-  }
-
-  /**
-   * Handle storage warning errors
-   */
-  private handleStorageWarning(data: StorageErrorData): void {
-    console.warn(`⚠️ Storage space low: ${data.usage_percent.toFixed(1)}% used`);
-    console.warn(`⚠️ Available space: ${this.formatBytes(data.available_space)}`);
-    
-    // Update connection store with storage warning
-    if (this.connectionStore) {
-      this.connectionStore.setError(`Storage space is low (${data.usage_percent.toFixed(1)}% used)`, ERROR_CODES.STORAGE_SPACE_LOW);
-    }
-    
-    // Notify UI components about storage warning
-    this.onErrorHandler?.(new WebSocketError(
-      `Storage space is low. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
-      ERROR_CODES.STORAGE_SPACE_LOW,
-      data
-    ));
-  }
-
-  /**
-   * Handle storage critical errors
-   */
-  private handleStorageCritical(data: StorageErrorData): void {
-    console.error(`🚨 Storage space critical: ${data.usage_percent.toFixed(1)}% used`);
-    console.error(`🚨 Available space: ${this.formatBytes(data.available_space)}`);
-    
-    // Update connection store with critical storage error
-    if (this.connectionStore) {
-      this.connectionStore.setError(`Storage space is critical (${data.usage_percent.toFixed(1)}% used)`, ERROR_CODES.STORAGE_SPACE_CRITICAL);
-    }
-    
-    // Notify UI components about critical storage
-    this.onErrorHandler?.(new WebSocketError(
-      `Storage space is critical. Available: ${this.formatBytes(data.available_space)} (${data.usage_percent.toFixed(1)}% used)`,
-      ERROR_CODES.STORAGE_SPACE_CRITICAL,
-      data
-    ));
-  }
-
-  /**
-   * Handle standard errors (fallback)
-   */
-  private handleStandardError(error: EnhancedJSONRPCError): void {
-    console.error(`❌ Standard error: ${error.code} - ${error.message}`);
-    
-    // Update connection store with standard error
+    // Update connection store
     if (this.connectionStore) {
       this.connectionStore.setError(error.message, error.code);
       this.connectionStore.incrementErrorCount();
     }
     
-    // Notify UI components about standard error
+    // Process specific error codes with enhanced handling
+    switch (error.code) {
+      case ERROR_CODES.CAMERA_ALREADY_RECORDING:
+        console.warn(`⚠️ Recording conflict detected: ${error.message}`);
+        this.handleRecordingConflict(error);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_LOW:
+        console.warn(`⚠️ Storage space low: ${error.message}`);
+        this.handleStorageWarning(error);
+        break;
+      case ERROR_CODES.STORAGE_SPACE_CRITICAL:
+        console.error(`🚨 Storage space critical: ${error.message}`);
+        this.handleStorageCritical(error);
+        break;
+      case ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED:
+        console.error(`❌ Camera not found or disconnected: ${error.message}`);
+        break;
+      case ERROR_CODES.RECORDING_ALREADY_IN_PROGRESS:
+        console.warn(`⚠️ Recording already in progress: ${error.message}`);
+        break;
+      case ERROR_CODES.MEDIAMTX_SERVICE_UNAVAILABLE:
+        console.error(`❌ MediaMTX service unavailable: ${error.message}`);
+        break;
+      case ERROR_CODES.AUTHENTICATION_REQUIRED:
+        console.error(`❌ Authentication required: ${error.message}`);
+        break;
+      case ERROR_CODES.INSUFFICIENT_STORAGE_SPACE:
+        console.error(`❌ Insufficient storage space: ${error.message}`);
+        break;
+      case ERROR_CODES.CAMERA_CAPABILITY_NOT_SUPPORTED:
+        console.warn(`⚠️ Camera capability not supported: ${error.message}`);
+        break;
+      default:
+        console.error(`❌ Standard error: ${error.code} - ${error.message}`);
+    }
+    
+    // Notify UI components about the error
     this.onErrorHandler?.(new WebSocketError(error.message, error.code, error.data));
+  }
+
+  /**
+   * Handle recording conflict errors
+   */
+  private handleRecordingConflict(error: JSONRPCError): void {
+    const conflictData = error.data as RecordingConflictErrorData;
+    console.warn(`⚠️ Recording conflict for camera: ${conflictData?.camera_id || 'unknown'}`);
+    console.warn(`⚠️ Active session: ${conflictData?.session_id || 'unknown'}`);
+    
+    // Update connection store with conflict information
+    if (this.connectionStore) {
+      this.connectionStore.setError(
+        `Camera ${conflictData?.camera_id || 'unknown'} is currently recording (Session: ${conflictData?.session_id || 'unknown'})`,
+        ERROR_CODES.CAMERA_ALREADY_RECORDING
+      );
+    }
+  }
+
+  /**
+   * Handle storage warning errors
+   */
+  private handleStorageWarning(error: JSONRPCError): void {
+    const storageData = error.data as StorageErrorData;
+    const usagePercent = storageData?.usage_percent || 0;
+    const availableSpace = storageData?.available_space || 0;
+    
+    console.warn(`⚠️ Storage space low: ${usagePercent.toFixed(1)}% used`);
+    console.warn(`⚠️ Available space: ${this.formatBytes(availableSpace)}`);
+    
+    // Update connection store with storage warning
+    if (this.connectionStore) {
+      this.connectionStore.setError(
+        `Storage space is low (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+        ERROR_CODES.STORAGE_SPACE_LOW
+      );
+    }
+  }
+
+  /**
+   * Handle storage critical errors
+   */
+  private handleStorageCritical(error: JSONRPCError): void {
+    const storageData = error.data as StorageErrorData;
+    const usagePercent = storageData?.usage_percent || 0;
+    const availableSpace = storageData?.available_space || 0;
+    
+    console.error(`🚨 Storage space critical: ${usagePercent.toFixed(1)}% used`);
+    console.error(`🚨 Available space: ${this.formatBytes(availableSpace)}`);
+    
+    // Update connection store with critical storage error
+    if (this.connectionStore) {
+      this.connectionStore.setError(
+        `Storage space is critical (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+        ERROR_CODES.STORAGE_SPACE_CRITICAL
+      );
+    }
   }
 
   /**
@@ -793,9 +817,8 @@ export class WebSocketService {
         this.pendingRequests.delete(response.id);
 
         if (response.error) {
-          // Use enhanced error handling for new recording management error codes
-          const enhancedError = response.error as EnhancedJSONRPCError;
-          this.handleEnhancedError(enhancedError);
+          // Handle error with specific error code processing
+          this.handleError(response.error);
           
           const error = new WebSocketError(response.error.message, response.error.code, response.error.data);
           console.error(`❌ Received error for request #${response.id}:`, error);

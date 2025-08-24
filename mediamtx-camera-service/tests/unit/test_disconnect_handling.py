@@ -40,6 +40,7 @@ from src.camera_service.config import Config
 from src.camera_service.service_manager import get_correlation_id
 
 
+@pytest.mark.no_collect
 class TestServiceManager(BaseServiceManager):
     """Custom service manager for testing with different health server port."""
     

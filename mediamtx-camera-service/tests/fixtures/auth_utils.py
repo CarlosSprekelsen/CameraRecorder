@@ -99,7 +99,7 @@ def cleanup_test_auth_manager(auth_manager: AuthManager):
             auth_manager.api_key_handler.cleanup_expired_keys()
 
 
-class TestUserFactory:
+class UserFactory:
     """Factory for creating test users with different roles and permissions.
     
     Provides convenient methods to create test users for integration testing.

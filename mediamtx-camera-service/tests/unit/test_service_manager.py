@@ -37,7 +37,7 @@ from src.camera_service.config import (
     SnapshotConfig,
 )
 from src.camera_service.service_manager import ServiceManager
-from tests.fixtures.auth_utils import TestUserFactory, get_test_auth_manager
+from tests.fixtures.auth_utils import UserFactory, get_test_auth_manager
 from tests.utils.port_utils import find_free_port
 
 def _free_port() -> int:
@@ -106,7 +106,7 @@ async def test_service_manager_lifecycle_req_tech_001():
         try:
             # Create test user for authentication
             auth_manager = get_test_auth_manager()
-            user_factory = TestUserFactory(auth_manager)
+            user_factory = UserFactory(auth_manager)
             test_user = user_factory.create_operator_user("service_manager_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"
@@ -139,7 +139,7 @@ async def test_req_svc_api_cam_list_001_get_camera_list_structure():
         try:
             # Create test user for authentication
             auth_manager = get_test_auth_manager()
-            user_factory = TestUserFactory(auth_manager)
+            user_factory = UserFactory(auth_manager)
             test_user = user_factory.create_operator_user("service_manager_test_user")
             
             uri = f"ws://{cfg.server.host}:{cfg.server.port}{cfg.server.websocket_path}"

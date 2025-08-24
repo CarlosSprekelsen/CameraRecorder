@@ -33,7 +33,7 @@ import sys
 import threading
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from .config import LoggingConfig
 
@@ -46,7 +46,7 @@ class CorrelationIdFilter(logging.Filter):
     tracing and debugging support across request boundaries.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._local = threading.local()
 
@@ -234,16 +234,17 @@ def setup_logging(
     # Add correlation filter to root logger as well for global access
     root_logger.addFilter(correlation_filter)
 
+    # Create console formatter based on mode
     if development_mode:
         # Development: Human-readable console format
-        console_formatter = ConsoleFormatter(
+        console_formatter_obj: Any = ConsoleFormatter(
             fmt=config.format, datefmt="%Y-%m-%d %H:%M:%S"
         )
     else:
         # Production: JSON format for structured logging
-        console_formatter = JsonFormatter(datefmt="%Y-%m-%dT%H:%M:%S")
+        console_formatter_obj: Any = JsonFormatter(datefmt="%Y-%m-%dT%H:%M:%S")
 
-    console_handler.setFormatter(console_formatter)
+    console_handler.setFormatter(console_formatter_obj)
     root_logger.addHandler(console_handler)
 
     # Setup file handler with rotation if enabled
@@ -254,28 +255,28 @@ def setup_logging(
 
         # Create rotating file handler with configuration-based rotation
         try:
-            max_bytes = _parse_file_size(config.max_file_size)
-            file_handler = logging.handlers.RotatingFileHandler(
+            max_bytes = _parse_file_size(str(config.max_file_size))
+            file_handler_obj: Any = logging.handlers.RotatingFileHandler(
                 config.file_path, maxBytes=max_bytes, backupCount=config.backup_count
             )
         except (ValueError, AttributeError):
             # Fallback to basic file handler if rotation config is invalid
             # TODO: LOW: Log rotation configuration validation warning [Story:S14]
-            file_handler = logging.FileHandler(config.file_path)
+            file_handler_obj: Any = logging.FileHandler(config.file_path)
 
-        file_handler.addFilter(correlation_filter)
+        file_handler_obj.addFilter(correlation_filter)
 
         # Use JSON format for file logging in production, console for development
         if development_mode:
-            file_formatter = ConsoleFormatter(
+            file_formatter_obj2: Any = ConsoleFormatter(
                 fmt=config.format, datefmt="%Y-%m-%d %H:%M:%S"
             )
         else:
-            file_formatter = JsonFormatter(datefmt="%Y-%m-%dT%H:%M:%S")
+            file_formatter_obj2: Any = JsonFormatter(datefmt="%Y-%m-%dT%H:%M:%S")
 
-        file_handler.setFormatter(file_formatter)
-        file_handler.setLevel(level)
-        root_logger.addHandler(file_handler)
+        file_handler_obj.setFormatter(file_formatter_obj2)
+        file_handler_obj.setLevel(level)
+        root_logger.addHandler(file_handler_obj)
 
 
 def get_correlation_filter() -> Optional[CorrelationIdFilter]:

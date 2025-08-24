@@ -37,7 +37,7 @@ from src.websocket_server.server import WebSocketJsonRpcServer
 
 # Import test infrastructure for real component testing
 from tests.fixtures.mediamtx_test_infrastructure import mediamtx_infrastructure, mediamtx_controller
-from tests.fixtures.auth_utils import WebSocketAuthTestClient, TestUserFactory, get_test_auth_manager
+from tests.fixtures.auth_utils import WebSocketAuthTestClient, UserFactory, get_test_auth_manager
 
 
 class TestSystemIntegration:
@@ -117,7 +117,7 @@ class TestSystemIntegration:
         """
         # Create authenticated WebSocket client
         auth_manager = get_test_auth_manager()
-        user_factory = TestUserFactory(auth_manager)
+        user_factory = UserFactory(auth_manager)
         test_user = user_factory.create_operator_user("integration_test_user")
         
         websocket_url = f"ws://{service_manager.config.server.host}:{service_manager.config.server.port}{service_manager.config.server.websocket_path}"
@@ -231,7 +231,7 @@ class TestSystemIntegration:
         """
         # Create authenticated WebSocket client
         auth_manager = get_test_auth_manager()
-        user_factory = TestUserFactory(auth_manager)
+        user_factory = UserFactory(auth_manager)
         test_user = user_factory.create_operator_user("websocket_test_user")
         
         websocket_url = f"ws://{service_manager.config.server.host}:{service_manager.config.server.port}{service_manager.config.server.websocket_path}"

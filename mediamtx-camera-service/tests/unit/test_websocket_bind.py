@@ -14,7 +14,7 @@ import pytest
 import os
 
 from src.websocket_server.server import WebSocketJsonRpcServer
-from tests.fixtures.auth_utils import get_test_auth_manager, TestUserFactory
+from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory
 
 
 @pytest.mark.asyncio
@@ -25,7 +25,7 @@ async def test_websocket_server_binds_and_ping(monkeypatch):
     
     # Create auth manager and test user
     auth_manager = get_test_auth_manager()
-    user_factory = TestUserFactory(auth_manager)
+    user_factory = UserFactory(auth_manager)
     test_user = user_factory.create_operator_user("websocket_bind_test_user")
     
     server = WebSocketJsonRpcServer(

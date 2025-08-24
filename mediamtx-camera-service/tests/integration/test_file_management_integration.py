@@ -36,7 +36,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
-from tests.fixtures.auth_utils import TestUserFactory, WebSocketAuthTestClient
+from tests.fixtures.auth_utils import UserFactory, WebSocketAuthTestClient
 from tests.utils.port_utils import find_free_port
 
 
@@ -74,7 +74,7 @@ class FileManagementTestSetup:
         self.auth_manager = get_test_auth_manager()
         
         # Create user factory
-        self.user_factory = TestUserFactory(self.auth_manager)
+        self.user_factory = UserFactory(self.auth_manager)
         
         # Create WebSocket server (without full service stack for file management tests)
         self.server = WebSocketJsonRpcServer(

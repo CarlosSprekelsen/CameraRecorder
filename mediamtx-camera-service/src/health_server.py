@@ -9,7 +9,7 @@ import logging
 import os
 import mimetypes
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
 from aiohttp import web
@@ -41,7 +41,7 @@ class HealthServer:
     as specified in Architecture Decision AD-6.
     """
     
-    def __init__(self, host: str = "0.0.0.0", port: int = 8003, recordings_path: str = None, snapshots_path: str = None):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8003, recordings_path: Optional[str] = None, snapshots_path: Optional[str] = None):
         """
         Initialize health server.
         
@@ -63,22 +63,22 @@ class HealthServer:
         self.service_manager = None
         
         # Server state
-        self.app = None
-        self.runner = None
+        self.app: Optional[web.Application] = None
+        self.runner: Optional[web.AppRunner] = None
         self._started = False
         
         self.logger.info("Health server initialized on %s:%d with recordings_path=%s, snapshots_path=%s", 
                         host, port, self.recordings_path, self.snapshots_path)
     
-    def set_mediamtx_controller(self, controller) -> None:
+    def set_mediamtx_controller(self, controller: Any) -> None:
         """Set MediaMTX controller reference."""
         self.mediamtx_controller = controller
     
-    def set_camera_monitor(self, monitor) -> None:
+    def set_camera_monitor(self, monitor: Any) -> None:
         """Set camera monitor reference."""
         self.camera_monitor = monitor
     
-    def set_service_manager(self, service_manager) -> None:
+    def set_service_manager(self, service_manager: Any) -> None:
         """Set service manager reference."""
         self.service_manager = service_manager
     
@@ -204,7 +204,7 @@ class HealthServer:
                 "error": str(e)
             }, status=500)
     
-    async def _handle_readiness(self, request: web.Request) -> web.Request:
+    async def _handle_readiness(self, request: web.Request) -> web.Response:
         """Handle Kubernetes readiness probe."""
         try:
             # Check if all critical components are healthy
@@ -405,7 +405,7 @@ class HealthServer:
         try:
             # Get camera status from camera monitor
             cameras = []
-            if self.camera_monitor and hasattr(self.camera_monitor, '_known_devices'):
+            if self.camera_monitor is not None and hasattr(self.camera_monitor, '_known_devices'):
                 try:
                     # Convert camera devices to simple format
                     for device_path, device_info in self.camera_monitor._known_devices.items():
@@ -442,7 +442,7 @@ class HealthServer:
                 "connected": 0
             }, status=500)
 
-    async def _handle_recording_download(self, request: web.Request) -> web.Response:
+    async def _handle_recording_download(self, request: web.Request) -> web.StreamResponse:
         """
         Handle recording file download requests.
         
@@ -508,7 +508,7 @@ class HealthServer:
             self.logger.error(f"Error serving recording file {filename}: {e}")
             return web.Response(status=500, text="Internal server error")
 
-    async def _handle_snapshot_download(self, request: web.Request) -> web.Response:
+    async def _handle_snapshot_download(self, request: web.Request) -> web.StreamResponse:
         """
         Handle snapshot file download requests.
         
