@@ -1,3 +1,20 @@
+/*
+Hot reload configuration management unit tests.
+
+Requirements Coverage:
+- REQ-CONFIG-005: Hot reload capability
+- REQ-CONFIG-006: File change detection
+- REQ-CONFIG-007: Debouncing of rapid changes
+- REQ-CONFIG-008: Error handling during reload
+- REQ-CONFIG-009: Thread-safe configuration updates
+
+Test Categories: Unit
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+//go:build unit
+// +build unit
+
 package config
 
 import (
@@ -404,6 +421,155 @@ server:
 	// Stop watcher
 	err = watcher.Stop()
 	require.NoError(t, err)
+}
+
+// REQ-CONFIG-005: Hot reload capability - Real file testing
+func TestConfigWatcher_RealConfigFiles(t *testing.T) {
+	// Test with REAL default.yaml file
+	defaultConfigPath := "../../config/default.yaml"
+	
+	// Verify file exists
+	_, err := os.Stat(defaultConfigPath)
+	require.NoError(t, err, "Real default.yaml file must exist for testing")
+	
+	// Create watcher with real file
+	callbackCalled := false
+	var callbackMutex sync.Mutex
+	callback := func(*Config) error {
+		callbackMutex.Lock()
+		defer callbackMutex.Unlock()
+		callbackCalled = true
+		return nil
+	}
+
+	watcher, err := NewConfigWatcher(defaultConfigPath, callback)
+	require.NoError(t, err)
+	require.NotNil(t, watcher)
+
+	// Test Start with real file
+	err = watcher.Start()
+	require.NoError(t, err)
+	assert.True(t, watcher.IsRunning())
+
+	// Test Stop
+	err = watcher.Stop()
+	require.NoError(t, err)
+	assert.False(t, watcher.IsRunning())
+}
+
+// REQ-CONFIG-008: Error handling during reload - Malformed YAML testing
+func TestConfigWatcher_MalformedYAMLHandling(t *testing.T) {
+	// Create a temporary config file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test-config.yaml")
+	
+	// Write initial valid config
+	err := os.WriteFile(configPath, []byte(`
+server:
+  host: "localhost"
+  port: 8080
+`), 0644)
+	require.NoError(t, err)
+
+	// Create watcher with error tracking
+	reloadErrors := make([]error, 0)
+	var errorMutex sync.Mutex
+	callback := func(*Config) error {
+		errorMutex.Lock()
+		defer errorMutex.Unlock()
+		if len(reloadErrors) > 0 {
+			return reloadErrors[len(reloadErrors)-1]
+		}
+		return nil
+	}
+
+	watcher, err := NewConfigWatcher(configPath, callback)
+	require.NoError(t, err)
+
+	// Start watcher
+	err = watcher.Start()
+	require.NoError(t, err)
+	defer watcher.Stop()
+
+	// Wait for watcher to be ready
+	time.Sleep(100 * time.Millisecond)
+
+	// Write malformed YAML
+	err = os.WriteFile(configPath, []byte(`
+server:
+  host: "localhost"
+  port: invalid_port
+  - invalid: yaml: structure
+`), 0644)
+	require.NoError(t, err)
+
+	// Wait for error handling
+	time.Sleep(1 * time.Second)
+
+	// Watcher should still be running despite YAML error
+	assert.True(t, watcher.IsRunning())
+}
+
+// REQ-CONFIG-007: Debouncing of rapid changes - Performance validation
+func TestConfigWatcher_PerformanceValidation(t *testing.T) {
+	// Create a temporary config file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test-config.yaml")
+	
+	// Write initial config
+	err := os.WriteFile(configPath, []byte(`
+server:
+  host: "localhost"
+  port: 8080
+`), 0644)
+	require.NoError(t, err)
+
+	// Create watcher with performance tracking
+	reloadTimes := make([]time.Time, 0)
+	var timeMutex sync.Mutex
+	callback := func(*Config) error {
+		timeMutex.Lock()
+		defer timeMutex.Unlock()
+		reloadTimes = append(reloadTimes, time.Now())
+		return nil
+	}
+
+	watcher, err := NewConfigWatcher(configPath, callback)
+	require.NoError(t, err)
+
+	// Start watcher
+	err = watcher.Start()
+	require.NoError(t, err)
+	defer watcher.Stop()
+
+	// Wait for watcher to be ready
+	time.Sleep(100 * time.Millisecond)
+
+	// Rapidly modify the config file
+	startTime := time.Now()
+	for i := 0; i < 10; i++ {
+		err = os.WriteFile(configPath, []byte(fmt.Sprintf(`
+server:
+  host: "localhost"
+  port: %d
+`, 8080+i)), 0644)
+		require.NoError(t, err)
+		time.Sleep(50 * time.Millisecond) // Less than debounce interval
+	}
+
+	// Wait for processing
+	time.Sleep(2 * time.Second)
+
+	// Validate performance: should not have more than 3 reloads (debounced)
+	timeMutex.Lock()
+	reloadCount := len(reloadTimes)
+	timeMutex.Unlock()
+	
+	assert.LessOrEqual(t, reloadCount, 3, "Should have debounced rapid changes")
+	
+	// Validate timing: total time should be reasonable
+	totalTime := time.Since(startTime)
+	assert.Less(t, totalTime, 5*time.Second, "Total processing time should be reasonable")
 }
 
 func TestConfigWatcher_EdgeCases(t *testing.T) {

@@ -21,7 +21,7 @@ Track architectural and technical decisions for the MediaMTX Camera Service Go i
 The project requires a high-performance implementation to replace the Python version while maintaining full API compatibility. Performance targets include 5x response time improvement and 10x concurrency improvement.
 
 **Decision:**  
-Use Go 1.25.0+ as the primary implementation language for the MediaMTX Camera Service.
+Use Go 1.24.6+ as the primary implementation language for the MediaMTX Camera Service.
 
 **Rationale:**
 - **Performance:** Go provides near-native performance with garbage collection

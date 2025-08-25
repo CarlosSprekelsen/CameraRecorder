@@ -240,7 +240,7 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 ## Technology Stack
 
 ### Go Implementation Stack
-- **Camera Service**: Go 1.25.0+, gorilla/websocket, net/http
+- **Camera Service**: Go 1.24.6+, gorilla/websocket, net/http
 - **Media Server**: MediaMTX (Go binary)
 - **Camera Interface**: V4L2, FFmpeg 6.0+
 - **Protocols**: WebSocket, JSON-RPC 2.0, REST, RTSP, WebRTC, HLS
@@ -410,7 +410,7 @@ The system implements power-efficient on-demand stream activation:
 ### Decision AD-GO-001: Go Language Selection
 **Date**: 2025-01-15  
 **Components**: Technology Stack  
-**Decision**: Use Go 1.25.0+ as the primary implementation language for the MediaMTX Camera Service.  
+**Decision**: Use Go 1.24.6+ as the primary implementation language for the MediaMTX Camera Service.  
 **Rationale**: Balance performance improvements with maintainability. Go provides 5x performance improvement, 10x concurrency improvement, and 50% resource reduction while maintaining full API compatibility.  
 **IV&V Reference**: Architecture Decisions v7, item 1
 
@@ -510,7 +510,7 @@ The system implements power-efficient on-demand stream activation:
 - Breaking change handling: Version-specific adapter pattern
 
 **Go Version Requirements**:
-- Minimum supported: Go 1.25.0
+- Minimum supported: Go 1.24.6
 - Target version: Latest stable Go version
 - Compatibility testing required for major Go version updates
 - Breaking change handling: Version-specific adapter pattern

@@ -1086,3 +1086,402 @@ func TestGetViper(t *testing.T) {
 	viper := loader.GetViper()
 	assert.NotNil(t, viper)
 }
+
+// REQ-CONFIG-003: Configuration validation - Edge cases and error detection
+func TestMalformedYAMLHandling(t *testing.T) {
+	// Test with malformed YAML
+	loader := NewConfigLoader()
+	
+	// Create a temporary file with invalid YAML
+	tempFile := t.TempDir() + "/invalid.yaml"
+	err := os.WriteFile(tempFile, []byte(`
+server:
+  host: "localhost"
+  port: invalid_port
+  - invalid: yaml: structure
+`), 0644)
+	require.NoError(t, err)
+
+	_, err = loader.LoadConfig(tempFile)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config file")
+}
+
+// REQ-CONFIG-003: Configuration validation - Missing required fields
+func TestMissingRequiredFields(t *testing.T) {
+	// Test with missing required fields
+	tempFile := t.TempDir() + "/missing_fields.yaml"
+	err := os.WriteFile(tempFile, []byte(`
+server:
+  # Missing host field
+  port: 8080
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  # Missing host field
+  api_port: 9997
+`), 0644)
+	require.NoError(t, err)
+
+	loader := NewConfigLoader()
+	config, err := loader.LoadConfig(tempFile)
+	require.NoError(t, err) // Should load with defaults for missing fields
+	
+	// Verify defaults are used for missing fields
+	assert.Equal(t, "0.0.0.0", config.Server.Host) // Default value
+	assert.Equal(t, "127.0.0.1", config.MediaMTX.Host) // Default value
+}
+
+// REQ-CONFIG-003: Configuration validation - Invalid data types
+func TestInvalidDataTypeHandling(t *testing.T) {
+	// Test with invalid data types
+	tempFile := t.TempDir() + "/invalid_types.yaml"
+	err := os.WriteFile(tempFile, []byte(`
+server:
+  host: "localhost"
+  port: "not_a_number"  # Should be int
+  websocket_path: "/ws"
+  max_connections: 100
+
+camera:
+  poll_interval: "not_a_float"  # Should be float
+  device_range: "not_an_array"  # Should be array
+`), 0644)
+	require.NoError(t, err)
+
+	loader := NewConfigLoader()
+	_, err = loader.LoadConfig(tempFile)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config file")
+}
+
+// REQ-CONFIG-003: Configuration validation - Boundary value testing
+func TestBoundaryValueValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "minimum valid port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 1, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: true,
+		},
+		{
+			name: "maximum valid port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 65535, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: true,
+		},
+		{
+			name: "zero port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 0, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "negative port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: -1, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "port too high",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 65536, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "empty host",
+			config: &Config{
+				Server: ServerConfig{Host: "", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server host cannot be empty",
+		},
+		{
+			name: "whitespace host",
+			config: &Config{
+				Server: ServerConfig{Host: "   ", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server host cannot be empty",
+		},
+		{
+			name: "empty websocket path",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "websocket path cannot be empty",
+		},
+		{
+			name: "negative max connections",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: -1},
+			},
+			expectValid: false,
+			errorMsg:    "max connections must be positive",
+		},
+		{
+			name: "zero max connections",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 0},
+			},
+			expectValid: false,
+			errorMsg:    "max connections must be positive",
+		},
+		{
+			name: "empty camera device range",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Camera: CameraConfig{DeviceRange: []int{}},
+			},
+			expectValid: false,
+			errorMsg:    "device_range cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+// REQ-CONFIG-003: Configuration validation - Cross-field validation
+func TestCrossFieldValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "server port conflicts with MediaMTX API port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{APIPort: 8080},
+			},
+			expectValid: false,
+			errorMsg:    "server port conflicts with MediaMTX API port",
+		},
+		{
+			name: "server port conflicts with MediaMTX RTSP port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8554, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{APIPort: 9997, RTSPPort: 8554},
+			},
+			expectValid: false,
+			errorMsg:    "server port conflicts with MediaMTX RTSP port",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+// REQ-CONFIG-003: Configuration validation - Invalid enum values
+func TestInvalidEnumValueValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "invalid video profile",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{Codec: CodecConfig{VideoProfile: "invalid_profile"}},
+			},
+			expectValid: false,
+			errorMsg:    "invalid video profile",
+		},
+		{
+			name: "invalid video level",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{Codec: CodecConfig{VideoLevel: "invalid_level"}},
+			},
+			expectValid: false,
+			errorMsg:    "invalid video level",
+		},
+		{
+			name: "invalid log level",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Logging: LoggingConfig{Level: "invalid_level"},
+			},
+			expectValid: false,
+			errorMsg:    "invalid log level",
+		},
+		{
+			name: "invalid recording format",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Recording: RecordingConfig{Format: "invalid_format"},
+			},
+			expectValid: false,
+			errorMsg:    "invalid recording format",
+		},
+		{
+			name: "invalid snapshot format",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Snapshots: SnapshotConfig{Format: "invalid_format"},
+			},
+			expectValid: false,
+			errorMsg:    "invalid snapshot format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+// REQ-CONFIG-003: Configuration validation - Range validation
+func TestRangeValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "snapshot quality too high",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Snapshots: SnapshotConfig{Quality: 150},
+			},
+			expectValid: false,
+			errorMsg:    "snapshot quality must be between 1 and 100",
+		},
+		{
+			name: "snapshot quality too low",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Snapshots: SnapshotConfig{Quality: 0},
+			},
+			expectValid: false,
+			errorMsg:    "snapshot quality must be between 1 and 100",
+		},
+		{
+			name: "negative snapshot quality",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Snapshots: SnapshotConfig{Quality: -10},
+			},
+			expectValid: false,
+			errorMsg:    "snapshot quality must be between 1 and 100",
+		},
+		{
+			name: "valid snapshot quality",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Snapshots: SnapshotConfig{Quality: 85},
+			},
+			expectValid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+// REQ-CONFIG-002: Environment variable overrides - Edge cases
+func TestEnvironmentVariableEdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		envVar      string
+		envValue    string
+		expectValid bool
+	}{
+		{"empty host", "CAMERA_SERVICE_SERVER_HOST", "", false},
+		{"whitespace host", "CAMERA_SERVICE_SERVER_HOST", "   ", false},
+		{"invalid host format", "CAMERA_SERVICE_SERVER_HOST", "invalid@host", false},
+		{"valid host", "CAMERA_SERVICE_SERVER_HOST", "localhost", true},
+		{"valid IP", "CAMERA_SERVICE_SERVER_HOST", "127.0.0.1", true},
+		{"negative port", "CAMERA_SERVICE_SERVER_PORT", "-1", false},
+		{"zero port", "CAMERA_SERVICE_SERVER_PORT", "0", false},
+		{"valid port", "CAMERA_SERVICE_SERVER_PORT", "8080", true},
+		{"port too high", "CAMERA_SERVICE_SERVER_PORT", "65536", false},
+		{"non-numeric port", "CAMERA_SERVICE_SERVER_PORT", "abc", false},
+		{"negative poll interval", "CAMERA_SERVICE_CAMERA_POLL_INTERVAL", "-0.1", false},
+		{"zero poll interval", "CAMERA_SERVICE_CAMERA_POLL_INTERVAL", "0", false},
+		{"valid poll interval", "CAMERA_SERVICE_CAMERA_POLL_INTERVAL", "0.5", true},
+		{"invalid boolean", "CAMERA_SERVICE_RECORDING_ENABLED", "maybe", false},
+		{"valid boolean true", "CAMERA_SERVICE_RECORDING_ENABLED", "true", true},
+		{"valid boolean false", "CAMERA_SERVICE_RECORDING_ENABLED", "false", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variable
+			os.Setenv(tt.envVar, tt.envValue)
+			defer os.Unsetenv(tt.envVar)
+
+			loader := NewConfigLoader()
+			config, err := loader.LoadConfig("non-existent-file.yaml")
+
+			if tt.expectValid {
+				assert.NoError(t, err)
+				assert.NotNil(t, config)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}

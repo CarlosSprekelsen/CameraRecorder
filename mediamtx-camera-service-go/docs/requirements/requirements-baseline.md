@@ -20,7 +20,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 
 | REQ-ID | Description | Priority | Source Reference |
 |--------|-------------|----------|------------------|
-| REQ-TECH-GO-001 | The system SHALL be implemented in Go 1.25.0+ | Critical | Go Implementation |
+| REQ-TECH-GO-001 | The system SHALL be implemented in Go 1.24.6+ | Critical | Go Implementation |
 | REQ-TECH-GO-002 | The system SHALL use gorilla/websocket for WebSocket implementation | Critical | Go Implementation |
 | REQ-TECH-GO-003 | The system SHALL use golang-jwt/jwt/v4 for JWT authentication | Critical | Go Implementation |
 | REQ-TECH-GO-004 | The system SHALL use golang.org/x/crypto/bcrypt for password hashing | Critical | Go Implementation |
