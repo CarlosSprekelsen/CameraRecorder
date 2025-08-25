@@ -115,6 +115,7 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 - Path lifecycle management (create/delete/verify)
 - Error handling and recovery for path operations
 - Automatic path creation on camera detection
+- **Stream enumeration and status monitoring** via `get_streams` method
 - **Recording session management and state tracking**
 - **File rotation management with configurable intervals**
 - **Storage space validation and threshold management**

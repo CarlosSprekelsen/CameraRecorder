@@ -24,10 +24,30 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ---
 
-## Architecture Analysis: Future Expansion
+## API Documentation Gap Remediation
 
-### Camera Visualization Support
-**Analysis**: The `get_streams` method is already documented in API and implemented in Python. It's a simple addition that leverages existing MediaMTX integration.
+### Critical Gap Identified: get_streams Method
+**Problem**: The `get_streams` method is implemented in Python but **not documented in API reference**, creating a ground truth violation.
+
+**Impact**: 
+- Go project API documentation inherited this gap
+- Missing method documentation affects client development
+- Violates ground truth principle where documentation should drive implementation
+
+**Remediation Required**:
+1. **Complete API documentation** for `get_streams` method in Go project
+2. **Add specific Go examples** and response formats
+3. **Document error conditions** and authentication requirements
+4. **Ensure ground truth compliance** before implementation
+
+**Scope**: This gap remediation is **mandatory** and must be completed before Epic E4 implementation.
+
+---
+
+## Architecture Analysis: Existing Undocumented Features
+
+### get_streams Method - Existing Undocumented Feature
+**Analysis**: The `get_streams` method is implemented in Python but missing from API documentation. It's an existing feature that needs proper documentation and migration.
 
 **Implementation Complexity**: **LOW** - Already implemented in Python, just needs Go port
 - **Current Python Implementation**: 30 lines of code
@@ -40,7 +60,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - Leverages planned stream management components
 - Fits naturally into Epic E4 (MediaMTX Integration)
 
-**Recommendation**: Include as part of Epic E4 Story S4.2 (Stream Management) or add as simple task in Epic E7 (System Management).
+**Status**: **EXISTING UNDOCUMENTED FEATURE** - Must be migrated as part of core functionality
 
 ---
 
@@ -194,11 +214,12 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T4.2.4**: Create stream unit tests (Developer)
 - **T4.2.5**: IV&V validate stream management (IV&V)
 - **T4.2.6**: PM approve stream completion (PM)
-- **T4.2.7**: Implement `get_streams` method for camera visualization (Developer)
+- **T4.2.7**: Implement `get_streams` method (existing undocumented feature) (Developer)
+- **T4.2.8**: Complete API documentation for `get_streams` method (Developer)
 
 **Control Point**: Must provide identical stream URLs to Python system  
 **Remediation**: 1 sprint allowed, must demonstrate stream compatibility  
-**Evidence**: Stream URL tests, get_streams method tests  
+**Evidence**: Stream URL tests, get_streams method tests, API documentation completeness  
 
 ---
 
@@ -387,13 +408,13 @@ This document outlines the comprehensive migration strategy from Python to Go im
 ## Future Expansion Considerations
 
 ### **Camera Visualization Support**
-The `get_streams` method has been analyzed and included in Epic E4 Story S4.2 as a simple addition. This provides the foundation for future camera visualization features.
+The `get_streams` method has been migrated as an existing undocumented feature in Epic E4 Story S4.2. This provides the foundation for future camera visualization features.
 
 **Implementation Details**:
 - **Complexity**: Low (30 lines of Python code → 25 lines of Go code)
 - **Dependencies**: MediaMTX controller (already planned)
 - **Architecture Impact**: Minimal (uses existing infrastructure)
-- **Timeline**: Included in Epic E4 for early availability
+- **Timeline**: Included in Epic E4 as existing feature migration
 
 **Future Enhancements**:
 - Real-time camera preview integration

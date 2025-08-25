@@ -795,6 +795,106 @@ func (c *Client) GetMetrics() (*SystemMetrics, error) {
 }
 ```
 
+}
+
+### get_streams
+Get list of all active streams from MediaMTX.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:** None
+
+**Returns:** Array of stream information objects
+
+**Status:** ✅ Implemented
+
+**Implementation:** Integrates with MediaMTX controller to return real-time stream status and metrics using Go's net/http client for REST API communication.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_streams",
+  "id": 10
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "name": "camera0",
+      "source": "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:8554/camera0",
+      "ready": true,
+      "readers": 2,
+      "bytes_sent": 12345678
+    },
+    {
+      "name": "camera1", 
+      "source": "ffmpeg -f v4l2 -i /dev/video1 -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:8554/camera1",
+      "ready": false,
+      "readers": 0,
+      "bytes_sent": 0
+    }
+  ],
+  "id": 10
+}
+```
+
+**Response Fields:**
+- `name`: Stream name (string)
+- `source`: FFmpeg command or source configuration (string)
+- `ready`: Stream readiness status (boolean)
+- `readers`: Number of active stream readers (integer)
+- `bytes_sent`: Total bytes sent for this stream (integer)
+
+**Go Client Example:**
+```go
+type StreamInfo struct {
+    Name      string `json:"name"`
+    Source    string `json:"source"`
+    Ready     bool   `json:"ready"`
+    Readers   int    `json:"readers"`
+    BytesSent int64  `json:"bytes_sent"`
+}
+
+func (c *Client) GetStreams() ([]StreamInfo, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_streams",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result []StreamInfo
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return result, nil
+}
+```
+
+**Error Response (MediaMTX Unavailable):**
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32006,
+    "message": "MediaMTX service unavailable",
+    "data": {
+      "reason": "MediaMTX REST API not responding"
+    }
+  },
+  "id": 10
+}
+```
+
 ---
 
 ## Notifications
