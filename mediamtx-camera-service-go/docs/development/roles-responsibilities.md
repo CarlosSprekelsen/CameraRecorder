@@ -10,6 +10,7 @@
 - Create tests that validate real functionality
 - Use STOP comments for ambiguities
 - Request IV&V review when implementation complete
+- Adheres to docs/development/go-coding/standards.md
 
 **Prohibited:**
 - Cannot claim sprint completion
@@ -24,11 +25,13 @@
 - Verify test quality (real functionality, not over-mocked)
 - Approve or reject completion evidence
 - Escalate quality concerns to Project Manager
+- Adheres to docs/testing/testing-guide.md
 
 **Prohibited:**
 - Cannot accept stub implementations
 - Cannot waive quality standards without PM approval
 - Cannot approve work without evidence validation
+- Cannot modify implementation to make tests pass (green)
 
 ## Project Manager Role
 **Authority:** Sprint completion and scope control  
@@ -46,4 +49,4 @@
 ## Workflow
 Developer Implementation → IV&V Validation → PM Approval
 
-**Only PM can declare sprint completion. No exceptions.**
+**Only PM can declare sprint / task completion. No exceptions.**
