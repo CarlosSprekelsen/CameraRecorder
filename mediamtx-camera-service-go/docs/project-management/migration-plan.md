@@ -74,7 +74,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S1.1: Configuration Management System**
 **Tasks**:
-- **T1.1.1**: Implement Viper-based configuration loader (Developer)
+- **T1.1.1**: Implement Viper-based configuration loader (Developer) - *reference Python config patterns*
 - **T1.1.2**: Create YAML configuration schema validation (Developer) 
 - **T1.1.3**: Implement environment variable binding (Developer)
 - **T1.1.4**: Add hot-reload capability (Developer)
@@ -88,7 +88,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S1.2: Logging Infrastructure**
 **Tasks**:
-- **T1.2.1**: Implement logrus structured logging (Developer)
+- **T1.2.1**: Implement logrus structured logging (Developer) - *reference Python logging behavior*
 - **T1.2.2**: Add correlation ID support (Developer)
 - **T1.2.3**: Create log rotation configuration (Developer)
 - **T1.2.4**: Implement log level management (Developer)
@@ -102,7 +102,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S1.3: Security Framework**
 **Tasks**:
-- **T1.3.1**: Implement JWT authentication with golang-jwt/jwt/v4 (Developer)
+- **T1.3.1**: Implement JWT authentication with golang-jwt/jwt/v4 (Developer) - *reference Python auth patterns*
 - **T1.3.2**: Add role-based access control (Developer)
 - **T1.3.3**: Implement session management (Developer)
 - **T1.3.4**: Create security unit tests (Developer)
@@ -123,7 +123,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S2.1: V4L2 Camera Interface**
 **Tasks**:
-- **T2.1.1**: Implement V4L2 device enumeration (Developer)
+- **T2.1.1**: Implement V4L2 device enumeration (Developer) - *reference Python camera discovery patterns*
 - **T2.1.2**: Add camera capability probing (Developer)
 - **T2.1.3**: Implement device status monitoring (Developer)
 - **T2.1.4**: Create camera interface unit tests (Developer)
@@ -136,7 +136,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S2.2: Camera Monitor Service**
 **Tasks**:
-- **T2.2.1**: Implement goroutine-based camera monitoring (Developer)
+- **T2.2.1**: Implement goroutine-based camera monitoring (Developer) - *reference Python monitoring patterns*
 - **T2.2.2**: Add hot-plug event handling (Developer)
 - **T2.2.3**: Create event notification system (Developer)
 - **T2.2.4**: Implement concurrent monitoring (Developer)
@@ -158,7 +158,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S3.1: WebSocket Infrastructure**
 **Tasks**:
-- **T3.1.1**: Implement gorilla/websocket server (Developer)
+- **T3.1.1**: Implement gorilla/websocket server (Developer) - *reference Python WebSocket patterns*
 - **T3.1.2**: Add connection management (Developer)
 - **T3.1.3**: Implement JSON-RPC 2.0 protocol (Developer)
 - **T3.1.4**: Add authentication middleware (Developer)
@@ -172,10 +172,10 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S3.2: Core JSON-RPC Methods**
 **Tasks**:
-- **T3.2.1**: Implement `ping` method (Developer)
-- **T3.2.2**: Implement `authenticate` method (Developer)
-- **T3.2.3**: Implement `get_camera_list` method (Developer)
-- **T3.2.4**: Implement `get_camera_status` method (Developer)
+- **T3.2.1**: Implement `ping` method (Developer) - *reference Python method behavior*
+- **T3.2.2**: Implement `authenticate` method (Developer) - *reference Python auth flow*
+- **T3.2.3**: Implement `get_camera_list` method (Developer) - *reference Python camera enumeration*
+- **T3.2.4**: Implement `get_camera_status` method (Developer) - *reference Python status patterns*
 - **T3.2.5**: Create method unit tests (Developer)
 - **T3.2.6**: IV&V validate core methods (IV&V)
 - **T3.2.7**: PM approve core methods (PM)
@@ -194,7 +194,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S4.1: MediaMTX Controller**
 **Tasks**:
-- **T4.1.1**: Implement MediaMTX REST API client (Developer)
+- **T4.1.1**: Implement MediaMTX REST API client (Developer) - *reference Python MediaMTX integration*
 - **T4.1.2**: Add dynamic path creation (Developer)
 - **T4.1.3**: Implement FFmpeg command generation (Developer)
 - **T4.1.4**: Add path lifecycle management (Developer)
@@ -208,13 +208,13 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S4.2: Stream Management**
 **Tasks**:
-- **T4.2.1**: Implement stream URL generation (Developer)
+- **T4.2.1**: Implement stream URL generation (Developer) - *reference Python stream patterns*
 - **T4.2.2**: Add stream status monitoring (Developer)
 - **T4.2.3**: Implement stream cleanup (Developer)
 - **T4.2.4**: Create stream unit tests (Developer)
 - **T4.2.5**: IV&V validate stream management (IV&V)
 - **T4.2.6**: PM approve stream completion (PM)
-- **T4.2.7**: Implement `get_streams` method (existing undocumented feature) (Developer)
+- **T4.2.7**: Implement `get_streams` method (existing undocumented feature) (Developer) - *reference Python get_streams implementation*
 - **T4.2.8**: Complete API documentation for `get_streams` method (Developer)
 
 **Control Point**: Must provide identical stream URLs to Python system  
@@ -231,7 +231,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S5.1: Snapshot System**
 **Tasks**:
-- **T5.1.1**: Implement `take_snapshot` method (Developer)
+- **T5.1.1**: Implement `take_snapshot` method (Developer) - *reference Python snapshot patterns*
 - **T5.1.2**: Add snapshot file management (Developer)
 - **T5.1.3**: Implement snapshot metadata (Developer)
 - **T5.1.4**: Create snapshot unit tests (Developer)
@@ -244,8 +244,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S5.2: Recording System**
 **Tasks**:
-- **T5.2.1**: Implement `start_recording` method (Developer)
-- **T5.2.2**: Implement `stop_recording` method (Developer)
+- **T5.2.1**: Implement `start_recording` method (Developer) - *reference Python recording patterns*
+- **T5.2.2**: Implement `stop_recording` method (Developer) - *reference Python recording patterns*
 - **T5.2.3**: Add recording file management (Developer)
 - **T5.2.4**: Implement recording metadata (Developer)
 - **T5.2.5**: Create recording unit tests (Developer)
@@ -266,8 +266,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S6.1: File Listing Operations**
 **Tasks**:
-- **T6.1.1**: Implement `list_recordings` method (Developer)
-- **T6.1.2**: Implement `list_snapshots` method (Developer)
+- **T6.1.1**: Implement `list_recordings` method (Developer) - *reference Python file listing patterns*
+- **T6.1.2**: Implement `list_snapshots` method (Developer) - *reference Python file listing patterns*
 - **T6.1.3**: Add file metadata extraction (Developer)
 - **T6.1.4**: Create file listing unit tests (Developer)
 - **T6.1.5**: IV&V validate file listing (IV&V)
@@ -279,10 +279,10 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S6.2: File Lifecycle Management**
 **Tasks**:
-- **T6.2.1**: Implement `get_recording_info` method (Developer)
-- **T6.2.2**: Implement `get_snapshot_info` method (Developer)
-- **T6.2.3**: Implement `delete_recording` method (Developer)
-- **T6.2.4**: Implement `delete_snapshot` method (Developer)
+- **T6.2.1**: Implement `get_recording_info` method (Developer) - *reference Python file info patterns*
+- **T6.2.2**: Implement `get_snapshot_info` method (Developer) - *reference Python file info patterns*
+- **T6.2.3**: Implement `delete_recording` method (Developer) - *reference Python file deletion patterns*
+- **T6.2.4**: Implement `delete_snapshot` method (Developer) - *reference Python file deletion patterns*
 - **T6.2.5**: Create file management unit tests (Developer)
 - **T6.2.6**: IV&V validate file management (IV&V)
 - **T6.2.7**: PM approve file management (PM)
@@ -301,7 +301,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S7.1: System Metrics**
 **Tasks**:
-- **T7.1.1**: Implement `get_metrics` method (Developer)
+- **T7.1.1**: Implement `get_metrics` method (Developer) - *reference Python metrics patterns*
 - **T7.1.2**: Add performance monitoring (Developer)
 - **T7.1.3**: Implement resource tracking (Developer)
 - **T7.1.4**: Create metrics unit tests (Developer)
@@ -314,7 +314,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 #### **Story S7.2: Health Monitoring**
 **Tasks**:
-- **T7.2.1**: Implement `get_status` method (Developer)
+- **T7.2.1**: Implement `get_status` method (Developer) - *reference Python health patterns*
 - **T7.2.2**: Add component health checks (Developer)
 - **T7.2.3**: Implement health endpoints (Developer)
 - **T7.2.4**: Create health unit tests (Developer)
