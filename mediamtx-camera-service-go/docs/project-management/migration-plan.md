@@ -56,8 +56,10 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T1.2.3**: Create log rotation configuration (Developer)
 - **T1.2.4**: Implement log level management (Developer)
 - **T1.2.5**: Create logging unit tests (Developer)
-- **T1.2.6**: IV&V validate logging system (IV&V)
-- **T1.2.7**: PM approve logging completion (PM)
+- **T2.1.6**: **INTEGRATION TASK**: Integrate with Configuration Management System (Developer) - *use config from Epic E1*
+- **T1.2.7**: IV&V validate logging system (IV&V)
+- **T1.2.8**: PM approve logging completion (PM)
+
 
 **Control Point**: Logging must produce identical format to Python system  
 **Remediation**: 1 sprint allowed, must demonstrate format compatibility  
@@ -83,6 +85,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Duration**: 2-3 sprints  
 **Control Gate**: Camera discovery must detect devices in <200ms  
 **Dependencies**: Epic E1 (Foundation Infrastructure)  
+**Integration Requirements**: Must integrate with Configuration Management System from Epic E1  
 
 #### **Story S2.1: V4L2 Camera Interface**
 **Tasks**:
@@ -92,6 +95,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T2.1.4**: Create camera interface unit tests (Developer)
 - **T2.1.5**: IV&V validate camera detection (IV&V)
 - **T2.1.6**: PM approve camera interface (PM)
+- **T2.1.7**: **INTEGRATION TASK**: Integrate with Configuration Management System (Developer) - *use config from Epic E1*
+- **T2.1.8**: **INTEGRATION TASK**: Validate configuration-driven camera settings (Developer) - *test with config values*
+- **T2.1.9**: **INTEGRATION TASK**: Create integration tests with configuration system (Developer)
+- **T2.1.10**: **ARCHITECTURE TASK**: IV&V validate architectural compliance (IV&V) - *ensure proper integration*
+- **T2.1.11**: **ARCHITECTURE TASK**: PM approve integration completion (PM)
 
 **Control Point**: Must detect same cameras as Python system with <200ms latency  
 **Remediation**: 1 sprint allowed, must meet performance targets  
@@ -106,6 +114,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T2.2.5**: Create monitor unit tests (Developer)
 - **T2.2.6**: IV&V validate monitoring system (IV&V)
 - **T2.2.7**: PM approve monitoring completion (PM)
+- **T2.2.8**: **INTEGRATION TASK**: Integrate monitoring with configuration system (Developer) - *use config-driven intervals*
+- **T2.2.9**: **INTEGRATION TASK**: Implement configuration hot-reload for monitoring settings (Developer)
+- **T2.2.10**: **INTEGRATION TASK**: Create monitoring integration tests (Developer)
+- **T2.2.11**: **ARCHITECTURE TASK**: IV&V validate monitoring integration (IV&V)
+- **T2.2.12**: **ARCHITECTURE TASK**: PM approve monitoring integration (PM)
 
 **Control Point**: Must handle connect/disconnect events with <20ms notification  
 **Remediation**: 1 sprint allowed, must demonstrate event handling  
@@ -118,6 +131,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Duration**: 3-4 sprints  
 **Control Gate**: Server must handle 1000+ connections with <50ms response time  
 **Dependencies**: Epic E1 (Foundation Infrastructure), Epic E2 (Camera Discovery)  
+**Integration Requirements**: Must integrate with Configuration Management (Epic E1) and Camera Discovery (Epic E2)  
 
 #### **Story S3.1: WebSocket Infrastructure**
 **Tasks**:
@@ -128,6 +142,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T3.1.5**: Create WebSocket unit tests (Developer)
 - **T3.1.6**: IV&V validate WebSocket implementation (IV&V)
 - **T3.1.7**: PM approve WebSocket completion (PM)
+- **T3.1.8**: **INTEGRATION TASK**: Integrate WebSocket server with configuration system (Developer) - *use config for server settings*
+- **T3.1.9**: **INTEGRATION TASK**: Implement configuration-driven connection limits (Developer)
+- **T3.1.10**: **INTEGRATION TASK**: Create WebSocket configuration integration tests (Developer)
+- **T3.1.11**: **ARCHITECTURE TASK**: IV&V validate WebSocket integration (IV&V)
+- **T3.1.12**: **ARCHITECTURE TASK**: PM approve WebSocket integration (PM)
 
 **Control Point**: Must handle 1000+ concurrent connections  
 **Remediation**: 1 sprint allowed, must meet concurrency targets  
@@ -142,6 +161,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T3.2.5**: Create method unit tests (Developer)
 - **T3.2.6**: IV&V validate core methods (IV&V)
 - **T3.2.7**: PM approve core methods (PM)
+- **T3.2.8**: **INTEGRATION TASK**: Integrate methods with camera discovery system (Developer) - *use camera data from Epic E2*
+- **T3.2.9**: **INTEGRATION TASK**: Implement configuration-driven method behavior (Developer)
+- **T3.2.10**: **INTEGRATION TASK**: Create end-to-end integration tests (Developer) - *test full flow from config to camera to API*
+- **T3.2.11**: **ARCHITECTURE TASK**: IV&V validate method integration (IV&V)
+- **T3.2.12**: **ARCHITECTURE TASK**: PM approve method integration (PM)
 
 **Control Point**: All methods must return identical responses to Python system  
 **Remediation**: 1 sprint allowed, must demonstrate API compatibility  
@@ -154,6 +178,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Duration**: 2-3 sprints  
 **Control Gate**: Path creation must complete in <100ms  
 **Dependencies**: Epic E1 (Foundation Infrastructure), Epic E2 (Camera Discovery)  
+**Integration Requirements**: Must integrate with Configuration Management (Epic E1), Camera Discovery (Epic E2), and WebSocket Server (Epic E3)  
 
 #### **Story S4.1: MediaMTX Controller**
 **Tasks**:
@@ -164,6 +189,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T4.1.5**: Create controller unit tests (Developer)
 - **T4.1.6**: IV&V validate MediaMTX integration (IV&V)
 - **T4.1.7**: PM approve MediaMTX completion (PM)
+- **T4.1.8**: **INTEGRATION TASK**: Integrate MediaMTX with configuration system (Developer) - *use config for MediaMTX settings*
+- **T4.1.9**: **INTEGRATION TASK**: Integrate with camera discovery system (Developer) - *use camera data for path creation*
+- **T4.1.10**: **INTEGRATION TASK**: Create MediaMTX integration tests (Developer)
+- **T4.1.11**: **ARCHITECTURE TASK**: IV&V validate MediaMTX integration (IV&V)
+- **T4.1.12**: **ARCHITECTURE TASK**: PM approve MediaMTX integration (PM)
 
 **Control Point**: Must create paths in <100ms with FFmpeg integration  
 **Remediation**: 1 sprint allowed, must meet performance targets  
@@ -324,6 +354,25 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ---
 
+## Integration and Architectural Compliance Rules
+
+### **Integration Requirements (Epic E2+)**
+- **Configuration Integration**: All epics must integrate with Configuration Management System (Epic E1)
+- **Cross-Epic Integration**: Each epic must integrate with all previous epics
+- **Architectural Validation**: IV&V must validate architectural compliance for each epic
+- **Integration Testing**: End-to-end integration tests required for each epic
+
+### **Integration Task Types**
+- **INTEGRATION TASK**: Developer tasks that ensure proper integration with previous epics
+- **ARCHITECTURE TASK**: IV&V and PM tasks that validate architectural compliance
+- **End-to-End Testing**: Full system integration tests from configuration to API response
+
+### **Architectural Compliance Gates**
+- **Epic E2**: Must integrate with Configuration Management (Epic E1)
+- **Epic E3**: Must integrate with Configuration Management (Epic E1) + Camera Discovery (Epic E2)
+- **Epic E4**: Must integrate with Configuration Management (Epic E1) + Camera Discovery (Epic E2) + WebSocket Server (Epic E3)
+- **Epic E5+**: Must integrate with all previous epics
+
 ## Control Point Rules
 
 ### **Go/No-Go Gates**
@@ -336,6 +385,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **2 Sprint Remediation**: Allowed for integration testing only
 - **No Carry-Over**: Failed control points must be remediated before proceeding
 - **PM Approval Required**: All remediation must be approved by PM
+- **Integration Remediation**: Failed integration tasks require immediate remediation before epic completion
+- **Architectural Remediation**: Failed architectural compliance requires epic restart
 
 ### **Role Responsibilities**
 - **Developer**: Implementation, unit tests, evidence creation
@@ -349,12 +400,33 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ---
 
+## Integration and Technical Debt Prevention
+
+### **Lessons Learned from Epic E1**
+- **Isolation Risk**: Epic E1 was completed in isolation, creating potential integration gaps
+- **Configuration Integration**: All subsequent epics must explicitly integrate with configuration system
+- **Architectural Validation**: IV&V must validate architectural compliance, not just functional requirements
+- **End-to-End Testing**: Integration tests must validate full system flow, not just individual components
+
+### **Integration Prevention Measures**
+- **Explicit Integration Tasks**: Each epic now includes mandatory integration tasks
+- **Architectural Validation**: IV&V must validate architectural compliance for each epic
+- **Cross-Epic Testing**: End-to-end tests must validate integration with all previous epics
+- **Configuration-Driven Design**: All components must use configuration system from Epic E1
+
+### **Technical Debt Prevention**
+- **No Isolation Development**: Epics cannot be developed in isolation
+- **Mandatory Integration**: Integration tasks are non-negotiable and must be completed
+- **Architectural Gates**: Failed architectural compliance requires epic restart
+- **Continuous Integration**: Each epic must integrate with all previous epics
+
 ## Risk Management
 
 ### **Technical Risks**
 - **MediaMTX Integration Complexity**: Mitigated by early prototyping in Epic E4
 - **Performance Targets**: Mitigated by incremental validation and benchmarking
 - **API Compatibility**: Mitigated by comprehensive testing against Python system
+- **Integration Gaps**: Mitigated by explicit integration tasks and architectural validation
 
 ### **Schedule Risks**
 - **Foundation Dependencies**: Mitigated by clear dependency mapping
@@ -410,7 +482,8 @@ The `get_streams` method has been migrated as an existing undocumented feature i
 
 ---
 
-**Document Status**: Approved migration plan with comprehensive Epic/Story/Task breakdown  
+**Document Status**: Approved migration plan with comprehensive Epic/Story/Task breakdown and integration requirements  
 **Last Updated**: 2025-01-15  
 **Next Review**: After Epic E1 completion  
-**Progress**: Story S1.1 ✅ COMPLETED (PM Approved 2025-01-15)
+**Progress**: Story S1.1 ✅ COMPLETED (PM Approved 2025-01-15)  
+**Architectural Update**: Integration and technical debt prevention measures added (2025-01-15)

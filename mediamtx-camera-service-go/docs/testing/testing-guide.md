@@ -27,6 +27,44 @@
 4. **Test failures indicate API/implementation mismatch** - Not test bugs
 5. **No "accommodation" of broken implementations** - Tests do not fix the implementation - it is ok if a test fails, that's their purpose, to find real bugs not accommodate them
 
+### **Package Declaration Rules**
+1. **Test files must use `package *_test` for external testing** - `package config_test` for config tests, `package logging_test` for logging tests
+2. **This follows Go's official external testing pattern** - Tests run in separate package context
+3. **Use `-coverpkg` flag for cross-package coverage** - `go test -coverpkg=./internal/config ./tests/unit/test_config_management_test.go`
+4. **Coverage measurement is mandatory** - All tests must produce accurate coverage reports
+5. **External testing provides better separation** - Keeps test infrastructure separate from source code
+
+### **Go Testing Approach Explanation**
+**Why We Use External Testing (`package *_test`)**:
+- **Separation of Concerns**: Keeps test infrastructure separate from source code
+- **Centralized Test Management**: Easier to maintain and govern test standards
+- **Better Organization**: Logical grouping by test type (unit, integration, etc.)
+- **Scalability**: Works better for complex projects with multiple components
+- **Team Coordination**: Clear boundaries between Developer, IV&V, and PM responsibilities
+
+**Trade-offs**:
+- Requires `-coverpkg` flag for cross-package coverage measurement
+- Slightly more complex test execution commands
+- Non-standard Go approach (but justified for project needs)
+
+**Correct Usage Examples**:
+```bash
+# Test config package with coverage
+go test -coverpkg=./internal/config ./tests/unit/test_config_management_test.go
+
+# Test logging package with coverage  
+go test -coverpkg=./internal/logging ./tests/unit/test_logging_infrastructure_test.go
+
+# Test security package with coverage
+go test -coverpkg=./internal/security ./tests/unit/test_security_framework_test.go
+```
+
+**⚠️ CRITICAL: Never Change Package Declarations**
+- **DO NOT** change `package *_test` to `package *` 
+- **DO NOT** try to "fix" package declarations - they are correct as `package *_test`
+- **ALWAYS** use `-coverpkg` flag for cross-package coverage measurement
+- **REMEMBER**: External testing is intentional and provides better separation
+
 ### Real System Testing Over Mocking
 - **MediaMTX:** Use systemd-managed service, never mock
 - **File System:** Use `tempfile`, never mock

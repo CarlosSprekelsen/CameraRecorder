@@ -1273,18 +1273,18 @@ mediamtx:
 	require.NotNil(t, cfg)
 
 	// Verify precedence: environment variables override file values
-	assert.Equal(t, "192.168.1.100", cfg.Server.Host)      // From env
-	assert.Equal(t, 8002, cfg.Server.Port)                 // From env
-	assert.Equal(t, "/ws", cfg.Server.WebSocketPath)       // From file
-	assert.Equal(t, 50, cfg.Server.MaxConnections)         // From file
+	assert.Equal(t, "192.168.1.100", cfg.Server.Host) // From env
+	assert.Equal(t, 8002, cfg.Server.Port)            // From env
+	assert.Equal(t, "/ws", cfg.Server.WebSocketPath)  // From file
+	assert.Equal(t, 50, cfg.Server.MaxConnections)    // From file
 
-	assert.Equal(t, "192.168.1.200", cfg.MediaMTX.Host)    // From env
-	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)            // From env
-	assert.Equal(t, 8555, cfg.MediaMTX.RTSPPort)           // From file
+	assert.Equal(t, "192.168.1.200", cfg.MediaMTX.Host) // From env
+	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)         // From env
+	assert.Equal(t, 8555, cfg.MediaMTX.RTSPPort)        // From file
 
 	// Verify defaults are used for values not in file or env
-	assert.Equal(t, 8889, cfg.MediaMTX.WebRTCPort)         // From defaults
-	assert.Equal(t, 8888, cfg.MediaMTX.HLSPort)            // From defaults
+	assert.Equal(t, 8889, cfg.MediaMTX.WebRTCPort) // From defaults
+	assert.Equal(t, 8888, cfg.MediaMTX.HLSPort)    // From defaults
 }
 
 func TestConfigManager_EnvironmentVariableEdgeCases(t *testing.T) {
@@ -1746,7 +1746,7 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 	// Test file permission errors
 	t.Run("file_permission_errors", func(t *testing.T) {
 		configPath := filepath.Join(tempDir, "readonly_config.yaml")
-		
+
 		// Create a file with read-only permissions
 		yamlContent := `
 server:
@@ -1769,7 +1769,7 @@ server:
 	t.Run("symbolic_link_handling", func(t *testing.T) {
 		originalPath := filepath.Join(tempDir, "original_config.yaml")
 		symlinkPath := filepath.Join(tempDir, "symlink_config.yaml")
-		
+
 		yamlContent := `
 server:
   host: "192.168.1.100"
