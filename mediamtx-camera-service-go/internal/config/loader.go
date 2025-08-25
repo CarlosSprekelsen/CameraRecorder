@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -47,7 +48,12 @@ func (cl *ConfigLoader) LoadConfig(configPath string) (*Config, error) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			cl.logger.Warn("Configuration file not found, using defaults")
 		} else {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			// Check if it's a file not found error
+			if os.IsNotExist(err) {
+				cl.logger.Warn("Configuration file not found, using defaults")
+			} else {
+				return nil, fmt.Errorf("failed to read config file: %w", err)
+			}
 		}
 	}
 	
