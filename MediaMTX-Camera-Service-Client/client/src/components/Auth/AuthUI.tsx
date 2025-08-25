@@ -86,8 +86,10 @@ const AuthUI: React.FC<AuthUIProps> = ({
     try {
       await storeLogin(storedToken);
       onLoginSuccess?.();
-    } catch (error) {
+    } catch (error: unknown) {
       // Auto-login failed, clear invalid token
+      const errorMessage = error instanceof Error ? error.message : 'Auto-login failed';
+      console.error('Auto-login failed:', errorMessage);
       authService.clearToken();
     }
   };
@@ -102,8 +104,10 @@ const AuthUI: React.FC<AuthUIProps> = ({
     try {
       await storeLogin(authToken);
       onLoginSuccess?.();
-    } catch (error) {
+    } catch (error: unknown) {
       // Error is handled by the store
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      console.error('Login failed:', errorMessage);
     }
   };
 

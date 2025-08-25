@@ -232,8 +232,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       storeSetStorageInfo(systemInfo.storageInfo);
       
       storeClearError();
-    } catch (error) {
-      console.error('Failed to refresh system info:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh system info';
+      console.error('Failed to refresh system info:', errorMessage);
       storeSetError('Failed to load system information');
     } finally {
       setIsRefreshing(false);
@@ -251,8 +252,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       storeSetPerformingCleanup(true);
       const results = await adminService.cleanupOldFiles();
       storeSetCleanupResults(results);
-    } catch (error) {
-      console.error('Cleanup failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Cleanup failed';
+      console.error('Cleanup failed:', errorMessage);
       storeSetError('Cleanup operation failed');
     } finally {
       storeSetPerformingCleanup(false);
@@ -271,8 +273,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const updatedPolicy = await adminService.setRetentionPolicy(policy);
       storeSetRetentionPolicy(updatedPolicy);
-    } catch (error) {
-      console.error('Failed to save retention policy:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save retention policy';
+      console.error('Failed to save retention policy:', errorMessage);
       storeSetError('Failed to save retention policy');
     }
   }, [storeSetRetentionPolicy, storeSetError]);

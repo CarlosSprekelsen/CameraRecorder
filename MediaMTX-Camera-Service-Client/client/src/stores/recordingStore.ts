@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { recordingManagerService } from '../services/recordingManagerService';
 import type {
-  RecordingState,
   RecordingSession,
   RecordingProgress,
   RecordingStatus

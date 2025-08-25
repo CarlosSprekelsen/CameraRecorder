@@ -115,8 +115,9 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       storeSetCameraHealth(health.cameras);
       storeSetMediaMTXHealth(health.mediamtx);
       storeSetReadinessStatus(health.readiness);
-    } catch (error) {
-      console.error('Failed to refresh health data:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health data';
+      console.error('Failed to refresh health data:', errorMessage);
     } finally {
       setIsRefreshing(false);
     }

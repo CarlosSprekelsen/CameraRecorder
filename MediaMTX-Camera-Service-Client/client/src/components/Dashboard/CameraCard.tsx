@@ -70,8 +70,9 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
         console.error('Snapshot failed:', result);
         // TODO: Show error notification
       }
-    } catch (error) {
-      console.error('Snapshot error:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Snapshot failed';
+      console.error('Snapshot error:', errorMessage);
       // TODO: Show error notification
     } finally {
       setIsSnapshotLoading(false);
@@ -102,8 +103,9 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
           // TODO: Show error notification
         }
       }
-    } catch (error) {
-      console.error('Recording error:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Recording failed';
+      console.error('Recording error:', errorMessage);
       // TODO: Show error notification
     } finally {
       setIsRecordingLoading(false);

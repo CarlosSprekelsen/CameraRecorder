@@ -1,41 +1,44 @@
-# MediaMTX Camera Service
+# MediaMTX Camera Service - Go Implementation
 
-A lightweight WebSocket JSON-RPC 2.0 service that provides real-time USB camera monitoring and control using MediaMTX as the media server backend.
+⚠️ **MIGRATION PROJECT - DO NOT TOUCH PYTHON SERVER**
 
+## Project Status
+- **Python server**: `../mediamtx-camera-service/` (PROTECTED - DO NOT MODIFY)
+- **This directory**: Go migration workspace only
+- **Purpose**: Zero-risk migration from Python to Go implementation
 
-## 📁 Project Structure
+## Protection Rules
+1. **NEVER** modify files in `../mediamtx-camera-service/`
+2. **NEVER** run commands that could affect the Python server
+3. **ALWAYS** verify Python server integrity before and after operations
+4. **ONLY** work within this Go project directory
 
+## Directory Structure
 ```
-mediamtx-camera-service/
-├── src/                           # Python source code
-│   ├── camera_service/            # Main application
-│   ├── mediamtx_wrapper/          # MediaMTX REST API client
-│   ├── websocket_server/          # WebSocket JSON-RPC server
-│   ├── camera_discovery/          # USB camera monitoring
-│   └── common/                    # Shared utilities
-├── config/                        # Configuration files
-├── deployment/                    # Systemd services & scripts
-├── docs/                          # Documentation
-├── tests/                         # Test suite
-├── examples/                      # Usage examples
-└── tools/                         # Development tools
+../mediamtx-camera-service/          # ← ORIGINAL PYTHON (UNTOUCHED)
+../mediamtx-camera-service-go/       # ← NEW GO PROJECT (this directory)
+├── README.md                        # This file
+├── go.mod                           # Go dependencies
+├── cmd/server/                      # Go application entry point
+├── internal/                        # Go internal packages
+├── pkg/                            # Go public packages
+├── docs/                           # Migrated documentation
+└── evidence/                        # Clean evidence directory
 ```
 
-## 📚 Documentation
+## Development Guidelines
+- All Go development happens in this directory only
+- Documentation is migrated from Python project with Go-specific updates
+- Business requirements remain the same, only technology stack changes
+- Performance targets are enhanced for Go implementation
 
-- **[Architecture Overview](docs/architecture/overview.md)** - System design and component interaction
-- **[API Reference](docs/api/json-rpc-methods.md)** - Complete JSON-RPC method specification
-- **[Installation Guide](docs/deployment/installation.md)** - Production deployment instructions
-- **[Development Setup](docs/development/setup.md)** - Development environment configuration
+## Verification Commands
+```bash
+# Verify Python server is untouched
+ls ../mediamtx-camera-service/src/  # Should see Python files
 
+# Verify Go project structure
+ls cmd/ internal/ pkg/              # Should see Go directories
+```
 
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-**Status**: 🚧 Active Development  
-**Version**: 0.1.0  
-**Python**: 3.10+  
-**Target**: Ubuntu 22.04+ Linux
+**Next Steps**: Begin Go implementation in this isolated environment with zero risk to current Python server.

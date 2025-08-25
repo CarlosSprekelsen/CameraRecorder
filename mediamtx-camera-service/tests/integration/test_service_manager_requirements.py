@@ -81,6 +81,8 @@ async def _mediamtx_ok(host: str, port: int):
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F111_photo_capture_service_availability():
     """
     Validates F1.1.1: The application SHALL allow users to take photos using available cameras
@@ -104,6 +106,8 @@ async def test_requirement_F111_photo_capture_service_availability():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F313_camera_hotplug_notifications():
     """
@@ -137,6 +141,8 @@ async def test_requirement_F313_camera_hotplug_notifications():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F125_recording_session_management():
     """
     Validates F1.2.5: The application SHALL handle recording session management via service API
@@ -165,6 +171,8 @@ async def test_requirement_F125_recording_session_management():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F311_camera_list_availability():
     """
@@ -208,6 +216,8 @@ async def test_requirement_F311_camera_list_availability():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F111_photo_capture_error_handling():
     """
     Validates F1.1.4: Handle photo capture errors gracefully with user feedback
@@ -250,6 +260,8 @@ async def test_requirement_F111_photo_capture_error_handling():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F125_recording_concurrent_conflict_detection():
     """
     Validates F1.2.5: Concurrent recording conflict detection via service API
@@ -282,6 +294,8 @@ async def test_requirement_F125_recording_concurrent_conflict_detection():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F311_camera_list_empty_structure():
     """
@@ -320,6 +334,8 @@ async def test_requirement_F311_camera_list_empty_structure():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F313_notification_delivery_failure_tolerance():
     """
@@ -361,6 +377,8 @@ async def test_requirement_F313_notification_delivery_failure_tolerance():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F312_camera_status_api_contract_and_errors():
     """
@@ -414,6 +432,8 @@ async def test_requirement_F312_camera_status_api_contract_and_errors():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F126_recording_duration_constraints():
     """
     Validates F1.2.6: The application SHALL enforce recording duration constraints
@@ -451,6 +471,8 @@ async def test_requirement_F126_recording_duration_constraints():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F320_operator_permissions_enforced():
     """
     Validates F3.2.0: Operator permissions required for recording and snapshot APIs
@@ -483,6 +505,8 @@ async def test_requirement_F320_operator_permissions_enforced():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F114_snapshot_quality_bounds_and_persistence():
     """
@@ -521,6 +545,8 @@ async def test_requirement_F114_snapshot_quality_bounds_and_persistence():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F313_notifications_multiple_clients():
     """
     Validates F3.1.3: Real-time notifications delivered to multiple connected clients
@@ -552,6 +578,8 @@ async def test_requirement_F313_notifications_multiple_clients():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_authenticate_method_api_compliance():
     """
@@ -633,6 +661,8 @@ async def test_authenticate_method_api_compliance():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F325_authenticate_and_protected_methods_success():
     """
     Validates F3.2.5: Operator permissions enforcement via authenticate for protected methods
@@ -677,6 +707,8 @@ async def test_requirement_F325_authenticate_and_protected_methods_success():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F326_token_expiration_and_reauth():
     """
@@ -735,6 +767,8 @@ async def test_requirement_F326_token_expiration_and_reauth():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F325_protected_methods_unauthorized_error():
     """
     Validates F3.2.5: Protected methods require operator role (unauthorized error case)
@@ -763,6 +797,8 @@ async def test_requirement_F325_protected_methods_unauthorized_error():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F123_recording_timed_minutes():
     """
     Validates F1.2.3: Timed recording using minutes duration
@@ -789,6 +825,8 @@ async def test_requirement_F123_recording_timed_minutes():
 
 
 @pytest.mark.asyncio
+@pytest.mark.integration
+@pytest.mark.asyncio
 async def test_requirement_F123_recording_timed_hours():
     """
     Validates F1.2.3: Timed recording using hours duration
@@ -814,6 +852,8 @@ async def test_requirement_F123_recording_timed_hours():
             await svc.stop()
 
 
+@pytest.mark.asyncio
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_requirement_F122_recording_unlimited_mode():
     """

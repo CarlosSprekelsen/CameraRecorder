@@ -89,8 +89,9 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
     try {
       await storeSaveSettings();
       showSuccess('Settings Saved', 'Your settings have been saved successfully');
-    } catch (error) {
-      showError('Save Failed', error instanceof Error ? error.message : 'Failed to save settings');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
+      showError('Save Failed', errorMessage);
     }
   };
 
@@ -130,8 +131,9 @@ const Settings: React.FC<SettingsProps> = ({ onClose }) => {
         setImportText('');
         showSuccess('Settings Imported', 'Settings have been imported successfully');
       }
-    } catch (error) {
-      showError('Import Failed', error instanceof Error ? error.message : 'Failed to import settings');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import settings';
+      showError('Import Failed', errorMessage);
     }
   };
 

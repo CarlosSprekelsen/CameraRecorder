@@ -58,6 +58,7 @@ class TestWebSocketAuthentication:
             window_size_seconds=60
         )
     
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_websocket_authentication_before_method_execution(self, security_middleware):
         """Test authentication check before method execution."""
@@ -83,6 +84,7 @@ class TestWebSocketAuthentication:
         # Cleanup
         security_middleware.unregister_connection(client_id)
     
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_websocket_permission_checking_for_sensitive_operations(self, security_middleware):
         """Test permission checking for sensitive WebSocket operations."""
@@ -114,6 +116,7 @@ class TestWebSocketAuthentication:
         security_middleware.unregister_connection(client_id)
         security_middleware.unregister_connection(admin_client_id)
     
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_websocket_rate_limiting_enforcement(self, security_middleware):
         """Test rate limiting enforcement for WebSocket connections."""
@@ -142,6 +145,7 @@ class TestWebSocketAuthentication:
         # Cleanup
         security_middleware.unregister_connection(client_id)
     
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_websocket_connection_limits_and_cleanup(self, security_middleware):
         """Test connection limits and cleanup for WebSocket connections."""

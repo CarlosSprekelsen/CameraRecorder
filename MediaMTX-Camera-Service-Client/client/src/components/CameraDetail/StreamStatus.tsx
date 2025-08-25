@@ -60,8 +60,9 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
     setIsRefreshing(true);
     try {
       await storeGetStreams();
-    } catch (error) {
-      console.error('Failed to refresh streams:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh streams';
+      console.error('Failed to refresh streams:', errorMessage);
     } finally {
       setIsRefreshing(false);
     }

@@ -130,10 +130,32 @@ export interface CameraStoreState {
   loading: boolean; // Alias for isLoading
   isRefreshing: boolean; // Alias for loadingStates.refreshing
   isConnecting: boolean; // Alias for loadingStates.connecting
+  isConnected: boolean; // Connection status
   connect: (url?: string) => Promise<void>;
   disconnect: () => void;
   refreshCameras: () => Promise<void>;
   selectCamera: (device: string) => void;
+  
+  // Error handling methods
+  clearError: () => void;
+  
+  // Additional camera operations
+  updateCameraStatus: (device: string, status: CameraStatus) => void;
+  addRecording: (device: string, recording: RecordingSession) => void;
+  removeRecording: (device: string) => void;
+  
+  // Notification handling
+  handleNotification: (notification: unknown) => void;
+  
+  // Real-time update management
+  enableRealTimeUpdates: () => void;
+  disableRealTimeUpdates: () => void;
+  updateRecordingProgress: (device: string, progress: RecordingProgress) => void;
+  getRecordingProgress: (device: string) => RecordingProgress | null;
+  clearRecordingProgress: (device: string) => void;
+  
+  // Initialization
+  initialize: () => Promise<void>;
 }
 
 export const useCameraStore = create<CameraStoreState>((set, get) => ({
@@ -179,6 +201,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   loading: false, // Alias for isLoading
   isRefreshing: false, // Alias for loadingStates.refreshing
   isConnecting: false, // Alias for loadingStates.connecting
+  isConnected: false, // Connection status
 
   // Standardized state management
   setLoading: (loading: boolean) => {
@@ -260,6 +283,156 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       wsService.disconnect();
     }
     get().reset();
+  },
+
+  // Legacy compatibility methods
+  connect: async (url?: string) => {
+    // Implementation will be added
+    console.log('Connect method called with URL:', url);
+  },
+
+  disconnect: () => {
+    const { wsService } = get();
+    if (wsService) {
+      wsService.disconnect();
+    }
+  },
+
+  refreshCameras: async () => {
+    try {
+      set({ isRefreshing: true, error: null });
+      await get().getCameraList();
+      await get().getStreams();
+      set({ isRefreshing: false });
+    } catch (error) {
+      set({ 
+        isRefreshing: false,
+        error: error instanceof Error ? error.message : 'Failed to refresh cameras'
+      });
+    }
+  },
+
+  selectCamera: (device: string) => {
+    const { cameras } = get();
+    const camera = cameras.find(c => c.device === device);
+    set({ selectedCamera: camera || null });
+  },
+
+  // Error handling methods
+  clearError: () => {
+    set({ error: null });
+  },
+
+  // Additional camera operations
+  updateCameraStatus: (device: string, status: CameraStatus) => {
+    set((state) => ({
+      cameras: state.cameras.map(camera => 
+        camera.device === device ? { ...camera, status } : camera
+      )
+    }));
+  },
+
+  addRecording: (device: string, recording: RecordingSession) => {
+    set((state) => {
+      const newRecordings = new Map(state.activeRecordings);
+      newRecordings.set(device, recording);
+      return { activeRecordings: newRecordings };
+    });
+  },
+
+  removeRecording: (device: string) => {
+    set((state) => {
+      const newRecordings = new Map(state.activeRecordings);
+      newRecordings.delete(device);
+      return { activeRecordings: newRecordings };
+    });
+  },
+
+  // Notification handling
+  handleNotification: (notification: unknown) => {
+    console.log('Notification received:', notification);
+  },
+
+  // Real-time update management
+  enableRealTimeUpdates: () => {
+    set({ realTimeUpdatesEnabled: true });
+  },
+
+  disableRealTimeUpdates: () => {
+    set({ realTimeUpdatesEnabled: false });
+  },
+
+  updateRecordingProgress: (device: string, progress: RecordingProgress) => {
+    set((state) => {
+      const newProgress = new Map(state.recordingProgress);
+      newProgress.set(device, progress);
+      return { 
+        recordingProgress: newProgress,
+        lastRecordingUpdate: new Date()
+      };
+    });
+  },
+
+  getRecordingProgress: (device: string) => {
+    return get().recordingProgress.get(device) || null;
+  },
+
+  clearRecordingProgress: (device: string) => {
+    set((state) => {
+      const newProgress = new Map(state.recordingProgress);
+      newProgress.delete(device);
+      return { recordingProgress: newProgress };
+    });
+  },
+
+  // Initialization
+  initialize: async () => {
+    const { wsService } = get();
+    
+    if (wsService) {
+      return; // Already initialized
+    }
+
+    try {
+      set({ isConnecting: true, error: null });
+      
+      // Initialize WebSocket service
+      const { createWebSocketService } = await import('../services/websocket');
+      const newWsService = await createWebSocketService({
+        url: 'ws://localhost:8002/ws',
+        reconnectInterval: 5000,
+        maxReconnectAttempts: 5,
+      });
+
+      set({ wsService: newWsService });
+
+      // Set up event handlers
+      newWsService.onConnect(() => {
+        set({ isConnected: true, error: null });
+      });
+
+      newWsService.onDisconnect(() => {
+        set({ isConnected: false });
+      });
+
+      newWsService.onError((error) => {
+        set({ error: error.message, isConnected: false });
+      });
+
+      // Connect to WebSocket
+      await newWsService.connect();
+      
+      // Load initial data
+      await get().refreshCameras();
+      
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to initialize camera store',
+        isConnected: false 
+      });
+    } finally {
+      set({ isConnecting: false });
+    }
   },
   
   // WebSocket service management

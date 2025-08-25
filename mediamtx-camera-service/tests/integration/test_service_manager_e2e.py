@@ -100,7 +100,9 @@ def build_config(api_port: int, ws_port: int) -> Config:
 
 
 @pytest.mark.asyncio
-async def test_e2e_connect_disconnect_creates_and_deletes_paths():
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_e2e_connect_disconnect_creates_and_deletes_paths():
     api_port = get_free_port()
     ws_port = get_free_port()
     async with start_fake_mediamtx_server("127.0.0.1", api_port) as calls:
@@ -155,7 +157,9 @@ async def test_e2e_connect_disconnect_creates_and_deletes_paths():
 
 
 @pytest.mark.asyncio
-async def test_e2e_resilience_on_mediamtx_failure():
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_e2e_resilience_on_mediamtx_failure():
     api_port = get_free_port()
     ws_port = get_free_port()
 

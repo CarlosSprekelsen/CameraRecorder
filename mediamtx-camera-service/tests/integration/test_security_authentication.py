@@ -81,6 +81,7 @@ class TestJWTAuthenticationFlow:
         pytest.skip("MediaMTX API is not responding")
         return False
     
+    @pytest.mark.integration
     def test_jwt_token_generation_and_validation(self, auth_manager, real_mediamtx_service):
         """Test complete JWT token generation and validation flow against real MediaMTX service.
         
@@ -98,6 +99,7 @@ class TestJWTAuthenticationFlow:
         assert result.role == "admin"
         assert result.auth_method == "jwt"
     
+    @pytest.mark.integration
     def test_jwt_token_expiry_validation(self, auth_manager):
         """Test JWT token expiry validation.
         
@@ -118,6 +120,7 @@ class TestJWTAuthenticationFlow:
         assert result.authenticated is False
         assert "expired" in result.error_message.lower()
     
+    @pytest.mark.integration
     def test_jwt_token_tampering_detection(self, auth_manager):
         """Test JWT token tampering detection.
         
@@ -138,6 +141,7 @@ class TestJWTAuthenticationFlow:
             assert result.authenticated is False
             assert result.error_message is not None
     
+    @pytest.mark.integration
     def test_jwt_auto_authentication_fallback(self, auth_manager):
         """Test auto authentication with JWT fallback."""
         # Generate JWT token using existing method
@@ -150,6 +154,7 @@ class TestJWTAuthenticationFlow:
         assert result.user_id == "auto_user"
         assert result.role == "operator"
     
+    @pytest.mark.integration
     def test_jwt_concurrent_authentication(self, auth_manager):
         """Test concurrent JWT authentication requests."""
         # Generate multiple tokens using existing method
@@ -169,6 +174,7 @@ class TestJWTAuthenticationFlow:
             assert result.authenticated is True
             assert result.auth_method == "jwt"
     
+    @pytest.mark.integration
     def test_jwt_performance_benchmark(self, auth_manager):
         """Test JWT authentication performance."""
         # Generate token using existing method
@@ -195,6 +201,7 @@ class TestAuthenticationErrorHandling:
         """Create authentication manager for error testing using non-hardcoded secrets."""
         return get_test_auth_manager()
     
+    @pytest.mark.integration
     def test_authentication_with_empty_token(self, auth_manager):
         """Test authentication with empty token."""
         result = auth_manager.authenticate("", "jwt")
@@ -202,6 +209,7 @@ class TestAuthenticationErrorHandling:
         assert result.error_message is not None
         assert result.auth_method == "jwt"
     
+    @pytest.mark.integration
     def test_authentication_with_none_token(self, auth_manager):
         """Test authentication with None token."""
         result = auth_manager.authenticate(None, "jwt")
@@ -209,6 +217,7 @@ class TestAuthenticationErrorHandling:
         assert result.error_message is not None
         assert result.auth_method == "jwt"
     
+    @pytest.mark.integration
     def test_authentication_with_invalid_auth_type(self, auth_manager):
         """Test authentication with invalid auth type."""
         token = auth_manager.generate_jwt_token("test_user", "viewer")
@@ -218,6 +227,7 @@ class TestAuthenticationErrorHandling:
         assert result.authenticated is True
         assert result.auth_method == "jwt"
     
+    @pytest.mark.integration
     def test_authentication_with_malformed_token(self, auth_manager):
         """Test authentication with malformed JWT token."""
         malformed_token = "not.a.valid.jwt.token"
@@ -239,6 +249,7 @@ class TestRoleBasedAccessControl:
         """Create user factory for RBAC testing."""
         return UserFactory(auth_manager)
     
+    @pytest.mark.integration
     def test_viewer_role_permissions(self, user_factory):
         """Test viewer role permissions."""
         viewer_user = user_factory.create_viewer_user()
@@ -253,6 +264,7 @@ class TestRoleBasedAccessControl:
         assert "start_recording" not in viewer_user["permissions"]
         assert "stop_recording" not in viewer_user["permissions"]
     
+    @pytest.mark.integration
     def test_operator_role_permissions(self, user_factory):
         """Test operator role permissions."""
         operator_user = user_factory.create_operator_user()
@@ -269,6 +281,7 @@ class TestRoleBasedAccessControl:
         assert "delete_camera" not in operator_user["permissions"]
         assert "modify_config" not in operator_user["permissions"]
     
+    @pytest.mark.integration
     def test_admin_role_permissions(self, user_factory):
         """Test admin role permissions."""
         admin_user = user_factory.create_admin_user()

@@ -87,6 +87,7 @@ class TestAPIKeyAuthenticationFlow:
         pytest.skip("MediaMTX API is not responding")
         return False
     
+    @pytest.mark.integration
     def test_api_key_creation_and_storage(self, api_key_handler, real_mediamtx_service):
         """Test API key creation and secure storage against real MediaMTX service.
         
@@ -117,6 +118,7 @@ class TestAPIKeyAuthenticationFlow:
             # MediaMTX API may not support API key auth, but our key management works
             pass
     
+    @pytest.mark.integration
     def test_api_key_validation_and_permission_checking(self, auth_manager):
         """Test API key validation and permission checking."""
         # Create API key
@@ -136,6 +138,7 @@ class TestAPIKeyAuthenticationFlow:
         assert auth_manager.has_permission(result, "operator") is True
         assert auth_manager.has_permission(result, "admin") is False
     
+    @pytest.mark.integration
     def test_api_key_rotation_workflow(self, api_key_handler):
         """Test complete API key rotation workflow."""
         # Create initial key
@@ -164,6 +167,7 @@ class TestAPIKeyAuthenticationFlow:
         assert new_result.name == "Rotation Test Key (rotated)"
         assert new_result.role == "viewer"
     
+    @pytest.mark.integration
     def test_api_key_expired_handling(self, api_key_handler):
         """Test handling of expired API keys."""
         # Create key with short expiry
@@ -178,6 +182,7 @@ class TestAPIKeyAuthenticationFlow:
         result = api_key_handler.validate_api_key(key)
         assert result is None  # Should be rejected
     
+    @pytest.mark.integration
     def test_api_key_concurrent_usage(self, auth_manager):
         """Test concurrent API key usage scenarios."""
         # Create multiple API keys
@@ -198,6 +203,7 @@ class TestAPIKeyAuthenticationFlow:
             assert result.auth_method == "api_key"
             assert result.role == "viewer"
     
+    @pytest.mark.integration
     def test_api_key_invalid_rejection(self, auth_manager):
         """Test rejection of invalid API keys."""
         # Test various invalid keys
@@ -215,6 +221,7 @@ class TestAPIKeyAuthenticationFlow:
             assert result.error_message is not None
             assert result.auth_method == "api_key"
     
+    @pytest.mark.integration
     def test_api_key_auto_authentication_fallback(self, auth_manager):
         """Test auto authentication with API key fallback."""
         # Create API key
@@ -226,6 +233,7 @@ class TestAPIKeyAuthenticationFlow:
         assert result.auth_method == "api_key"
         assert result.role == "operator"
     
+    @pytest.mark.integration
     def test_api_key_performance_benchmark(self, auth_manager):
         """Test API key authentication performance."""
         # Create API key
@@ -243,6 +251,7 @@ class TestAPIKeyAuthenticationFlow:
         # Performance should be under 1ms per authentication
         assert avg_time < 0.001, f"API key authentication too slow: {avg_time:.6f}s per request"
     
+    @pytest.mark.integration
     def test_api_key_storage_persistence(self, temp_storage_file):
         """Test API key storage persistence across instances."""
         # Create first handler and add key
@@ -279,6 +288,7 @@ class TestAPIKeyManagement:
         """Create API key handler for management tests."""
         return APIKeyHandler(temp_storage_file)
     
+    @pytest.mark.integration
     def test_api_key_listing_and_management(self, api_key_handler):
         """Test API key listing and management operations."""
         # Create multiple keys
@@ -300,6 +310,7 @@ class TestAPIKeyManagement:
         for key in keys:
             assert "key_id" not in key  # Sensitive info removed
     
+    @pytest.mark.integration
     def test_api_key_revocation(self, api_key_handler):
         """Test API key revocation functionality."""
         # Create key
@@ -317,6 +328,7 @@ class TestAPIKeyManagement:
         validation_result = api_key_handler.validate_api_key(key)
         assert validation_result is None
     
+    @pytest.mark.integration
     def test_api_key_cleanup_expired_keys(self, api_key_handler):
         """Test cleanup of expired API keys."""
         # Create keys with different expiry times
@@ -337,6 +349,7 @@ class TestAPIKeyManagement:
         assert len(keys) == 1
         assert keys[0]["name"] == "Valid Key"
     
+    @pytest.mark.integration
     def test_api_key_concurrent_operations(self, api_key_handler):
         """Test concurrent API key operations."""
         # Simulate concurrent key creation
@@ -359,6 +372,7 @@ class TestAPIKeyManagement:
         for result in results:
             assert result is not None
     
+    @pytest.mark.integration
     def test_api_key_error_handling(self, api_key_handler):
         """Test API key error handling scenarios."""
         # Test creation with invalid role
@@ -399,6 +413,7 @@ class TestAPIKeySecurity:
         """Create API key handler for security tests."""
         return APIKeyHandler(temp_storage_file)
     
+    @pytest.mark.integration
     def test_api_key_storage_security(self, api_key_handler):
         """Test API key storage security features."""
         # Create key
@@ -417,6 +432,7 @@ class TestAPIKeySecurity:
         # The actual key should not be stored (only hash in real implementation)
         # In our simplified implementation, we don't store the actual key
     
+    @pytest.mark.integration
     def test_api_key_permission_boundaries(self, api_key_handler):
         """Test API key permission boundary enforcement."""
         # Create keys with different roles
@@ -439,6 +455,7 @@ class TestAPIKeySecurity:
         assert operator_result.role in ["viewer", "operator", "admin"]
         assert admin_result.role in ["viewer", "operator", "admin"]
     
+    @pytest.mark.integration
     def test_api_key_brute_force_protection(self, api_key_handler):
         """Test API key brute force protection."""
         # Attempt to validate with various invalid keys
@@ -457,6 +474,7 @@ class TestAPIKeySecurity:
             result = api_key_handler.validate_api_key(invalid_key)
             assert result is None
     
+    @pytest.mark.integration
     def test_api_key_performance_under_load(self, api_key_handler):
         """Test API key performance under load."""
         # Create multiple keys

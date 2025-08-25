@@ -40,8 +40,7 @@ from src.camera_service.config import Config
 from src.camera_service.service_manager import get_correlation_id
 
 
-@pytest.mark.no_collect
-class TestServiceManager(BaseServiceManager):
+class CustomServiceManager(BaseServiceManager):
     """Custom service manager for testing with different health server port."""
     
     async def _start_health_server(self) -> None:
@@ -150,7 +149,7 @@ class TestCameraDisconnectHandlingReal:
     @pytest.fixture
     def real_service_manager(self, real_config):
         """Create real service manager for testing."""
-        return TestServiceManager(real_config)
+        return CustomServiceManager(real_config)
 
     @pytest.fixture
     def real_hybrid_monitor(self, real_config):
