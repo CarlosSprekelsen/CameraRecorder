@@ -1,5 +1,39 @@
 # Project Ground Rules
 
+## 🚨 **CRITICAL: STOP and Authorization Required**
+- **STOP before modifying any code** - Investigate and understand the issue first
+- **Ask for explicit authorization** before making any code changes
+- **No working in isolation** - Coordinate with team before implementation
+- **Present options and recommendations** for team decision
+- **Do not create document over population** - Only create requested reports, do not offer free reports outside the chat unless requested
+
+## 🚨 **CRITICAL: API Documentation is Ground Truth**
+- **API Documentation**: `docs/api/json_rpc_methods.md` is the ONLY source of truth for API behavior
+- **Health Endpoints**: `docs/api/health-endpoints.md` is the ONLY source of truth for health API
+- **NEVER use server implementation as reference** - Only use documented API
+- **Tests must validate against API documentation** - Not against server implementation
+- **If test fails, check API documentation first** - Don't adapt test to broken implementation
+
+## **Ground Truth Enforcement Rules**
+1. **API Documentation is FROZEN** - Changes require formal approval process
+2. **Server Implementation follows API Documentation** - Not the other way around
+3. **Tests validate API compliance** - Not implementation details
+4. **Test failures indicate API/implementation mismatch** - Not test bugs
+5. **No "accommodation" of broken implementations** - Tests do not fix the implementation - it is ok if a test fails, that's their purpose, to find real bugs not accommodate them
+
+## **Real System Testing Over Mocking**
+- **MediaMTX:** Use systemd-managed service, never mock
+- **File System:** Use `tempfile`, never mock
+- **WebSocket:** Use real connections within system
+- **Authentication:** Use real JWT tokens with test secrets
+- **API Keys:** Use test-accessible storage location (`/tmp/test_api_keys.json`)
+
+## **Strategic Mocking Rules**
+**MOCK:** External APIs, time operations, expensive hardware simulation  
+**NEVER MOCK:** MediaMTX service, filesystem, internal WebSocket, JWT auth, config loading
+
+---
+
 ## Context  
 Role-based development with virtual team scaling. These ground rules define single source of truth, decision priorities, and role boundaries for any project.
 
