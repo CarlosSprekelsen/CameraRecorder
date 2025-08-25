@@ -3,42 +3,38 @@
 ⚠️ **MIGRATION PROJECT - DO NOT TOUCH PYTHON SERVER**
 
 ## Project Status
-- **Python server**: `../mediamtx-camera-service/` (PROTECTED - DO NOT MODIFY)
+- **Python server**: `../CameraRecorder/mediamtx-camera-service/` (PROTECTED - DO NOT MODIFY)
 - **This directory**: Go migration workspace only
 - **Purpose**: Zero-risk migration from Python to Go implementation
 
 ## Protection Rules
-1. **NEVER** modify files in `../mediamtx-camera-service/`
-2. **NEVER** run commands that could affect the Python server
-3. **ALWAYS** verify Python server integrity before and after operations
-4. **ONLY** work within this Go project directory
+1. **NEVER** modify files in `../CameraRecorder/mediamtx-camera-service/`
+2. **NEVER** delete or rename the original Python project
+3. **ONLY** work within this Go project directory
+4. **ALWAYS** verify Python server remains untouched after any operations
 
 ## Directory Structure
 ```
-../mediamtx-camera-service/          # ← ORIGINAL PYTHON (UNTOUCHED)
-../mediamtx-camera-service-go/       # ← NEW GO PROJECT (this directory)
-├── README.md                        # This file
-├── go.mod                           # Go dependencies
-├── cmd/server/                      # Go application entry point
-├── internal/                        # Go internal packages
-├── pkg/                            # Go public packages
-├── docs/                           # Migrated documentation
-└── evidence/                        # Clean evidence directory
+~/CameraRecorder/
+├── mediamtx-camera-service/          # ← ORIGINAL PYTHON (UNTOUCHED)
+└── mediamtx-camera-service-go/       # ← NEW GO PROJECT (this directory)
+    ├── cmd/server/                   # Go application entry point
+    ├── internal/                     # Internal Go packages
+    ├── pkg/                         # Public Go packages
+    ├── docs/                        # Migrated documentation
+    └── evidence/                    # Clean evidence directory
 ```
 
 ## Development Guidelines
-- All Go development happens in this directory only
-- Documentation is migrated from Python project with Go-specific updates
-- Business requirements remain the same, only technology stack changes
-- Performance targets are enhanced for Go implementation
+- Copy documentation from Python project and update for Go
+- Maintain identical business requirements and API contracts
+- Update only technology stack references (Python → Go)
+- Preserve all functional specifications
 
-## Verification Commands
-```bash
-# Verify Python server is untouched
-ls ../mediamtx-camera-service/src/  # Should see Python files
+## Next Steps
+1. Copy and update documentation
+2. Implement Go version with same business logic
+3. Maintain API compatibility
+4. Validate against original requirements
 
-# Verify Go project structure
-ls cmd/ internal/ pkg/              # Should see Go directories
-```
-
-**Next Steps**: Begin Go implementation in this isolated environment with zero risk to current Python server.
+**Remember: The Python server must remain completely functional throughout this migration.**
