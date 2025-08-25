@@ -20,7 +20,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 
 | REQ-ID | Description | Priority | Source Reference |
 |--------|-------------|----------|------------------|
-| REQ-TECH-GO-001 | The system SHALL be implemented in Go 1.19+ | Critical | Go Implementation |
+| REQ-TECH-GO-001 | The system SHALL be implemented in Go 1.25.0+ | Critical | Go Implementation |
 | REQ-TECH-GO-002 | The system SHALL use gorilla/websocket for WebSocket implementation | Critical | Go Implementation |
 | REQ-TECH-GO-003 | The system SHALL use golang-jwt/jwt/v4 for JWT authentication | Critical | Go Implementation |
 | REQ-TECH-GO-004 | The system SHALL use golang.org/x/crypto/bcrypt for password hashing | Critical | Go Implementation |
@@ -264,8 +264,8 @@ This document serves as the master requirements register for the MediaMTX Camera
 |--------|-------------|----------|------------------|
 | REQ-DEPLOY-GO-001 | The system SHALL be deployable as a single statically linked binary | Critical | Go Implementation |
 | REQ-DEPLOY-GO-002 | The system SHALL support SystemD service management | Critical | Go Implementation |
-| REQ-DEPLOY-GO-003 | The system SHALL support Docker container deployment | High | Go Implementation |
-| REQ-DEPLOY-GO-004 | The system SHALL support Kubernetes deployment | Medium | Go Implementation |
+| REQ-DEPLOY-GO-003 | The system SHALL support OCI-compatible container deployment | High | Go Implementation |
+| REQ-DEPLOY-GO-004 | The system SHALL support CNCF-compliant orchestration deployment | Medium | Go Implementation |
 | REQ-DEPLOY-GO-005 | The system SHALL provide automated installation scripts | High | Go Implementation |
 | REQ-DEPLOY-GO-006 | The system SHALL provide automated uninstallation scripts | High | Go Implementation |
 | REQ-DEPLOY-GO-007 | The system SHALL support configuration hot-reload | High | Go Implementation |
@@ -311,7 +311,7 @@ This document serves as the master requirements register for the MediaMTX Camera
 ### 8.2 Deployment Benefits
 - **Single Binary:** No runtime dependencies
 - **Static Linking:** Simplified deployment
-- **Container Support:** Efficient Docker images
+- **Container Support:** Efficient OCI-compatible container images
 - **Cross-Platform:** Linux, macOS, Windows support
 - **Resource Efficiency:** Lower memory and CPU requirements
 

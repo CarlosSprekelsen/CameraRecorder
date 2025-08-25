@@ -64,7 +64,7 @@ func (cl *ConfigLoader) LoadConfig(configPath string) (*Config, error) {
 	}
 	
 	// Validate configuration
-	if err := cl.validateConfig(&config); err != nil {
+	if err := validateConfig(&config); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 	
@@ -74,29 +74,28 @@ func (cl *ConfigLoader) LoadConfig(configPath string) (*Config, error) {
 
 // setDefaults sets all default configuration values matching Python defaults.
 func (cl *ConfigLoader) setDefaults() {
-	// Server defaults
+	// Set server defaults
 	cl.viper.SetDefault("server.host", "0.0.0.0")
 	cl.viper.SetDefault("server.port", 8002)
 	cl.viper.SetDefault("server.websocket_path", "/ws")
 	cl.viper.SetDefault("server.max_connections", 100)
-	
-	// MediaMTX defaults
-	cl.viper.SetDefault("mediamtx.host", "localhost")
+
+	// Set MediaMTX defaults
+	cl.viper.SetDefault("mediamtx.host", "127.0.0.1")
 	cl.viper.SetDefault("mediamtx.api_port", 9997)
 	cl.viper.SetDefault("mediamtx.rtsp_port", 8554)
 	cl.viper.SetDefault("mediamtx.webrtc_port", 8889)
 	cl.viper.SetDefault("mediamtx.hls_port", 8888)
-	cl.viper.SetDefault("mediamtx.config_path", "/etc/mediamtx/mediamtx.yml")
+	cl.viper.SetDefault("mediamtx.config_path", "/opt/camera-service/config/mediamtx.yml")
 	cl.viper.SetDefault("mediamtx.recordings_path", "/opt/camera-service/recordings")
 	cl.viper.SetDefault("mediamtx.snapshots_path", "/opt/camera-service/snapshots")
 	
-	// STANAG 4406 codec defaults
-	cl.viper.SetDefault("mediamtx.codec", "libx264")
-	cl.viper.SetDefault("mediamtx.video_profile", "baseline")
-	cl.viper.SetDefault("mediamtx.video_level", "3.0")
-	cl.viper.SetDefault("mediamtx.pixel_format", "yuv420p")
-	cl.viper.SetDefault("mediamtx.bitrate", "600k")
-	cl.viper.SetDefault("mediamtx.preset", "ultrafast")
+	// Codec defaults
+	cl.viper.SetDefault("mediamtx.codec.video_profile", "baseline")
+	cl.viper.SetDefault("mediamtx.codec.video_level", "3.0")
+	cl.viper.SetDefault("mediamtx.codec.pixel_format", "yuv420p")
+	cl.viper.SetDefault("mediamtx.codec.bitrate", "600k")
+	cl.viper.SetDefault("mediamtx.codec.preset", "ultrafast")
 	
 	// Health monitoring defaults
 	cl.viper.SetDefault("mediamtx.health_check_interval", 30)
@@ -116,56 +115,49 @@ func (cl *ConfigLoader) setDefaults() {
 	cl.viper.SetDefault("mediamtx.stream_readiness.check_interval", 0.5)
 	cl.viper.SetDefault("mediamtx.stream_readiness.enable_progress_notifications", true)
 	cl.viper.SetDefault("mediamtx.stream_readiness.graceful_fallback", true)
-	
-	// Camera defaults
+
+	// Set camera defaults
 	cl.viper.SetDefault("camera.poll_interval", 0.1)
-	cl.viper.SetDefault("camera.detection_timeout", 1.0)
-	cl.viper.SetDefault("camera.device_range", []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
+	cl.viper.SetDefault("camera.detection_timeout", 2.0)
+	cl.viper.SetDefault("camera.device_range", []int{0, 9})
 	cl.viper.SetDefault("camera.enable_capability_detection", true)
-	cl.viper.SetDefault("camera.auto_start_streams", false)
+	cl.viper.SetDefault("camera.auto_start_streams", true)
 	cl.viper.SetDefault("camera.capability_timeout", 5.0)
 	cl.viper.SetDefault("camera.capability_retry_interval", 1.0)
 	cl.viper.SetDefault("camera.capability_max_retries", 3)
-	
-	// Logging defaults
+
+	// Set logging defaults
 	cl.viper.SetDefault("logging.level", "INFO")
 	cl.viper.SetDefault("logging.format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-	cl.viper.SetDefault("logging.file_enabled", false)
-	cl.viper.SetDefault("logging.file_path", "/var/log/camera-service/camera-service.log")
+	cl.viper.SetDefault("logging.file_enabled", true)
+	cl.viper.SetDefault("logging.file_path", "/opt/camera-service/logs/camera-service.log")
 	cl.viper.SetDefault("logging.max_file_size", 10485760)
 	cl.viper.SetDefault("logging.backup_count", 5)
 	cl.viper.SetDefault("logging.console_enabled", true)
-	
-	// Recording defaults
+
+	// Set recording defaults
 	cl.viper.SetDefault("recording.enabled", false)
-	cl.viper.SetDefault("recording.auto_record", false)
 	cl.viper.SetDefault("recording.format", "fmp4")
-	cl.viper.SetDefault("recording.quality", "medium")
+	cl.viper.SetDefault("recording.quality", "high")
 	cl.viper.SetDefault("recording.segment_duration", 3600)
 	cl.viper.SetDefault("recording.max_segment_size", 524288000)
 	cl.viper.SetDefault("recording.auto_cleanup", true)
 	cl.viper.SetDefault("recording.cleanup_interval", 86400)
 	cl.viper.SetDefault("recording.max_age", 604800)
 	cl.viper.SetDefault("recording.max_size", 10737418240)
-	cl.viper.SetDefault("recording.max_duration", 3600)
-	cl.viper.SetDefault("recording.cleanup_after_days", 30)
-	cl.viper.SetDefault("recording.rotation_minutes", 30)
-	cl.viper.SetDefault("recording.storage_warn_percent", 80)
-	cl.viper.SetDefault("recording.storage_block_percent", 90)
-	
-	// Snapshot defaults
+
+	// Set snapshots defaults
 	cl.viper.SetDefault("snapshots.enabled", true)
 	cl.viper.SetDefault("snapshots.format", "jpeg")
-	cl.viper.SetDefault("snapshots.quality", 85)
+	cl.viper.SetDefault("snapshots.quality", 90)
 	cl.viper.SetDefault("snapshots.max_width", 1920)
 	cl.viper.SetDefault("snapshots.max_height", 1080)
 	cl.viper.SetDefault("snapshots.auto_cleanup", true)
 	cl.viper.SetDefault("snapshots.cleanup_interval", 3600)
 	cl.viper.SetDefault("snapshots.max_age", 86400)
 	cl.viper.SetDefault("snapshots.max_count", 1000)
-	cl.viper.SetDefault("snapshots.cleanup_after_days", 7)
-	
-	// FFmpeg defaults
+
+	// Set FFmpeg defaults
 	cl.viper.SetDefault("ffmpeg.snapshot.process_creation_timeout", 5.0)
 	cl.viper.SetDefault("ffmpeg.snapshot.execution_timeout", 8.0)
 	cl.viper.SetDefault("ffmpeg.snapshot.internal_timeout", 5000000)
@@ -177,8 +169,19 @@ func (cl *ConfigLoader) setDefaults() {
 	cl.viper.SetDefault("ffmpeg.recording.internal_timeout", 10000000)
 	cl.viper.SetDefault("ffmpeg.recording.retry_attempts", 3)
 	cl.viper.SetDefault("ffmpeg.recording.retry_delay", 2.0)
+
+	// Set notifications defaults
+	cl.viper.SetDefault("notifications.websocket.delivery_timeout", 5.0)
+	cl.viper.SetDefault("notifications.websocket.retry_attempts", 3)
+	cl.viper.SetDefault("notifications.websocket.retry_delay", 1.0)
+	cl.viper.SetDefault("notifications.websocket.max_queue_size", 1000)
+	cl.viper.SetDefault("notifications.websocket.cleanup_interval", 30)
 	
-	// Performance defaults
+	cl.viper.SetDefault("notifications.real_time.camera_status_interval", 1.0)
+	cl.viper.SetDefault("notifications.real_time.recording_progress_interval", 0.5)
+	cl.viper.SetDefault("notifications.real_time.connection_health_check", 10.0)
+
+	// Set performance defaults
 	cl.viper.SetDefault("performance.response_time_targets.snapshot_capture", 2.0)
 	cl.viper.SetDefault("performance.response_time_targets.recording_start", 2.0)
 	cl.viper.SetDefault("performance.response_time_targets.recording_stop", 2.0)

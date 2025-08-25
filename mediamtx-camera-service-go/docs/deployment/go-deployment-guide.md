@@ -15,8 +15,8 @@ Provide comprehensive deployment instructions for the MediaMTX Camera Service Go
 
 ### Deployment Options
 - **Binary Deployment:** Direct binary installation with SystemD service
-- **Container Deployment:** Docker container with orchestration
-- **Cloud Deployment:** Kubernetes deployment for scalable environments
+- **Container Deployment:** OCI-compatible container with orchestration
+- **Cloud Deployment:** CNCF-compliant orchestration deployment for scalable environments
 
 ### System Requirements
 - **Operating System:** Linux (Ubuntu 20.04+ recommended)
@@ -321,8 +321,8 @@ export CAMERA_SERVICE_JWT_SECRET=your-secret-key
 
 ## 5. Container Deployment
 
-### Dockerfile
-Create `Dockerfile`:
+### Containerfile
+Create `Containerfile`:
 ```dockerfile
 # Build stage
 FROM golang:1.19-alpine AS builder
@@ -382,8 +382,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["./mediamtx-camera-service-go"]
 ```
 
-### Docker Compose
-Create `docker-compose.yml`:
+### Container Compose
+Create `compose.yml`:
 ```yaml
 version: '3.8'
 
@@ -433,7 +433,7 @@ volumes:
   logs:
 ```
 
-### Kubernetes Deployment
+### CNCF-Compliant Orchestration Deployment
 Create `k8s/deployment.yaml`:
 ```yaml
 apiVersion: apps/v1
@@ -800,6 +800,6 @@ htop -p $(pgrep mediamtx-camera-service-go)
 
 **References:**
 - [SystemD Documentation](https://systemd.io/)
-- [Docker Documentation](https://docs.docker.com/)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [OCI Runtime Specification](https://github.com/opencontainers/runtime-spec)
+- [CNCF Landscape](https://landscape.cncf.io/)
 - [Nginx Documentation](https://nginx.org/en/docs/)

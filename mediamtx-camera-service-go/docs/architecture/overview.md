@@ -240,7 +240,7 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 ## Technology Stack
 
 ### Go Implementation Stack
-- **Camera Service**: Go 1.19+, gorilla/websocket, net/http
+- **Camera Service**: Go 1.25.0+, gorilla/websocket, net/http
 - **Media Server**: MediaMTX (Go binary)
 - **Camera Interface**: V4L2, FFmpeg 6.0+
 - **Protocols**: WebSocket, JSON-RPC 2.0, REST, RTSP, WebRTC, HLS
@@ -248,7 +248,7 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 - **Configuration**: viper, YAML
 - **Logging**: logrus, structured JSON logging
 - **Testing**: testify, built-in testing
-- **Deployment**: Systemd services, Docker, Kubernetes, Linux (Ubuntu 22.04+)
+- **Deployment**: Systemd services, OCI-compatible containers, CNCF-compliant orchestration, Linux (Ubuntu 22.04+)
 - **Monitoring**: Prometheus metrics, structured JSON logging
 
 ### Performance Improvements
@@ -410,7 +410,7 @@ The system implements power-efficient on-demand stream activation:
 ### Decision AD-GO-001: Go Language Selection
 **Date**: 2025-01-15  
 **Components**: Technology Stack  
-**Decision**: Use Go 1.19+ as the primary implementation language for the MediaMTX Camera Service.  
+**Decision**: Use Go 1.25.0+ as the primary implementation language for the MediaMTX Camera Service.  
 **Rationale**: Balance performance improvements with maintainability. Go provides 5x performance improvement, 10x concurrency improvement, and 50% resource reduction while maintaining full API compatibility.  
 **IV&V Reference**: Architecture Decisions v7, item 1
 
@@ -473,8 +473,8 @@ The system implements power-efficient on-demand stream activation:
 ### Decision AD-GO-010: Build and Deployment Strategy
 **Date**: 2025-01-15  
 **Components**: Build System, Deployment  
-**Decision**: Use Make for build automation with static linking and multi-stage Docker builds.  
-**Rationale**: Static linking eliminates runtime dependencies. Multi-stage Docker builds provide efficient container images. Make provides simple and effective build automation.  
+**Decision**: Use Make for build automation with static linking and multi-stage OCI container builds.
+**Rationale**: Static linking eliminates runtime dependencies. Multi-stage OCI container builds provide efficient container images. Make provides simple and effective build automation.  
 **IV&V Reference**: Architecture Decisions v7, item 10
 
 ### Decision AD-GO-011: Performance Optimization Strategy
@@ -510,7 +510,7 @@ The system implements power-efficient on-demand stream activation:
 - Breaking change handling: Version-specific adapter pattern
 
 **Go Version Requirements**:
-- Minimum supported: Go 1.19
+- Minimum supported: Go 1.25.0
 - Target version: Latest stable Go version
 - Compatibility testing required for major Go version updates
 - Breaking change handling: Version-specific adapter pattern

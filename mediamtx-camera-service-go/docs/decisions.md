@@ -21,7 +21,7 @@ Track architectural and technical decisions for the MediaMTX Camera Service Go i
 The project requires a high-performance implementation to replace the Python version while maintaining full API compatibility. Performance targets include 5x response time improvement and 10x concurrency improvement.
 
 **Decision:**  
-Use Go 1.19+ as the primary implementation language for the MediaMTX Camera Service.
+Use Go 1.25.0+ as the primary implementation language for the MediaMTX Camera Service.
 
 **Rationale:**
 - **Performance:** Go provides near-native performance with garbage collection
@@ -301,13 +301,13 @@ Use Go's built-in testing package with testify for assertions and test utilities
 The service requires efficient build process and multiple deployment options (binary, container, cloud).
 
 **Decision:**  
-Use Make for build automation with static linking and multi-stage Docker builds.
+Use Make for build automation with static linking and multi-stage OCI container builds.
 
 **Rationale:**
 - **Make:** Simple and effective build automation
 - **Static Linking:** Single binary deployment without dependencies
-- **Docker:** Container deployment for consistency and portability
-- **Multi-stage:** Efficient Docker builds with minimal runtime image
+- **OCI Containers:** Container deployment for consistency and portability
+- **Multi-stage:** Efficient OCI container builds with minimal runtime image
 - **Flexibility:** Supports multiple deployment targets
 
 **Consequences:**
@@ -317,7 +317,7 @@ Use Make for build automation with static linking and multi-stage Docker builds.
 
 **Evidence:**
 - Static linking eliminates runtime dependencies
-- Multi-stage Docker builds provide efficient container images
+- Multi-stage OCI container builds provide efficient container images
 - Make provides simple and effective build automation
 
 ---

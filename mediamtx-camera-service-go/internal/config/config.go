@@ -14,6 +14,7 @@ type Config struct {
 	Recording   RecordingConfig   `mapstructure:"recording"`
 	Snapshots   SnapshotConfig    `mapstructure:"snapshots"`
 	FFmpeg      FFmpegConfig      `mapstructure:"ffmpeg"`
+	Notifications NotificationsConfig `mapstructure:"notifications"`
 	Performance PerformanceConfig `mapstructure:"performance"`
 }
 
@@ -23,6 +24,25 @@ type ServerConfig struct {
 	Port           int    `mapstructure:"port"`
 	WebSocketPath  string `mapstructure:"websocket_path"`
 	MaxConnections int    `mapstructure:"max_connections"`
+}
+
+// CodecConfig represents STANAG 4406 H.264 codec configuration.
+type CodecConfig struct {
+	VideoProfile string `mapstructure:"video_profile"`
+	VideoLevel   string `mapstructure:"video_level"`
+	PixelFormat  string `mapstructure:"pixel_format"`
+	Bitrate      string `mapstructure:"bitrate"`
+	Preset       string `mapstructure:"preset"`
+}
+
+// StreamReadinessConfig represents stream readiness configuration.
+type StreamReadinessConfig struct {
+	Timeout                    float64 `mapstructure:"timeout"`
+	RetryAttempts              int     `mapstructure:"retry_attempts"`
+	RetryDelay                 float64 `mapstructure:"retry_delay"`
+	CheckInterval              float64 `mapstructure:"check_interval"`
+	EnableProgressNotifications bool    `mapstructure:"enable_progress_notifications"`
+	GracefulFallback           bool    `mapstructure:"graceful_fallback"`
 }
 
 // MediaMTXConfig represents MediaMTX integration configuration.
@@ -37,12 +57,7 @@ type MediaMTXConfig struct {
 	SnapshotsPath                      string                `mapstructure:"snapshots_path"`
 	
 	// STANAG 4406 H.264 codec configuration
-	Codec                              string                `mapstructure:"codec"`
-	VideoProfile                       string                `mapstructure:"video_profile"`
-	VideoLevel                         string                `mapstructure:"video_level"`
-	PixelFormat                        string                `mapstructure:"pixel_format"`
-	Bitrate                            string                `mapstructure:"bitrate"`
-	Preset                             string                `mapstructure:"preset"`
+	Codec                              CodecConfig           `mapstructure:"codec"`
 	
 	// Health monitoring configuration
 	HealthCheckInterval                int                   `mapstructure:"health_check_interval"`
@@ -57,16 +72,6 @@ type MediaMTXConfig struct {
 	
 	// Stream readiness configuration
 	StreamReadiness                    StreamReadinessConfig `mapstructure:"stream_readiness"`
-}
-
-// StreamReadinessConfig represents stream readiness configuration.
-type StreamReadinessConfig struct {
-	Timeout                    float64 `mapstructure:"timeout"`
-	RetryAttempts              int     `mapstructure:"retry_attempts"`
-	RetryDelay                 float64 `mapstructure:"retry_delay"`
-	CheckInterval              float64 `mapstructure:"check_interval"`
-	EnableProgressNotifications bool    `mapstructure:"enable_progress_notifications"`
-	GracefulFallback           bool    `mapstructure:"graceful_fallback"`
 }
 
 // CameraConfig represents camera detection and monitoring configuration.
@@ -95,7 +100,6 @@ type LoggingConfig struct {
 // RecordingConfig represents recording configuration settings.
 type RecordingConfig struct {
 	Enabled             bool   `mapstructure:"enabled"`
-	AutoRecord          bool   `mapstructure:"auto_record"`
 	Format              string `mapstructure:"format"`
 	Quality             string `mapstructure:"quality"`
 	SegmentDuration     int    `mapstructure:"segment_duration"`
@@ -104,13 +108,6 @@ type RecordingConfig struct {
 	CleanupInterval     int    `mapstructure:"cleanup_interval"`
 	MaxAge              int    `mapstructure:"max_age"`
 	MaxSize             int    `mapstructure:"max_size"`
-	MaxDuration         int    `mapstructure:"max_duration"`
-	CleanupAfterDays    int    `mapstructure:"cleanup_after_days"`
-	
-	// Recording Management Configuration
-	RotationMinutes     int    `mapstructure:"rotation_minutes"`
-	StorageWarnPercent  int    `mapstructure:"storage_warn_percent"`
-	StorageBlockPercent int    `mapstructure:"storage_block_percent"`
 }
 
 // SnapshotConfig represents snapshot configuration settings.
@@ -124,13 +121,6 @@ type SnapshotConfig struct {
 	CleanupInterval int    `mapstructure:"cleanup_interval"`
 	MaxAge          int    `mapstructure:"max_age"`
 	MaxCount        int    `mapstructure:"max_count"`
-	CleanupAfterDays int   `mapstructure:"cleanup_after_days"`
-}
-
-// FFmpegConfig represents FFmpeg configuration settings.
-type FFmpegConfig struct {
-	Snapshot  FFmpegOperationConfig `mapstructure:"snapshot"`
-	Recording FFmpegOperationConfig `mapstructure:"recording"`
 }
 
 // FFmpegOperationConfig represents FFmpeg operation configuration.
@@ -142,11 +132,32 @@ type FFmpegOperationConfig struct {
 	RetryDelay             float64 `mapstructure:"retry_delay"`
 }
 
-// PerformanceConfig represents performance configuration settings.
-type PerformanceConfig struct {
-	ResponseTimeTargets ResponseTimeTargets `mapstructure:"response_time_targets"`
-	SnapshotTiers       SnapshotTiers       `mapstructure:"snapshot_tiers"`
-	Optimization        OptimizationConfig  `mapstructure:"optimization"`
+// FFmpegConfig represents FFmpeg configuration settings.
+type FFmpegConfig struct {
+	Snapshot  FFmpegOperationConfig `mapstructure:"snapshot"`
+	Recording FFmpegOperationConfig `mapstructure:"recording"`
+}
+
+// WebSocketNotificationConfig represents WebSocket notification configuration.
+type WebSocketNotificationConfig struct {
+	DeliveryTimeout   float64 `mapstructure:"delivery_timeout"`
+	RetryAttempts     int     `mapstructure:"retry_attempts"`
+	RetryDelay        float64 `mapstructure:"retry_delay"`
+	MaxQueueSize      int     `mapstructure:"max_queue_size"`
+	CleanupInterval   int     `mapstructure:"cleanup_interval"`
+}
+
+// RealTimeNotificationConfig represents real-time notification configuration.
+type RealTimeNotificationConfig struct {
+	CameraStatusInterval       float64 `mapstructure:"camera_status_interval"`
+	RecordingProgressInterval  float64 `mapstructure:"recording_progress_interval"`
+	ConnectionHealthCheck      float64 `mapstructure:"connection_health_check"`
+}
+
+// NotificationsConfig represents notification configuration.
+type NotificationsConfig struct {
+	WebSocket WebSocketNotificationConfig `mapstructure:"websocket"`
+	RealTime  RealTimeNotificationConfig  `mapstructure:"real_time"`
 }
 
 // ResponseTimeTargets represents response time target configuration.
@@ -175,6 +186,13 @@ type OptimizationConfig struct {
 	CacheTTL                int  `mapstructure:"cache_ttl"`
 	MaxConcurrentOperations int  `mapstructure:"max_concurrent_operations"`
 	ConnectionPoolSize      int  `mapstructure:"connection_pool_size"`
+}
+
+// PerformanceConfig represents performance configuration settings.
+type PerformanceConfig struct {
+	ResponseTimeTargets ResponseTimeTargets `mapstructure:"response_time_targets"`
+	SnapshotTiers       SnapshotTiers       `mapstructure:"snapshot_tiers"`
+	Optimization        OptimizationConfig  `mapstructure:"optimization"`
 }
 
 // String returns a string representation of the configuration for debugging.

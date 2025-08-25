@@ -29,30 +29,30 @@ func TestLoadConfigWithDefaults(t *testing.T) {
 	assert.Equal(t, "/ws", config.Server.WebSocketPath)
 	assert.Equal(t, 100, config.Server.MaxConnections)
 	
-	assert.Equal(t, "localhost", config.MediaMTX.Host)
+	assert.Equal(t, "127.0.0.1", config.MediaMTX.Host)
 	assert.Equal(t, 9997, config.MediaMTX.APIPort)
 	assert.Equal(t, 8554, config.MediaMTX.RTSPPort)
 	assert.Equal(t, 8889, config.MediaMTX.WebRTCPort)
 	assert.Equal(t, 8888, config.MediaMTX.HLSPort)
 	
 	assert.Equal(t, 0.1, config.Camera.PollInterval)
-	assert.Equal(t, 1.0, config.Camera.DetectionTimeout)
-	assert.Equal(t, []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, config.Camera.DeviceRange)
+	assert.Equal(t, 2.0, config.Camera.DetectionTimeout)
+	assert.Equal(t, []int{0, 9}, config.Camera.DeviceRange)
 	assert.True(t, config.Camera.EnableCapabilityDetection)
-	assert.False(t, config.Camera.AutoStartStreams)
+	assert.True(t, config.Camera.AutoStartStreams)
 	
 	assert.Equal(t, "INFO", config.Logging.Level)
-	assert.False(t, config.Logging.FileEnabled)
+	assert.True(t, config.Logging.FileEnabled)
 	assert.True(t, config.Logging.ConsoleEnabled)
 	
 	assert.False(t, config.Recording.Enabled)
-	assert.False(t, config.Recording.AutoRecord)
+	// AutoRecord field removed from Python YAML structure
 	assert.Equal(t, "fmp4", config.Recording.Format)
-	assert.Equal(t, "medium", config.Recording.Quality)
+	assert.Equal(t, "high", config.Recording.Quality)
 	
 	assert.True(t, config.Snapshots.Enabled)
 	assert.Equal(t, "jpeg", config.Snapshots.Format)
-	assert.Equal(t, 85, config.Snapshots.Quality)
+	assert.Equal(t, 90, config.Snapshots.Quality)
 }
 
 func TestLoadConfigFromFile(t *testing.T) {
@@ -85,7 +85,7 @@ func TestLoadConfigFromFile(t *testing.T) {
 	assert.False(t, config.Logging.ConsoleEnabled)
 	
 	assert.True(t, config.Recording.Enabled)
-	assert.True(t, config.Recording.AutoRecord)
+	// AutoRecord field removed from Python YAML structure
 	assert.Equal(t, "mp4", config.Recording.Format)
 	assert.Equal(t, "high", config.Recording.Quality)
 	
@@ -113,8 +113,7 @@ func TestEnvironmentVariableOverrides(t *testing.T) {
 		os.Unsetenv("CAMERA_SERVICE_SNAPSHOTS_ENABLED")
 	}()
 	
-	loader := NewConfigLoader()
-	config, err := loader.LoadConfig("non-existent-file.yaml")
+	config, err := NewConfigLoader().LoadConfig("non-existent-file.yaml")
 	require.NoError(t, err)
 	assert.NotNil(t, config)
 	
@@ -129,7 +128,6 @@ func TestEnvironmentVariableOverrides(t *testing.T) {
 }
 
 func TestConfigValidation(t *testing.T) {
-	loader := NewConfigLoader()
 	
 	// Test invalid port
 	config := &Config{
@@ -163,7 +161,7 @@ func TestConfigValidation(t *testing.T) {
 		},
 	}
 	
-	err := loader.validateConfig(config)
+	err := validateConfig(config)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "port must be between 1 and 65535")
 	
@@ -199,7 +197,7 @@ func TestConfigValidation(t *testing.T) {
 		},
 	}
 	
-	err = loader.validateConfig(config)
+	err = validateConfig(config)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid logging level")
 	
@@ -235,7 +233,7 @@ func TestConfigValidation(t *testing.T) {
 		},
 	}
 	
-	err = loader.validateConfig(config)
+	err = validateConfig(config)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid recording format")
 	
@@ -271,7 +269,7 @@ func TestConfigValidation(t *testing.T) {
 		},
 	}
 	
-	err = loader.validateConfig(config)
+	err = validateConfig(config)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "snapshot quality must be between 1 and 100")
 }
@@ -382,4 +380,555 @@ snapshots:
 	require.NoError(t, err)
 	
 	return tempFile
+}
+
+// Edge case tests for IV&V validation requirements
+func TestPortBoundaryValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		port        int
+		expectValid bool
+	}{
+		{"minimum valid port", 1, true},
+		{"maximum valid port", 65535, true},
+		{"zero port", 0, false},
+		{"negative port", -1, false},
+		{"port too high", 65536, false},
+		{"port way too high", 99999, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Config{
+				Server: ServerConfig{Port: tt.port, Host: "localhost", WebSocketPath: "/ws", MaxConnections: 100},
+			}
+			err := validateConfig(config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestInvalidYAMLHandling(t *testing.T) {
+	// Test with malformed YAML
+	loader := NewConfigLoader()
+	
+	// Create a temporary file with invalid YAML
+	tempFile := t.TempDir() + "/invalid.yaml"
+	err := os.WriteFile(tempFile, []byte(`
+server:
+  host: "localhost"
+  port: invalid_port
+  - invalid: yaml: structure
+`), 0644)
+	require.NoError(t, err)
+
+	_, err = loader.LoadConfig(tempFile)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config file")
+}
+
+func TestEnvironmentVariableEdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		envVar      string
+		envValue    string
+		expectValid bool
+	}{
+		{"empty host", "CAMERA_SERVICE_SERVER_HOST", "", false},
+		{"whitespace host", "CAMERA_SERVICE_SERVER_HOST", "   ", false},
+		{"invalid host format", "CAMERA_SERVICE_SERVER_HOST", "invalid@host", false},
+		{"valid host", "CAMERA_SERVICE_SERVER_HOST", "localhost", true},
+		{"valid IP", "CAMERA_SERVICE_SERVER_HOST", "127.0.0.1", true},
+		{"negative port", "CAMERA_SERVICE_SERVER_PORT", "-1", false},
+		{"zero port", "CAMERA_SERVICE_SERVER_PORT", "0", false},
+		{"valid port", "CAMERA_SERVICE_SERVER_PORT", "8080", true},
+		{"port too high", "CAMERA_SERVICE_SERVER_PORT", "65536", false},
+		{"non-numeric port", "CAMERA_SERVICE_SERVER_PORT", "abc", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variable
+			os.Setenv(tt.envVar, tt.envValue)
+			defer os.Unsetenv(tt.envVar)
+
+			loader := NewConfigLoader()
+			config, err := loader.LoadConfig("non-existent-file.yaml")
+
+			if tt.expectValid {
+				assert.NoError(t, err)
+				assert.NotNil(t, config)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestValidationEdgeCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "empty server host",
+			config: &Config{
+				Server: ServerConfig{Host: "", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server host cannot be empty",
+		},
+		{
+			name: "whitespace server host",
+			config: &Config{
+				Server: ServerConfig{Host: "   ", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server host cannot be empty",
+		},
+		{
+			name: "invalid server host format",
+			config: &Config{
+				Server: ServerConfig{Host: "invalid@host", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "invalid server host format",
+		},
+		{
+			name: "negative server port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: -1, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "zero server port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 0, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "server port too high",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 65536, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server port must be between 1 and 65535",
+		},
+		{
+			name: "empty websocket path",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "websocket path cannot be empty",
+		},
+		{
+			name: "negative max connections",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: -1},
+			},
+			expectValid: false,
+			errorMsg:    "max connections must be positive",
+		},
+		{
+			name: "zero max connections",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 0},
+			},
+			expectValid: false,
+			errorMsg:    "max connections must be positive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestCrossFieldValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "server port conflicts with MediaMTX API port",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{APIPort: 8080},
+			},
+			expectValid: false,
+			errorMsg:    "server port conflicts with MediaMTX API port",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestTypeValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "invalid video profile",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{Codec: CodecConfig{VideoProfile: "invalid_profile"}},
+			},
+			expectValid: false,
+			errorMsg:    "invalid video profile",
+		},
+		{
+			name: "invalid video level",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				MediaMTX: MediaMTXConfig{Codec: CodecConfig{VideoLevel: "invalid_level"}},
+			},
+			expectValid: false,
+			errorMsg:    "invalid video level",
+		},
+		{
+			name: "invalid log level",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Logging: LoggingConfig{Level: "invalid_level"},
+			},
+			expectValid: false,
+			errorMsg:    "invalid log level",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestBoundaryValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+	}{
+		{
+			name: "minimum valid values",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 1, WebSocketPath: "/ws", MaxConnections: 1},
+				Camera: CameraConfig{PollInterval: 0.01, DetectionTimeout: 0.1, DeviceRange: []int{0}},
+			},
+			expectValid: true,
+		},
+		{
+			name: "maximum valid values",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 65535, WebSocketPath: "/ws", MaxConnections: 10000},
+				Camera: CameraConfig{PollInterval: 1.0, DetectionTimeout: 10.0, DeviceRange: []int{10}},
+			},
+			expectValid: true,
+		},
+		{
+			name: "exceed maximum values",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 65536, WebSocketPath: "/ws", MaxConnections: 10001},
+			},
+			expectValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestEmptyArraysAndStrings(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+	}{
+		{
+			name: "empty camera device range",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Camera: CameraConfig{DeviceRange: []int{}},
+			},
+			expectValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestUnicodeAndSpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+	}{
+		{
+			name: "unicode host name",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost-测试", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestVeryLargeValues(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+	}{
+		{
+			name: "very large port numbers",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 999999, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestMissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *Config
+		expectValid bool
+		errorMsg    string
+	}{
+		{
+			name: "missing server host",
+			config: &Config{
+				Server: ServerConfig{Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+			},
+			expectValid: false,
+			errorMsg:    "server host cannot be empty",
+		},
+		{
+			name: "missing camera device range",
+			config: &Config{
+				Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+				Camera: CameraConfig{},
+			},
+			expectValid: false,
+			errorMsg:    "device_range cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateConfig(tt.config)
+			if tt.expectValid {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			}
+		})
+	}
+}
+
+// Performance benchmarks for IV&V validation
+func BenchmarkConfigLoadingLegacy(b *testing.B) {
+	loader := NewConfigLoader()
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := loader.LoadConfig("non-existent-file.yaml")
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkValidationLegacy(b *testing.B) {
+	config := &Config{
+		Server: ServerConfig{Host: "localhost", Port: 8080, WebSocketPath: "/ws", MaxConnections: 100},
+		MediaMTX: MediaMTXConfig{
+			Codec: CodecConfig{
+				VideoProfile: "baseline",
+				VideoLevel:   "3.1",
+				PixelFormat:  "yuv420p",
+				Preset:       "medium",
+			},
+		},
+		Camera: CameraConfig{
+			PollInterval:     1.0,
+			DetectionTimeout: 5.0,
+			DeviceRange:      []int{0, 1, 2},
+		},
+		Logging: LoggingConfig{Level: "info", Format: "json"},
+		Recording: RecordingConfig{
+			Enabled:         true,
+			Format:          "mp4",
+			Quality:         "high",
+			SegmentDuration: 60,
+		},
+		Snapshots: SnapshotConfig{
+			Enabled:  true,
+			Format:   "jpg",
+			Quality:  90,
+			MaxWidth: 1920,
+		},
+		FFmpeg: FFmpegConfig{
+			Snapshot: FFmpegOperationConfig{
+				ProcessCreationTimeout: 5.0,
+				ExecutionTimeout:       30.0,
+				InternalTimeout:        60,
+			},
+			Recording: FFmpegOperationConfig{
+				ProcessCreationTimeout: 5.0,
+				ExecutionTimeout:       30.0,
+				InternalTimeout:        60,
+			},
+		},
+		Performance: PerformanceConfig{
+			ResponseTimeTargets: ResponseTimeTargets{
+				SnapshotCapture: 1.0,
+				RecordingStart:  2.0,
+				RecordingStop:   1.0,
+				FileListing:     0.5,
+			},
+			SnapshotTiers: SnapshotTiers{
+				Tier1USBDirectTimeout:         0.1,
+				Tier2RTSPReadyCheckTimeout:    0.5,
+				Tier3ActivationTimeout:        1.0,
+				Tier3ActivationTriggerTimeout: 0.5,
+				TotalOperationTimeout:         5.0,
+				ImmediateResponseThreshold:    0.1,
+				AcceptableResponseThreshold:   1.0,
+				SlowResponseThreshold:         3.0,
+			},
+			Optimization: OptimizationConfig{
+				EnableCaching:           true,
+				CacheTTL:                300,
+				MaxConcurrentOperations: 10,
+				ConnectionPoolSize:      5,
+			},
+		},
+	}
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := validateConfig(config)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkEnvironmentVariableOverridesLegacy(b *testing.B) {
+	// Set environment variables
+	os.Setenv("CAMERA_SERVICE_SERVER_HOST", "localhost")
+	os.Setenv("CAMERA_SERVICE_SERVER_PORT", "8080")
+	os.Setenv("CAMERA_SERVICE_MEDIAMTX_API_PORT", "8081")
+	defer func() {
+		os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
+		os.Unsetenv("CAMERA_SERVICE_SERVER_PORT")
+		os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
+	}()
+
+	loader := NewConfigLoader()
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := loader.LoadConfig("non-existent-file.yaml")
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Test GetViper method for 100% coverage
+func TestGetViper(t *testing.T) {
+	loader := NewConfigLoader()
+	viper := loader.GetViper()
+	assert.NotNil(t, viper)
 }
