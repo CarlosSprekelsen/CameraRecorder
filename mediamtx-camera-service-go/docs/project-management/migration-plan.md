@@ -44,7 +44,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **✅ T1.1.6**: IV&V validate configuration system (IV&V)
 - **✅ T1.1.7**: PM approve foundation completion (PM)
 
-**Control Point**: Configuration system must load all settings from Python equivalent  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Configuration system must load all settings from Python equivalent, no vilation of rules  
 **Status**: ✅ PASSED - All configuration sections implemented and functional  
 **Remediation**: 1 sprint allowed, must demonstrate functional equivalence  
 **Evidence**: Configuration loading tests, schema validation tests  
@@ -60,8 +61,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T1.2.7**: IV&V validate logging system (IV&V)
 - **T1.2.8**: PM approve logging completion (PM)
 
-
-**Control Point**: Logging must produce identical format to Python system  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Logging must produce identical format to Python system, no rules violation  
 **Remediation**: 1 sprint allowed, must demonstrate format compatibility  
 **Evidence**: Log format comparison tests, correlation ID tests  
 
@@ -101,9 +102,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T2.1.10**: **ARCHITECTURE TASK**: IV&V validate architectural compliance (IV&V) - *ensure proper integration*
 - **T2.1.11**: **ARCHITECTURE TASK**: PM approve integration completion (PM)
 
-**Control Point**: Must detect same cameras as Python system with <200ms latency  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Must detect same cameras as Python system with <200ms latency, no violation of rules
 **Remediation**: 1 sprint allowed, must meet performance targets  
-**Evidence**: Camera detection tests, performance benchmarks  
+**Evidence**: Camera detection tests, performance benchmarks
+
 
 #### **Story S2.2: Camera Monitor Service**
 **Tasks**:
@@ -120,7 +123,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T2.2.11**: **ARCHITECTURE TASK**: IV&V validate monitoring integration (IV&V)
 - **T2.2.12**: **ARCHITECTURE TASK**: PM approve monitoring integration (PM)
 
-**Control Point**: Must handle connect/disconnect events with <20ms notification  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Must handle connect/disconnect events with <20ms notification, no violation of rules  
 **Remediation**: 1 sprint allowed, must demonstrate event handling  
 **Evidence**: Event handling tests, notification latency tests  
 
@@ -148,7 +152,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T3.1.11**: **ARCHITECTURE TASK**: IV&V validate WebSocket integration (IV&V)
 - **T3.1.12**: **ARCHITECTURE TASK**: PM approve WebSocket integration (PM)
 
-**Control Point**: Must handle 1000+ concurrent connections  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Must handle 1000+ concurrent connections, no violation of rules  
 **Remediation**: 1 sprint allowed, must meet concurrency targets  
 **Evidence**: Connection stress tests, performance benchmarks  
 
@@ -167,7 +172,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T3.2.11**: **ARCHITECTURE TASK**: IV&V validate method integration (IV&V)
 - **T3.2.12**: **ARCHITECTURE TASK**: PM approve method integration (PM)
 
-**Control Point**: All methods must return identical responses to Python system  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: All methods must return identical responses to Python system, no violation of rules  
 **Remediation**: 1 sprint allowed, must demonstrate API compatibility  
 **Evidence**: API compatibility tests, response format validation  
 
@@ -195,7 +201,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T4.1.11**: **ARCHITECTURE TASK**: IV&V validate MediaMTX integration (IV&V)
 - **T4.1.12**: **ARCHITECTURE TASK**: PM approve MediaMTX integration (PM)
 
-**Control Point**: Must create paths in <100ms with FFmpeg integration  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Must create paths in <100ms with FFmpeg integration, no violation of rules  
 **Remediation**: 1 sprint allowed, must meet performance targets  
 **Evidence**: Path creation tests, FFmpeg integration tests  
 
@@ -210,7 +217,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T4.2.7**: Implement `get_streams` method (existing undocumented feature) (Developer) - *reference Python get_streams implementation*
 - **T4.2.8**: Complete API documentation for `get_streams` method (Developer)
 
-**Control Point**: Must provide identical stream URLs to Python system  
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
+**Control Point**: Must provide identical stream URLs to Python system, no violation of rules  
 **Remediation**: 1 sprint allowed, must demonstrate stream compatibility  
 **Evidence**: Stream URL tests, get_streams method tests, API documentation completeness  
 
