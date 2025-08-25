@@ -84,23 +84,23 @@ performance:
   
   # Multi-tier snapshot capture configuration for optimal user experience
   snapshot_tiers:
-          # Tier 1: USB direct capture (fastest for USB container)
-          tier1_usb_direct_timeout: 0.5          # seconds - Timeout for direct USB camera capture
-          
-          # Tier 2: RTSP immediate capture (when stream is already ready)
-          tier2_rtsp_ready_check_timeout: 1.0    # seconds - Quick check if RTSP stream is ready
-          
-          # Tier 3: RTSP stream activation (when RTSP needs to be started)
-          tier3_activation_timeout: 3.0          # seconds - Time to wait for stream activation
-          tier3_activation_trigger_timeout: 1.0  # seconds - Timeout for triggering activation
-          
-          # Overall snapshot operation timeout
-          total_operation_timeout: 10.0          # seconds - Maximum total time for snapshot operation
-          
-          # User experience thresholds
-          immediate_response_threshold: 0.5      # seconds - Consider response "immediate" if under this
-          acceptable_response_threshold: 2.0     # seconds - Consider response "acceptable" if under this
-          slow_response_threshold: 5.0           # seconds - Consider response "slow" if over this
+    # Tier 1: USB direct capture (fastest for USB container)
+    tier1_usb_direct_timeout: 0.5          # seconds - Timeout for direct USB camera capture
+    
+    # Tier 2: RTSP immediate capture (when stream is already ready)
+    tier2_rtsp_ready_check_timeout: 1.0    # seconds - Quick check if RTSP stream is ready
+    
+    # Tier 3: RTSP stream activation (when RTSP needs to be started)
+    tier3_activation_timeout: 3.0          # seconds - Time to wait for stream activation
+    tier3_activation_trigger_timeout: 1.0  # seconds - Timeout for triggering activation
+    
+    # Overall snapshot operation timeout
+    total_operation_timeout: 10.0          # seconds - Maximum total time for snapshot operation
+    
+    # User experience thresholds
+    immediate_response_threshold: 0.5      # seconds - Consider response "immediate" if under this
+    acceptable_response_threshold: 2.0     # seconds - Consider response "acceptable" if under this
+    slow_response_threshold: 5.0           # seconds - Consider response "slow" if over this
   
   optimization:
     enable_caching: true

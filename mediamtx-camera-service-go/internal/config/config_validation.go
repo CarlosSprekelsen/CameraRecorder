@@ -1,0 +1,583 @@
+package config
+
+import (
+	"fmt"
+	"strings"
+)
+
+// ValidationError represents a configuration validation error.
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("validation error for field '%s': %s", e.Field, e.Message)
+}
+
+// ValidateConfig performs comprehensive validation of the configuration.
+func ValidateConfig(config *Config) error {
+	var errors []error
+
+	// Validate each configuration section
+	if err := validateServerConfig(&config.Server); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateMediaMTXConfig(&config.MediaMTX); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateCameraConfig(&config.Camera); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateLoggingConfig(&config.Logging); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateRecordingConfig(&config.Recording); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateSnapshotConfig(&config.Snapshots); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateFFmpegConfig(&config.FFmpeg); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateNotificationsConfig(&config.Notifications); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validatePerformanceConfig(&config.Performance); err != nil {
+		errors = append(errors, err)
+	}
+
+	// Return combined errors if any
+	if len(errors) > 0 {
+		return &ValidationError{
+			Field:   "config",
+			Message: fmt.Sprintf("configuration validation failed: %v", errors),
+		}
+	}
+
+	return nil
+}
+
+// validateServerConfig validates server configuration.
+func validateServerConfig(config *ServerConfig) error {
+	if config.Host == "" {
+		return &ValidationError{Field: "server.host", Message: "host cannot be empty"}
+	}
+
+	if config.Port <= 0 || config.Port > 65535 {
+		return &ValidationError{Field: "server.port", Message: fmt.Sprintf("port must be between 1 and 65535, got %d", config.Port)}
+	}
+
+	if config.WebSocketPath == "" {
+		return &ValidationError{Field: "server.websocket_path", Message: "websocket path cannot be empty"}
+	}
+
+	if !strings.HasPrefix(config.WebSocketPath, "/") {
+		return &ValidationError{Field: "server.websocket_path", Message: "websocket path must start with '/'"}
+	}
+
+	if config.MaxConnections <= 0 {
+		return &ValidationError{Field: "server.max_connections", Message: fmt.Sprintf("max connections must be positive, got %d", config.MaxConnections)}
+	}
+
+	return nil
+}
+
+// validateMediaMTXConfig validates MediaMTX configuration.
+func validateMediaMTXConfig(config *MediaMTXConfig) error {
+	if config.Host == "" {
+		return &ValidationError{Field: "mediamtx.host", Message: "host cannot be empty"}
+	}
+
+	if config.APIPort <= 0 || config.APIPort > 65535 {
+		return &ValidationError{Field: "mediamtx.api_port", Message: fmt.Sprintf("API port must be between 1 and 65535, got %d", config.APIPort)}
+	}
+
+	if config.RTSPPort <= 0 || config.RTSPPort > 65535 {
+		return &ValidationError{Field: "mediamtx.rtsp_port", Message: fmt.Sprintf("RTSP port must be between 1 and 65535, got %d", config.RTSPPort)}
+	}
+
+	if config.WebRTCPort <= 0 || config.WebRTCPort > 65535 {
+		return &ValidationError{Field: "mediamtx.webrtc_port", Message: fmt.Sprintf("WebRTC port must be between 1 and 65535, got %d", config.WebRTCPort)}
+	}
+
+	if config.HLSPort <= 0 || config.HLSPort > 65535 {
+		return &ValidationError{Field: "mediamtx.hls_port", Message: fmt.Sprintf("HLS port must be between 1 and 65535, got %d", config.HLSPort)}
+	}
+
+	if config.ConfigPath == "" {
+		return &ValidationError{Field: "mediamtx.config_path", Message: "config path cannot be empty"}
+	}
+
+	if config.RecordingsPath == "" {
+		return &ValidationError{Field: "mediamtx.recordings_path", Message: "recordings path cannot be empty"}
+	}
+
+	if config.SnapshotsPath == "" {
+		return &ValidationError{Field: "mediamtx.snapshots_path", Message: "snapshots path cannot be empty"}
+	}
+
+	// Validate codec configuration
+	if err := validateCodecConfig(&config.Codec); err != nil {
+		return err
+	}
+
+	// Validate health monitoring configuration
+	if config.HealthCheckInterval <= 0 {
+		return &ValidationError{Field: "mediamtx.health_check_interval", Message: fmt.Sprintf("health check interval must be positive, got %d", config.HealthCheckInterval)}
+	}
+
+	if config.HealthFailureThreshold <= 0 {
+		return &ValidationError{Field: "mediamtx.health_failure_threshold", Message: fmt.Sprintf("health failure threshold must be positive, got %d", config.HealthFailureThreshold)}
+	}
+
+	if config.HealthCircuitBreakerTimeout <= 0 {
+		return &ValidationError{Field: "mediamtx.health_circuit_breaker_timeout", Message: fmt.Sprintf("circuit breaker timeout must be positive, got %d", config.HealthCircuitBreakerTimeout)}
+	}
+
+	if config.HealthMaxBackoffInterval <= 0 {
+		return &ValidationError{Field: "mediamtx.health_max_backoff_interval", Message: fmt.Sprintf("max backoff interval must be positive, got %d", config.HealthMaxBackoffInterval)}
+	}
+
+	if config.HealthRecoveryConfirmationThreshold <= 0 {
+		return &ValidationError{Field: "mediamtx.health_recovery_confirmation_threshold", Message: fmt.Sprintf("recovery confirmation threshold must be positive, got %d", config.HealthRecoveryConfirmationThreshold)}
+	}
+
+	if config.BackoffBaseMultiplier <= 0 {
+		return &ValidationError{Field: "mediamtx.backoff_base_multiplier", Message: fmt.Sprintf("backoff base multiplier must be positive, got %f", config.BackoffBaseMultiplier)}
+	}
+
+	if len(config.BackoffJitterRange) != 2 {
+		return &ValidationError{Field: "mediamtx.backoff_jitter_range", Message: "backoff jitter range must have exactly 2 elements"}
+	}
+
+	if config.BackoffJitterRange[0] >= config.BackoffJitterRange[1] {
+		return &ValidationError{Field: "mediamtx.backoff_jitter_range", Message: "backoff jitter range min must be less than max"}
+	}
+
+	if config.ProcessTerminationTimeout <= 0 {
+		return &ValidationError{Field: "mediamtx.process_termination_timeout", Message: fmt.Sprintf("process termination timeout must be positive, got %f", config.ProcessTerminationTimeout)}
+	}
+
+	if config.ProcessKillTimeout <= 0 {
+		return &ValidationError{Field: "mediamtx.process_kill_timeout", Message: fmt.Sprintf("process kill timeout must be positive, got %f", config.ProcessKillTimeout)}
+	}
+
+	// Validate stream readiness configuration
+	if err := validateStreamReadinessConfig(&config.StreamReadiness); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateCodecConfig validates codec configuration.
+func validateCodecConfig(config *CodecConfig) error {
+	validProfiles := []string{"baseline", "main", "high"}
+	if !contains(validProfiles, config.VideoProfile) {
+		return &ValidationError{Field: "mediamtx.codec.video_profile", Message: fmt.Sprintf("video profile must be one of %v, got %s", validProfiles, config.VideoProfile)}
+	}
+
+	validLevels := []string{"1.0", "1.1", "1.2", "1.3", "2.0", "2.1", "2.2", "3.0", "3.1", "3.2", "4.0", "4.1", "4.2", "5.0", "5.1", "5.2"}
+	if !contains(validLevels, config.VideoLevel) {
+		return &ValidationError{Field: "mediamtx.codec.video_level", Message: fmt.Sprintf("video level must be one of %v, got %s", validLevels, config.VideoLevel)}
+	}
+
+	validFormats := []string{"yuv420p", "yuv422p", "yuv444p"}
+	if !contains(validFormats, config.PixelFormat) {
+		return &ValidationError{Field: "mediamtx.codec.pixel_format", Message: fmt.Sprintf("pixel format must be one of %v, got %s", validFormats, config.PixelFormat)}
+	}
+
+	if config.Bitrate == "" {
+		return &ValidationError{Field: "mediamtx.codec.bitrate", Message: "bitrate cannot be empty"}
+	}
+
+	validPresets := []string{"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"}
+	if !contains(validPresets, config.Preset) {
+		return &ValidationError{Field: "mediamtx.codec.preset", Message: fmt.Sprintf("preset must be one of %v, got %s", validPresets, config.Preset)}
+	}
+
+	return nil
+}
+
+// validateStreamReadinessConfig validates stream readiness configuration.
+func validateStreamReadinessConfig(config *StreamReadinessConfig) error {
+	if config.Timeout <= 0 {
+		return &ValidationError{Field: "mediamtx.stream_readiness.timeout", Message: fmt.Sprintf("timeout must be positive, got %f", config.Timeout)}
+	}
+
+	if config.RetryAttempts < 0 {
+		return &ValidationError{Field: "mediamtx.stream_readiness.retry_attempts", Message: fmt.Sprintf("retry attempts must be non-negative, got %d", config.RetryAttempts)}
+	}
+
+	if config.RetryDelay < 0 {
+		return &ValidationError{Field: "mediamtx.stream_readiness.retry_delay", Message: fmt.Sprintf("retry delay must be non-negative, got %f", config.RetryDelay)}
+	}
+
+	if config.CheckInterval <= 0 {
+		return &ValidationError{Field: "mediamtx.stream_readiness.check_interval", Message: fmt.Sprintf("check interval must be positive, got %f", config.CheckInterval)}
+	}
+
+	return nil
+}
+
+// validateCameraConfig validates camera configuration.
+func validateCameraConfig(config *CameraConfig) error {
+	if config.PollInterval < 0 {
+		return &ValidationError{Field: "camera.poll_interval", Message: fmt.Sprintf("poll interval must be non-negative, got %f", config.PollInterval)}
+	}
+
+	if config.DetectionTimeout <= 0 {
+		return &ValidationError{Field: "camera.detection_timeout", Message: fmt.Sprintf("detection timeout must be positive, got %f", config.DetectionTimeout)}
+	}
+
+	if len(config.DeviceRange) != 2 {
+		return &ValidationError{Field: "camera.device_range", Message: "device range must have exactly 2 elements"}
+	}
+
+	if config.DeviceRange[0] < 0 || config.DeviceRange[1] < 0 {
+		return &ValidationError{Field: "camera.device_range", Message: "device range values must be non-negative"}
+	}
+
+	if config.DeviceRange[0] > config.DeviceRange[1] {
+		return &ValidationError{Field: "camera.device_range", Message: "device range min must be less than or equal to max"}
+	}
+
+	if config.CapabilityTimeout <= 0 {
+		return &ValidationError{Field: "camera.capability_timeout", Message: fmt.Sprintf("capability timeout must be positive, got %f", config.CapabilityTimeout)}
+	}
+
+	if config.CapabilityRetryInterval < 0 {
+		return &ValidationError{Field: "camera.capability_retry_interval", Message: fmt.Sprintf("capability retry interval must be non-negative, got %f", config.CapabilityRetryInterval)}
+	}
+
+	if config.CapabilityMaxRetries < 0 {
+		return &ValidationError{Field: "camera.capability_max_retries", Message: fmt.Sprintf("capability max retries must be non-negative, got %d", config.CapabilityMaxRetries)}
+	}
+
+	return nil
+}
+
+// validateLoggingConfig validates logging configuration.
+func validateLoggingConfig(config *LoggingConfig) error {
+	validLevels := []string{"DEBUG", "INFO", "WARN", "WARNING", "ERROR", "FATAL"}
+	if !contains(validLevels, strings.ToUpper(config.Level)) {
+		return &ValidationError{Field: "logging.level", Message: fmt.Sprintf("log level must be one of %v, got %s", validLevels, config.Level)}
+	}
+
+	if config.Format == "" {
+		return &ValidationError{Field: "logging.format", Message: "log format cannot be empty"}
+	}
+
+	if config.FileEnabled && config.FilePath == "" {
+		return &ValidationError{Field: "logging.file_path", Message: "file path cannot be empty when file logging is enabled"}
+	}
+
+	if config.MaxFileSize <= 0 {
+		return &ValidationError{Field: "logging.max_file_size", Message: fmt.Sprintf("max file size must be positive, got %d", config.MaxFileSize)}
+	}
+
+	if config.BackupCount < 0 {
+		return &ValidationError{Field: "logging.backup_count", Message: fmt.Sprintf("backup count must be non-negative, got %d", config.BackupCount)}
+	}
+
+	return nil
+}
+
+// validateRecordingConfig validates recording configuration.
+func validateRecordingConfig(config *RecordingConfig) error {
+	validFormats := []string{"fmp4", "mp4", "mkv", "avi"}
+	if !contains(validFormats, config.Format) {
+		return &ValidationError{Field: "recording.format", Message: fmt.Sprintf("recording format must be one of %v, got %s", validFormats, config.Format)}
+	}
+
+	validQualities := []string{"low", "medium", "high"}
+	if !contains(validQualities, config.Quality) {
+		return &ValidationError{Field: "recording.quality", Message: fmt.Sprintf("recording quality must be one of %v, got %s", validQualities, config.Quality)}
+	}
+
+	if config.SegmentDuration <= 0 {
+		return &ValidationError{Field: "recording.segment_duration", Message: fmt.Sprintf("segment duration must be positive, got %d", config.SegmentDuration)}
+	}
+
+	if config.MaxSegmentSize <= 0 {
+		return &ValidationError{Field: "recording.max_segment_size", Message: fmt.Sprintf("max segment size must be positive, got %d", config.MaxSegmentSize)}
+	}
+
+	if config.CleanupInterval <= 0 {
+		return &ValidationError{Field: "recording.cleanup_interval", Message: fmt.Sprintf("cleanup interval must be positive, got %d", config.CleanupInterval)}
+	}
+
+	if config.MaxAge <= 0 {
+		return &ValidationError{Field: "recording.max_age", Message: fmt.Sprintf("max age must be positive, got %d", config.MaxAge)}
+	}
+
+	if config.MaxSize <= 0 {
+		return &ValidationError{Field: "recording.max_size", Message: fmt.Sprintf("max size must be positive, got %d", config.MaxSize)}
+	}
+
+	return nil
+}
+
+// validateSnapshotConfig validates snapshot configuration.
+func validateSnapshotConfig(config *SnapshotConfig) error {
+	validFormats := []string{"jpeg", "png", "bmp"}
+	if !contains(validFormats, config.Format) {
+		return &ValidationError{Field: "snapshots.format", Message: fmt.Sprintf("snapshot format must be one of %v, got %s", validFormats, config.Format)}
+	}
+
+	if config.Quality < 1 || config.Quality > 100 {
+		return &ValidationError{Field: "snapshots.quality", Message: fmt.Sprintf("quality must be between 1 and 100, got %d", config.Quality)}
+	}
+
+	if config.MaxWidth <= 0 {
+		return &ValidationError{Field: "snapshots.max_width", Message: fmt.Sprintf("max width must be positive, got %d", config.MaxWidth)}
+	}
+
+	if config.MaxHeight <= 0 {
+		return &ValidationError{Field: "snapshots.max_height", Message: fmt.Sprintf("max height must be positive, got %d", config.MaxHeight)}
+	}
+
+	if config.CleanupInterval <= 0 {
+		return &ValidationError{Field: "snapshots.cleanup_interval", Message: fmt.Sprintf("cleanup interval must be positive, got %d", config.CleanupInterval)}
+	}
+
+	if config.MaxAge <= 0 {
+		return &ValidationError{Field: "snapshots.max_age", Message: fmt.Sprintf("max age must be positive, got %d", config.MaxAge)}
+	}
+
+	if config.MaxCount <= 0 {
+		return &ValidationError{Field: "snapshots.max_count", Message: fmt.Sprintf("max count must be positive, got %d", config.MaxCount)}
+	}
+
+	return nil
+}
+
+// validateFFmpegConfig validates FFmpeg configuration.
+func validateFFmpegConfig(config *FFmpegConfig) error {
+	if err := validateFFmpegSnapshotConfig(&config.Snapshot); err != nil {
+		return err
+	}
+
+	if err := validateFFmpegRecordingConfig(&config.Recording); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateFFmpegSnapshotConfig validates FFmpeg snapshot configuration.
+func validateFFmpegSnapshotConfig(config *FFmpegSnapshotConfig) error {
+	if config.ProcessCreationTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.snapshot.process_creation_timeout", Message: fmt.Sprintf("process creation timeout must be positive, got %f", config.ProcessCreationTimeout)}
+	}
+
+	if config.ExecutionTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.snapshot.execution_timeout", Message: fmt.Sprintf("execution timeout must be positive, got %f", config.ExecutionTimeout)}
+	}
+
+	if config.InternalTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.snapshot.internal_timeout", Message: fmt.Sprintf("internal timeout must be positive, got %d", config.InternalTimeout)}
+	}
+
+	if config.RetryAttempts < 0 {
+		return &ValidationError{Field: "ffmpeg.snapshot.retry_attempts", Message: fmt.Sprintf("retry attempts must be non-negative, got %d", config.RetryAttempts)}
+	}
+
+	if config.RetryDelay < 0 {
+		return &ValidationError{Field: "ffmpeg.snapshot.retry_delay", Message: fmt.Sprintf("retry delay must be non-negative, got %f", config.RetryDelay)}
+	}
+
+	return nil
+}
+
+// validateFFmpegRecordingConfig validates FFmpeg recording configuration.
+func validateFFmpegRecordingConfig(config *FFmpegRecordingConfig) error {
+	if config.ProcessCreationTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.recording.process_creation_timeout", Message: fmt.Sprintf("process creation timeout must be positive, got %f", config.ProcessCreationTimeout)}
+	}
+
+	if config.ExecutionTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.recording.execution_timeout", Message: fmt.Sprintf("execution timeout must be positive, got %f", config.ExecutionTimeout)}
+	}
+
+	if config.InternalTimeout <= 0 {
+		return &ValidationError{Field: "ffmpeg.recording.internal_timeout", Message: fmt.Sprintf("internal timeout must be positive, got %d", config.InternalTimeout)}
+	}
+
+	if config.RetryAttempts < 0 {
+		return &ValidationError{Field: "ffmpeg.recording.retry_attempts", Message: fmt.Sprintf("retry attempts must be non-negative, got %d", config.RetryAttempts)}
+	}
+
+	if config.RetryDelay < 0 {
+		return &ValidationError{Field: "ffmpeg.recording.retry_delay", Message: fmt.Sprintf("retry delay must be non-negative, got %f", config.RetryDelay)}
+	}
+
+	return nil
+}
+
+// validateNotificationsConfig validates notifications configuration.
+func validateNotificationsConfig(config *NotificationsConfig) error {
+	if err := validateWebSocketNotificationConfig(&config.WebSocket); err != nil {
+		return err
+	}
+
+	if err := validateRealTimeNotificationConfig(&config.RealTime); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateWebSocketNotificationConfig validates WebSocket notification configuration.
+func validateWebSocketNotificationConfig(config *WebSocketNotificationConfig) error {
+	if config.DeliveryTimeout <= 0 {
+		return &ValidationError{Field: "notifications.websocket.delivery_timeout", Message: fmt.Sprintf("delivery timeout must be positive, got %f", config.DeliveryTimeout)}
+	}
+
+	if config.RetryAttempts < 0 {
+		return &ValidationError{Field: "notifications.websocket.retry_attempts", Message: fmt.Sprintf("retry attempts must be non-negative, got %d", config.RetryAttempts)}
+	}
+
+	if config.RetryDelay < 0 {
+		return &ValidationError{Field: "notifications.websocket.retry_delay", Message: fmt.Sprintf("retry delay must be non-negative, got %f", config.RetryDelay)}
+	}
+
+	if config.MaxQueueSize <= 0 {
+		return &ValidationError{Field: "notifications.websocket.max_queue_size", Message: fmt.Sprintf("max queue size must be positive, got %d", config.MaxQueueSize)}
+	}
+
+	if config.CleanupInterval <= 0 {
+		return &ValidationError{Field: "notifications.websocket.cleanup_interval", Message: fmt.Sprintf("cleanup interval must be positive, got %d", config.CleanupInterval)}
+	}
+
+	return nil
+}
+
+// validateRealTimeNotificationConfig validates real-time notification configuration.
+func validateRealTimeNotificationConfig(config *RealTimeNotificationConfig) error {
+	if config.CameraStatusInterval <= 0 {
+		return &ValidationError{Field: "notifications.real_time.camera_status_interval", Message: fmt.Sprintf("camera status interval must be positive, got %f", config.CameraStatusInterval)}
+	}
+
+	if config.RecordingProgressInterval <= 0 {
+		return &ValidationError{Field: "notifications.real_time.recording_progress_interval", Message: fmt.Sprintf("recording progress interval must be positive, got %f", config.RecordingProgressInterval)}
+	}
+
+	if config.ConnectionHealthCheck <= 0 {
+		return &ValidationError{Field: "notifications.real_time.connection_health_check", Message: fmt.Sprintf("connection health check must be positive, got %f", config.ConnectionHealthCheck)}
+	}
+
+	return nil
+}
+
+// validatePerformanceConfig validates performance configuration.
+func validatePerformanceConfig(config *PerformanceConfig) error {
+	if err := validateResponseTimeTargetsConfig(&config.ResponseTimeTargets); err != nil {
+		return err
+	}
+
+	if err := validateSnapshotTiersConfig(&config.SnapshotTiers); err != nil {
+		return err
+	}
+
+	if err := validateOptimizationConfig(&config.Optimization); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateResponseTimeTargetsConfig validates response time targets configuration.
+func validateResponseTimeTargetsConfig(config *ResponseTimeTargetsConfig) error {
+	if config.SnapshotCapture <= 0 {
+		return &ValidationError{Field: "performance.response_time_targets.snapshot_capture", Message: fmt.Sprintf("snapshot capture target must be positive, got %f", config.SnapshotCapture)}
+	}
+
+	if config.RecordingStart <= 0 {
+		return &ValidationError{Field: "performance.response_time_targets.recording_start", Message: fmt.Sprintf("recording start target must be positive, got %f", config.RecordingStart)}
+	}
+
+	if config.RecordingStop <= 0 {
+		return &ValidationError{Field: "performance.response_time_targets.recording_stop", Message: fmt.Sprintf("recording stop target must be positive, got %f", config.RecordingStop)}
+	}
+
+	if config.FileListing <= 0 {
+		return &ValidationError{Field: "performance.response_time_targets.file_listing", Message: fmt.Sprintf("file listing target must be positive, got %f", config.FileListing)}
+	}
+
+	return nil
+}
+
+// validateSnapshotTiersConfig validates snapshot tiers configuration.
+func validateSnapshotTiersConfig(config *SnapshotTiersConfig) error {
+	if config.Tier1USBDirectTimeout <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.tier1_usb_direct_timeout", Message: fmt.Sprintf("tier1 USB direct timeout must be positive, got %f", config.Tier1USBDirectTimeout)}
+	}
+
+	if config.Tier2RTSPReadyCheckTimeout <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.tier2_rtsp_ready_check_timeout", Message: fmt.Sprintf("tier2 RTSP ready check timeout must be positive, got %f", config.Tier2RTSPReadyCheckTimeout)}
+	}
+
+	if config.Tier3ActivationTimeout <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.tier3_activation_timeout", Message: fmt.Sprintf("tier3 activation timeout must be positive, got %f", config.Tier3ActivationTimeout)}
+	}
+
+	if config.Tier3ActivationTriggerTimeout <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.tier3_activation_trigger_timeout", Message: fmt.Sprintf("tier3 activation trigger timeout must be positive, got %f", config.Tier3ActivationTriggerTimeout)}
+	}
+
+	if config.TotalOperationTimeout <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.total_operation_timeout", Message: fmt.Sprintf("total operation timeout must be positive, got %f", config.TotalOperationTimeout)}
+	}
+
+	if config.ImmediateResponseThreshold <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.immediate_response_threshold", Message: fmt.Sprintf("immediate response threshold must be positive, got %f", config.ImmediateResponseThreshold)}
+	}
+
+	if config.AcceptableResponseThreshold <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.acceptable_response_threshold", Message: fmt.Sprintf("acceptable response threshold must be positive, got %f", config.AcceptableResponseThreshold)}
+	}
+
+	if config.SlowResponseThreshold <= 0 {
+		return &ValidationError{Field: "performance.snapshot_tiers.slow_response_threshold", Message: fmt.Sprintf("slow response threshold must be positive, got %f", config.SlowResponseThreshold)}
+	}
+
+	return nil
+}
+
+// validateOptimizationConfig validates optimization configuration.
+func validateOptimizationConfig(config *OptimizationConfig) error {
+	if config.CacheTTL <= 0 {
+		return &ValidationError{Field: "performance.optimization.cache_ttl", Message: fmt.Sprintf("cache TTL must be positive, got %d", config.CacheTTL)}
+	}
+
+	if config.MaxConcurrentOperations <= 0 {
+		return &ValidationError{Field: "performance.optimization.max_concurrent_operations", Message: fmt.Sprintf("max concurrent operations must be positive, got %d", config.MaxConcurrentOperations)}
+	}
+
+	if config.ConnectionPoolSize <= 0 {
+		return &ValidationError{Field: "performance.optimization.connection_pool_size", Message: fmt.Sprintf("connection pool size must be positive, got %d", config.ConnectionPoolSize)}
+	}
+
+	return nil
+}
+
+// contains checks if a slice contains a specific value.
+func contains(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}

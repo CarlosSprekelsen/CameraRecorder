@@ -24,45 +24,6 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ---
 
-## API Documentation Gap Remediation
-
-### Critical Gap Identified: get_streams Method
-**Problem**: The `get_streams` method is implemented in Python but **not documented in API reference**, creating a ground truth violation.
-
-**Impact**: 
-- Go project API documentation inherited this gap
-- Missing method documentation affects client development
-- Violates ground truth principle where documentation should drive implementation
-
-**Remediation Required**:
-1. **Complete API documentation** for `get_streams` method in Go project
-2. **Add specific Go examples** and response formats
-3. **Document error conditions** and authentication requirements
-4. **Ensure ground truth compliance** before implementation
-
-**Scope**: This gap remediation is **mandatory** and must be completed before Epic E4 implementation.
-
----
-
-## Architecture Analysis: Existing Undocumented Features
-
-### get_streams Method - Existing Undocumented Feature
-**Analysis**: The `get_streams` method is implemented in Python but missing from API documentation. It's an existing feature that needs proper documentation and migration.
-
-**Implementation Complexity**: **LOW** - Already implemented in Python, just needs Go port
-- **Current Python Implementation**: 30 lines of code
-- **Go Implementation**: ~25 lines of code
-- **Dependencies**: MediaMTX controller (already planned in Epic E4)
-- **Integration**: Uses existing stream management infrastructure
-
-**Architecture Impact**: **MINIMAL** - No architectural changes required
-- Uses existing MediaMTX REST API integration
-- Leverages planned stream management components
-- Fits naturally into Epic E4 (MediaMTX Integration)
-
-**Status**: **EXISTING UNDOCUMENTED FEATURE** - Must be migrated as part of core functionality
-
----
 
 ## Epic/Story/Task Breakdown
 

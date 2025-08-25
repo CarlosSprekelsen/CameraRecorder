@@ -1,4 +1,4 @@
-# MediaMTX Camera Service - Development Configuration (Go Implementation)
+# MediaMTX Camera Service - Development Configuration
 
 server:
   host: "0.0.0.0"
@@ -30,7 +30,7 @@ mediamtx:
 camera:
   poll_interval: 0.1
   detection_timeout: 2.0
-  device_range: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # /dev/video0 to /dev/video9
+  device_range: [0, 9]  # /dev/video0 to /dev/video9
   enable_capability_detection: true
   auto_start_streams: true
   capability_timeout: 5.0
@@ -48,7 +48,6 @@ logging:
 
 recording:
   enabled: false
-  auto_record: false
   format: "fmp4"
   quality: "high"
   segment_duration: 3600
@@ -57,11 +56,6 @@ recording:
   cleanup_interval: 86400
   max_age: 604800
   max_size: 10737418240
-  max_duration: 3600
-  cleanup_after_days: 30
-  rotation_minutes: 30
-  storage_warn_percent: 80
-  storage_block_percent: 90
 
 snapshots:
   enabled: true
@@ -73,4 +67,3 @@ snapshots:
   cleanup_interval: 3600
   max_age: 86400
   max_count: 1000
-  cleanup_after_days: 7

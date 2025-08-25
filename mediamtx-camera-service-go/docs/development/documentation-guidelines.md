@@ -48,6 +48,7 @@ Ensure all project documentation is consistent, discoverable, reviewable for IV&
   - `docs/development/coding_standards.md`
   - `docs/development/principles.md`
   - `docs/development/documentation_guidelines.md`
+  - `docs/project-management/migration-plan.md`
   - `docs/decisions.md`
   - `docs/roadmap.md`
 
