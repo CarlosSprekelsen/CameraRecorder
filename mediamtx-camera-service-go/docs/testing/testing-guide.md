@@ -325,6 +325,9 @@ go test -tags=integration ./...
 # Use tools only for specialized orchestration
 ./tests/tools/run_all_tests.sh
 ./tests/tools/run_critical_error_tests.sh
+
+# Clear cache if tests behave unexpectedly
+go clean -cache
 ```
 
 ## 7. Performance Targets
