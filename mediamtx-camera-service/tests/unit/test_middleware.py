@@ -34,6 +34,7 @@ class TestRateLimitInfo:
     """
     """Test rate limit information structure."""
     
+    @pytest.mark.unit
     def test_create_rate_limit_info(self):
         """Test creating rate limit info."""
         now = time.time()
@@ -92,6 +93,7 @@ class TestSecurityMiddleware:
             window_size_seconds=60
         )
     
+    @pytest.mark.unit
     def test_init(self, security_middleware, auth_manager):
         """Test security middleware initialization."""
         assert security_middleware.auth_manager == auth_manager
@@ -102,11 +104,13 @@ class TestSecurityMiddleware:
         assert len(security_middleware.connection_auth) == 0
         assert len(security_middleware.rate_limit_info) == 0
     
+    @pytest.mark.unit
     def test_can_accept_connection_success(self, security_middleware):
         """Test successful connection acceptance."""
         result = security_middleware.can_accept_connection("client_1")
         assert result is True
     
+    @pytest.mark.unit
     def test_can_accept_connection_limit_exceeded(self, security_middleware):
         """Test connection rejection when limit exceeded."""
         # Fill up connections
@@ -117,6 +121,7 @@ class TestSecurityMiddleware:
         result = security_middleware.can_accept_connection("client_11")
         assert result is False
     
+    @pytest.mark.unit
     def test_register_connection(self, security_middleware):
         """Test connection registration."""
         security_middleware.register_connection("client_1")
@@ -124,6 +129,7 @@ class TestSecurityMiddleware:
         assert "client_1" in security_middleware.active_connections
         assert len(security_middleware.active_connections) == 1
     
+    @pytest.mark.unit
     def test_unregister_connection(self, security_middleware):
         """Test connection unregistration."""
         security_middleware.register_connection("client_1")
@@ -135,11 +141,13 @@ class TestSecurityMiddleware:
         assert "client_2" in security_middleware.active_connections
         assert len(security_middleware.active_connections) == 1
     
+    @pytest.mark.unit
     def test_unregister_connection_not_registered(self, security_middleware):
         """Test unregistering non-existent connection."""
         # Should not raise an error
         security_middleware.unregister_connection("nonexistent_client")
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_authenticate_connection_jwt_success(self, security_middleware):
         """Test successful JWT authentication."""
@@ -154,6 +162,7 @@ class TestSecurityMiddleware:
         assert result.auth_method == "jwt"
         assert "client_1" in security_middleware.connection_auth
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_authenticate_connection_api_key_success(self, security_middleware):
         """Test successful API key authentication."""
@@ -167,6 +176,7 @@ class TestSecurityMiddleware:
         assert result.auth_method == "api_key"
         assert "client_2" in security_middleware.connection_auth
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_authenticate_connection_failure(self, security_middleware):
         """Test failed authentication."""
@@ -176,6 +186,7 @@ class TestSecurityMiddleware:
         assert result.error_message is not None
         assert "client_3" not in security_middleware.connection_auth
     
+    @pytest.mark.unit
     def test_is_authenticated_true(self, security_middleware):
         """Test checking authenticated client."""
         # Create real authentication results

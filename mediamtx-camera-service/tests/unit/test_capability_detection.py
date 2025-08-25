@@ -38,6 +38,7 @@ class TestCapabilityDetectionRealIntegration:
         """Create a fresh HybridCameraMonitor instance for testing."""
         return HybridCameraMonitor()
 
+    @pytest.mark.unit
     def test_real_v4l2_command_availability(self, monitor):
         """Test that v4l2-ctl command is available and working."""
         try:
@@ -53,6 +54,7 @@ class TestCapabilityDetectionRealIntegration:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("v4l2-ctl not available or not working")
 
+    @pytest.mark.unit
     def test_real_device_listing(self, monitor):
         """Test real device listing with v4l2-ctl."""
         try:
@@ -69,6 +71,7 @@ class TestCapabilityDetectionRealIntegration:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("v4l2-ctl not available or not working")
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_device_capability_probing(self, monitor):
         """Test real device capability probing with actual V4L2 devices."""

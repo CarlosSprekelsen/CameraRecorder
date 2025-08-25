@@ -3,11 +3,10 @@ import { HTTPPollingService } from './httpPollingService';
 import { errorRecoveryService } from './errorRecoveryService';
 import type {
   RecordingSession,
-  RecordingConflict,
   RecordingProgress,
-  RecordingState,
-  ValidationResult,
-  CameraDevice
+  RecordingStatus,
+  CameraDevice,
+  ConfigValidationResult
 } from '../types/camera';
 import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
 
@@ -18,11 +17,8 @@ import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
  * recording management capabilities.
  */
 class RecordingManagerService {
-  private recordingState: Map<string, RecordingState> = new Map();
   private activeSessions: Map<string, RecordingSession> = new Map();
-  private conflictCallbacks: Set<(conflict: RecordingConflict) => void> = new Set();
   private progressCallbacks: Set<(progress: RecordingProgress) => void> = new Set();
-  private stateCallbacks: Set<(state: RecordingState) => void> = new Set();
 
   /**
    * Start recording for a camera
@@ -43,7 +39,7 @@ class RecordingManagerService {
     try {
       const session = await errorRecoveryService.executeWithRetry(
         async () => {
-          const response = await wsService.call(RPC_METHODS.START_RECORDING, { camera_id: cameraId });
+          const response = await wsService.call(RPC_METHODS.START_RECORDING, { device: cameraId });
           return response as RecordingSession;
         },
         'startRecording'
@@ -64,7 +60,7 @@ class RecordingManagerService {
       if (error.code === ERROR_CODES.CAMERA_ALREADY_RECORDING) {
         // Handle recording conflict
         const conflict: RecordingConflict = {
-          camera_id: cameraId,
+          device: cameraId,
           session_id: error.data?.session_id || 'unknown',
           message: error.message
         };
@@ -86,7 +82,7 @@ class RecordingManagerService {
     try {
       await errorRecoveryService.executeWithRetry(
         async () => {
-          await wsService.call(RPC_METHODS.STOP_RECORDING, { camera_id: cameraId });
+          await wsService.call(RPC_METHODS.STOP_RECORDING, { device: cameraId });
         },
         'stopRecording'
       );

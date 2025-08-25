@@ -48,7 +48,7 @@ const StorageMonitor: React.FC = () => {
     setLocalError(null);
     try {
       await refreshStorage();
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh storage';
       setLocalError(errorMessage);
     } finally {
@@ -122,7 +122,7 @@ const StorageMonitor: React.FC = () => {
 
   const getThresholdColor = () => {
     const thresholdStatus = getThresholdStatus();
-    if (!thresholdStatus) return 'default';
+    if (!thresholdStatus) return 'info';
     
     if (thresholdStatus.isCritical) return 'error';
     if (thresholdStatus.isWarning) return 'warning';

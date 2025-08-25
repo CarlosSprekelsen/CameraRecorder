@@ -125,7 +125,9 @@ def _disconnected_event(device_path: str = "/dev/video0") -> CameraEventData:
     return CameraEventData(device_path=device_path, event_type=CameraEvent.DISCONNECTED, device_info=dev, timestamp=1234567891.0)
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.real_mediamtx
 async def test_real_connect_flow(service_manager: ServiceManager, real_mediamtx_service):
     """Test real camera connect flow with actual MediaMTX service integration."""
     # Use real MediaMTX service instead of mock HTTP server
@@ -138,7 +140,9 @@ async def test_real_connect_flow(service_manager: ServiceManager, real_mediamtx_
     await service_manager.stop()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.real_mediamtx
 async def test_real_disconnect_flow(service_manager: ServiceManager, real_mediamtx_service):
     """Test real camera disconnect flow with actual MediaMTX service integration."""
     # Use real MediaMTX service instead of mock HTTP server
@@ -151,7 +155,9 @@ async def test_real_disconnect_flow(service_manager: ServiceManager, real_mediam
     await service_manager.stop()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.real_mediamtx
 async def test_real_mediamtx_failure_keeps_service_running(service_manager: ServiceManager, real_mediamtx_service):
     """Test that service remains running when MediaMTX fails with real service integration."""
     # Use real MediaMTX service - failures will be tested through real service behavior
@@ -161,7 +167,9 @@ async def test_real_mediamtx_failure_keeps_service_running(service_manager: Serv
     await service_manager.stop()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.real_mediamtx
 async def test_real_capability_metadata(service_manager: ServiceManager, real_mediamtx_service):
     """Test real camera capability metadata with actual MediaMTX service integration."""
     # Use real MediaMTX service instead of mock HTTP server

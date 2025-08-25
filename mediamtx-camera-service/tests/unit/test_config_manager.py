@@ -46,6 +46,7 @@ class TestConfigManagerRealIntegration:
         """Create a fresh ConfigManager instance for testing."""
         return ConfigManager()
 
+    @pytest.mark.unit
     def test_real_config_file_loading(self, config_manager, temp_config_dir):
         """Test loading configuration from a real YAML file."""
         config_file = temp_config_dir / "test_config.yaml"
@@ -84,6 +85,7 @@ class TestConfigManagerRealIntegration:
         assert config.camera.poll_interval == 0.2
         assert config.logging.level == "DEBUG"
 
+    @pytest.mark.unit
     def test_real_config_file_not_found(self, config_manager, temp_config_dir):
         """Test configuration loading when real file doesn't exist."""
         non_existent_file = temp_config_dir / "non_existent.yaml"
@@ -93,6 +95,7 @@ class TestConfigManagerRealIntegration:
         assert isinstance(config, Config)
         assert config.server.port == 8002  # Default value
 
+    @pytest.mark.unit
     def test_real_malformed_yaml_handling(self, config_manager, temp_config_dir):
         """Test handling of real malformed YAML file."""
         config_file = temp_config_dir / "malformed.yaml"
@@ -107,6 +110,7 @@ class TestConfigManagerRealIntegration:
         assert isinstance(config, Config)
         assert config.server.port == 8002  # Default value
 
+    @pytest.mark.unit
     def test_real_environment_variable_overrides(self, config_manager, temp_config_dir):
         """Test real environment variable overrides."""
         config_file = temp_config_dir / "test_config.yaml"
@@ -133,6 +137,7 @@ class TestConfigManagerRealIntegration:
             os.environ.clear()
             os.environ.update(original_env)
 
+    @pytest.mark.unit
     def test_real_invalid_environment_variable_handling(self, config_manager, temp_config_dir):
         """Test handling of real invalid environment variable values."""
         config_file = temp_config_dir / "test_config.yaml"
@@ -156,6 +161,7 @@ class TestConfigManagerRealIntegration:
             os.environ.clear()
             os.environ.update(original_env)
 
+    @pytest.mark.unit
     def test_real_configuration_validation(self, config_manager, temp_config_dir):
         """Test real configuration validation with invalid values."""
         config_file = temp_config_dir / "invalid_config.yaml"
@@ -173,6 +179,7 @@ class TestConfigManagerRealIntegration:
         with pytest.raises(ValueError):
             config_manager.load_config(str(config_file))
 
+    @pytest.mark.unit
     def test_real_config_update_runtime(self, config_manager, temp_config_dir):
         """Test real runtime configuration updates."""
         config_file = temp_config_dir / "test_config.yaml"

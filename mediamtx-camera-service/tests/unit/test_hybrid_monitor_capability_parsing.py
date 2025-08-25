@@ -31,6 +31,7 @@ class TestHybridMonitorCapabilityParsingRealIntegration:
         """Create a fresh HybridCameraMonitor instance for testing."""
         return HybridCameraMonitor()
 
+    @pytest.mark.unit
     def test_real_v4l2_command_execution(self, monitor):
         """Test real v4l2-ctl command execution and output parsing."""
         try:
@@ -46,6 +47,7 @@ class TestHybridMonitorCapabilityParsingRealIntegration:
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pytest.skip("v4l2-ctl not available or not working")
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_device_capability_probing(self, monitor):
         """Test real device capability probing with actual V4L2 devices."""
@@ -75,6 +77,7 @@ class TestHybridMonitorCapabilityParsingRealIntegration:
                     assert caps.error is not None
                     assert "permission" in caps.error.lower() or "busy" in caps.error.lower() or "failed" in caps.error.lower()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_timeout_handling(self, monitor):
         """Test real timeout handling with actual V4L2 operations."""
@@ -99,6 +102,7 @@ class TestHybridMonitorCapabilityParsingRealIntegration:
             # Restore original timeout
             monitor._detection_timeout = original_timeout
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_subprocess_failure_handling(self, monitor):
         """Test real subprocess failure handling with actual V4L2 operations."""
@@ -111,6 +115,7 @@ class TestHybridMonitorCapabilityParsingRealIntegration:
         assert caps.error is not None
         assert "failed to probe" in caps.error.lower() or "timeout" in caps.error.lower() or "unavailable" in caps.error.lower()
 
+    @pytest.mark.unit
     def test_real_v4l2_output_parsing(self, monitor):
         """Test parsing of real v4l2-ctl output formats."""
         # Test with actual v4l2-ctl output if available

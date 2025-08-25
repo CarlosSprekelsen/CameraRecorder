@@ -32,6 +32,7 @@ class TestJavaScriptClientExample:
         return Path(__file__).parent.parent.parent / "examples" / "javascript" / "camera_client.js"
     
     @pytest.fixture
+    @pytest.mark.unit
     def test_config(self):
         """Test configuration for JavaScript client."""
         return {
@@ -44,6 +45,7 @@ class TestJavaScriptClientExample:
             "retryDelay": 1.0
         }
     
+    @pytest.mark.unit
     def test_javascript_client_file_exists(self, js_client_path):
         """Test that JavaScript client file exists and is readable."""
         assert js_client_path.exists(), f"JavaScript client file not found: {js_client_path}"
@@ -55,6 +57,7 @@ class TestJavaScriptClientExample:
         assert "async connect()" in content, "JavaScript client file does not contain connect method"
         assert "async getCameraList()" in content, "JavaScript client file does not contain getCameraList method"
     
+    @pytest.mark.unit
     def test_javascript_client_syntax_valid(self, js_client_path):
         """Test that JavaScript client has valid syntax."""
         try:
@@ -71,6 +74,7 @@ class TestJavaScriptClientExample:
         except FileNotFoundError:
             pytest.skip("Node.js not available for syntax checking")
     
+    @pytest.mark.unit
     def test_javascript_client_imports_available(self, js_client_path):
         """Test that JavaScript client has required imports."""
         content = js_client_path.read_text()
@@ -84,6 +88,7 @@ class TestJavaScriptClientExample:
         for import_stmt in required_imports:
             assert import_stmt in content, f"Missing required import: {import_stmt}"
     
+    @pytest.mark.unit
     def test_javascript_client_class_structure(self, js_client_path):
         """Test JavaScript client class structure."""
         content = js_client_path.read_text()
@@ -107,6 +112,7 @@ class TestJavaScriptClientExample:
         for method in required_methods:
             assert method in content, f"Missing required method: {method}"
     
+    @pytest.mark.unit
     def test_javascript_client_error_handling(self, js_client_path):
         """Test that JavaScript client has proper error handling."""
         content = js_client_path.read_text()
@@ -124,6 +130,7 @@ class TestJavaScriptClientExample:
         for pattern in error_patterns:
             assert pattern in content, f"Missing error handling pattern: {pattern}"
     
+    @pytest.mark.unit
     def test_javascript_client_authentication_flow(self, js_client_path):
         """Test that JavaScript client has proper authentication flow."""
         content = js_client_path.read_text()
@@ -141,6 +148,7 @@ class TestJavaScriptClientExample:
         for pattern in auth_patterns:
             assert pattern in content, f"Missing authentication pattern: {pattern}"
     
+    @pytest.mark.unit
     def test_javascript_client_websocket_communication(self, js_client_path):
         """Test that JavaScript client has WebSocket communication."""
         content = js_client_path.read_text()
@@ -161,6 +169,7 @@ class TestJavaScriptClientExample:
         found_patterns = [pattern for pattern in websocket_patterns if pattern in content]
         assert len(found_patterns) >= 4, f"Not enough WebSocket patterns found. Found: {found_patterns}"
     
+    @pytest.mark.unit
     def test_javascript_client_json_rpc_format(self, js_client_path):
         """Test that JavaScript client uses proper JSON-RPC format."""
         content = js_client_path.read_text()
@@ -178,6 +187,7 @@ class TestJavaScriptClientExample:
         for pattern in jsonrpc_patterns:
             assert pattern in content, f"Missing JSON-RPC pattern: {pattern}"
     
+    @pytest.mark.unit
     def test_javascript_client_configuration_options(self, js_client_path):
         """Test that JavaScript client supports configuration options."""
         content = js_client_path.read_text()
@@ -197,6 +207,7 @@ class TestJavaScriptClientExample:
         for option in config_options:
             assert option in content, f"Missing configuration option: {option}"
     
+    @pytest.mark.unit
     def test_javascript_client_camera_operations(self, js_client_path):
         """Test that JavaScript client supports all camera operations."""
         content = js_client_path.read_text()
@@ -213,6 +224,7 @@ class TestJavaScriptClientExample:
         for operation in camera_operations:
             assert operation in content, f"Missing camera operation: {operation}"
     
+    @pytest.mark.unit
     def test_javascript_client_data_structures(self, js_client_path):
         """Test that JavaScript client has proper data structures."""
         content = js_client_path.read_text()
@@ -226,6 +238,7 @@ class TestJavaScriptClientExample:
         for structure in data_structures:
             assert structure in content, f"Missing data structure: {structure}"
     
+    @pytest.mark.unit
     def test_javascript_client_example_usage(self, js_client_path):
         """Test that JavaScript client has example usage patterns."""
         content = js_client_path.read_text()
@@ -237,6 +250,7 @@ class TestJavaScriptClientExample:
             assert "await client.connect()" in content, "Missing connection example"
             assert "await client.getCameraList()" in content, "Missing camera list example"
     
+    @pytest.mark.unit
     def test_javascript_client_error_classes(self, js_client_path):
         """Test that JavaScript client has proper error classes."""
         content = js_client_path.read_text()
@@ -251,6 +265,7 @@ class TestJavaScriptClientExample:
         for error_class in error_classes:
             assert error_class in content, f"Missing error class: {error_class}"
     
+    @pytest.mark.unit
     def test_javascript_client_retry_logic(self, js_client_path):
         """Test that JavaScript client has retry logic."""
         content = js_client_path.read_text()
@@ -268,6 +283,7 @@ class TestJavaScriptClientExample:
         found_patterns = [pattern for pattern in retry_patterns if pattern in content]
         assert len(found_patterns) >= 2, f"Not enough retry patterns found. Found: {found_patterns}"
     
+    @pytest.mark.unit
     def test_javascript_client_connection_management(self, js_client_path):
         """Test that JavaScript client has proper connection management."""
         content = js_client_path.read_text()
@@ -284,6 +300,7 @@ class TestJavaScriptClientExample:
         for pattern in connection_patterns:
             assert pattern in content, f"Missing connection management pattern: {pattern}"
     
+    @pytest.mark.unit
     def test_javascript_client_message_handling(self, js_client_path):
         """Test that JavaScript client has proper message handling."""
         content = js_client_path.read_text()
@@ -300,6 +317,7 @@ class TestJavaScriptClientExample:
         found_patterns = [pattern for pattern in message_patterns if pattern in content]
         assert len(found_patterns) >= 2, f"Not enough message handling patterns found. Found: {found_patterns}"
     
+    @pytest.mark.unit
     def test_javascript_client_validation(self, js_client_path):
         """Test that JavaScript client has input validation."""
         content = js_client_path.read_text()
@@ -316,6 +334,7 @@ class TestJavaScriptClientExample:
         found_patterns = [pattern for pattern in validation_patterns if pattern in content]
         assert len(found_patterns) >= 2, f"Not enough validation patterns found. Found: {found_patterns}"
     
+    @pytest.mark.unit
     def test_javascript_client_logging(self, js_client_path):
         """Test that JavaScript client has logging capabilities."""
         content = js_client_path.read_text()
@@ -332,6 +351,7 @@ class TestJavaScriptClientExample:
         has_logging = any(pattern in content for pattern in logging_patterns)
         assert has_logging, "JavaScript client should have logging capabilities"
     
+    @pytest.mark.unit
     def test_javascript_client_async_await_patterns(self, js_client_path):
         """Test that JavaScript client uses proper async/await patterns."""
         content = js_client_path.read_text()
@@ -349,6 +369,7 @@ class TestJavaScriptClientExample:
         has_async = any(pattern in content for pattern in async_patterns)
         assert has_async, "JavaScript client should use async/await patterns"
     
+    @pytest.mark.unit
     def test_javascript_client_file_completeness(self, js_client_path):
         """Test that JavaScript client file is complete and well-structured."""
         content = js_client_path.read_text()
@@ -359,6 +380,7 @@ class TestJavaScriptClientExample:
         assert content.count("async") >= 10, "JavaScript client should have multiple async methods"
         # Note: This is a CommonJS file, not ES6 module, so no exports expected
     
+    @pytest.mark.unit
     def test_javascript_client_no_syntax_errors(self, js_client_path):
         """Test that JavaScript client has no obvious syntax errors."""
         content = js_client_path.read_text()
@@ -380,6 +402,7 @@ class TestJavaScriptClientExample:
             else:
                 assert count < 10, f"Too many potential syntax issues: {issue} appears {count} times"
     
+    @pytest.mark.unit
     def test_javascript_client_consistent_formatting(self, js_client_path):
         """Test that JavaScript client has consistent formatting."""
         content = js_client_path.read_text()
@@ -395,6 +418,7 @@ class TestJavaScriptClientExample:
         empty_lines = [line for line in lines if line.strip() == '']
         assert len(empty_lines) > 0, "JavaScript client should have some empty lines for readability"
     
+    @pytest.mark.unit
     def test_javascript_client_documentation(self, js_client_path):
         """Test that JavaScript client has proper documentation."""
         content = js_client_path.read_text()

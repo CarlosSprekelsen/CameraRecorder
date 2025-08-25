@@ -63,6 +63,7 @@ class TestStreamReadinessValidationReal:
             snapshots_path="/tmp/test_snapshots",
         )
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_stream_readiness_check_with_real_mediamtx(self, real_mediamtx_controller):
         """
@@ -105,6 +106,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_stream_readiness_check_invalid_stream_name(self, real_mediamtx_controller):
         """
@@ -131,6 +133,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_stream_readiness_check_controller_not_started(self):
         """
@@ -158,6 +161,7 @@ class TestStreamReadinessValidationReal:
         with pytest.raises(ConnectionError, match="MediaMTX controller not started"):
             await controller.check_stream_readiness("test_stream")
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_recording_start_with_stream_readiness_validation(self, real_mediamtx_controller):
         """
@@ -200,6 +204,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_recording_start_stream_not_found(self, real_mediamtx_controller):
         """
@@ -222,6 +227,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_concurrent_stream_readiness_checks(self, real_mediamtx_controller):
         """
@@ -272,6 +278,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_stream_readiness_timeout_handling(self, real_mediamtx_controller):
         """
@@ -300,6 +307,7 @@ class TestStreamReadinessValidationReal:
         finally:
             await real_mediamtx_controller.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_stream_readiness_error_recovery(self, real_mediamtx_controller):
         """

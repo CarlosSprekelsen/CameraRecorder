@@ -1,11 +1,9 @@
-import { wsService } from './websocket';
-import { httpPollingService } from './httpPollingService';
+import { WebSocketService } from './websocket';
 import { errorRecoveryService } from './errorRecoveryService';
 import type {
   StorageInfo,
   StorageUsage,
-  ThresholdStatus,
-  ValidationResult
+  ThresholdStatus
 } from '../types/camera';
 import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
 
@@ -16,6 +14,7 @@ import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
  * for storage-dependent operations.
  */
 class StorageMonitorService {
+  private wsService: WebSocketService | null = null;
   private currentStorageInfo: StorageInfo | null = null;
   private monitoringInterval: NodeJS.Timeout | null = null;
   private thresholdCallbacks: Set<(threshold: ThresholdStatus) => void> = new Set();
@@ -27,13 +26,24 @@ class StorageMonitorService {
   private criticalThreshold = 95; // 95% usage
 
   /**
+   * Set WebSocket service instance
+   */
+  setWebSocketService(service: WebSocketService): void {
+    this.wsService = service;
+  }
+
+  /**
    * Get current storage information
    */
   async getStorageInfo(): Promise<StorageInfo> {
+    if (!this.wsService) {
+      throw new Error('WebSocket service not initialized');
+    }
+
     try {
       const info = await errorRecoveryService.executeWithRetry(
         async () => {
-          const response = await wsService.call(RPC_METHODS.GET_STORAGE_INFO, {});
+          const response = await this.wsService!.call(RPC_METHODS.GET_STORAGE_INFO, {});
           return response as StorageInfo;
         },
         'getStorageInfo'
@@ -67,19 +77,23 @@ class StorageMonitorService {
   async checkStorageThresholds(): Promise<ThresholdStatus> {
     const usage = await this.getStorageUsage();
     
+    let currentStatus: 'normal' | 'warning' | 'critical' = 'normal';
+    if (usage.usage_percent >= this.criticalThreshold) {
+      currentStatus = 'critical';
+    } else if (usage.usage_percent >= this.warnThreshold) {
+      currentStatus = 'warning';
+    }
+    
     const status: ThresholdStatus = {
-      is_warning: usage.usage_percent >= this.warnThreshold,
-      is_critical: usage.usage_percent >= this.criticalThreshold,
-      usage_percent: usage.usage_percent,
-      available_space: usage.available_space,
-      total_space: usage.total_space,
-      message: this.getThresholdMessage(usage.usage_percent)
+      warning_threshold: this.warnThreshold,
+      critical_threshold: this.criticalThreshold,
+      current_status: currentStatus
     };
 
     // Notify callbacks if thresholds are exceeded
-    if (status.is_critical) {
+    if (currentStatus === 'critical') {
       this.notifyCriticalCallbacks(this.currentStorageInfo!);
-    } else if (status.is_warning) {
+    } else if (currentStatus === 'warning') {
       this.notifyThresholdCallbacks(status);
     }
 

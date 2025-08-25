@@ -45,6 +45,7 @@ class TestLoggingConfigRealIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             yield Path(temp_dir)
 
+    @pytest.mark.unit
     def test_real_correlation_id_filter_thread_isolation(self):
         """Test correlation IDs are isolated between threads with real threading."""
         import threading
@@ -75,6 +76,7 @@ class TestLoggingConfigRealIntegration:
         assert results[1] == "thread-1"
         assert results[2] == "thread-2"
 
+    @pytest.mark.unit
     def test_real_json_formatter_with_exception(self):
         """Test JSON formatter with real exception information."""
         formatter = JsonFormatter()
@@ -100,6 +102,7 @@ class TestLoggingConfigRealIntegration:
         assert "exception" in log_data
         assert "Test exception" in log_data["exception"]
 
+    @pytest.mark.unit
     def test_real_setup_logging_development_mode(self, temp_log_dir):
         """Test logging setup in development mode with real file system."""
         log_file = temp_log_dir / "test.log"
@@ -143,6 +146,7 @@ class TestLoggingConfigRealIntegration:
         # Verify log file was created
         assert log_file.exists()
 
+    @pytest.mark.unit
     def test_real_setup_logging_production_mode(self, temp_log_dir):
         """Test logging setup in production mode with real file system."""
         log_file = temp_log_dir / "test_prod.log"
@@ -180,6 +184,7 @@ class TestLoggingConfigRealIntegration:
         # Verify log file was created
         assert log_file.exists()
 
+    @pytest.mark.unit
     def test_real_setup_logging_auto_mode_detection(self, temp_log_dir):
         """Test automatic development/production mode detection with real environment."""
         log_file = temp_log_dir / "test_auto.log"

@@ -17,11 +17,13 @@ from camera_service.main import ServiceCoordinator, main, get_version
 class TestGetVersion:
     """Test version detection functionality."""
     
+    @pytest.mark.unit
     def test_get_version_with_package(self):
         """Test version retrieval when package is installed."""
         with patch('camera_service.main.version', return_value='1.2.3'):
             assert get_version() == '1.2.3'
     
+    @pytest.mark.unit
     def test_get_version_without_package(self):
         """
         Test version retrieval when package is not found.
@@ -38,6 +40,7 @@ class TestGetVersion:
         with patch('camera_service.main.version', side_effect=PackageNotFoundError("mediamtx-camera-service")):
             assert get_version() == 'unknown'
     
+    @pytest.mark.unit
     def test_get_version_import_error(self):
         """
         Test version retrieval when import system fails.
@@ -53,6 +56,7 @@ class TestGetVersion:
         with patch('camera_service.main.version', side_effect=ImportError("Import system failure")):
             assert get_version() == 'unknown'
     
+    @pytest.mark.unit
     def test_get_version_general_exception(self):
         """
         Test version retrieval when unexpected errors occur.
@@ -68,6 +72,7 @@ class TestGetVersion:
         with patch('camera_service.main.version', side_effect=Exception("Unexpected error")):
             assert get_version() == 'unknown'
     
+    @pytest.mark.unit
     def test_get_version_success(self):
         """
         Test version retrieval when package metadata is available.
@@ -98,6 +103,7 @@ class TestServiceCoordinator:
         config.logging = Mock()
         return config
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_successful_startup_sequence(self, coordinator, mock_config):
         """Test successful startup sequence with all components."""
@@ -118,6 +124,7 @@ class TestServiceCoordinator:
             assert coordinator.logger is not None
             mock_service_manager.start.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_startup_config_load_failure(self, coordinator):
         """Test startup failure during configuration loading."""
@@ -132,6 +139,7 @@ class TestServiceCoordinator:
             # Service manager should not be created on config failure
             assert coordinator.service_manager is None
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_startup_logging_setup_failure(self, coordinator, mock_config):
         """Test startup failure during logging setup."""
@@ -143,6 +151,7 @@ class TestServiceCoordinator:
             with pytest.raises(SystemExit):
                 await coordinator.startup()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_startup_service_manager_failure(self, coordinator, mock_config):
         """Test startup failure during service manager startup."""
@@ -159,6 +168,7 @@ class TestServiceCoordinator:
             with pytest.raises(SystemExit):
                 await coordinator.startup()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_graceful_shutdown_success(self, coordinator):
         """Test successful graceful shutdown."""
@@ -172,6 +182,7 @@ class TestServiceCoordinator:
         
         mock_service_manager.stop.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_shutdown_with_service_manager_error(self, coordinator):
         """Test shutdown when service manager raises an error."""
@@ -187,6 +198,7 @@ class TestServiceCoordinator:
         
         coordinator.logger.error.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_wait_for_shutdown_with_signal(self, coordinator):
         """Test wait_for_shutdown when shutdown signal is received."""
@@ -201,6 +213,7 @@ class TestServiceCoordinator:
         
         await coordinator.wait_for_shutdown()
     
+    @pytest.mark.unit
     def test_signal_handler_setup_unix(self, coordinator):
         """Test signal handler setup on Unix systems."""
         # TODO: MEDIUM: Test Unix signal handler setup [Story:S14]
@@ -218,6 +231,7 @@ class TestServiceCoordinator:
             # Should setup handlers for SIGTERM and SIGINT
             assert mock_event_loop.add_signal_handler.call_count == 2
     
+    @pytest.mark.unit
     def test_signal_handler_setup_windows(self, coordinator):
         """Test signal handler setup on Windows (should warn and skip)."""
         # TODO: MEDIUM: Test Windows signal handler behavior [Story:S14]
@@ -229,6 +243,7 @@ class TestServiceCoordinator:
             # Should log warning about Windows not supporting signal handlers
             coordinator.logger.warning.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_cleanup_partial_state(self, coordinator):
         """Test cleanup of partially initialized state."""
@@ -242,6 +257,7 @@ class TestServiceCoordinator:
         
         mock_service_manager.stop.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_cleanup_partial_state_with_error(self, coordinator):
         """Test partial state cleanup when service manager stop fails."""
@@ -260,6 +276,7 @@ class TestServiceCoordinator:
 class TestMainFunction:
     """Test the main() entry point function."""
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_main_successful_execution(self):
         """Test main() function with successful startup and shutdown."""
@@ -275,6 +292,7 @@ class TestMainFunction:
             mock_coordinator.wait_for_shutdown.assert_called_once()
             mock_coordinator.shutdown.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_main_keyboard_interrupt(self):
         """Test main() function handling of KeyboardInterrupt."""
@@ -290,6 +308,7 @@ class TestMainFunction:
             # Should still attempt shutdown even after KeyboardInterrupt
             mock_coordinator.shutdown.assert_called_once()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_main_system_exit_preservation(self):
         """Test main() function preserves SystemExit exceptions."""
@@ -304,6 +323,7 @@ class TestMainFunction:
             
             assert exc_info.value.code == 42
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_main_unexpected_error_handling(self):
         """Test main() function handling of unexpected errors."""
@@ -324,6 +344,7 @@ class TestMainFunction:
 class TestSignalIntegration:
     """Integration tests for signal handling."""
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.platform == 'win32', reason="Unix signals not available on Windows")
     async def test_signal_triggers_shutdown(self):

@@ -30,6 +30,7 @@ import type {
   StreamListResponse,
   ServerInfo,
   RecordingStatus,
+  RecordingProgress,
 } from '../types';
 import { RPC_METHODS, NOTIFICATION_METHODS } from '../types';
 import type { WebSocketService } from '../services/websocket';
@@ -54,13 +55,25 @@ export interface CameraStoreState {
   // Server info
   serverInfo: ServerInfo | null;
   
-  // UI state - CONSOLIDATION: Added missing scaffolding properties
-  loading: boolean;
-  isLoading: boolean; // Alias for loading
-  isRefreshing: boolean;
-  isConnecting: boolean;
-  isConnected: boolean;
+  // Standardized loading state
+  isLoading: boolean;
+  loadingStates: {
+    refreshing: boolean;
+    connecting: boolean;
+    gettingStatus: boolean;
+    takingSnapshot: boolean;
+    gettingServerInfo: boolean;
+    pinging: boolean;
+    gettingRecordings: boolean;
+    gettingSnapshots: boolean;
+  };
+  
+  // Standardized error state
   error: string | null;
+  lastError: string | null;
+  errors: Map<string, string>;
+  
+  // UI state
   lastUpdate: Date | null;
   updateCount: number;
   
@@ -99,31 +112,27 @@ export interface CameraStoreState {
   getServerInfo: () => Promise<ServerInfo | null>;
   pingServer: () => Promise<boolean>;
   
-  // State management
-  setError: (error: string | null) => void;
-  clearError: () => void;
-  updateCameraStatus: (device: string, status: CameraStatus) => void;
-  addRecording: (device: string, recording: RecordingSession) => void;
-  removeRecording: (device: string) => void;
-  
   // File operations
-  getRecordings: (params?: FileListParams) => Promise<FileListResponse | null>;
-  getSnapshots: (params?: FileListParams) => Promise<FileListResponse | null>;
+  getRecordings: () => Promise<FileListResponse | null>;
+  getSnapshots: () => Promise<FileListResponse | null>;
   
-  // Notification handling
-  handleNotification: (notification: unknown) => void;
+  // Standardized state management
+  setLoading: (loading: boolean) => void;
+  setOperationLoading: (operation: string, loading: boolean) => void;
+  setError: (error: string | null) => void;
+  setLastError: (error: string | null) => void;
+  setOperationError: (operation: string, error: string | null) => void;
+  clearErrors: () => void;
+  reset: () => void;
+  cleanup: () => void;
   
-  // Real-time update management
-  enableRealTimeUpdates: () => void;
-  disableRealTimeUpdates: () => void;
-  updateRecordingProgress: (device: string, progress: RecordingProgress) => void;
-  getRecordingProgress: (device: string) => RecordingProgress | null;
-  clearRecordingProgress: (device: string) => void;
-  
-  // CONSOLIDATION: Added missing scaffolding methods
-  initialize: () => Promise<void>;
-  refreshCameras: () => Promise<void>;
+  // Legacy compatibility
+  loading: boolean; // Alias for isLoading
+  isRefreshing: boolean; // Alias for loadingStates.refreshing
+  isConnecting: boolean; // Alias for loadingStates.connecting
+  connect: (url?: string) => Promise<void>;
   disconnect: () => void;
+  refreshCameras: () => Promise<void>;
   selectCamera: (device: string) => void;
 }
 
@@ -136,12 +145,26 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   snapshots: [],
   streams: [],
   serverInfo: null,
-  loading: false,
-  isLoading: false, // Alias for loading
-  isRefreshing: false,
-  isConnecting: false,
-  isConnected: false,
+  
+  // Standardized loading state
+  isLoading: false,
+  loadingStates: {
+    refreshing: false,
+    connecting: false,
+    gettingStatus: false,
+    takingSnapshot: false,
+    gettingServerInfo: false,
+    pinging: false,
+    gettingRecordings: false,
+    gettingSnapshots: false,
+  },
+  
+  // Standardized error state
   error: null,
+  lastError: null,
+  errors: new Map(),
+  
+  // UI state
   lastUpdate: null,
   updateCount: 0,
   wsService: null,
@@ -151,7 +174,94 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   recordingProgress: new Map<string, RecordingProgress>(),
   lastRecordingUpdate: null,
   notificationCount: 0,
+  
+  // Legacy compatibility
+  loading: false, // Alias for isLoading
+  isRefreshing: false, // Alias for loadingStates.refreshing
+  isConnecting: false, // Alias for loadingStates.connecting
 
+  // Standardized state management
+  setLoading: (loading: boolean) => {
+    set({ isLoading: loading });
+  },
+  
+  setOperationLoading: (operation: string, loading: boolean) => {
+    set((state) => ({
+      loadingStates: {
+        ...state.loadingStates,
+        [operation]: loading,
+      },
+    }));
+  },
+  
+  setError: (error: string | null) => {
+    set({ error });
+  },
+  
+  setLastError: (error: string | null) => {
+    set({ lastError: error });
+  },
+  
+  setOperationError: (operation: string, error: string | null) => {
+    set((state) => {
+      const newErrors = new Map(state.errors);
+      if (error) {
+        newErrors.set(operation, error);
+      } else {
+        newErrors.delete(operation);
+      }
+      return { errors: newErrors };
+    });
+  },
+  
+  clearErrors: () => {
+    set({ error: null, lastError: null, errors: new Map() });
+  },
+  
+  reset: () => {
+    set({
+      cameras: [],
+      selectedCamera: null,
+      activeRecordings: new Map(),
+      recordings: [],
+      snapshots: [],
+      streams: [],
+      serverInfo: null,
+      isLoading: false,
+      loadingStates: {
+        refreshing: false,
+        connecting: false,
+        gettingStatus: false,
+        takingSnapshot: false,
+        gettingServerInfo: false,
+        pinging: false,
+        gettingRecordings: false,
+        gettingSnapshots: false,
+      },
+      error: null,
+      lastError: null,
+      errors: new Map(),
+      lastUpdate: null,
+      updateCount: 0,
+      wsService: null,
+      realTimeUpdatesEnabled: true,
+      recordingProgress: new Map(),
+      lastRecordingUpdate: null,
+      notificationCount: 0,
+      loading: false,
+      isRefreshing: false,
+      isConnecting: false,
+    });
+  },
+  
+  cleanup: () => {
+    const { wsService } = get();
+    if (wsService) {
+      wsService.disconnect();
+    }
+    get().reset();
+  },
+  
   // WebSocket service management
   setWebSocketService: (service: WebSocketService) => {
     set({ wsService: service });

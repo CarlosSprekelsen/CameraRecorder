@@ -39,6 +39,7 @@ class TestAuthResult:
     """
     """Test authentication result structure."""
     
+    @pytest.mark.unit
     def test_create_auth_result(self):
         """Test creating authentication result."""
         result = AuthResult(
@@ -55,6 +56,7 @@ class TestAuthResult:
         assert result.auth_method == "jwt"
         assert result.error_message is None
     
+    @pytest.mark.unit
     def test_create_failed_auth_result(self):
         """Test creating failed authentication result."""
         result = AuthResult(
@@ -106,11 +108,13 @@ class TestAuthManager:
         """Create authentication manager for testing."""
         return AuthManager(jwt_handler, api_key_handler)
     
+    @pytest.mark.unit
     def test_init(self, auth_manager, jwt_handler, api_key_handler):
         """Test authentication manager initialization."""
         assert auth_manager.jwt_handler == jwt_handler
         assert auth_manager.api_key_handler == api_key_handler
     
+    @pytest.mark.unit
     def test_authenticate_jwt_success(self, auth_manager):
         """Test successful JWT authentication."""
         # Generate a valid JWT token
@@ -124,6 +128,7 @@ class TestAuthManager:
         assert result.auth_method == "jwt"
         assert result.error_message is None
     
+    @pytest.mark.unit
     def test_authenticate_result_api_compliance(self, auth_manager):
         """
         Test that AuthResult structure matches API documentation format.
@@ -170,6 +175,7 @@ class TestAuthManager:
         assert isinstance(api_response_data["expires_at"], str), "expires_at must be string"
         assert isinstance(api_response_data["session_id"], str), "session_id must be string"
     
+    @pytest.mark.unit
     def test_authenticate_jwt_invalid_token(self, auth_manager):
         """Test JWT authentication with invalid token."""
         result = auth_manager.authenticate("invalid_token", "jwt")
@@ -180,6 +186,7 @@ class TestAuthManager:
         assert result.auth_method == "jwt"
         assert result.error_message is not None
     
+    @pytest.mark.unit
     def test_authenticate_api_key_success(self, auth_manager):
         """Test successful API key authentication."""
         # Create a valid API key
@@ -193,6 +200,7 @@ class TestAuthManager:
         assert result.auth_method == "api_key"
         assert result.error_message is None
     
+    @pytest.mark.unit
     def test_authenticate_api_key_invalid(self, auth_manager):
         """Test API key authentication with invalid key."""
         result = auth_manager.authenticate("invalid_key", "api_key")
@@ -203,6 +211,7 @@ class TestAuthManager:
         assert result.auth_method == "api_key"
         assert result.error_message is not None
     
+    @pytest.mark.unit
     def test_authenticate_auto_jwt_first(self, auth_manager):
         """Test auto authentication with JWT token."""
         # Generate a valid JWT token
@@ -215,6 +224,7 @@ class TestAuthManager:
         assert result.role == "admin"
         assert result.auth_method == "jwt"
     
+    @pytest.mark.unit
     def test_authenticate_auto_api_key_fallback(self, auth_manager):
         """Test auto authentication with API key fallback."""
         # Create a valid API key

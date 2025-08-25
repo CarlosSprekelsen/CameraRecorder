@@ -162,6 +162,7 @@ class TestCameraDisconnectHandlingReal:
             enable_capability_detection=real_config.camera.enable_capability_detection,
         )
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_camera_disconnect_event_processing(self, real_hybrid_monitor):
         """
@@ -207,6 +208,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_hybrid_monitor.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_service_manager_disconnect_handling(self, real_service_manager, real_mediamtx_controller):
         """
@@ -263,6 +265,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_websocket_disconnect_notification(self, real_websocket_server, real_service_manager):
         """
@@ -339,6 +342,7 @@ class TestCameraDisconnectHandlingReal:
             await real_websocket_server.stop()
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_state_consistency_validation(self, real_hybrid_monitor, real_service_manager):
         """
@@ -377,6 +381,7 @@ class TestCameraDisconnectHandlingReal:
             await real_hybrid_monitor.stop()
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_concurrent_disconnect_handling(self, real_service_manager):
         """
@@ -429,6 +434,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_mediamtx_failure_handling(self, real_service_manager):
         """
@@ -465,6 +471,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_websocket_failure_handling(self, real_service_manager):
         """
@@ -501,6 +508,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_service_manager.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_rapid_connect_disconnect_sequence(self, real_hybrid_monitor):
         """
@@ -554,6 +562,7 @@ class TestCameraDisconnectHandlingReal:
         finally:
             await real_hybrid_monitor.stop()
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_disconnect_event_propagation(self, real_hybrid_monitor, real_service_manager):
         """

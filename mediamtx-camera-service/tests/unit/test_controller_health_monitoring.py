@@ -112,6 +112,7 @@ paths:
             import shutil
             shutil.rmtree(base, ignore_errors=True)
 
+    @pytest.mark.unit
     def test_configurable_circuit_breaker_parameters(self):
         """Test circuit breaker uses configurable parameters, not hardcoded values."""
         # Test with different threshold values
@@ -160,6 +161,7 @@ paths:
         assert "consecutive_successes_during_recovery" in controller1._health_state
         assert "consecutive_successes_during_recovery" in controller2._health_state
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_circuit_breaker_recovery_confirmation_threshold(
         self, controller_fast_timers, real_mediamtx_service
@@ -188,6 +190,7 @@ paths:
         assert controller._health_state["total_checks"] > 0, "Should have performed health checks"
         assert controller._health_state["success_count"] > 0, "Real MediaMTX service should be healthy"
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_recovery_confirmation_reset_on_failure(
         self, controller_fast_timers, real_mediamtx_service, caplog
@@ -215,6 +218,7 @@ paths:
         health_logs = [msg for msg in log_messages if "health" in msg.lower()]
         assert len(health_logs) > 0, "Should log health check information"
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_health_check_backoff_calculation(
         self, controller_fast_timers, real_mediamtx_service

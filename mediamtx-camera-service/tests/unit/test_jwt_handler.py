@@ -28,6 +28,7 @@ class TestJWTClaims:
     """
     """Test JWT claims structure."""
     
+    @pytest.mark.unit
     def test_create_claims(self):
         """Test creating JWT claims."""
         claims = JWTClaims.create("test_user", "viewer", 24)
@@ -38,6 +39,7 @@ class TestJWTClaims:
         assert claims.exp > claims.iat
         assert claims.exp == claims.iat + (24 * 3600)
     
+    @pytest.mark.unit
     def test_create_claims_default_expiry(self):
         """Test creating JWT claims with default expiry."""
         claims = JWTClaims.create("test_user", "admin")
@@ -58,16 +60,19 @@ class TestJWTHandler:
         """Create JWT handler with test secret."""
         return JWTHandler(get_test_jwt_secret())
     
+    @pytest.mark.unit
     def test_init_with_secret(self, jwt_handler):
         """Test JWT handler initialization."""
         assert jwt_handler.secret_key == get_test_jwt_secret()
         assert jwt_handler.algorithm == "HS256"
     
+    @pytest.mark.unit
     def test_init_without_secret(self):
         """Test JWT handler initialization without secret."""
         with pytest.raises(ValueError, match="Secret key must be provided"):
             JWTHandler("")
     
+    @pytest.mark.unit
     def test_generate_token_success(self, jwt_handler):
         """Test successful token generation."""
         token = jwt_handler.generate_token("test_user", "viewer", 1)
@@ -83,16 +88,19 @@ class TestJWTHandler:
         assert "iat" in payload
         assert "exp" in payload
     
+    @pytest.mark.unit
     def test_generate_token_invalid_role(self, jwt_handler):
         """Test token generation with invalid role."""
         with pytest.raises(ValueError, match="Invalid role"):
             jwt_handler.generate_token("test_user", "invalid_role")
     
+    @pytest.mark.unit
     def test_generate_token_empty_user_id(self, jwt_handler):
         """Test token generation with empty user ID."""
         with pytest.raises(ValueError, match="User ID must be provided"):
             jwt_handler.generate_token("", "viewer")
     
+    @pytest.mark.unit
     def test_validate_token_success(self, jwt_handler):
         """Test successful token validation."""
         token = jwt_handler.generate_token("test_user", "operator", 1)
@@ -104,6 +112,7 @@ class TestJWTHandler:
         assert claims.iat > 0
         assert claims.exp > claims.iat
     
+    @pytest.mark.unit
     def test_validate_token_invalid_signature(self, jwt_handler):
         """Test token validation with invalid signature."""
         # Create token with different secret
@@ -113,6 +122,7 @@ class TestJWTHandler:
         claims = jwt_handler.validate_token(token)
         assert claims is None
     
+    @pytest.mark.unit
     def test_validate_token_expired(self, jwt_handler):
         """Test validation of expired token."""
         # Create an expired token by manually setting expiry in the past
@@ -128,6 +138,7 @@ class TestJWTHandler:
         claims = jwt_handler.validate_token(expired_token)
         assert claims is None
     
+    @pytest.mark.unit
     def test_validate_token_missing_fields(self, jwt_handler):
         """Test validation of token with missing fields."""
         # Create payload with missing fields
@@ -137,6 +148,7 @@ class TestJWTHandler:
         claims = jwt_handler.validate_token(token)
         assert claims is None
     
+    @pytest.mark.unit
     def test_validate_token_invalid_role(self, jwt_handler):
         """Test validation of token with invalid role."""
         # Create payload with invalid role
@@ -151,16 +163,19 @@ class TestJWTHandler:
         claims = jwt_handler.validate_token(token)
         assert claims is None
     
+    @pytest.mark.unit
     def test_validate_token_none(self, jwt_handler):
         """Test validation of None token."""
         claims = jwt_handler.validate_token(None)
         assert claims is None
     
+    @pytest.mark.unit
     def test_validate_token_empty(self, jwt_handler):
         """Test validation of empty token."""
         claims = jwt_handler.validate_token("")
         assert claims is None
     
+    @pytest.mark.unit
     def test_is_token_expired_true(self, jwt_handler):
         """Test checking expired token."""
         # Create expired token
@@ -174,6 +189,7 @@ class TestJWTHandler:
         
         assert jwt_handler.is_token_expired(token) is True
     
+    @pytest.mark.unit
     def test_is_token_expired_false(self, jwt_handler):
         """Test checking non-expired token."""
         # Create valid token
@@ -187,6 +203,7 @@ class TestJWTHandler:
         
         assert jwt_handler.is_token_expired(token) is False
     
+    @pytest.mark.unit
     def test_get_token_info_success(self, jwt_handler):
         """Test getting token information."""
         token = jwt_handler.generate_token("test_user", "admin", 2)
@@ -199,11 +216,13 @@ class TestJWTHandler:
         assert info["expires_at"] > info["issued_at"]
         assert info["expired"] is False
     
+    @pytest.mark.unit
     def test_get_token_info_invalid_token(self, jwt_handler):
         """Test getting info from invalid token."""
         info = jwt_handler.get_token_info("invalid_token")
         assert info is None
     
+    @pytest.mark.unit
     def test_has_permission_viewer(self, jwt_handler):
         """Test permission checking for viewer role."""
         claims = JWTClaims.create("test_user", "viewer")
@@ -217,6 +236,7 @@ class TestJWTHandler:
         # Viewer should not have admin permission
         assert jwt_handler.has_permission(claims, "admin") is False
     
+    @pytest.mark.unit
     def test_has_permission_operator(self, jwt_handler):
         """Test permission checking for operator role."""
         claims = JWTClaims.create("test_user", "operator")
@@ -230,6 +250,7 @@ class TestJWTHandler:
         # Operator should not have admin permission
         assert jwt_handler.has_permission(claims, "admin") is False
     
+    @pytest.mark.unit
     def test_has_permission_admin(self, jwt_handler):
         """Test permission checking for admin role."""
         claims = JWTClaims.create("test_user", "admin")
@@ -239,6 +260,7 @@ class TestJWTHandler:
         assert jwt_handler.has_permission(claims, "operator") is True
         assert jwt_handler.has_permission(claims, "admin") is True
     
+    @pytest.mark.unit
     def test_has_permission_invalid_role(self, jwt_handler):
         """Test permission checking with invalid role."""
         claims = JWTClaims.create("test_user", "viewer")
@@ -246,6 +268,7 @@ class TestJWTHandler:
         # Invalid required role should return False
         assert jwt_handler.has_permission(claims, "invalid_role") is False
     
+    @pytest.mark.unit
     def test_valid_roles_constant(self, jwt_handler):
         """Test VALID_ROLES constant."""
         assert "viewer" in jwt_handler.VALID_ROLES
@@ -265,6 +288,7 @@ class TestJWTHandlerIntegration:
         """Create JWT handler for integration tests."""
         return JWTHandler(get_test_jwt_secret())
     
+    @pytest.mark.unit
     def test_full_token_lifecycle(self, jwt_handler):
         """Test complete token lifecycle."""
         # Generate token
@@ -288,6 +312,7 @@ class TestJWTHandlerIntegration:
         assert info["role"] == "operator"
         assert info["expired"] is False
     
+    @pytest.mark.unit
     def test_token_expiry_handling(self, jwt_handler):
         """Test token expiry handling."""
         # Create a valid token first

@@ -120,8 +120,8 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
   setThresholdStatus: (status: ThresholdStatus) => {
     set({ 
       thresholdStatus: status,
-      hasWarnings: status.is_warning,
-      hasCriticalIssues: status.is_critical
+      hasWarnings: status.current_status === 'warning',
+      hasCriticalIssues: status.current_status === 'critical'
     });
   },
 
@@ -242,17 +242,17 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
 
   isStorageAvailable: () => {
     const status = get().thresholdStatus;
-    return status ? !status.is_critical : true;
+    return status ? status.current_status !== 'critical' : true;
   },
 
   isStorageCritical: () => {
     const status = get().thresholdStatus;
-    return status ? status.is_critical : false;
+    return status ? status.current_status === 'critical' : false;
   },
 
   isStorageWarning: () => {
     const status = get().thresholdStatus;
-    return status ? status.is_warning : false;
+    return status ? status.current_status === 'warning' : false;
   },
 
   // Storage refresh method for component compatibility

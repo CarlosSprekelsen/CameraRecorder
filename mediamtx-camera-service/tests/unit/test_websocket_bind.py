@@ -17,6 +17,7 @@ from src.websocket_server.server import WebSocketJsonRpcServer
 from tests.fixtures.auth_utils import get_test_auth_manager, UserFactory
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_websocket_server_binds_and_ping(monkeypatch):
     """Test WebSocket server binding and ping with authentication."""
@@ -69,6 +70,7 @@ async def test_websocket_server_binds_and_ping(monkeypatch):
         await server.stop()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_websocket_server_ping_requires_authentication(monkeypatch):
     """Test that ping method requires authentication according to API documentation."""

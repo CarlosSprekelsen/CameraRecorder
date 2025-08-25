@@ -27,12 +27,26 @@ import type {
   StorageInfo
 } from '../types/camera';
 import type {
-  JSONRPCError,
-  RecordingConflictErrorData,
-  StorageErrorData
+  JSONRPCError
 } from '../types/rpc';
 import { authService } from './authService';
 import { ERROR_CODES } from '../types/rpc';
+
+/**
+ * Parse recording conflict error message from server
+ * Server format: "Camera is currently recording (session: 550e8400-e29b-41d4-a716-446655440000)"
+ */
+function parseRecordingConflictError(errorMessage: string): { device: string; session_id: string } {
+  // Extract session_id from error message
+  const sessionMatch = errorMessage.match(/session:\s*([a-f0-9-]+)/i);
+  const session_id = sessionMatch ? sessionMatch[1] : 'unknown';
+  
+  // Extract device from error message (if present)
+  const deviceMatch = errorMessage.match(/device\s+([^\s]+)/i);
+  const device = deviceMatch ? deviceMatch[1] : 'unknown';
+  
+  return { device, session_id };
+}
 
 export interface HTTPPollingConfig {
   baseUrl: string;
@@ -806,15 +820,16 @@ export class HTTPPollingService {
    * Handle recording conflict errors
    */
   private handleRecordingConflict(error: JSONRPCError): void {
-    const conflictData = error.data as RecordingConflictErrorData;
-    console.warn(`⚠️ HTTP Polling: Recording conflict for camera: ${conflictData?.camera_id || 'unknown'}`);
-    console.warn(`⚠️ HTTP Polling: Active session: ${conflictData?.session_id || 'unknown'}`);
+    // Parse error message to extract session_id from server format
+    const parsedError = parseRecordingConflictError(error.message);
+    console.warn(`⚠️ HTTP Polling: Recording conflict for camera: ${parsedError.device}`);
+    console.warn(`⚠️ HTTP Polling: Active session: ${parsedError.session_id}`);
     
     // Notify error handler about the conflict
     this.onErrorHandler?.(new HTTPPollingError(
-      `Camera ${conflictData?.camera_id || 'unknown'} is currently recording (Session: ${conflictData?.session_id || 'unknown'})`,
+      `Camera ${parsedError.device} is currently recording (Session: ${parsedError.session_id})`,
       ERROR_CODES.CAMERA_ALREADY_RECORDING,
-      conflictData
+      { device: parsedError.device, session_id: parsedError.session_id }
     ));
   }
 
@@ -822,18 +837,17 @@ export class HTTPPollingService {
    * Handle storage warning errors
    */
   private handleStorageWarning(error: JSONRPCError): void {
-    const storageData = error.data as StorageErrorData;
-    const usagePercent = storageData?.usage_percent || 0;
-    const availableSpace = storageData?.available_space || 0;
+    // Parse storage error from message since server doesn't provide structured data
+    const usagePercent = parseStorageUsageFromMessage(error.message);
     
     console.warn(`⚠️ HTTP Polling: Storage space low: ${usagePercent.toFixed(1)}% used`);
-    console.warn(`⚠️ HTTP Polling: Available space: ${this.formatBytes(availableSpace)}`);
+    console.warn(`⚠️ HTTP Polling: Error message: ${error.message}`);
     
     // Notify error handler about storage warning
     this.onErrorHandler?.(new HTTPPollingError(
-      `Storage space is low (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+      `Storage space is low (${usagePercent.toFixed(1)}% used)`,
       ERROR_CODES.STORAGE_SPACE_LOW,
-      storageData
+      { usage_percent: usagePercent }
     ));
   }
 
@@ -841,18 +855,17 @@ export class HTTPPollingService {
    * Handle storage critical errors
    */
   private handleStorageCritical(error: JSONRPCError): void {
-    const storageData = error.data as StorageErrorData;
-    const usagePercent = storageData?.usage_percent || 0;
-    const availableSpace = storageData?.available_space || 0;
+    // Parse storage error from message since server doesn't provide structured data
+    const usagePercent = parseStorageUsageFromMessage(error.message);
     
     console.error(`🚨 HTTP Polling: Storage space critical: ${usagePercent.toFixed(1)}% used`);
-    console.error(`🚨 HTTP Polling: Available space: ${this.formatBytes(availableSpace)}`);
+    console.error(`🚨 HTTP Polling: Error message: ${error.message}`);
     
     // Notify error handler about critical storage
     this.onErrorHandler?.(new HTTPPollingError(
-      `Storage space is critical (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+      `Storage space is critical (${usagePercent.toFixed(1)}% used)`,
       ERROR_CODES.STORAGE_SPACE_CRITICAL,
-      storageData
+      { usage_percent: usagePercent }
     ));
   }
 

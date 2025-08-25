@@ -81,6 +81,8 @@ class AdvancedCameraCapabilitiesValidator:
             "test_config": test_config
         }
     
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_camera_hot_swap_scenarios(self):
         """REQ-CAM-005: Test camera hot-swap detection and capability evolution."""
         env = await self.setup_test_environment()
@@ -202,6 +204,8 @@ class AdvancedCameraCapabilitiesValidator:
             import shutil
             shutil.rmtree(env["temp_dir"], ignore_errors=True)
     
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_advanced_capability_detection(self):
         """REQ-CAM-005: Test advanced capability detection scenarios."""
         env = await self.setup_test_environment()
@@ -280,6 +284,8 @@ class AdvancedCameraCapabilitiesValidator:
             import shutil
             shutil.rmtree(env["temp_dir"], ignore_errors=True)
     
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_complex_camera_configurations(self):
         """REQ-CAM-005: Test complex camera configuration scenarios."""
         env = await self.setup_test_environment()
@@ -434,6 +440,7 @@ class TestAdvancedCameraCapabilities:
         """Create advanced camera capabilities validator."""
         return AdvancedCameraCapabilitiesValidator()
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_camera_hot_swap_scenarios(self, validator):
         """REQ-CAM-005: Test camera hot-swap detection and capability evolution."""
@@ -448,6 +455,7 @@ class TestAdvancedCameraCapabilities:
         success_rate = (success_count / len(hot_swap_results)) * 100
         assert success_rate >= 75, f"Hot-swap success rate {success_rate}% below 75% threshold"
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_advanced_capability_detection(self, validator):
         """REQ-CAM-005: Test advanced capability detection scenarios."""
@@ -462,6 +470,7 @@ class TestAdvancedCameraCapabilities:
         success_rate = (success_count / len(advanced_results)) * 100
         assert success_rate >= 80, f"Advanced capability success rate {success_rate}% below 80% threshold"
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_complex_camera_configurations(self, validator):
         """REQ-CAM-005: Test complex camera configuration scenarios."""
@@ -476,6 +485,7 @@ class TestAdvancedCameraCapabilities:
         success_rate = (success_count / len(complex_results)) * 100
         assert success_rate >= 85, f"Complex configuration success rate {success_rate}% below 85% threshold"
     
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_advanced_capabilities_requirements_coverage(self, validator):
         """Test that all advanced camera capability requirements are met."""
@@ -501,6 +511,7 @@ class TestAdvancedCameraCapabilities:
             assert result.details is not None, f"Test {result.test_name} missing details"
             assert len(result.details) > 0, f"Test {result.test_name} has empty details"
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_simple_monitor_initialization(self):
         """Simple test to isolate hanging issue."""

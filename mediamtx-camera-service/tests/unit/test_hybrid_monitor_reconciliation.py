@@ -67,6 +67,7 @@ class TestRealAdaptivePollingBehavior:
             enable_capability_detection=True,
         )
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_adaptive_polling_with_stale_udev_events(self, real_monitor):
         """
@@ -95,6 +96,7 @@ class TestRealAdaptivePollingBehavior:
         assert stats["adaptive_poll_adjustments"] > 0, "Should record adaptive adjustment"
         assert stats["current_poll_interval"] == real_monitor._current_poll_interval
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_adaptive_polling_with_recent_udev_events(self, real_monitor):
         """
@@ -118,6 +120,7 @@ class TestRealAdaptivePollingBehavior:
         assert real_monitor._current_poll_interval > initial_interval, \
             f"Polling interval should increase when udev is fresh: {initial_interval} -> {real_monitor._current_poll_interval}"
 
+    @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_real_failure_recovery_with_actual_errors(self, real_monitor):
         """

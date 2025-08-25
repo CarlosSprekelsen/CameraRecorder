@@ -35,8 +35,6 @@ import type {
   CameraStatusNotification,
   RecordingStatusNotification,
   StorageStatusNotification,
-  RecordingConflictErrorData,
-  StorageErrorData,
   RecordingProgress,
 } from '../types';
 import { authService } from './authService';
@@ -138,6 +136,31 @@ interface StateRecoveryData {
   connectionUptime: number;
   messageCount: number;
   errorCount: number;
+}
+
+/**
+ * Parse recording conflict error message from server
+ * Server format: "Camera is currently recording (session: 550e8400-e29b-41d4-a716-446655440000)"
+ */
+function parseRecordingConflictError(errorMessage: string): { device: string; session_id: string } {
+  // Extract session_id from error message
+  const sessionMatch = errorMessage.match(/session:\s*([a-f0-9-]+)/i);
+  const session_id = sessionMatch ? sessionMatch[1] : 'unknown';
+  
+  // Extract device from error message (if present)
+  const deviceMatch = errorMessage.match(/device\s+([^\s]+)/i);
+  const device = deviceMatch ? deviceMatch[1] : 'unknown';
+  
+  return { device, session_id };
+}
+
+/**
+ * Parse storage usage from error message
+ * Server format: "Storage space is critical (95.2% used)"
+ */
+function parseStorageUsageFromMessage(errorMessage: string): number {
+  const usageMatch = errorMessage.match(/(\d+\.?\d*)%?\s*used/i);
+  return usageMatch ? parseFloat(usageMatch[1]) : 0;
 }
 
 export class WebSocketService {
@@ -439,14 +462,15 @@ export class WebSocketService {
    * Handle recording conflict errors
    */
   private handleRecordingConflict(error: JSONRPCError): void {
-    const conflictData = error.data as RecordingConflictErrorData;
-    console.warn(`⚠️ Recording conflict for camera: ${conflictData?.camera_id || 'unknown'}`);
-    console.warn(`⚠️ Active session: ${conflictData?.session_id || 'unknown'}`);
+    // Parse error message to extract session_id from server format
+    const parsedError = parseRecordingConflictError(error.message);
+    console.warn(`⚠️ Recording conflict for camera: ${parsedError.device}`);
+    console.warn(`⚠️ Active session: ${parsedError.session_id}`);
     
     // Update connection store with conflict information
     if (this.connectionStore) {
       this.connectionStore.setError(
-        `Camera ${conflictData?.camera_id || 'unknown'} is currently recording (Session: ${conflictData?.session_id || 'unknown'})`,
+        `Camera ${parsedError.device} is currently recording (Session: ${parsedError.session_id})`,
         ERROR_CODES.CAMERA_ALREADY_RECORDING
       );
     }
@@ -456,17 +480,16 @@ export class WebSocketService {
    * Handle storage warning errors
    */
   private handleStorageWarning(error: JSONRPCError): void {
-    const storageData = error.data as StorageErrorData;
-    const usagePercent = storageData?.usage_percent || 0;
-    const availableSpace = storageData?.available_space || 0;
+    // Parse storage error from message since server doesn't provide structured data
+    const usagePercent = parseStorageUsageFromMessage(error.message);
     
     console.warn(`⚠️ Storage space low: ${usagePercent.toFixed(1)}% used`);
-    console.warn(`⚠️ Available space: ${this.formatBytes(availableSpace)}`);
+    console.warn(`⚠️ Error message: ${error.message}`);
     
     // Update connection store with storage warning
     if (this.connectionStore) {
       this.connectionStore.setError(
-        `Storage space is low (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+        `Storage space is low (${usagePercent.toFixed(1)}% used)`,
         ERROR_CODES.STORAGE_SPACE_LOW
       );
     }
@@ -476,17 +499,16 @@ export class WebSocketService {
    * Handle storage critical errors
    */
   private handleStorageCritical(error: JSONRPCError): void {
-    const storageData = error.data as StorageErrorData;
-    const usagePercent = storageData?.usage_percent || 0;
-    const availableSpace = storageData?.available_space || 0;
+    // Parse storage error from message since server doesn't provide structured data
+    const usagePercent = parseStorageUsageFromMessage(error.message);
     
     console.error(`🚨 Storage space critical: ${usagePercent.toFixed(1)}% used`);
-    console.error(`🚨 Available space: ${this.formatBytes(availableSpace)}`);
+    console.error(`🚨 Error message: ${error.message}`);
     
     // Update connection store with critical storage error
     if (this.connectionStore) {
       this.connectionStore.setError(
-        `Storage space is critical (${usagePercent.toFixed(1)}% used). Available: ${this.formatBytes(availableSpace)}`,
+        `Storage space is critical (${usagePercent.toFixed(1)}% used)`,
         ERROR_CODES.STORAGE_SPACE_CRITICAL
       );
     }

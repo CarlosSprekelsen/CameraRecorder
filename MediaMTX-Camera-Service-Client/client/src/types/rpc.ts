@@ -24,23 +24,6 @@ export interface JSONRPCError {
 }
 
 /**
- * Error response data for recording conflicts
- */
-export interface RecordingConflictErrorData {
-  camera_id: string;
-  session_id: string;
-}
-
-/**
- * Error response data for storage issues
- */
-export interface StorageErrorData {
-  available_space: number;
-  total_space: number;
-  usage_percent: number;
-}
-
-/**
  * JSON-RPC 2.0 response
  */
 export interface JSONRPCResponse {

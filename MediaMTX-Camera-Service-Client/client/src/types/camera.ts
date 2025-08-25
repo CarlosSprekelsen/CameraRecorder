@@ -210,6 +210,7 @@ export interface RecordingSession {
  */
 export interface StartRecordingParams {
   device: string;
+  duration?: number; // Legacy seconds parameter
   duration_seconds?: number; // 1-3600 seconds
   duration_minutes?: number; // 1-1440 minutes  
   duration_hours?: number; // 1-24 hours
@@ -233,8 +234,7 @@ export interface SnapshotResult {
   status: 'completed' | 'FAILED';
   timestamp: string;
   file_size: number;
-  format?: SnapshotFormat;
-  quality?: number;
+  file_path: string;
   error?: string; // Present when status is 'FAILED'
 }
 
@@ -351,6 +351,9 @@ export interface AuthenticateParams {
 export interface AuthenticateResponse {
   authenticated: boolean;
   role?: string;
+  permissions?: string[];
+  expires_at?: string;
+  session_id?: string;
   user_id?: string;
   auth_method?: string;
 }

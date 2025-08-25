@@ -27,6 +27,7 @@ class TestAPIKey:
     """
     """Test API key structure."""
     
+    @pytest.mark.unit
     def test_create_api_key(self):
         """Test creating API key from dictionary."""
         data = {
@@ -49,6 +50,7 @@ class TestAPIKey:
         assert api_key.last_used == "2025-08-06T11:00:00"
         assert api_key.is_active is True
     
+    @pytest.mark.unit
     def test_to_dict(self):
         """Test converting API key to dictionary."""
         api_key = APIKey(
@@ -96,11 +98,13 @@ class TestAPIKeyHandler:
         """Create API key handler with temporary storage."""
         return APIKeyHandler(temp_storage_file)
     
+    @pytest.mark.unit
     def test_init_with_storage_file(self, api_key_handler, temp_storage_file):
         """Test API key handler initialization."""
         assert api_key_handler.storage_file == temp_storage_file
         assert len(api_key_handler._keys) == 0
     
+    @pytest.mark.unit
     def test_init_with_nonexistent_file(self):
         """Test initialization with non-existent storage file."""
         temp_file = "/tmp/nonexistent_api_keys.json"
@@ -114,6 +118,7 @@ class TestAPIKeyHandler:
         if os.path.exists(temp_file):
             os.unlink(temp_file)
     
+    @pytest.mark.unit
     def test_create_api_key_success(self, api_key_handler):
         """Test successful API key creation."""
         key = api_key_handler.create_api_key("Test Key", "viewer", 30)
@@ -125,16 +130,19 @@ class TestAPIKeyHandler:
         # Check that key was stored
         assert len(api_key_handler._keys) == 1
     
+    @pytest.mark.unit
     def test_create_api_key_invalid_role(self, api_key_handler):
         """Test API key creation with invalid role."""
         with pytest.raises(ValueError, match="Invalid role"):
             api_key_handler.create_api_key("Test Key", "invalid_role", 30)
     
+    @pytest.mark.unit
     def test_create_api_key_empty_name(self, api_key_handler):
         """Test API key creation with empty name."""
         with pytest.raises(ValueError, match="API key name must be provided"):
             api_key_handler.create_api_key("", "viewer", 30)
     
+    @pytest.mark.unit
     def test_create_api_key_no_expiry(self, api_key_handler):
         """Test API key creation without expiry."""
         key = api_key_handler.create_api_key("Test Key", "admin")
@@ -146,6 +154,7 @@ class TestAPIKeyHandler:
         stored_key = list(api_key_handler._keys.values())[0]
         assert stored_key.expires_at is None
     
+    @pytest.mark.unit
     def test_validate_api_key_success(self, api_key_handler):
         """Test successful API key validation."""
         # Create a key
@@ -159,21 +168,25 @@ class TestAPIKeyHandler:
         assert result.role == "operator"
         assert result.is_active is True
     
+    @pytest.mark.unit
     def test_validate_api_key_invalid(self, api_key_handler):
         """Test API key validation with invalid key."""
         result = api_key_handler.validate_api_key("invalid_key")
         assert result is None
     
+    @pytest.mark.unit
     def test_validate_api_key_none(self, api_key_handler):
         """Test API key validation with None."""
         result = api_key_handler.validate_api_key(None)
         assert result is None
     
+    @pytest.mark.unit
     def test_validate_api_key_empty(self, api_key_handler):
         """Test API key validation with empty string."""
         result = api_key_handler.validate_api_key("")
         assert result is None
     
+    @pytest.mark.unit
     def test_validate_api_key_expired(self, api_key_handler):
         """Test validation of expired API key."""
         # Create key with expired timestamp (manually set expiry in the past)
@@ -187,6 +200,7 @@ class TestAPIKeyHandler:
         result = api_key_handler.validate_api_key(key)
         assert result is None
     
+    @pytest.mark.unit
     def test_validate_api_key_inactive(self, api_key_handler):
         """Test validation of inactive API key."""
         # Create a key

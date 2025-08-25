@@ -26,6 +26,7 @@ from src.mediamtx_wrapper.controller import MediaMTXController
 class TestConfigurationSchemaValidation:
     """Test configuration schema consistency and parameter compatibility."""
 
+    @pytest.mark.unit
     def test_mediamtx_config_controller_compatibility(self):
         """Test that MediaMTXConfig fields match MediaMTXController constructor parameters."""
         
@@ -51,6 +52,7 @@ class TestConfigurationSchemaValidation:
         if unused_in_controller:
             print(f"Warning: MediaMTXConfig fields not used by MediaMTXController: {unused_in_controller}")
 
+    @pytest.mark.unit
     def test_mediamtx_config_field_types(self):
         """Test that MediaMTXConfig field types are compatible with expected values."""
         
@@ -97,6 +99,7 @@ class TestConfigurationSchemaValidation:
                 f"Field {field_name}: expected {expected_type}, got {actual_type}"
             )
 
+    @pytest.mark.unit
     def test_service_manager_config_instantiation(self):
         """Test that ServiceManager can create MediaMTXController with config object."""
         
@@ -189,6 +192,7 @@ class TestConfigurationSchemaValidation:
                 f"ServiceManager failed due to parameter mismatch: {error_msg}"
             )
 
+    @pytest.mark.unit
     def test_config_default_values(self):
         """Test that default configuration values are valid."""
         

@@ -77,8 +77,6 @@ export type {
   JSONRPCResponse,
   JSONRPCNotification,
   JSONRPCError,
-  RecordingConflictErrorData,
-  StorageErrorData,
   WebSocketMessage,
   ErrorCode,
   RPCMethod,
