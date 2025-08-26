@@ -531,4 +531,42 @@ Every test that calls server APIs MUST be audited against API documentation.
 - **Marker Compliance**: All markers defined and properly used
 - **API Compliance**: All tests must validate against API documentation
 
+## 12. Mandatory IV&V Validation Checklist
+
+### **🚨 ARCHITECTURE COMPLIANCE VALIDATION**
+**Before any IV&V approval, MUST validate:**
+
+□ **Single Responsibility Principle**: Each component has one clear purpose
+□ **No Duplicate Implementations**: Reuses existing logger, config, utilities
+□ **Proper Dependency Injection**: No public methods created for testing shortcuts
+□ **Architecture Integration**: Follows documented patterns and interfaces
+□ **Component Boundaries**: Respects existing component responsibilities
+
+### **🚨 TEST QUALITY VALIDATION**  
+**Before any IV&V approval, MUST validate:**
+
+□ **Requirements-Based Testing**: Tests validate requirements, not implementation details
+□ **Error Detection Design**: Tests designed to catch errors, not just pass
+□ **Real Functionality Testing**: Tests exercise real behavior, minimal mocking
+□ **Failure Conditions**: Tests validate error handling and edge cases
+□ **Integration Testing**: Tests verify component interactions work properly
+
+### **🚨 TECHNICAL DEBT ASSESSMENT**
+**Before any IV&V approval, MUST assess:**
+
+□ **Architecture Violations**: Document any departures from established patterns
+□ **Code Quality Issues**: Identify maintainability and readability problems
+□ **Integration Risks**: Assess impact on existing system components
+□ **Technical Debt Quantification**: Measure and report debt accumulation
+□ **Remediation Requirements**: Identify what must be fixed before progression
+
+### **IV&V FAILURE CONDITIONS**
+**MUST fail validation if:**
+❌ Architecture violations found without justified waivers
+❌ Duplicate implementations created instead of reusing existing components  
+❌ Tests designed to pass rather than validate requirements
+❌ Technical debt above established thresholds
+❌ Missing requirements traceability documentation
+
+
 **Status**: **CREATED** - Go implementation testing guide with strict structure guidelines, comprehensive markers section, enhanced compliance requirements, and critical authorization rules.

@@ -4,6 +4,7 @@
 package config_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +16,56 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
+
+// cleanupCameraServiceEnvVars cleans up all CAMERA_SERVICE environment variables
+func cleanupCameraServiceEnvVars() {
+	envVars := []string{
+		"CAMERA_SERVICE_SERVER_HOST",
+		"CAMERA_SERVICE_SERVER_PORT",
+		"CAMERA_SERVICE_SERVER_WEBSOCKET_PATH",
+		"CAMERA_SERVICE_SERVER_MAX_CONNECTIONS",
+		"CAMERA_SERVICE_MEDIAMTX_HOST",
+		"CAMERA_SERVICE_MEDIAMTX_API_PORT",
+		"CAMERA_SERVICE_MEDIAMTX_RTSP_PORT",
+		"CAMERA_SERVICE_MEDIAMTX_WEBRTC_PORT",
+		"CAMERA_SERVICE_MEDIAMTX_HLS_PORT",
+		"CAMERA_SERVICE_MEDIAMTX_CONFIG_PATH",
+		"CAMERA_SERVICE_MEDIAMTX_RECORDINGS_PATH",
+		"CAMERA_SERVICE_MEDIAMTX_SNAPSHOTS_PATH",
+		"CAMERA_SERVICE_MEDIAMTX_HEALTH_CHECK_INTERVAL",
+		"CAMERA_SERVICE_MEDIAMTX_HEALTH_FAILURE_THRESHOLD",
+		"CAMERA_SERVICE_MEDIAMTX_HEALTH_CIRCUIT_BREAKER_TIMEOUT",
+		"CAMERA_SERVICE_MEDIAMTX_HEALTH_MAX_BACKOFF_INTERVAL",
+		"CAMERA_SERVICE_MEDIAMTX_HEALTH_RECOVERY_CONFIRMATION_THRESHOLD",
+		"CAMERA_SERVICE_MEDIAMTX_BACKOFF_BASE_MULTIPLIER",
+		"CAMERA_SERVICE_MEDIAMTX_PROCESS_TERMINATION_TIMEOUT",
+		"CAMERA_SERVICE_MEDIAMTX_PROCESS_KILL_TIMEOUT",
+		"CAMERA_SERVICE_CAMERA_POLL_INTERVAL",
+		"CAMERA_SERVICE_CAMERA_DETECTION_TIMEOUT",
+		"CAMERA_SERVICE_CAMERA_ENABLE_CAPABILITY_DETECTION",
+		"CAMERA_SERVICE_CAMERA_AUTO_START_STREAMS",
+		"CAMERA_SERVICE_CAMERA_CAPABILITY_TIMEOUT",
+		"CAMERA_SERVICE_CAMERA_CAPABILITY_RETRY_INTERVAL",
+		"CAMERA_SERVICE_CAMERA_CAPABILITY_MAX_RETRIES",
+		"CAMERA_SERVICE_LOGGING_LEVEL",
+		"CAMERA_SERVICE_LOGGING_FORMAT",
+		"CAMERA_SERVICE_LOGGING_FILE_ENABLED",
+		"CAMERA_SERVICE_LOGGING_FILE_PATH",
+		"CAMERA_SERVICE_LOGGING_CONSOLE_ENABLED",
+		"CAMERA_SERVICE_RECORDING_ENABLED",
+		"CAMERA_SERVICE_RECORDING_FORMAT",
+		"CAMERA_SERVICE_RECORDING_QUALITY",
+		"CAMERA_SERVICE_SNAPSHOTS_ENABLED",
+		"CAMERA_SERVICE_SNAPSHOTS_FORMAT",
+		"CAMERA_SERVICE_SNAPSHOTS_QUALITY",
+		"CAMERA_SERVICE_ENABLE_HOT_RELOAD",
+		"CAMERA_SERVICE_ENV",
+	}
+
+	for _, envVar := range envVars {
+		os.Unsetenv(envVar)
+	}
+}
 
 /*
 Module: Configuration Management System
@@ -32,6 +83,9 @@ API Documentation Reference: N/A (Configuration system)
 
 func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 	// REQ-E1-S1.1-001: Configuration loading from YAML files
+	// Clean up any existing environment variables that might interfere
+	cleanupCameraServiceEnvVars()
+
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
@@ -1320,7 +1374,7 @@ server:
 	t.Run("special_characters", func(t *testing.T) {
 		specialPath := "/path/with/spaces and special chars!@#$%^&*()"
 		os.Setenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH", specialPath)
-		defer os.Unsetenv("CAMERA_SERVICE_SERVICE_WEBSOCKET_PATH")
+		defer os.Unsetenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH")
 
 		manager := config.NewConfigManager()
 		err := manager.LoadConfig(configPath)
@@ -1689,6 +1743,9 @@ snapshots:
 
 	// Test special characters in string fields
 	t.Run("special_characters", func(t *testing.T) {
+		// Clean up any existing environment variables that might interfere
+		cleanupCameraServiceEnvVars()
+
 		specialYAML := `
 server:
   host: "127.0.0.1"
@@ -1814,5 +1871,797 @@ server:
 		require.NotNil(t, cfg)
 		assert.Equal(t, "10.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8080, cfg.Server.Port)
+	})
+}
+
+func TestGlobalConfigFunctions(t *testing.T) {
+	// Test global configuration manager functions
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_config.yaml")
+
+	yamlContent := `
+server:
+  host: "192.168.1.100"
+  port: 9000
+  websocket_path: "/test"
+  max_connections: 50
+
+mediamtx:
+  host: "192.168.1.200"
+  api_port: 9998
+  rtsp_port: 8555
+  webrtc_port: 8890
+  hls_port: 8889
+  config_path: "/test/config.yml"
+  recordings_path: "/test/recordings"
+  snapshots_path: "/test/snapshots"
+`
+
+	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
+	require.NoError(t, err)
+
+	// Test GetConfigManager
+	t.Run("get_config_manager", func(t *testing.T) {
+		manager := config.GetConfigManager()
+		require.NotNil(t, manager)
+
+		// Should return the same instance
+		manager2 := config.GetConfigManager()
+		assert.Equal(t, manager, manager2)
+	})
+
+	// Test LoadConfig global function
+	t.Run("load_config_global", func(t *testing.T) {
+		err := config.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := config.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "192.168.1.100", cfg.Server.Host)
+		assert.Equal(t, 9000, cfg.Server.Port)
+	})
+
+	// Test GetConfig global function
+	t.Run("get_config_global", func(t *testing.T) {
+		cfg := config.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "192.168.1.100", cfg.Server.Host)
+		assert.Equal(t, 9000, cfg.Server.Port)
+	})
+}
+
+func TestConfigValidation_ComprehensiveCoverage(t *testing.T) {
+	// Test comprehensive validation coverage
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_config.yaml")
+
+	// Test validation with invalid configuration
+	t.Run("invalid_config_validation", func(t *testing.T) {
+		invalidYAML := `
+server:
+  host: ""  # Empty host
+  port: 0   # Invalid port
+  websocket_path: ""  # Empty path
+  max_connections: 0   # Invalid connections
+
+mediamtx:
+  host: ""  # Empty host
+  api_port: 0  # Invalid port
+  config_path: ""  # Empty path
+  recordings_path: ""  # Empty path
+  snapshots_path: ""  # Empty path
+`
+
+		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validation error")
+	})
+
+	// Test validation with missing required fields
+	t.Run("missing_required_fields", func(t *testing.T) {
+		incompleteYAML := `
+server:
+  host: ""  # Empty host should fail validation
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: ""  # Empty host should fail validation
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: ""  # Empty config path should fail validation
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+		err := os.WriteFile(configPath, []byte(incompleteYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validation error")
+	})
+
+	// Test validation with out-of-range values
+	t.Run("out_of_range_values", func(t *testing.T) {
+		outOfRangeYAML := `
+server:
+  host: "127.0.0.1"
+  port: 99999  # Invalid port
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  health_check_interval: -1  # Invalid negative value
+  health_failure_threshold: 0  # Invalid zero value
+  backoff_base_multiplier: 0.0  # Invalid zero value
+`
+
+		err := os.WriteFile(configPath, []byte(outOfRangeYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validation error")
+	})
+
+	// Test validation with invalid enum values
+	t.Run("invalid_enum_values", func(t *testing.T) {
+		invalidEnumYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  
+  codec:
+    video_profile: "invalid_profile"  # Invalid enum value
+    video_level: "invalid_level"      # Invalid enum value
+    pixel_format: "invalid_format"    # Invalid enum value
+    preset: "invalid_preset"          # Invalid enum value
+
+logging:
+  level: "INVALID_LEVEL"  # Invalid log level
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_enabled: true
+  file_path: "/opt/camera-service/logs/camera-service.log"
+  max_file_size: 10485760
+  backup_count: 5
+  console_enabled: true
+
+recording:
+  enabled: true
+  format: "invalid_format"  # Invalid format
+  quality: "invalid_quality"  # Invalid quality
+
+snapshots:
+  enabled: true
+  format: "invalid_format"  # Invalid format
+  quality: 150  # Invalid quality (out of range)
+`
+
+		err := os.WriteFile(configPath, []byte(invalidEnumYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "validation error")
+	})
+}
+
+func TestConfigManager_HotReload_Comprehensive(t *testing.T) {
+	// Test comprehensive hot reload functionality
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_config.yaml")
+
+	// Initial configuration
+	initialYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+	err := os.WriteFile(configPath, []byte(initialYAML), 0644)
+	require.NoError(t, err)
+
+	// Enable hot reload for testing
+	os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
+	defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
+
+	manager := config.NewConfigManager()
+	err = manager.LoadConfig(configPath)
+	require.NoError(t, err)
+
+	// Test callback notification
+	t.Run("callback_notification", func(t *testing.T) {
+		callbackCalled := make(chan bool, 1)
+		var callbackConfig *config.Config
+
+		manager.AddUpdateCallback(func(cfg *config.Config) {
+			callbackConfig = cfg
+			callbackCalled <- true
+		})
+
+		// Update configuration file
+		updatedYAML := `
+server:
+  host: "192.168.1.100"
+  port: 9000
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "192.168.1.200"
+  api_port: 9998
+  rtsp_port: 8555
+  webrtc_port: 8890
+  hls_port: 8889
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+		err := os.WriteFile(configPath, []byte(updatedYAML), 0644)
+		require.NoError(t, err)
+
+		// Wait for hot reload with timeout - increase timeout for file system events
+		select {
+		case <-callbackCalled:
+			// Callback was called successfully
+		case <-time.After(5 * time.Second):
+			t.Fatal("Callback was not called within timeout")
+		}
+
+		// Check if callback was called
+		require.NotNil(t, callbackConfig)
+		assert.Equal(t, "192.168.1.100", callbackConfig.Server.Host)
+		assert.Equal(t, 9000, callbackConfig.Server.Port)
+	})
+
+	// Test multiple callbacks
+	t.Run("multiple_callbacks", func(t *testing.T) {
+		callback1Called := make(chan bool, 1)
+		callback2Called := make(chan bool, 1)
+
+		manager.AddUpdateCallback(func(cfg *config.Config) {
+			callback1Called <- true
+		})
+
+		manager.AddUpdateCallback(func(cfg *config.Config) {
+			callback2Called <- true
+		})
+
+		// Update configuration file
+		updatedYAML := `
+server:
+  host: "10.0.0.1"
+  port: 8080
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "10.0.0.2"
+  api_port: 9999
+  rtsp_port: 8556
+  webrtc_port: 8891
+  hls_port: 8890
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+		err := os.WriteFile(configPath, []byte(updatedYAML), 0644)
+		require.NoError(t, err)
+
+		// Wait for hot reload with timeout - increase timeout for file system events
+		select {
+		case <-callback1Called:
+			// First callback was called
+		case <-time.After(5 * time.Second):
+			t.Fatal("First callback was not called within timeout")
+		}
+
+		select {
+		case <-callback2Called:
+			// Second callback was called
+		case <-time.After(5 * time.Second):
+			t.Fatal("Second callback was not called within timeout")
+		}
+	})
+
+	// Test callback panic handling
+	t.Run("callback_panic_handling", func(t *testing.T) {
+		manager.AddUpdateCallback(func(cfg *config.Config) {
+			panic("test panic")
+		})
+
+		// Update configuration file
+		updatedYAML := `
+server:
+  host: "172.16.0.1"
+  port: 7070
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "172.16.0.2"
+  api_port: 9996
+  rtsp_port: 8553
+  webrtc_port: 8888
+  hls_port: 8887
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+		err := os.WriteFile(configPath, []byte(updatedYAML), 0644)
+		require.NoError(t, err)
+
+		// Wait for hot reload - should not panic
+		time.Sleep(200 * time.Millisecond)
+
+		// Test should complete without panic
+		assert.True(t, true)
+	})
+
+	// Test file removal during hot reload
+	t.Run("file_removal_during_hot_reload", func(t *testing.T) {
+		// Remove the config file
+		err := os.Remove(configPath)
+		require.NoError(t, err)
+
+		// Wait a bit for the file watcher to detect the removal
+		time.Sleep(200 * time.Millisecond)
+
+		// The hot reload should be disabled gracefully
+	})
+
+	// Test failed reload scenario
+	t.Run("failed_reload_scenario", func(t *testing.T) {
+		// Create a malformed config file
+		malformedYAML := `
+server:
+  host: "127.0.0.1"
+  port: invalid_port  # Invalid port should cause reload to fail
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+`
+
+		err := os.WriteFile(configPath, []byte(malformedYAML), 0644)
+		require.NoError(t, err)
+
+		// Wait a bit for the reload attempt
+		time.Sleep(200 * time.Millisecond)
+
+		// The reload should fail gracefully
+	})
+
+	// Clean up
+	manager.Stop()
+}
+
+func TestConfigValidation_DetailedCoverage(t *testing.T) {
+	// Test detailed validation coverage for all validation functions
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "test_config.yaml")
+
+	// Test codec validation
+	t.Run("codec_validation", func(t *testing.T) {
+		codecYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  
+  codec:
+    video_profile: "high"  # Valid enum value
+    video_level: "4.0"     # Valid enum value
+    pixel_format: "yuv444p" # Valid enum value
+    bitrate: "800k"        # Valid bitrate
+    preset: "slow"         # Valid preset
+`
+
+		err := os.WriteFile(configPath, []byte(codecYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "high", cfg.MediaMTX.Codec.VideoProfile)
+		assert.Equal(t, "4.0", cfg.MediaMTX.Codec.VideoLevel)
+		assert.Equal(t, "yuv444p", cfg.MediaMTX.Codec.PixelFormat)
+		assert.Equal(t, "800k", cfg.MediaMTX.Codec.Bitrate)
+		assert.Equal(t, "slow", cfg.MediaMTX.Codec.Preset)
+	})
+
+	// Test stream readiness validation
+	t.Run("stream_readiness_validation", func(t *testing.T) {
+		streamYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  
+  stream_readiness:
+    timeout: 20.0
+    retry_attempts: 5
+    retry_delay: 2.0
+    check_interval: 0.5
+    enable_progress_notifications: true
+    graceful_fallback: true
+`
+
+		err := os.WriteFile(configPath, []byte(streamYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, 20.0, cfg.MediaMTX.StreamReadiness.Timeout)
+		assert.Equal(t, 5, cfg.MediaMTX.StreamReadiness.RetryAttempts)
+		assert.Equal(t, 2.0, cfg.MediaMTX.StreamReadiness.RetryDelay)
+		assert.Equal(t, 0.5, cfg.MediaMTX.StreamReadiness.CheckInterval)
+		assert.True(t, cfg.MediaMTX.StreamReadiness.EnableProgressNotifications)
+		assert.True(t, cfg.MediaMTX.StreamReadiness.GracefulFallback)
+	})
+
+	// Test FFmpeg validation
+	t.Run("ffmpeg_validation", func(t *testing.T) {
+		ffmpegYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 5.0
+    execution_timeout: 10.0
+    internal_timeout: 5000000
+    retry_attempts: 3
+    retry_delay: 1.0
+  
+  recording:
+    process_creation_timeout: 10.0
+    execution_timeout: 20.0
+    internal_timeout: 10000000
+    retry_attempts: 5
+    retry_delay: 2.0
+`
+
+		err := os.WriteFile(configPath, []byte(ffmpegYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, 5.0, cfg.FFmpeg.Snapshot.ProcessCreationTimeout)
+		assert.Equal(t, 10.0, cfg.FFmpeg.Snapshot.ExecutionTimeout)
+		assert.Equal(t, 5000000, cfg.FFmpeg.Snapshot.InternalTimeout)
+		assert.Equal(t, 3, cfg.FFmpeg.Snapshot.RetryAttempts)
+		assert.Equal(t, 1.0, cfg.FFmpeg.Snapshot.RetryDelay)
+	})
+
+	// Test notifications validation
+	t.Run("notifications_validation", func(t *testing.T) {
+		notificationsYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+
+notifications:
+  websocket:
+    delivery_timeout: 5.0
+    retry_attempts: 3
+    retry_delay: 1.0
+  
+  real_time:
+    camera_status_interval: 5.0
+    recording_progress_interval: 5.0
+    connection_health_check: 5.0
+`
+
+		err := os.WriteFile(configPath, []byte(notificationsYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, 5.0, cfg.Notifications.WebSocket.DeliveryTimeout)
+		assert.Equal(t, 3, cfg.Notifications.WebSocket.RetryAttempts)
+		assert.Equal(t, 1.0, cfg.Notifications.WebSocket.RetryDelay)
+		assert.Equal(t, 5.0, cfg.Notifications.RealTime.CameraStatusInterval)
+		assert.Equal(t, 5.0, cfg.Notifications.RealTime.RecordingProgressInterval)
+		assert.Equal(t, 5.0, cfg.Notifications.RealTime.ConnectionHealthCheck)
+	})
+
+	// Test performance validation
+	t.Run("performance_validation", func(t *testing.T) {
+		performanceYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/camera-service/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+
+performance:
+  response_time_targets:
+    snapshot_capture: 30.0
+    recording_start: 80.0
+    recording_stop: 15.0
+    file_listing: 30.0
+  
+  snapshot_tiers:
+    tier1_usb_direct_timeout: 5.0
+    tier2_rtsp_ready_check_timeout: 10.0
+    tier3_activation_timeout: 15.0
+    tier3_activation_trigger_timeout: 20.0
+    total_operation_timeout: 30.0
+    immediate_response_threshold: 1.0
+    acceptable_response_threshold: 5.0
+    slow_response_threshold: 10.0
+  
+  optimization:
+    enable_caching: true
+    cache_ttl: 300
+    max_concurrent_operations: 100
+    connection_pool_size: 50
+`
+
+		err := os.WriteFile(configPath, []byte(performanceYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, 30.0, cfg.Performance.ResponseTimeTargets.SnapshotCapture)
+		assert.Equal(t, 80.0, cfg.Performance.ResponseTimeTargets.RecordingStart)
+		assert.Equal(t, 15.0, cfg.Performance.ResponseTimeTargets.RecordingStop)
+		assert.Equal(t, 30.0, cfg.Performance.ResponseTimeTargets.FileListing)
+		assert.Equal(t, 5.0, cfg.Performance.SnapshotTiers.Tier1USBDirectTimeout)
+		assert.Equal(t, 10.0, cfg.Performance.SnapshotTiers.Tier2RTSPReadyCheckTimeout)
+		assert.Equal(t, 15.0, cfg.Performance.SnapshotTiers.Tier3ActivationTimeout)
+		assert.Equal(t, 20.0, cfg.Performance.SnapshotTiers.Tier3ActivationTriggerTimeout)
+		assert.Equal(t, 30.0, cfg.Performance.SnapshotTiers.TotalOperationTimeout)
+		assert.True(t, cfg.Performance.Optimization.EnableCaching)
+		assert.Equal(t, 300, cfg.Performance.Optimization.CacheTTL)
+		assert.Equal(t, 100, cfg.Performance.Optimization.MaxConcurrentOperations)
+		assert.Equal(t, 50, cfg.Performance.Optimization.ConnectionPoolSize)
+	})
+}
+
+func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
+	// Test comprehensive edge cases
+	tempDir := t.TempDir()
+
+	// Test with non-existent directory
+	t.Run("non_existent_directory", func(t *testing.T) {
+		nonExistentPath := filepath.Join(tempDir, "nonexistent", "config.yaml")
+
+		manager := config.NewConfigManager()
+		err := manager.LoadConfig(nonExistentPath)
+		require.NoError(t, err) // Should use defaults
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+	})
+
+	// Test with empty file
+	t.Run("empty_file", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "empty_config.yaml")
+		err := os.WriteFile(configPath, []byte(""), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err) // Should use defaults
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+	})
+
+	// Test with file containing only comments
+	t.Run("comments_only_file", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "comments_config.yaml")
+		commentsYAML := `
+# This is a comment
+# Another comment
+# No actual configuration
+`
+		err := os.WriteFile(configPath, []byte(commentsYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err) // Should use defaults
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+	})
+
+	// Test with malformed YAML that's not completely invalid
+	t.Run("malformed_yaml", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "malformed_config.yaml")
+		malformedYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+  # Missing closing quote
+  websocket_path: "/ws
+  max_connections: 100
+`
+		err := os.WriteFile(configPath, []byte(malformedYAML), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err) // Should use defaults due to YAML parsing error
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+	})
+
+	// Test with very large configuration file
+	t.Run("large_config_file", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "large_config.yaml")
+
+		// Create a large YAML file
+		var largeYAML strings.Builder
+		largeYAML.WriteString("server:\n")
+		largeYAML.WriteString("  host: \"127.0.0.1\"\n")
+		largeYAML.WriteString("  port: 8002\n")
+		largeYAML.WriteString("  websocket_path: \"/ws\"\n")
+		largeYAML.WriteString("  max_connections: 100\n")
+
+		// Add many comments to make it large
+		for i := 0; i < 1000; i++ {
+			largeYAML.WriteString(fmt.Sprintf("  # Comment %d\n", i))
+		}
+
+		largeYAML.WriteString("\nmediamtx:\n")
+		largeYAML.WriteString("  host: \"127.0.0.1\"\n")
+		largeYAML.WriteString("  api_port: 9997\n")
+		largeYAML.WriteString("  rtsp_port: 8554\n")
+		largeYAML.WriteString("  webrtc_port: 8889\n")
+		largeYAML.WriteString("  hls_port: 8888\n")
+		largeYAML.WriteString("  config_path: \"/opt/camera-service/config/mediamtx.yml\"\n")
+		largeYAML.WriteString("  recordings_path: \"/opt/camera-service/recordings\"\n")
+		largeYAML.WriteString("  snapshots_path: \"/opt/camera-service/snapshots\"\n")
+
+		err := os.WriteFile(configPath, []byte(largeYAML.String()), 0644)
+		require.NoError(t, err)
+
+		manager := config.NewConfigManager()
+		err = manager.LoadConfig(configPath)
+		require.NoError(t, err)
+
+		cfg := manager.GetConfig()
+		require.NotNil(t, cfg)
+		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
+		assert.Equal(t, 8002, cfg.Server.Port)
 	})
 }

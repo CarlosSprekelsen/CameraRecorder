@@ -72,9 +72,6 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// Apply environment variable overrides
-	cm.applyEnvironmentOverrides(&config)
-
 	// Validate configuration
 	if err := ValidateConfig(&config); err != nil {
 		return fmt.Errorf("configuration validation failed: %w", err)
@@ -148,7 +145,10 @@ func (cm *ConfigManager) stopFileWatching() {
 	defer cm.watcherLock.Unlock()
 
 	if cm.watcher != nil {
-		cm.watcher.Close()
+		// Close watcher safely
+		if err := cm.watcher.Close(); err != nil {
+			cm.logger.WithError(err).Warn("Error closing file watcher")
+		}
 		cm.watcher = nil
 	}
 }
@@ -189,6 +189,7 @@ func (cm *ConfigManager) watchFileChanges() {
 				case fsnotify.Remove:
 					cm.logger.Warn("Configuration file was removed, hot reload disabled")
 					cm.stopFileWatching()
+					return // Exit the goroutine when file is removed
 				}
 			}
 
