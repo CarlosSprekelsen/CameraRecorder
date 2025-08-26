@@ -28,7 +28,7 @@ mediamtx:
   process_kill_timeout: 2.0
 
 camera:
-  poll_interval: 0.1
+  poll_interval: 0.05  # Reduced from 0.1s to 0.05s (50ms) for faster detection
   detection_timeout: 2.0
   device_range: [0, 9]  # /dev/video0 to /dev/video9
   enable_capability_detection: true
