@@ -1,11 +1,18 @@
 package config
 
+import "time"
+
 // ServerConfig represents WebSocket server configuration settings.
 type ServerConfig struct {
-	Host           string `mapstructure:"host"`
-	Port           int    `mapstructure:"port"`
-	WebSocketPath  string `mapstructure:"websocket_path"`
-	MaxConnections int    `mapstructure:"max_connections"`
+	Host           string        `mapstructure:"host"`
+	Port           int           `mapstructure:"port"`
+	WebSocketPath  string        `mapstructure:"websocket_path"`
+	MaxConnections int           `mapstructure:"max_connections"`
+	ReadTimeout    time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout   time.Duration `mapstructure:"write_timeout"`
+	PingInterval   time.Duration `mapstructure:"ping_interval"`
+	PongWait       time.Duration `mapstructure:"pong_wait"`
+	MaxMessageSize int64         `mapstructure:"max_message_size"`
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
