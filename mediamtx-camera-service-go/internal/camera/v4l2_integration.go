@@ -1,27 +1,28 @@
 package camera
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // V4L2IntegrationManager manages the integration between V4L2 camera interface and configuration system
 type V4L2IntegrationManager struct {
 	deviceManager *V4L2DeviceManager
 	configManager *config.ConfigManager
-	logger        *logrus.Logger
+	logger        *logging.Logger
 	mu            sync.RWMutex
 	running       bool
 	stopChan      chan struct{}
 }
 
 // NewV4L2IntegrationManager creates a new V4L2 integration manager
-func NewV4L2IntegrationManager(configManager *config.ConfigManager, logger *logrus.Logger) *V4L2IntegrationManager {
+func NewV4L2IntegrationManager(configManager *config.ConfigManager, logger *logging.Logger) *V4L2IntegrationManager {
 	if logger == nil {
-		logger = logrus.New()
+		logger = logging.NewLogger("v4l2-integration")
 	}
 
 	return &V4L2IntegrationManager{
@@ -46,23 +47,8 @@ func (im *V4L2IntegrationManager) Start() error {
 		return fmt.Errorf("configuration not available")
 	}
 
-	// Create camera configuration
-	cameraConfig := &CameraConfig{
-		PollInterval:              cfg.Camera.PollInterval,
-		DetectionTimeout:          cfg.Camera.DetectionTimeout,
-		DeviceRange:               cfg.Camera.DeviceRange,
-		EnableCapabilityDetection: cfg.Camera.EnableCapabilityDetection,
-		CapabilityTimeout:         cfg.Camera.CapabilityTimeout,
-		CapabilityRetryInterval:   cfg.Camera.CapabilityRetryInterval,
-		CapabilityMaxRetries:      cfg.Camera.CapabilityMaxRetries,
-	}
-
-	// Create adapters for dependency injection
-	configProvider := &IntegrationConfigProvider{config: cameraConfig}
-	loggerAdapter := &LogrusLoggerAdapter{logger: im.logger}
-	
-	// Create device manager with configuration
-	im.deviceManager = NewV4L2DeviceManager(configProvider, loggerAdapter)
+	// Create device manager with real configuration and logging
+	im.deviceManager = NewV4L2DeviceManager(im.configManager, im.logger)
 
 	// Start device manager
 	if err := im.deviceManager.Start(); err != nil {
@@ -90,7 +76,9 @@ func (im *V4L2IntegrationManager) Stop() error {
 	// Stop device manager
 	if im.deviceManager != nil {
 		if err := im.deviceManager.Stop(); err != nil {
-			im.logger.WithError(err).Error("Error stopping device manager")
+			im.logger.WithFields(map[string]interface{}{
+				"error": err.Error(),
+			}).Error("Error stopping device manager")
 		}
 	}
 
@@ -101,40 +89,29 @@ func (im *V4L2IntegrationManager) Stop() error {
 	return nil
 }
 
-// GetConnectedDevices returns all currently connected devices
-func (im *V4L2IntegrationManager) GetConnectedDevices() map[string]*V4L2Device {
+// GetDeviceManager returns the device manager instance
+func (im *V4L2IntegrationManager) GetDeviceManager() *V4L2DeviceManager {
 	im.mu.RLock()
 	defer im.mu.RUnlock()
-
-	if im.deviceManager == nil {
-		return make(map[string]*V4L2Device)
-	}
-
-	return im.deviceManager.GetConnectedDevices()
+	return im.deviceManager
 }
 
-// GetDevice returns a specific device by path
-func (im *V4L2IntegrationManager) GetDevice(path string) (*V4L2Device, bool) {
-	im.mu.RLock()
-	defer im.mu.RUnlock()
-
-	if im.deviceManager == nil {
-		return nil, false
-	}
-
-	return im.deviceManager.GetDevice(path)
-}
-
-// GetStats returns current statistics
+// GetStats returns device manager statistics
 func (im *V4L2IntegrationManager) GetStats() *DeviceManagerStats {
 	im.mu.RLock()
 	defer im.mu.RUnlock()
 
-	if im.deviceManager == nil {
-		return &DeviceManagerStats{}
+	if im.deviceManager != nil {
+		return im.deviceManager.GetStats()
 	}
+	return &DeviceManagerStats{}
+}
 
-	return im.deviceManager.GetStats()
+// IsRunning returns whether the integration manager is running
+func (im *V4L2IntegrationManager) IsRunning() bool {
+	im.mu.RLock()
+	defer im.mu.RUnlock()
+	return im.running
 }
 
 // handleConfigUpdate handles configuration updates
@@ -142,107 +119,68 @@ func (im *V4L2IntegrationManager) handleConfigUpdate(newConfig *config.Config) {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 
-	if !im.running || im.deviceManager == nil {
+	if !im.running {
 		return
 	}
 
-	im.logger.WithFields(logrus.Fields{
-		"component": "v4l2_integration",
-		"action":    "config_update",
-	}).Info("Handling configuration update")
+	im.logger.WithFields(map[string]interface{}{
+		"action": "config_update",
+	}).Info("Configuration updated, restarting device manager")
 
-	// Note: In a real implementation, we would update the device manager configuration
-	// For now, we'll just log the update
-	im.logger.WithFields(logrus.Fields{
-		"poll_interval":               newConfig.Camera.PollInterval,
-		"detection_timeout":           newConfig.Camera.DetectionTimeout,
-		"device_range":                newConfig.Camera.DeviceRange,
-		"enable_capability_detection": newConfig.Camera.EnableCapabilityDetection,
-	}).Debug("Configuration updated")
-}
-
-// ValidateConfiguration validates that the configuration is compatible with V4L2 operations
-func (im *V4L2IntegrationManager) ValidateConfiguration(cfg *config.Config) error {
-	if cfg == nil {
-		return fmt.Errorf("configuration is nil")
-	}
-
-	if cfg.Camera.PollInterval <= 0 {
-		return fmt.Errorf("poll_interval must be greater than 0")
-	}
-
-	if cfg.Camera.DetectionTimeout <= 0 {
-		return fmt.Errorf("detection_timeout must be greater than 0")
-	}
-
-	if len(cfg.Camera.DeviceRange) == 0 {
-		return fmt.Errorf("device_range cannot be empty")
-	}
-
-	// Validate device range values
-	for _, deviceNum := range cfg.Camera.DeviceRange {
-		if deviceNum < 0 {
-			return fmt.Errorf("device numbers must be non-negative")
+	// Stop current device manager
+	if im.deviceManager != nil {
+		if err := im.deviceManager.Stop(); err != nil {
+			im.logger.WithFields(map[string]interface{}{
+				"error": err.Error(),
+			}).Error("Error stopping device manager during config update")
 		}
 	}
 
-	return nil
-}
+	// Create new device manager with updated configuration
+	im.deviceManager = NewV4L2DeviceManager(im.configManager, im.logger)
 
-// IntegrationConfigProvider adapts CameraConfig to ConfigProvider interface
-type IntegrationConfigProvider struct {
-	config *CameraConfig
-}
-
-func (i *IntegrationConfigProvider) GetCameraConfig() *CameraConfig {
-	return i.config
-}
-
-func (i *IntegrationConfigProvider) GetPollInterval() float64 {
-	return i.config.PollInterval
-}
-
-func (i *IntegrationConfigProvider) GetDetectionTimeout() float64 {
-	return i.config.DetectionTimeout
-}
-
-func (i *IntegrationConfigProvider) GetDeviceRange() []int {
-	return i.config.DeviceRange
-}
-
-func (i *IntegrationConfigProvider) GetEnableCapabilityDetection() bool {
-	return i.config.EnableCapabilityDetection
-}
-
-func (i *IntegrationConfigProvider) GetCapabilityTimeout() float64 {
-	return i.config.CapabilityTimeout
-}
-
-// LogrusLoggerAdapter adapts logrus.Logger to Logger interface
-type LogrusLoggerAdapter struct {
-	logger *logrus.Logger
-}
-
-func (l *LogrusLoggerAdapter) WithFields(fields map[string]interface{}) Logger {
-	logrusFields := logrus.Fields{}
-	for k, v := range fields {
-		logrusFields[k] = v
+	// Start new device manager
+	if err := im.deviceManager.Start(); err != nil {
+		im.logger.WithFields(map[string]interface{}{
+			"error": err.Error(),
+		}).Error("Error starting device manager after config update")
+	} else {
+		im.logger.Info("Device manager restarted successfully with new configuration")
 	}
-	return &LogrusLoggerAdapter{logger: l.logger.WithFields(logrusFields).Logger}
 }
 
-func (l *LogrusLoggerAdapter) Info(args ...interface{}) {
-	l.logger.Info(args...)
+// EnumerateDevices enumerates all V4L2 devices
+func (im *V4L2IntegrationManager) EnumerateDevices(ctx context.Context) ([]*V4L2Device, error) {
+	im.mu.RLock()
+	defer im.mu.RUnlock()
+
+	if im.deviceManager == nil {
+		return nil, fmt.Errorf("device manager not available")
+	}
+
+	return im.deviceManager.EnumerateDevices(ctx)
 }
 
-func (l *LogrusLoggerAdapter) Warn(args ...interface{}) {
-	l.logger.Warn(args...)
+// ProbeCapabilities probes capabilities for a specific device
+func (im *V4L2IntegrationManager) ProbeCapabilities(ctx context.Context, devicePath string) (*V4L2Capabilities, error) {
+	im.mu.RLock()
+	defer im.mu.RUnlock()
+
+	if im.deviceManager == nil {
+		return nil, fmt.Errorf("device manager not available")
+	}
+
+	return im.deviceManager.ProbeCapabilities(ctx, devicePath)
 }
 
-func (l *LogrusLoggerAdapter) Error(args ...interface{}) {
-	l.logger.Error(args...)
-}
+// StartMonitoring starts device monitoring
+func (im *V4L2IntegrationManager) StartMonitoring(ctx context.Context) error {
+	im.mu.RLock()
+	defer im.mu.RUnlock()
 
-func (l *LogrusLoggerAdapter) Debug(args ...interface{}) {
-	l.logger.Debug(args...)
+	if im.deviceManager == nil {
+		return fmt.Errorf("device manager not available")
+	}
+
+	return im.deviceManager.StartMonitoring(ctx)
 }

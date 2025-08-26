@@ -6,7 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // DeviceStatus represents the current status of a V4L2 device
@@ -51,8 +52,8 @@ type V4L2Device struct {
 
 // V4L2DeviceManager manages V4L2 device discovery and monitoring
 type V4L2DeviceManager struct {
-	configProvider  ConfigProvider
-	logger          Logger
+	configManager   *config.ConfigManager
+	logger          *logging.Logger
 	deviceChecker   DeviceChecker
 	commandExecutor V4L2CommandExecutor
 	infoParser      DeviceInfoParser
@@ -91,85 +92,42 @@ type DeviceManagerStats struct {
 }
 
 // NewV4L2DeviceManager creates a new V4L2 device manager with dependency injection
-func NewV4L2DeviceManager(configProvider ConfigProvider, logger Logger) *V4L2DeviceManager {
-	return NewV4L2DeviceManagerWithDependencies(configProvider, logger, &RealDeviceChecker{}, &RealV4L2CommandExecutor{}, &RealDeviceInfoParser{})
+func NewV4L2DeviceManager(configManager *config.ConfigManager, logger *logging.Logger) *V4L2DeviceManager {
+	return NewV4L2DeviceManagerWithDependencies(configManager, logger, &RealDeviceChecker{}, &RealV4L2CommandExecutor{}, &RealDeviceInfoParser{})
 }
 
 // NewV4L2DeviceManagerWithDependencies creates a new V4L2 device manager with all dependencies injected
-func NewV4L2DeviceManagerWithDependencies(configProvider ConfigProvider, logger Logger, deviceChecker DeviceChecker, commandExecutor V4L2CommandExecutor, infoParser DeviceInfoParser) *V4L2DeviceManager {
-	if configProvider == nil {
-		// Create default config provider
-		configProvider = &DefaultConfigProvider{
-			config: &CameraConfig{
-				PollInterval:              0.1,
-				DetectionTimeout:          1.0,
-				DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
-				EnableCapabilityDetection: true,
-				CapabilityTimeout:         5.0,
-				CapabilityRetryInterval:   1.0,
-				CapabilityMaxRetries:      3,
-			},
-		}
+func NewV4L2DeviceManagerWithDependencies(configManager *config.ConfigManager, logger *logging.Logger, deviceChecker DeviceChecker, commandExecutor V4L2CommandExecutor, infoParser DeviceInfoParser) *V4L2DeviceManager {
+	if configManager == nil {
+		panic("configManager cannot be nil - use existing internal/config/ConfigManager")
 	}
 
 	if logger == nil {
-		logger = &DefaultLogger{}
+		logger = logging.NewLogger("v4l2-device-manager")
 	}
 
 	return &V4L2DeviceManager{
-		configProvider:  configProvider,
+		configManager:   configManager,
 		logger:          logger,
-		deviceChecker:   &RealDeviceChecker{},
-		commandExecutor: &RealV4L2CommandExecutor{},
-		infoParser:      &RealDeviceInfoParser{},
+		deviceChecker:   deviceChecker,
+		commandExecutor: commandExecutor,
+		infoParser:      infoParser,
 		devices:         make(map[string]*V4L2Device),
 		stopChan:        make(chan struct{}),
 		stats: &DeviceManagerStats{
-			CurrentPollInterval: configProvider.GetPollInterval(),
+			CurrentPollInterval: getPollIntervalFromConfig(configManager),
 		},
 	}
 }
 
-// DefaultConfigProvider provides default configuration
-type DefaultConfigProvider struct {
-	config *CameraConfig
+// getPollIntervalFromConfig extracts poll interval from config manager
+func getPollIntervalFromConfig(configManager *config.ConfigManager) float64 {
+	cfg := configManager.GetConfig()
+	if cfg != nil {
+		return cfg.Camera.PollInterval
+	}
+	return 0.1 // Default fallback
 }
-
-func (d *DefaultConfigProvider) GetCameraConfig() *CameraConfig {
-	return d.config
-}
-
-func (d *DefaultConfigProvider) GetPollInterval() float64 {
-	return d.config.PollInterval
-}
-
-func (d *DefaultConfigProvider) GetDetectionTimeout() float64 {
-	return d.config.DetectionTimeout
-}
-
-func (d *DefaultConfigProvider) GetDeviceRange() []int {
-	return d.config.DeviceRange
-}
-
-func (d *DefaultConfigProvider) GetEnableCapabilityDetection() bool {
-	return d.config.EnableCapabilityDetection
-}
-
-func (d *DefaultConfigProvider) GetCapabilityTimeout() float64 {
-	return d.config.CapabilityTimeout
-}
-
-// DefaultLogger provides default logging
-type DefaultLogger struct{}
-
-func (d *DefaultLogger) WithFields(fields map[string]interface{}) Logger {
-	return d
-}
-
-func (d *DefaultLogger) Info(args ...interface{})  {}
-func (d *DefaultLogger) Warn(args ...interface{})  {}
-func (d *DefaultLogger) Error(args ...interface{}) {}
-func (d *DefaultLogger) Debug(args ...interface{}) {}
 
 // Start begins device discovery and monitoring
 func (dm *V4L2DeviceManager) Start() error {
@@ -241,14 +199,196 @@ func (dm *V4L2DeviceManager) GetStats() *DeviceManagerStats {
 	return &stats
 }
 
-// pollingLoop continuously polls for device changes
-func (dm *V4L2DeviceManager) pollingLoop() {
-	ticker := time.NewTicker(time.Duration(dm.configProvider.GetPollInterval() * float64(time.Second)))
+// EnumerateDevices enumerates all V4L2 devices in the configured device range
+// This method provides immediate device enumeration without starting the monitoring loop
+func (dm *V4L2DeviceManager) EnumerateDevices(ctx context.Context) ([]*V4L2Device, error) {
+	dm.logger.WithFields(map[string]interface{}{
+		"device_range": dm.configManager.GetConfig().Camera.DeviceRange,
+		"action":       "enumerate_devices",
+	}).Info("Starting V4L2 device enumeration")
+
+	var devices []*V4L2Device
+	deviceRange := dm.configManager.GetConfig().Camera.DeviceRange
+
+	for _, deviceNum := range deviceRange {
+		devicePath := fmt.Sprintf("/dev/video%d", deviceNum)
+
+		// Check if context is cancelled
+		select {
+		case <-ctx.Done():
+			return devices, ctx.Err()
+		default:
+		}
+
+		device, err := dm.createDeviceInfo(devicePath, deviceNum)
+		if err != nil {
+			dm.logger.WithFields(map[string]interface{}{
+				"device_path": devicePath,
+				"error":       err.Error(),
+				"action":      "enumerate_devices",
+			}).Debug("Device enumeration skipped - device not available")
+			continue
+		}
+
+		if device != nil && (device.Status == DeviceStatusConnected || device.Status == DeviceStatusError) {
+			devices = append(devices, device)
+			dm.logger.WithFields(map[string]interface{}{
+				"device_path": devicePath,
+				"device_name": device.Name,
+				"status":      device.Status,
+				"action":      "enumerate_devices",
+			}).Debug("Device enumerated successfully")
+		}
+	}
+
+	dm.logger.WithFields(map[string]interface{}{
+		"devices_found": len(devices),
+		"device_range":  deviceRange,
+		"action":        "enumerate_devices",
+	}).Info("V4L2 device enumeration completed")
+
+	return devices, nil
+}
+
+// ProbeCapabilities probes capabilities for a specific device path
+// This method provides independent capability probing without device enumeration
+func (dm *V4L2DeviceManager) ProbeCapabilities(ctx context.Context, devicePath string) (*V4L2Capabilities, error) {
+	dm.logger.WithFields(map[string]interface{}{
+		"device_path": devicePath,
+		"action":      "probe_capabilities",
+	}).Info("Starting device capability probing")
+
+	// Check if context is cancelled
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	// Check if device exists
+	if !dm.deviceChecker.Exists(devicePath) {
+		return nil, fmt.Errorf("device does not exist: %s", devicePath)
+	}
+
+	// Execute v4l2-ctl --device /dev/videoX --info
+	infoOutput, err := dm.commandExecutor.ExecuteCommand(ctx, devicePath, "--info")
+	if err != nil {
+		dm.stats.mu.Lock()
+		dm.stats.CapabilityTimeouts++
+		dm.stats.mu.Unlock()
+
+		dm.logger.WithFields(map[string]interface{}{
+			"device_path": devicePath,
+			"error":       err.Error(),
+			"action":      "probe_capabilities",
+		}).Error("Failed to get device info during capability probing")
+
+		return nil, fmt.Errorf("failed to get device info: %w", err)
+	}
+
+	// Parse device info
+	capabilities, err := dm.infoParser.ParseDeviceInfo(infoOutput)
+	if err != nil {
+		dm.stats.mu.Lock()
+		dm.stats.CapabilityParseErrors++
+		dm.stats.mu.Unlock()
+
+		dm.logger.WithFields(map[string]interface{}{
+			"device_path": devicePath,
+			"error":       err.Error(),
+			"action":      "probe_capabilities",
+		}).Error("Failed to parse device info during capability probing")
+
+		return nil, fmt.Errorf("failed to parse device info: %w", err)
+	}
+
+	dm.stats.mu.Lock()
+	dm.stats.CapabilityProbesSuccessful++
+	dm.stats.mu.Unlock()
+
+	dm.logger.WithFields(map[string]interface{}{
+		"device_path":  devicePath,
+		"driver_name":  capabilities.DriverName,
+		"card_name":    capabilities.CardName,
+		"capabilities": len(capabilities.Capabilities),
+		"device_caps":  len(capabilities.DeviceCaps),
+		"action":       "probe_capabilities",
+	}).Info("Device capability probing completed successfully")
+
+	return &capabilities, nil
+}
+
+// StartMonitoring starts device status monitoring with context support
+// This method provides monitoring capabilities with proper context cancellation
+func (dm *V4L2DeviceManager) StartMonitoring(ctx context.Context) error {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	if dm.running {
+		return fmt.Errorf("device manager is already running")
+	}
+
+	dm.running = true
+	dm.stats.Running = true
+	dm.stats.ActiveTasks++
+
+	dm.logger.WithFields(map[string]interface{}{
+		"poll_interval": dm.configManager.GetConfig().Camera.PollInterval,
+		"device_range":  dm.configManager.GetConfig().Camera.DeviceRange,
+		"action":        "start_monitoring",
+	}).Info("Starting V4L2 device status monitoring")
+
+	// Start monitoring loop with context
+	go dm.monitoringLoop(ctx)
+
+	return nil
+}
+
+// monitoringLoop continuously monitors for device changes with context support
+func (dm *V4L2DeviceManager) monitoringLoop(ctx context.Context) {
+	defer func() {
+		dm.stats.mu.Lock()
+		dm.stats.ActiveTasks--
+		dm.stats.mu.Unlock()
+	}()
+
+	ticker := time.NewTicker(time.Duration(dm.configManager.GetConfig().Camera.PollInterval * float64(time.Second)))
 	defer ticker.Stop()
 
 	dm.logger.WithFields(map[string]interface{}{
-		"poll_interval": dm.configProvider.GetPollInterval(),
-		"device_range":  dm.configProvider.GetDeviceRange(),
+		"poll_interval": dm.configManager.GetConfig().Camera.PollInterval,
+		"device_range":  dm.configManager.GetConfig().Camera.DeviceRange,
+		"action":        "monitoring_loop",
+	}).Info("V4L2 device monitoring loop started")
+
+	for {
+		select {
+		case <-ctx.Done():
+			dm.logger.WithFields(map[string]interface{}{
+				"action": "monitoring_loop",
+				"reason": "context_cancelled",
+			}).Info("V4L2 device monitoring loop stopped due to context cancellation")
+			return
+		case <-dm.stopChan:
+			dm.logger.WithFields(map[string]interface{}{
+				"action": "monitoring_loop",
+				"reason": "stop_requested",
+			}).Info("V4L2 device monitoring loop stopped")
+			return
+		case <-ticker.C:
+			dm.discoverDevices()
+		}
+	}
+}
+
+// pollingLoop continuously polls for device changes
+func (dm *V4L2DeviceManager) pollingLoop() {
+	ticker := time.NewTicker(time.Duration(dm.configManager.GetConfig().Camera.PollInterval * float64(time.Second)))
+	defer ticker.Stop()
+
+	dm.logger.WithFields(map[string]interface{}{
+		"poll_interval": dm.configManager.GetConfig().Camera.PollInterval,
+		"device_range":  dm.configManager.GetConfig().Camera.DeviceRange,
 	}).Info("Starting V4L2 device polling loop")
 
 	for {
@@ -270,12 +410,12 @@ func (dm *V4L2DeviceManager) discoverDevices() {
 
 	currentDevices := make(map[string]*V4L2Device)
 
-	for _, deviceNum := range dm.configProvider.GetDeviceRange() {
+	for _, deviceNum := range dm.configManager.GetConfig().Camera.DeviceRange {
 		devicePath := fmt.Sprintf("/dev/video%d", deviceNum)
 
 		device, err := dm.createDeviceInfo(devicePath, deviceNum)
 		if err != nil {
-			dm.logger.WithFields(logrus.Fields{
+			dm.logger.WithFields(map[string]interface{}{
 				"device_path": devicePath,
 				"error":       err.Error(),
 			}).Debug("Error checking device")
@@ -305,11 +445,11 @@ func (dm *V4L2DeviceManager) createDeviceInfo(devicePath string, deviceNum int) 
 	}
 
 	// Probe device capabilities if enabled
-	if dm.configProvider.GetEnableCapabilityDetection() {
+	if dm.configManager.GetConfig().Camera.EnableCapabilityDetection {
 		if err := dm.probeDeviceCapabilities(device); err != nil {
 			device.Status = DeviceStatusError
 			device.Error = err.Error()
-			dm.logger.WithFields(logrus.Fields{
+			dm.logger.WithFields(map[string]interface{}{
 				"device_path": devicePath,
 				"error":       err.Error(),
 			}).Debug("Failed to probe device capabilities")
