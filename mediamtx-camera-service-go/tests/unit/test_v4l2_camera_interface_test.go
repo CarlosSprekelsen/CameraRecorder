@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 )
 
 // Mock implementations for testing
@@ -110,6 +110,20 @@ func (m *MockLogger) Error(args ...interface{}) {
 
 func (m *MockLogger) Debug(args ...interface{}) {}
 
+// createTestManager creates a V4L2DeviceManager with mock dependencies for testing
+func createTestManager(configProvider camera.ConfigProvider, logger camera.Logger, deviceExists map[string]bool) *camera.V4L2DeviceManager {
+	return createTestManagerWithMocks(configProvider, logger, deviceExists, &MockV4L2CommandExecutor{}, &MockDeviceInfoParser{})
+}
+
+// createTestManagerWithMocks creates a V4L2DeviceManager with all mock dependencies specified
+func createTestManagerWithMocks(configProvider camera.ConfigProvider, logger camera.Logger, deviceExists map[string]bool, commandExecutor camera.V4L2CommandExecutor, infoParser camera.DeviceInfoParser) *camera.V4L2DeviceManager {
+	mockDeviceChecker := &MockDeviceChecker{
+		existsMap: deviceExists,
+	}
+
+	return camera.NewV4L2DeviceManagerWithDependencies(configProvider, logger, mockDeviceChecker, commandExecutor, infoParser)
+}
+
 func TestV4L2DeviceManager_Creation(t *testing.T) {
 	t.Run("nil_config_uses_defaults", func(t *testing.T) {
 		manager := camera.NewV4L2DeviceManager(nil, nil)
@@ -121,7 +135,7 @@ func TestV4L2DeviceManager_Creation(t *testing.T) {
 		config := &camera.CameraConfig{
 			PollInterval:              0.2,
 			DetectionTimeout:          2.0,
-			DeviceRange:              []int{0, 1, 2},
+			DeviceRange:               []int{0, 1, 2},
 			EnableCapabilityDetection: true,
 		}
 		configProvider := &MockConfigProvider{config: config}
@@ -138,7 +152,7 @@ func TestV4L2DeviceManager_StartStop(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1},
+			DeviceRange:               []int{0, 1},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -162,21 +176,16 @@ func TestV4L2DeviceManager_DeviceDiscovery(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1},
+			DeviceRange:               []int{0, 1},
 			EnableCapabilityDetection: true,
 		},
 	}
 	logger := &MockLogger{}
 
-	manager := camera.NewV4L2DeviceManager(configProvider, logger)
-
-	// Mock device checker to return existing devices
-	manager.deviceChecker = &MockDeviceChecker{
-		existsMap: map[string]bool{
-			"/dev/video0": true,
-			"/dev/video1": true,
-		},
-	}
+	manager := createTestManager(configProvider, logger, map[string]bool{
+		"/dev/video0": true,
+		"/dev/video1": true,
+	})
 
 	err := manager.Start()
 	require.NoError(t, err)
@@ -196,7 +205,7 @@ func TestV4L2DeviceManager_GetDevice(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -234,23 +243,14 @@ func TestV4L2DeviceManager_DeviceCapabilities(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0},
+			DeviceRange:               []int{0},
 			EnableCapabilityDetection: true,
 		},
 	}
 	logger := &MockLogger{}
 
-	manager := camera.NewV4L2DeviceManager(configProvider, logger)
-
-	// Mock device checker
-	manager.deviceChecker = &MockDeviceChecker{
-		existsMap: map[string]bool{
-			"/dev/video0": true,
-		},
-	}
-
-	// Mock command executor with successful response
-	manager.commandExecutor = &MockV4L2CommandExecutor{
+	// Create mock command executor with successful response
+	mockCommandExecutor := &MockV4L2CommandExecutor{
 		outputMap: map[string]string{
 			"/dev/video0:--info": `Driver name       : uvcvideo
 Card type         : USB Camera
@@ -261,17 +261,21 @@ Device Caps       : video_capture streaming`,
 		},
 	}
 
-	// Mock info parser
-	manager.infoParser = &MockDeviceInfoParser{
+	// Create mock info parser
+	mockInfoParser := &MockDeviceInfoParser{
 		capabilities: camera.V4L2Capabilities{
-			DriverName: "uvcvideo",
-			CardName:   "USB Camera",
-			BusInfo:    "usb-0000:00:14.0-1",
-			Version:    "5.15.0",
+			DriverName:   "uvcvideo",
+			CardName:     "USB Camera",
+			BusInfo:      "usb-0000:00:14.0-1",
+			Version:      "5.15.0",
 			Capabilities: []string{"video_capture", "video_output"},
 			DeviceCaps:   []string{"video_capture", "streaming"},
 		},
 	}
+
+	manager := createTestManagerWithMocks(configProvider, logger, map[string]bool{
+		"/dev/video0": true,
+	}, mockCommandExecutor, mockInfoParser)
 
 	err := manager.Start()
 	require.NoError(t, err)
@@ -295,7 +299,7 @@ func TestV4L2DeviceManager_DeviceStatus(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -329,7 +333,7 @@ func TestV4L2DeviceManager_Statistics(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -365,7 +369,7 @@ func TestV4L2DeviceManager_ConcurrentAccess(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -386,7 +390,7 @@ func TestV4L2DeviceManager_ConcurrentAccess(t *testing.T) {
 
 	// Test concurrent access to multiple methods
 	done := make(chan bool, 30)
-	
+
 	// Concurrent GetConnectedDevices calls
 	for i := 0; i < 10; i++ {
 		go func() {
@@ -437,7 +441,7 @@ func TestV4L2DeviceManager_ConfigurationValidation(t *testing.T) {
 			config: &camera.CameraConfig{
 				PollInterval:              0.1,
 				DetectionTimeout:          1.0,
-				DeviceRange:              []int{0, 1, 2},
+				DeviceRange:               []int{0, 1, 2},
 				EnableCapabilityDetection: true,
 			},
 			expectError: false,
@@ -478,7 +482,7 @@ func TestV4L2DeviceManager_ConfigurationValidation(t *testing.T) {
 			logger := &MockLogger{}
 
 			manager := camera.NewV4L2DeviceManager(configProvider, logger)
-			
+
 			// Test that manager can be created with any config
 			// Validation should happen at runtime, not creation time
 			assert.NotNil(t, manager)
@@ -491,7 +495,7 @@ func TestV4L2DeviceManager_EdgeCases(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.01, // Very fast polling
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0},
+			DeviceRange:               []int{0},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -531,7 +535,7 @@ func TestV4L2DeviceManager_DeviceRange(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{5, 10, 15}, // Non-standard range
+			DeviceRange:               []int{5, 10, 15}, // Non-standard range
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -556,11 +560,11 @@ func TestV4L2DeviceManager_DeviceRange(t *testing.T) {
 
 func TestV4L2DeviceManager_CapabilityDetection(t *testing.T) {
 	tests := []struct {
-		name                string
-		enableDetection     bool
-		expectedStatus      camera.DeviceStatus
-		commandExecutor     camera.V4L2CommandExecutor
-		infoParser          camera.DeviceInfoParser
+		name            string
+		enableDetection bool
+		expectedStatus  camera.DeviceStatus
+		commandExecutor camera.V4L2CommandExecutor
+		infoParser      camera.DeviceInfoParser
 	}{
 		{
 			name:            "capability_detection_enabled",
@@ -593,7 +597,7 @@ func TestV4L2DeviceManager_CapabilityDetection(t *testing.T) {
 				config: &camera.CameraConfig{
 					PollInterval:              0.1,
 					DetectionTimeout:          1.0,
-					DeviceRange:              []int{0},
+					DeviceRange:               []int{0},
 					EnableCapabilityDetection: tt.enableDetection,
 				},
 			}
@@ -639,7 +643,7 @@ func TestV4L2DeviceManager_Performance(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -681,7 +685,7 @@ func TestV4L2DeviceManager_ErrorHandling(t *testing.T) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0},
+			DeviceRange:               []int{0},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -705,7 +709,7 @@ func BenchmarkV4L2DeviceManager_GetConnectedDevices(b *testing.B) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -733,7 +737,7 @@ func BenchmarkV4L2DeviceManager_GetDevice(b *testing.B) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}
@@ -761,7 +765,7 @@ func BenchmarkV4L2DeviceManager_GetStats(b *testing.B) {
 		config: &camera.CameraConfig{
 			PollInterval:              0.1,
 			DetectionTimeout:          1.0,
-			DeviceRange:              []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			DeviceRange:               []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
 			EnableCapabilityDetection: true,
 		},
 	}

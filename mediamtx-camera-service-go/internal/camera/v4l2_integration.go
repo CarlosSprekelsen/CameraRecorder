@@ -57,8 +57,12 @@ func (im *V4L2IntegrationManager) Start() error {
 		CapabilityMaxRetries:      cfg.Camera.CapabilityMaxRetries,
 	}
 
+	// Create adapters for dependency injection
+	configProvider := &IntegrationConfigProvider{config: cameraConfig}
+	loggerAdapter := &LogrusLoggerAdapter{logger: im.logger}
+	
 	// Create device manager with configuration
-	im.deviceManager = NewV4L2DeviceManager(cameraConfig, im.logger)
+	im.deviceManager = NewV4L2DeviceManager(configProvider, loggerAdapter)
 
 	// Start device manager
 	if err := im.deviceManager.Start(); err != nil {
@@ -183,4 +187,62 @@ func (im *V4L2IntegrationManager) ValidateConfiguration(cfg *config.Config) erro
 	}
 
 	return nil
+}
+
+// IntegrationConfigProvider adapts CameraConfig to ConfigProvider interface
+type IntegrationConfigProvider struct {
+	config *CameraConfig
+}
+
+func (i *IntegrationConfigProvider) GetCameraConfig() *CameraConfig {
+	return i.config
+}
+
+func (i *IntegrationConfigProvider) GetPollInterval() float64 {
+	return i.config.PollInterval
+}
+
+func (i *IntegrationConfigProvider) GetDetectionTimeout() float64 {
+	return i.config.DetectionTimeout
+}
+
+func (i *IntegrationConfigProvider) GetDeviceRange() []int {
+	return i.config.DeviceRange
+}
+
+func (i *IntegrationConfigProvider) GetEnableCapabilityDetection() bool {
+	return i.config.EnableCapabilityDetection
+}
+
+func (i *IntegrationConfigProvider) GetCapabilityTimeout() float64 {
+	return i.config.CapabilityTimeout
+}
+
+// LogrusLoggerAdapter adapts logrus.Logger to Logger interface
+type LogrusLoggerAdapter struct {
+	logger *logrus.Logger
+}
+
+func (l *LogrusLoggerAdapter) WithFields(fields map[string]interface{}) Logger {
+	logrusFields := logrus.Fields{}
+	for k, v := range fields {
+		logrusFields[k] = v
+	}
+	return &LogrusLoggerAdapter{logger: l.logger.WithFields(logrusFields).Logger}
+}
+
+func (l *LogrusLoggerAdapter) Info(args ...interface{}) {
+	l.logger.Info(args...)
+}
+
+func (l *LogrusLoggerAdapter) Warn(args ...interface{}) {
+	l.logger.Warn(args...)
+}
+
+func (l *LogrusLoggerAdapter) Error(args ...interface{}) {
+	l.logger.Error(args...)
+}
+
+func (l *LogrusLoggerAdapter) Debug(args ...interface{}) {
+	l.logger.Debug(args...)
 }

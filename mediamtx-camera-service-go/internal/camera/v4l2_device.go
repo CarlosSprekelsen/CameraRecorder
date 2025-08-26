@@ -51,16 +51,16 @@ type V4L2Device struct {
 
 // V4L2DeviceManager manages V4L2 device discovery and monitoring
 type V4L2DeviceManager struct {
-	configProvider    ConfigProvider
-	logger            Logger
-	deviceChecker     DeviceChecker
-	commandExecutor   V4L2CommandExecutor
-	infoParser        DeviceInfoParser
-	devices           map[string]*V4L2Device
-	mu                sync.RWMutex
-	stopChan          chan struct{}
-	running           bool
-	stats             *DeviceManagerStats
+	configProvider  ConfigProvider
+	logger          Logger
+	deviceChecker   DeviceChecker
+	commandExecutor V4L2CommandExecutor
+	infoParser      DeviceInfoParser
+	devices         map[string]*V4L2Device
+	mu              sync.RWMutex
+	stopChan        chan struct{}
+	running         bool
+	stats           *DeviceManagerStats
 }
 
 // CameraConfig represents camera discovery configuration
@@ -92,6 +92,11 @@ type DeviceManagerStats struct {
 
 // NewV4L2DeviceManager creates a new V4L2 device manager with dependency injection
 func NewV4L2DeviceManager(configProvider ConfigProvider, logger Logger) *V4L2DeviceManager {
+	return NewV4L2DeviceManagerWithDependencies(configProvider, logger, &RealDeviceChecker{}, &RealV4L2CommandExecutor{}, &RealDeviceInfoParser{})
+}
+
+// NewV4L2DeviceManagerWithDependencies creates a new V4L2 device manager with all dependencies injected
+func NewV4L2DeviceManagerWithDependencies(configProvider ConfigProvider, logger Logger, deviceChecker DeviceChecker, commandExecutor V4L2CommandExecutor, infoParser DeviceInfoParser) *V4L2DeviceManager {
 	if configProvider == nil {
 		// Create default config provider
 		configProvider = &DefaultConfigProvider{
@@ -161,8 +166,8 @@ func (d *DefaultLogger) WithFields(fields map[string]interface{}) Logger {
 	return d
 }
 
-func (d *DefaultLogger) Info(args ...interface{}) {}
-func (d *DefaultLogger) Warn(args ...interface{}) {}
+func (d *DefaultLogger) Info(args ...interface{})  {}
+func (d *DefaultLogger) Warn(args ...interface{})  {}
 func (d *DefaultLogger) Error(args ...interface{}) {}
 func (d *DefaultLogger) Debug(args ...interface{}) {}
 
@@ -318,8 +323,6 @@ func (dm *V4L2DeviceManager) createDeviceInfo(devicePath string, deviceNum int) 
 
 	return device, nil
 }
-
-
 
 // probeDeviceCapabilities probes device capabilities using v4l2-ctl
 func (dm *V4L2DeviceManager) probeDeviceCapabilities(device *V4L2Device) error {
