@@ -36,154 +36,166 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ## Epic/Story/Task Breakdown
 
-### **EPIC E0: Requirements Foundation & Baseline**
-**Goal**: Establish comprehensive requirements baseline for ecosystem integration  
+### **EPIC E0: External Interface Architecture**
+**Goal**: Define all external interfaces and integration patterns following industry best practices  
 **Duration**: 2 sprints  
-**Control Gate**: All foundation requirements must be defined and validated  
+**Control Gate**: All external interfaces must be defined and validated  
 **Dependencies**: None  
-**Status**: 🔄 **IN PROGRESS** - Foundation requirements definition  
+**Status**: 🔄 **IN PROGRESS** - External interface architecture definition  
 
-#### **Story S0.1: Service Discovery Requirements Definition**
+#### **Story S0.1: Service Discovery Interface Definition**
+**Objective**: Define how the service registers with and reports to the service discovery aggregator
+**Deliverable**: Service discovery interface specification document
 **Tasks**:
-- **T0.1.1**: Define service registration requirements (REQ-DISC-001) (Requirements Engineer)
-- **T0.1.2**: Define health reporting requirements (REQ-DISC-002) (Requirements Engineer)
-- **T0.1.3**: Define capability advertisement requirements (REQ-DISC-003) (Requirements Engineer)
-- **T0.1.4**: Define service metadata schema requirements (REQ-DISC-004) (Requirements Engineer)
-- **T0.1.5**: Define heartbeat and keepalive requirements (REQ-DISC-005) (Requirements Engineer)
-- **T0.1.6**: Define clean deregistration requirements (REQ-DISC-006) (Requirements Engineer)
-- **T0.1.7**: IV&V validate service discovery requirements (IV&V)
-- **T0.1.8**: PM approve service discovery requirements (PM)
+- **T0.1.1**: Define service registration interface contract (Architect)
+- **T0.1.2**: Define health reporting interface contract (Architect)
+- **T0.1.3**: Define capability advertisement interface contract (Architect)
+- **T0.1.4**: Define heartbeat and keepalive interface contract (Architect)
+- **T0.1.5**: Define clean deregistration interface contract (Architect)
+- **T0.1.6**: IV&V validate service discovery interface (IV&V)
+- **T0.1.7**: PM approve service discovery interface (PM)
 
-**Control Point**: All service discovery requirements must be complete and validated  
+**Control Point**: Service discovery interface must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Requirements specification document, validation test cases  
+**Evidence**: Interface specification document, validation test cases  
 
-#### **Story S0.2: Mixed Video Source Requirements Definition**
+#### **Story S0.2: Device Management Interface Definition**
+**Objective**: Define how the service consumes device assignments from Hub OS
+**Deliverable**: Device management interface specification document
 **Tasks**:
-- **T0.2.1**: Define YAML configuration-driven RTSP feed requirements (REQ-SOURCE-001) (Requirements Engineer)
-- **T0.2.2**: Define VID:PID device assignment requirements (REQ-SOURCE-002) (Requirements Engineer)
-- **T0.2.3**: Define unified video source abstraction requirements (REQ-SOURCE-003) (Requirements Engineer)
-- **T0.2.4**: Define mixed source lifecycle management requirements (REQ-SOURCE-004) (Requirements Engineer)
-- **T0.2.5**: Define source authentication and credential requirements (REQ-SOURCE-005) (Requirements Engineer)
-- **T0.2.6**: IV&V validate mixed source requirements (IV&V)
-- **T0.2.7**: PM approve mixed source requirements (PM)
+- **T0.2.1**: Define device assignment consumption interface contract (Architect)
+- **T0.2.2**: Define device status reporting interface contract (Architect)
+- **T0.2.3**: Define mixed source (USB/RTSP) interface contract (Architect)
+- **T0.2.4**: Define device lifecycle management interface contract (Architect)
+- **T0.2.5**: Define device capability query interface contract (Architect)
+- **T0.2.6**: IV&V validate device management interface (IV&V)
+- **T0.2.7**: PM approve device management interface (PM)
 
-**Control Point**: All mixed source requirements must be complete and validated  
+**Control Point**: Device management interface must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Requirements specification document, validation test cases  
+**Evidence**: Interface specification document, validation test cases  
 
-#### **Story S0.3: Resource Management Requirements Definition**
+#### **Story S0.3: Platform Integration Interface Definition**
+**Objective**: Define how the service reports to and integrates with the platform
+**Deliverable**: Platform integration interface specification document
 **Tasks**:
-- **T0.3.1**: Define hardware constraint tracking requirements (REQ-RESOURCE-001) (Requirements Engineer)
-- **T0.3.2**: Define resource capacity reporting requirements (REQ-RESOURCE-002) (Requirements Engineer)
-- **T0.3.3**: Define stream count monitoring requirements (REQ-RESOURCE-003) (Requirements Engineer)
-- **T0.3.4**: Define load balancing coordination requirements (REQ-RESOURCE-004) (Requirements Engineer)
-- **T0.3.5**: Define multi-container resource coordination requirements (REQ-RESOURCE-005) (Requirements Engineer)
-- **T0.3.6**: IV&V validate resource management requirements (IV&V)
-- **T0.3.7**: PM approve resource management requirements (PM)
+- **T0.3.1**: Define health reporting interface contract (Architect)
+- **T0.3.2**: Define capacity reporting interface contract (Architect)
+- **T0.3.3**: Define metrics exposition interface contract (Architect)
+- **T0.3.4**: Define graceful shutdown interface contract (Architect)
+- **T0.3.5**: Define container conformance interface contract (Architect)
+- **T0.3.6**: IV&V validate platform integration interface (IV&V)
+- **T0.3.7**: PM approve platform integration interface (PM)
 
-**Control Point**: All resource management requirements must be complete and validated  
+**Control Point**: Platform integration interface must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Requirements specification document, validation test cases  
+**Evidence**: Interface specification document, validation test cases  
 
-#### **Story S0.4: Platform Integration Requirements Definition**
+#### **Story S0.4: Client API Interface Definition**
+**Objective**: Define the client-facing API interface for applications
+**Deliverable**: Client API interface specification document
 **Tasks**:
-- **T0.4.1**: Define container conformance requirements (REQ-PLATFORM-001) (Requirements Engineer)
-- **T0.4.2**: Define structured logging requirements (REQ-PLATFORM-002) (Requirements Engineer)
-- **T0.4.3**: Define metrics exposition requirements (REQ-PLATFORM-003) (Requirements Engineer)
-- **T0.4.4**: Define back-pressure handling requirements (REQ-PLATFORM-004) (Requirements Engineer)
-- **T0.4.5**: Define graceful shutdown requirements (REQ-PLATFORM-005) (Requirements Engineer)
-- **T0.4.6**: IV&V validate platform integration requirements (IV&V)
-- **T0.4.7**: PM approve platform integration requirements (PM)
+- **T0.4.1**: Define JSON-RPC 2.0 interface contract (Architect)
+- **T0.4.2**: Define WebSocket communication interface contract (Architect)
+- **T0.4.3**: Define authentication and authorization interface contract (Architect)
+- **T0.4.4**: Define real-time notification interface contract (Architect)
+- **T0.4.5**: Define error handling interface contract (Architect)
+- **T0.4.6**: IV&V validate client API interface (IV&V)
+- **T0.4.7**: PM approve client API interface (PM)
 
-**Control Point**: All platform integration requirements must be complete and validated  
+**Control Point**: Client API interface must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Requirements specification document, validation test cases  
+**Evidence**: Interface specification document, validation test cases  
 
 ---
 
-### **EPIC E0.5: Architecture Foundation & Decisions**
-**Goal**: Establish architecture decisions and patterns for ecosystem integration  
+### **EPIC E0.5: Integration Pattern Architecture**
+**Goal**: Define integration patterns and data schemas for all external interfaces  
 **Duration**: 2 sprints  
-**Control Gate**: All architecture decisions must be documented and validated  
-**Dependencies**: Epic E0 (Requirements Foundation)  
-**Status**: 🔄 **IN PROGRESS** - Architecture foundation definition  
+**Control Gate**: All integration patterns must be documented and validated  
+**Dependencies**: Epic E0 (External Interface Architecture)  
+**Status**: 🔄 **IN PROGRESS** - Integration pattern architecture definition  
 
-#### **Story S0.5.1: Service Discovery Architecture Decision (AD-ECO-001)**
+#### **Story S0.5.1: Service Discovery Integration Pattern**
+**Objective**: Define how service discovery integration works end-to-end
+**Deliverable**: Service discovery integration pattern specification
 **Tasks**:
-- **T0.5.1.1**: Define service registration architecture pattern (Architect)
-- **T0.5.1.2**: Define registration data format and timing (Architect)
-- **T0.5.1.3**: Define health reporting patterns and frequency (Architect)
-- **T0.5.1.4**: Define failure handling when aggregator unavailable (Architect)
-- **T0.5.1.5**: Document AD-ECO-001 architecture decision (Architect)
-- **T0.5.1.6**: IV&V validate service discovery architecture (IV&V)
-- **T0.5.1.7**: PM approve service discovery architecture (PM)
+- **T0.5.1.1**: Define registration pattern and data flow (Architect)
+- **T0.5.1.2**: Define health reporting pattern and frequency (Architect)
+- **T0.5.1.3**: Define failure handling and recovery patterns (Architect)
+- **T0.5.1.4**: Define data schemas for all service discovery messages (Architect)
+- **T0.5.1.5**: IV&V validate service discovery patterns (IV&V)
+- **T0.5.1.6**: PM approve service discovery patterns (PM)
 
-**Control Point**: Service discovery architecture must be complete and validated  
+**Control Point**: Service discovery integration patterns must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Architecture decision document, validation test cases  
+**Evidence**: Integration pattern specification, data schema validation  
 
-#### **Story S0.5.2: Mixed Source Management Architecture Decision (AD-ECO-002)**
+#### **Story S0.5.2: Device Management Integration Pattern**
+**Objective**: Define how device management integration works end-to-end
+**Deliverable**: Device management integration pattern specification
 **Tasks**:
-- **T0.5.2.1**: Define RTSP and USB source unification pattern (Architect)
-- **T0.5.2.2**: Define configuration schema for mixed sources (Architect)
-- **T0.5.2.3**: Define path management strategy for MediaMTX (Architect)
-- **T0.5.2.4**: Define source priority and fallback handling (Architect)
-- **T0.5.2.5**: Document AD-ECO-002 architecture decision (Architect)
-- **T0.5.2.6**: IV&V validate mixed source architecture (IV&V)
-- **T0.5.2.7**: PM approve mixed source architecture (PM)
+- **T0.5.2.1**: Define device assignment consumption pattern (Architect)
+- **T0.5.2.2**: Define mixed source management pattern (Architect)
+- **T0.5.2.3**: Define device lifecycle management pattern (Architect)
+- **T0.5.2.4**: Define data schemas for all device management messages (Architect)
+- **T0.5.2.5**: IV&V validate device management patterns (IV&V)
+- **T0.5.2.6**: PM approve device management patterns (PM)
 
-**Control Point**: Mixed source architecture must be complete and validated  
+**Control Point**: Device management integration patterns must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Architecture decision document, validation test cases  
+**Evidence**: Integration pattern specification, data schema validation  
 
-#### **Story S0.5.3: Resource Constraint Architecture Decision (AD-ECO-003)**
+#### **Story S0.5.3: Platform Integration Pattern**
+**Objective**: Define how platform integration works end-to-end
+**Deliverable**: Platform integration pattern specification
 **Tasks**:
-- **T0.5.3.1**: Define 8-port hardware limit enforcement pattern (Architect)
-- **T0.5.3.2**: Define resource tracking and reporting mechanisms (Architect)
-- **T0.5.3.3**: Define multi-container coordination approach (Architect)
-- **T0.5.3.4**: Define load balancing and capacity management (Architect)
-- **T0.5.3.5**: Document AD-ECO-003 architecture decision (Architect)
-- **T0.5.3.6**: IV&V validate resource constraint architecture (IV&V)
-- **T0.5.3.7**: PM approve resource constraint architecture (PM)
+- **T0.5.3.1**: Define health and capacity reporting pattern (Architect)
+- **T0.5.3.2**: Define metrics exposition pattern (Architect)
+- **T0.5.3.3**: Define graceful shutdown pattern (Architect)
+- **T0.5.3.4**: Define data schemas for all platform integration messages (Architect)
+- **T0.5.3.5**: IV&V validate platform integration patterns (IV&V)
+- **T0.5.3.6**: PM approve platform integration patterns (PM)
 
-**Control Point**: Resource constraint architecture must be complete and validated  
+**Control Point**: Platform integration patterns must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Architecture decision document, validation test cases  
+**Evidence**: Integration pattern specification, data schema validation  
 
-#### **Story S0.5.4: Platform Integration Architecture Decision (AD-ECO-004)**
+#### **Story S0.5.4: Client API Integration Pattern**
+**Objective**: Define how client API integration works end-to-end
+**Deliverable**: Client API integration pattern specification
 **Tasks**:
-- **T0.5.4.1**: Define container conformance implementation approach (Architect)
-- **T0.5.4.2**: Define logging and metrics standardization (Architect)
-- **T0.5.4.3**: Define signal handling and graceful shutdown (Architect)
-- **T0.5.4.4**: Define integration with platform management systems (Architect)
-- **T0.5.4.5**: Document AD-ECO-004 architecture decision (Architect)
-- **T0.5.4.6**: IV&V validate platform integration architecture (IV&V)
-- **T0.5.4.7**: PM approve platform integration architecture (PM)
+- **T0.5.4.1**: Define JSON-RPC 2.0 communication pattern (Architect)
+- **T0.5.4.2**: Define WebSocket connection management pattern (Architect)
+- **T0.5.4.3**: Define authentication and session management pattern (Architect)
+- **T0.5.4.4**: Define data schemas for all client API messages (Architect)
+- **T0.5.4.5**: IV&V validate client API patterns (IV&V)
+- **T0.5.4.6**: PM approve client API patterns (PM)
 
-**Control Point**: Platform integration architecture must be complete and validated  
+**Control Point**: Client API integration patterns must be complete and validated  
 **Status**: 🔄 IN PROGRESS  
-**Evidence**: Architecture decision document, validation test cases  
+**Evidence**: Integration pattern specification, data schema validation  
 
 ---
 
 ### **EPIC E1: Foundation Infrastructure** 
-**Goal**: Establish core Go infrastructure and configuration management with ecosystem integration foundation  
+**Goal**: Establish core Go infrastructure with external interface support  
 **Duration**: 2-3 sprints  
-**Control Gate**: All foundation modules must pass unit tests and IV&V validation with ecosystem integration  
-**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation)  
-**Integration Requirements**: Must integrate with Requirements Foundation (Epic E0) and Architecture Foundation (Epic E0.5)  
-**Status**: 🔄 **IN PROGRESS** - Foundation modules with ecosystem integration 
+**Control Gate**: All foundation modules must pass unit tests and IV&V validation with external interface compliance  
+**Dependencies**: Epic E0 (External Interface Architecture), Epic E0.5 (Integration Pattern Architecture)  
+**Integration Requirements**: Must integrate with External Interface Architecture (Epic E0) and Integration Pattern Architecture (Epic E0.5)  
+**Status**: 🔄 **IN PROGRESS** - Foundation modules with external interface support 
 
 #### **Story S1.1: Configuration Management System**
+**Objective**: Implement configuration system that supports all external interface configurations
+**Deliverable**: Configuration management system with external interface support
 **Tasks**:
-- **T1.1.1**: Implement Viper-based configuration loader (Developer) - *reference Python config patterns*
-- **T1.1.2**: Create YAML configuration schema validation (Developer) 
-- **T1.1.3**: Implement environment variable binding (Developer)
-- **T1.1.4**: Add hot-reload capability (Developer)
-- **T1.1.5**: Create configuration unit tests (Developer)
-- **T1.1.6**: IV&V validate configuration system (IV&V)
-- **T1.1.7**: PM approve foundation completion (PM)
+- **T1.1.1**: Implement configuration system with external interface support (Developer)
+- **T1.1.2**: Create configuration validation for external interfaces (Developer)
+- **T1.1.3**: Implement configuration hot-reload capability (Developer)
+- **T1.1.4**: Create configuration unit tests (Developer)
+- **T1.1.5**: IV&V validate configuration system (IV&V)
+- **T1.1.6**: PM approve configuration system (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
 **Control Point**: Configuration system must load all settings from Python equivalent, no vilation of rules  
@@ -192,15 +204,15 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Evidence**: Configuration loading tests, schema validation tests  
 
 #### **Story S1.2: Logging Infrastructure**
+**Objective**: Implement logging system that supports structured logging for external interfaces
+**Deliverable**: Logging infrastructure with external interface support
 **Tasks**:
-- **T1.2.1**: ✅ Implement logrus structured logging (Developer) - *reference Python logging behavior* - **COMPLETED**
-- **T1.2.2**: ✅ Add correlation ID support (Developer) - **COMPLETED**
-- **T1.2.3**: ✅ Create log rotation configuration (Developer) - **COMPLETED**
-- **T1.2.4**: ✅ Implement log level management (Developer) - **COMPLETED**
-- **T1.2.5**: ✅ Create logging unit tests (Developer) - **COMPLETED**
-- **T1.2.6**: ✅ **INTEGRATION TASK**: Integrate with Configuration Management System (Developer) - *use config from Epic E1* - **COMPLETED**
-- **T1.2.7**: ✅ IV&V validate logging system (IV&V) - **COMPLETED**
-- **T1.2.8**: ✅ PM approve logging completion (PM) - **COMPLETED**
+- **T1.2.1**: Implement structured logging with external interface support (Developer)
+- **T1.2.2**: Add correlation ID support for external interface tracing (Developer)
+- **T1.2.3**: Create log rotation and management (Developer)
+- **T1.2.4**: Create logging unit tests (Developer)
+- **T1.2.5**: IV&V validate logging system (IV&V)
+- **T1.2.6**: PM approve logging system (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
 **Control Point**: Logging must produce identical format to Python system, no rules violation  
@@ -209,33 +221,32 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Evidence**: Log format comparison tests, correlation ID tests, complete implementation with configuration integration  
 
 #### **Story S1.3: Security Framework**
+**Objective**: Implement security framework that supports authentication for external interfaces
+**Deliverable**: Security framework with external interface authentication support
 **Tasks**:
-- **T1.3.1**: ✅ Implement JWT authentication with golang-jwt/jwt/v4 (Developer) - *reference Python auth patterns* - **COMPLETED**
-- **T1.3.2**: ✅ Add role-based access control (Developer) - **COMPLETED**
-- **T1.3.3**: ✅ Implement session management (Developer) - **COMPLETED**
-- **T1.3.4**: ✅ Create security unit tests (Developer) - **COMPLETED**
-- **T1.3.5**: ✅ IV&V validate security implementation (IV&V) - **COMPLETED**
-- **T1.3.6**: ✅ PM approve security completion (PM) - **COMPLETED**
+- **T1.3.1**: Implement JWT authentication with external interface support (Developer)
+- **T1.3.2**: Add role-based access control for external interfaces (Developer)
+- **T1.3.3**: Implement session management for external interfaces (Developer)
+- **T1.3.4**: Create security unit tests (Developer)
+- **T1.3.5**: IV&V validate security framework (IV&V)
+- **T1.3.6**: PM approve security framework (PM)
 
 **Control Point**: Authentication must be functionally equivalent to Python system  
 **Status**: ✅ FULLY COMPLETED - All security components implemented with comprehensive testing
 **Remediation**: 1 sprint allowed, must demonstrate security parity  
 **Evidence**: Authentication tests, role-based access tests, comprehensive security test suite  
 
-#### **Story S1.4: Ecosystem Integration Foundation**
+#### **Story S1.4: External Interface Foundation**
+**Objective**: Implement foundation components that support all external interfaces
+**Deliverable**: External interface foundation components
 **Tasks**:
-- **T1.4.1**: Implement aggregator endpoint configuration (Developer) - *use requirements from Epic E0*
-- **T1.4.2**: Add service discovery client foundation (Developer) - *use architecture from Epic E0.5*
-- **T1.4.3**: Implement mixed source configuration schema (Developer) - *use requirements from Epic E0*
-- **T1.4.4**: Add resource constraint tracking foundation (Developer) - *use architecture from Epic E0.5*
-- **T1.4.5**: Create ecosystem integration unit tests (Developer)
-- **T1.4.6**: IV&V validate ecosystem integration foundation (IV&V)
-- **T1.4.7**: PM approve ecosystem integration foundation (PM)
-- **T1.4.8**: **INTEGRATION TASK**: Integrate ecosystem foundation with configuration system (Developer) - *use config from Epic E1*
-- **T1.4.9**: **INTEGRATION TASK**: Validate ecosystem configuration integration (Developer)
-- **T1.4.10**: **INTEGRATION TASK**: Create ecosystem configuration integration tests (Developer)
-- **T1.4.11**: **ARCHITECTURE TASK**: IV&V validate ecosystem foundation integration (IV&V)
-- **T1.4.12**: **ARCHITECTURE TASK**: PM approve ecosystem foundation integration (PM)
+- **T1.4.1**: Implement service discovery client foundation (Developer)
+- **T1.4.2**: Implement device management foundation (Developer)
+- **T1.4.3**: Implement platform integration foundation (Developer)
+- **T1.4.4**: Implement client API foundation (Developer)
+- **T1.4.5**: Create external interface unit tests (Developer)
+- **T1.4.6**: IV&V validate external interface foundation (IV&V)
+- **T1.4.7**: PM approve external interface foundation (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
 **Control Point**: Ecosystem integration foundation must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
@@ -246,26 +257,23 @@ This document outlines the comprehensive migration strategy from Python to Go im
 ---
 
 ### **EPIC E2: Camera Discovery System**
-**Goal**: Implement USB camera detection and monitoring with 5x performance improvement and ecosystem integration  
+**Goal**: Implement camera discovery system that can consume device assignments from Hub OS  
 **Duration**: 2-3 sprints  
-**Control Gate**: Camera discovery must detect devices in <200ms with ecosystem integration  
-**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation), Epic E1 (Foundation Infrastructure)  
-**Integration Requirements**: Must integrate with Configuration Management System (Epic E1), Requirements Foundation (Epic E0), and Architecture Foundation (Epic E0.5)  
-**Status**: 🔄 **IN PROGRESS** - Camera discovery with ecosystem integration  
+**Control Gate**: Camera discovery must detect devices in <200ms with external interface compliance  
+**Dependencies**: Epic E0 (External Interface Architecture), Epic E0.5 (Integration Pattern Architecture), Epic E1 (Foundation Infrastructure)  
+**Integration Requirements**: Must integrate with External Interface Architecture (Epic E0) and Integration Pattern Architecture (Epic E0.5)  
+**Status**: 🔄 **IN PROGRESS** - Camera discovery with external interface support  
 
 #### **Story S2.1: V4L2 Camera Interface**
+**Objective**: Implement V4L2 camera interface that can consume device assignments from Hub OS
+**Deliverable**: V4L2 camera interface with device assignment consumption
 **Tasks**:
-- **T2.1.1**: ✅ Implement V4L2 device enumeration (Developer) - *reference Python camera discovery patterns* - **COMPLETED**
-- **T2.1.2**: ✅ Add camera capability probing (Developer) - **COMPLETED**
-- **T2.1.3**: ✅ Implement device status monitoring (Developer) - **COMPLETED**
-- **T2.1.4**: ✅ Create camera interface unit tests (Developer) - **COMPLETED**
-- **T2.1.5**: ✅ IV&V validate camera detection (IV&V) - **COMPLETED**
-- **T2.1.6**: ✅ PM approve camera interface (PM) - **COMPLETED**
-- **T2.1.7**: ✅ **INTEGRATION TASK**: Integrate with Configuration Management System (Developer) - *use config from Epic E1* - **COMPLETED**
-- **T2.1.8**: ✅ **INTEGRATION TASK**: Validate configuration-driven camera settings (Developer) - *test with config values* - **COMPLETED**
-- **T2.1.9**: ✅ **INTEGRATION TASK**: Create integration tests with configuration system (Developer) - **COMPLETED**
-- **T2.1.10**: ✅ **ARCHITECTURE TASK**: IV&V validate architectural compliance (IV&V) - *ensure proper integration* - **COMPLETED**
-- **T2.1.11**: ✅ **ARCHITECTURE TASK**: PM approve integration completion (PM) - **COMPLETED**
+- **T2.1.1**: Implement V4L2 device enumeration with device assignment support (Developer)
+- **T2.1.2**: Add camera capability probing (Developer)
+- **T2.1.3**: Implement device status monitoring (Developer)
+- **T2.1.4**: Create camera interface unit tests (Developer)
+- **T2.1.5**: IV&V validate camera detection (IV&V)
+- **T2.1.6**: PM approve camera interface (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
 **Control Point**: Must detect same cameras as Python system with <200ms latency, no violation of rules
@@ -275,19 +283,16 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 
 #### **Story S2.2: Camera Monitor Service**
+**Objective**: Implement camera monitoring service that can handle device assignment changes from Hub OS
+**Deliverable**: Camera monitoring service with device assignment change handling
 **Tasks**:
-- **T2.2.1**: Implement goroutine-based camera monitoring (Developer) - *reference Python monitoring patterns*
-- **T2.2.2**: Add hot-plug event handling (Developer)
-- **T2.2.3**: Create event notification system (Developer)
+- **T2.2.1**: Implement camera monitoring with device assignment change handling (Developer)
+- **T2.2.2**: Add hot-plug event handling for device assignments (Developer)
+- **T2.2.3**: Create event notification system for device changes (Developer)
 - **T2.2.4**: Implement concurrent monitoring (Developer)
 - **T2.2.5**: Create monitor unit tests (Developer)
 - **T2.2.6**: IV&V validate monitoring system (IV&V)
-- **T2.2.7**: PM approve monitoring completion (PM)
-- **T2.2.8**: **INTEGRATION TASK**: Integrate monitoring with configuration system (Developer) - *use config-driven intervals*
-- **T2.2.9**: **INTEGRATION TASK**: Implement configuration hot-reload for monitoring settings (Developer)
-- **T2.2.10**: **INTEGRATION TASK**: Create monitoring integration tests (Developer)
-- **T2.2.11**: **ARCHITECTURE TASK**: IV&V validate monitoring integration (IV&V)
-- **T2.2.12**: **ARCHITECTURE TASK**: PM approve monitoring integration (PM)
+- **T2.2.7**: PM approve monitoring system (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md,  docs/developemnt/go-coding-sandards
 **Control Point**: Must handle connect/disconnect events with <20ms notification, no violation of rules  
@@ -295,19 +300,16 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Evidence**: Event handling tests, notification latency tests, comprehensive monitoring integration  
 
 #### **Story S2.3: Mixed Video Source Support**
+**Objective**: Implement mixed video source support that can handle both USB and RTSP sources
+**Deliverable**: Mixed video source system with unified abstraction
 **Tasks**:
-- **T2.3.1**: Implement RTSP feed configuration management (Developer) - *use requirements from Epic E0*
-- **T2.3.2**: Add unified video source abstraction layer (Developer) - *use architecture from Epic E0.5*
-- **T2.3.3**: Implement VID:PID device assignment integration (Developer) - *use requirements from Epic E0*
-- **T2.3.4**: Add mixed source lifecycle management (Developer) - *use architecture from Epic E0.5*
+- **T2.3.1**: Implement RTSP feed configuration management (Developer)
+- **T2.3.2**: Add unified video source abstraction layer (Developer)
+- **T2.3.3**: Implement device assignment consumption from Hub OS (Developer)
+- **T2.3.4**: Add mixed source lifecycle management (Developer)
 - **T2.3.5**: Create mixed source unit tests (Developer)
 - **T2.3.6**: IV&V validate mixed source support (IV&V)
 - **T2.3.7**: PM approve mixed source support (PM)
-- **T2.3.8**: **INTEGRATION TASK**: Integrate mixed source with camera discovery system (Developer) - *use camera data from Epic E2*
-- **T2.3.9**: **INTEGRATION TASK**: Implement configuration-driven mixed source settings (Developer)
-- **T2.3.10**: **INTEGRATION TASK**: Create mixed source integration tests (Developer)
-- **T2.3.11**: **ARCHITECTURE TASK**: IV&V validate mixed source integration (IV&V)
-- **T2.3.12**: **ARCHITECTURE TASK**: PM approve mixed source integration (PM)
 
 **Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
 **Control Point**: Mixed source support must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
@@ -760,13 +762,13 @@ The `get_streams` method has been migrated as an existing undocumented feature i
 
 ---
 
-**Document Status**: Approved migration plan with comprehensive Epic/Story/Task breakdown, ecosystem integration foundation, and integration requirements  
+**Document Status**: Architecture-first migration plan with external interface definition and objective-based implementation  
 **Last Updated**: 2025-01-15  
 **Next Review**: After Epic E0 and E0.5 completion  
 **Progress**: 
-- Epic E0: 🔄 IN PROGRESS (Requirements Foundation & Baseline)
-- Epic E0.5: 🔄 IN PROGRESS (Architecture Foundation & Decisions)
-- Epic E1: 🔄 IN PROGRESS (Foundation Infrastructure with Ecosystem Integration)
-- Epic E2: 🔄 IN PROGRESS (Camera Discovery System with Ecosystem Integration)
-- Ready for Epic E3: WebSocket JSON-RPC Server with Ecosystem Integration
-**Architectural Update**: Foundation-first ecosystem integration approach with comprehensive requirements and architecture foundation (2025-01-15)
+- Epic E0: 🔄 IN PROGRESS (External Interface Architecture)
+- Epic E0.5: 🔄 IN PROGRESS (Integration Pattern Architecture)
+- Epic E1: 🔄 IN PROGRESS (Foundation Infrastructure with External Interface Support)
+- Epic E2: 🔄 IN PROGRESS (Camera Discovery System with External Interface Support)
+- Ready for Epic E3: WebSocket JSON-RPC Server with External Interface Support
+**Architectural Update**: Architecture-first approach with external interface definition and objective-based implementation (2025-01-15)
