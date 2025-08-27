@@ -534,6 +534,7 @@ func (h *healthMonitor) GetDetailedStatus() HealthStatus {
 // performRealHealthCheck performs a real health check against MediaMTX
 func (h *healthMonitor) performRealHealthCheck() (*HealthStatus, error) {
 	// Use existing MediaMTX client for health checks
+	// TODO: Make timeout configurable from MediaMTXConfig.HealthCheckTimeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

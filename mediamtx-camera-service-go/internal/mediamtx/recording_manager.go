@@ -1550,6 +1550,17 @@ func (rm *RecordingManager) checkStorageSpace() (*StorageInfo, error) {
 	return storageInfo, nil
 }
 
+// UpdateStorageThresholds updates storage thresholds from configuration (Phase 4 enhancement)
+func (rm *RecordingManager) UpdateStorageThresholds(warnPercent, blockPercent int) {
+	rm.storageWarnPercent = warnPercent
+	rm.storageBlockPercent = blockPercent
+
+	rm.logger.WithFields(logrus.Fields{
+		"warn_percent":  warnPercent,
+		"block_percent": blockPercent,
+	}).Info("Storage thresholds updated from configuration")
+}
+
 // Auto-stop functionality methods (Phase 3 enhancement)
 
 // scheduleAutoStop schedules automatic stopping of a recording after a specified duration

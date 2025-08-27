@@ -29,7 +29,7 @@ var ValidRoles = map[string]bool{
 
 // ClientRateInfo represents rate limiting information for a client
 type ClientRateInfo struct {
-	ClientID    string
+	ClientID     string
 	RequestCount int64
 	LastRequest  time.Time
 	WindowStart  time.Time
@@ -42,11 +42,11 @@ type JWTHandler struct {
 	secretKey string
 	algorithm string
 	logger    *logrus.Logger
-	
+
 	// Rate limiting extensions (Phase 1 enhancement)
 	clientRates map[string]*ClientRateInfo
 	rateMutex   sync.RWMutex
-	rateLimit   int64  // Requests per window
+	rateLimit   int64         // Requests per window
 	rateWindow  time.Duration // Time window for rate limiting
 }
 
@@ -61,16 +61,16 @@ func NewJWTHandler(secretKey string) (*JWTHandler, error) {
 		secretKey: secretKey,
 		algorithm: "HS256",
 		logger:    logrus.New(),
-		
+
 		// Rate limiting initialization (Phase 1 enhancement)
 		clientRates: make(map[string]*ClientRateInfo),
-		rateLimit:   100, // Default: 100 requests per window
+		rateLimit:   100,         // Default: 100 requests per window
 		rateWindow:  time.Minute, // Default: 1 minute window
 	}
 
 	handler.logger.WithFields(logrus.Fields{
-		"algorithm": handler.algorithm,
-		"rate_limit": handler.rateLimit,
+		"algorithm":   handler.algorithm,
+		"rate_limit":  handler.rateLimit,
 		"rate_window": handler.rateWindow,
 	}).Info("JWT handler initialized with rate limiting")
 	return handler, nil

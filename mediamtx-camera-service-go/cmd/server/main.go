@@ -27,18 +27,13 @@ func main() {
 	logger := logging.NewLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 
-	// Initialize real implementations for camera monitor dependencies
-	deviceChecker := camera.NewRealDeviceChecker()
-	commandExecutor := camera.NewRealV4L2CommandExecutor()
-	infoParser := camera.NewRealDeviceInfoParser()
-
-	// Initialize camera monitor
+	// Initialize camera monitor with default implementations
 	cameraMonitor := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
+		nil, // Will use default implementations
+		nil, // Will use default implementations
+		nil, // Will use default implementations
 	)
 
 	// Initialize MediaMTX controller

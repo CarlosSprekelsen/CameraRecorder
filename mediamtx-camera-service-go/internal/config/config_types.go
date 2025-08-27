@@ -34,6 +34,22 @@ type StreamReadinessConfig struct {
 	GracefulFallback            bool    `mapstructure:"graceful_fallback"`
 }
 
+// SecurityConfig represents security configuration settings.
+type SecurityConfig struct {
+	RateLimitRequests int           `mapstructure:"rate_limit_requests"` // Default: 100 requests per window
+	RateLimitWindow   time.Duration `mapstructure:"rate_limit_window"`   // Default: 1 minute
+	JWTSecretKey      string        `mapstructure:"jwt_secret_key"`
+	JWTExpiryHours    int           `mapstructure:"jwt_expiry_hours"` // Default: 24 hours
+}
+
+// StorageConfig represents storage configuration settings.
+type StorageConfig struct {
+	WarnPercent  int    `mapstructure:"warn_percent"`  // Default: 80% usage warning
+	BlockPercent int    `mapstructure:"block_percent"` // Default: 90% usage block
+	DefaultPath  string `mapstructure:"default_path"`  // Default: "/opt/camera-service/recordings"
+	FallbackPath string `mapstructure:"fallback_path"` // Default: "/tmp/recordings"
+}
+
 // MediaMTXConfig represents MediaMTX integration configuration.
 type MediaMTXConfig struct {
 	Host                                string                `mapstructure:"host"`
@@ -55,6 +71,7 @@ type MediaMTXConfig struct {
 	ProcessTerminationTimeout           float64               `mapstructure:"process_termination_timeout"`
 	ProcessKillTimeout                  float64               `mapstructure:"process_kill_timeout"`
 	StreamReadiness                     StreamReadinessConfig `mapstructure:"stream_readiness"`
+	HealthCheckTimeout                  time.Duration         `mapstructure:"health_check_timeout"` // Default: 5 seconds
 }
 
 // FFmpegSnapshotConfig represents FFmpeg snapshot configuration.
@@ -163,15 +180,18 @@ type LoggingConfig struct {
 
 // RecordingConfig represents recording configuration.
 type RecordingConfig struct {
-	Enabled         bool   `mapstructure:"enabled"`
-	Format          string `mapstructure:"format"`
-	Quality         string `mapstructure:"quality"`
-	SegmentDuration int    `mapstructure:"segment_duration"`
-	MaxSegmentSize  int64  `mapstructure:"max_segment_size"`
-	AutoCleanup     bool   `mapstructure:"auto_cleanup"`
-	CleanupInterval int    `mapstructure:"cleanup_interval"`
-	MaxAge          int    `mapstructure:"max_age"`
-	MaxSize         int64  `mapstructure:"max_size"`
+	Enabled              bool          `mapstructure:"enabled"`
+	Format               string        `mapstructure:"format"`
+	Quality              string        `mapstructure:"quality"`
+	SegmentDuration      int           `mapstructure:"segment_duration"`
+	MaxSegmentSize       int64         `mapstructure:"max_segment_size"`
+	AutoCleanup          bool          `mapstructure:"auto_cleanup"`
+	CleanupInterval      int           `mapstructure:"cleanup_interval"`
+	MaxAge               int           `mapstructure:"max_age"`
+	MaxSize              int64         `mapstructure:"max_size"`
+	DefaultRotationSize  int64         `mapstructure:"default_rotation_size"`  // Default: 100MB
+	DefaultMaxDuration   time.Duration `mapstructure:"default_max_duration"`   // Default: 24 hours
+	DefaultRetentionDays int           `mapstructure:"default_retention_days"` // Default: 7 days
 }
 
 // SnapshotConfig represents snapshot configuration.
@@ -198,5 +218,7 @@ type Config struct {
 	FFmpeg        FFmpegConfig        `mapstructure:"ffmpeg"`
 	Notifications NotificationsConfig `mapstructure:"notifications"`
 	Performance   PerformanceConfig   `mapstructure:"performance"`
+	Security      SecurityConfig      `mapstructure:"security"`
+	Storage       StorageConfig       `mapstructure:"storage"`
 	HealthPort    *int                `mapstructure:"health_port"` // Optional health server port for testing
 }

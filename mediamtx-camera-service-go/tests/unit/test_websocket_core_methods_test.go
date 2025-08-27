@@ -25,26 +25,11 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
-// Use type aliases to avoid import conflicts
-type HealthStatus = mediamtx.HealthStatus
-type Metrics = mediamtx.Metrics
-type SystemMetrics = mediamtx.SystemMetrics
-type Stream = mediamtx.Stream
-type Path = mediamtx.Path
-type RecordingSession = mediamtx.RecordingSession
-type Snapshot = mediamtx.Snapshot
-type FileListResponse = mediamtx.FileListResponse
-type FileMetadata = mediamtx.FileMetadata
-type SnapshotSettings = mediamtx.SnapshotSettings
-type MediaMTXConfig = mediamtx.MediaMTXConfig
 
-//go:build unit
-// +build unit
 
 // TestPingMethod tests the ping JSON-RPC method
 func TestPingMethod(t *testing.T) {
