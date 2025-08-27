@@ -27,25 +27,41 @@ func main() {
 	logger := logging.NewLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 
-	// Initialize camera monitor with default implementations
+	// Initialize real implementations for camera monitor dependencies
+	deviceChecker := &camera.RealDeviceChecker{}
+	commandExecutor := &camera.RealV4L2CommandExecutor{}
+	infoParser := &camera.RealDeviceInfoParser{}
+
+	// Initialize camera monitor with real implementations
 	cameraMonitor := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
-		nil, // Will use default implementations
-		nil, // Will use default implementations
-		nil, // Will use default implementations
+		deviceChecker,
+		commandExecutor,
+		infoParser,
 	)
 
-	// Initialize MediaMTX controller
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger)
+	// Initialize MediaMTX controller with existing logger
+	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
 	}
 
-	// Initialize JWT handler
-	jwtHandler, err := security.NewJWTHandler("default-secret-key-change-in-production")
+	// Get configuration
+	cfg := configManager.GetConfig()
+	if cfg == nil {
+		logger.Fatal("Configuration not available")
+	}
+
+	// Initialize JWT handler with configuration
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
+	}
+
+	// Update rate limiting configuration if specified
+	if cfg.Security.RateLimitRequests > 0 {
+		jwtHandler.SetRateLimit(int64(cfg.Security.RateLimitRequests), cfg.Security.RateLimitWindow)
 	}
 
 	// Initialize WebSocket server
@@ -78,7 +94,7 @@ func main() {
 	logger.Info("Received shutdown signal, stopping services...")
 
 	// Graceful shutdown
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := wsServer.Stop(); err != nil {

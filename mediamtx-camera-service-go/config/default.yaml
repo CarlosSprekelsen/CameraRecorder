@@ -80,7 +80,7 @@ recording:
 
 snapshots:
   enabled: true
-  format: "jpg"
+  format: "jpeg"
   quality: 85
   max_width: 1920
   max_height: 1080

@@ -224,13 +224,13 @@ func TestErrorHandling(t *testing.T) {
 
 		// Test rapid successive requests
 		params := map[string]interface{}{}
-		
+
 		// Make multiple rapid requests to trigger rate limiting
 		for i := 0; i < 10; i++ {
 			response, err := server.MethodPing(params, client)
 			require.NoError(t, err)
 			assert.NotNil(t, response)
-			
+
 			// Check if rate limiting error occurs
 			if response.Error != nil && response.Error.Code == websocket.RATE_LIMIT_EXCEEDED {
 				assert.Equal(t, "Rate limit exceeded", response.Error.Message)
@@ -271,7 +271,7 @@ func TestErrorHandling(t *testing.T) {
 
 		// Test with non-existent method
 		params := map[string]interface{}{}
-		
+
 		// This would require testing the method dispatch mechanism
 		// For now, we test the error handling structure
 		response, err := server.MethodPing(params, client)
