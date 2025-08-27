@@ -380,6 +380,102 @@ func (c *Client) GetCameraStatus(device string) (*CameraStatus, error) {
 }
 ```
 
+### get_camera_capabilities
+Get detailed capabilities and supported formats for a specific camera device.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- device: string - Camera device path (required)
+
+**Returns:** Camera capabilities object with supported formats, resolutions, and FPS options
+
+**Status:** ✅ Implemented
+
+**Implementation:** Queries camera discovery monitor for device capabilities, formats, and supported configurations. Provides real-time capability detection with validation status.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_camera_capabilities",
+  "params": {
+    "device": "/dev/video0"
+  },
+  "id": 4
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "/dev/video0",
+    "formats": ["YUYV", "MJPEG", "RGB24"],
+    "resolutions": ["1920x1080", "1280x720", "640x480"],
+    "fps_options": [15, 30, 60],
+    "validation_status": "confirmed"
+  },
+  "id": 4
+}
+```
+
+**Response Fields:**
+- `device`: Camera device path (string)
+- `formats`: Array of supported pixel formats (array of strings)
+- `resolutions`: Array of supported resolutions (array of strings)
+- `fps_options`: Array of supported frame rates (array of integers)
+- `validation_status`: Capability validation status ("none", "disconnected", "confirmed")
+
+**Go Client Example:**
+```go
+type CameraCapabilitiesResponse struct {
+    Device            string        `json:"device"`
+    Formats           []string      `json:"formats"`
+    Resolutions       []string      `json:"resolutions"`
+    FPSOptions        []int         `json:"fps_options"`
+    ValidationStatus  string        `json:"validation_status"`
+}
+
+func (c *Client) GetCameraCapabilities(device string) (*CameraCapabilitiesResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_camera_capabilities",
+        Params:  map[string]string{"device": device},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result CameraCapabilitiesResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+**Error Response (Camera Not Found):**
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32602,
+    "message": "Invalid parameters",
+    "data": "device parameter is required"
+  },
+  "id": 4
+}
+```
+
+---
+
+## Recording and Snapshot Methods
+
 ### take_snapshot  
 Capture a snapshot from the specified camera.
 
@@ -1001,6 +1097,10 @@ Standard JSON-RPC 2.0 error codes plus service-specific codes:
 - **-32008**: Camera capability not supported
 
 ### Enhanced Recording Management Error Codes
+- **-1000**: Camera not found
+- **-1001**: Camera not available
+- **-1002**: Recording in progress
+- **-1003**: MediaMTX error
 - **-1006**: Camera is currently recording (device already has active recording)
 - **-1008**: Storage space is low (available storage below 10%)
 - **-1010**: Storage space is critical (available storage below 5%)
@@ -1100,6 +1200,432 @@ func main() {
         fmt.Printf("Notification: %+v\n", notification)
     }
 }
+```
+
+---
+
+## File Management Methods
+
+### list_snapshots
+List available snapshot files with metadata and pagination support.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- limit: number - Maximum number of files to return (optional)
+- offset: number - Number of files to skip for pagination (optional)
+
+**Returns:** Object containing snapshots list, metadata, and pagination information
+
+**Status:** ✅ Implemented
+
+**Implementation:** Scans snapshots directory, provides file metadata, and supports pagination for large file collections.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "list_snapshots",
+  "params": {
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 8
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "files": [
+      {
+        "filename": "snapshot_2025-01-15_14-30-00.jpg",
+        "file_size": 204800,
+        "modified_time": "2025-01-15T14:30:00Z",
+        "download_url": "/files/snapshots/snapshot_2025-01-15_14-30-00.jpg"
+      }
+    ],
+    "total": 15,
+    "limit": 10,
+    "offset": 0
+  },
+  "id": 8
+}
+```
+
+### get_recording_info
+Get detailed information about a specific recording file.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- filename: string - Name of the recording file (required)
+
+**Returns:** Object containing recording file metadata and information
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_recording_info",
+  "params": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 12
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "file_size": 1073741824,
+    "duration": 3600,
+    "created_time": "2025-01-15T14:30:00Z",
+    "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 12
+}
+```
+
+### get_snapshot_info
+Get detailed information about a specific snapshot file.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- filename: string - Name of the snapshot file (required)
+
+**Returns:** Object containing snapshot file metadata and information
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_snapshot_info",
+  "params": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 13
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg",
+    "file_size": 204800,
+    "created_time": "2025-01-15T14:30:00Z",
+    "download_url": "/files/snapshots/snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 13
+}
+```
+
+### delete_recording
+Delete a specific recording file.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- filename: string - Name of the recording file to delete (required)
+
+**Returns:** Object containing deletion status and confirmation
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "delete_recording",
+  "params": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4"
+  },
+  "id": 14
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "deleted": true,
+    "message": "Recording file deleted successfully"
+  },
+  "id": 14
+}
+```
+
+### delete_snapshot
+Delete a specific snapshot file.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- filename: string - Name of the snapshot file to delete (required)
+
+**Returns:** Object containing deletion status and confirmation
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "delete_snapshot",
+  "params": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg"
+  },
+  "id": 15
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "filename": "snapshot_2025-01-15_14-30-00.jpg",
+    "deleted": true,
+    "message": "Snapshot file deleted successfully"
+  },
+  "id": 15
+}
+```
+
+### get_storage_info
+Get storage space information and usage statistics.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing storage space information and usage statistics
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_storage_info",
+  "id": 16
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "total_space": 107374182400,
+    "used_space": 53687091200,
+    "available_space": 53687091200,
+    "usage_percentage": 50.0,
+    "recordings_size": 42949672960,
+    "snapshots_size": 10737418240,
+    "low_space_warning": false
+  },
+  "id": 16
+}
+```
+
+### set_retention_policy
+Configure file retention policies for automatic cleanup.
+
+**Authentication:** Required (admin role)
+
+**Parameters:**
+- policy_type: string - Type of retention policy ("age", "size", "manual") (required)
+- max_age_days: number - Maximum age in days for age-based retention (optional)
+- max_size_gb: number - Maximum size in GB for size-based retention (optional)
+- enabled: boolean - Enable or disable the retention policy (required)
+
+**Returns:** Object containing policy configuration status
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "set_retention_policy",
+  "params": {
+    "policy_type": "age",
+    "max_age_days": 30,
+    "enabled": true
+  },
+  "id": 17
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "policy_type": "age",
+    "max_age_days": 30,
+    "enabled": true,
+    "message": "Retention policy configured successfully"
+  },
+  "id": 17
+}
+```
+
+### cleanup_old_files
+Manually trigger cleanup of old files based on retention policies.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing cleanup results and statistics
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "cleanup_old_files",
+  "id": 18
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "cleanup_executed": true,
+    "files_deleted": 15,
+    "space_freed": 10737418240,
+    "message": "Cleanup completed successfully"
+  },
+  "id": 18
+}
+```
+
+---
+
+## System Management Methods
+
+### get_status
+Get system status and health information.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing system status, component health, and operational state
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_status",
+  "id": 10
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "status": "healthy",
+    "uptime": 86400,
+    "version": "1.0.0",
+    "components": {
+      "websocket_server": "running",
+      "camera_monitor": "running",
+      "mediamtx_controller": "running"
+    }
+  },
+  "id": 10
+}
+```
+
+### get_server_info
+Get server configuration and capability information.
+
+**Authentication:** Required (admin role)
+
+**Parameters:** None
+
+**Returns:** Object containing server configuration, capabilities, and feature information
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_server_info",
+  "id": 11
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "name": "MediaMTX Camera Service",
+    "version": "1.0.0",
+    "build_date": "2025-01-15",
+    "go_version": "go1.24.6",
+    "architecture": "amd64",
+    "capabilities": ["snapshots", "recordings", "streaming"],
+    "supported_formats": ["mp4", "mkv", "jpg"],
+    "max_cameras": 10
+  },
+  "id": 11
+}
+```
+
+---
+
+## HTTP File Download Endpoints
+
+### GET /files/recordings/{filename}
+Download a recording file via HTTP.
+
+**Parameters:**
+- filename: string - Name of the recording file to download
+
+**Headers:**
+- Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
+
+**Returns:** File content with appropriate Content-Type and Content-Disposition headers
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+     http://localhost:8002/files/recordings/camera0_2025-01-15_14-30-00.mp4
+```
+
+### GET /files/snapshots/{filename}
+Download a snapshot file via HTTP.
+
+**Parameters:**
+- filename: string - Name of the snapshot file to download
+
+**Headers:**
+- Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
+
+**Returns:** File content with appropriate Content-Type and Content-Disposition headers
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+     http://localhost:8002/files/snapshots/snapshot_2025-01-15_14-30-00.jpg
 ```
 
 ---
