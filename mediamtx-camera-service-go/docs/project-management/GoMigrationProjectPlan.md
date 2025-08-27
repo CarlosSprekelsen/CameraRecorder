@@ -487,7 +487,6 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T8.1.3**: Create `tests/integration/test_mediamtx_integration.go` (Developer) - *New file for MediaMTX path/stream integration testing*
 - **T8.1.4**: Add performance benchmarks in `tests/benchmarks/benchmark_api_performance_test.go` (Developer) - *New file for API performance benchmarking*
 - **T8.1.5**: Add stress tests in `tests/stress/test_concurrent_connections.go` (Developer) - *New file for 1000+ connection testing*
-- **T8.1.6**: Create compatibility validator in `tests/integration/test_python_api_compatibility.go` (Developer) - *New file for Python vs Go API response validation*
 - **T8.1.7**: Add unit tests in `tests/unit/test_integration_validation_test.go` (Developer) - *New file for integration validation testing*
 - **T8.1.8**: IV&V validate integration (IV&V)
 - **T8.1.9**: PM approve integration completion (PM)
@@ -500,7 +499,6 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **T8.2.1**: Update existing `docs/api/json-rpc-methods.md` (Developer) - *Add new method documentation for camera operations and file management*
 - **T8.2.2**: Update existing `docs/deployment/deployment-guide.md` (Developer) - *Add Go service deployment procedures*
 - **T8.2.3**: Update existing `docs/operations/operational-procedures.md` (Developer) - *Add Go service operational procedures*
-- **T8.2.4**: Create `docs/migration/python-to-go-migration-guide.md` (Developer) - *New file for migration procedures*
 - **T8.2.5**: Update existing `README.md` (Developer) - *Update with Go implementation instructions*
 - **T8.2.6**: Update existing `docker/Dockerfile` (Developer) - *Add Go service container configuration*
 - **T8.2.7**: Update existing `scripts/build.sh` (Developer) - *Add Go build procedures*

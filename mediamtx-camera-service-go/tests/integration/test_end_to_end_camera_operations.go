@@ -60,7 +60,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	// Initialize JWT handler
 	cfg := configManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration not available")
-	
+
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(t, err, "Failed to create JWT handler")
 
@@ -94,7 +94,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 		// Get discovered cameras
 		cameras := cameraMonitor.GetConnectedCameras()
-		
+
 		// Log discovered cameras
 		t.Logf("Discovered %d cameras", len(cameras))
 		for _, cam := range cameras {
@@ -118,7 +118,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			camera = cam
 			break
 		}
-		
+
 		// Get camera capabilities - skip for now as method doesn't exist
 		t.Logf("Camera: %s, Path: %s", camera.Name, camera.Path)
 	})
