@@ -27,7 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
-	"github.com/bluenviron/mediamtx/pkg/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 // registerBuiltinMethods registers all built-in JSON-RPC methods
@@ -385,6 +385,8 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		}
 	}
 
+	// Enhanced health metrics are available through systemMetrics (Phase 1 enhancement)
+
 	// Get base performance metrics from existing infrastructure
 	baseMetrics := s.GetMetrics()
 
@@ -430,7 +432,19 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 	// Get heap allocation in bytes
 	heapAlloc := m.HeapAlloc
 
-	// Use system metrics from controller if available
+	// Enhanced metrics result with sophisticated health monitoring (Phase 1 enhancement)
+	result := map[string]interface{}{
+		"active_connections":    activeConnections,
+		"total_requests":        baseMetrics.RequestCount,
+		"average_response_time": averageResponseTime,
+		"error_rate":            errorRate,
+		"memory_usage":          memoryUsage,
+		"cpu_usage":             cpuUsage,
+		"goroutines":            goroutines,
+		"heap_alloc":            heapAlloc,
+	}
+
+	// Use system metrics from controller if available (Phase 1 enhancement)
 	if systemMetrics != nil {
 		// Override with controller metrics for better accuracy
 		activeConnections = int(systemMetrics.ActiveConnections)
@@ -438,6 +452,17 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		if systemMetrics.RequestCount > 0 {
 			errorRate = float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0
 		}
+
+		// Add enhanced health monitoring metrics (Phase 1 enhancement)
+		result["circuit_breaker_state"] = systemMetrics.CircuitBreakerState
+		result["component_status"] = systemMetrics.ComponentStatus
+		result["error_counts"] = systemMetrics.ErrorCounts
+		result["last_check"] = systemMetrics.LastCheck
+
+		// Update base metrics with enhanced values
+		result["active_connections"] = activeConnections
+		result["average_response_time"] = averageResponseTime
+		result["error_rate"] = errorRate
 	}
 
 	s.logger.WithFields(logrus.Fields{
@@ -451,19 +476,10 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		"action":                "metrics_success",
 	}).Debug("Metrics retrieved successfully")
 
-	// Return metrics following API documentation exactly
+	// Return enhanced metrics following API documentation exactly (Phase 1 enhancement)
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"active_connections":    activeConnections,
-			"total_requests":        baseMetrics.RequestCount,
-			"average_response_time": averageResponseTime,
-			"error_rate":            errorRate,
-			"memory_usage":          memoryUsage,
-			"cpu_usage":             cpuUsage,
-			"goroutines":            goroutines,
-			"heap_alloc":            heapAlloc,
-		},
+		Result:  result,
 	}, nil
 }
 
@@ -1624,7 +1640,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Extract optional parameters
+	// Extract optional parameters with enhanced use case support (Phase 2 enhancement)
 	options := make(map[string]interface{})
 	if duration, ok := params["duration_seconds"].(int); ok && duration > 0 {
 		options["max_duration"] = time.Duration(duration) * time.Second
@@ -1639,16 +1655,81 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		options["crf"] = quality
 	}
 
+	// Enhanced use case management parameters (Phase 2 enhancement)
+	if useCase, ok := params["use_case"].(string); ok && useCase != "" {
+		options["use_case"] = useCase
+	}
+	if priority, ok := params["priority"].(int); ok && priority > 0 {
+		options["priority"] = priority
+	}
+	if autoCleanup, ok := params["auto_cleanup"].(bool); ok {
+		options["auto_cleanup"] = autoCleanup
+	}
+	if retentionDays, ok := params["retention_days"].(int); ok && retentionDays > 0 {
+		options["retention_days"] = retentionDays
+	}
+	if qualityStr, ok := params["quality_level"].(string); ok && qualityStr != "" {
+		options["quality"] = qualityStr
+	}
+	if autoRotate, ok := params["auto_rotate"].(bool); ok {
+		options["auto_rotate"] = autoRotate
+	}
+	if rotationSize, ok := params["rotation_size"].(int64); ok && rotationSize > 0 {
+		options["rotation_size"] = rotationSize
+	}
+
+	// Enhanced segment-based rotation parameters (Phase 3 enhancement)
+	if continuityMode, ok := params["continuity_mode"].(bool); ok {
+		options["continuity_mode"] = continuityMode
+	}
+	if segmentFormat, ok := params["segment_format"].(string); ok && segmentFormat != "" {
+		options["segment_format"] = segmentFormat
+	}
+	if resetTimestamps, ok := params["reset_timestamps"].(bool); ok {
+		options["reset_timestamps"] = resetTimestamps
+	}
+	if strftimeEnabled, ok := params["strftime_enabled"].(bool); ok {
+		options["strftime_enabled"] = strftimeEnabled
+	}
+	if segmentPrefix, ok := params["segment_prefix"].(string); ok && segmentPrefix != "" {
+		options["segment_prefix"] = segmentPrefix
+	}
+	if maxSegments, ok := params["max_segments"].(int); ok && maxSegments > 0 {
+		options["max_segments"] = maxSegments
+	}
+	if segmentRotation, ok := params["segment_rotation"].(bool); ok {
+		options["segment_rotation"] = segmentRotation
+	}
+
 	// Validate camera device exists
 	_, exists := s.cameraMonitor.GetDevice(devicePath)
 	if !exists {
+		// Enhanced error categorization and logging (Phase 4 enhancement)
+		enhancedErr := mediamtx.CategorizeError(fmt.Errorf("camera device not found: %s", devicePath))
+		errorMetadata := mediamtx.GetErrorMetadata(enhancedErr)
+		recoveryStrategies := mediamtx.GetRecoveryStrategies(enhancedErr.GetCategory())
+
+		s.logger.WithFields(logrus.Fields{
+			"client_id":           client.ClientID,
+			"method":              "start_recording",
+			"device":              devicePath,
+			"error_category":      errorMetadata["category"],
+			"error_severity":      errorMetadata["severity"],
+			"retryable":           errorMetadata["retryable"],
+			"recoverable":         errorMetadata["recoverable"],
+			"recovery_strategies": recoveryStrategies,
+		}).Warn("Camera device not found with enhanced error categorization")
+
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INVALID_PARAMS,
 				Message: "Camera device not found",
 				Data: map[string]interface{}{
-					"device": devicePath,
+					"device":              devicePath,
+					"error_category":      errorMetadata["category"],
+					"error_severity":      errorMetadata["severity"],
+					"recovery_strategies": recoveryStrategies,
 				},
 			},
 		}, nil
@@ -1657,12 +1738,22 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 	// Start recording using MediaMTX controller
 	session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, "", options)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
-			"client_id": client.ClientID,
-			"method":    "start_recording",
-			"device":    devicePath,
-			"action":    "start_recording_error",
-		}).Error("Failed to start recording using MediaMTX controller")
+		// Enhanced error categorization and logging (Phase 4 enhancement)
+		enhancedErr := mediamtx.CategorizeError(err)
+		errorMetadata := mediamtx.GetErrorMetadata(enhancedErr)
+		recoveryStrategies := mediamtx.GetRecoveryStrategies(enhancedErr.GetCategory())
+
+		s.logger.WithFields(logrus.Fields{
+			"client_id":           client.ClientID,
+			"method":              "start_recording",
+			"device":              devicePath,
+			"action":              "start_recording_error",
+			"error_category":      errorMetadata["category"],
+			"error_severity":      errorMetadata["severity"],
+			"retryable":           errorMetadata["retryable"],
+			"recoverable":         errorMetadata["recoverable"],
+			"recovery_strategies": recoveryStrategies,
+		}).Error("Failed to start recording using MediaMTX controller with enhanced error categorization")
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
@@ -1691,6 +1782,17 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 			"device":     session.Device,
 			"status":     session.Status,
 			"start_time": session.StartTime,
+			// Enhanced use case information (Phase 2 enhancement)
+			"use_case":       session.UseCase,
+			"priority":       session.Priority,
+			"auto_cleanup":   session.AutoCleanup,
+			"retention_days": session.RetentionDays,
+			"quality":        session.Quality,
+			"max_duration":   session.MaxDuration.String(),
+			"auto_rotate":    session.AutoRotate,
+			"rotation_size":  session.RotationSize,
+			// Enhanced segment-based rotation information (Phase 3 enhancement)
+			"continuity_id": session.ContinuityID,
 		},
 	}, nil
 }

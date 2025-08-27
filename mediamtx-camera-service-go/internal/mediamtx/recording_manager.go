@@ -56,6 +56,17 @@ type RotationSettings struct {
 	AutoRotate      bool          `json:"auto_rotate"`
 	KeepSegments    int           `json:"keep_segments"`
 	OutputFormat    string        `json:"output_format"`
+
+	// Enhanced segment-based rotation (Phase 3 enhancement)
+	ContinuityMode  bool   `json:"continuity_mode"`  // Enable recording continuity across segments
+	SegmentIndex    int    `json:"segment_index"`    // Current segment index
+	SegmentFormat   string `json:"segment_format"`   // Segment filename format
+	ResetTimestamps bool   `json:"reset_timestamps"` // Reset timestamps for each segment
+	StrftimeEnabled bool   `json:"strftime_enabled"` // Enable strftime in segment names
+	SegmentPrefix   string `json:"segment_prefix"`   // Prefix for segment files
+	MaxSegments     int    `json:"max_segments"`     // Maximum number of segments to keep
+	SegmentRotation bool   `json:"segment_rotation"` // Enable automatic segment rotation
+	ContinuityID    string `json:"continuity_id"`    // Continuity identifier for segments
 }
 
 // RecordingSegment represents a recording segment
@@ -266,7 +277,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 	}
 	rm.sessionsMu.Unlock()
 
-	// Create recording session
+	// Create recording session with enhanced use case management (Phase 2 enhancement)
 	session := &RecordingSession{
 		ID:           sessionID,
 		Device:       device,
@@ -276,9 +287,75 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 		FilePath:     rm.generateRecordingPath(device, sessionID),
 		ContinuityID: generateContinuityID(),
 		State:        SessionStateRecording,
+
+		// Enhanced use case management (Phase 2 enhancement)
+		UseCase:       UseCaseRecording,  // Default to recording use case
+		Priority:      2,                 // Default medium priority
+		AutoCleanup:   true,              // Default auto-cleanup
+		RetentionDays: 7,                 // Default 7 days retention
+		Quality:       "medium",          // Default medium quality
+		MaxDuration:   24 * time.Hour,    // Default 24 hour max duration
+		AutoRotate:    true,              // Default auto-rotate
+		RotationSize:  100 * 1024 * 1024, // Default 100MB rotation size
 	}
 
-	// Apply rotation settings from options
+	// Apply use case specific configuration (Phase 2 enhancement)
+	if useCase, ok := options["use_case"].(string); ok {
+		switch useCase {
+		case "recording":
+			session.UseCase = UseCaseRecording
+			session.Priority = 1
+			session.AutoCleanup = true
+			session.RetentionDays = 30
+			session.Quality = "high"
+			session.MaxDuration = 24 * time.Hour
+			session.AutoRotate = true
+			session.RotationSize = 100 * 1024 * 1024 // 100MB
+		case "viewing":
+			session.UseCase = UseCaseViewing
+			session.Priority = 2
+			session.AutoCleanup = false
+			session.RetentionDays = 1
+			session.Quality = "medium"
+			session.MaxDuration = 2 * time.Hour
+			session.AutoRotate = false
+			session.RotationSize = 0
+		case "snapshot":
+			session.UseCase = UseCaseSnapshot
+			session.Priority = 3
+			session.AutoCleanup = true
+			session.RetentionDays = 7
+			session.Quality = "low"
+			session.MaxDuration = 1 * time.Hour
+			session.AutoRotate = false
+			session.RotationSize = 0
+		}
+	}
+
+	// Override with explicit options if provided (Phase 2 enhancement)
+	if priority, ok := options["priority"].(int); ok {
+		session.Priority = priority
+	}
+	if autoCleanup, ok := options["auto_cleanup"].(bool); ok {
+		session.AutoCleanup = autoCleanup
+	}
+	if retentionDays, ok := options["retention_days"].(int); ok {
+		session.RetentionDays = retentionDays
+	}
+	if quality, ok := options["quality"].(string); ok {
+		session.Quality = quality
+	}
+	if maxDuration, ok := options["max_duration"].(time.Duration); ok {
+		session.MaxDuration = maxDuration
+	}
+	if autoRotate, ok := options["auto_rotate"].(bool); ok {
+		session.AutoRotate = autoRotate
+	}
+	if rotationSize, ok := options["rotation_size"].(int64); ok {
+		session.RotationSize = rotationSize
+	}
+
+	// Apply enhanced rotation settings from options (Phase 3 enhancement)
 	if maxFileSize, ok := options["max_file_size"].(int64); ok {
 		rm.rotationSettings.MaxFileSize = maxFileSize
 	}
@@ -292,13 +369,73 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 		rm.rotationSettings.AutoRotate = autoRotate
 	}
 
-	// Build FFmpeg command with advanced options
-	command := rm.buildAdvancedRecordingCommand(device, session.FilePath, options)
+	// Enhanced segment-based rotation settings (Phase 3 enhancement)
+	if continuityMode, ok := options["continuity_mode"].(bool); ok {
+		rm.rotationSettings.ContinuityMode = continuityMode
+	}
+	if segmentFormat, ok := options["segment_format"].(string); ok && segmentFormat != "" {
+		rm.rotationSettings.SegmentFormat = segmentFormat
+	}
+	if resetTimestamps, ok := options["reset_timestamps"].(bool); ok {
+		rm.rotationSettings.ResetTimestamps = resetTimestamps
+	}
+	if strftimeEnabled, ok := options["strftime_enabled"].(bool); ok {
+		rm.rotationSettings.StrftimeEnabled = strftimeEnabled
+	}
+	if segmentPrefix, ok := options["segment_prefix"].(string); ok && segmentPrefix != "" {
+		rm.rotationSettings.SegmentPrefix = segmentPrefix
+	}
+	if maxSegments, ok := options["max_segments"].(int); ok && maxSegments > 0 {
+		rm.rotationSettings.MaxSegments = maxSegments
+	}
+	if segmentRotation, ok := options["segment_rotation"].(bool); ok {
+		rm.rotationSettings.SegmentRotation = segmentRotation
+	}
 
-	// Start FFmpeg process
-	pid, err := rm.ffmpegManager.StartProcess(ctx, command, session.FilePath)
-	if err != nil {
-		return nil, NewRecordingErrorWithErr(sessionID, device, "start_recording", "failed to start FFmpeg process", err)
+	// Set continuity ID for segment-based recording (Phase 3 enhancement)
+	if rm.rotationSettings.ContinuityMode {
+		rm.rotationSettings.ContinuityID = session.ContinuityID
+	}
+
+	// Enhanced FFmpeg command building with segment support (Phase 3 enhancement)
+	var err error
+	var pid int
+
+	if rm.rotationSettings.ContinuityMode && rm.rotationSettings.SegmentRotation {
+		// Use segmented recording with continuity support
+		rm.logger.WithFields(logrus.Fields{
+			"session_id":       sessionID,
+			"continuity_id":    session.ContinuityID,
+			"segment_duration": rm.rotationSettings.SegmentDuration,
+		}).Info("Starting segmented recording with continuity")
+
+		err = rm.ffmpegManager.CreateSegmentedRecording(ctx, device, session.FilePath, rm.rotationSettings)
+		if err != nil {
+			return nil, NewRecordingErrorWithErr(sessionID, device, "start_recording", "failed to start segmented recording", err)
+		}
+		pid = 0 // Segmented recording doesn't return PID immediately
+	} else {
+		// Use standard FFmpeg recording
+		command := rm.buildAdvancedRecordingCommand(device, session.FilePath, options)
+		pid, err = rm.ffmpegManager.StartProcess(ctx, command, session.FilePath)
+		if err != nil {
+			// Enhanced error categorization and logging (Phase 4 enhancement)
+			enhancedErr := CategorizeError(err)
+			errorMetadata := GetErrorMetadata(enhancedErr)
+			recoveryStrategies := GetRecoveryStrategies(enhancedErr.GetCategory())
+
+			rm.logger.WithFields(logrus.Fields{
+				"session_id":          sessionID,
+				"device":              device,
+				"error_category":      errorMetadata["category"],
+				"error_severity":      errorMetadata["severity"],
+				"retryable":           errorMetadata["retryable"],
+				"recoverable":         errorMetadata["recoverable"],
+				"recovery_strategies": recoveryStrategies,
+			}).Error("Failed to start FFmpeg process with enhanced error categorization")
+
+			return nil, NewRecordingErrorWithErr(sessionID, device, "start_recording", "failed to start FFmpeg process", err)
+		}
 	}
 
 	// Update session
@@ -395,12 +532,19 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 
 	rm.sessionsMu.Unlock()
 
+	// Enhanced use case specific cleanup (Phase 2 enhancement)
 	rm.logger.WithFields(logrus.Fields{
-		"session_id": sessionID,
-		"device":     session.Device,
-		"duration":   session.Duration,
-		"file_size":  session.FileSize,
+		"session_id":   sessionID,
+		"device":       session.Device,
+		"duration":     session.Duration,
+		"file_size":    session.FileSize,
+		"use_case":     session.UseCase,
+		"priority":     session.Priority,
+		"auto_cleanup": session.AutoCleanup,
 	}).Info("Advanced recording stopped successfully")
+
+	// Perform use case specific cleanup (Phase 2 enhancement)
+	go rm.performUseCaseCleanup(ctx, session)
 
 	return nil
 }
@@ -1213,5 +1357,124 @@ func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string
 	}
 
 	rm.logger.WithField("filename", filename).Info("Recording file deleted successfully")
+	return nil
+}
+
+// performUseCaseCleanup performs use case specific cleanup operations (Phase 2 enhancement)
+func (rm *RecordingManager) performUseCaseCleanup(ctx context.Context, session *RecordingSession) {
+	rm.logger.WithFields(logrus.Fields{
+		"session_id":   session.ID,
+		"use_case":     session.UseCase,
+		"priority":     session.Priority,
+		"auto_cleanup": session.AutoCleanup,
+	}).Debug("Performing use case specific cleanup")
+
+	// Skip cleanup if auto-cleanup is disabled
+	if !session.AutoCleanup {
+		rm.logger.WithField("session_id", session.ID).Debug("Auto-cleanup disabled, skipping cleanup")
+		return
+	}
+
+	// Perform use case specific cleanup
+	switch session.UseCase {
+	case UseCaseRecording:
+		// Recording use case: Keep files for longer, high priority
+		rm.logger.WithField("session_id", session.ID).Debug("Performing recording use case cleanup")
+		// Recording files are kept for retention period, no immediate cleanup
+
+	case UseCaseViewing:
+		// Viewing use case: Clean up quickly, medium priority
+		rm.logger.WithField("session_id", session.ID).Debug("Performing viewing use case cleanup")
+		// Viewing files are cleaned up after short retention period
+		go rm.scheduleViewingCleanup(ctx, session)
+
+	case UseCaseSnapshot:
+		// Snapshot use case: Clean up after medium retention, low priority
+		rm.logger.WithField("session_id", session.ID).Debug("Performing snapshot use case cleanup")
+		// Snapshot files are cleaned up after medium retention period
+		go rm.scheduleSnapshotCleanup(ctx, session)
+
+	default:
+		rm.logger.WithFields(logrus.Fields{
+			"session_id": session.ID,
+			"use_case":   session.UseCase,
+		}).Warn("Unknown use case, skipping cleanup")
+	}
+}
+
+// scheduleViewingCleanup schedules cleanup for viewing use case files (Phase 2 enhancement)
+func (rm *RecordingManager) scheduleViewingCleanup(ctx context.Context, session *RecordingSession) {
+	// Viewing files are cleaned up after 1 day
+	cleanupDelay := 24 * time.Hour
+
+	rm.logger.WithFields(logrus.Fields{
+		"session_id":    session.ID,
+		"cleanup_delay": cleanupDelay,
+	}).Debug("Scheduling viewing cleanup")
+
+	time.Sleep(cleanupDelay)
+
+	// Check if file still exists and delete if retention period exceeded
+	if err := rm.cleanupExpiredFile(ctx, session); err != nil {
+		rm.logger.WithError(err).WithField("session_id", session.ID).Error("Failed to cleanup viewing file")
+	}
+}
+
+// scheduleSnapshotCleanup schedules cleanup for snapshot use case files (Phase 2 enhancement)
+func (rm *RecordingManager) scheduleSnapshotCleanup(ctx context.Context, session *RecordingSession) {
+	// Snapshot files are cleaned up after retention period
+	cleanupDelay := time.Duration(session.RetentionDays) * 24 * time.Hour
+
+	rm.logger.WithFields(logrus.Fields{
+		"session_id":     session.ID,
+		"cleanup_delay":  cleanupDelay,
+		"retention_days": session.RetentionDays,
+	}).Debug("Scheduling snapshot cleanup")
+
+	time.Sleep(cleanupDelay)
+
+	// Check if file still exists and delete if retention period exceeded
+	if err := rm.cleanupExpiredFile(ctx, session); err != nil {
+		rm.logger.WithError(err).WithField("session_id", session.ID).Error("Failed to cleanup snapshot file")
+	}
+}
+
+// cleanupExpiredFile cleans up expired files based on retention policy (Phase 2 enhancement)
+func (rm *RecordingManager) cleanupExpiredFile(ctx context.Context, session *RecordingSession) error {
+	// Check if file exists
+	if _, err := os.Stat(session.FilePath); os.IsNotExist(err) {
+		rm.logger.WithField("session_id", session.ID).Debug("File already deleted, skipping cleanup")
+		return nil
+	}
+
+	// Check if file is older than retention period
+	fileInfo, err := os.Stat(session.FilePath)
+	if err != nil {
+		return fmt.Errorf("error accessing file: %w", err)
+	}
+
+	retentionPeriod := time.Duration(session.RetentionDays) * 24 * time.Hour
+	fileAge := time.Since(fileInfo.ModTime())
+
+	if fileAge > retentionPeriod {
+		rm.logger.WithFields(logrus.Fields{
+			"session_id":       session.ID,
+			"file_age":         fileAge,
+			"retention_period": retentionPeriod,
+		}).Info("File exceeds retention period, deleting")
+
+		if err := os.Remove(session.FilePath); err != nil {
+			return fmt.Errorf("error deleting expired file: %w", err)
+		}
+
+		rm.logger.WithField("session_id", session.ID).Info("Expired file deleted successfully")
+	} else {
+		rm.logger.WithFields(logrus.Fields{
+			"session_id":       session.ID,
+			"file_age":         fileAge,
+			"retention_period": retentionPeriod,
+		}).Debug("File within retention period, keeping")
+	}
+
 	return nil
 }

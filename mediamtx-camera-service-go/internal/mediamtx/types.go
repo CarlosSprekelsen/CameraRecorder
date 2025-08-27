@@ -142,7 +142,18 @@ type RecordingSession struct {
 	State          SessionState  `json:"state"`
 	Segments       []string      `json:"segments,omitempty"`
 	CurrentSegment string        `json:"current_segment,omitempty"`
-	mu             sync.RWMutex  `json:"-"` // Mutex for thread-safe access
+
+	// Enhanced use case management (Phase 2 enhancement)
+	UseCase       StreamUseCase `json:"use_case"`       // "recording", "viewing", "snapshot"
+	Priority      int           `json:"priority"`       // Priority level (1=high, 2=medium, 3=low)
+	AutoCleanup   bool          `json:"auto_cleanup"`   // Auto-cleanup when session ends
+	RetentionDays int           `json:"retention_days"` // Days to retain files
+	Quality       string        `json:"quality"`        // Recording quality (low, medium, high)
+	MaxDuration   time.Duration `json:"max_duration"`   // Maximum recording duration
+	AutoRotate    bool          `json:"auto_rotate"`    // Auto-rotate files
+	RotationSize  int64         `json:"rotation_size"`  // Size threshold for rotation
+
+	mu sync.RWMutex `json:"-"` // Mutex for thread-safe access
 }
 
 // Snapshot represents a camera snapshot
@@ -342,6 +353,9 @@ type FFmpegManager interface {
 	StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error)
 	StopRecording(ctx context.Context, pid int) error
 	TakeSnapshot(ctx context.Context, device, outputPath string) error
+
+	// Enhanced recording operations (Phase 3 enhancement)
+	CreateSegmentedRecording(ctx context.Context, input, output string, settings *RotationSettings) error
 
 	// File management
 	RotateFile(ctx context.Context, oldPath, newPath string) error

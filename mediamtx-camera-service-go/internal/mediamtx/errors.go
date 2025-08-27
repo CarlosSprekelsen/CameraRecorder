@@ -17,6 +17,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 )
 
 // MediaMTXError represents MediaMTX-specific errors
@@ -108,6 +110,71 @@ type FFmpegError struct {
 	Err     error  `json:"-"`
 }
 
+// Enhanced error categorization (Phase 4 enhancement)
+type ErrorCategory string
+
+const (
+	ErrorCategorySystem     ErrorCategory = "SYSTEM"
+	ErrorCategoryNetwork    ErrorCategory = "NETWORK"
+	ErrorCategoryResource   ErrorCategory = "RESOURCE"
+	ErrorCategoryValidation ErrorCategory = "VALIDATION"
+	ErrorCategorySecurity   ErrorCategory = "SECURITY"
+	ErrorCategoryTimeout    ErrorCategory = "TIMEOUT"
+	ErrorCategoryRecovery   ErrorCategory = "RECOVERY"
+)
+
+// ErrorSeverity represents error severity levels
+type ErrorSeverity string
+
+const (
+	ErrorSeverityLow      ErrorSeverity = "LOW"
+	ErrorSeverityMedium   ErrorSeverity = "MEDIUM"
+	ErrorSeverityHigh     ErrorSeverity = "HIGH"
+	ErrorSeverityCritical ErrorSeverity = "CRITICAL"
+)
+
+// ErrorContext represents additional error context
+type ErrorContext struct {
+	Category    ErrorCategory          `json:"category"`
+	Severity    ErrorSeverity          `json:"severity"`
+	Retryable   bool                   `json:"retryable"`
+	Recoverable bool                   `json:"recoverable"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Timestamp   string                 `json:"timestamp"`
+	TraceID     string                 `json:"trace_id,omitempty"`
+}
+
+// EnhancedError represents an enhanced error with categorization and context
+type EnhancedError struct {
+	BaseError   error        `json:"base_error"`
+	Context     ErrorContext `json:"context"`
+	RecoveryOps []string     `json:"recovery_ops,omitempty"`
+}
+
+func (e *EnhancedError) Error() string {
+	return fmt.Sprintf("enhanced error [%s/%s]: %v", e.Context.Category, e.Context.Severity, e.BaseError)
+}
+
+func (e *EnhancedError) Unwrap() error {
+	return e.BaseError
+}
+
+func (e *EnhancedError) IsRetryable() bool {
+	return e.Context.Retryable
+}
+
+func (e *EnhancedError) IsRecoverable() bool {
+	return e.Context.Recoverable
+}
+
+func (e *EnhancedError) GetCategory() ErrorCategory {
+	return e.Context.Category
+}
+
+func (e *EnhancedError) GetSeverity() ErrorSeverity {
+	return e.Context.Severity
+}
+
 func (e *FFmpegError) Error() string {
 	return fmt.Sprintf("FFmpeg process %d (%s): %s: %s", e.PID, e.Command, e.Op, e.Message)
 }
@@ -135,14 +202,14 @@ func (e *ConfigurationError) Unwrap() error {
 // Predefined error constants
 var (
 	// MediaMTX service errors
-	ErrMediaMTXUnavailable = errors.New("MediaMTX service unavailable")
-	ErrMediaMTXTimeout     = errors.New("MediaMTX service timeout")
+	ErrMediaMTXUnavailable     = errors.New("MediaMTX service unavailable")
+	ErrMediaMTXTimeout         = errors.New("MediaMTX service timeout")
 	ErrMediaMTXInvalidResponse = errors.New("MediaMTX invalid response")
-	ErrMediaMTXUnauthorized = errors.New("MediaMTX unauthorized access")
-	ErrMediaMTXForbidden    = errors.New("MediaMTX forbidden access")
-	ErrMediaMTXNotFound     = errors.New("MediaMTX resource not found")
-	ErrMediaMTXConflict     = errors.New("MediaMTX resource conflict")
-	ErrMediaMTXInternal     = errors.New("MediaMTX internal server error")
+	ErrMediaMTXUnauthorized    = errors.New("MediaMTX unauthorized access")
+	ErrMediaMTXForbidden       = errors.New("MediaMTX forbidden access")
+	ErrMediaMTXNotFound        = errors.New("MediaMTX resource not found")
+	ErrMediaMTXConflict        = errors.New("MediaMTX resource conflict")
+	ErrMediaMTXInternal        = errors.New("MediaMTX internal server error")
 
 	// Circuit breaker errors
 	ErrCircuitOpen     = errors.New("circuit breaker is open")
@@ -172,11 +239,11 @@ var (
 	ErrRecordingFailed      = errors.New("recording failed")
 
 	// FFmpeg errors
-	ErrFFmpegNotFound    = errors.New("FFmpeg not found")
-	ErrFFmpegProcessFailed = errors.New("FFmpeg process failed")
-	ErrFFmpegTimeout      = errors.New("FFmpeg process timeout")
+	ErrFFmpegNotFound       = errors.New("FFmpeg not found")
+	ErrFFmpegProcessFailed  = errors.New("FFmpeg process failed")
+	ErrFFmpegTimeout        = errors.New("FFmpeg process timeout")
 	ErrFFmpegInvalidCommand = errors.New("FFmpeg invalid command")
-	ErrFFmpegOutputError  = errors.New("FFmpeg output error")
+	ErrFFmpegOutputError    = errors.New("FFmpeg output error")
 
 	// Configuration errors
 	ErrConfigInvalid     = errors.New("invalid configuration")
@@ -312,6 +379,130 @@ func NewFFmpegErrorWithErr(pid int, command, op, message string, err error) *FFm
 		Message: message,
 		Err:     err,
 	}
+}
+
+// Enhanced error handling functions (Phase 4 enhancement)
+
+// NewEnhancedError creates a new enhanced error with categorization
+func NewEnhancedError(baseError error, category ErrorCategory, severity ErrorSeverity, retryable, recoverable bool) *EnhancedError {
+	return &EnhancedError{
+		BaseError: baseError,
+		Context: ErrorContext{
+			Category:    category,
+			Severity:    severity,
+			Retryable:   retryable,
+			Recoverable: recoverable,
+			Timestamp:   time.Now().Format(time.RFC3339),
+		},
+	}
+}
+
+// CategorizeError automatically categorizes errors based on their type and content
+func CategorizeError(err error) *EnhancedError {
+	if err == nil {
+		return nil
+	}
+
+	// Check for specific error types
+	switch {
+	case errors.Is(err, ErrMediaMTXUnavailable):
+		return NewEnhancedError(err, ErrorCategoryNetwork, ErrorSeverityHigh, true, true)
+	case errors.Is(err, ErrMediaMTXTimeout):
+		return NewEnhancedError(err, ErrorCategoryTimeout, ErrorSeverityMedium, true, true)
+	case errors.Is(err, ErrMediaMTXUnauthorized):
+		return NewEnhancedError(err, ErrorCategorySecurity, ErrorSeverityHigh, false, true)
+	case errors.Is(err, ErrMediaMTXForbidden):
+		return NewEnhancedError(err, ErrorCategorySecurity, ErrorSeverityHigh, false, true)
+	case errors.Is(err, ErrStreamNotFound):
+		return NewEnhancedError(err, ErrorCategoryResource, ErrorSeverityMedium, false, true)
+	case errors.Is(err, ErrRecordingFailed):
+		return NewEnhancedError(err, ErrorCategorySystem, ErrorSeverityHigh, true, true)
+	case errors.Is(err, ErrFFmpegProcessFailed):
+		return NewEnhancedError(err, ErrorCategorySystem, ErrorSeverityHigh, true, true)
+	case errors.Is(err, ErrCircuitOpen):
+		return NewEnhancedError(err, ErrorCategoryRecovery, ErrorSeverityMedium, true, true)
+	default:
+		// Default categorization based on error message
+		errStr := err.Error()
+		switch {
+		case contains(errStr, "timeout"):
+			return NewEnhancedError(err, ErrorCategoryTimeout, ErrorSeverityMedium, true, true)
+		case contains(errStr, "not found"):
+			return NewEnhancedError(err, ErrorCategoryResource, ErrorSeverityMedium, false, true)
+		case contains(errStr, "permission"):
+			return NewEnhancedError(err, ErrorCategorySecurity, ErrorSeverityHigh, false, true)
+		case contains(errStr, "network"):
+			return NewEnhancedError(err, ErrorCategoryNetwork, ErrorSeverityHigh, true, true)
+		case contains(errStr, "invalid"):
+			return NewEnhancedError(err, ErrorCategoryValidation, ErrorSeverityMedium, false, true)
+		default:
+			return NewEnhancedError(err, ErrorCategorySystem, ErrorSeverityMedium, false, true)
+		}
+	}
+}
+
+// contains is a helper function to check if a string contains a substring
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// GetRecoveryStrategies returns recovery strategies for different error categories
+func GetRecoveryStrategies(category ErrorCategory) []string {
+	switch category {
+	case ErrorCategoryNetwork:
+		return []string{"retry_with_backoff", "check_connectivity", "restart_service"}
+	case ErrorCategoryTimeout:
+		return []string{"increase_timeout", "retry_with_backoff", "check_system_load"}
+	case ErrorCategoryResource:
+		return []string{"cleanup_resources", "restart_service", "check_disk_space"}
+	case ErrorCategorySystem:
+		return []string{"restart_service", "check_logs", "restart_ffmpeg"}
+	case ErrorCategorySecurity:
+		return []string{"check_credentials", "verify_permissions", "contact_admin"}
+	case ErrorCategoryValidation:
+		return []string{"validate_input", "check_configuration", "update_parameters"}
+	case ErrorCategoryRecovery:
+		return []string{"wait_for_recovery", "reset_circuit_breaker", "restart_service"}
+	default:
+		return []string{"check_logs", "restart_service"}
+	}
+}
+
+// ShouldRetry determines if an error should be retried
+func ShouldRetry(err error) bool {
+	if enhancedErr, ok := err.(*EnhancedError); ok {
+		return enhancedErr.IsRetryable()
+	}
+
+	// Check for specific retryable errors
+	return errors.Is(err, ErrMediaMTXTimeout) ||
+		errors.Is(err, ErrMediaMTXUnavailable) ||
+		errors.Is(err, ErrRecordingFailed) ||
+		errors.Is(err, ErrFFmpegProcessFailed) ||
+		errors.Is(err, ErrCircuitOpen)
+}
+
+// GetErrorMetadata extracts metadata from an error for logging and monitoring
+func GetErrorMetadata(err error) map[string]interface{} {
+	metadata := make(map[string]interface{})
+
+	if enhancedErr, ok := err.(*EnhancedError); ok {
+		metadata["category"] = enhancedErr.GetCategory()
+		metadata["severity"] = enhancedErr.GetSeverity()
+		metadata["retryable"] = enhancedErr.IsRetryable()
+		metadata["recoverable"] = enhancedErr.IsRecoverable()
+		metadata["recovery_ops"] = enhancedErr.RecoveryOps
+		metadata["timestamp"] = enhancedErr.Context.Timestamp
+		if enhancedErr.Context.TraceID != "" {
+			metadata["trace_id"] = enhancedErr.Context.TraceID
+		}
+	}
+
+	// Add error type information
+	metadata["error_type"] = fmt.Sprintf("%T", err)
+	metadata["error_message"] = err.Error()
+
+	return metadata
 }
 
 // NewConfigurationError creates a new configuration error

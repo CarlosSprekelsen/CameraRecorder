@@ -255,7 +255,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get health monitor metrics
+	// Get enhanced health monitor metrics (Phase 1 enhancement)
 	healthMetrics := c.healthMonitor.GetMetrics()
 	
 	// Get health status for component information
@@ -270,10 +270,16 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	componentStatus["recording_manager"] = "running"
 	componentStatus["snapshot_manager"] = "running"
 
-	// Calculate error counts
+	// Enhanced error counts with sophisticated tracking (Phase 1 enhancement)
 	errorCounts := make(map[string]int64)
 	if failureCount, ok := healthMetrics["failure_count"].(int); ok {
 		errorCounts["health_check"] = int64(failureCount)
+	}
+	if consecutiveFailures, ok := healthMetrics["consecutive_failures"].(int); ok {
+		errorCounts["consecutive_failures"] = int64(consecutiveFailures)
+	}
+	if circuitBreakerActivations, ok := healthMetrics["circuit_breaker_activations"].(int); ok {
+		errorCounts["circuit_breaker_activations"] = int64(circuitBreakerActivations)
 	}
 
 	// Get circuit breaker state

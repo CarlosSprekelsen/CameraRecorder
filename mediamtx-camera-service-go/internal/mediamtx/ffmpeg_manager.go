@@ -15,6 +15,7 @@ package mediamtx
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -332,6 +333,115 @@ func (fm *ffmpegManager) buildRecordingCommand(device, outputPath string, option
 	command = append(command, outputPath)
 
 	return command
+}
+
+// CreateSegmentedRecording creates a segmented recording with continuity support (Phase 3 enhancement)
+func (fm *ffmpegManager) CreateSegmentedRecording(ctx context.Context, input, output string, settings *RotationSettings) error {
+	fm.logger.WithFields(logrus.Fields{
+		"input":   input,
+		"output":  output,
+		"settings": settings,
+	}).Info("Creating segmented recording with continuity")
+
+	// Build segment-based FFmpeg command
+	args := fm.buildSegmentedRecordingCommand(input, output, settings)
+	
+	// Execute FFmpeg command
+	return fm.executeFFmpeg(args)
+}
+
+// buildSegmentedRecordingCommand builds FFmpeg command for segmented recording (Phase 3 enhancement)
+func (fm *ffmpegManager) buildSegmentedRecordingCommand(input, output string, settings *RotationSettings) []string {
+	command := []string{"ffmpeg"}
+	
+	// Input
+	command = append(command, "-i", input)
+	
+	// Segment-based output with continuity
+	command = append(command, "-f", "segment")
+	
+	// Segment duration
+	if settings.SegmentDuration > 0 {
+		command = append(command, "-segment_time", settings.SegmentDuration.String())
+	}
+	
+	// Reset timestamps for each segment
+	if settings.ResetTimestamps {
+		command = append(command, "-reset_timestamps", "1")
+	}
+	
+	// Segment format with continuity support
+	segmentFormat := fm.buildSegmentFormat(output, settings)
+	command = append(command, segmentFormat)
+	
+	fm.logger.WithFields(logrus.Fields{
+		"command": command,
+		"segment_format": segmentFormat,
+	}).Debug("Built segmented recording command")
+	
+	return command
+}
+
+// buildSegmentFormat builds segment filename format with continuity support (Phase 3 enhancement)
+func (fm *ffmpegManager) buildSegmentFormat(baseOutput string, settings *RotationSettings) string {
+	// Base directory and filename
+	baseDir := filepath.Dir(baseOutput)
+	baseName := filepath.Base(baseOutput)
+	nameWithoutExt := strings.TrimSuffix(baseName, filepath.Ext(baseName))
+	
+	// Build segment format
+	var format string
+	
+	if settings.ContinuityMode {
+		// Continuity mode: include continuity ID and segment index
+		format = filepath.Join(baseDir, fmt.Sprintf("%s_%s_%%03d%s", 
+			nameWithoutExt, 
+			settings.ContinuityID, 
+			filepath.Ext(baseName)))
+	} else {
+		// Standard mode: just segment index
+		format = filepath.Join(baseDir, fmt.Sprintf("%s_%%03d%s", 
+			nameWithoutExt, 
+			filepath.Ext(baseName)))
+	}
+	
+	// Add strftime support if enabled
+	if settings.StrftimeEnabled {
+		format = strings.ReplaceAll(format, "%03d", "%Y%m%d_%H%M%S_%03d")
+	}
+	
+	return format
+}
+
+// executeFFmpeg executes FFmpeg command with error handling (Phase 3 enhancement)
+func (fm *ffmpegManager) executeFFmpeg(args []string) error {
+	fm.logger.WithField("args", args).Debug("Executing FFmpeg command")
+	
+	// Create command
+	cmd := exec.Command("ffmpeg", args...)
+	
+	// Capture output
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	// Execute command
+	if err := cmd.Run(); err != nil {
+		fm.logger.WithFields(logrus.Fields{
+			"error":  err,
+			"stdout": stdout.String(),
+			"stderr": stderr.String(),
+		}).Error("FFmpeg command failed")
+		
+		return NewFFmpegErrorWithErr(0, strings.Join(args, " "), "execute_ffmpeg", "FFmpeg command failed", err)
+	}
+	
+	fm.logger.WithFields(logrus.Fields{
+		"stdout": stdout.String(),
+		"stderr": stderr.String(),
+	}).Debug("FFmpeg command executed successfully")
+	
+	return nil
 }
 
 // buildSnapshotCommand builds an FFmpeg command for snapshot
