@@ -366,3 +366,62 @@ func (h *healthMonitor) GetMetrics() map[string]interface{} {
 		"health_details":       h.healthStatus.Details,
 	}
 }
+
+// CheckAllComponents performs health checks on all system components
+func (h *healthMonitor) CheckAllComponents(ctx context.Context) map[string]string {
+	componentStatus := make(map[string]string)
+	
+	// Check MediaMTX service health
+	if h.IsHealthy() {
+		componentStatus["mediamtx_service"] = "healthy"
+	} else {
+		componentStatus["mediamtx_service"] = "unhealthy"
+	}
+	
+	// Check circuit breaker state
+	if h.IsCircuitOpen() {
+		componentStatus["circuit_breaker"] = "open"
+	} else {
+		componentStatus["circuit_breaker"] = "closed"
+	}
+	
+	// Check health monitor itself
+	componentStatus["health_monitor"] = "running"
+	
+	// Check client connection
+	if h.client != nil {
+		componentStatus["http_client"] = "available"
+	} else {
+		componentStatus["http_client"] = "unavailable"
+	}
+	
+	return componentStatus
+}
+
+// GetDetailedStatus returns comprehensive health status information
+func (h *healthMonitor) GetDetailedStatus() HealthStatus {
+	h.stateMutex.RLock()
+	defer h.stateMutex.RUnlock()
+	
+	// Create detailed status with component information
+	detailedStatus := h.healthStatus
+	
+	// Add component status
+	detailedStatus.ComponentStatus = map[string]string{
+		"mediamtx_service":  h.healthStatus.Status,
+		"circuit_breaker":   h.state.String(),
+		"health_monitor":    "running",
+		"http_client":       "available",
+	}
+	
+	// Add error count
+	detailedStatus.ErrorCount = int64(h.failureCount)
+	
+	// Add last check time
+	detailedStatus.LastCheck = h.lastCheckTime
+	
+	// Add circuit breaker state
+	detailedStatus.CircuitBreakerState = h.state.String()
+	
+	return detailedStatus
+}

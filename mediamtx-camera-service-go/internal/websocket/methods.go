@@ -26,6 +26,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"github.com/bluenviron/mediamtx/pkg/mediamtx"
 )
 
 // registerBuiltinMethods registers all built-in JSON-RPC methods
@@ -368,6 +370,21 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		}, nil
 	}
 
+	// Get system metrics from MediaMTX controller
+	var systemMetrics *mediamtx.SystemMetrics
+	var err error
+
+	if s.mediaMTXController != nil {
+		systemMetrics, err = s.mediaMTXController.GetSystemMetrics(context.Background())
+		if err != nil {
+			s.logger.WithError(err).WithFields(logrus.Fields{
+				"client_id": client.ClientID,
+				"method":    "get_metrics",
+				"action":    "controller_error",
+			}).Error("Error getting system metrics from controller")
+		}
+	}
+
 	// Get base performance metrics from existing infrastructure
 	baseMetrics := s.GetMetrics()
 
@@ -412,6 +429,16 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 
 	// Get heap allocation in bytes
 	heapAlloc := m.HeapAlloc
+
+	// Use system metrics from controller if available
+	if systemMetrics != nil {
+		// Override with controller metrics for better accuracy
+		activeConnections = int(systemMetrics.ActiveConnections)
+		averageResponseTime = systemMetrics.ResponseTime
+		if systemMetrics.RequestCount > 0 {
+			errorRate = float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0
+		}
+	}
 
 	s.logger.WithFields(logrus.Fields{
 		"client_id":             client.ClientID,

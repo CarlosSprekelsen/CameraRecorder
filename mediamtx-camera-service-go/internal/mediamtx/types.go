@@ -95,10 +95,26 @@ type Path struct {
 
 // HealthStatus represents MediaMTX service health status
 type HealthStatus struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	Details   string    `json:"details,omitempty"`
-	Metrics   Metrics   `json:"metrics,omitempty"`
+	Status              string            `json:"status"`
+	Timestamp           time.Time         `json:"timestamp"`
+	Details             string            `json:"details,omitempty"`
+	Metrics             Metrics           `json:"metrics,omitempty"`
+	ComponentStatus     map[string]string `json:"component_status,omitempty"`
+	ErrorCount          int64             `json:"error_count"`
+	LastCheck           time.Time         `json:"last_check"`
+	CircuitBreakerState string            `json:"circuit_breaker_state"`
+}
+
+// SystemMetrics represents system performance metrics
+type SystemMetrics struct {
+	RequestCount        int64             `json:"request_count"`
+	ResponseTime        float64           `json:"response_time"`
+	ErrorCount          int64             `json:"error_count"`
+	ActiveConnections   int64             `json:"active_connections"`
+	ComponentStatus     map[string]string `json:"component_status,omitempty"`
+	ErrorCounts         map[string]int64  `json:"error_counts,omitempty"`
+	LastCheck           time.Time         `json:"last_check"`
+	CircuitBreakerState string            `json:"circuit_breaker_state"`
 }
 
 // Metrics represents MediaMTX service metrics
@@ -179,6 +195,7 @@ type MediaMTXController interface {
 	// Health and status
 	GetHealth(ctx context.Context) (*HealthStatus, error)
 	GetMetrics(ctx context.Context) (*Metrics, error)
+	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
 
 	// Stream management
 	GetStreams(ctx context.Context) ([]*Stream, error)
@@ -253,6 +270,7 @@ type HealthMonitor interface {
 	Stop(ctx context.Context) error
 	GetStatus() HealthStatus
 	IsHealthy() bool
+	GetMetrics() map[string]interface{}
 
 	// Circuit breaker
 	IsCircuitOpen() bool

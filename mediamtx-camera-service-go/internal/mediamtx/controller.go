@@ -248,6 +248,60 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 	return metrics, nil
 }
 
+// GetSystemMetrics returns comprehensive system performance metrics
+// Following Python PerformanceMetrics.get_metrics() implementation
+func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Get health monitor metrics
+	healthMetrics := c.healthMonitor.GetMetrics()
+	
+	// Get health status for component information
+	healthStatus := c.healthMonitor.GetStatus()
+
+	// Calculate component status
+	componentStatus := make(map[string]string)
+	componentStatus["mediamtx_controller"] = "running"
+	componentStatus["health_monitor"] = healthStatus.Status
+	componentStatus["path_manager"] = "running"
+	componentStatus["stream_manager"] = "running"
+	componentStatus["recording_manager"] = "running"
+	componentStatus["snapshot_manager"] = "running"
+
+	// Calculate error counts
+	errorCounts := make(map[string]int64)
+	if failureCount, ok := healthMetrics["failure_count"].(int); ok {
+		errorCounts["health_check"] = int64(failureCount)
+	}
+
+	// Get circuit breaker state
+	circuitBreakerState := "CLOSED"
+	if state, ok := healthMetrics["circuit_state"].(string); ok {
+		circuitBreakerState = state
+	}
+
+	// Calculate response time (average from health metrics)
+	responseTime := 0.0
+	if lastCheckTime, ok := healthMetrics["last_check_time"].(time.Time); ok {
+		responseTime = float64(time.Since(lastCheckTime).Milliseconds())
+	}
+
+	systemMetrics := &SystemMetrics{
+		RequestCount:       0, // Will be populated by WebSocket server
+		ResponseTime:       responseTime,
+		ErrorCount:         int64(healthMetrics["failure_count"].(int)),
+		ActiveConnections:  0, // Will be populated by WebSocket server
+		ComponentStatus:    componentStatus,
+		ErrorCounts:        errorCounts,
+		LastCheck:          healthStatus.LastCheck,
+		CircuitBreakerState: circuitBreakerState,
+	}
+
+	return systemMetrics, nil
+}
+
 // GetStreams returns all streams
 func (c *controller) GetStreams(ctx context.Context) ([]*Stream, error) {
 	if !c.isRunning {
