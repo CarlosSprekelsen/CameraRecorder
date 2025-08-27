@@ -729,3 +729,95 @@ func (c *controller) GetSnapshotSettings() *SnapshotSettings {
 func (c *controller) UpdateSnapshotSettings(settings *SnapshotSettings) {
 	c.snapshotManager.UpdateSnapshotSettings(settings)
 }
+
+// GetRecordingStatus gets the status of a recording session
+func (c *controller) GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithField("session_id", sessionID).Debug("Getting recording status")
+
+	// Check if session exists
+	c.sessionsMu.RLock()
+	session, exists := c.sessions[sessionID]
+	c.sessionsMu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("recording session not found: %s", sessionID)
+	}
+
+	return session, nil
+}
+
+// ListRecordings lists recording files with metadata and pagination
+func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"limit":  limit,
+		"offset": offset,
+	}).Debug("Listing recordings")
+
+	return c.recordingManager.GetRecordingsList(ctx, limit, offset)
+}
+
+// ListSnapshots lists snapshot files with metadata and pagination
+func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"limit":  limit,
+		"offset": offset,
+	}).Debug("Listing snapshots")
+
+	return c.snapshotManager.GetSnapshotsList(ctx, limit, offset)
+}
+
+// GetRecordingInfo gets detailed information about a specific recording file
+func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithField("filename", filename).Debug("Getting recording info")
+
+	return c.recordingManager.GetRecordingInfo(ctx, filename)
+}
+
+// GetSnapshotInfo gets detailed information about a specific snapshot file
+func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	if !c.isRunning {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithField("filename", filename).Debug("Getting snapshot info")
+
+	return c.snapshotManager.GetSnapshotInfo(ctx, filename)
+}
+
+// DeleteRecording deletes a recording file
+func (c *controller) DeleteRecording(ctx context.Context, filename string) error {
+	if !c.isRunning {
+		return fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithField("filename", filename).Debug("Deleting recording")
+
+	return c.recordingManager.DeleteRecording(ctx, filename)
+}
+
+// DeleteSnapshot deletes a snapshot file
+func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error {
+	if !c.isRunning {
+		return fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithField("filename", filename).Debug("Deleting snapshot")
+
+	return c.snapshotManager.DeleteSnapshotFile(ctx, filename)
+}

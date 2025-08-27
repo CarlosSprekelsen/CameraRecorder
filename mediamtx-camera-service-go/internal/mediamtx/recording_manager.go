@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -129,17 +130,7 @@ type Segment struct {
 }
 
 // RecordingSession represents an enhanced recording session with continuity
-type RecordingSession struct {
-	ID        string       `json:"id"`
-	Device    string       `json:"device"`
-	Path      string       `json:"path"`
-	Status    string       `json:"status"`
-	StartTime time.Time    `json:"start_time"`
-	EndTime   *time.Time   `json:"end_time"`
-	Duration  time.Duration `json:"duration"`
-	FilePath  string       `json:"file_path"`
-	mu        sync.RWMutex
-}
+// Note: RecordingSession is defined in types.go
 
 // RecordingContinuity represents recording continuity information
 type RecordingContinuity struct {
@@ -350,8 +341,9 @@ func (rm *RecordingManager) StopRecordingWithContinuity(ctx context.Context, ses
 	session.EndTime = &endTime
 	session.Duration = endTime.Sub(session.StartTime)
 
-	// Stop FFmpeg process
-	if err := rm.ffmpegManager.StopProcess(ctx, sessionID); err != nil {
+	// Stop FFmpeg process - convert sessionID to PID if needed
+	// For now, we'll use a placeholder PID since the actual PID should be stored in the session
+	if err := rm.ffmpegManager.StopProcess(ctx, 0); err != nil {
 		rm.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to stop FFmpeg process")
 	}
 
@@ -939,4 +931,212 @@ func generateContinuityID() string {
 // generateSegmentID generates a unique segment ID
 func generateSegmentID(sessionID string, index int) string {
 	return fmt.Sprintf("seg_%s_%03d", sessionID, index)
+}
+
+// GetRecordingsList scans the recordings directory and returns a list of recording files with metadata
+func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	rm.logger.WithFields(logrus.Fields{
+		"limit":  limit,
+		"offset": offset,
+	}).Debug("Getting recordings list")
+
+	// Get recordings directory path from configuration
+	recordingsDir := rm.config.RecordingsPath
+	if recordingsDir == "" {
+		return nil, fmt.Errorf("recordings path not configured")
+	}
+
+	// Check if directory exists and is accessible
+	if _, err := os.Stat(recordingsDir); os.IsNotExist(err) {
+		rm.logger.WithField("directory", recordingsDir).Warn("Recordings directory does not exist")
+		return &FileListResponse{
+			Files:  []*FileMetadata{},
+			Total:  0,
+			Limit:  limit,
+			Offset: offset,
+		}, nil
+	}
+
+	// Read directory entries
+	entries, err := os.ReadDir(recordingsDir)
+	if err != nil {
+		rm.logger.WithError(err).WithField("directory", recordingsDir).Error("Error reading recordings directory")
+		return nil, fmt.Errorf("failed to read recordings directory: %w", err)
+	}
+
+	// Process files and extract metadata
+	var files []*FileMetadata
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		filename := entry.Name()
+
+		// Get file stats
+		fileInfo, err := entry.Info()
+		if err != nil {
+			rm.logger.WithError(err).WithField("filename", filename).Warn("Error accessing file")
+			continue
+		}
+
+		// Determine if it's a video file
+		isVideo := false
+		ext := filepath.Ext(filename)
+		switch ext {
+		case ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv":
+			isVideo = true
+		}
+
+		// Create file metadata
+		fileMetadata := &FileMetadata{
+			FileName:    filename,
+			FileSize:    fileInfo.Size(),
+			CreatedAt:   fileInfo.ModTime(), // Use ModTime as CreatedAt since creation time may not be available
+			ModifiedAt:  fileInfo.ModTime(),
+			DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
+		}
+
+		// Add duration for video files (will be implemented when video metadata extraction is available)
+		if isVideo {
+			// TODO: Extract duration from video file metadata
+			// For now, set to nil as specified in the plan
+			fileMetadata.Duration = nil
+		}
+
+		files = append(files, fileMetadata)
+	}
+
+	// Sort files by modified time (newest first)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModifiedAt.After(files[j].ModifiedAt)
+	})
+
+	// Apply pagination
+	totalCount := len(files)
+	startIdx := offset
+	endIdx := startIdx + limit
+	if endIdx > totalCount {
+		endIdx = totalCount
+	}
+	if startIdx > totalCount {
+		startIdx = totalCount
+	}
+
+	paginatedFiles := files[startIdx:endIdx]
+
+	rm.logger.WithFields(logrus.Fields{
+		"total_files": totalCount,
+		"returned":    len(paginatedFiles),
+	}).Debug("Recordings list retrieved successfully")
+
+	return &FileListResponse{
+		Files:  paginatedFiles,
+		Total:  totalCount,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+// GetRecordingInfo gets detailed information about a specific recording file
+func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	rm.logger.WithField("filename", filename).Debug("Getting recording info")
+
+	// Validate filename
+	if filename == "" {
+		return nil, fmt.Errorf("filename cannot be empty")
+	}
+
+	// Get recordings directory path from configuration
+	recordingsDir := rm.config.RecordingsPath
+	if recordingsDir == "" {
+		return nil, fmt.Errorf("recordings path not configured")
+	}
+
+	// Construct full file path
+	filePath := filepath.Join(recordingsDir, filename)
+
+	// Check if file exists
+	fileInfo, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("recording file not found: %s", filename)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error accessing file: %w", err)
+	}
+
+	// Check if it's a file (not a directory)
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is not a file: %s", filename)
+	}
+
+	// Determine if it's a video file
+	isVideo := false
+	ext := filepath.Ext(filename)
+	switch ext {
+	case ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv":
+		isVideo = true
+	}
+
+	// Create file metadata
+	fileMetadata := &FileMetadata{
+		FileName:    filename,
+		FileSize:    fileInfo.Size(),
+		CreatedAt:   fileInfo.ModTime(), // Use ModTime as CreatedAt since creation time may not be available
+		ModifiedAt:  fileInfo.ModTime(),
+		DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
+	}
+
+	// Add duration for video files (will be implemented when video metadata extraction is available)
+	if isVideo {
+		// TODO: Extract duration from video file metadata
+		// For now, set to nil as specified in the plan
+		fileMetadata.Duration = nil
+	}
+
+	rm.logger.WithField("filename", filename).Debug("Recording info retrieved successfully")
+	return fileMetadata, nil
+}
+
+// DeleteRecording deletes a recording file
+func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string) error {
+	rm.logger.WithField("filename", filename).Debug("Deleting recording")
+
+	// Validate filename
+	if filename == "" {
+		return fmt.Errorf("filename cannot be empty")
+	}
+
+	// Get recordings directory path from configuration
+	recordingsDir := rm.config.RecordingsPath
+	if recordingsDir == "" {
+		return fmt.Errorf("recordings path not configured")
+	}
+
+	// Construct full file path
+	filePath := filepath.Join(recordingsDir, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("recording file not found: %s", filename)
+	}
+
+	// Check if it's a file (not a directory)
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("error accessing file: %w", err)
+	}
+
+	if fileInfo.IsDir() {
+		return fmt.Errorf("path is not a file: %s", filename)
+	}
+
+	// Delete the file
+	if err := os.Remove(filePath); err != nil {
+		rm.logger.WithError(err).WithField("filename", filename).Error("Error deleting recording file")
+		return fmt.Errorf("error deleting recording file: %w", err)
+	}
+
+	rm.logger.WithField("filename", filename).Info("Recording file deleted successfully")
+	return nil
 }

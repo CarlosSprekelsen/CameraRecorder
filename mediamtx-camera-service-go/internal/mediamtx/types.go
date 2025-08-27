@@ -15,6 +15,7 @@ package mediamtx
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -111,15 +112,21 @@ type Metrics struct {
 
 // RecordingSession represents a recording session
 type RecordingSession struct {
-	ID        string        `json:"id"`
-	Device    string        `json:"device"`
-	Path      string        `json:"path"`
-	Status    string        `json:"status"`
-	StartTime time.Time     `json:"start_time"`
-	EndTime   *time.Time    `json:"end_time,omitempty"`
-	Duration  time.Duration `json:"duration"`
-	FileSize  int64         `json:"file_size"`
-	FilePath  string        `json:"file_path"`
+	ID             string        `json:"id"`
+	Device         string        `json:"device"`
+	DevicePath     string        `json:"device_path"`
+	Path           string        `json:"path"`
+	Status         string        `json:"status"`
+	StartTime      time.Time     `json:"start_time"`
+	EndTime        *time.Time    `json:"end_time,omitempty"`
+	Duration       time.Duration `json:"duration"`
+	FileSize       int64         `json:"file_size"`
+	FilePath       string        `json:"file_path"`
+	ContinuityID   string        `json:"continuity_id,omitempty"`
+	State          SessionState  `json:"state"`
+	Segments       []string      `json:"segments,omitempty"`
+	CurrentSegment string        `json:"current_segment,omitempty"`
+	mu             sync.RWMutex  `json:"-"` // Mutex for thread-safe access
 }
 
 // Snapshot represents a camera snapshot
@@ -131,6 +138,40 @@ type Snapshot struct {
 	Size     int64                  `json:"size"`
 	Created  time.Time              `json:"created"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// SnapshotOptions represents snapshot capture options
+type SnapshotOptions struct {
+	Quality    int    `json:"quality"`    // Image quality (1-100)
+	Format     string `json:"format"`     // Image format (jpg, png)
+	Resolution string `json:"resolution"` // Resolution (e.g., "1920x1080")
+	Timestamp  bool   `json:"timestamp"`  // Include timestamp in filename
+}
+
+// RecordingOptions represents recording options
+type RecordingOptions struct {
+	Duration     int    `json:"duration"`      // Recording duration in seconds (0 = unlimited)
+	Quality      string `json:"quality"`       // Video quality (low, medium, high)
+	FileRotation int    `json:"file_rotation"` // File rotation interval in minutes
+	SegmentSize  int64  `json:"segment_size"`  // Segment size in bytes
+}
+
+// FileListResponse represents a paginated file list response
+type FileListResponse struct {
+	Files  []*FileMetadata `json:"files"`
+	Total  int             `json:"total"`
+	Limit  int             `json:"limit"`
+	Offset int             `json:"offset"`
+}
+
+// FileMetadata represents file metadata for recordings and snapshots
+type FileMetadata struct {
+	FileName    string    `json:"filename"`
+	FileSize    int64     `json:"file_size"`
+	CreatedAt   time.Time `json:"created_at"`
+	ModifiedAt  time.Time `json:"modified_at"`
+	Duration    *int64    `json:"duration,omitempty"` // Duration in seconds for video files
+	DownloadURL string    `json:"download_url"`
 }
 
 // MediaMTXController interface defines MediaMTX operations
@@ -155,6 +196,15 @@ type MediaMTXController interface {
 	StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
 	StopRecording(ctx context.Context, sessionID string) error
 	TakeSnapshot(ctx context.Context, device, path string) (*Snapshot, error)
+	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
+
+	// File listing operations
+	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
+	ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error)
+	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
+	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
+	DeleteRecording(ctx context.Context, filename string) error
+	DeleteSnapshot(ctx context.Context, filename string) error
 
 	// Advanced recording operations
 	StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error)
@@ -235,6 +285,33 @@ type StreamManager interface {
 	MonitorStream(ctx context.Context, id string) error
 	GetStreamStatus(ctx context.Context, id string) (string, error)
 }
+
+// StreamUseCase represents different stream use cases
+type StreamUseCase string
+
+const (
+	UseCaseRecording StreamUseCase = "recording"
+	UseCaseViewing   StreamUseCase = "viewing"
+	UseCaseSnapshot  StreamUseCase = "snapshot"
+)
+
+// UseCaseConfig represents configuration for different stream use cases
+type UseCaseConfig struct {
+	RunOnDemandCloseAfter   string `json:"run_on_demand_close_after"`
+	RunOnDemandRestart      bool   `json:"run_on_demand_restart"`
+	RunOnDemandStartTimeout string `json:"run_on_demand_start_timeout"`
+	Suffix                  string `json:"suffix"`
+}
+
+// SessionState represents the state of a recording session
+type SessionState string
+
+const (
+	SessionStateIdle      SessionState = "IDLE"
+	SessionStateRecording SessionState = "RECORDING"
+	SessionStateStopped   SessionState = "STOPPED"
+	SessionStateError     SessionState = "ERROR"
+)
 
 // FFmpegManager interface defines FFmpeg process management
 type FFmpegManager interface {

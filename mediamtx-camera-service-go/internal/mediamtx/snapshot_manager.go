@@ -392,10 +392,10 @@ func (sm *SnapshotManager) getStreamNameFromDevice(devicePath string) string {
 func (sm *SnapshotManager) createSnapshotResult(snapshot *Snapshot, tier int, captureTime time.Duration, methodsTried []string) *Snapshot {
 	// Add tier information to snapshot
 	snapshot.Metadata = map[string]interface{}{
-		"tier_used":           tier,
-		"capture_time_ms":     captureTime.Milliseconds(),
-		"methods_tried":       methodsTried,
-		"user_experience":     sm.determineUserExperience(captureTime),
+		"tier_used":       tier,
+		"capture_time_ms": captureTime.Milliseconds(),
+		"methods_tried":   methodsTried,
+		"user_experience": sm.determineUserExperience(captureTime),
 	}
 
 	return snapshot
@@ -404,7 +404,7 @@ func (sm *SnapshotManager) createSnapshotResult(snapshot *Snapshot, tier int, ca
 // determineUserExperience determines user experience based on response time
 func (sm *SnapshotManager) determineUserExperience(captureTime time.Duration) string {
 	tierConfig := sm.getTierConfiguration()
-	
+
 	if captureTime < time.Duration(tierConfig.ImmediateResponseThreshold*float64(time.Second)) {
 		return "excellent"
 	} else if captureTime < time.Duration(tierConfig.AcceptableResponseThreshold*float64(time.Second)) {
@@ -418,7 +418,7 @@ func (sm *SnapshotManager) determineUserExperience(captureTime time.Duration) st
 
 // createMultiTierError creates a comprehensive error for multi-tier failures
 func (sm *SnapshotManager) createMultiTierError(device string, methodsTried []string, totalTime time.Duration) error {
-	return fmt.Errorf("all snapshot capture methods failed for %s after %.2fs: tried %v", 
+	return fmt.Errorf("all snapshot capture methods failed for %s after %.2fs: tried %v",
 		device, totalTime.Seconds(), methodsTried)
 }
 
@@ -599,4 +599,182 @@ func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 		"max_height":  settings.MaxHeight,
 		"auto_resize": settings.AutoResize,
 	}).Info("Snapshot settings updated")
+}
+
+// GetSnapshotsList scans the snapshots directory and returns a list of snapshot files with metadata
+func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	sm.logger.WithFields(logrus.Fields{
+		"limit":  limit,
+		"offset": offset,
+	}).Debug("Getting snapshots list")
+
+	// Get snapshots directory path from configuration
+	snapshotsDir := sm.config.SnapshotsPath
+	if snapshotsDir == "" {
+		return nil, fmt.Errorf("snapshots path not configured")
+	}
+
+	// Check if directory exists and is accessible
+	if _, err := os.Stat(snapshotsDir); os.IsNotExist(err) {
+		sm.logger.WithField("directory", snapshotsDir).Warn("Snapshots directory does not exist")
+		return &FileListResponse{
+			Files:  []*FileMetadata{},
+			Total:  0,
+			Limit:  limit,
+			Offset: offset,
+		}, nil
+	}
+
+	// Read directory entries
+	entries, err := os.ReadDir(snapshotsDir)
+	if err != nil {
+		sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
+		return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+	}
+
+	// Process files and extract metadata
+	var files []*FileMetadata
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		filename := entry.Name()
+
+		// Get file stats
+		fileInfo, err := entry.Info()
+		if err != nil {
+			sm.logger.WithError(err).WithField("filename", filename).Warn("Error accessing file")
+			continue
+		}
+
+		// Create file metadata
+		fileMetadata := &FileMetadata{
+			FileName:    filename,
+			FileSize:    fileInfo.Size(),
+			CreatedAt:   fileInfo.ModTime(), // Use ModTime as CreatedAt since creation time may not be available
+			ModifiedAt:  fileInfo.ModTime(),
+			DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+		}
+
+		files = append(files, fileMetadata)
+	}
+
+	// Sort files by modified time (newest first)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].ModifiedAt.After(files[j].ModifiedAt)
+	})
+
+	// Apply pagination
+	totalCount := len(files)
+	startIdx := offset
+	endIdx := startIdx + limit
+	if endIdx > totalCount {
+		endIdx = totalCount
+	}
+	if startIdx > totalCount {
+		startIdx = totalCount
+	}
+
+	paginatedFiles := files[startIdx:endIdx]
+
+	sm.logger.WithFields(logrus.Fields{
+		"total_files": totalCount,
+		"returned":    len(paginatedFiles),
+	}).Debug("Snapshots list retrieved successfully")
+
+	return &FileListResponse{
+		Files:  paginatedFiles,
+		Total:  totalCount,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+// GetSnapshotInfo gets detailed information about a specific snapshot file
+func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	sm.logger.WithField("filename", filename).Debug("Getting snapshot info")
+
+	// Validate filename
+	if filename == "" {
+		return nil, fmt.Errorf("filename cannot be empty")
+	}
+
+	// Get snapshots directory path from configuration
+	snapshotsDir := sm.config.SnapshotsPath
+	if snapshotsDir == "" {
+		return nil, fmt.Errorf("snapshots path not configured")
+	}
+
+	// Construct full file path
+	filePath := filepath.Join(snapshotsDir, filename)
+
+	// Check if file exists
+	fileInfo, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("snapshot file not found: %s", filename)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error accessing file: %w", err)
+	}
+
+	// Check if it's a file (not a directory)
+	if fileInfo.IsDir() {
+		return nil, fmt.Errorf("path is not a file: %s", filename)
+	}
+
+	// Create file metadata
+	fileMetadata := &FileMetadata{
+		FileName:    filename,
+		FileSize:    fileInfo.Size(),
+		CreatedAt:   fileInfo.ModTime(), // Use ModTime as CreatedAt since creation time may not be available
+		ModifiedAt:  fileInfo.ModTime(),
+		DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+	}
+
+	sm.logger.WithField("filename", filename).Debug("Snapshot info retrieved successfully")
+	return fileMetadata, nil
+}
+
+// DeleteSnapshotFile deletes a snapshot file by filename
+func (sm *SnapshotManager) DeleteSnapshotFile(ctx context.Context, filename string) error {
+	sm.logger.WithField("filename", filename).Debug("Deleting snapshot file")
+
+	// Validate filename
+	if filename == "" {
+		return fmt.Errorf("filename cannot be empty")
+	}
+
+	// Get snapshots directory path from configuration
+	snapshotsDir := sm.config.SnapshotsPath
+	if snapshotsDir == "" {
+		return fmt.Errorf("snapshots path not configured")
+	}
+
+	// Construct full file path
+	filePath := filepath.Join(snapshotsDir, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("snapshot file not found: %s", filename)
+	}
+
+	// Check if it's a file (not a directory)
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("error accessing file: %w", err)
+	}
+
+	if fileInfo.IsDir() {
+		return fmt.Errorf("path is not a file: %s", filename)
+	}
+
+	// Delete the file
+	if err := os.Remove(filePath); err != nil {
+		sm.logger.WithError(err).WithField("filename", filename).Error("Error deleting snapshot file")
+		return fmt.Errorf("error deleting snapshot file: %w", err)
+	}
+
+	sm.logger.WithField("filename", filename).Info("Snapshot file deleted successfully")
+	return nil
 }

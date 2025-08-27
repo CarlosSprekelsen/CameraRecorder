@@ -24,17 +24,41 @@ import (
 
 // streamManager represents the MediaMTX stream manager
 type streamManager struct {
-	client MediaMTXClient
-	config *MediaMTXConfig
-	logger *logrus.Logger
+	client         MediaMTXClient
+	config         *MediaMTXConfig
+	logger         *logrus.Logger
+	useCaseConfigs map[StreamUseCase]UseCaseConfig
 }
 
 // NewStreamManager creates a new MediaMTX stream manager
 func NewStreamManager(client MediaMTXClient, config *MediaMTXConfig, logger *logrus.Logger) StreamManager {
+	// Initialize use case configurations based on Python implementation
+	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
+		UseCaseRecording: {
+			RunOnDemandCloseAfter:   "0s", // Never auto-close for recording
+			RunOnDemandRestart:      true,
+			RunOnDemandStartTimeout: "10s",
+			Suffix:                  "",
+		},
+		UseCaseViewing: {
+			RunOnDemandCloseAfter:   "300s", // 5 minutes after last viewer
+			RunOnDemandRestart:      true,
+			RunOnDemandStartTimeout: "10s",
+			Suffix:                  "_viewing",
+		},
+		UseCaseSnapshot: {
+			RunOnDemandCloseAfter:   "60s", // 1 minute after capture
+			RunOnDemandRestart:      false,
+			RunOnDemandStartTimeout: "5s",
+			Suffix:                  "_snapshot",
+		},
+	}
+
 	return &streamManager{
-		client: client,
-		config: config,
-		logger: logger,
+		client:         client,
+		config:         config,
+		logger:         logger,
+		useCaseConfigs: useCaseConfigs,
 	}
 }
 
@@ -65,6 +89,48 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 
 	sm.logger.WithField("stream_id", stream.ID).Info("MediaMTX stream created successfully")
 	return stream, nil
+}
+
+// CreateStreamWithUseCase creates a new stream with use case specific configuration
+func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, source string, useCase StreamUseCase) (*Stream, error) {
+	sm.logger.WithFields(logrus.Fields{
+		"name":     name,
+		"source":   source,
+		"use_case": useCase,
+	}).Debug("Creating MediaMTX stream with use case configuration")
+
+	// Get use case configuration
+	useCaseConfig, exists := sm.useCaseConfigs[useCase]
+	if !exists {
+		return nil, fmt.Errorf("unsupported use case: %s", useCase)
+	}
+
+	// Add use case suffix to stream name if specified
+	streamName := name
+	if useCaseConfig.Suffix != "" {
+		streamName = name + useCaseConfig.Suffix
+	}
+
+	// Create path configuration with use case specific settings
+	// This would be used to configure MediaMTX paths with specific lifecycle policies
+	_ = map[string]interface{}{
+		"runOnDemandCloseAfter":   useCaseConfig.RunOnDemandCloseAfter,
+		"runOnDemandRestart":      useCaseConfig.RunOnDemandRestart,
+		"runOnDemandStartTimeout": useCaseConfig.RunOnDemandStartTimeout,
+	}
+
+	// Create the stream with use case specific configuration
+	// This would typically involve creating a MediaMTX path with the specific configuration
+	// For now, we'll use the basic CreateStream method but log the use case configuration
+	sm.logger.WithFields(logrus.Fields{
+		"stream_name": streamName,
+		"use_case":    useCase,
+		"config":      useCaseConfig,
+	}).Info("Creating stream with use case specific configuration")
+
+	// Use the existing CreateStream method for now
+	// In a full implementation, this would create a MediaMTX path with the specific configuration
+	return sm.CreateStream(ctx, streamName, source)
 }
 
 // DeleteStream deletes a stream

@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -771,140 +770,58 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 		}
 	}
 
-	// Get recordings directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	recordingsDir := config.MediaMTX.RecordingsPath
-
-	// Check if directory exists and is accessible
-	if _, err := os.Stat(recordingsDir); os.IsNotExist(err) {
-		s.logger.WithFields(logrus.Fields{
-			"client_id": client.ClientID,
-			"method":    "list_recordings",
-			"directory": recordingsDir,
-			"action":    "directory_not_found",
-		}).Warn("Recordings directory does not exist")
-
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Result: map[string]interface{}{
-				"files":  []map[string]interface{}{},
-				"total":  0,
-				"limit":  limit,
-				"offset": offset,
-			},
-		}, nil
-	}
-
-	// Get list of files in directory
-	files := []map[string]interface{}{}
-
-	entries, err := os.ReadDir(recordingsDir)
+	// Use MediaMTX controller to get recordings list
+	fileList, err := s.mediaMTXController.ListRecordings(context.Background(), limit, offset)
 	if err != nil {
 		s.logger.WithError(err).WithFields(logrus.Fields{
 			"client_id": client.ClientID,
 			"method":    "list_recordings",
-			"directory": recordingsDir,
-			"action":    "read_directory_error",
-		}).Error("Error reading recordings directory")
+			"action":    "controller_error",
+		}).Error("Error getting recordings list from controller")
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error reading recordings directory: %v", err),
+				Data:    fmt.Sprintf("Error getting recordings list: %v", err),
 			},
 		}, nil
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		filename := entry.Name()
-
-		// Get file stats
-		fileInfo, err := entry.Info()
-		if err != nil {
-			s.logger.WithError(err).WithFields(logrus.Fields{
-				"client_id": client.ClientID,
-				"method":    "list_recordings",
-				"filename":  filename,
-				"action":    "file_stat_error",
-			}).Warn("Error accessing file")
-			continue
-		}
-
-		// Determine if it's a video file
-		isVideo := false
-		ext := filepath.Ext(filename)
-		switch ext {
-		case ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv":
-			isVideo = true
-		}
-
+	// Convert FileMetadata to map for JSON response
+	files := make([]map[string]interface{}, len(fileList.Files))
+	for i, file := range fileList.Files {
 		fileData := map[string]interface{}{
-			"filename":      filename,
-			"file_size":     fileInfo.Size(),
-			"modified_time": fileInfo.ModTime().Format(time.RFC3339),
-			"download_url":  fmt.Sprintf("/files/recordings/%s", filename),
+			"filename":      file.FileName,
+			"file_size":     file.FileSize,
+			"modified_time": file.ModifiedAt.Format(time.RFC3339),
+			"download_url":  file.DownloadURL,
 		}
 
-		// Add duration for video files (will be implemented when video metadata extraction is available)
-		if isVideo {
-			fileData["duration"] = nil // Duration extraction will be implemented in future
+		// Add duration if available
+		if file.Duration != nil {
+			fileData["duration"] = *file.Duration
 		}
 
-		files = append(files, fileData)
+		files[i] = fileData
 	}
-
-	// Sort files by modified_time (newest first)
-	sort.Slice(files, func(i, j int) bool {
-		timeI := files[i]["modified_time"].(string)
-		timeJ := files[j]["modified_time"].(string)
-		return timeI > timeJ
-	})
-
-	// Apply pagination
-	totalCount := len(files)
-	startIdx := offset
-	endIdx := startIdx + limit
-	if endIdx > totalCount {
-		endIdx = totalCount
-	}
-	if startIdx > totalCount {
-		startIdx = totalCount
-	}
-
-	paginatedFiles := files[startIdx:endIdx]
 
 	s.logger.WithFields(logrus.Fields{
 		"client_id":   client.ClientID,
 		"method":      "list_recordings",
-		"total_files": totalCount,
-		"returned":    len(paginatedFiles),
+		"total_files": fileList.Total,
+		"returned":    len(files),
 		"action":      "recordings_listed",
 	}).Debug("Recordings listed successfully")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"files":  paginatedFiles,
-			"total":  totalCount,
-			"limit":  limit,
-			"offset": offset,
+			"files":  files,
+			"total":  fileList.Total,
+			"limit":  fileList.Limit,
+			"offset": fileList.Offset,
 		},
 	}, nil
 }
@@ -953,73 +870,22 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Get recordings directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	recordingsDir := config.MediaMTX.RecordingsPath
-	filePath := filepath.Join(recordingsDir, filename)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Recording file not found",
-				Data:    fmt.Sprintf("Recording file not found: %s", filename),
-			},
-		}, nil
-	}
-
-	// Check if it's a file (not a directory)
-	fileInfo, err := os.Stat(filePath)
+	// Use MediaMTX controller to delete recording
+	err := s.mediaMTXController.DeleteRecording(context.Background(), filename)
 	if err != nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error accessing file: %v", err),
-			},
-		}, nil
-	}
-
-	if fileInfo.IsDir() {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Path is not a file",
-				Data:    fmt.Sprintf("Path is not a file: %s", filename),
-			},
-		}, nil
-	}
-
-	// Delete the file
-	if err := os.Remove(filePath); err != nil {
 		s.logger.WithError(err).WithFields(logrus.Fields{
 			"client_id": client.ClientID,
 			"method":    "delete_recording",
 			"filename":  filename,
-			"action":    "delete_error",
-		}).Error("Error deleting recording file")
+			"action":    "controller_error",
+		}).Error("Error deleting recording from controller")
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error deleting recording file: %v", err),
+				Data:    fmt.Sprintf("Error deleting recording: %v", err),
 			},
 		}, nil
 	}
@@ -1085,73 +951,22 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Get snapshots directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	snapshotsDir := config.MediaMTX.SnapshotsPath
-	filePath := filepath.Join(snapshotsDir, filename)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Snapshot file not found",
-				Data:    fmt.Sprintf("Snapshot file not found: %s", filename),
-			},
-		}, nil
-	}
-
-	// Check if it's a file (not a directory)
-	fileInfo, err := os.Stat(filePath)
+	// Use MediaMTX controller to delete snapshot
+	err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
 	if err != nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error accessing file: %v", err),
-			},
-		}, nil
-	}
-
-	if fileInfo.IsDir() {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Path is not a file",
-				Data:    fmt.Sprintf("Path is not a file: %s", filename),
-			},
-		}, nil
-	}
-
-	// Delete the file
-	if err := os.Remove(filePath); err != nil {
 		s.logger.WithError(err).WithFields(logrus.Fields{
 			"client_id": client.ClientID,
 			"method":    "delete_snapshot",
 			"filename":  filename,
-			"action":    "delete_error",
-		}).Error("Error deleting snapshot file")
+			"action":    "controller_error",
+		}).Error("Error deleting snapshot from controller")
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error deleting snapshot file: %v", err),
+				Data:    fmt.Sprintf("Error deleting snapshot: %v", err),
 			},
 		}, nil
 	}
@@ -1574,127 +1389,53 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 		}
 	}
 
-	// Get snapshots directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	snapshotsDir := config.MediaMTX.SnapshotsPath
-
-	// Check if directory exists and is accessible
-	if _, err := os.Stat(snapshotsDir); os.IsNotExist(err) {
-		s.logger.WithFields(logrus.Fields{
-			"client_id": client.ClientID,
-			"method":    "list_snapshots",
-			"directory": snapshotsDir,
-			"action":    "directory_not_found",
-		}).Warn("Snapshots directory does not exist")
-
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Result: map[string]interface{}{
-				"files":  []map[string]interface{}{},
-				"total":  0,
-				"limit":  limit,
-				"offset": offset,
-			},
-		}, nil
-	}
-
-	// Get list of files in directory
-	files := []map[string]interface{}{}
-
-	entries, err := os.ReadDir(snapshotsDir)
+	// Use MediaMTX controller to get snapshots list
+	fileList, err := s.mediaMTXController.ListSnapshots(context.Background(), limit, offset)
 	if err != nil {
 		s.logger.WithError(err).WithFields(logrus.Fields{
 			"client_id": client.ClientID,
 			"method":    "list_snapshots",
-			"directory": snapshotsDir,
-			"action":    "read_directory_error",
-		}).Error("Error reading snapshots directory")
+			"action":    "controller_error",
+		}).Error("Error getting snapshots list from controller")
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error reading snapshots directory: %v", err),
+				Data:    fmt.Sprintf("Error getting snapshots list: %v", err),
 			},
 		}, nil
 	}
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		filename := entry.Name()
-
-		// Get file stats
-		fileInfo, err := entry.Info()
-		if err != nil {
-			s.logger.WithError(err).WithFields(logrus.Fields{
-				"client_id": client.ClientID,
-				"method":    "list_snapshots",
-				"filename":  filename,
-				"action":    "file_stat_error",
-			}).Warn("Error accessing file")
-			continue
-		}
-
+	// Convert FileMetadata to map for JSON response
+	files := make([]map[string]interface{}, len(fileList.Files))
+	for i, file := range fileList.Files {
 		fileData := map[string]interface{}{
-			"filename":      filename,
-			"file_size":     fileInfo.Size(),
-			"modified_time": fileInfo.ModTime().Format(time.RFC3339),
-			"download_url":  fmt.Sprintf("/files/snapshots/%s", filename),
+			"filename":      file.FileName,
+			"file_size":     file.FileSize,
+			"modified_time": file.ModifiedAt.Format(time.RFC3339),
+			"download_url":  file.DownloadURL,
 		}
 
-		files = append(files, fileData)
+		files[i] = fileData
 	}
-
-	// Sort files by modified_time (newest first)
-	sort.Slice(files, func(i, j int) bool {
-		timeI := files[i]["modified_time"].(string)
-		timeJ := files[j]["modified_time"].(string)
-		return timeI > timeJ
-	})
-
-	// Apply pagination
-	totalCount := len(files)
-	startIdx := offset
-	endIdx := startIdx + limit
-	if endIdx > totalCount {
-		endIdx = totalCount
-	}
-	if startIdx > totalCount {
-		startIdx = totalCount
-	}
-
-	paginatedFiles := files[startIdx:endIdx]
 
 	s.logger.WithFields(logrus.Fields{
 		"client_id":   client.ClientID,
 		"method":      "list_snapshots",
-		"total_files": totalCount,
-		"returned":    len(paginatedFiles),
+		"total_files": fileList.Total,
+		"returned":    len(files),
 		"action":      "snapshots_listed",
 	}).Debug("Snapshots listed successfully")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"files":  paginatedFiles,
-			"total":  totalCount,
-			"limit":  limit,
-			"offset": offset,
+			"files":  files,
+			"total":  fileList.Total,
+			"limit":  fileList.Limit,
+			"offset": fileList.Offset,
 		},
 	}, nil
 }
@@ -1753,6 +1494,21 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 	}
 	if quality, ok := params["quality"].(int); ok && quality > 0 {
 		options["quality"] = quality
+	}
+
+	// Validate camera device exists
+	_, exists := s.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "Camera device not found",
+				Data: map[string]interface{}{
+					"device": devicePath,
+				},
+			},
+		}, nil
 	}
 
 	// Take snapshot using MediaMTX controller
@@ -1856,6 +1612,21 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		options["crf"] = quality
 	}
 
+	// Validate camera device exists
+	_, exists := s.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "Camera device not found",
+				Data: map[string]interface{}{
+					"device": devicePath,
+				},
+			},
+		}, nil
+	}
+
 	// Start recording using MediaMTX controller
 	session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, "", options)
 	if err != nil {
@@ -1937,6 +1708,21 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 				Code:    INVALID_PARAMS,
 				Message: ErrorMessages[INVALID_PARAMS],
 				Data:    "device parameter is required",
+			},
+		}, nil
+	}
+
+	// Validate camera device exists
+	_, exists := s.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "Camera device not found",
+				Data: map[string]interface{}{
+					"device": devicePath,
+				},
 			},
 		}, nil
 	}
@@ -2060,43 +1846,22 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		}, nil
 	}
 
-	// Get recordings directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	recordingsDir := config.MediaMTX.RecordingsPath
-	filePath := filepath.Join(recordingsDir, filename)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Recording file not found",
-				Data:    fmt.Sprintf("Recording file not found: %s", filename),
-			},
-		}, nil
-	}
-
-	// Get file info
-	fileInfo, err := os.Stat(filePath)
+	// Use MediaMTX controller to get recording info
+	fileMetadata, err := s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
 	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "get_recording_info",
+			"filename":  filename,
+			"action":    "controller_error",
+		}).Error("Error getting recording info from controller")
+
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error accessing file: %v", err),
+				Data:    fmt.Sprintf("Error getting recording info: %v", err),
 			},
 		}, nil
 	}
@@ -2109,15 +1874,23 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 	}).Debug("Recording info retrieved successfully")
 
 	// Return recording info following API documentation exactly
+	result := map[string]interface{}{
+		"filename":     fileMetadata.FileName,
+		"file_size":    fileMetadata.FileSize,
+		"created_time": fileMetadata.CreatedAt.Format(time.RFC3339),
+		"download_url": fileMetadata.DownloadURL,
+	}
+
+	// Add duration if available
+	if fileMetadata.Duration != nil {
+		result["duration"] = *fileMetadata.Duration
+	} else {
+		result["duration"] = 0 // Will be implemented with video metadata extraction in future
+	}
+
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"filename":     filename,
-			"file_size":    fileInfo.Size(),
-			"duration":     0, // Will be implemented with video metadata extraction in future
-			"created_time": fileInfo.ModTime().Format(time.RFC3339),
-			"download_url": fmt.Sprintf("/files/recordings/%s", filename),
-		},
+		Result:  result,
 	}, nil
 }
 
@@ -2165,43 +1938,22 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Get snapshots directory path from configuration
-	config := s.configManager.GetConfig()
-	if config == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    "Configuration not available",
-			},
-		}, nil
-	}
-
-	snapshotsDir := config.MediaMTX.SnapshotsPath
-	filePath := filepath.Join(snapshotsDir, filename)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Snapshot file not found",
-				Data:    fmt.Sprintf("Snapshot file not found: %s", filename),
-			},
-		}, nil
-	}
-
-	// Get file info
-	fileInfo, err := os.Stat(filePath)
+	// Use MediaMTX controller to get snapshot info
+	fileMetadata, err := s.mediaMTXController.GetSnapshotInfo(context.Background(), filename)
 	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "get_snapshot_info",
+			"filename":  filename,
+			"action":    "controller_error",
+		}).Error("Error getting snapshot info from controller")
+
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Error accessing file: %v", err),
+				Data:    fmt.Sprintf("Error getting snapshot info: %v", err),
 			},
 		}, nil
 	}
@@ -2217,10 +1969,10 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"filename":     filename,
-			"file_size":    fileInfo.Size(),
-			"created_time": fileInfo.ModTime().Format(time.RFC3339),
-			"download_url": fmt.Sprintf("/files/snapshots/%s", filename),
+			"filename":     fileMetadata.FileName,
+			"file_size":    fileMetadata.FileSize,
+			"created_time": fileMetadata.CreatedAt.Format(time.RFC3339),
+			"download_url": fileMetadata.DownloadURL,
 		},
 	}, nil
 }
