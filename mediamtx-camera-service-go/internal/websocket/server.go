@@ -27,6 +27,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -39,10 +40,11 @@ type WebSocketServer struct {
 	config *ServerConfig
 
 	// Dependencies (proper dependency injection)
-	configManager *config.ConfigManager
-	logger        *logging.Logger
-	cameraMonitor *camera.HybridCameraMonitor
-	jwtHandler    *security.JWTHandler
+	configManager      *config.ConfigManager
+	logger             *logging.Logger
+	cameraMonitor      *camera.HybridCameraMonitor
+	jwtHandler         *security.JWTHandler
+	mediaMTXController mediamtx.MediaMTXController
 
 	// WebSocket server
 	upgrader websocket.Upgrader
@@ -78,6 +80,7 @@ func NewWebSocketServer(
 	logger *logging.Logger,
 	cameraMonitor *camera.HybridCameraMonitor,
 	jwtHandler *security.JWTHandler,
+	mediaMTXController mediamtx.MediaMTXController,
 ) *WebSocketServer {
 	if configManager == nil {
 		panic("configManager cannot be nil - use existing internal/config/ConfigManager")
@@ -93,6 +96,10 @@ func NewWebSocketServer(
 
 	if jwtHandler == nil {
 		panic("jwtHandler cannot be nil - use existing internal/security/JWTHandler")
+	}
+
+	if mediaMTXController == nil {
+		panic("mediaMTXController cannot be nil - use existing internal/mediamtx/MediaMTXController")
 	}
 
 	// Get configuration from config manager
@@ -115,11 +122,12 @@ func NewWebSocketServer(
 	}
 
 	server := &WebSocketServer{
-		config:        serverConfig,
-		configManager: configManager,
-		logger:        logger,
-		cameraMonitor: cameraMonitor,
-		jwtHandler:    jwtHandler,
+		config:             serverConfig,
+		configManager:      configManager,
+		logger:             logger,
+		cameraMonitor:      cameraMonitor,
+		jwtHandler:         jwtHandler,
+		mediaMTXController: mediaMTXController,
 
 		// WebSocket upgrader configuration
 		upgrader: websocket.Upgrader{

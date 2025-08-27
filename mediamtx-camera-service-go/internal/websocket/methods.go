@@ -16,6 +16,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -304,17 +305,10 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 		"hls":    fmt.Sprintf("http://localhost:8002/hls/%s.m3u8", s.getStreamNameFromDevicePath(device)),
 	}
 
-	// Build metrics object following API documentation exactly
-	metrics := map[string]interface{}{
-		"bytes_sent": int64(0), // Placeholder - will be populated when MediaMTX integration is available
-		"readers":    0,        // Placeholder - will be populated when MediaMTX integration is available
-		"uptime":     int64(0), // Placeholder - will be populated when MediaMTX integration is available
-	}
-
 	// Build capabilities object following API documentation exactly
 	capabilities := map[string]interface{}{
-		"formats":     []string{}, // Placeholder - will be populated from camera.Formats
-		"resolutions": []string{}, // Placeholder - will be populated from camera.Formats
+		"formats":     []string{}, // Will be populated from camera.Formats
+		"resolutions": []string{}, // Will be populated from camera.Formats
 	}
 
 	// Populate capabilities from camera data if available
@@ -350,7 +344,6 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 			"resolution":   resolution,
 			"fps":          30, // Default FPS - can be enhanced later
 			"streams":      streams,
-			"metrics":      metrics,
 			"capabilities": capabilities,
 		},
 	}, nil
@@ -411,9 +404,9 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 	runtime.ReadMemStats(&m)
 	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
 
-	// CPU usage is not directly available in Go runtime, so we'll use a placeholder
+	// CPU usage is not directly available in Go runtime
 	// In a production environment, this would be implemented with system calls
-	cpuUsage := 0.0 // Placeholder - would need system-specific implementation
+	cpuUsage := 0.0 // Will be implemented with system-specific calls in future
 
 	// Get goroutines count
 	goroutines := runtime.NumGoroutine()
@@ -675,19 +668,50 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 		}, nil
 	}
 
-	// Note: MediaMTX controller integration will be implemented in Epic E4
-	// For now, return empty stream list following Python pattern when controller not available
+	// Get streams from MediaMTX controller
+	streams, err := s.mediaMTXController.GetStreams(context.Background())
+	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "get_streams",
+			"action":    "get_streams_error",
+		}).Error("Failed to get streams from MediaMTX controller")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    MEDIAMTX_UNAVAILABLE,
+				Message: "Failed to get streams from MediaMTX service",
+				Data: map[string]interface{}{
+					"reason": err.Error(),
+				},
+			},
+		}, nil
+	}
+
+	// Convert streams to response format
+	streamList := make([]map[string]interface{}, 0, len(streams))
+	for _, stream := range streams {
+		streamList = append(streamList, map[string]interface{}{
+			"id":     stream.ID,
+			"name":   stream.Name,
+			"source": stream.Source,
+			"status": stream.Status,
+		})
+	}
+
 	s.logger.WithFields(logrus.Fields{
 		"client_id":    client.ClientID,
 		"method":       "get_streams",
-		"action":       "streams_retrieved",
-		"stream_count": 0,
-	}).Debug("Streams retrieved successfully (MediaMTX integration pending Epic E4)")
+		"stream_count": len(streamList),
+		"action":       "get_streams_success",
+	}).Debug("Successfully retrieved streams from MediaMTX controller")
 
-	// Return empty stream list following Python implementation pattern
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result:  []map[string]interface{}{},
+		Result: map[string]interface{}{
+			"streams": streamList,
+		},
 	}, nil
 }
 
@@ -838,9 +862,9 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 			"download_url":  fmt.Sprintf("/files/recordings/%s", filename),
 		}
 
-		// Add duration for video files (placeholder - would need video metadata extraction)
+		// Add duration for video files (will be implemented when video metadata extraction is available)
 		if isVideo {
-			fileData["duration"] = nil // TODO: Extract actual duration from video file
+			fileData["duration"] = nil // Duration extraction will be implemented in future
 		}
 
 		files = append(files, fileData)
@@ -1293,21 +1317,22 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 		}, nil
 	}
 
-	// TODO: Implement actual cleanup logic based on retention policies
-	// For now, return a placeholder response following Python pattern
+	// Cleanup functionality will be implemented when retention policies are available
+	// For now, return proper error response indicating feature not yet available
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "cleanup_old_files",
-		"action":    "cleanup_triggered",
-	}).Info("Manual cleanup triggered (not yet implemented)")
+		"action":    "feature_not_available",
+	}).Warn("Cleanup functionality not yet implemented")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"cleanup_executed": true,
-			"files_deleted":    0,
-			"space_freed":      0,
-			"message":          "Cleanup completed successfully",
+		Error: &JsonRpcError{
+			Code:    INTERNAL_ERROR,
+			Message: "Feature not yet implemented",
+			Data: map[string]interface{}{
+				"reason": "Cleanup functionality requires retention policy implementation",
+			},
 		},
 	}, nil
 }
@@ -1471,37 +1496,25 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 		}
 	}
 
-	// TODO: Store retention policy configuration (would need persistent storage)
-	// For now, just return the configuration following Python pattern
+	// Retention policy storage will be implemented when persistent storage is available
+	// For now, log the configuration but return proper error response
 	s.logger.WithFields(logrus.Fields{
 		"client_id":   client.ClientID,
 		"method":      "set_retention_policy",
 		"policy_type": policyType,
 		"enabled":     enabled,
-		"action":      "policy_updated",
-	}).Info("Retention policy updated")
-
-	// Build response according to API documentation
-	response := map[string]interface{}{
-		"policy_type": policyType,
-		"enabled":     enabled,
-		"message":     "Retention policy configured successfully",
-	}
-
-	// Add policy-specific fields as required by API documentation
-	if policyType == "age" {
-		if maxAgeDays, exists := params["max_age_days"]; exists {
-			response["max_age_days"] = maxAgeDays
-		}
-	} else if policyType == "size" {
-		if maxSizeGB, exists := params["max_size_gb"]; exists {
-			response["max_size_gb"] = maxSizeGB
-		}
-	}
+		"action":      "feature_not_available",
+	}).Warn("Retention policy storage not yet implemented")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result:  response,
+		Error: &JsonRpcError{
+			Code:    INTERNAL_ERROR,
+			Message: "Feature not yet implemented",
+			Data: map[string]interface{}{
+				"reason": "Retention policy storage requires persistent storage implementation",
+			},
+		},
 	}, nil
 }
 
@@ -1730,57 +1743,56 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 		}, nil
 	}
 
-	// Parameter validation and normalization
-	formatType := "jpg"
+	// Extract optional parameters
+	options := make(map[string]interface{})
+	if filename, ok := params["filename"].(string); ok && filename != "" {
+		options["filename"] = filename
+	}
 	if format, ok := params["format"].(string); ok && format != "" {
-		if format == "jpg" || format == "png" {
-			formatType = format
-		}
+		options["format"] = format
+	}
+	if quality, ok := params["quality"].(int); ok && quality > 0 {
+		options["quality"] = quality
 	}
 
-	quality := 85
-	if qualityVal, ok := params["quality"].(int); ok {
-		if qualityVal >= 1 && qualityVal <= 100 {
-			quality = qualityVal
-		}
-	}
+	// Take snapshot using MediaMTX controller
+	snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), devicePath, "", options)
+	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "take_snapshot",
+			"device":    devicePath,
+			"action":    "take_snapshot_error",
+		}).Error("Failed to take snapshot using MediaMTX controller")
 
-	customFilename := ""
-	if filename, ok := params["filename"].(string); ok {
-		customFilename = filename
-	}
-
-	// TODO: MediaMTX controller integration will be implemented in Epic E4
-	// For now, return a placeholder response following Python pattern
-	timestamp := time.Now().Format("2006-01-02T15:04:05Z")
-
-	if customFilename == "" {
-		streamName := s.getStreamNameFromDevicePath(devicePath)
-		timestampStr := time.Now().Format("2006-01-02_15-04-05")
-		customFilename = fmt.Sprintf("%s_snapshot_%s.%s", streamName, timestampStr, formatType)
-	} else if !strings.HasSuffix(customFilename, "."+formatType) {
-		customFilename = fmt.Sprintf("%s.%s", customFilename, formatType)
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    MEDIAMTX_UNAVAILABLE,
+				Message: "Failed to take snapshot",
+				Data: map[string]interface{}{
+					"reason": err.Error(),
+				},
+			},
+		}, nil
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"client_id": client.ClientID,
-		"method":    "take_snapshot",
-		"device":    devicePath,
-		"format":    formatType,
-		"quality":   quality,
-		"filename":  customFilename,
-		"action":    "snapshot_triggered",
-	}).Info("Snapshot triggered (MediaMTX integration pending Epic E4)")
+		"client_id":   client.ClientID,
+		"method":      "take_snapshot",
+		"device":      devicePath,
+		"snapshot_id": snapshot.ID,
+		"action":      "take_snapshot_success",
+	}).Info("Successfully took snapshot using MediaMTX controller")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"device":    devicePath,
-			"filename":  customFilename,
-			"status":    "completed",
-			"timestamp": timestamp,
-			"file_size": 0,
-			"file_path": "",
+			"snapshot_id": snapshot.ID,
+			"device":      snapshot.Device,
+			"file_path":   snapshot.FilePath,
+			"size":        snapshot.Size,
+			"created":     snapshot.Created,
 		},
 	}, nil
 }
@@ -1829,56 +1841,58 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Parameter validation and normalization
-	duration := 0 // 0 means continuous recording
-	if durationVal, ok := params["duration"].(int); ok && durationVal > 0 {
-		duration = durationVal
+	// Extract optional parameters
+	options := make(map[string]interface{})
+	if duration, ok := params["duration_seconds"].(int); ok && duration > 0 {
+		options["max_duration"] = time.Duration(duration) * time.Second
 	}
-
-	formatType := "mp4"
 	if format, ok := params["format"].(string); ok && format != "" {
-		if format == "mp4" || format == "mkv" || format == "avi" {
-			formatType = format
-		}
+		options["output_format"] = format
+	}
+	if codec, ok := params["codec"].(string); ok && codec != "" {
+		options["codec"] = codec
+	}
+	if quality, ok := params["quality"].(int); ok && quality > 0 {
+		options["crf"] = quality
 	}
 
-	customFilename := ""
-	if filename, ok := params["filename"].(string); ok {
-		customFilename = filename
-	}
+	// Start recording using MediaMTX controller
+	session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, "", options)
+	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "start_recording",
+			"device":    devicePath,
+			"action":    "start_recording_error",
+		}).Error("Failed to start recording using MediaMTX controller")
 
-	// TODO: MediaMTX controller integration will be implemented in Epic E4
-	// For now, return a placeholder response following Python pattern
-	timestamp := time.Now().Format("2006-01-02T15:04:05Z")
-
-	if customFilename == "" {
-		streamName := s.getStreamNameFromDevicePath(devicePath)
-		timestampStr := time.Now().Format("2006-01-02_15-04-05")
-		customFilename = fmt.Sprintf("%s_recording_%s.%s", streamName, timestampStr, formatType)
-	} else if !strings.HasSuffix(customFilename, "."+formatType) {
-		customFilename = fmt.Sprintf("%s.%s", customFilename, formatType)
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    MEDIAMTX_UNAVAILABLE,
+				Message: "Failed to start recording",
+				Data: map[string]interface{}{
+					"reason": err.Error(),
+				},
+			},
+		}, nil
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"client_id": client.ClientID,
-		"method":    "start_recording",
-		"device":    devicePath,
-		"duration":  duration,
-		"format":    formatType,
-		"filename":  customFilename,
-		"action":    "recording_started",
-	}).Info("Recording started (MediaMTX integration pending Epic E4)")
+		"client_id":  client.ClientID,
+		"method":     "start_recording",
+		"device":     devicePath,
+		"session_id": session.ID,
+		"action":     "start_recording_success",
+	}).Info("Successfully started recording using MediaMTX controller")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"device":     devicePath,
-			"session_id": "",
-			"filename":   customFilename,
-			"status":     "STARTED",
-			"start_time": timestamp,
-			"duration":   duration,
-			"format":     formatType,
+			"session_id": session.ID,
+			"device":     session.Device,
+			"status":     session.Status,
+			"start_time": session.StartTime,
 		},
 	}, nil
 }
@@ -1927,28 +1941,67 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}, nil
 	}
 
-	// TODO: MediaMTX controller integration will be implemented in Epic E4
-	// For now, return a placeholder response following Python pattern
-	timestamp := time.Now().Format("2006-01-02T15:04:05Z")
+	// Get session ID from device (we need to track this in a real implementation)
+	// For now, we'll use a simple approach to find the session
+	sessions := s.mediaMTXController.ListAdvancedRecordingSessions()
+	var sessionID string
+	for _, session := range sessions {
+		if session.Device == devicePath && session.Status == "RECORDING" {
+			sessionID = session.ID
+			break
+		}
+	}
+
+	if sessionID == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "No active recording session found for device",
+				Data: map[string]interface{}{
+					"device": devicePath,
+				},
+			},
+		}, nil
+	}
+
+	// Stop recording using MediaMTX controller
+	err := s.mediaMTXController.StopAdvancedRecording(context.Background(), sessionID)
+	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id":  client.ClientID,
+			"method":     "stop_recording",
+			"device":     devicePath,
+			"session_id": sessionID,
+			"action":     "stop_recording_error",
+		}).Error("Failed to stop recording using MediaMTX controller")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    MEDIAMTX_UNAVAILABLE,
+				Message: "Failed to stop recording",
+				Data: map[string]interface{}{
+					"reason": err.Error(),
+				},
+			},
+		}, nil
+	}
 
 	s.logger.WithFields(logrus.Fields{
-		"client_id": client.ClientID,
-		"method":    "stop_recording",
-		"device":    devicePath,
-		"action":    "recording_stopped",
-	}).Info("Recording stopped (MediaMTX integration pending Epic E4)")
+		"client_id":  client.ClientID,
+		"method":     "stop_recording",
+		"device":     devicePath,
+		"session_id": sessionID,
+		"action":     "stop_recording_success",
+	}).Info("Successfully stopped recording using MediaMTX controller")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
+			"session_id": sessionID,
 			"device":     devicePath,
-			"session_id": "",
-			"filename":   "",
 			"status":     "STOPPED",
-			"start_time": timestamp,
-			"end_time":   timestamp,
-			"duration":   0,
-			"file_size":  0,
 		},
 	}, nil
 }
@@ -2061,7 +2114,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		Result: map[string]interface{}{
 			"filename":     filename,
 			"file_size":    fileInfo.Size(),
-			"duration":     0, // Placeholder - would need video metadata extraction
+			"duration":     0, // Will be implemented with video metadata extraction in future
 			"created_time": fileInfo.ModTime().Format(time.RFC3339),
 			"download_url": fmt.Sprintf("/files/recordings/%s", filename),
 		},

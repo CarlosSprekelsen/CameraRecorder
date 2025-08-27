@@ -1,0 +1,254 @@
+/*
+MediaMTX Integration Types
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX service integration
+- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-004: Health monitoring
+
+Test Categories: Unit/Integration
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package mediamtx
+
+import (
+	"context"
+	"time"
+)
+
+// MediaMTXConfig represents MediaMTX service configuration
+type MediaMTXConfig struct {
+	BaseURL        string               `mapstructure:"base_url"`
+	HealthCheckURL string               `mapstructure:"health_check_url"`
+	Timeout        time.Duration        `mapstructure:"timeout"`
+	RetryAttempts  int                  `mapstructure:"retry_attempts"`
+	RetryDelay     time.Duration        `mapstructure:"retry_delay"`
+	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
+	ConnectionPool ConnectionPoolConfig `mapstructure:"connection_pool"`
+
+	// Integration with existing config
+	Host                                string    `mapstructure:"host"`
+	APIPort                             int       `mapstructure:"api_port"`
+	RTSPPort                            int       `mapstructure:"rtsp_port"`
+	WebRTCPort                          int       `mapstructure:"webrtc_port"`
+	HLSPort                             int       `mapstructure:"hls_port"`
+	ConfigPath                          string    `mapstructure:"config_path"`
+	RecordingsPath                      string    `mapstructure:"recordings_path"`
+	SnapshotsPath                       string    `mapstructure:"snapshots_path"`
+	HealthCheckInterval                 int       `mapstructure:"health_check_interval"`
+	HealthFailureThreshold              int       `mapstructure:"health_failure_threshold"`
+	HealthCircuitBreakerTimeout         int       `mapstructure:"health_circuit_breaker_timeout"`
+	HealthMaxBackoffInterval            int       `mapstructure:"health_max_backoff_interval"`
+	HealthRecoveryConfirmationThreshold int       `mapstructure:"health_recovery_confirmation_threshold"`
+	BackoffBaseMultiplier               float64   `mapstructure:"backoff_base_multiplier"`
+	BackoffJitterRange                  []float64 `mapstructure:"backoff_jitter_range"`
+	ProcessTerminationTimeout           float64   `mapstructure:"process_termination_timeout"`
+	ProcessKillTimeout                  float64   `mapstructure:"process_kill_timeout"`
+}
+
+// CircuitBreakerConfig represents circuit breaker configuration
+type CircuitBreakerConfig struct {
+	FailureThreshold int           `mapstructure:"failure_threshold"`
+	RecoveryTimeout  time.Duration `mapstructure:"recovery_timeout"`
+	MaxFailures      int           `mapstructure:"max_failures"`
+}
+
+// ConnectionPoolConfig represents HTTP connection pool configuration
+type ConnectionPoolConfig struct {
+	MaxIdleConns        int           `mapstructure:"max_idle_conns"`
+	MaxIdleConnsPerHost int           `mapstructure:"max_idle_conns_per_host"`
+	IdleConnTimeout     time.Duration `mapstructure:"idle_conn_timeout"`
+}
+
+// Stream represents a MediaMTX stream
+type Stream struct {
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Path      string            `json:"path"`
+	Source    string            `json:"source"`
+	Status    string            `json:"status"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+}
+
+// Path represents a MediaMTX path configuration
+type Path struct {
+	ID                         string        `json:"id"`
+	Name                       string        `json:"name"`
+	Source                     string        `json:"source"`
+	SourceOnDemand             bool          `json:"source_on_demand"`
+	SourceOnDemandStartTimeout time.Duration `json:"source_on_demand_start_timeout"`
+	SourceOnDemandCloseAfter   time.Duration `json:"source_on_demand_close_after"`
+	PublishUser                string        `json:"publish_user"`
+	PublishPass                string        `json:"publish_pass"`
+	ReadUser                   string        `json:"read_user"`
+	ReadPass                   string        `json:"read_pass"`
+	RunOnDemand                string        `json:"run_on_demand"`
+	RunOnDemandRestart         bool          `json:"run_on_demand_restart"`
+	RunOnDemandCloseAfter      time.Duration `json:"run_on_demand_close_after"`
+	RunOnDemandStartTimeout    time.Duration `json:"run_on_demand_start_timeout"`
+}
+
+// HealthStatus represents MediaMTX service health status
+type HealthStatus struct {
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Details   string    `json:"details,omitempty"`
+	Metrics   Metrics   `json:"metrics,omitempty"`
+}
+
+// Metrics represents MediaMTX service metrics
+type Metrics struct {
+	ActiveStreams int     `json:"active_streams"`
+	TotalStreams  int     `json:"total_streams"`
+	CPUUsage      float64 `json:"cpu_usage"`
+	MemoryUsage   float64 `json:"memory_usage"`
+	Uptime        int64   `json:"uptime"`
+}
+
+// RecordingSession represents a recording session
+type RecordingSession struct {
+	ID        string        `json:"id"`
+	Device    string        `json:"device"`
+	Path      string        `json:"path"`
+	Status    string        `json:"status"`
+	StartTime time.Time     `json:"start_time"`
+	EndTime   *time.Time    `json:"end_time,omitempty"`
+	Duration  time.Duration `json:"duration"`
+	FileSize  int64         `json:"file_size"`
+	FilePath  string        `json:"file_path"`
+}
+
+// Snapshot represents a camera snapshot
+type Snapshot struct {
+	ID       string                 `json:"id"`
+	Device   string                 `json:"device"`
+	Path     string                 `json:"path"`
+	FilePath string                 `json:"file_path"`
+	Size     int64                  `json:"size"`
+	Created  time.Time              `json:"created"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// MediaMTXController interface defines MediaMTX operations
+type MediaMTXController interface {
+	// Health and status
+	GetHealth(ctx context.Context) (*HealthStatus, error)
+	GetMetrics(ctx context.Context) (*Metrics, error)
+
+	// Stream management
+	GetStreams(ctx context.Context) ([]*Stream, error)
+	GetStream(ctx context.Context, id string) (*Stream, error)
+	CreateStream(ctx context.Context, name, source string) (*Stream, error)
+	DeleteStream(ctx context.Context, id string) error
+
+	// Path management
+	GetPaths(ctx context.Context) ([]*Path, error)
+	GetPath(ctx context.Context, name string) (*Path, error)
+	CreatePath(ctx context.Context, path *Path) error
+	DeletePath(ctx context.Context, name string) error
+
+	// Recording operations
+	StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
+	StopRecording(ctx context.Context, sessionID string) error
+	TakeSnapshot(ctx context.Context, device, path string) (*Snapshot, error)
+
+	// Advanced recording operations
+	StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error)
+	StopAdvancedRecording(ctx context.Context, sessionID string) error
+	GetAdvancedRecordingSession(sessionID string) (*RecordingSession, bool)
+	ListAdvancedRecordingSessions() []*RecordingSession
+	RotateRecordingFile(ctx context.Context, sessionID string) error
+
+	// Advanced snapshot operations
+	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
+	GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool)
+	ListAdvancedSnapshots() []*Snapshot
+	DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error
+	CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error
+	GetSnapshotSettings() *SnapshotSettings
+	UpdateSnapshotSettings(settings *SnapshotSettings)
+
+	// Configuration
+	GetConfig(ctx context.Context) (*MediaMTXConfig, error)
+	UpdateConfig(ctx context.Context, config *MediaMTXConfig) error
+
+	// Lifecycle
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+}
+
+// MediaMTXClient interface defines HTTP client operations
+type MediaMTXClient interface {
+	// HTTP operations
+	Get(ctx context.Context, path string) ([]byte, error)
+	Post(ctx context.Context, path string, data []byte) ([]byte, error)
+	Put(ctx context.Context, path string, data []byte) ([]byte, error)
+	Delete(ctx context.Context, path string) error
+
+	// Health check
+	HealthCheck(ctx context.Context) error
+
+	// Connection management
+	Close() error
+}
+
+// HealthMonitor interface defines health monitoring operations
+type HealthMonitor interface {
+	// Health monitoring
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	GetStatus() HealthStatus
+	IsHealthy() bool
+
+	// Circuit breaker
+	IsCircuitOpen() bool
+	RecordSuccess()
+	RecordFailure()
+}
+
+// PathManager interface defines path management operations
+type PathManager interface {
+	// Path operations
+	CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error
+	DeletePath(ctx context.Context, name string) error
+	GetPath(ctx context.Context, name string) (*Path, error)
+	ListPaths(ctx context.Context) ([]*Path, error)
+
+	// Path validation
+	ValidatePath(ctx context.Context, name string) error
+	PathExists(ctx context.Context, name string) bool
+}
+
+// StreamManager interface defines stream management operations
+type StreamManager interface {
+	// Stream operations
+	CreateStream(ctx context.Context, name, source string) (*Stream, error)
+	DeleteStream(ctx context.Context, id string) error
+	GetStream(ctx context.Context, id string) (*Stream, error)
+	ListStreams(ctx context.Context) ([]*Stream, error)
+
+	// Stream monitoring
+	MonitorStream(ctx context.Context, id string) error
+	GetStreamStatus(ctx context.Context, id string) (string, error)
+}
+
+// FFmpegManager interface defines FFmpeg process management
+type FFmpegManager interface {
+	// Process management
+	StartProcess(ctx context.Context, command []string, outputPath string) (int, error)
+	StopProcess(ctx context.Context, pid int) error
+	IsProcessRunning(ctx context.Context, pid int) bool
+
+	// Recording operations
+	StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error)
+	StopRecording(ctx context.Context, pid int) error
+	TakeSnapshot(ctx context.Context, device, outputPath string) error
+
+	// File management
+	RotateFile(ctx context.Context, oldPath, newPath string) error
+	GetFileInfo(ctx context.Context, path string) (int64, time.Time, error)
+}
