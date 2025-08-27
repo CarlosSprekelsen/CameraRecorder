@@ -3,7 +3,27 @@
 **Version:** 2.0  
 **Date:** 2025-01-15  
 **Status:** Go Implementation API Reference  
-**Related Epic/Story:** Go Implementation API Compatibility  
+**Related Epic/Story:** Go Implementation API Compatibility
+
+## API Versioning Strategy
+
+### Version Compatibility
+- **Current Version**: 2.0
+- **Backward Compatibility**: All 1.x clients supported
+- **Deprecation Policy**: 12-month notice for breaking changes
+- **Migration Path**: Clear upgrade guides for major versions
+
+### Version Indicators
+- **API Version**: Included in response metadata
+- **Deprecation Warnings**: Notified via response headers
+- **Breaking Changes**: Documented in changelog
+- **Feature Flags**: Optional features can be enabled/disabled
+
+### Deprecation Process
+1. **Announcement**: 12 months before deprecation
+2. **Warning Phase**: 6 months with deprecation warnings
+3. **Removal**: After 12 months, feature removed
+4. **Migration Support**: Tools and guides provided  
 
 This document describes all available JSON-RPC 2.0 methods provided by the MediaMTX Camera Service Go implementation. The API maintains 100% compatibility with the Python implementation while providing Go-specific examples and performance improvements.
 
@@ -1026,8 +1046,28 @@ Sent when a camera connects, disconnects, or changes status.
 
 **Go Client Example:**
 ```go
-func (c *Client) ListenForNotifications() (<-chan interface{}, error) {
-    notificationChan := make(chan interface{}, 100)
+type CameraStatusNotification struct {
+    Device     string            `json:"device"`
+    Status     string            `json:"status"`
+    Name       string            `json:"name"`
+    Resolution string            `json:"resolution"`
+    FPS        int               `json:"fps"`
+    Streams    map[string]string `json:"streams"`
+}
+
+type RecordingStatusNotification struct {
+    Device    string `json:"device"`
+    Status    string `json:"status"`
+    Filename  string `json:"filename"`
+    Duration  int64  `json:"duration"`
+}
+
+type NotificationType interface {
+    CameraStatusNotification | RecordingStatusNotification
+}
+
+func (c *Client) ListenForNotifications() (<-chan NotificationType, error) {
+    notificationChan := make(chan NotificationType, 100)
     
     go func() {
         for {
@@ -1039,7 +1079,7 @@ func (c *Client) ListenForNotifications() (<-chan interface{}, error) {
             
             switch notification.Method {
             case "camera_status_update":
-                var cameraStatus CameraStatus
+                var cameraStatus CameraStatusNotification
                 if err := json.Unmarshal(notification.Params, &cameraStatus); err != nil {
                     log.Printf("Error unmarshaling camera status: %v", err)
                     continue
@@ -1047,7 +1087,7 @@ func (c *Client) ListenForNotifications() (<-chan interface{}, error) {
                 notificationChan <- cameraStatus
                 
             case "recording_status_update":
-                var recordingStatus RecordingStatus
+                var recordingStatus RecordingStatusNotification
                 if err := json.Unmarshal(notification.Params, &recordingStatus); err != nil {
                     log.Printf("Error unmarshaling recording status: %v", err)
                     continue
@@ -1083,6 +1123,50 @@ Sent when recording starts, stops, or encounters an error.
 ```
 
 ---
+
+## Error Response Standardization
+
+All error responses follow a consistent JSON-RPC 2.0 error format with standardized error codes and structured data.
+
+### Standard Error Response Format
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32001,
+    "message": "Authentication failed",
+    "data": {
+      "reason": "Invalid or expired token",
+      "details": "Token expired at 2025-01-15T14:30:00Z",
+      "suggestion": "Please re-authenticate with a valid token"
+    }
+  },
+  "id": 1
+}
+```
+
+### Error Response Fields
+- `code`: Integer error code (negative for application errors)
+- `message`: Human-readable error message
+- `data`: Optional structured error data containing:
+  - `reason`: Technical reason for the error
+  - `details`: Additional error details
+  - `suggestion`: Suggested action to resolve the error
+
+### Go Error Response Types
+```go
+type ErrorData struct {
+    Reason     string `json:"reason,omitempty"`
+    Details    string `json:"details,omitempty"`
+    Suggestion string `json:"suggestion,omitempty"`
+}
+
+type JsonRpcError struct {
+    Code    int        `json:"code"`
+    Message string     `json:"message"`
+    Data    *ErrorData `json:"data,omitempty"`
+}
+```
 
 ## Error Codes
 
@@ -1254,6 +1338,49 @@ List available snapshot files with metadata and pagination support.
 }
 ```
 
+**Go Client Example:**
+```go
+type SnapshotFileInfo struct {
+    Filename     string    `json:"filename"`
+    FileSize     int64     `json:"file_size"`
+    ModifiedTime time.Time `json:"modified_time"`
+    DownloadURL  string    `json:"download_url"`
+}
+
+type ListSnapshotsRequest struct {
+    Limit  int `json:"limit,omitempty"`
+    Offset int `json:"offset,omitempty"`
+}
+
+type ListSnapshotsResponse struct {
+    Files  []SnapshotFileInfo `json:"files"`
+    Total  int                `json:"total"`
+    Limit  int                `json:"limit"`
+    Offset int                `json:"offset"`
+}
+
+func (c *Client) ListSnapshots(limit, offset int) (*ListSnapshotsResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "list_snapshots",
+        Params:  ListSnapshotsRequest{Limit: limit, Offset: offset},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result ListSnapshotsResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ### get_recording_info
 Get detailed information about a specific recording file.
 
@@ -1292,6 +1419,38 @@ Get detailed information about a specific recording file.
 }
 ```
 
+**Go Client Example:**
+```go
+type RecordingInfo struct {
+    Filename     string    `json:"filename"`
+    FileSize     int64     `json:"file_size"`
+    Duration     int64     `json:"duration"`
+    CreatedTime  time.Time `json:"created_time"`
+    DownloadURL  string    `json:"download_url"`
+}
+
+func (c *Client) GetRecordingInfo(filename string) (*RecordingInfo, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_recording_info",
+        Params:  map[string]string{"filename": filename},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result RecordingInfo
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ### get_snapshot_info
 Get detailed information about a specific snapshot file.
 
@@ -1323,9 +1482,40 @@ Get detailed information about a specific snapshot file.
     "filename": "snapshot_2025-01-15_14-30-00.jpg",
     "file_size": 204800,
     "created_time": "2025-01-15T14:30:00Z",
-    "download_url": "/files/snapshots/snapshot_2025-01-15_14-30-00.jpg"
+    "download_url": "/files/snapshots/snapshot_2025-01-15_14-30:00.jpg"
   },
   "id": 13
+}
+```
+
+**Go Client Example:**
+```go
+type SnapshotInfo struct {
+    Filename     string    `json:"filename"`
+    FileSize     int64     `json:"file_size"`
+    CreatedTime  time.Time `json:"created_time"`
+    DownloadURL  string    `json:"download_url"`
+}
+
+func (c *Client) GetSnapshotInfo(filename string) (*SnapshotInfo, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_snapshot_info",
+        Params:  map[string]string{"filename": filename},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result SnapshotInfo
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
 }
 ```
 
@@ -1365,6 +1555,36 @@ Delete a specific recording file.
 }
 ```
 
+**Go Client Example:**
+```go
+type DeleteRecordingResponse struct {
+    Filename string `json:"filename"`
+    Deleted  bool   `json:"deleted"`
+    Message  string `json:"message"`
+}
+
+func (c *Client) DeleteRecording(filename string) (*DeleteRecordingResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "delete_recording",
+        Params:  map[string]string{"filename": filename},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result DeleteRecordingResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ### delete_snapshot
 Delete a specific snapshot file.
 
@@ -1401,6 +1621,36 @@ Delete a specific snapshot file.
 }
 ```
 
+**Go Client Example:**
+```go
+type DeleteSnapshotResponse struct {
+    Filename string `json:"filename"`
+    Deleted  bool   `json:"deleted"`
+    Message  string `json:"message"`
+}
+
+func (c *Client) DeleteSnapshot(filename string) (*DeleteSnapshotResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "delete_snapshot",
+        Params:  map[string]string{"filename": filename},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result DeleteSnapshotResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ### get_storage_info
 Get storage space information and usage statistics.
 
@@ -1434,6 +1684,39 @@ Get storage space information and usage statistics.
     "low_space_warning": false
   },
   "id": 16
+}
+```
+
+**Go Client Example:**
+```go
+type StorageInfo struct {
+    TotalSpace        int64   `json:"total_space"`
+    UsedSpace         int64   `json:"used_space"`
+    AvailableSpace    int64   `json:"available_space"`
+    UsagePercentage   float64 `json:"usage_percentage"`
+    RecordingsSize    int64   `json:"recordings_size"`
+    SnapshotsSize     int64   `json:"snapshots_size"`
+    LowSpaceWarning   bool    `json:"low_space_warning"`
+}
+
+func (c *Client) GetStorageInfo() (*StorageInfo, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_storage_info",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result StorageInfo
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
 }
 ```
 
@@ -1479,6 +1762,44 @@ Configure file retention policies for automatic cleanup.
 }
 ```
 
+**Go Client Example:**
+```go
+type RetentionPolicyRequest struct {
+    PolicyType  string  `json:"policy_type"`
+    MaxAgeDays  *int    `json:"max_age_days,omitempty"`
+    MaxSizeGB   *int    `json:"max_size_gb,omitempty"`
+    Enabled     bool    `json:"enabled"`
+}
+
+type RetentionPolicyResponse struct {
+    PolicyType  string `json:"policy_type"`
+    MaxAgeDays  *int   `json:"max_age_days,omitempty"`
+    Enabled     bool   `json:"enabled"`
+    Message     string `json:"message"`
+}
+
+func (c *Client) SetRetentionPolicy(req RetentionPolicyRequest) (*RetentionPolicyResponse, error) {
+    jsonReq := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "set_retention_policy",
+        Params:  req,
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(jsonReq, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result RetentionPolicyResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ### cleanup_old_files
 Manually trigger cleanup of old files based on retention policies.
 
@@ -1512,6 +1833,36 @@ Manually trigger cleanup of old files based on retention policies.
 }
 ```
 
+**Go Client Example:**
+```go
+type CleanupResponse struct {
+    CleanupExecuted bool   `json:"cleanup_executed"`
+    FilesDeleted    int    `json:"files_deleted"`
+    SpaceFreed      int64  `json:"space_freed"`
+    Message         string `json:"message"`
+}
+
+func (c *Client) CleanupOldFiles() (*CleanupResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "cleanup_old_files",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result CleanupResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ---
 
 ## System Management Methods
@@ -1541,15 +1892,51 @@ Get system status and health information.
   "jsonrpc": "2.0",
   "result": {
     "status": "healthy",
-    "uptime": 86400,
+    "uptime": 86400.5,
     "version": "1.0.0",
     "components": {
       "websocket_server": "running",
       "camera_monitor": "running",
-      "mediamtx_controller": "running"
+      "mediamtx": "running"
     }
   },
   "id": 10
+}
+```
+
+**Go Client Example:**
+```go
+type ComponentStatus struct {
+    WebSocketServer string `json:"websocket_server"`
+    CameraMonitor   string `json:"camera_monitor"`
+    MediaMTX        string `json:"mediamtx"`
+}
+
+type SystemStatus struct {
+    Status     string           `json:"status"`
+    Uptime     float64          `json:"uptime"`
+    Version    string           `json:"version"`
+    Components ComponentStatus  `json:"components"`
+}
+
+func (c *Client) GetStatus() (*SystemStatus, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_status",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result SystemStatus
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
 }
 ```
 
@@ -1590,6 +1977,40 @@ Get server configuration and capability information.
 }
 ```
 
+**Go Client Example:**
+```go
+type ServerInfo struct {
+    Name              string   `json:"name"`
+    Version           string   `json:"version"`
+    BuildDate         string   `json:"build_date"`
+    GoVersion         string   `json:"go_version"`
+    Architecture      string   `json:"architecture"`
+    Capabilities      []string `json:"capabilities"`
+    SupportedFormats  []string `json:"supported_formats"`
+    MaxCameras        int      `json:"max_cameras"`
+}
+
+func (c *Client) GetServerInfo() (*ServerInfo, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_server_info",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result ServerInfo
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
 ---
 
 ## HTTP File Download Endpoints
@@ -1626,6 +2047,75 @@ Download a snapshot file via HTTP.
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
      http://localhost:8002/files/snapshots/snapshot_2025-01-15_14-30-00.jpg
+```
+
+---
+
+## API Validation Rules
+
+### Parameter Validation
+All API parameters are validated according to the following rules:
+
+#### String Parameters
+- **Device paths**: Must match pattern `/dev/video[0-9]+`
+- **Filenames**: Must be valid filename characters, no path traversal
+- **JWT tokens**: Must be valid JWT format
+- **API keys**: Must be 32+ character alphanumeric strings
+
+#### Numeric Parameters
+- **Duration**: Must be positive integer (1-86400 seconds)
+- **File sizes**: Must be non-negative integers
+- **Limits**: Must be positive integers (1-1000)
+- **Offsets**: Must be non-negative integers
+
+#### Boolean Parameters
+- **Enabled flags**: Must be true/false values
+- **Success flags**: Must be true/false values
+
+### Response Validation
+All responses are validated to ensure:
+
+#### Required Fields
+- All documented fields must be present
+- No additional fields beyond documented API
+- Consistent field types across all responses
+
+#### Type Constraints
+- **Timestamps**: ISO 8601 format strings
+- **File sizes**: int64 for large file support
+- **Durations**: int64 for precise timing
+- **Percentages**: float64 for decimal precision
+
+### Error Handling
+- All errors return standardized JSON-RPC 2.0 error format
+- Error codes are consistent across all methods
+- Error messages provide actionable information
+- Error data includes technical details and suggestions
+
+### Response Metadata
+All responses include optional metadata for debugging and monitoring:
+
+#### Performance Metrics
+- **Processing time**: Time taken to process the request
+- **Server timestamp**: When the response was generated
+- **Request ID**: Unique identifier for request tracing
+
+#### Example Response with Metadata
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "cameras": [...],
+    "total": 1,
+    "connected": 1
+  },
+  "id": 2,
+  "metadata": {
+    "processing_time_ms": 45,
+    "server_timestamp": "2025-01-15T14:30:00Z",
+    "request_id": "req_550e8400-e29b-41d4-a716-446655440000"
+  }
+}
 ```
 
 ---
