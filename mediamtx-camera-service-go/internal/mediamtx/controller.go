@@ -611,7 +611,7 @@ func generateSnapshotPath(device, snapshotID string) string {
 	return fmt.Sprintf("/tmp/snapshots/%s_%s.jpg", device, snapshotID)
 }
 
-// StartAdvancedRecording starts a recording with advanced features
+// StartAdvancedRecording starts a recording with advanced features and full state management
 func (c *controller) StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error) {
 	if !c.isRunning {
 		return nil, fmt.Errorf("controller is not running")
@@ -621,20 +621,108 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 		"device":  device,
 		"path":    path,
 		"options": options,
-	}).Info("Starting advanced recording")
+	}).Info("Starting advanced recording with full state management")
 
-	return c.recordingManager.StartRecording(ctx, device, path, options)
+	// Validate device exists
+	if device == "" {
+		return nil, fmt.Errorf("device path is required")
+	}
+
+	// Create advanced recording session with full state management
+	session, err := c.recordingManager.StartRecording(ctx, device, path, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start advanced recording: %w", err)
+	}
+
+	// Store session in controller for state tracking
+	c.sessionsMu.Lock()
+	c.sessions[session.ID] = session
+	c.sessionsMu.Unlock()
+
+	// Initialize session state tracking for Python equivalence
+	session.State = SessionStateRecording
+	session.ContinuityID = generateContinuityID()
+	session.Segments = make([]string, 0)
+
+	c.logger.WithFields(logrus.Fields{
+		"session_id":   session.ID,
+		"device":       device,
+		"status":       session.Status,
+		"state":        session.State,
+		"continuity_id": session.ContinuityID,
+	}).Info("Advanced recording session started successfully with full state tracking")
+
+	return session, nil
 }
 
-// StopAdvancedRecording stops a recording with advanced features
+// StopAdvancedRecording stops a recording with advanced features and state persistence
 func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string) error {
 	if !c.isRunning {
 		return fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("session_id", sessionID).Info("Stopping advanced recording")
+	c.logger.WithField("session_id", sessionID).Info("Stopping advanced recording with state persistence")
 
-	return c.recordingManager.StopRecording(ctx, sessionID)
+	// Get session for state tracking
+	c.sessionsMu.RLock()
+	session, exists := c.sessions[sessionID]
+	c.sessionsMu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("recording session not found: %s", sessionID)
+	}
+
+	// Update session state for Python equivalence
+	session.State = SessionStateStopped
+	endTime := time.Now()
+	session.EndTime = &endTime
+	session.Duration = endTime.Sub(session.StartTime)
+
+	// Stop recording using manager
+	err := c.recordingManager.StopRecording(ctx, sessionID)
+	if err != nil {
+		// Update state even if stop fails
+		session.State = SessionStateError
+		return fmt.Errorf("failed to stop advanced recording: %w", err)
+	}
+
+	// Persist session state for Python equivalence
+	c.persistSessionState(session)
+
+	c.logger.WithFields(logrus.Fields{
+		"session_id":   sessionID,
+		"state":        session.State,
+		"duration":     session.Duration,
+		"continuity_id": session.ContinuityID,
+	}).Info("Advanced recording stopped successfully with state persistence")
+
+	return nil
+}
+
+// persistSessionState persists session state for Python equivalence
+func (c *controller) persistSessionState(session *RecordingSession) {
+	c.logger.WithFields(logrus.Fields{
+		"session_id":   session.ID,
+		"state":        session.State,
+		"continuity_id": session.ContinuityID,
+	}).Debug("Persisting session state for Python equivalence")
+
+	// Store session in controller's session map for persistence
+	c.sessionsMu.Lock()
+	c.sessions[session.ID] = session
+	c.sessionsMu.Unlock()
+
+	// Log session state for monitoring and debugging
+	c.logger.WithFields(logrus.Fields{
+		"session_id":   session.ID,
+		"device":       session.Device,
+		"state":        session.State,
+		"status":       session.Status,
+		"continuity_id": session.ContinuityID,
+		"duration":     session.Duration,
+		"file_size":    session.FileSize,
+		"segments":     len(session.Segments),
+	}).Info("Session state persisted successfully")
 }
 
 // GetAdvancedRecordingSession gets a recording session

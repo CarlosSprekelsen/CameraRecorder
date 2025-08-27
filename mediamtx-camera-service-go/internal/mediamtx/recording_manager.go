@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -612,16 +613,16 @@ func (rm *RecordingManager) startNewSegment(ctx context.Context, session *Record
 	}
 
 	// Build FFmpeg command for segment-based recording
-	ffmpegCmd := rm.buildSegmentFFmpegCommand(session.DevicePath, segmentPath)
+	ffmpegCmd := rm.buildSegmentFFmpegCommand(session.Device, segmentPath)
 
 	// Start FFmpeg process
-	if err := rm.ffmpegManager.StartProcess(ctx, segmentID, ffmpegCmd); err != nil {
+	_, err := rm.ffmpegManager.StartProcess(ctx, ffmpegCmd, segmentPath)
+	if err != nil {
 		return fmt.Errorf("failed to start FFmpeg process: %w", err)
 	}
 
-	// Update session
-	session.CurrentSegment = segment
-	session.Segments = append(session.Segments, segment)
+	// Update session - store segment ID in segments list
+	session.Segments = append(session.Segments, segmentID)
 
 	// Store segment in segment manager
 	rm.segmentManager.mu.Lock()
@@ -707,24 +708,36 @@ func (rm *RecordingManager) rotateSegment(ctx context.Context, session *Recordin
 	session.mu.Lock()
 	defer session.mu.Unlock()
 
-	if session.CurrentSegment == nil {
-		return fmt.Errorf("no current segment to rotate")
+	if len(session.Segments) == 0 {
+		return fmt.Errorf("no segments to rotate")
+	}
+
+	// Get current segment ID
+	currentSegmentID := session.Segments[len(session.Segments)-1]
+
+	// Get segment from manager
+	rm.segmentManager.mu.RLock()
+	currentSegment, exists := rm.segmentManager.segments[currentSegmentID]
+	rm.segmentManager.mu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("current segment not found: %s", currentSegmentID)
 	}
 
 	// End current segment
-	session.CurrentSegment.EndTime = time.Now()
-	session.CurrentSegment.Duration = session.CurrentSegment.EndTime.Sub(session.CurrentSegment.StartTime)
+	currentSegment.EndTime = time.Now()
+	currentSegment.Duration = currentSegment.EndTime.Sub(currentSegment.StartTime)
 
 	// Get file size
-	if fileInfo, err := os.Stat(session.CurrentSegment.FilePath); err == nil {
-		session.CurrentSegment.Size = fileInfo.Size()
+	if fileInfo, err := os.Stat(currentSegment.FilePath); err == nil {
+		currentSegment.Size = fileInfo.Size()
 	}
 
 	rm.logger.WithFields(logrus.Fields{
 		"session_id": session.ID,
-		"segment_id": session.CurrentSegment.ID,
-		"duration":   session.CurrentSegment.Duration,
-		"size":       session.CurrentSegment.Size,
+		"segment_id": currentSegment.ID,
+		"duration":   currentSegment.Duration,
+		"size":       currentSegment.Size,
 	}).Info("Rotated recording segment")
 
 	// Start new segment
@@ -749,7 +762,17 @@ func (rm *RecordingManager) cleanupOldSegments(session *RecordingSession) {
 	// Remove oldest segments
 	segmentsToRemove := len(session.Segments) - config.MaxSegments
 	for i := 0; i < segmentsToRemove; i++ {
-		segment := session.Segments[i]
+		segmentID := session.Segments[i]
+
+		// Get segment from manager
+		rm.segmentManager.mu.RLock()
+		segment, exists := rm.segmentManager.segments[segmentID]
+		rm.segmentManager.mu.RUnlock()
+
+		if !exists {
+			rm.logger.WithField("segment_id", segmentID).Warning("Segment not found in manager")
+			continue
+		}
 
 		// Remove file
 		if err := os.Remove(segment.FilePath); err != nil {
@@ -758,7 +781,7 @@ func (rm *RecordingManager) cleanupOldSegments(session *RecordingSession) {
 
 		// Remove from segment manager
 		rm.segmentManager.mu.Lock()
-		delete(rm.segmentManager.segments, segment.ID)
+		delete(rm.segmentManager.segments, segmentID)
 		rm.segmentManager.mu.Unlock()
 
 		rm.logger.WithField("segment_path", segment.FilePath).Info("Removed old segment file")
@@ -790,7 +813,17 @@ func (rm *RecordingManager) GetRecordingContinuity(sessionID string) (*Recording
 		Segments:      make([]*SegmentInfo, len(session.Segments)),
 	}
 
-	for i, segment := range session.Segments {
+	for i, segmentID := range session.Segments {
+		// Get segment from manager
+		rm.segmentManager.mu.RLock()
+		segment, exists := rm.segmentManager.segments[segmentID]
+		rm.segmentManager.mu.RUnlock()
+
+		if !exists {
+			rm.logger.WithField("segment_id", segmentID).Warning("Segment not found in manager")
+			continue
+		}
+
 		continuity.Segments[i] = &SegmentInfo{
 			ID:        segment.ID,
 			FilePath:  segment.FilePath,
@@ -997,11 +1030,15 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 			DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
 		}
 
-		// Add duration for video files (will be implemented when video metadata extraction is available)
+		// Add duration for video files with comprehensive metadata extraction
 		if isVideo {
-			// TODO: Extract duration from video file metadata
-			// For now, set to nil as specified in the plan
-			fileMetadata.Duration = nil
+			duration, err := rm.extractVideoDuration(ctx, filepath.Join(recordingsDir, filename))
+			if err != nil {
+				rm.logger.WithError(err).WithField("filename", filename).Warn("Failed to extract video duration")
+				fileMetadata.Duration = nil
+			} else {
+				fileMetadata.Duration = &duration
+			}
 		}
 
 		files = append(files, fileMetadata)
@@ -1036,6 +1073,44 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 		Limit:  limit,
 		Offset: offset,
 	}, nil
+}
+
+// extractVideoDuration extracts duration from video file using FFmpeg
+func (rm *RecordingManager) extractVideoDuration(ctx context.Context, filePath string) (int64, error) {
+	rm.logger.WithField("file_path", filePath).Debug("Extracting video duration")
+
+	// Use FFmpeg to get video duration
+	command := []string{
+		"ffprobe",
+		"-v", "quiet",
+		"-show_entries", "format=duration",
+		"-of", "csv=p=0",
+		filePath,
+	}
+
+	// Execute command with timeout
+	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to extract video duration: %w", err)
+	}
+
+	// Parse duration from output
+	durationStr := strings.TrimSpace(string(output))
+	duration, err := strconv.ParseFloat(durationStr, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse duration: %w", err)
+	}
+
+	// Convert to seconds (int64)
+	durationSeconds := int64(duration)
+
+	rm.logger.WithFields(logrus.Fields{
+		"file_path": filePath,
+		"duration":  durationSeconds,
+	}).Debug("Video duration extracted successfully")
+
+	return durationSeconds, nil
 }
 
 // GetRecordingInfo gets detailed information about a specific recording file
