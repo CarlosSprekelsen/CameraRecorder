@@ -528,3 +528,49 @@ func (h *healthMonitor) GetDetailedStatus() HealthStatus {
 
 	return detailedStatus
 }
+
+// Real health check methods (Phase 4 enhancement)
+
+// performRealHealthCheck performs a real health check against MediaMTX
+func (h *healthMonitor) performRealHealthCheck() (*HealthStatus, error) {
+	// Use existing MediaMTX client for health checks
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := h.client.HealthCheck(ctx)
+	if err != nil {
+		return &HealthStatus{
+			Status:    "unhealthy",
+			Details:   err.Error(),
+			Timestamp: time.Now(),
+		}, nil
+	}
+
+	// Parse health data and return status
+	return &HealthStatus{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+		Details:   "MediaMTX service is healthy",
+	}, nil
+}
+
+// getBasicStatus returns basic health status without real checks
+func (h *healthMonitor) getBasicStatus() HealthStatus {
+	h.stateMutex.RLock()
+	defer h.stateMutex.RUnlock()
+
+	status := "unknown"
+	if h.state == CircuitClosed {
+		status = "healthy"
+	} else if h.state == CircuitOpen {
+		status = "unhealthy"
+	} else if h.state == CircuitHalfOpen {
+		status = "degraded"
+	}
+
+	return HealthStatus{
+		Status:    status,
+		Timestamp: time.Now(),
+		Details:   fmt.Sprintf("Circuit state: %s, Failure count: %d", h.state, h.failureCount),
+	}
+}

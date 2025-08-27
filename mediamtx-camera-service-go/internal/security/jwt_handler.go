@@ -3,6 +3,7 @@ package security
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -26,13 +27,27 @@ var ValidRoles = map[string]bool{
 	"admin":    true,
 }
 
+// ClientRateInfo represents rate limiting information for a client
+type ClientRateInfo struct {
+	ClientID    string
+	RequestCount int64
+	LastRequest  time.Time
+	WindowStart  time.Time
+}
+
 // JWTHandler manages JWT token generation and validation.
 // Implements JWT authentication with HS256 algorithm, configurable expiry,
-// and role-based access control as specified in Architecture Decision AD-7.
+// role-based access control, and rate limiting as specified in Architecture Decision AD-7.
 type JWTHandler struct {
 	secretKey string
 	algorithm string
 	logger    *logrus.Logger
+	
+	// Rate limiting extensions (Phase 1 enhancement)
+	clientRates map[string]*ClientRateInfo
+	rateMutex   sync.RWMutex
+	rateLimit   int64  // Requests per window
+	rateWindow  time.Duration // Time window for rate limiting
 }
 
 // NewJWTHandler creates a new JWT handler instance.
@@ -46,9 +61,18 @@ func NewJWTHandler(secretKey string) (*JWTHandler, error) {
 		secretKey: secretKey,
 		algorithm: "HS256",
 		logger:    logrus.New(),
+		
+		// Rate limiting initialization (Phase 1 enhancement)
+		clientRates: make(map[string]*ClientRateInfo),
+		rateLimit:   100, // Default: 100 requests per window
+		rateWindow:  time.Minute, // Default: 1 minute window
 	}
 
-	handler.logger.WithField("algorithm", handler.algorithm).Info("JWT handler initialized")
+	handler.logger.WithFields(logrus.Fields{
+		"algorithm": handler.algorithm,
+		"rate_limit": handler.rateLimit,
+		"rate_window": handler.rateWindow,
+	}).Info("JWT handler initialized with rate limiting")
 	return handler, nil
 }
 
@@ -99,6 +123,139 @@ func (h *JWTHandler) GenerateToken(userID, role string, expiryHours int) (string
 	}).Debug("JWT token generated successfully")
 
 	return tokenString, nil
+}
+
+// Rate limiting methods (Phase 1 enhancement)
+
+// CheckRateLimit checks if a client has exceeded the rate limit
+func (h *JWTHandler) CheckRateLimit(clientID string) bool {
+	h.rateMutex.Lock()
+	defer h.rateMutex.Unlock()
+
+	now := time.Now()
+	clientRate, exists := h.clientRates[clientID]
+
+	if !exists {
+		// First request for this client
+		h.clientRates[clientID] = &ClientRateInfo{
+			ClientID:     clientID,
+			RequestCount: 1,
+			LastRequest:  now,
+			WindowStart:  now,
+		}
+		return true
+	}
+
+	// Check if we're in a new time window
+	if now.Sub(clientRate.WindowStart) >= h.rateWindow {
+		// Reset for new window
+		clientRate.RequestCount = 1
+		clientRate.WindowStart = now
+		clientRate.LastRequest = now
+		return true
+	}
+
+	// Check if within rate limit
+	if clientRate.RequestCount >= h.rateLimit {
+		h.logger.WithFields(logrus.Fields{
+			"client_id":     clientID,
+			"request_count": clientRate.RequestCount,
+			"rate_limit":    h.rateLimit,
+			"window_start":  clientRate.WindowStart,
+		}).Warn("Rate limit exceeded for client")
+		return false
+	}
+
+	// Increment request count
+	clientRate.RequestCount++
+	clientRate.LastRequest = now
+
+	return true
+}
+
+// RecordRequest records a request for rate limiting (alternative to CheckRateLimit)
+func (h *JWTHandler) RecordRequest(clientID string) {
+	h.rateMutex.Lock()
+	defer h.rateMutex.Unlock()
+
+	now := time.Now()
+	clientRate, exists := h.clientRates[clientID]
+
+	if !exists {
+		h.clientRates[clientID] = &ClientRateInfo{
+			ClientID:     clientID,
+			RequestCount: 1,
+			LastRequest:  now,
+			WindowStart:  now,
+		}
+		return
+	}
+
+	// Check if we're in a new time window
+	if now.Sub(clientRate.WindowStart) >= h.rateWindow {
+		clientRate.RequestCount = 1
+		clientRate.WindowStart = now
+		clientRate.LastRequest = now
+		return
+	}
+
+	clientRate.RequestCount++
+	clientRate.LastRequest = now
+}
+
+// GetClientRateInfo returns rate limiting information for a client
+func (h *JWTHandler) GetClientRateInfo(clientID string) *ClientRateInfo {
+	h.rateMutex.RLock()
+	defer h.rateMutex.RUnlock()
+
+	if clientRate, exists := h.clientRates[clientID]; exists {
+		// Return a copy to avoid race conditions
+		return &ClientRateInfo{
+			ClientID:     clientRate.ClientID,
+			RequestCount: clientRate.RequestCount,
+			LastRequest:  clientRate.LastRequest,
+			WindowStart:  clientRate.WindowStart,
+		}
+	}
+
+	return nil
+}
+
+// SetRateLimit configures the rate limiting parameters
+func (h *JWTHandler) SetRateLimit(limit int64, window time.Duration) {
+	h.rateMutex.Lock()
+	defer h.rateMutex.Unlock()
+
+	h.rateLimit = limit
+	h.rateWindow = window
+
+	h.logger.WithFields(logrus.Fields{
+		"rate_limit":  limit,
+		"rate_window": window,
+	}).Info("Rate limiting configuration updated")
+}
+
+// CleanupExpiredClients removes rate limiting data for inactive clients
+func (h *JWTHandler) CleanupExpiredClients(maxInactive time.Duration) {
+	h.rateMutex.Lock()
+	defer h.rateMutex.Unlock()
+
+	now := time.Now()
+	expiredClients := []string{}
+
+	for clientID, clientRate := range h.clientRates {
+		if now.Sub(clientRate.LastRequest) > maxInactive {
+			expiredClients = append(expiredClients, clientID)
+		}
+	}
+
+	for _, clientID := range expiredClients {
+		delete(h.clientRates, clientID)
+	}
+
+	if len(expiredClients) > 0 {
+		h.logger.WithField("expired_clients", len(expiredClients)).Debug("Cleaned up expired client rate limiting data")
+	}
 }
 
 // ValidateToken validates a JWT token and extracts claims.

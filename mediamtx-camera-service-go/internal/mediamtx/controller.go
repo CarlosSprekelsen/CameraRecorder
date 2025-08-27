@@ -43,6 +43,10 @@ type controller struct {
 	// Recording sessions
 	sessions   map[string]*RecordingSession
 	sessionsMu sync.RWMutex
+
+	// Active recording tracking (Phase 2 enhancement)
+	activeRecordings map[string]*ActiveRecording
+	recordingMutex   sync.RWMutex
 }
 
 // NewController creates a new MediaMTX controller
@@ -84,7 +88,111 @@ func NewController(config *MediaMTXConfig, logger *logrus.Logger) (MediaMTXContr
 		config:           config,
 		logger:           logger,
 		sessions:         make(map[string]*RecordingSession),
+
+		// Active recording tracking initialization (Phase 2 enhancement)
+		activeRecordings: make(map[string]*ActiveRecording),
 	}, nil
+}
+
+// Active recording management methods (Phase 2 enhancement)
+
+// IsDeviceRecording checks if a device is currently recording
+func (c *controller) IsDeviceRecording(devicePath string) bool {
+	c.recordingMutex.RLock()
+	defer c.recordingMutex.RUnlock()
+
+	_, exists := c.activeRecordings[devicePath]
+	return exists
+}
+
+// StartActiveRecording starts tracking an active recording session
+func (c *controller) StartActiveRecording(devicePath, sessionID, streamName string) error {
+	c.recordingMutex.Lock()
+	defer c.recordingMutex.Unlock()
+
+	// Check for existing recording
+	if _, exists := c.activeRecordings[devicePath]; exists {
+		return fmt.Errorf("device %s is already recording", devicePath)
+	}
+
+	// Create active recording entry
+	c.activeRecordings[devicePath] = &ActiveRecording{
+		SessionID:  sessionID,
+		DevicePath: devicePath,
+		StartTime:  time.Now(),
+		StreamName: streamName,
+		Status:     "RECORDING",
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"device_path": devicePath,
+		"session_id":  sessionID,
+		"stream_name": streamName,
+	}).Info("Active recording started")
+
+	return nil
+}
+
+// StopActiveRecording stops tracking an active recording session
+func (c *controller) StopActiveRecording(devicePath string) error {
+	c.recordingMutex.Lock()
+	defer c.recordingMutex.Unlock()
+
+	recording, exists := c.activeRecordings[devicePath]
+	if !exists {
+		return fmt.Errorf("no active recording found for device %s", devicePath)
+	}
+
+	// Update status and remove from active recordings
+	recording.Status = "STOPPED"
+	delete(c.activeRecordings, devicePath)
+
+	c.logger.WithFields(logrus.Fields{
+		"device_path": devicePath,
+		"session_id":  recording.SessionID,
+		"duration":    time.Since(recording.StartTime),
+	}).Info("Active recording stopped")
+
+	return nil
+}
+
+// GetActiveRecordings returns all active recording sessions
+func (c *controller) GetActiveRecordings() map[string]*ActiveRecording {
+	c.recordingMutex.RLock()
+	defer c.recordingMutex.RUnlock()
+
+	// Return a copy to avoid race conditions
+	activeRecordings := make(map[string]*ActiveRecording)
+	for devicePath, recording := range c.activeRecordings {
+		activeRecordings[devicePath] = &ActiveRecording{
+			SessionID:  recording.SessionID,
+			DevicePath: recording.DevicePath,
+			StartTime:  recording.StartTime,
+			StreamName: recording.StreamName,
+			Status:     recording.Status,
+		}
+	}
+
+	return activeRecordings
+}
+
+// GetActiveRecording returns active recording for a specific device
+func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
+	c.recordingMutex.RLock()
+	defer c.recordingMutex.RUnlock()
+
+	if recording, exists := c.activeRecordings[devicePath]; exists {
+		// Return a copy to avoid race conditions
+		return &ActiveRecording{
+			SessionID:  recording.SessionID,
+			DevicePath: recording.DevicePath,
+			StartTime:  recording.StartTime,
+			StreamName: recording.StreamName,
+			Status:     recording.Status,
+		}
+	}
+
+	return nil
 }
 
 // NewControllerWithConfigManager creates a new MediaMTX controller with configuration integration
@@ -257,7 +365,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 
 	// Get enhanced health monitor metrics (Phase 1 enhancement)
 	healthMetrics := c.healthMonitor.GetMetrics()
-	
+
 	// Get health status for component information
 	healthStatus := c.healthMonitor.GetStatus()
 
@@ -295,13 +403,13 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	}
 
 	systemMetrics := &SystemMetrics{
-		RequestCount:       0, // Will be populated by WebSocket server
-		ResponseTime:       responseTime,
-		ErrorCount:         int64(healthMetrics["failure_count"].(int)),
-		ActiveConnections:  0, // Will be populated by WebSocket server
-		ComponentStatus:    componentStatus,
-		ErrorCounts:        errorCounts,
-		LastCheck:          healthStatus.LastCheck,
+		RequestCount:        0, // Will be populated by WebSocket server
+		ResponseTime:        responseTime,
+		ErrorCount:          int64(healthMetrics["failure_count"].(int)),
+		ActiveConnections:   0, // Will be populated by WebSocket server
+		ComponentStatus:     componentStatus,
+		ErrorCounts:         errorCounts,
+		LastCheck:           healthStatus.LastCheck,
 		CircuitBreakerState: circuitBreakerState,
 	}
 
@@ -705,10 +813,10 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 	session.Segments = make([]string, 0)
 
 	c.logger.WithFields(logrus.Fields{
-		"session_id":   session.ID,
-		"device":       device,
-		"status":       session.Status,
-		"state":        session.State,
+		"session_id":    session.ID,
+		"device":        device,
+		"status":        session.Status,
+		"state":         session.State,
 		"continuity_id": session.ContinuityID,
 	}).Info("Advanced recording session started successfully with full state tracking")
 
@@ -750,9 +858,9 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 	c.persistSessionState(session)
 
 	c.logger.WithFields(logrus.Fields{
-		"session_id":   sessionID,
-		"state":        session.State,
-		"duration":     session.Duration,
+		"session_id":    sessionID,
+		"state":         session.State,
+		"duration":      session.Duration,
 		"continuity_id": session.ContinuityID,
 	}).Info("Advanced recording stopped successfully with state persistence")
 
@@ -762,8 +870,8 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 // persistSessionState persists session state for Python equivalence
 func (c *controller) persistSessionState(session *RecordingSession) {
 	c.logger.WithFields(logrus.Fields{
-		"session_id":   session.ID,
-		"state":        session.State,
+		"session_id":    session.ID,
+		"state":         session.State,
 		"continuity_id": session.ContinuityID,
 	}).Debug("Persisting session state for Python equivalence")
 
@@ -774,14 +882,14 @@ func (c *controller) persistSessionState(session *RecordingSession) {
 
 	// Log session state for monitoring and debugging
 	c.logger.WithFields(logrus.Fields{
-		"session_id":   session.ID,
-		"device":       session.Device,
-		"state":        session.State,
-		"status":       session.Status,
+		"session_id":    session.ID,
+		"device":        session.Device,
+		"state":         session.State,
+		"status":        session.Status,
 		"continuity_id": session.ContinuityID,
-		"duration":     session.Duration,
-		"file_size":    session.FileSize,
-		"segments":     len(session.Segments),
+		"duration":      session.Duration,
+		"file_size":     session.FileSize,
+		"segments":      len(session.Segments),
 	}).Info("Session state persisted successfully")
 }
 

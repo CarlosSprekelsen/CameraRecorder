@@ -201,6 +201,15 @@ type FileMetadata struct {
 	DownloadURL string    `json:"download_url"`
 }
 
+// ActiveRecording represents an active recording session (Phase 2 enhancement)
+type ActiveRecording struct {
+	SessionID  string    `json:"session_id"`
+	DevicePath string    `json:"device_path"`
+	StartTime  time.Time `json:"start_time"`
+	StreamName string    `json:"stream_name"`
+	Status     string    `json:"status"`
+}
+
 // MediaMTXController interface defines MediaMTX operations
 type MediaMTXController interface {
 	// Health and status
@@ -257,6 +266,13 @@ type MediaMTXController interface {
 	// Lifecycle
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
+
+	// Active recording management (Phase 2 enhancement)
+	IsDeviceRecording(devicePath string) bool
+	StartActiveRecording(devicePath, sessionID, streamName string) error
+	StopActiveRecording(devicePath string) error
+	GetActiveRecordings() map[string]*ActiveRecording
+	GetActiveRecording(devicePath string) *ActiveRecording
 }
 
 // MediaMTXClient interface defines HTTP client operations

@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"syscall"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,6 +48,10 @@ type RecordingManager struct {
 
 	// Segment management
 	segmentManager *SegmentManager
+
+	// Storage thresholds (Phase 2 enhancement)
+	storageWarnPercent  int
+	storageBlockPercent int
 }
 
 // RotationSettings defines file rotation behavior
@@ -207,6 +213,8 @@ func NewRecordingManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, lo
 			logger:   logger,
 			segments: make(map[string]*Segment),
 		},
+		storageWarnPercent:  80,
+		storageBlockPercent: 90,
 	}
 
 	// Start storage monitoring
@@ -276,6 +284,12 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 		return nil, NewRecordingError(sessionID, device, "start_recording", "session already exists")
 	}
 	rm.sessionsMu.Unlock()
+
+	// Storage validation check (Phase 2 enhancement)
+	if _, err := rm.checkStorageSpace(); err != nil {
+		rm.logger.WithError(err).WithField("device", device).Error("Storage validation failed")
+		return nil, NewRecordingError(sessionID, device, "start_recording", "storage validation failed: "+err.Error())
+	}
 
 	// Create recording session with enhanced use case management (Phase 2 enhancement)
 	session := &RecordingSession{
@@ -451,11 +465,21 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 		go rm.monitorRecordingForRotation(ctx, sessionID)
 	}
 
+	// Schedule auto-stop if max duration is specified (Phase 3 enhancement)
+	if session.MaxDuration > 0 {
+		rm.scheduleAutoStop(ctx, sessionID, session.MaxDuration)
+		rm.logger.WithFields(logrus.Fields{
+			"session_id":   sessionID,
+			"max_duration": session.MaxDuration,
+		}).Debug("Auto-stop scheduled for recording")
+	}
+
 	rm.logger.WithFields(logrus.Fields{
-		"session_id": sessionID,
-		"device":     device,
-		"path":       path,
-		"pid":        pid,
+		"session_id":   sessionID,
+		"device":       device,
+		"path":         path,
+		"pid":          pid,
+		"max_duration": session.MaxDuration,
 	}).Info("Advanced recording started successfully")
 
 	return session, nil
@@ -1477,4 +1501,85 @@ func (rm *RecordingManager) cleanupExpiredFile(ctx context.Context, session *Rec
 	}
 
 	return nil
+}
+
+// Storage validation methods (Phase 2 enhancement)
+
+// checkStorageSpace checks available storage space and returns status
+func (rm *RecordingManager) checkStorageSpace() (*StorageInfo, error) {
+	// Get storage path from config
+	storagePath := "/opt/camera-service/recordings"
+	if rm.config != nil && rm.config.RecordingsPath != "" {
+		storagePath = rm.config.RecordingsPath
+	}
+
+	// Get file system statistics
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(storagePath, &stat); err != nil {
+		return nil, fmt.Errorf("failed to get storage info: %w", err)
+	}
+
+	// Calculate storage metrics
+	totalSpace := int64(stat.Blocks) * int64(stat.Bsize)
+	availableSpace := int64(stat.Bavail) * int64(stat.Bsize)
+	usedSpace := totalSpace - availableSpace
+	usagePercent := int((usedSpace * 100) / totalSpace)
+
+	storageInfo := &StorageInfo{
+		TotalSpace:     totalSpace,
+		AvailableSpace: availableSpace,
+		UsedSpace:      usedSpace,
+		UsagePercent:   usagePercent,
+		WarnThreshold:  rm.storageWarnPercent,
+		BlockThreshold: rm.storageBlockPercent,
+	}
+
+	// Check against thresholds
+	if usagePercent >= rm.storageBlockPercent {
+		return storageInfo, fmt.Errorf("storage space critical (%d%% used)", usagePercent)
+	}
+
+	if usagePercent >= rm.storageWarnPercent {
+		rm.logger.WithFields(logrus.Fields{
+			"usage_percent":  usagePercent,
+			"warn_threshold": rm.storageWarnPercent,
+			"storage_path":   storagePath,
+		}).Warn("Storage usage high")
+	}
+
+	return storageInfo, nil
+}
+
+// Auto-stop functionality methods (Phase 3 enhancement)
+
+// scheduleAutoStop schedules automatic stopping of a recording after a specified duration
+func (rm *RecordingManager) scheduleAutoStop(ctx context.Context, sessionID string, duration time.Duration) {
+	go func() {
+		timer := time.NewTimer(duration)
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+			// Auto-stop the recording
+			if err := rm.StopRecording(ctx, sessionID); err != nil {
+				rm.logger.WithError(err).WithField("session_id", sessionID).Error("Auto-stop failed")
+			} else {
+				rm.logger.WithField("session_id", sessionID).Info("Recording auto-stopped after duration")
+			}
+		case <-ctx.Done():
+			// Context cancelled, don't auto-stop
+			rm.logger.WithField("session_id", sessionID).Debug("Auto-stop cancelled due to context cancellation")
+			return
+		}
+	}()
+}
+
+// StorageInfo represents storage space information
+type StorageInfo struct {
+	TotalSpace     int64 `json:"total_space"`
+	AvailableSpace int64 `json:"available_space"`
+	UsedSpace      int64 `json:"used_space"`
+	UsagePercent   int   `json:"usage_percent"`
+	WarnThreshold  int   `json:"warn_threshold"`
+	BlockThreshold int   `json:"block_threshold"`
 }
