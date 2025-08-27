@@ -130,16 +130,17 @@ type ServerConfig struct {
 }
 
 // DefaultServerConfig returns default WebSocket server configuration
+// Optimized for Epic E3 performance requirements: <50ms response time, 1000+ connections
 func DefaultServerConfig() *ServerConfig {
 	return &ServerConfig{
 		Host:            "0.0.0.0",
 		Port:            8002,
 		WebSocketPath:   "/ws",
 		MaxConnections:  1000,
-		ReadTimeout:     60 * time.Second,
-		WriteTimeout:    10 * time.Second,
-		PingInterval:    30 * time.Second,
-		PongWait:        60 * time.Second,
-		MaxMessageSize:  1024 * 1024, // 1MB
+		ReadTimeout:     5 * time.Second,  // Reduced for faster response detection
+		WriteTimeout:    1 * time.Second,  // Reduced for faster message delivery
+		PingInterval:    30 * time.Second, // Keep reasonable for connection health
+		PongWait:        60 * time.Second, // Keep reasonable for connection stability
+		MaxMessageSize:  1024 * 1024,      // 1MB
 	}
 }

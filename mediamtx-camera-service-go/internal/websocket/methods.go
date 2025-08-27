@@ -26,10 +26,10 @@ import (
 // Following Python _register_builtin_methods patterns
 func (s *WebSocketServer) registerBuiltinMethods() {
 	// Core methods
-	s.registerMethod("ping", s.methodPing, "1.0")
-	s.registerMethod("authenticate", s.methodAuthenticate, "1.0")
-	s.registerMethod("get_camera_list", s.methodGetCameraList, "1.0")
-	s.registerMethod("get_camera_status", s.methodGetCameraStatus, "1.0")
+	s.registerMethod("ping", s.MethodPing, "1.0")
+	s.registerMethod("authenticate", s.MethodAuthenticate, "1.0")
+	s.registerMethod("get_camera_list", s.MethodGetCameraList, "1.0")
+	s.registerMethod("get_camera_status", s.MethodGetCameraStatus, "1.0")
 
 	s.logger.WithField("action", "register_methods").Info("Built-in methods registered")
 }
@@ -49,9 +49,9 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 	}).Debug("Method registered")
 }
 
-// methodPing implements the ping method
+// MethodPing implements the ping method
 // Following Python _method_ping implementation
-func (s *WebSocketServer) methodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "ping",
@@ -65,9 +65,9 @@ func (s *WebSocketServer) methodPing(params map[string]interface{}, client *Clie
 	}, nil
 }
 
-// methodAuthenticate implements the authenticate method
+// MethodAuthenticate implements the authenticate method
 // Following Python _method_authenticate implementation
-func (s *WebSocketServer) methodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "authenticate",
@@ -138,9 +138,9 @@ func (s *WebSocketServer) methodAuthenticate(params map[string]interface{}, clie
 	}, nil
 }
 
-// methodGetCameraList implements the get_camera_list method
+// MethodGetCameraList implements the get_camera_list method
 // Following Python _method_get_camera_list implementation
-func (s *WebSocketServer) methodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_camera_list",
@@ -160,7 +160,7 @@ func (s *WebSocketServer) methodGetCameraList(params map[string]interface{}, cli
 
 	// Get camera list from camera monitor
 	cameras := s.cameraMonitor.GetConnectedCameras()
-	
+
 	// Convert camera list to response format
 	cameraList := make([]map[string]interface{}, 0, len(cameras))
 	connectedCount := 0
@@ -178,7 +178,7 @@ func (s *WebSocketServer) methodGetCameraList(params map[string]interface{}, cli
 			"status":     string(camera.Status),
 			"name":       camera.Name,
 			"resolution": resolution,
-			"fps":        30, // Default FPS - can be enhanced later
+			"fps":        30,                      // Default FPS - can be enhanced later
 			"streams":    make(map[string]string), // Empty streams for now
 		}
 
@@ -190,11 +190,11 @@ func (s *WebSocketServer) methodGetCameraList(params map[string]interface{}, cli
 	}
 
 	s.logger.WithFields(logrus.Fields{
-		"client_id":      client.ClientID,
-		"method":         "get_camera_list",
-		"total_cameras":  len(cameras),
-		"connected":      connectedCount,
-		"action":         "camera_list_success",
+		"client_id":     client.ClientID,
+		"method":        "get_camera_list",
+		"total_cameras": len(cameras),
+		"connected":     connectedCount,
+		"action":        "camera_list_success",
 	}).Debug("Camera list retrieved successfully")
 
 	// Return camera list following Python implementation
@@ -208,9 +208,9 @@ func (s *WebSocketServer) methodGetCameraList(params map[string]interface{}, cli
 	}, nil
 }
 
-// methodGetCameraStatus implements the get_camera_status method
+// MethodGetCameraStatus implements the get_camera_status method
 // Following Python _method_get_camera_status implementation
-func (s *WebSocketServer) methodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_camera_status",
@@ -277,8 +277,8 @@ func (s *WebSocketServer) methodGetCameraStatus(params map[string]interface{}, c
 			"status":       string(camera.Status),
 			"name":         camera.Name,
 			"resolution":   resolution,
-			"fps":          30, // Default FPS - can be enhanced later
-			"streams":      make(map[string]string), // Empty streams for now
+			"fps":          30,                           // Default FPS - can be enhanced later
+			"streams":      make(map[string]string),      // Empty streams for now
 			"metrics":      make(map[string]interface{}), // Empty metrics for now
 			"capabilities": camera.Capabilities,
 		},

@@ -280,7 +280,7 @@ type WebSocketHandler interface {
 
 #### **Task T3.1.3: Implement JSON-RPC 2.0 protocol**
 - **Request/Response**: Full JSON-RPC 2.0 request and response handling
-- **Error Codes**: Implement all JSON-RPC error codes from Python system
+- **Error Codes**: Implement all JSON-RPC error codes from Python system (validate against requirements and API)
 - **Method Registration**: Dynamic method registration system
 - **Notification Support**: Support for JSON-RPC notifications
 
