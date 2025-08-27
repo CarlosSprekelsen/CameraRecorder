@@ -1,38 +1,179 @@
 # Go Migration Project Plan
 
-**Version:** 1.0  
+**Version:** 2.0  
 **Date:** 2025-01-15  
-**Status:** Approved Migration Strategy  
-**Related Epic/Story:** Go Implementation Migration  
+**Status:** Approved Migration Strategy with Ecosystem Integration  
+**Related Epic/Story:** Go Implementation Migration with Ecosystem Foundation  
 
 ## Executive Summary
 
-This document outlines the comprehensive migration strategy from Python to Go implementation of the MediaMTX Camera Service. The plan follows a progressive vertical slice approach with foundation-first development, ensuring low risk and quick path to success.
+This document outlines the comprehensive migration strategy from Python to Go implementation of the MediaMTX Camera Service, addressing critical ecosystem integration gaps identified in the Python implementation. The plan follows a progressive vertical slice approach with foundation-first development, ensuring low risk and quick path to success while establishing proper ecosystem integration patterns.
 
 ### Migration Goals
 - **Performance**: 5x improvement in response time and throughput
 - **Concurrency**: 10x improvement (100 → 1000+ connections)
 - **Resource Usage**: 50% reduction in memory footprint
 - **Compatibility**: 100% API compatibility with Python implementation
-- **Risk Management**: Incremental delivery with clear validation gates
+- **Ecosystem Integration**: Service discovery, mixed video sources, resource management, and platform conformance
+- **Risk Management**: Incremental delivery with clear validation gates and foundation-first approach
 
 ### Success Criteria
 - All JSON-RPC methods return identical responses to Python system
 - Performance targets met: <50ms status, <100ms control operations
 - Memory usage <60MB base, <200MB with 10 cameras
 - 1000+ concurrent WebSocket connections supported
+- **Ecosystem Integration**: Service discovery registration, mixed source management, resource constraint compliance
+- **Platform Conformance**: Container standards compliance, structured observability, graceful shutdown
+
+### Foundation Requirements
+- **Service Discovery Integration**: Aggregator registration, health reporting, capability advertisement
+- **Mixed Video Source Management**: USB + RTSP unified abstraction, configuration-driven source management
+- **Resource Management**: Hardware constraint tracking (8-port limit), multi-container coordination
+- **Platform Integration**: Container conformance, structured logging, metrics exposition, signal handling
 
 ---
 
 
 ## Epic/Story/Task Breakdown
 
-### **EPIC E1: Foundation Infrastructure** 
-**Goal**: Establish core Go infrastructure and configuration management  
-**Duration**: 2-3 sprints  
-**Control Gate**: All foundation modules must pass unit tests and IV&V validation  
+### **EPIC E0: Requirements Foundation & Baseline**
+**Goal**: Establish comprehensive requirements baseline for ecosystem integration  
+**Duration**: 2 sprints  
+**Control Gate**: All foundation requirements must be defined and validated  
 **Dependencies**: None  
-**Status**: ✅ **COMPLETED** - All foundation modules implemented and validated 
+**Status**: 🔄 **IN PROGRESS** - Foundation requirements definition  
+
+#### **Story S0.1: Service Discovery Requirements Definition**
+**Tasks**:
+- **T0.1.1**: Define service registration requirements (REQ-DISC-001) (Requirements Engineer)
+- **T0.1.2**: Define health reporting requirements (REQ-DISC-002) (Requirements Engineer)
+- **T0.1.3**: Define capability advertisement requirements (REQ-DISC-003) (Requirements Engineer)
+- **T0.1.4**: Define service metadata schema requirements (REQ-DISC-004) (Requirements Engineer)
+- **T0.1.5**: Define heartbeat and keepalive requirements (REQ-DISC-005) (Requirements Engineer)
+- **T0.1.6**: Define clean deregistration requirements (REQ-DISC-006) (Requirements Engineer)
+- **T0.1.7**: IV&V validate service discovery requirements (IV&V)
+- **T0.1.8**: PM approve service discovery requirements (PM)
+
+**Control Point**: All service discovery requirements must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Requirements specification document, validation test cases  
+
+#### **Story S0.2: Mixed Video Source Requirements Definition**
+**Tasks**:
+- **T0.2.1**: Define YAML configuration-driven RTSP feed requirements (REQ-SOURCE-001) (Requirements Engineer)
+- **T0.2.2**: Define VID:PID device assignment requirements (REQ-SOURCE-002) (Requirements Engineer)
+- **T0.2.3**: Define unified video source abstraction requirements (REQ-SOURCE-003) (Requirements Engineer)
+- **T0.2.4**: Define mixed source lifecycle management requirements (REQ-SOURCE-004) (Requirements Engineer)
+- **T0.2.5**: Define source authentication and credential requirements (REQ-SOURCE-005) (Requirements Engineer)
+- **T0.2.6**: IV&V validate mixed source requirements (IV&V)
+- **T0.2.7**: PM approve mixed source requirements (PM)
+
+**Control Point**: All mixed source requirements must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Requirements specification document, validation test cases  
+
+#### **Story S0.3: Resource Management Requirements Definition**
+**Tasks**:
+- **T0.3.1**: Define hardware constraint tracking requirements (REQ-RESOURCE-001) (Requirements Engineer)
+- **T0.3.2**: Define resource capacity reporting requirements (REQ-RESOURCE-002) (Requirements Engineer)
+- **T0.3.3**: Define stream count monitoring requirements (REQ-RESOURCE-003) (Requirements Engineer)
+- **T0.3.4**: Define load balancing coordination requirements (REQ-RESOURCE-004) (Requirements Engineer)
+- **T0.3.5**: Define multi-container resource coordination requirements (REQ-RESOURCE-005) (Requirements Engineer)
+- **T0.3.6**: IV&V validate resource management requirements (IV&V)
+- **T0.3.7**: PM approve resource management requirements (PM)
+
+**Control Point**: All resource management requirements must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Requirements specification document, validation test cases  
+
+#### **Story S0.4: Platform Integration Requirements Definition**
+**Tasks**:
+- **T0.4.1**: Define container conformance requirements (REQ-PLATFORM-001) (Requirements Engineer)
+- **T0.4.2**: Define structured logging requirements (REQ-PLATFORM-002) (Requirements Engineer)
+- **T0.4.3**: Define metrics exposition requirements (REQ-PLATFORM-003) (Requirements Engineer)
+- **T0.4.4**: Define back-pressure handling requirements (REQ-PLATFORM-004) (Requirements Engineer)
+- **T0.4.5**: Define graceful shutdown requirements (REQ-PLATFORM-005) (Requirements Engineer)
+- **T0.4.6**: IV&V validate platform integration requirements (IV&V)
+- **T0.4.7**: PM approve platform integration requirements (PM)
+
+**Control Point**: All platform integration requirements must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Requirements specification document, validation test cases  
+
+---
+
+### **EPIC E0.5: Architecture Foundation & Decisions**
+**Goal**: Establish architecture decisions and patterns for ecosystem integration  
+**Duration**: 2 sprints  
+**Control Gate**: All architecture decisions must be documented and validated  
+**Dependencies**: Epic E0 (Requirements Foundation)  
+**Status**: 🔄 **IN PROGRESS** - Architecture foundation definition  
+
+#### **Story S0.5.1: Service Discovery Architecture Decision (AD-ECO-001)**
+**Tasks**:
+- **T0.5.1.1**: Define service registration architecture pattern (Architect)
+- **T0.5.1.2**: Define registration data format and timing (Architect)
+- **T0.5.1.3**: Define health reporting patterns and frequency (Architect)
+- **T0.5.1.4**: Define failure handling when aggregator unavailable (Architect)
+- **T0.5.1.5**: Document AD-ECO-001 architecture decision (Architect)
+- **T0.5.1.6**: IV&V validate service discovery architecture (IV&V)
+- **T0.5.1.7**: PM approve service discovery architecture (PM)
+
+**Control Point**: Service discovery architecture must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Architecture decision document, validation test cases  
+
+#### **Story S0.5.2: Mixed Source Management Architecture Decision (AD-ECO-002)**
+**Tasks**:
+- **T0.5.2.1**: Define RTSP and USB source unification pattern (Architect)
+- **T0.5.2.2**: Define configuration schema for mixed sources (Architect)
+- **T0.5.2.3**: Define path management strategy for MediaMTX (Architect)
+- **T0.5.2.4**: Define source priority and fallback handling (Architect)
+- **T0.5.2.5**: Document AD-ECO-002 architecture decision (Architect)
+- **T0.5.2.6**: IV&V validate mixed source architecture (IV&V)
+- **T0.5.2.7**: PM approve mixed source architecture (PM)
+
+**Control Point**: Mixed source architecture must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Architecture decision document, validation test cases  
+
+#### **Story S0.5.3: Resource Constraint Architecture Decision (AD-ECO-003)**
+**Tasks**:
+- **T0.5.3.1**: Define 8-port hardware limit enforcement pattern (Architect)
+- **T0.5.3.2**: Define resource tracking and reporting mechanisms (Architect)
+- **T0.5.3.3**: Define multi-container coordination approach (Architect)
+- **T0.5.3.4**: Define load balancing and capacity management (Architect)
+- **T0.5.3.5**: Document AD-ECO-003 architecture decision (Architect)
+- **T0.5.3.6**: IV&V validate resource constraint architecture (IV&V)
+- **T0.5.3.7**: PM approve resource constraint architecture (PM)
+
+**Control Point**: Resource constraint architecture must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Architecture decision document, validation test cases  
+
+#### **Story S0.5.4: Platform Integration Architecture Decision (AD-ECO-004)**
+**Tasks**:
+- **T0.5.4.1**: Define container conformance implementation approach (Architect)
+- **T0.5.4.2**: Define logging and metrics standardization (Architect)
+- **T0.5.4.3**: Define signal handling and graceful shutdown (Architect)
+- **T0.5.4.4**: Define integration with platform management systems (Architect)
+- **T0.5.4.5**: Document AD-ECO-004 architecture decision (Architect)
+- **T0.5.4.6**: IV&V validate platform integration architecture (IV&V)
+- **T0.5.4.7**: PM approve platform integration architecture (PM)
+
+**Control Point**: Platform integration architecture must be complete and validated  
+**Status**: 🔄 IN PROGRESS  
+**Evidence**: Architecture decision document, validation test cases  
+
+---
+
+### **EPIC E1: Foundation Infrastructure** 
+**Goal**: Establish core Go infrastructure and configuration management with ecosystem integration foundation  
+**Duration**: 2-3 sprints  
+**Control Gate**: All foundation modules must pass unit tests and IV&V validation with ecosystem integration  
+**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation)  
+**Integration Requirements**: Must integrate with Requirements Foundation (Epic E0) and Architecture Foundation (Epic E0.5)  
+**Status**: 🔄 **IN PROGRESS** - Foundation modules with ecosystem integration 
 
 #### **Story S1.1: Configuration Management System**
 **Tasks**:
@@ -81,15 +222,36 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Remediation**: 1 sprint allowed, must demonstrate security parity  
 **Evidence**: Authentication tests, role-based access tests, comprehensive security test suite  
 
+#### **Story S1.4: Ecosystem Integration Foundation**
+**Tasks**:
+- **T1.4.1**: Implement aggregator endpoint configuration (Developer) - *use requirements from Epic E0*
+- **T1.4.2**: Add service discovery client foundation (Developer) - *use architecture from Epic E0.5*
+- **T1.4.3**: Implement mixed source configuration schema (Developer) - *use requirements from Epic E0*
+- **T1.4.4**: Add resource constraint tracking foundation (Developer) - *use architecture from Epic E0.5*
+- **T1.4.5**: Create ecosystem integration unit tests (Developer)
+- **T1.4.6**: IV&V validate ecosystem integration foundation (IV&V)
+- **T1.4.7**: PM approve ecosystem integration foundation (PM)
+- **T1.4.8**: **INTEGRATION TASK**: Integrate ecosystem foundation with configuration system (Developer) - *use config from Epic E1*
+- **T1.4.9**: **INTEGRATION TASK**: Validate ecosystem configuration integration (Developer)
+- **T1.4.10**: **INTEGRATION TASK**: Create ecosystem configuration integration tests (Developer)
+- **T1.4.11**: **ARCHITECTURE TASK**: IV&V validate ecosystem foundation integration (IV&V)
+- **T1.4.12**: **ARCHITECTURE TASK**: PM approve ecosystem foundation integration (PM)
+
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
+**Control Point**: Ecosystem integration foundation must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
+**Status**: 🔄 IN PROGRESS  
+**Remediation**: 1 sprint allowed, must demonstrate ecosystem compliance  
+**Evidence**: Ecosystem integration tests, configuration validation tests, architecture compliance validation  
+
 ---
 
 ### **EPIC E2: Camera Discovery System**
-**Goal**: Implement USB camera detection and monitoring with 5x performance improvement  
+**Goal**: Implement USB camera detection and monitoring with 5x performance improvement and ecosystem integration  
 **Duration**: 2-3 sprints  
-**Control Gate**: Camera discovery must detect devices in <200ms  
-**Dependencies**: Epic E1 (Foundation Infrastructure)  
-**Integration Requirements**: Must integrate with Configuration Management System from Epic E1  
-**Status**: ✅ **COMPLETED** - All performance targets exceeded (73.7ms vs 200ms requirement)  
+**Control Gate**: Camera discovery must detect devices in <200ms with ecosystem integration  
+**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation), Epic E1 (Foundation Infrastructure)  
+**Integration Requirements**: Must integrate with Configuration Management System (Epic E1), Requirements Foundation (Epic E0), and Architecture Foundation (Epic E0.5)  
+**Status**: 🔄 **IN PROGRESS** - Camera discovery with ecosystem integration  
 
 #### **Story S2.1: V4L2 Camera Interface**
 **Tasks**:
@@ -131,6 +293,27 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Control Point**: Must handle connect/disconnect events with <20ms notification, no violation of rules  
 **Remediation**: 1 sprint allowed, must demonstrate event handling  
 **Evidence**: Event handling tests, notification latency tests, comprehensive monitoring integration  
+
+#### **Story S2.3: Mixed Video Source Support**
+**Tasks**:
+- **T2.3.1**: Implement RTSP feed configuration management (Developer) - *use requirements from Epic E0*
+- **T2.3.2**: Add unified video source abstraction layer (Developer) - *use architecture from Epic E0.5*
+- **T2.3.3**: Implement VID:PID device assignment integration (Developer) - *use requirements from Epic E0*
+- **T2.3.4**: Add mixed source lifecycle management (Developer) - *use architecture from Epic E0.5*
+- **T2.3.5**: Create mixed source unit tests (Developer)
+- **T2.3.6**: IV&V validate mixed source support (IV&V)
+- **T2.3.7**: PM approve mixed source support (PM)
+- **T2.3.8**: **INTEGRATION TASK**: Integrate mixed source with camera discovery system (Developer) - *use camera data from Epic E2*
+- **T2.3.9**: **INTEGRATION TASK**: Implement configuration-driven mixed source settings (Developer)
+- **T2.3.10**: **INTEGRATION TASK**: Create mixed source integration tests (Developer)
+- **T2.3.11**: **ARCHITECTURE TASK**: IV&V validate mixed source integration (IV&V)
+- **T2.3.12**: **ARCHITECTURE TASK**: PM approve mixed source integration (PM)
+
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
+**Control Point**: Mixed source support must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
+**Status**: 🔄 IN PROGRESS  
+**Remediation**: 1 sprint allowed, must demonstrate mixed source compliance  
+**Evidence**: Mixed source tests, unified abstraction tests, lifecycle management tests  
 
 ---
 
@@ -228,13 +411,86 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ---
 
-### **EPIC E5: Camera Control Operations**
-**Goal**: Implement snapshot and recording functionality  
-**Duration**: 2-3 sprints  
-**Control Gate**: All operations must complete in <100ms  
-**Dependencies**: Epic E4 (MediaMTX Integration)  
+### **EPIC E5: Ecosystem Integration**
+**Goal**: Implement comprehensive ecosystem integration with service discovery, mixed sources, and platform conformance  
+**Duration**: 3-4 sprints  
+**Control Gate**: All ecosystem integration must be functional and validated  
+**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation), Epic E1 (Foundation Infrastructure), Epic E2 (Camera Discovery), Epic E3 (WebSocket Server), Epic E4 (MediaMTX Integration)  
+**Integration Requirements**: Must integrate with all previous epics and comply with requirements from Epic E0 and architecture from Epic E0.5  
 
-#### **Story S5.1: Snapshot System**
+#### **Story S5.1: Service Discovery Client Implementation**
+**Tasks**:
+- **T5.1.1**: Implement service registration with aggregator (Developer) - *use requirements from Epic E0*
+- **T5.1.2**: Add periodic health reporting (Developer) - *use architecture from Epic E0.5*
+- **T5.1.3**: Implement capability advertisement (Developer) - *use requirements from Epic E0*
+- **T5.1.4**: Add heartbeat and keepalive mechanisms (Developer) - *use architecture from Epic E0.5*
+- **T5.1.5**: Create service discovery unit tests (Developer)
+- **T5.1.6**: IV&V validate service discovery implementation (IV&V)
+- **T5.1.7**: PM approve service discovery implementation (PM)
+- **T5.1.8**: **INTEGRATION TASK**: Integrate service discovery with configuration system (Developer) - *use config from Epic E1*
+- **T5.1.9**: **INTEGRATION TASK**: Integrate with camera discovery system (Developer) - *use camera data from Epic E2*
+- **T5.1.10**: **INTEGRATION TASK**: Create service discovery integration tests (Developer)
+- **T5.1.11**: **ARCHITECTURE TASK**: IV&V validate service discovery integration (IV&V)
+- **T5.1.12**: **ARCHITECTURE TASK**: PM approve service discovery integration (PM)
+
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
+**Control Point**: Service discovery must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
+**Status**: 🔄 IN PROGRESS  
+**Remediation**: 1 sprint allowed, must demonstrate service discovery compliance  
+**Evidence**: Service discovery tests, registration tests, health reporting tests  
+
+#### **Story S5.2: Resource Management Implementation**
+**Tasks**:
+- **T5.2.1**: Implement hardware constraint tracking (Developer) - *use requirements from Epic E0*
+- **T5.2.2**: Add resource capacity reporting (Developer) - *use architecture from Epic E0.5*
+- **T5.2.3**: Implement stream count monitoring (Developer) - *use requirements from Epic E0*
+- **T5.2.4**: Add load balancing coordination (Developer) - *use architecture from Epic E0.5*
+- **T5.2.5**: Create resource management unit tests (Developer)
+- **T5.2.6**: IV&V validate resource management implementation (IV&V)
+- **T5.2.7**: PM approve resource management implementation (PM)
+- **T5.2.8**: **INTEGRATION TASK**: Integrate resource management with MediaMTX system (Developer) - *use MediaMTX from Epic E4*
+- **T5.2.9**: **INTEGRATION TASK**: Integrate with WebSocket server (Developer) - *use WebSocket from Epic E3*
+- **T5.2.10**: **INTEGRATION TASK**: Create resource management integration tests (Developer)
+- **T5.2.11**: **ARCHITECTURE TASK**: IV&V validate resource management integration (IV&V)
+- **T5.2.12**: **ARCHITECTURE TASK**: PM approve resource management integration (PM)
+
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
+**Control Point**: Resource management must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
+**Status**: 🔄 IN PROGRESS  
+**Remediation**: 1 sprint allowed, must demonstrate resource management compliance  
+**Evidence**: Resource management tests, constraint tracking tests, capacity reporting tests  
+
+#### **Story S5.3: Platform Conformance Implementation**
+**Tasks**:
+- **T5.3.1**: Implement container conformance standards (Developer) - *use requirements from Epic E0*
+- **T5.3.2**: Add structured logging format (Developer) - *use architecture from Epic E0.5*
+- **T5.3.3**: Implement metrics exposition format (Developer) - *use requirements from Epic E0*
+- **T5.3.4**: Add back-pressure handling (Developer) - *use architecture from Epic E0.5*
+- **T5.3.5**: Create platform conformance unit tests (Developer)
+- **T5.3.6**: IV&V validate platform conformance implementation (IV&V)
+- **T5.3.7**: PM approve platform conformance implementation (PM)
+- **T5.3.8**: **INTEGRATION TASK**: Integrate platform conformance with logging system (Developer) - *use logging from Epic E1*
+- **T5.3.9**: **INTEGRATION TASK**: Integrate with monitoring system (Developer) - *use monitoring from Epic E7*
+- **T5.3.10**: **INTEGRATION TASK**: Create platform conformance integration tests (Developer)
+- **T5.3.11**: **ARCHITECTURE TASK**: IV&V validate platform conformance integration (IV&V)
+- **T5.3.12**: **ARCHITECTURE TASK**: PM approve platform conformance integration (PM)
+
+**Rules (MANDATORY)**: /docs/testing/testing-guide.md, docs/developemnt/go-coding-sandards
+**Control Point**: Platform conformance must comply with requirements from Epic E0 and architecture from Epic E0.5, no violation of rules  
+**Status**: 🔄 IN PROGRESS  
+**Remediation**: 1 sprint allowed, must demonstrate platform conformance compliance  
+**Evidence**: Platform conformance tests, structured logging tests, metrics exposition tests  
+
+---
+
+### **EPIC E6: Camera Control Operations**
+**Goal**: Implement snapshot and recording functionality with ecosystem integration  
+**Duration**: 2-3 sprints  
+**Control Gate**: All operations must complete in <100ms with ecosystem integration  
+**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation), Epic E4 (MediaMTX Integration), Epic E5 (Ecosystem Integration)  
+**Integration Requirements**: Must integrate with Ecosystem Integration (Epic E5) and comply with requirements from Epic E0 and architecture from Epic E0.5  
+
+#### **Story S6.1: Snapshot System**
 **Tasks**:
 - **T5.1.1**: Implement `take_snapshot` method (Developer) - *reference Python snapshot patterns*
 - **T5.1.2**: Add snapshot file management (Developer)
@@ -247,7 +503,7 @@ This document outlines the comprehensive migration strategy from Python to Go im
 **Remediation**: 1 sprint allowed, must demonstrate file compatibility  
 **Evidence**: Snapshot file tests, metadata validation tests  
 
-#### **Story S5.2: Recording System**
+#### **Story S6.2: Recording System**
 **Tasks**:
 - **T5.2.1**: Implement `start_recording` method (Developer) - *reference Python recording patterns*
 - **T5.2.2**: Implement `stop_recording` method (Developer) - *reference Python recording patterns*
@@ -299,10 +555,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 ---
 
 ### **EPIC E7: System Management & Monitoring**
-**Goal**: Implement system metrics, health monitoring, and observability  
+**Goal**: Implement system metrics, health monitoring, and observability with ecosystem integration  
 **Duration**: 2 sprints  
-**Control Gate**: All monitoring must provide identical data to Python system  
-**Dependencies**: Epic E3 (WebSocket Server), Epic E4 (MediaMTX Integration)  
+**Control Gate**: All monitoring must provide identical data to Python system with ecosystem integration  
+**Dependencies**: Epic E0 (Requirements Foundation), Epic E0.5 (Architecture Foundation), Epic E3 (WebSocket Server), Epic E4 (MediaMTX Integration), Epic E5 (Ecosystem Integration)  
+**Integration Requirements**: Must integrate with Ecosystem Integration (Epic E5) and comply with requirements from Epic E0 and architecture from Epic E0.5  
 
 #### **Story S7.1: System Metrics**
 **Tasks**:
@@ -333,10 +590,11 @@ This document outlines the comprehensive migration strategy from Python to Go im
 ---
 
 ### **EPIC E8: Integration & Validation**
-**Goal**: End-to-end integration testing and performance validation  
+**Goal**: End-to-end integration testing and performance validation with ecosystem integration  
 **Duration**: 2-3 sprints  
-**Control Gate**: Complete functional equivalence with 5x performance improvement  
-**Dependencies**: All previous epics  
+**Control Gate**: Complete functional equivalence with 5x performance improvement and ecosystem integration  
+**Dependencies**: All previous epics (E0, E0.5, E1, E2, E3, E4, E5, E6, E7)  
+**Integration Requirements**: Must validate integration with all epics and comply with requirements from Epic E0 and architecture from Epic E0.5  
 
 #### **Story S8.1: Integration Testing**
 **Tasks**:
@@ -368,7 +626,8 @@ This document outlines the comprehensive migration strategy from Python to Go im
 
 ## Integration and Architectural Compliance Rules
 
-### **Integration Requirements (Epic E2+)**
+### **Integration Requirements (Epic E1+)**
+- **Foundation Integration**: All epics must integrate with Requirements Foundation (Epic E0) and Architecture Foundation (Epic E0.5)
 - **Configuration Integration**: All epics must integrate with Configuration Management System (Epic E1)
 - **Cross-Epic Integration**: Each epic must integrate with all previous epics
 - **Architectural Validation**: IV&V must validate architectural compliance for each epic
@@ -380,16 +639,20 @@ This document outlines the comprehensive migration strategy from Python to Go im
 - **End-to-End Testing**: Full system integration tests from configuration to API response
 
 ### **Architectural Compliance Gates**
-- **Epic E2**: Must integrate with Configuration Management (Epic E1)
-- **Epic E3**: Must integrate with Configuration Management (Epic E1) + Camera Discovery (Epic E2)
-- **Epic E4**: Must integrate with Configuration Management (Epic E1) + Camera Discovery (Epic E2) + WebSocket Server (Epic E3)
-- **Epic E5+**: Must integrate with all previous epics
+- **Epic E1**: Must integrate with Requirements Foundation (Epic E0) + Architecture Foundation (Epic E0.5)
+- **Epic E2**: Must integrate with Foundation (E0, E0.5) + Configuration Management (Epic E1)
+- **Epic E3**: Must integrate with Foundation (E0, E0.5) + Configuration Management (Epic E1) + Camera Discovery (Epic E2)
+- **Epic E4**: Must integrate with Foundation (E0, E0.5) + Configuration Management (Epic E1) + Camera Discovery (Epic E2) + WebSocket Server (Epic E3)
+- **Epic E5**: Must integrate with Foundation (E0, E0.5) + All previous epics (E1, E2, E3, E4)
+- **Epic E6+**: Must integrate with Foundation (E0, E0.5) + All previous epics
 
 ## Control Point Rules
 
 ### **Go/No-Go Gates**
-- **Foundation Epics (E1)**: Must complete before proceeding to functional epics
-- **Core Epics (E2-E3)**: Must complete before proceeding to integration epics
+- **Foundation Epics (E0, E0.5)**: Must complete before proceeding to implementation epics
+- **Implementation Epics (E1-E4)**: Must complete before proceeding to ecosystem integration
+- **Ecosystem Epic (E5)**: Must complete before proceeding to functional epics
+- **Functional Epics (E6-E7)**: Must complete before proceeding to final integration
 - **Integration Epic (E8)**: Final validation gate
 
 ### **Remediation Policy**
@@ -485,20 +748,25 @@ The `get_streams` method has been migrated as an existing undocumented feature i
 - **Test Coverage**: >90% unit test coverage
 - **Documentation**: Complete API and deployment documentation
 - **Performance**: All targets met in integration testing
+- **Ecosystem Integration**: 100% compliance with requirements from Epic E0 and architecture from Epic E0.5
+- **Platform Conformance**: 100% container standards compliance and structured observability
 
 ### **Delivery Targets**
-- **Timeline**: 12-16 sprints total
+- **Timeline**: 14-18 sprints total (including foundation epics)
 - **Risk Management**: No more than 2 remediation sprints per epic
-- **Quality Gates**: All control points passed with IV&V validation
-- **Documentation**: Complete operational and migration guides
+- **Quality Gates**: All control points passed with IV&V validation including ecosystem integration
+- **Documentation**: Complete operational and migration guides with ecosystem integration
+- **Foundation Compliance**: All epics must comply with requirements from Epic E0 and architecture from Epic E0.5
 
 ---
 
-**Document Status**: Approved migration plan with comprehensive Epic/Story/Task breakdown and integration requirements  
+**Document Status**: Approved migration plan with comprehensive Epic/Story/Task breakdown, ecosystem integration foundation, and integration requirements  
 **Last Updated**: 2025-01-15  
-**Next Review**: After Epic E1 completion  
+**Next Review**: After Epic E0 and E0.5 completion  
 **Progress**: 
-- Epic E1: ✅ COMPLETED (Foundation Infrastructure)
-- Epic E2: ✅ COMPLETED (Camera Discovery System)
-- Ready for Epic E3: WebSocket JSON-RPC Server
-**Architectural Update**: Integration and technical debt prevention measures added (2025-01-15)
+- Epic E0: 🔄 IN PROGRESS (Requirements Foundation & Baseline)
+- Epic E0.5: 🔄 IN PROGRESS (Architecture Foundation & Decisions)
+- Epic E1: 🔄 IN PROGRESS (Foundation Infrastructure with Ecosystem Integration)
+- Epic E2: 🔄 IN PROGRESS (Camera Discovery System with Ecosystem Integration)
+- Ready for Epic E3: WebSocket JSON-RPC Server with Ecosystem Integration
+**Architectural Update**: Foundation-first ecosystem integration approach with comprehensive requirements and architecture foundation (2025-01-15)
