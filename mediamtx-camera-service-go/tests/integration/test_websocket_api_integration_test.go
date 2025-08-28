@@ -1,5 +1,6 @@
-//go:build integration && real_websocket
 // +build integration,real_websocket
+
+//go:build integration && real_websocket
 
 /*
 WebSocket API Integration Test

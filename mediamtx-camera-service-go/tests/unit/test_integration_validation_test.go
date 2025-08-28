@@ -1,3 +1,7 @@
+// +build unit
+
+//go:build unit
+
 /*
 Integration Validation Unit Test
 
@@ -15,10 +19,7 @@ Test Categories: Unit/Integration/Security/Performance/Reliability
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-//go:build unit
-// +build unit
-
-package unit
+package unit_test
 
 import (
 	"context"
@@ -33,12 +34,14 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // IntegrationValidationTestSuite provides integration validation testing
 type IntegrationValidationTestSuite struct {
+	testEnv            *utils.TestEnvironment
 	configManager      *config.ConfigManager
 	logger             *logging.Logger
 	cameraMonitor      *camera.HybridCameraMonitor
@@ -58,13 +61,13 @@ func (suite *IntegrationValidationTestSuite) Setup(t *testing.T) {
 	// Create context
 	suite.ctx = context.Background()
 
-	// Load configuration
-	suite.configManager = config.NewConfigManager()
-	err := suite.configManager.LoadConfig("config/default.yaml")
-	require.NoError(t, err, "Failed to load configuration")
+	// Setup test environment with proper configuration
+	suite.testEnv = utils.SetupTestEnvironment(t)
+	suite.configManager = suite.testEnv.ConfigManager
+	suite.logger = suite.testEnv.Logger
 
-	// Setup logging
-	suite.logger = logging.NewLogger("integration-validation-test")
+	// Validate test configuration
+	utils.ValidateTestConfiguration(t, suite.configManager)
 
 	// Initialize real implementations
 	deviceChecker := &camera.RealDeviceChecker{}
@@ -81,6 +84,7 @@ func (suite *IntegrationValidationTestSuite) Setup(t *testing.T) {
 	)
 
 	// Initialize MediaMTX controller
+	var err error
 	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 

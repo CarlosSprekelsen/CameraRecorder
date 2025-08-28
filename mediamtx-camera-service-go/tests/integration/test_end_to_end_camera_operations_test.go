@@ -1,5 +1,6 @@
-//go:build integration && real_system
 // +build integration,real_system
+
+//go:build integration && real_system
 
 /*
 End-to-End Camera Operations Integration Test

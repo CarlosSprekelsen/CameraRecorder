@@ -1,0 +1,60 @@
+# Test Configuration for Unit Tests
+# This file provides test data and evidence for unit testing
+
+# MediaMTX Configuration
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  health_check_timeout: "5s"
+  recording:
+    default_path: "/tmp/test_recordings"
+    fallback_path: "/tmp/test_fallback"
+    default_rotation_size: 104857600  # 100MB
+    default_max_duration: 3600        # 1 hour
+    default_retention_days: 7
+  snapshots:
+    default_path: "/tmp/test_snapshots"
+    fallback_path: "/tmp/test_snapshot_fallback"
+    format: "jpeg"
+    quality: 85
+    max_width: 1920
+    max_height: 1080
+    default_retention_days: 30
+
+# Security Configuration
+security:
+  jwt_secret_key: "test-secret-key-for-unit-testing-only-not-for-production"
+  jwt_expiry_hours: 24
+  rate_limit_requests: 100
+  rate_limit_window: "1m"
+
+# Storage Configuration
+storage:
+  warn_percent: 80
+  block_percent: 90
+  default_path: "/tmp/test_storage"
+  fallback_path: "/tmp/test_storage_fallback"
+
+# Camera Configuration
+camera:
+  detection_timeout: "2s"
+  poll_interval: "100ms"
+  device_range: [0, 9]
+  capability_detection:
+    enabled: true
+    max_retries: 3
+    timeout: "5s"
+
+# WebSocket Configuration
+websocket:
+  host: "localhost"
+  port: 8002
+  read_timeout: "30s"
+  write_timeout: "30s"
+  max_message_size: 1048576  # 1MB
+
+# Logging Configuration
+logging:
+  level: "debug"
+  format: "json"
+  output: "stdout"
