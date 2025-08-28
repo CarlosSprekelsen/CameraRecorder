@@ -18,13 +18,10 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package unit
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
 // mockStatusHandler implements status handling for testing
@@ -63,45 +60,15 @@ func TestGetStatusMethod_BasicFunctionality(t *testing.T) {
 	t.Run("ValidStatusRequest", func(t *testing.T) {
 		handler := newMockStatusHandler()
 
-		// Create JSON-RPC request
-		request := websocket.JSONRPCRequest{
-			JSONRPC: "2.0",
-			Method:  "get_status",
-			Params:  map[string]interface{}{},
-			ID:      1,
-		}
-
-		// Mock the status method call
-		response := map[string]interface{}{
-			"jsonrpc": "2.0",
-			"result": map[string]interface{}{
-				"status":     "HEALTHY",
-				"uptime":     "1h0m0s",
-				"last_check": time.Now().Format(time.RFC3339),
-				"components": map[string]interface{}{
-					"mediamtx":  "HEALTHY",
-					"camera":    "HEALTHY",
-					"websocket": "HEALTHY",
-				},
-			},
-			"id": 1,
-		}
+		// Get system status from mock handler
+		status := handler.GetSystemStatus()
 
 		// Validate response structure
-		assert.Equal(t, "2.0", response["jsonrpc"], "JSON-RPC version should be 2.0")
-		assert.Equal(t, float64(1), response["id"], "Response ID should match request ID")
+		assert.Contains(t, status, "status", "Status should contain status field")
+		assert.Contains(t, status, "uptime", "Status should contain uptime field")
+		assert.Contains(t, status, "last_check", "Status should contain last_check field")
+		assert.Contains(t, status, "components", "Status should contain components field")
 
-		result, exists := response["result"]
-		assert.True(t, exists, "Response should contain result field")
-
-		resultMap, ok := result.(map[string]interface{})
-		assert.True(t, ok, "Result should be a map")
-
-		// Validate required fields
-		assert.Contains(t, resultMap, "status", "Result should contain status field")
-		assert.Contains(t, resultMap, "uptime", "Result should contain uptime field")
-		assert.Contains(t, resultMap, "last_check", "Result should contain last_check field")
-		assert.Contains(t, resultMap, "components", "Result should contain components field")
 	})
 
 	t.Run("StatusFieldValidation", func(t *testing.T) {
@@ -228,15 +195,8 @@ func TestGetStatusMethod_ErrorHandling(t *testing.T) {
 	// REQ-API-019: Error handling for status requests
 
 	t.Run("InvalidRequestFormat", func(t *testing.T) {
-		// Test with invalid JSON-RPC request
-		invalidRequest := websocket.JSONRPCRequest{
-			JSONRPC: "2.0",
-			Method:  "get_status",
-			Params:  "invalid_params", // Should be map[string]interface{}
-			ID:      1,
-		}
-
-		// Mock error response
+		// Test error handling for invalid request format
+		// Mock error response structure
 		errorResponse := map[string]interface{}{
 			"jsonrpc": "2.0",
 			"error": map[string]interface{}{
@@ -247,7 +207,7 @@ func TestGetStatusMethod_ErrorHandling(t *testing.T) {
 		}
 
 		assert.Equal(t, "2.0", errorResponse["jsonrpc"], "Error response should have correct JSON-RPC version")
-		assert.Equal(t, float64(1), errorResponse["id"], "Error response should have correct ID")
+		assert.Equal(t, 1, errorResponse["id"], "Error response should have correct ID")
 
 		errorObj, exists := errorResponse["error"]
 		assert.True(t, exists, "Error response should contain error field")
@@ -255,20 +215,13 @@ func TestGetStatusMethod_ErrorHandling(t *testing.T) {
 		errorMap, ok := errorObj.(map[string]interface{})
 		assert.True(t, ok, "Error should be a map")
 
-		assert.Equal(t, float64(-32602), errorMap["code"], "Error should have correct error code")
+		assert.Equal(t, -32602, errorMap["code"], "Error should have correct error code")
 		assert.Equal(t, "Invalid params", errorMap["message"], "Error should have correct error message")
 	})
 
 	t.Run("MissingMethod", func(t *testing.T) {
-		// Test with missing method
-		invalidRequest := websocket.JSONRPCRequest{
-			JSONRPC: "2.0",
-			Method:  "", // Empty method
-			Params:  map[string]interface{}{},
-			ID:      1,
-		}
-
-		// Mock error response
+		// Test error handling for missing method
+		// Mock error response structure
 		errorResponse := map[string]interface{}{
 			"jsonrpc": "2.0",
 			"error": map[string]interface{}{
@@ -279,19 +232,12 @@ func TestGetStatusMethod_ErrorHandling(t *testing.T) {
 		}
 
 		errorObj := errorResponse["error"].(map[string]interface{})
-		assert.Equal(t, float64(-32600), errorObj["code"], "Should return invalid request error code")
+		assert.Equal(t, -32600, errorObj["code"], "Should return invalid request error code")
 	})
 
 	t.Run("InvalidJSONRPCVersion", func(t *testing.T) {
-		// Test with invalid JSON-RPC version
-		invalidRequest := websocket.JSONRPCRequest{
-			JSONRPC: "1.0", // Invalid version
-			Method:  "get_status",
-			Params:  map[string]interface{}{},
-			ID:      1,
-		}
-
-		// Mock error response
+		// Test error handling for invalid JSON-RPC version
+		// Mock error response structure
 		errorResponse := map[string]interface{}{
 			"jsonrpc": "2.0",
 			"error": map[string]interface{}{
@@ -302,7 +248,7 @@ func TestGetStatusMethod_ErrorHandling(t *testing.T) {
 		}
 
 		errorObj := errorResponse["error"].(map[string]interface{})
-		assert.Equal(t, float64(-32600), errorObj["code"], "Should return invalid request error code")
+		assert.Equal(t, -32600, errorObj["code"], "Should return invalid request error code")
 	})
 }
 
@@ -358,9 +304,6 @@ func TestGetStatusMethod_ContextHandling(t *testing.T) {
 	// Test context handling for status requests
 
 	t.Run("ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
 		// Mock context cancellation handling
 		// In real implementation, this would check context.Done()
 		handler := newMockStatusHandler()
@@ -371,9 +314,6 @@ func TestGetStatusMethod_ContextHandling(t *testing.T) {
 	})
 
 	t.Run("ContextTimeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-		defer cancel()
-
 		// Mock timeout handling
 		handler := newMockStatusHandler()
 		status := handler.GetSystemStatus()

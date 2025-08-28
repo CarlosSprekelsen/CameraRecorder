@@ -25,15 +25,12 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
-//go:build unit
-// +build unit
-
 // mockHealthMonitor implements HealthMonitor interface for testing
 type mockHealthMonitor struct {
-	status       mediamtx.HealthStatus
-	isHealthy    bool
-	circuitOpen  bool
-	metrics      map[string]interface{}
+	status              mediamtx.HealthStatus
+	isHealthy           bool
+	circuitOpen         bool
+	metrics             map[string]interface{}
 	consecutiveFailures int
 	lastSuccessTime     time.Time
 }
@@ -47,10 +44,10 @@ func newMockHealthMonitor() *mockHealthMonitor {
 		isHealthy:   true,
 		circuitOpen: false,
 		metrics: map[string]interface{}{
-			"request_count":       0,
-			"response_time_avg":   0.0,
-			"error_count":         0,
-			"active_connections":  0,
+			"request_count":      0,
+			"response_time_avg":  0.0,
+			"error_count":        0,
+			"active_connections": 0,
 		},
 		consecutiveFailures: 0,
 		lastSuccessTime:     time.Now(),
@@ -146,7 +143,7 @@ func TestHealthMonitorCircuitBreaker(t *testing.T) {
 
 	t.Run("CircuitBreaker_RecordSuccess", func(t *testing.T) {
 		monitor := newMockHealthMonitor()
-		
+
 		// Set unhealthy state first
 		monitor.RecordFailure()
 		monitor.RecordFailure()
@@ -183,7 +180,7 @@ func TestHealthMonitorStateTracking(t *testing.T) {
 
 	t.Run("ConsecutiveFailures_Tracking", func(t *testing.T) {
 		monitor := newMockHealthMonitor()
-		
+
 		assert.Equal(t, 0, monitor.consecutiveFailures, "Should start with 0 failures")
 
 		monitor.RecordFailure()

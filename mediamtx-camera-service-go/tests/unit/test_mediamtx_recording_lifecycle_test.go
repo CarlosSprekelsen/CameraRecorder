@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX Recording Lifecycle Management Unit Tests
 
@@ -17,16 +20,13 @@ package unit
 import (
 	"context"
 	"testing"
-	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
-
-//go:build unit
-// +build unit
 
 // mockFFmpegManager implements FFmpegManager interface for testing
 type mockFFmpegManager struct{}
@@ -49,11 +49,9 @@ func TestRecordingManagerStorageMonitoring(t *testing.T) {
 
 	ffmpegManager := &mockFFmpegManager{}
 	config := &mediamtx.MediaMTXConfig{
-		StoragePath: "/tmp/test_recordings",
-		StorageWarnPercent: 80,
-		StorageBlockPercent: 90,
+		RecordingsPath: "/tmp/test_recordings",
 	}
-	logger := mediamtx.NewLogger()
+	logger := logrus.New()
 	recordingManager := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
 	t.Run("CheckStorageSpace_WithinLimits", func(t *testing.T) {
@@ -88,7 +86,7 @@ func TestRecordingManagerSegmentedRecording(t *testing.T) {
 		outputPath := "/tmp/test_recordings/test_recording.mp4"
 		options := map[string]interface{}{
 			"segment_duration": 30,
-			"segment_format": "recording_%Y%m%d_%H%M%S.mp4",
+			"segment_format":   "recording_%Y%m%d_%H%M%S.mp4",
 		}
 
 		session, err := recordingManager.StartRecordingWithSegments(ctx, devicePath, outputPath, options)
@@ -185,7 +183,7 @@ func TestRecordingManagerSessionTracking(t *testing.T) {
 
 		sessions := recordingManager.ListRecordingSessions()
 		assert.Len(t, sessions, 2, "Should track multiple active sessions")
-		
+
 		// Verify sessions are in the list
 		sessionIDs := make(map[string]bool)
 		for _, session := range sessions {
