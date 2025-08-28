@@ -13,7 +13,10 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit_test
+//go:build unit
+// +build unit
+
+package unit
 
 import (
 	"testing"

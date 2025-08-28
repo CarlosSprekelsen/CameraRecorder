@@ -15,7 +15,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package security_test
+package unit
 
 import (
 	"fmt"

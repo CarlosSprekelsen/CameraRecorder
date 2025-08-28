@@ -1,4 +1,24 @@
-package integration
+//go:build integration && real_mediamtx
+// +build integration,real_mediamtx
+
+/*
+MediaMTX Integration Test
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX health monitoring
+- REQ-MTX-002: Path configuration and management
+- REQ-MTX-003: Stream lifecycle management
+- REQ-MTX-004: Recording integration
+- REQ-MTX-005: Snapshot integration
+- REQ-MTX-006: Active recording tracking
+- REQ-MTX-007: System metrics integration
+- REQ-MTX-008: Error handling and recovery
+
+Test Categories: Integration/Real MediaMTX/System
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package integration_test
 
 import (
 	"context"

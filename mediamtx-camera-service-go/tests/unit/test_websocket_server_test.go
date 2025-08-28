@@ -32,7 +32,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package websocket_test
+package unit
 
 import (
 	"testing"

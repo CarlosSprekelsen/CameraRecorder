@@ -17,7 +17,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 Real Component Usage: V4L2 devices, file system, configuration system
 */
 
-package camera_test
+package unit
 
 import (
 	"context"

@@ -13,7 +13,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit_test
+package unit
 
 import (
 	"context"
@@ -25,11 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mediamtx-camera-service-go/internal/logging"
-	"mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
-func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
+func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	// Setup test logger
 	logger := logging.NewLogger("mediamtx-recording-lifecycle-test")
 
@@ -107,7 +107,7 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 	}
 }
 
-func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
+func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 	// Setup test logger
 	logger := logging.NewLogger("mediamtx-snapshot-lifecycle-test")
 
@@ -185,7 +185,7 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 	}
 }
 
-func TestMediaMTXController_DeleteRecording(t *testing.T) {
+func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 	// Setup test logger
 	logger := logging.NewLogger("mediamtx-recording-delete-lifecycle-test")
 
@@ -257,7 +257,7 @@ func TestMediaMTXController_DeleteRecording(t *testing.T) {
 	}
 }
 
-func TestMediaMTXController_DeleteSnapshot(t *testing.T) {
+func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	// Setup test logger
 	logger := logging.NewLogger("mediamtx-snapshot-delete-lifecycle-test")
 

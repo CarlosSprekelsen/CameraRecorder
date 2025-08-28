@@ -1,4 +1,24 @@
-package integration
+//go:build integration && real_system
+// +build integration,real_system
+
+/*
+End-to-End Camera Operations Integration Test
+
+Requirements Coverage:
+- REQ-CAM-001: Camera discovery and enumeration
+- REQ-CAM-002: Camera capability detection
+- REQ-REC-001: Recording session management
+- REQ-REC-002: Recording start/stop operations
+- REQ-SNAP-001: Snapshot capture functionality
+- REQ-FILE-001: File listing and management
+- REQ-HEALTH-001: Health monitoring integration
+- REQ-ACTIVE-001: Active recording tracking
+
+Test Categories: Integration/Real System/Hardware
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package integration_test
 
 import (
 	"context"

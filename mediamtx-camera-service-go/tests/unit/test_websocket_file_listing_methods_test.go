@@ -13,7 +13,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 //go:build unit
 // +build unit
 
-package unit_test
+package unit
 
 import (
 	"context"
@@ -24,9 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mediamtx-camera-service-go/internal/mediamtx"
-	"mediamtx-camera-service-go/internal/websocket"
-	"mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // Mock MediaMTX controller for testing

@@ -1,4 +1,24 @@
-package stress
+//go:build performance && stress
+// +build performance,stress
+
+/*
+Concurrent Connections Stress Test
+
+Requirements Coverage:
+- REQ-STRESS-001: Concurrent WebSocket connections
+- REQ-STRESS-002: Concurrent request handling
+- REQ-STRESS-003: Connection stress over time
+- REQ-STRESS-004: Memory stress testing
+- REQ-STRESS-005: Rate limiting stress testing
+- REQ-STRESS-006: Error rate monitoring
+- REQ-STRESS-007: Performance degradation testing
+- REQ-STRESS-008: System stability validation
+
+Test Categories: Performance/Stress/Real System
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package stress_test
 
 import (
 	"context"

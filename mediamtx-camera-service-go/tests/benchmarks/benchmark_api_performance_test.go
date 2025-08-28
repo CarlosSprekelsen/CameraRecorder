@@ -1,4 +1,24 @@
-package benchmarks
+//go:build performance
+// +build performance
+
+/*
+API Performance Benchmark Test
+
+Requirements Coverage:
+- REQ-PERF-001: API response time performance
+- REQ-PERF-002: Camera discovery performance
+- REQ-PERF-003: Health check performance
+- REQ-PERF-004: JWT token performance
+- REQ-PERF-005: Active recording tracking performance
+- REQ-PERF-006: Configuration access performance
+- REQ-PERF-007: Concurrent operation performance
+- REQ-PERF-008: Memory usage performance
+
+Test Categories: Performance/Benchmark/System
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package benchmarks_test
 
 import (
 	"context"

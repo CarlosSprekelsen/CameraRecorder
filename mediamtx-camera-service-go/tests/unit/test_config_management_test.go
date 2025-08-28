@@ -1,7 +1,7 @@
 //go:build unit
 // +build unit
 
-package config_test
+package unit
 
 import (
 	"fmt"

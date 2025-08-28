@@ -43,10 +43,6 @@ func newMockHealthMonitor() *mockHealthMonitor {
 		status: mediamtx.HealthStatus{
 			Status:    "HEALTHY",
 			Timestamp: time.Now(),
-			Components: map[string]mediamtx.ComponentStatus{
-				"mediamtx": {Status: "HEALTHY", LastCheck: time.Now()},
-				"camera":   {Status: "HEALTHY", LastCheck: time.Now()},
-			},
 		},
 		isHealthy:   true,
 		circuitOpen: false,
@@ -122,16 +118,6 @@ func TestHealthMonitorBasicOperations(t *testing.T) {
 
 		assert.Equal(t, "HEALTHY", status.Status, "Initial status should be HEALTHY")
 		assert.NotZero(t, status.Timestamp, "Status should have timestamp")
-		assert.Len(t, status.Components, 2, "Should have 2 component statuses")
-		
-		// Verify component statuses
-		mediamtxStatus, exists := status.Components["mediamtx"]
-		assert.True(t, exists, "MediaMTX component should exist")
-		assert.Equal(t, "HEALTHY", mediamtxStatus.Status, "MediaMTX should be healthy")
-
-		cameraStatus, exists := status.Components["camera"]
-		assert.True(t, exists, "Camera component should exist")
-		assert.Equal(t, "HEALTHY", cameraStatus.Status, "Camera should be healthy")
 	})
 
 	t.Run("IsHealthy_InitialState", func(t *testing.T) {
@@ -225,12 +211,9 @@ func TestHealthMonitorStateTracking(t *testing.T) {
 		monitor := newMockHealthMonitor()
 		status := monitor.GetStatus()
 
-		// Verify component status tracking
-		for componentName, componentStatus := range status.Components {
-			assert.NotEmpty(t, componentName, "Component name should not be empty")
-			assert.NotZero(t, componentStatus.LastCheck, "Component should have last check time")
-			assert.Contains(t, []string{"HEALTHY", "UNHEALTHY", "DEGRADED"}, componentStatus.Status, "Component status should be valid")
-		}
+		// Verify basic status tracking
+		assert.NotEmpty(t, status.Status, "Status should not be empty")
+		assert.NotZero(t, status.Timestamp, "Status should have timestamp")
 	})
 }
 

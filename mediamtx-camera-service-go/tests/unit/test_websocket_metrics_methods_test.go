@@ -10,7 +10,7 @@ Test Categories: Unit/Integration
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit_test
+package unit
 
 import (
 	"testing"

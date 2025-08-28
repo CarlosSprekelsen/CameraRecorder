@@ -1,4 +1,24 @@
-package integration
+//go:build integration && real_websocket
+// +build integration,real_websocket
+
+/*
+WebSocket API Integration Test
+
+Requirements Coverage:
+- REQ-AUTH-001: JWT authentication validation
+- REQ-AUTH-002: Role-based access control
+- REQ-RATE-001: Rate limiting enforcement
+- REQ-WS-001: WebSocket connection management
+- REQ-WS-002: JSON-RPC message handling
+- REQ-WS-003: Real-time communication
+- REQ-PERM-001: Permission enforcement
+- REQ-API-001: API method validation
+
+Test Categories: Integration/Real WebSocket/Security
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package integration_test
 
 import (
 	"encoding/json"

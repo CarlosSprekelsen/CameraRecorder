@@ -17,7 +17,7 @@ Test Categories: Unit/Integration (Real MediaMTX + Real System)
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package mediamtx_test
+package unit
 
 import (
 	"context"
