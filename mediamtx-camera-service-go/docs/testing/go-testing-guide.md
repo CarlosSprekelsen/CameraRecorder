@@ -90,14 +90,12 @@ go test -coverpkg=./internal/security ./tests/unit/test_security_framework_test.
 ### Mandatory Directory Structure
 ```
 tests/
-├── unit/                   # Unit tests (<30 seconds total)
-├── integration/            # Integration tests (<5 minutes total)
-├── security/              # Security tests
-├── performance/           # Performance and load tests
-├── health/                # Health monitoring tests
-├── fixtures/              # Shared test fixtures and utilities
-├── utils/                 # Test utilities and helpers
-└── tools/                 # Test runners and orchestration tools
+├── unit/           # One test file per Go module (your main work)
+├── integration/    # End-to-end API tests
+├── performance/    # Load/stress tests for reliability
+├── fixtures/       # Test data files (.yaml, .json, mock data)
+├── utils/          # Helper functions (setupTest, generateToken, etc.)
+└── tools/          # Scripts that run tests
 ```
 
 ### STRICT DIRECTORY RULES
@@ -433,58 +431,8 @@ source .test_env
 - Test environment redirects to user-accessible location (`/tmp/`)
 - Without this configuration, 90% of tests will fail with authentication errors
 
-## 9. Go-Specific Testing Patterns
 
-### Benchmark Testing
-```go
-//go:build performance
-// +build performance
-
-func BenchmarkAPIMethod(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        // Benchmark API method performance
-    }
-}
-```
-
-### Table-Driven Tests
-```go
-func TestAPIMethodWithTable(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    string
-        expected string
-    }{
-        {"valid_input", "test", "expected"},
-        {"empty_input", "", "error"},
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result := apiMethod(tt.input)
-            assert.Equal(t, tt.expected, result)
-        })
-    }
-}
-```
-
-### Test Helpers and Utilities
-```go
-// tests/utils/test_helpers.go
-func setupTestEnvironment(t *testing.T) *TestEnvironment {
-    // Setup test environment
-}
-
-func teardownTestEnvironment(t *testing.T, env *TestEnvironment) {
-    // Cleanup test environment
-}
-
-func generateTestToken(user, role string) string {
-    // Generate test JWT token
-}
-```
-
-## 10. Documentation Standards
+## 9. Documentation Standards
 
 ### Test File Documentation
 - **Requirements Coverage**: Mandatory in every test file docstring
