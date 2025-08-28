@@ -17,7 +17,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit
+package websocket_test
 
 import (
 	"encoding/json"

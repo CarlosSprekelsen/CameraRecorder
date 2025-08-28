@@ -78,30 +78,53 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 
 	lines := strings.Split(output, "\n")
 	var currentFormat *V4L2Format
+	var currentPixelFormat string
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
-		if strings.Contains(line, "Index") && strings.Contains(line, "Type") {
-			// New format entry
-			if currentFormat != nil {
-				formats = append(formats, *currentFormat)
+		// Check for new format entry: [0]: 'YUYV' (YUYV 4:2:2)
+		if strings.HasPrefix(line, "[") && strings.Contains(line, "]:") && strings.Contains(line, "'") {
+			// New format entry - save the pixel format for subsequent sizes
+			if strings.Contains(line, "'") {
+				start := strings.Index(line, "'") + 1
+				end := strings.LastIndex(line, "'")
+				if start > 0 && end > start {
+					currentPixelFormat = line[start:end]
+				}
 			}
-			currentFormat = &V4L2Format{
-				FrameRates: []string{},
-			}
-		} else if currentFormat != nil {
-			if strings.Contains(line, "Name") {
-				currentFormat.PixelFormat = r.extractValue(line)
-			} else if strings.Contains(line, "Size") {
+		} else if currentPixelFormat != "" {
+			if strings.Contains(line, "Size:") {
+				// Create a new format entry for each size
+				if currentFormat != nil {
+					formats = append(formats, *currentFormat)
+				}
+				
+				currentFormat = &V4L2Format{
+					PixelFormat: currentPixelFormat,
+					FrameRates:  []string{},
+				}
+				
+				// Extract size from "Size: Discrete 640x480"
 				size := r.extractValue(line)
+				// Remove "Discrete " prefix if present
+				if strings.HasPrefix(size, "Discrete ") {
+					size = strings.TrimPrefix(size, "Discrete ")
+				}
 				width, height := r.parseSize(size)
 				currentFormat.Width = width
 				currentFormat.Height = height
-			} else if strings.Contains(line, "fps") {
-				fps := r.extractValue(line)
-				if fps != "" {
-					currentFormat.FrameRates = append(currentFormat.FrameRates, fps)
+			} else if currentFormat != nil && strings.Contains(line, "Interval:") && strings.Contains(line, "fps") {
+				// Extract fps from interval line: Interval: Discrete 0.033s (30.000 fps)
+				if strings.Contains(line, "(") && strings.Contains(line, "fps") {
+					start := strings.Index(line, "(") + 1
+					end := strings.Index(line, "fps")
+					if start > 0 && end > start {
+						fps := strings.TrimSpace(line[start:end])
+						if fps != "" {
+							currentFormat.FrameRates = append(currentFormat.FrameRates, fps)
+						}
+					}
 				}
 			}
 		}
@@ -120,12 +143,12 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 
 	// Enhanced frame rate patterns for robust parsing (following Python patterns)
 	frameRatePatterns := []string{
-		`(?m)^\s*(\d+(?:\.\d+)?)\s*fps\b`,           // 30.000 fps
-		`(?m)^\s*(\d+(?:\.\d+)?)\s*FPS\b`,           // 30.000 FPS
-		`Frame\s*rate[:\s]+(\d+(?:\.\d+)?)`,         // Frame rate: 30.0
-		`(?m)^\s*(\d+(?:\.\d+)?)\s*Hz\b`,            // 30 Hz
+		`(?m)^\s*(\d+(?:\.\d+)?)\s*fps\b`,            // 30.000 fps
+		`(?m)^\s*(\d+(?:\.\d+)?)\s*FPS\b`,            // 30.000 FPS
+		`Frame\s*rate[:\s]+(\d+(?:\.\d+)?)`,          // Frame rate: 30.0
+		`(?m)^\s*(\d+(?:\.\d+)?)\s*Hz\b`,             // 30 Hz
 		`@(\d+(?:\.\d+)?)\b`,                         // 1920x1080@60
-		`Interval:\s*\[1/(\d+(?:\.\d+)?)\]`,         // Interval: [1/30]
+		`Interval:\s*\[1/(\d+(?:\.\d+)?)\]`,          // Interval: [1/30]
 		`\[1/(\d+(?:\.\d+)?)\]`,                      // [1/30]
 		`1/(\d+(?:\.\d+)?)\s*s`,                      // 1/30 s
 		`(\d+(?:\.\d+)?)\s*frame[s]?\s*per\s*second`, // 30 frames per second
@@ -138,7 +161,7 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 	for _, pattern := range frameRatePatterns {
 		re := regexp.MustCompile(pattern)
 		matches := re.FindAllStringSubmatch(output, -1)
-		
+
 		for _, match := range matches {
 			if len(match) > 1 {
 				rate := strings.TrimSpace(match[1])

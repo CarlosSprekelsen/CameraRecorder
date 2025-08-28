@@ -12,7 +12,7 @@ Test Categories: Unit/Integration (Real MediaMTX Server)
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit
+package mediamtx_test
 
 import (
 	"context"
@@ -464,11 +464,12 @@ func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
 	// Create config integration
 	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
 
-	// Create mock controller
-	mockController := &mockMediaMTXController{}
+	// Create real MediaMTX controller using test utilities
+	realController, err := mediamtx.NewControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Failed to create real MediaMTX controller")
 
-	// Test config change watching (should return error as not implemented)
-	err = configIntegration.WatchConfigChanges(mockController)
+	// Test config change watching with real controller
+	err = configIntegration.WatchConfigChanges(realController)
 	// Note: The actual implementation returns nil, so we test the actual behavior
 	if err != nil {
 		assert.Contains(t, err.Error(), "not implemented", "Error message should indicate not implemented")
@@ -478,172 +479,4 @@ func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
 	}
 }
 
-// mockMediaMTXController implements MediaMTXController interface for testing
-type mockMediaMTXController struct{}
-
-func (m *mockMediaMTXController) GetHealth(ctx context.Context) (*mediamtx.HealthStatus, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetMetrics(ctx context.Context) (*mediamtx.Metrics, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetSystemMetrics(ctx context.Context) (*mediamtx.SystemMetrics, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetStreams(ctx context.Context) ([]*mediamtx.Stream, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetStream(ctx context.Context, id string) (*mediamtx.Stream, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) CreateStream(ctx context.Context, name, source string) (*mediamtx.Stream, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) DeleteStream(ctx context.Context, id string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetPaths(ctx context.Context) ([]*mediamtx.Path, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetPath(ctx context.Context, name string) (*mediamtx.Path, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) CreatePath(ctx context.Context, path *mediamtx.Path) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) DeletePath(ctx context.Context, name string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) StartRecording(ctx context.Context, device, path string) (*mediamtx.RecordingSession, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) StopRecording(ctx context.Context, sessionID string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) TakeSnapshot(ctx context.Context, device, path string) (*mediamtx.Snapshot, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetRecordingStatus(ctx context.Context, sessionID string) (*mediamtx.RecordingSession, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) ListRecordings(ctx context.Context, limit, offset int) (*mediamtx.FileListResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) ListSnapshots(ctx context.Context, limit, offset int) (*mediamtx.FileListResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetRecordingInfo(ctx context.Context, filename string) (*mediamtx.FileMetadata, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetSnapshotInfo(ctx context.Context, filename string) (*mediamtx.FileMetadata, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) DeleteRecording(ctx context.Context, filename string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) DeleteSnapshot(ctx context.Context, filename string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*mediamtx.RecordingSession, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) StopAdvancedRecording(ctx context.Context, sessionID string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetAdvancedRecordingSession(sessionID string) (*mediamtx.RecordingSession, bool) {
-	return nil, false
-}
-
-func (m *mockMediaMTXController) ListAdvancedRecordingSessions() []*mediamtx.RecordingSession {
-	return nil
-}
-
-func (m *mockMediaMTXController) RotateRecordingFile(ctx context.Context, sessionID string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*mediamtx.Snapshot, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetAdvancedSnapshot(snapshotID string) (*mediamtx.Snapshot, bool) {
-	return nil, false
-}
-
-func (m *mockMediaMTXController) ListAdvancedSnapshots() []*mediamtx.Snapshot {
-	return nil
-}
-
-func (m *mockMediaMTXController) DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetSnapshotSettings() *mediamtx.SnapshotSettings {
-	return nil
-}
-
-func (m *mockMediaMTXController) UpdateSnapshotSettings(settings *mediamtx.SnapshotSettings) {
-}
-
-func (m *mockMediaMTXController) GetConfig(ctx context.Context) (*mediamtx.MediaMTXConfig, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) UpdateConfig(ctx context.Context, config *mediamtx.MediaMTXConfig) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) Start(ctx context.Context) error {
-	return nil
-}
-
-func (m *mockMediaMTXController) Stop(ctx context.Context) error {
-	return nil
-}
-
-func (m *mockMediaMTXController) IsDeviceRecording(devicePath string) bool {
-	return false
-}
-
-func (m *mockMediaMTXController) StartActiveRecording(devicePath, sessionID, streamName string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) StopActiveRecording(devicePath string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func (m *mockMediaMTXController) GetActiveRecordings() map[string]*mediamtx.ActiveRecording {
-	return nil
-}
-
-func (m *mockMediaMTXController) GetActiveRecording(devicePath string) *mediamtx.ActiveRecording {
-	return nil
-}
+// Real MediaMTX controller is used instead of mocks per testing guide requirements

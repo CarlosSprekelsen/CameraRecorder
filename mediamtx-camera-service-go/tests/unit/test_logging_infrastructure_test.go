@@ -15,7 +15,7 @@ Test Categories: Unit/Integration/Performance
 API Documentation Reference: Internal logging system (no external API)
 */
 
-package unit
+package logging_test
 
 import (
 	"context"

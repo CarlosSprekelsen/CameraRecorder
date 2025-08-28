@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 Stream Lifecycle Management Unit Tests
 
@@ -11,7 +14,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package unit
+package mediamtx_test
 
 import (
 	"context"

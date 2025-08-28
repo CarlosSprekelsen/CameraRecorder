@@ -13,7 +13,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 //go:build unit
 // +build unit
 
-package unit
+package mediamtx_test
 
 import (
 	"context"
