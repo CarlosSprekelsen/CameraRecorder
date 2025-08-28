@@ -1,6 +1,7 @@
 // +build unit
 
 //go:build unit
+// +build unit
 
 /*
 Integration Validation Unit Test
@@ -110,6 +111,11 @@ func (suite *IntegrationValidationTestSuite) Teardown(t *testing.T) {
 	if suite.wsServer != nil {
 		err := suite.wsServer.Stop()
 		require.NoError(t, err, "Failed to stop WebSocket server")
+	}
+
+	// Cleanup test environment
+	if suite.testEnv != nil {
+		utils.TeardownTestEnvironment(t, suite.testEnv)
 	}
 }
 
