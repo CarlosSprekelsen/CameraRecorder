@@ -73,17 +73,17 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 		return fmt.Errorf("configuration validation failed: invalid configuration - cannot read configuration file '%s': %w", configPath, err)
 	}
 
-	// REQ-CONFIG-001: Validate environment variables before applying them
-	// REQ-CONFIG-002: Fail fast on configuration errors
-	// REQ-CONFIG-003: Early detection and clear error reporting
-	if err := cm.validateEnvironmentVariables(); err != nil {
-		return fmt.Errorf("configuration validation failed: invalid configuration - %w", err)
-	}
-
 	// Unmarshal configuration
 	var config Config
 	if err := v.Unmarshal(&config); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// REQ-CONFIG-001: Validate final configuration values after environment variable overrides
+	// REQ-CONFIG-002: Fail fast on configuration errors
+	// REQ-CONFIG-003: Early detection and clear error reporting
+	if err := cm.validateFinalConfiguration(&config); err != nil {
+		return fmt.Errorf("configuration validation failed: invalid configuration - %w", err)
 	}
 
 	// Validate configuration
@@ -155,6 +155,156 @@ func (cm *ConfigManager) validateConfigFile(configPath string) error {
 
 	if !hasNonCommentContent {
 		return fmt.Errorf("configuration file contains only comments or is empty: '%s' - file must contain valid YAML configuration data", configPath)
+	}
+
+	return nil
+}
+
+// validateFinalConfiguration validates the final configuration values after environment variable overrides
+// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+func (cm *ConfigManager) validateFinalConfiguration(config *Config) error {
+	// Validate server configuration
+	if strings.TrimSpace(config.Server.Host) == "" {
+		return fmt.Errorf("server host cannot be empty or whitespace-only")
+	}
+	if config.Server.Port <= 0 || config.Server.Port > 65535 {
+		return fmt.Errorf("server port must be between 1 and 65535, got %d", config.Server.Port)
+	}
+
+	// Validate MediaMTX configuration
+	if strings.TrimSpace(config.MediaMTX.Host) == "" {
+		return fmt.Errorf("MediaMTX host cannot be empty or whitespace-only")
+	}
+	if config.MediaMTX.APIPort <= 0 || config.MediaMTX.APIPort > 65535 {
+		return fmt.Errorf("MediaMTX API port must be between 1 and 65535, got %d", config.MediaMTX.APIPort)
+	}
+	if config.MediaMTX.RTSPPort <= 0 || config.MediaMTX.RTSPPort > 65535 {
+		return fmt.Errorf("MediaMTX RTSP port must be between 1 and 65535, got %d", config.MediaMTX.RTSPPort)
+	}
+	if config.MediaMTX.WebRTCPort <= 0 || config.MediaMTX.WebRTCPort > 65535 {
+		return fmt.Errorf("MediaMTX WebRTC port must be between 1 and 65535, got %d", config.MediaMTX.WebRTCPort)
+	}
+	if config.MediaMTX.HLSPort <= 0 || config.MediaMTX.HLSPort > 65535 {
+		return fmt.Errorf("MediaMTX HLS port must be between 1 and 65535, got %d", config.MediaMTX.HLSPort)
+	}
+	if strings.TrimSpace(config.MediaMTX.ConfigPath) == "" {
+		return fmt.Errorf("MediaMTX config path cannot be empty or whitespace-only")
+	}
+	if strings.TrimSpace(config.MediaMTX.RecordingsPath) == "" {
+		return fmt.Errorf("MediaMTX recordings path cannot be empty or whitespace-only")
+	}
+	if strings.TrimSpace(config.MediaMTX.SnapshotsPath) == "" {
+		return fmt.Errorf("MediaMTX snapshots path cannot be empty or whitespace-only")
+	}
+
+	// Validate camera configuration
+	if config.Camera.PollInterval <= 0 {
+		return fmt.Errorf("camera poll interval must be positive, got %f", config.Camera.PollInterval)
+	}
+	if config.Camera.DetectionTimeout <= 0 {
+		return fmt.Errorf("camera detection timeout must be positive, got %f", config.Camera.DetectionTimeout)
+	}
+	if config.Camera.CapabilityTimeout <= 0 {
+		return fmt.Errorf("camera capability timeout must be positive, got %f", config.Camera.CapabilityTimeout)
+	}
+	if config.Camera.CapabilityRetryInterval <= 0 {
+		return fmt.Errorf("camera capability retry interval must be positive, got %f", config.Camera.CapabilityRetryInterval)
+	}
+	if config.Camera.CapabilityMaxRetries < 0 {
+		return fmt.Errorf("camera capability max retries cannot be negative, got %d", config.Camera.CapabilityMaxRetries)
+	}
+
+	// Validate logging configuration
+	validLogLevels := []string{"debug", "info", "warn", "warning", "error", "fatal", "panic"}
+	levelFound := false
+	for _, valid := range validLogLevels {
+		if strings.ToLower(config.Logging.Level) == valid {
+			levelFound = true
+			break
+		}
+	}
+	if !levelFound {
+		return fmt.Errorf("logging level must be one of: %v, got %s", validLogLevels, config.Logging.Level)
+	}
+	if strings.TrimSpace(config.Logging.Format) == "" {
+		return fmt.Errorf("logging format cannot be empty or whitespace-only")
+	}
+	if config.Logging.FileEnabled && strings.TrimSpace(config.Logging.FilePath) == "" {
+		return fmt.Errorf("logging file path cannot be empty when file logging is enabled")
+	}
+
+	// Validate recording configuration
+	if strings.TrimSpace(config.Recording.Format) == "" {
+		return fmt.Errorf("recording format cannot be empty or whitespace-only")
+	}
+	if strings.TrimSpace(config.Recording.Quality) == "" {
+		return fmt.Errorf("recording quality cannot be empty or whitespace-only")
+	}
+	if config.Recording.SegmentDuration < 0 {
+		return fmt.Errorf("recording segment duration cannot be negative, got %d", config.Recording.SegmentDuration)
+	}
+	if config.Recording.MaxSegmentSize < 0 {
+		return fmt.Errorf("recording max segment size cannot be negative, got %d", config.Recording.MaxSegmentSize)
+	}
+	if config.Recording.CleanupInterval < 0 {
+		return fmt.Errorf("recording cleanup interval cannot be negative, got %d", config.Recording.CleanupInterval)
+	}
+	if config.Recording.MaxAge < 0 {
+		return fmt.Errorf("recording max age cannot be negative, got %d", config.Recording.MaxAge)
+	}
+	if config.Recording.MaxSize <= 0 {
+		return fmt.Errorf("recording max size must be positive, got %d", config.Recording.MaxSize)
+	}
+	if config.Recording.DefaultRotationSize < 0 {
+		return fmt.Errorf("recording default rotation size cannot be negative, got %d", config.Recording.DefaultRotationSize)
+	}
+	if config.Recording.DefaultMaxDuration < 0 {
+		return fmt.Errorf("recording default max duration cannot be negative, got %v", config.Recording.DefaultMaxDuration)
+	}
+	if config.Recording.DefaultRetentionDays < 0 {
+		return fmt.Errorf("recording default retention days cannot be negative, got %d", config.Recording.DefaultRetentionDays)
+	}
+
+	// Validate snapshots configuration
+	if strings.TrimSpace(config.Snapshots.Format) == "" {
+		return fmt.Errorf("snapshots format cannot be empty or whitespace-only")
+	}
+	if config.Snapshots.Quality < 0 || config.Snapshots.Quality > 100 {
+		return fmt.Errorf("snapshots quality must be between 0 and 100, got %d", config.Snapshots.Quality)
+	}
+	if config.Snapshots.MaxWidth <= 0 {
+		return fmt.Errorf("snapshots max width must be positive, got %d", config.Snapshots.MaxWidth)
+	}
+	if config.Snapshots.MaxHeight <= 0 {
+		return fmt.Errorf("snapshots max height must be positive, got %d", config.Snapshots.MaxHeight)
+	}
+	if config.Snapshots.CleanupInterval < 0 {
+		return fmt.Errorf("snapshots cleanup interval cannot be negative, got %d", config.Snapshots.CleanupInterval)
+	}
+	if config.Snapshots.MaxAge < 0 {
+		return fmt.Errorf("snapshots max age cannot be negative, got %d", config.Snapshots.MaxAge)
+	}
+	if config.Snapshots.MaxCount <= 0 {
+		return fmt.Errorf("snapshots max count must be positive, got %d", config.Snapshots.MaxCount)
+	}
+
+	// Validate storage configuration
+	if config.Storage.WarnPercent < 0 || config.Storage.WarnPercent > 100 {
+		return fmt.Errorf("storage warn percent must be between 0 and 100, got %d", config.Storage.WarnPercent)
+	}
+	if config.Storage.BlockPercent < 0 || config.Storage.BlockPercent > 100 {
+		return fmt.Errorf("storage block percent must be between 0 and 100, got %d", config.Storage.BlockPercent)
+	}
+	if config.Storage.WarnPercent >= config.Storage.BlockPercent {
+		return fmt.Errorf("storage warn percent (%d) must be less than block percent (%d)", config.Storage.WarnPercent, config.Storage.BlockPercent)
+	}
+	if strings.TrimSpace(config.Storage.DefaultPath) == "" {
+		return fmt.Errorf("storage default path cannot be empty or whitespace-only")
+	}
+	if strings.TrimSpace(config.Storage.FallbackPath) == "" {
+		return fmt.Errorf("storage fallback path cannot be empty or whitespace-only")
 	}
 
 	return nil
@@ -728,6 +878,12 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("snapshots.cleanup_interval", 3600)
 	v.SetDefault("snapshots.max_age", 86400)
 	v.SetDefault("snapshots.max_count", 1000)
+
+	// Storage defaults
+	v.SetDefault("storage.warn_percent", 80)
+	v.SetDefault("storage.block_percent", 90)
+	v.SetDefault("storage.default_path", "/opt/camera-service/recordings")
+	v.SetDefault("storage.fallback_path", "/tmp/recordings")
 }
 
 // applyEnvironmentOverrides applies environment variable overrides to configuration.

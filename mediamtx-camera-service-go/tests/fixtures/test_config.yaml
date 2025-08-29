@@ -6,20 +6,33 @@ mediamtx:
   host: "localhost"
   api_port: 9997
   health_check_timeout: "5s"
-  recording:
-    default_path: "/tmp/test_recordings"
-    fallback_path: "/tmp/test_fallback"
-    default_rotation_size: 104857600  # 100MB
-    default_max_duration: 3600        # 1 hour
-    default_retention_days: 7
-  snapshots:
-    default_path: "/tmp/test_snapshots"
-    fallback_path: "/tmp/test_snapshot_fallback"
-    format: "jpeg"
-    quality: 85
-    max_width: 1920
-    max_height: 1080
-    default_retention_days: 30
+
+# Recording Configuration
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "high"
+  segment_duration: 300
+  max_segment_size: 104857600
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 604800
+  max_size: 1073741824
+  default_rotation_size: 104857600  # 100MB
+  default_max_duration: 3600        # 1 hour
+  default_retention_days: 7
+
+# Snapshots Configuration
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 85
+  max_width: 1920
+  max_height: 1080
+  auto_cleanup: true
+  cleanup_interval: 86400
+  max_age: 2592000
+  max_count: 1000
 
 # Security Configuration
 security:

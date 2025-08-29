@@ -329,6 +329,10 @@ func validateRecordingConfig(config *RecordingConfig) error {
 		return &ValidationError{Field: "recording.max_size", Message: fmt.Sprintf("max size must be positive, got %d", config.MaxSize)}
 	}
 
+	if config.DefaultRotationSize < 0 {
+		return &ValidationError{Field: "recording.default_rotation_size", Message: fmt.Sprintf("recording default rotation size cannot be negative, got %d", config.DefaultRotationSize)}
+	}
+
 	return nil
 }
 
