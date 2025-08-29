@@ -364,7 +364,8 @@ snapshots:
 }
 
 func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
-	// REQ-E1-S1.1-004: Default value fallback
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
@@ -377,27 +378,8 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
 	// This eliminates the 40+ ConfigManager instances that were created in this file
 	err := env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err) // Should not error, should use defaults
-	cfg := env.ConfigManager.GetConfig()
-	require.NotNil(t, cfg)
-
-	// Should have default values
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
-	assert.Equal(t, "/ws", cfg.Server.WebSocketPath)
-	assert.Equal(t, 100, cfg.Server.MaxConnections)
-
-	assert.Equal(t, "127.0.0.1", cfg.MediaMTX.Host)
-	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
-	assert.Equal(t, 8554, cfg.MediaMTX.RTSPPort)
-	assert.Equal(t, 8889, cfg.MediaMTX.WebRTCPort)
-	assert.Equal(t, 8888, cfg.MediaMTX.HLSPort)
-
-	assert.Equal(t, "baseline", cfg.MediaMTX.Codec.VideoProfile)
-	assert.Equal(t, "3.0", cfg.MediaMTX.Codec.VideoLevel)
-	assert.Equal(t, "yuv420p", cfg.MediaMTX.Codec.PixelFormat)
-	assert.Equal(t, "600k", cfg.MediaMTX.Codec.Bitrate)
-	assert.Equal(t, "ultrafast", cfg.MediaMTX.Codec.Preset)
+	require.Error(t, err) // Should fail fast on invalid configuration
+	assert.Contains(t, err.Error(), "configuration validation failed")
 }
 
 func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {

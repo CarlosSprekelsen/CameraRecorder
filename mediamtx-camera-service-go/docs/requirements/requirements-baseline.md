@@ -26,6 +26,11 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-TECH-GO-004 | The system SHALL use golang.org/x/crypto/bcrypt for password hashing | Critical | Go Implementation |
 | REQ-TECH-GO-005 | The system SHALL use viper for configuration management | High | Go Implementation |
 | REQ-TECH-GO-006 | The system SHALL use logrus for structured logging | High | Go Implementation |
+
+### 1.3 Configuration Validation Requirements
+
+| REQ-ID | Description | Priority | Source Reference |
+|--------|-------------|----------|------------------|
 | REQ-TECH-GO-007 | The system SHALL use testify for testing utilities | High | Go Implementation |
 | REQ-TECH-GO-008 | The system SHALL be statically linked for deployment | Critical | Go Implementation |
 | REQ-TECH-GO-009 | The system SHALL use goroutines for concurrent operations | Critical | Go Implementation |
@@ -42,6 +47,13 @@ This document serves as the master requirements register for the MediaMTX Camera
 | REQ-PERF-GO-005 | CPU Usage: <50% sustained usage under normal load (30% reduction) | High | Performance Requirements |
 | REQ-PERF-GO-006 | Goroutine Limit: <1000 concurrent goroutines maximum | High | Performance Requirements |
 
+### 1.3 Configuration Validation Requirements
+
+| REQ-ID | Description | Priority | Source Reference |
+|--------|-------------|----------|------------------|
+| REQ-CONFIG-001 | The system SHALL validate configuration files before loading | Critical | Configuration Requirements |
+| REQ-CONFIG-002 | The system SHALL fail fast on configuration errors | Critical | Configuration Requirements |
+| REQ-CONFIG-003 | Edge case handling SHALL mean early detection and clear error reporting | Critical | Configuration Requirements |
 ---
 
 ## 2. Client Application Requirements
