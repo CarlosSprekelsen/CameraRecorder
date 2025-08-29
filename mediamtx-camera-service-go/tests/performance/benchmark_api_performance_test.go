@@ -79,7 +79,7 @@ func (suite *BenchmarkSuite) Setup(b *testing.B) {
 	require.NoError(b, err, "Failed to create camera monitor")
 
 	// Initialize MediaMTX controller
-	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
+	suite.mediaMTXController, err = mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(b, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler

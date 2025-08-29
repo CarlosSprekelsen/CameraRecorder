@@ -3,7 +3,7 @@
 
 # JWT Configuration
 export CAMERA_SERVICE_JWT_SECRET="[0;34m[INFO][0m Generating test JWT secret...
-7b73f851cf5dcad42e6c029df9d2116e1c89e807525c46bea73525c9427f5b97"
+4cf39fb07088cfe12ebedd8eedc00ba7263f15f3e5d32be339df321628fcf9ba"
 
 # API Keys Configuration
 export CAMERA_SERVICE_API_KEYS_PATH="/tmp/test_api_keys.json"

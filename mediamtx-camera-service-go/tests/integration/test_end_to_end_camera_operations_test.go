@@ -28,8 +28,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
@@ -78,7 +76,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	)
 
 	// Initialize MediaMTX controller
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler
@@ -372,7 +370,7 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 	)
 
 	// Initialize MediaMTX controller (not used in this test but required for completeness)
-	_, err = mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	_, err = mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Test mock camera discovery
@@ -418,7 +416,7 @@ func BenchmarkCameraOperations(b *testing.B) {
 		infoParser,
 	)
 
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(b, err, "Failed to create MediaMTX controller")
 
 	// Benchmark camera discovery

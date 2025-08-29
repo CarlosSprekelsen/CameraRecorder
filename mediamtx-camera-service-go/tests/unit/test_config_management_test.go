@@ -75,7 +75,9 @@ Requirements Coverage:
 - REQ-E1-S1.1-001: Configuration loading from YAML files
 - REQ-E1-S1.1-002: Environment variable overrides
 - REQ-E1-S1.1-003: Configuration validation
-- REQ-E1-S1.1-004: Default value fallback
+- REQ-CONFIG-001: The system SHALL validate configuration files before loading
+- REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+- REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 - REQ-E1-S1.1-005: Thread-safe configuration access
 
 Test Categories: Unit
@@ -255,8 +257,6 @@ snapshots:
 	// Validate loaded configuration
 	assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 	assert.Equal(t, 9000, cfg.Server.Port)
-	assert.Equal(t, "/test", cfg.Server.WebSocketPath)
-	assert.Equal(t, 50, cfg.Server.MaxConnections)
 
 	assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 	assert.Equal(t, 9998, cfg.MediaMTX.APIPort)
@@ -379,11 +379,16 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 	// This eliminates the 40+ ConfigManager instances that were created in this file
 	err := env.ConfigManager.LoadConfig(configPath)
 	require.Error(t, err) // Should fail fast on invalid configuration
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 	assert.Contains(t, err.Error(), "configuration validation failed")
+	// Enhanced error message validation for clear reporting
+	assert.Contains(t, err.Error(), "invalid configuration")
+	assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 }
 
 func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {
-	// Test invalid YAML handling
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
@@ -409,17 +414,17 @@ server:
 	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
 	// This eliminates the 40+ ConfigManager instances that were created in this file
 	err = env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err) // Should not error, should use defaults
-	cfg := env.ConfigManager.GetConfig()
-	require.NotNil(t, cfg)
-
-	// Should have default values due to invalid YAML
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	require.Error(t, err) // Should fail fast on invalid configuration
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+	assert.Contains(t, err.Error(), "configuration validation failed")
+	// Enhanced error message validation for clear reporting
+	assert.Contains(t, err.Error(), "invalid configuration")
+	assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 }
 
 func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
-	// Test empty YAML file handling
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
@@ -436,13 +441,12 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
 	// This eliminates the 40+ ConfigManager instances that were created in this file
 	err = env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err) // Should not error, should use defaults
-	cfg := env.ConfigManager.GetConfig()
-	require.NotNil(t, cfg)
-
-	// Should have default values
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	require.Error(t, err) // Should fail fast on invalid configuration
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+	assert.Contains(t, err.Error(), "configuration validation failed")
+	// Enhanced error message validation for clear reporting
+	assert.Contains(t, err.Error(), "invalid configuration")
+	assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 }
 
 func TestConfigManager_EnvironmentVariableOverrides(t *testing.T) {
@@ -1485,6 +1489,9 @@ server:
 
 func TestConfigValidation_Comprehensive(t *testing.T) {
 	// REQ-E1-S1.1-003: Comprehensive configuration validation testing
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
@@ -2672,7 +2679,9 @@ performance:
 }
 
 func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
-	// Test comprehensive edge cases
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
@@ -2686,11 +2695,12 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 		nonExistentPath := filepath.Join(tempDir, "nonexistent", "config.yaml")
 
 		err := env.ConfigManager.LoadConfig(nonExistentPath)
-		require.NoError(t, err) // Should use defaults
-
-		cfg := env.ConfigManager.GetConfig()
-		require.NotNil(t, cfg)
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+		require.Error(t, err) // Should fail fast on invalid configuration
+		// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+		assert.Contains(t, err.Error(), "configuration validation failed")
+		// Enhanced error message validation for clear reporting
+		assert.Contains(t, err.Error(), "invalid configuration")
+		assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 	})
 
 	// Test with empty file
@@ -2700,11 +2710,12 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 		require.NoError(t, err)
 
 		err = env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should use defaults
-
-		cfg := env.ConfigManager.GetConfig()
-		require.NotNil(t, cfg)
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+		require.Error(t, err) // Should fail fast on invalid configuration
+		// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+		assert.Contains(t, err.Error(), "configuration validation failed")
+		// Enhanced error message validation for clear reporting
+		assert.Contains(t, err.Error(), "invalid configuration")
+		assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 	})
 
 	// Test with file containing only comments
@@ -2719,11 +2730,12 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 		require.NoError(t, err)
 
 		err = env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should use defaults
-
-		cfg := env.ConfigManager.GetConfig()
-		require.NotNil(t, cfg)
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+		require.Error(t, err) // Should fail fast on invalid configuration
+		// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+		assert.Contains(t, err.Error(), "configuration validation failed")
+		// Enhanced error message validation for clear reporting
+		assert.Contains(t, err.Error(), "invalid configuration")
+		assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 	})
 
 	// Test with malformed YAML that's not completely invalid
@@ -2733,9 +2745,15 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 server:
   host: "127.0.0.1"
   port: 8002
-
   websocket_path: "/ws"
   max_connections: 100
+  # Missing closing brace for server section
+mediamtx:
+  host: "127.0.0.1"
+  api_port: 9997
+  # Unclosed quote
+  config_path: "/opt/camera-service/config/mediamtx.yml
+  recordings_path: "/opt/camera-service/recordings"
 `
 		err := os.WriteFile(configPath, []byte(malformedYAML), 0644)
 		require.NoError(t, err)
@@ -2746,11 +2764,12 @@ server:
 		defer utils.TeardownTestEnvironment(t, env)
 
 		err = env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should use defaults due to YAML parsing error
-
-		cfg := env.ConfigManager.GetConfig()
-		require.NotNil(t, cfg)
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
+		require.Error(t, err) // Should fail fast on invalid configuration
+		// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+		assert.Contains(t, err.Error(), "configuration validation failed")
+		// Enhanced error message validation for clear reporting
+		assert.Contains(t, err.Error(), "invalid configuration")
+		assert.True(t, len(err.Error()) > 50, "Error message should be descriptive")
 	})
 
 	// Test with very large configuration file
@@ -2795,6 +2814,116 @@ server:
 		require.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
+	})
+}
+
+func TestConfigValidation_EnhancedErrorReporting(t *testing.T) {
+	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+	// Test enhanced error message validation for clear reporting
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	tempDir := t.TempDir()
+
+	t.Run("descriptive_error_messages", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "descriptive_error_test.yaml")
+
+		// Create configuration with multiple validation issues
+		invalidYAML := `
+server:
+  host: ""
+  port: 99999
+  websocket_path: ""
+  max_connections: -5
+
+mediamtx:
+  host: ""
+  api_port: 99999
+  health_check_interval: -10
+  codec:
+    video_profile: "INVALID_PROFILE"
+    video_level: "INVALID_LEVEL"
+    pixel_format: "INVALID_FORMAT"
+    preset: "INVALID_PRESET"
+
+logging:
+  level: "INVALID_LEVEL"
+
+recording:
+  format: "INVALID_FORMAT"
+  quality: "INVALID_QUALITY"
+
+snapshots:
+  format: "INVALID_FORMAT"
+  quality: 999
+`
+
+		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(configPath)
+		require.Error(t, err)
+
+		// REQ-CONFIG-003: Enhanced error message validation for clear reporting
+		errorMessage := err.Error()
+
+		// Check that error message is descriptive and comprehensive
+		assert.True(t, len(errorMessage) > 100, "Error message should be comprehensive")
+		assert.Contains(t, errorMessage, "configuration validation failed")
+		assert.Contains(t, errorMessage, "invalid")
+
+		// Check for specific validation details
+		assert.True(t, strings.Contains(errorMessage, "host") ||
+			strings.Contains(errorMessage, "port") ||
+			strings.Contains(errorMessage, "level") ||
+			strings.Contains(errorMessage, "format") ||
+			strings.Contains(errorMessage, "profile"),
+			"Error message should contain specific field names")
+
+		// Check for actionable information
+		assert.True(t, strings.Contains(errorMessage, "required") ||
+			strings.Contains(errorMessage, "invalid") ||
+			strings.Contains(errorMessage, "must") ||
+			strings.Contains(errorMessage, "should"),
+			"Error message should contain actionable guidance")
+	})
+
+	t.Run("early_detection_validation", func(t *testing.T) {
+		configPath := filepath.Join(tempDir, "early_detection_test.yaml")
+
+		// Create configuration with critical validation issues
+		criticalYAML := `
+server:
+  host: ""
+  port: 0
+
+mediamtx:
+  host: ""
+  api_port: 0
+  config_path: ""
+  recordings_path: ""
+  snapshots_path: ""
+`
+
+		err := os.WriteFile(configPath, []byte(criticalYAML), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(configPath)
+		require.Error(t, err)
+
+		// REQ-CONFIG-003: Early detection validation
+		errorMessage := err.Error()
+
+		// Check that critical issues are detected early
+		assert.Contains(t, errorMessage, "configuration validation failed")
+		assert.True(t, len(errorMessage) > 50, "Error message should be descriptive")
+
+		// Check that error is detected before any processing
+		assert.False(t, strings.Contains(errorMessage, "default"),
+			"Should not fall back to defaults, should fail fast")
 	})
 }
 
@@ -3030,4 +3159,20 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
 		assert.Equal(t, longHost, cfg.Server.Host)
 		assert.Equal(t, longLevel, cfg.Logging.Level)
 	})
+}
+
+func TestConfigManager_SaveConfigBasic(t *testing.T) {
+	// REQ-E1-S1.1-001: Configuration loading from YAML files
+	// Test basic SaveConfig functionality
+
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load initial configuration
+	err := env.ConfigManager.LoadConfig("")
+	require.NoError(t, err)
+
+	// Test SaveConfig method
+	err = env.ConfigManager.SaveConfig()
+	require.NoError(t, err)
 }

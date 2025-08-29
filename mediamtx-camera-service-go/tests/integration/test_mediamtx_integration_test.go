@@ -62,7 +62,7 @@ func (suite *MediaMTXIntegrationTestSuite) Setup(t *testing.T) {
 	suite.logger = logging.NewLogger("mediamtx-integration-test")
 
 	// Initialize MediaMTX controller
-	suite.controller, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
+	suite.controller, err = mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 }
 

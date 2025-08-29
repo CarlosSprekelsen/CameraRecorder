@@ -140,7 +140,7 @@ func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 	baseEnv := SetupTestEnvironment(t)
 
 	// Create real MediaMTX controller
-	controller, err := mediamtx.NewControllerWithConfigManager(baseEnv.ConfigManager, baseEnv.Logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(baseEnv.ConfigManager, baseEnv.Logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 
 	return &MediaMTXTestEnvironment{
@@ -251,7 +251,7 @@ func TeardownTestEnvironment(t *testing.T, env *TestEnvironment) {
 // SetupRealMediaMTXController creates a real MediaMTX controller for testing
 // Use this when you need a MediaMTX controller but not the full environment
 func SetupRealMediaMTXController(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) mediamtx.MediaMTXController {
-	controller, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 	return controller
 }

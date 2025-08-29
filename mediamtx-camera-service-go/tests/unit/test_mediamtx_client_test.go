@@ -20,16 +20,16 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestClient_Creation tests client creation
 func TestClient_Creation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -39,16 +39,16 @@ func TestClient_Creation(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 	require.NotNil(t, client, "Client should not be nil")
 }
 
 // TestClient_Get tests GET request functionality
 func TestClient_Get(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -58,8 +58,8 @@ func TestClient_Get(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -76,9 +76,9 @@ func TestClient_Get(t *testing.T) {
 
 // TestClient_Post tests POST request functionality
 func TestClient_Post(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -88,8 +88,8 @@ func TestClient_Post(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -107,9 +107,9 @@ func TestClient_Post(t *testing.T) {
 
 // TestClient_Put tests PUT request functionality
 func TestClient_Put(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -119,8 +119,8 @@ func TestClient_Put(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -138,9 +138,9 @@ func TestClient_Put(t *testing.T) {
 
 // TestClient_Delete tests DELETE request functionality
 func TestClient_Delete(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -150,8 +150,8 @@ func TestClient_Delete(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -166,9 +166,9 @@ func TestClient_Delete(t *testing.T) {
 
 // TestClient_HealthCheck tests health check functionality
 func TestClient_HealthCheck(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -178,8 +178,8 @@ func TestClient_HealthCheck(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -194,9 +194,9 @@ func TestClient_HealthCheck(t *testing.T) {
 
 // TestClient_Close tests client close functionality
 func TestClient_Close(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -206,8 +206,8 @@ func TestClient_Close(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	// Test close
 	err := client.Close()
@@ -216,9 +216,9 @@ func TestClient_Close(t *testing.T) {
 
 // TestClient_ErrorHandling tests error handling scenarios
 func TestClient_ErrorHandling(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -228,8 +228,8 @@ func TestClient_ErrorHandling(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client with invalid URL
-	client := mediamtx.NewClient("http://invalid-url:99999", testConfig, logger)
+	// Create client with invalid URL using shared logger
+	client := mediamtx.NewClient("http://invalid-url:99999", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -256,9 +256,9 @@ func TestClient_ErrorHandling(t *testing.T) {
 
 // TestClient_ConcurrentAccess tests concurrent access scenarios
 func TestClient_ConcurrentAccess(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -268,8 +268,8 @@ func TestClient_ConcurrentAccess(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	ctx := context.Background()
 
@@ -299,9 +299,9 @@ func TestClient_ConcurrentAccess(t *testing.T) {
 
 // TestClient_ContextCancellation tests context cancellation
 func TestClient_ContextCancellation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -311,8 +311,8 @@ func TestClient_ContextCancellation(t *testing.T) {
 		RetryDelay:    1 * time.Second,
 	}
 
-	// Create client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	// Create client using shared logger
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, env.Logger.Logger)
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -330,9 +330,9 @@ func TestClient_ContextCancellation(t *testing.T) {
 
 // TestClient_ConfigurationValidation tests configuration validation
 func TestClient_ConfigurationValidation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
@@ -342,8 +342,8 @@ func TestClient_ConfigurationValidation(t *testing.T) {
 		RetryDelay:    -1 * time.Second,
 	}
 
-	// Create client with invalid config
-	client := mediamtx.NewClient("", invalidConfig, logger)
+	// Create client with invalid config using shared logger
+	client := mediamtx.NewClient("", invalidConfig, env.Logger.Logger)
 	require.NotNil(t, client, "Client should be created even with invalid config")
 
 	// Test that client handles invalid config gracefully

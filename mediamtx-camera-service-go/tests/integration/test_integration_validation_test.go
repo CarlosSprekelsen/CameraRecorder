@@ -86,7 +86,7 @@ func (suite *IntegrationValidationTestSuite) Setup(t *testing.T) {
 
 	// Initialize MediaMTX controller
 	var err error
-	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
+	suite.mediaMTXController, err = mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler

@@ -82,7 +82,7 @@ func (suite *WebSocketAPITestSuite) Setup(t *testing.T) {
 	)
 
 	// Initialize MediaMTX controller
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler

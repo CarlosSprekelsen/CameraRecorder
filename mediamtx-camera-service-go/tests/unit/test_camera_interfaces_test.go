@@ -272,19 +272,26 @@ Device Caps: video capture, video streaming`
 		assert.Contains(t, capabilities.Capabilities, "video", "Should parse video capability")
 		assert.Contains(t, capabilities.Capabilities, "capture,", "Should parse capture capability")
 
-		// Test format parsing with real V4L2 format output
+		// REAL V4L2 TEST: This reflects actual v4l2-ctl --list-formats-ext output
+		// If the parser can't handle multiple sizes per format, it should FAIL
 		sampleFormatOutput := `[0]: 'YUYV' (YUYV 4:2:2)
-	Size: Discrete 1920x1080
-		Interval: Discrete 0.033s (30.000 fps)
-	Size: Discrete 1280x720
-		Interval: Discrete 0.033s (30.000 fps)`
+                Size: Discrete 640x480
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                Size: Discrete 320x240
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)`
 
 		formats, err := parser.ParseDeviceFormats(sampleFormatOutput)
 		assert.NoError(t, err, "Parser should parse device formats without error")
-		assert.Len(t, formats, 2, "Should parse two format sizes")
+		// REAL SYSTEM EXPECTATION: Real V4L2 cameras support multiple resolutions per format
+		// This test will FAIL if the parser doesn't handle multiple sizes correctly
+		assert.Len(t, formats, 2, "Should parse two sizes (640x480 and 320x240)")
 		assert.Equal(t, "YUYV", formats[0].PixelFormat, "Pixel format should be parsed correctly")
-		assert.Equal(t, 1920, formats[0].Width, "Width should be parsed correctly")
-		assert.Equal(t, 1080, formats[0].Height, "Height should be parsed correctly")
+		assert.Equal(t, 640, formats[0].Width, "First size width should be 640")
+		assert.Equal(t, 480, formats[0].Height, "First size height should be 480")
+		assert.Equal(t, 320, formats[1].Width, "Second size width should be 320")
+		assert.Equal(t, 240, formats[1].Height, "Second size height should be 240")
 
 		// Test frame rate parsing with real V4L2 frame rate output
 		// Use actual V4L2 output format from real camera

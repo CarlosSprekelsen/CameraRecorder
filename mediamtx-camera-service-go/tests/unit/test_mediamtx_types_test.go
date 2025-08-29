@@ -153,10 +153,12 @@ func TestHealthStatus_Validation(t *testing.T) {
 		Status:    "HEALTHY",
 		Timestamp: now,
 		Details:   "All systems operational",
-		Metrics: map[string]interface{}{
-			"cpu_usage":    25.5,
-			"memory_usage": 45.2,
-			"disk_usage":   30.1,
+		Metrics: mediamtx.Metrics{
+			ActiveStreams: 5,
+			TotalStreams:  10,
+			CPUUsage:      25.5,
+			MemoryUsage:   45.2,
+			Uptime:        3600,
 		},
 	}
 
@@ -164,9 +166,11 @@ func TestHealthStatus_Validation(t *testing.T) {
 	assert.Equal(t, "HEALTHY", healthStatus.Status)
 	assert.Equal(t, now, healthStatus.Timestamp)
 	assert.Equal(t, "All systems operational", healthStatus.Details)
-	assert.Equal(t, 25.5, healthStatus.Metrics["cpu_usage"])
-	assert.Equal(t, 45.2, healthStatus.Metrics["memory_usage"])
-	assert.Equal(t, 30.1, healthStatus.Metrics["disk_usage"])
+	assert.Equal(t, 5, healthStatus.Metrics.ActiveStreams)
+	assert.Equal(t, 10, healthStatus.Metrics.TotalStreams)
+	assert.Equal(t, 25.5, healthStatus.Metrics.CPUUsage)
+	assert.Equal(t, 45.2, healthStatus.Metrics.MemoryUsage)
+	assert.Equal(t, int64(3600), healthStatus.Metrics.Uptime)
 }
 
 // TestRecordingSession_Validation tests RecordingSession validation
@@ -176,20 +180,23 @@ func TestRecordingSession_Validation(t *testing.T) {
 	endTime := startTime.Add(30 * time.Second)
 
 	recordingSession := &mediamtx.RecordingSession{
-		ID:        "recording-123",
-		Device:    "/dev/video0",
-		Path:      "/recordings/test.mp4",
-		Status:    "RECORDING",
-		StartTime: startTime,
-		EndTime:   &endTime,
-		Duration:  30 * time.Second,
-		FilePath:  "/tmp/recordings/test.mp4",
-		FileSize:  1024000, // 1MB
-		Metadata: map[string]interface{}{
-			"format":  "mp4",
-			"codec":   "h264",
-			"quality": 23,
-		},
+		ID:            "recording-123",
+		Device:        "/dev/video0",
+		Path:          "/recordings/test.mp4",
+		Status:        "RECORDING",
+		StartTime:     startTime,
+		EndTime:       &endTime,
+		Duration:      30 * time.Second,
+		FilePath:      "/tmp/recordings/test.mp4",
+		FileSize:      1024000, // 1MB
+		Quality:       "high",
+		UseCase:       mediamtx.UseCaseRecording,
+		Priority:      1,
+		AutoCleanup:   true,
+		RetentionDays: 30,
+		MaxDuration:   24 * time.Hour,
+		AutoRotate:    true,
+		RotationSize:  100 * 1024 * 1024, // 100MB
 	}
 
 	assert.NotNil(t, recordingSession)
@@ -202,9 +209,14 @@ func TestRecordingSession_Validation(t *testing.T) {
 	assert.Equal(t, 30*time.Second, recordingSession.Duration)
 	assert.Equal(t, "/tmp/recordings/test.mp4", recordingSession.FilePath)
 	assert.Equal(t, int64(1024000), recordingSession.FileSize)
-	assert.Equal(t, "mp4", recordingSession.Metadata["format"])
-	assert.Equal(t, "h264", recordingSession.Metadata["codec"])
-	assert.Equal(t, 23, recordingSession.Metadata["quality"])
+	assert.Equal(t, "high", recordingSession.Quality)
+	assert.Equal(t, mediamtx.UseCaseRecording, recordingSession.UseCase)
+	assert.Equal(t, 1, recordingSession.Priority)
+	assert.True(t, recordingSession.AutoCleanup)
+	assert.Equal(t, 30, recordingSession.RetentionDays)
+	assert.Equal(t, 24*time.Hour, recordingSession.MaxDuration)
+	assert.True(t, recordingSession.AutoRotate)
+	assert.Equal(t, int64(100*1024*1024), recordingSession.RotationSize)
 }
 
 // TestSnapshot_Validation tests Snapshot validation

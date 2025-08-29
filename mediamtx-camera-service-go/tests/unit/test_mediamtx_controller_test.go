@@ -54,7 +54,7 @@ func TestMediaMTXController_Creation(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller with configuration integration
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -77,7 +77,7 @@ func TestMediaMTXController_StartStop(t *testing.T) {
 	logger := setupTestLogger("mediamtx-controller-lifecycle-test")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -105,7 +105,7 @@ func TestMediaMTXController_TakeAdvancedSnapshot(t *testing.T) {
 	logger := setupTestLogger("mediamtx-snapshot-test")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -145,7 +145,7 @@ func TestMediaMTXController_GetAdvancedSnapshot(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Test getting non-existent snapshot
@@ -170,7 +170,7 @@ func TestMediaMTXController_ListAdvancedSnapshots(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Test listing snapshots (should be empty initially)
@@ -195,7 +195,7 @@ func TestMediaMTXController_DeleteAdvancedSnapshot(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -221,10 +221,15 @@ func TestMediaMTXController_CleanupOldSnapshots(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
+
+	// Start controller first (required for cleanup operations)
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
 
 	// Test cleanup with no snapshots (should not error)
 	err = controller.CleanupOldSnapshots(ctx, 24*time.Hour, 100)
@@ -247,7 +252,7 @@ func TestMediaMTXController_GetSnapshotSettings(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Test getting snapshot settings
@@ -273,7 +278,7 @@ func TestMediaMTXController_UpdateSnapshotSettings(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Create new settings
@@ -315,7 +320,7 @@ func TestMediaMTXController_HealthMonitoring(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -353,7 +358,7 @@ func TestMediaMTXController_Metrics(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -390,7 +395,7 @@ func TestMediaMTXController_ConfigurationIntegration(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller with configuration integration
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -422,7 +427,7 @@ func TestMediaMTXController_ErrorHandling(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	ctx := context.Background()
@@ -457,7 +462,7 @@ func TestMediaMTXController_ConcurrentAccess(t *testing.T) {
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create controller
-	controller, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Test concurrent snapshot settings access
@@ -481,4 +486,552 @@ func TestMediaMTXController_ConcurrentAccess(t *testing.T) {
 	// Wait for both goroutines to complete
 	<-done
 	<-done
+}
+
+// TestMediaMTXController_StreamManagement tests stream management functionality
+func TestMediaMTXController_StreamManagement(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-stream-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test stream listing
+	streams, err := controller.GetStreams(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, streams, "Streams should not be nil")
+	}
+
+	// Test path listing
+	paths, err := controller.GetPaths(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Path listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, paths, "Paths should not be nil")
+	}
+}
+
+// TestMediaMTXController_RecordingManagement tests recording management functionality
+func TestMediaMTXController_RecordingManagement(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-recording-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test recording session management
+	sessions := controller.ListAdvancedRecordingSessions()
+	assert.NotNil(t, sessions, "Sessions should not be nil")
+
+	// Test snapshot management
+	snapshots := controller.ListAdvancedSnapshots()
+	assert.NotNil(t, snapshots, "Snapshots should not be nil")
+
+	// Test device recording status
+	isRecording := controller.IsDeviceRecording("/dev/video0")
+	assert.IsType(t, false, isRecording, "Should return boolean")
+
+	// Test active recordings
+	activeRecordings := controller.GetActiveRecordings()
+	assert.NotNil(t, activeRecordings, "Active recordings should not be nil")
+}
+
+// TestMediaMTXController_SystemMetrics tests system metrics functionality
+func TestMediaMTXController_SystemMetrics(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-system-metrics-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test system metrics retrieval
+	systemMetrics, err := controller.GetSystemMetrics(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("System metrics retrieval failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, systemMetrics, "System metrics should not be nil")
+	}
+}
+
+// TestMediaMTXController_FileOperations tests file operations functionality
+func TestMediaMTXController_FileOperations(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-file-operations-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test file listing operations
+	recordings, err := controller.ListRecordings(ctx, 10, 0)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Recordings listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, recordings, "Recordings should not be nil")
+	}
+
+	snapshots, err := controller.ListSnapshots(ctx, 10, 0)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Snapshots listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, snapshots, "Snapshots should not be nil")
+	}
+}
+
+// TestMediaMTXController_ActiveRecordingManagement tests active recording management
+func TestMediaMTXController_ActiveRecordingManagement(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-active-recording-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test device recording status (should be false initially)
+	isRecording := controller.IsDeviceRecording("/dev/video0")
+	assert.False(t, isRecording, "Device should not be recording initially")
+
+	// Test active recordings (should be empty initially)
+	activeRecordings := controller.GetActiveRecordings()
+	assert.Empty(t, activeRecordings, "Active recordings should be empty initially")
+
+	// Test getting active recording for non-existent device
+	activeRecording := controller.GetActiveRecording("/dev/video0")
+	assert.Nil(t, activeRecording, "Active recording should be nil for non-existent device")
+
+	// Test starting active recording
+	err = controller.StartActiveRecording("/dev/video0", "test-session-123", "test-stream")
+	require.NoError(t, err, "Should start active recording successfully")
+
+	// Verify recording is now active
+	isRecording = controller.IsDeviceRecording("/dev/video0")
+	assert.True(t, isRecording, "Device should now be recording")
+
+	// Verify active recordings contains the device
+	activeRecordings = controller.GetActiveRecordings()
+	assert.NotEmpty(t, activeRecordings, "Active recordings should not be empty")
+	assert.Contains(t, activeRecordings, "/dev/video0", "Active recordings should contain device")
+
+	// Test getting active recording for existing device
+	activeRecording = controller.GetActiveRecording("/dev/video0")
+	assert.NotNil(t, activeRecording, "Active recording should not be nil for existing device")
+	assert.Equal(t, "test-session-123", activeRecording.SessionID, "Session ID should match")
+	assert.Equal(t, "test-stream", activeRecording.StreamName, "Stream name should match")
+
+	// Test stopping active recording
+	err = controller.StopActiveRecording("/dev/video0")
+	require.NoError(t, err, "Should stop active recording successfully")
+
+	// Verify recording is no longer active
+	isRecording = controller.IsDeviceRecording("/dev/video0")
+	assert.False(t, isRecording, "Device should no longer be recording")
+
+	// Verify active recordings is empty again
+	activeRecordings = controller.GetActiveRecordings()
+	assert.Empty(t, activeRecordings, "Active recordings should be empty after stopping")
+}
+
+// TestMediaMTXController_HealthResponseParsing tests health response parsing
+func TestMediaMTXController_HealthResponseParsing(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-health-parsing-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test health check (this will exercise parseHealthResponse)
+	health, err := controller.GetHealth(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Health check failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, health, "Health status should not be nil")
+		assert.NotEmpty(t, health.Status, "Health status should not be empty")
+		assert.NotNil(t, health.Timestamp, "Health timestamp should not be nil")
+		assert.NotNil(t, health.Metrics, "Health metrics should not be nil")
+	}
+
+	// Test metrics retrieval (this will exercise parseMetricsResponse)
+	metrics, err := controller.GetMetrics(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Metrics retrieval failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, metrics, "Metrics should not be nil")
+	}
+}
+
+// TestMediaMTXController_StreamPathResponseParsing tests stream and path response parsing
+func TestMediaMTXController_StreamPathResponseParsing(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-stream-path-parsing-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test stream listing (this will exercise parseStreamsResponse and parseStreamResponse)
+	streams, err := controller.GetStreams(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, streams, "Streams should not be nil")
+		// If there are streams, test getting individual stream
+		if len(streams) > 0 {
+			stream, err := controller.GetStream(ctx, streams[0].ID)
+			if err != nil {
+				t.Logf("Individual stream retrieval failed: %v", err)
+			} else {
+				assert.NotNil(t, stream, "Individual stream should not be nil")
+				assert.Equal(t, streams[0].ID, stream.ID, "Stream ID should match")
+			}
+		}
+	}
+
+	// Test path listing (this will exercise parsePathsResponse and parsePathResponse)
+	paths, err := controller.GetPaths(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Path listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, paths, "Paths should not be nil")
+		// If there are paths, test getting individual path
+		if len(paths) > 0 {
+			path, err := controller.GetPath(ctx, paths[0].Name)
+			if err != nil {
+				t.Logf("Individual path retrieval failed: %v", err)
+			} else {
+				assert.NotNil(t, path, "Individual path should not be nil")
+				assert.Equal(t, paths[0].Name, path.Name, "Path name should match")
+			}
+		}
+	}
+}
+
+// TestMediaMTXController_ConfigIntegration tests configuration integration functionality
+func TestMediaMTXController_ConfigIntegration(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-config-integration-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test configuration retrieval (this exercises config integration methods)
+	config, err := controller.GetConfig(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Config retrieval failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, config, "Config should not be nil")
+		assert.NotEmpty(t, config.BaseURL, "Config should have BaseURL")
+		assert.NotZero(t, config.APIPort, "Config should have APIPort")
+	}
+
+	// Test configuration update (this exercises UpdateMediaMTXConfig)
+	updatedConfig := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        30 * time.Second,
+		RetryAttempts:  3,
+		RetryDelay:     1 * time.Second,
+		Host:           "localhost",
+		APIPort:        9997,
+		RTSPPort:       8554,
+		WebRTCPort:     8889,
+		HLSPort:        8888,
+	}
+
+	err = controller.UpdateConfig(ctx, updatedConfig)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Config update failed (expected if MediaMTX not running): %v", err)
+	} else {
+		// Verify config was updated
+		config, err := controller.GetConfig(ctx)
+		if err == nil {
+			assert.Equal(t, updatedConfig.BaseURL, config.BaseURL, "Config should be updated")
+		}
+	}
+}
+
+// TestMediaMTXController_ConfigValidation tests configuration validation functionality
+func TestMediaMTXController_ConfigValidation(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-config-validation-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test with invalid configuration (this exercises ValidateMediaMTXConfig)
+	invalidConfig := &mediamtx.MediaMTXConfig{
+		BaseURL:        "", // Invalid empty URL
+		HealthCheckURL: "",
+		Timeout:        0,  // Invalid timeout
+		RetryAttempts:  -1, // Invalid retry attempts
+		RetryDelay:     0,  // Invalid retry delay
+		Host:           "",
+		APIPort:        0, // Invalid port
+		RTSPPort:       0,
+		WebRTCPort:     0,
+		HLSPort:        0,
+	}
+
+	err = controller.UpdateConfig(ctx, invalidConfig)
+	// This should fail due to validation
+	if err != nil {
+		t.Logf("Config validation correctly failed: %v", err)
+		assert.Contains(t, err.Error(), "validation", "Error should mention validation")
+	} else {
+		t.Logf("Config validation unexpectedly succeeded with invalid config")
+	}
+
+	// Test with valid configuration
+	validConfig := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        30 * time.Second,
+		RetryAttempts:  3,
+		RetryDelay:     1 * time.Second,
+		Host:           "localhost",
+		APIPort:        9997,
+		RTSPPort:       8554,
+		WebRTCPort:     8889,
+		HLSPort:        8888,
+	}
+
+	err = controller.UpdateConfig(ctx, validConfig)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Valid config update failed (expected if MediaMTX not running): %v", err)
+	} else {
+		t.Logf("Valid config update succeeded")
+	}
+}
+
+// TestMediaMTXController_ConfigComponents tests individual config component retrieval
+func TestMediaMTXController_ConfigComponents(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Setup test logging
+	logger := logging.NewLogger("mediamtx-config-components-test")
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
+	require.NoError(t, err, "Failed to setup logging")
+
+	// Create controller
+	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	ctx := context.Background()
+
+	// Start controller
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer controller.Stop(ctx)
+
+	// Test configuration retrieval (this exercises GetRecordingConfig, GetSnapshotConfig, etc.)
+	config, err := controller.GetConfig(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Config retrieval failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, config, "Config should not be nil")
+
+		// Validate config components
+		assert.NotEmpty(t, config.BaseURL, "BaseURL should not be empty")
+		assert.NotEmpty(t, config.HealthCheckURL, "HealthCheckURL should not be empty")
+		assert.NotZero(t, config.Timeout, "Timeout should not be zero")
+		assert.Greater(t, config.RetryAttempts, 0, "RetryAttempts should be positive")
+		assert.NotZero(t, config.RetryDelay, "RetryDelay should not be zero")
+		assert.NotEmpty(t, config.Host, "Host should not be empty")
+		assert.Greater(t, config.APIPort, 0, "APIPort should be positive")
+		assert.Greater(t, config.RTSPPort, 0, "RTSPPort should be positive")
+		assert.Greater(t, config.WebRTCPort, 0, "WebRTCPort should be positive")
+		assert.Greater(t, config.HLSPort, 0, "HLSPort should be positive")
+	}
 }

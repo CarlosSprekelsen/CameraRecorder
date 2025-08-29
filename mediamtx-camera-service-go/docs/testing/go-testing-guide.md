@@ -50,7 +50,7 @@
 **Correct Usage Examples**:
 ```bash
 # Test config package with coverage
-go test -coverpkg=./internal/config ./tests/unit/test_config_management_test.go
+go test -tags="unit,real_system" -coverpkg=./internal/config ./tests/unit/test_config_management_test.go
 
 # Test logging package with coverage  
 go test -coverpkg=./internal/logging ./tests/unit/test_logging_infrastructure_test.go
@@ -355,8 +355,8 @@ All test runners and utilities are located in `tests/tools/`:
 ```bash
 # For most testing needs, use go test directly
 go test ./...
-go test -tags=unit ./...
-go test -tags=integration ./...
+go test -tags="unit,real_system,real_mediamtx" ./tests/unit/...
+go test -tags="integration,real_system,real_mediamtx" ./tests/integration/...
 
 # Use tools only for specialized orchestration
 ./tests/tools/run_all_tests.sh
@@ -377,8 +377,7 @@ go clean -cache
 
 ### MediaMTX Integration
 ```go
-//go:build integration
-//go:build real_mediamtx
+//go:build integration && real_mediamtx
 // +build integration,real_mediamtx
 
 func TestStreamCreation(t *testing.T) {

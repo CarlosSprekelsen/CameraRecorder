@@ -224,7 +224,7 @@ func TestMain_ComponentDependencies(t *testing.T) {
 		"config.NewConfigManager",
 		"logging.NewLogger",
 		"camera.NewHybridCameraMonitor",
-		"mediamtx.NewControllerWithConfigManager",
+		"mediamtx.ControllerWithConfigManager",
 		"security.NewJWTHandler",
 		"websocket.NewWebSocketServer",
 	}

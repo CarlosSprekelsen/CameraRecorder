@@ -49,51 +49,6 @@ type controller struct {
 	recordingMutex   sync.RWMutex
 }
 
-// NewController creates a new MediaMTX controller
-func NewController(config *MediaMTXConfig, logger *logrus.Logger) (MediaMTXController, error) {
-	// Validate configuration
-	if err := validateConfig(config); err != nil {
-		return nil, NewConfigurationErrorWithErr("config", "validation", "invalid configuration", err)
-	}
-
-	// Create HTTP client
-	client := NewClient(config.BaseURL, config, logger)
-
-	// Create health monitor
-	healthMonitor := NewHealthMonitor(client, config, logger)
-
-	// Create path manager
-	pathManager := NewPathManager(client, config, logger)
-
-	// Create stream manager
-	streamManager := NewStreamManager(client, config, logger)
-
-	// Create FFmpeg manager
-	ffmpegManager := NewFFmpegManager(config, logger)
-
-	// Create recording manager
-	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
-
-	// Create snapshot manager
-	snapshotManager := NewSnapshotManager(ffmpegManager, config, logger)
-
-	return &controller{
-		client:           client,
-		healthMonitor:    healthMonitor,
-		pathManager:      pathManager,
-		streamManager:    streamManager,
-		ffmpegManager:    ffmpegManager,
-		recordingManager: recordingManager,
-		snapshotManager:  snapshotManager,
-		config:           config,
-		logger:           logger,
-		sessions:         make(map[string]*RecordingSession),
-
-		// Active recording tracking initialization (Phase 2 enhancement)
-		activeRecordings: make(map[string]*ActiveRecording),
-	}, nil
-}
-
 // Active recording management methods (Phase 2 enhancement)
 
 // IsDeviceRecording checks if a device is currently recording
@@ -195,8 +150,8 @@ func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 	return nil
 }
 
-// NewControllerWithConfigManager creates a new MediaMTX controller with configuration integration
-func NewControllerWithConfigManager(configManager *config.ConfigManager, logger *logrus.Logger) (MediaMTXController, error) {
+// ControllerWithConfigManager creates a new MediaMTX controller with configuration integration
+func ControllerWithConfigManager(configManager *config.ConfigManager, logger *logrus.Logger) (MediaMTXController, error) {
 	// Create configuration integration
 	configIntegration := NewConfigIntegration(configManager, logger)
 
@@ -238,6 +193,7 @@ func NewControllerWithConfigManager(configManager *config.ConfigManager, logger 
 		config:           mediaMTXConfig,
 		logger:           logger,
 		sessions:         make(map[string]*RecordingSession),
+		activeRecordings: make(map[string]*ActiveRecording),
 	}, nil
 }
 

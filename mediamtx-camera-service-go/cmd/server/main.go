@@ -45,7 +45,7 @@ func main() {
 	}
 
 	// Initialize MediaMTX controller with existing logger
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, logger.Logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
 	}

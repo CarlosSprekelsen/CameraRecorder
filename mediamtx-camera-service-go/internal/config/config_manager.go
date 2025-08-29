@@ -62,8 +62,7 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 
 	// Read configuration file
 	if err := v.ReadInConfig(); err != nil {
-		cm.logger.WithError(err).Warn("Failed to read config file, using defaults")
-		// Continue with defaults
+		return fmt.Errorf("configuration validation failed: invalid configuration - cannot read configuration file '%s': %w", configPath, err)
 	}
 
 	// Unmarshal configuration

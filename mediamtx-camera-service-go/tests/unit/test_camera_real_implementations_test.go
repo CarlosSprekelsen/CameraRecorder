@@ -90,12 +90,15 @@ func TestRealV4L2CommandExecutor(t *testing.T) {
 		// Test with a command that should work (help)
 		output, err := executor.ExecuteCommand(ctx, "/dev/video0", "--help")
 
-		// This may fail if v4l2-ctl is not installed, but we test the interface
+		// REAL SYSTEM TEST: This should test actual v4l2-ctl behavior
+		// If v4l2-ctl is not installed, the error should be meaningful
 		if err != nil {
+			// REAL ERROR EXPECTATION: Should provide clear error message
 			assert.Contains(t, err.Error(), "executable file not found", "Should fail gracefully if v4l2-ctl not found")
 		} else {
 			assert.NotEmpty(t, output, "Command output should not be empty")
-			assert.Contains(t, output, "v4l2-ctl", "Output should contain v4l2-ctl information")
+			// REAL V4L2-CTL OUTPUT: Should contain actual v4l2-ctl help information
+			assert.Contains(t, output, "General/Common options", "Output should contain v4l2-ctl help information")
 		}
 	})
 
@@ -106,9 +109,10 @@ func TestRealV4L2CommandExecutor(t *testing.T) {
 		// Test with invalid device path
 		output, err := executor.ExecuteCommand(ctx, "/dev/invalid_device", "--info")
 
-		// This should fail gracefully
+		// REAL SYSTEM TEST: Invalid device should provide meaningful error
 		if err != nil {
-			assert.Contains(t, err.Error(), "No such file", "Should fail with appropriate error for invalid device")
+			// REAL ERROR EXPECTATION: Should provide clear error message about the invalid device
+			assert.Contains(t, err.Error(), "Cannot open device", "Should fail with clear error message for invalid device")
 		} else {
 			// If it doesn't fail, output should be empty or contain error info
 			t.Logf("Command output: %s", output)
@@ -193,38 +197,36 @@ Bus info          : usb-0000:00:14.0-1
 	})
 
 	t.Run("parse_device_formats_valid_output", func(t *testing.T) {
-		validOutput := `
-Index : 0
-Type  : Video Capture
-Name  : YUYV
-Size  : 1920x1080
-fps   : 30.000
-
-Index : 1
-Type  : Video Capture
-Name  : MJPEG
-Size  : 1280x720
-fps   : 60.000
-`
+		// REAL V4L2 TEST: This reflects actual v4l2-ctl --list-formats-ext output
+		validOutput := `[0]: 'YUYV' (YUYV 4:2:2)
+                Size: Discrete 640x480
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                Size: Discrete 320x240
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)`
 
 		formats, err := parser.ParseDeviceFormats(validOutput)
 		require.NoError(t, err, "Should parse valid format output without error")
 
-		assert.Len(t, formats, 2, "Should parse two formats")
+		// REAL SYSTEM EXPECTATION: Should parse multiple sizes for the same format
+		assert.Len(t, formats, 2, "Should parse two sizes (640x480 and 320x240)")
 
-		// Check first format
-		assert.Equal(t, "YUYV", formats[0].PixelFormat, "First format pixel format should be correct")
-		assert.Equal(t, 1920, formats[0].Width, "First format width should be correct")
-		assert.Equal(t, 1080, formats[0].Height, "First format height should be correct")
-		assert.Len(t, formats[0].FrameRates, 1, "First format should have one frame rate")
-		assert.Equal(t, "30.000", formats[0].FrameRates[0], "First format frame rate should be correct")
+		// Check first format (640x480)
+		assert.Equal(t, "YUYV", formats[0].PixelFormat, "Format pixel format should be correct")
+		assert.Equal(t, 640, formats[0].Width, "First format width should be 640")
+		assert.Equal(t, 480, formats[0].Height, "First format height should be 480")
+		assert.Len(t, formats[0].FrameRates, 2, "First format should have two frame rates")
+		assert.Contains(t, formats[0].FrameRates, "30.000", "First format should contain 30.000 fps")
+		assert.Contains(t, formats[0].FrameRates, "20.000", "First format should contain 20.000 fps")
 
-		// Check second format
-		assert.Equal(t, "MJPEG", formats[1].PixelFormat, "Second format pixel format should be correct")
-		assert.Equal(t, 1280, formats[1].Width, "Second format width should be correct")
-		assert.Equal(t, 720, formats[1].Height, "Second format height should be correct")
-		assert.Len(t, formats[1].FrameRates, 1, "Second format should have one frame rate")
-		assert.Equal(t, "60.000", formats[1].FrameRates[0], "Second format frame rate should be correct")
+		// Check second format (320x240)
+		assert.Equal(t, "YUYV", formats[1].PixelFormat, "Second format pixel format should be correct")
+		assert.Equal(t, 320, formats[1].Width, "Second format width should be 320")
+		assert.Equal(t, 240, formats[1].Height, "Second format height should be 240")
+		assert.Len(t, formats[1].FrameRates, 2, "Second format should have two frame rates")
+		assert.Contains(t, formats[1].FrameRates, "30.000", "Second format should contain 30.000 fps")
+		assert.Contains(t, formats[1].FrameRates, "20.000", "Second format should contain 20.000 fps")
 	})
 
 	t.Run("parse_device_formats_empty_output", func(t *testing.T) {
@@ -252,25 +254,36 @@ fps   : 30.000
 	})
 
 	t.Run("parse_device_frame_rates_valid_output", func(t *testing.T) {
+		// REAL V4L2 OUTPUT FORMAT - matches actual v4l2-ctl --list-formats-ext output
 		validOutput := `
-30.000 fps
-60.000 FPS
-Frame rate: 25.0
-30 Hz
-1920x1080@60
-Interval: [1/30]
-[1/25]
-1/30 s
-30 frames per second
-rate: 24
-fps: 29.97
+ioctl: VIDIOC_ENUM_FMT
+        Type: Video Capture
+
+        [0]: 'YUYV' (YUYV 4:2:2)
+                Size: Discrete 640x480
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                        Interval: Discrete 0.067s (15.000 fps)
+                        Interval: Discrete 0.100s (10.000 fps)
+                        Interval: Discrete 0.200s (5.000 fps)
+                Size: Discrete 320x240
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                        Interval: Discrete 0.067s (15.000 fps)
+                        Interval: Discrete 0.100s (10.000 fps)
+        [1]: 'MJPG' (Motion-JPEG, compressed)
+                Size: Discrete 1280x720
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.040s (25.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
 `
 
 		frameRates, err := parser.ParseDeviceFrameRates(validOutput)
 		require.NoError(t, err, "Should parse valid frame rate output without error")
 
-		expectedRates := []string{"30.000", "60.000", "25.0", "30", "60", "30", "25", "30", "30", "24", "29.97"}
-		assert.ElementsMatch(t, expectedRates, frameRates, "Should parse all frame rate patterns")
+		// REAL V4L2 FRAME RATES - these are the actual rates from the output above
+		expectedRates := []string{"30.000", "20.000", "15.000", "10.000", "5.000", "25.000"}
+		assert.ElementsMatch(t, expectedRates, frameRates, "Should parse all frame rate patterns from real V4L2 output")
 	})
 
 	t.Run("parse_device_frame_rates_empty_output", func(t *testing.T) {
@@ -294,18 +307,25 @@ No fps information here
 	})
 
 	t.Run("parse_device_frame_rates_duplicate_rates", func(t *testing.T) {
+		// REAL V4L2 OUTPUT WITH DUPLICATE RATES - matches actual v4l2-ctl output
 		duplicateOutput := `
-30.000 fps
-30.000 FPS
-30 Hz
-30 frames per second
+ioctl: VIDIOC_ENUM_FMT
+        Type: Video Capture
+
+        [0]: 'YUYV' (YUYV 4:2:2)
+                Size: Discrete 640x480
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
 `
 
 		frameRates, err := parser.ParseDeviceFrameRates(duplicateOutput)
 		require.NoError(t, err, "Should handle duplicate frame rates without error")
 
-		assert.Len(t, frameRates, 1, "Should deduplicate frame rates")
-		assert.Equal(t, "30.000", frameRates[0], "Should keep one instance of duplicate rate")
+		assert.Len(t, frameRates, 2, "Should deduplicate frame rates")
+		assert.Contains(t, frameRates, "30.000", "Should contain 30.000 fps")
+		assert.Contains(t, frameRates, "20.000", "Should contain 20.000 fps")
 	})
 }
 
@@ -335,37 +355,38 @@ Device Caps       : 0x04200001
 	})
 
 	t.Run("parse_complete_formats_with_sizes", func(t *testing.T) {
+		// REAL V4L2 OUTPUT FORMAT - matches actual v4l2-ctl --list-formats-ext output
 		completeFormatsOutput := `
-Index : 0
-Type  : Video Capture
-Name  : YUYV
-Size  : 1920x1080
-fps   : 30.000
+ioctl: VIDIOC_ENUM_FMT
+        Type: Video Capture
 
-Index : 1
-Type  : Video Capture
-Name  : MJPEG
-Size  : 1280x720
-fps   : 60.000
-
-Index : 2
-Type  : Video Capture
-Name  : RGB24
-Size  : 640x480
-fps   : 25.000
+        [0]: 'YUYV' (YUYV 4:2:2)
+                Size: Discrete 640x480
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+                Size: Discrete 320x240
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.050s (20.000 fps)
+        [1]: 'MJPG' (Motion-JPEG, compressed)
+                Size: Discrete 1280x720
+                        Interval: Discrete 0.033s (30.000 fps)
+                        Interval: Discrete 0.040s (25.000 fps)
 `
 
 		formats, err := parser.ParseDeviceFormats(completeFormatsOutput)
 		require.NoError(t, err, "Should parse complete formats without error")
 
-		assert.Len(t, formats, 3, "Should parse three formats")
+		assert.Len(t, formats, 3, "Should parse three format entries (YUYV 640x480, YUYV 320x240, MJPG 1280x720)")
 
-		// Verify size parsing works correctly
-		assert.Equal(t, 1920, formats[0].Width, "First format width should be parsed correctly")
-		assert.Equal(t, 1080, formats[0].Height, "First format height should be parsed correctly")
-		assert.Equal(t, 1280, formats[1].Width, "Second format width should be parsed correctly")
-		assert.Equal(t, 720, formats[1].Height, "Second format height should be parsed correctly")
-		assert.Equal(t, 640, formats[2].Width, "Third format width should be parsed correctly")
-		assert.Equal(t, 480, formats[2].Height, "Third format height should be parsed correctly")
+		// Verify size parsing works correctly for real V4L2 format
+		// First format: YUYV 640x480
+		assert.Equal(t, 640, formats[0].Width, "First format width should be parsed correctly")
+		assert.Equal(t, 480, formats[0].Height, "First format height should be parsed correctly")
+		// Second format: YUYV 320x240
+		assert.Equal(t, 320, formats[1].Width, "Second format width should be parsed correctly")
+		assert.Equal(t, 240, formats[1].Height, "Second format height should be parsed correctly")
+		// Third format: MJPG 1280x720
+		assert.Equal(t, 1280, formats[2].Width, "Third format width should be parsed correctly")
+		assert.Equal(t, 720, formats[2].Height, "Third format height should be parsed correctly")
 	})
 }

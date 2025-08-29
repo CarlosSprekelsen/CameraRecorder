@@ -489,7 +489,7 @@ func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
 	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Create real MediaMTX controller using test utilities
-	realController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	realController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 
 	// Test config change watching with real controller

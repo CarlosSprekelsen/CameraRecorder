@@ -62,7 +62,7 @@ func NewStressTestSuite() *StressTestSuite {
 // Setup initializes the stress test suite
 func (suite *StressTestSuite) Setup(t *testing.T) {
 	// REQ-STRESS-001: Concurrent WebSocket connections
-	
+
 	// Create context with timeout
 	suite.ctx, suite.cancel = context.WithTimeout(context.Background(), 300*time.Second)
 
@@ -90,7 +90,7 @@ func (suite *StressTestSuite) Setup(t *testing.T) {
 	require.NoError(t, err, "Failed to create camera monitor")
 
 	// Initialize MediaMTX controller
-	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
+	suite.mediaMTXController, err = mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler

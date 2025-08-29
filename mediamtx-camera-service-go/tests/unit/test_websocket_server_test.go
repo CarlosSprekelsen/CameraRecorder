@@ -64,7 +64,7 @@ func TestWebSocketServerInstantiation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	// Test successful instantiation
@@ -454,7 +454,7 @@ func TestClientConnectionManagement(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -511,7 +511,7 @@ func TestServerLifecycle(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -547,7 +547,7 @@ func TestApiCompliance(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -617,7 +617,7 @@ func TestPerformanceMetrics(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -653,7 +653,7 @@ func TestJwtTokenValidation(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -710,7 +710,7 @@ func TestServerErrorHandling(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -770,7 +770,7 @@ func TestServerMetricsComprehensive(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
@@ -824,7 +824,7 @@ func TestServerLifecycleComprehensive(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
 
 	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
