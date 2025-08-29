@@ -139,7 +139,6 @@ func TestCameraEventData(t *testing.T) {
 // TestCameraEventHandler tests the CameraEventHandler interface
 func TestCameraEventHandler(t *testing.T) {
 	t.Run("camera_event_handler_interface_compliance", func(t *testing.T) {
-		// Create a mock event handler that implements the interface
 		mockHandler := &MockCameraEventHandler{
 			events: make([]camera.CameraEventData, 0),
 		}

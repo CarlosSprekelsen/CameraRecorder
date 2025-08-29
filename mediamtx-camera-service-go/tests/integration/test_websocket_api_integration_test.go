@@ -60,7 +60,7 @@ func NewWebSocketAPITestSuite() *WebSocketAPITestSuite {
 // Setup initializes the test suite
 func (suite *WebSocketAPITestSuite) Setup(t *testing.T) {
 	// Load configuration
-	suite.configManager = config.NewConfigManager()
+	suite.configManager = config.CreateConfigManager()
 	err := suite.configManager.LoadConfig("config/default.yaml")
 	require.NoError(t, err, "Failed to load configuration")
 

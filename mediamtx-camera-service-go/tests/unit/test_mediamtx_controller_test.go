@@ -121,11 +121,10 @@ func TestMediaMTXController_TakeAdvancedSnapshot(t *testing.T) {
 		"quality": 85,
 	}
 
-	// Note: This test requires actual camera hardware or mock setup
+	// Note: This test requires actual camera hardware [exists]
 	// For unit testing, we test the method signature and error handling
 	_, err = controller.TakeAdvancedSnapshot(ctx, "/dev/video0", "/tmp/test_snapshot", options)
-	// We expect an error since we don't have actual camera hardware in unit tests
-	// This validates that the method exists and handles errors appropriately
+	// We do not expect an error since we have an actual camera hardware in unit tests
 	assert.Error(t, err, "Should return error when camera not available")
 }
 

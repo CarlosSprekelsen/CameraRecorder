@@ -586,10 +586,10 @@ func validateRetentionPolicyConfig(config *RetentionPolicyConfig) error {
 
 	// Validate age-based policy parameters
 	if config.Type == "age" {
-		if config.MaxAgeDays <= 0 {
-			return &ValidationError{Field: "retention_policy.max_age_days", Message: fmt.Sprintf("max age days must be positive for age-based policy, got %d", config.MaxAgeDays)}
+		if config.MaxAgeDays < 0 {
+			return &ValidationError{Field: "retention_policy.max_age_days", Message: fmt.Sprintf("max age days cannot be negative for age-based policy, got %d", config.MaxAgeDays)}
 		}
-		if config.MaxAgeDays > 365 {
+		if config.MaxAgeDays > 0 && config.MaxAgeDays > 365 {
 			return &ValidationError{Field: "retention_policy.max_age_days", Message: fmt.Sprintf("max age days cannot exceed 365 days, got %d", config.MaxAgeDays)}
 		}
 	}

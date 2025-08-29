@@ -221,7 +221,7 @@ func TestMain_ComponentDependencies(t *testing.T) {
 
 	// Test that all required components are referenced
 	requiredComponents := []string{
-		"config.NewConfigManager",
+		"config.CreateConfigManager()",
 		"logging.NewLogger",
 		"camera.NewHybridCameraMonitor",
 		"mediamtx.ControllerWithConfigManager",

@@ -8,7 +8,7 @@ consistent test environment setup across all test files.
 
 COMMON PATTERN USAGE:
 Instead of creating individual components in each test:
-   configManager := config.NewConfigManager()
+   configManager := config.CreateConfigManager()
    logger := logging.NewLogger("test")
 
 Use the shared utilities:
@@ -102,7 +102,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	require.NoError(t, err, "Failed to copy test configuration")
 
 	// Initialize configuration manager
-	configManager := config.NewConfigManager()
+	configManager := config.CreateConfigManager()
 	err = configManager.LoadConfig(configPath)
 	require.NoError(t, err, "Failed to load test configuration")
 

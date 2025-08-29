@@ -321,7 +321,7 @@ func TestErrorHandlingIntegration(t *testing.T) {
 		// Test configuration error handling
 
 		// Test with invalid configuration
-		invalidConfigManager := config.NewConfigManager()
+		invalidConfigManager := config.CreateConfigManager()
 		err := invalidConfigManager.LoadConfig("non-existent-config.yaml")
 		assert.Error(t, err, "Should return error for non-existent config file")
 

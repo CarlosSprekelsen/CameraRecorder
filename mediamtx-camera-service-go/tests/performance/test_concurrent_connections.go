@@ -67,7 +67,7 @@ func (suite *StressTestSuite) Setup(t *testing.T) {
 	suite.ctx, suite.cancel = context.WithTimeout(context.Background(), 300*time.Second)
 
 	// Load configuration
-	suite.configManager = config.NewConfigManager()
+	suite.configManager = config.CreateConfigManager()
 	err := suite.configManager.LoadConfig("config/default.yaml")
 	require.NoError(t, err, "Failed to load configuration")
 

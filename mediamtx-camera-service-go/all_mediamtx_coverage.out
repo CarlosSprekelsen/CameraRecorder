@@ -305,7 +305,7 @@ github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controlle
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:921.58,923.2 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:926.91,927.18 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:927.18,929.3 1 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:931.2,931.58 1 0
+github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:931.2,931.58 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:935.105,936.18 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:936.18,938.3 1 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/controller.go:940.2,940.69 1 1
@@ -1133,8 +1133,8 @@ github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:435.56,440.40 4 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:440.40,442.3 1 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:444.2,444.18 1 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:448.89,453.13 4 0
-github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:453.13,456.3 2 0
+github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:448.89,453.13 4 1
+github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:453.13,456.3 2 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:459.2,463.53 3 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:463.53,465.3 1 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx/snapshot_manager.go:467.2,472.12 2 0

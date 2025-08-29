@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,8 +28,8 @@ type ConfigManager struct {
 	wg              sync.WaitGroup
 }
 
-// NewConfigManager creates a new configuration manager instance.
-func NewConfigManager() *ConfigManager {
+// CreateConfigManager creates a new configuration manager instance.
+func CreateConfigManager() *ConfigManager {
 	return &ConfigManager{
 		updateCallbacks: make([]func(*Config), 0),
 		defaultConfig:   getDefaultConfig(),
@@ -47,6 +48,13 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 		"action":      "load_config",
 	}).Info("Loading configuration")
 
+	// REQ-CONFIG-001: Validate configuration files before loading
+	// REQ-CONFIG-002: Fail fast on configuration errors
+	// REQ-CONFIG-003: Early detection and clear error reporting
+	if err := cm.validateConfigFile(configPath); err != nil {
+		return fmt.Errorf("configuration validation failed: invalid configuration - %w", err)
+	}
+
 	// Set up Viper
 	v := viper.New()
 	v.SetConfigFile(configPath)
@@ -63,6 +71,13 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 	// Read configuration file
 	if err := v.ReadInConfig(); err != nil {
 		return fmt.Errorf("configuration validation failed: invalid configuration - cannot read configuration file '%s': %w", configPath, err)
+	}
+
+	// REQ-CONFIG-001: Validate environment variables before applying them
+	// REQ-CONFIG-002: Fail fast on configuration errors
+	// REQ-CONFIG-003: Early detection and clear error reporting
+	if err := cm.validateEnvironmentVariables(); err != nil {
+		return fmt.Errorf("configuration validation failed: invalid configuration - %w", err)
 	}
 
 	// Unmarshal configuration
@@ -97,6 +112,200 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 		"action":      "load_config",
 		"status":      "success",
 	}).Info("Configuration loaded successfully")
+
+	return nil
+}
+
+// validateConfigFile validates the configuration file before loading
+// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+func (cm *ConfigManager) validateConfigFile(configPath string) error {
+	// Check if file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return fmt.Errorf("configuration file does not exist: '%s'", configPath)
+	}
+
+	// Read file content for validation
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("cannot read configuration file '%s': %w", configPath, err)
+	}
+
+	// Check for empty file
+	if len(content) == 0 {
+		return fmt.Errorf("configuration file is empty: '%s' - file must contain valid YAML configuration", configPath)
+	}
+
+	// Check for comments-only file
+	lines := strings.Split(string(content), "\n")
+	hasNonCommentContent := false
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine == "" {
+			continue // Skip empty lines
+		}
+		if strings.HasPrefix(trimmedLine, "#") {
+			continue // Skip comment lines
+		}
+		hasNonCommentContent = true
+		break
+	}
+
+	if !hasNonCommentContent {
+		return fmt.Errorf("configuration file contains only comments or is empty: '%s' - file must contain valid YAML configuration data", configPath)
+	}
+
+	return nil
+}
+
+// validateEnvironmentVariables validates environment variables before applying them
+// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
+func (cm *ConfigManager) validateEnvironmentVariables() error {
+	// Get all environment variables with CAMERA_SERVICE prefix
+	envVars := make(map[string]string)
+	for _, env := range os.Environ() {
+		pair := strings.SplitN(env, "=", 2)
+		if len(pair) == 2 && strings.HasPrefix(pair[0], "CAMERA_SERVICE_") {
+			envVars[pair[0]] = pair[1]
+		}
+	}
+
+	// Validate each environment variable
+	for key, value := range envVars {
+		// Skip empty environment variables (they should be ignored, not validated)
+		if value == "" {
+			continue
+		}
+
+		// Check for whitespace-only values (these should fail fast)
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("environment variable '%s' has whitespace-only value - must provide a valid configuration value", key)
+		}
+
+		// Validate specific field types based on the environment variable name
+		if err := cm.validateEnvironmentVariableValue(key, value); err != nil {
+			return fmt.Errorf("environment variable '%s' has invalid value '%s': %w", key, value, err)
+		}
+	}
+
+	return nil
+}
+
+// validateEnvironmentVariableValue validates a specific environment variable value based on its field type
+func (cm *ConfigManager) validateEnvironmentVariableValue(key, value string) error {
+	// Convert key to field path for validation
+	fieldPath := strings.ToLower(strings.TrimPrefix(key, "CAMERA_SERVICE_"))
+	fieldPath = strings.ReplaceAll(fieldPath, "_", ".")
+
+	// Validate based on field type
+	switch {
+	case strings.HasSuffix(fieldPath, ".port"):
+		// Port fields should be numeric and in valid range
+		if port, err := strconv.Atoi(value); err != nil {
+			return fmt.Errorf("port value must be a valid integer")
+		} else if port <= 0 || port > 65535 {
+			return fmt.Errorf("port value must be between 1 and 65535, got %d", port)
+		}
+
+	case strings.HasSuffix(fieldPath, ".host"):
+		// Host fields should not be empty or whitespace-only
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("host value cannot be empty or whitespace-only")
+		}
+
+	case strings.HasSuffix(fieldPath, ".path"):
+		// Path fields should not be empty or whitespace-only
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("path value cannot be empty or whitespace-only")
+		}
+
+	case strings.HasSuffix(fieldPath, ".enabled"):
+		// Boolean fields should be valid boolean values
+		validBools := []string{"true", "false", "1", "0", "t", "f", "yes", "no", "y", "n"}
+		lowerValue := strings.ToLower(strings.TrimSpace(value))
+		isValid := false
+		for _, valid := range validBools {
+			if lowerValue == valid {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return fmt.Errorf("boolean value must be one of: %v", validBools)
+		}
+
+	case strings.HasSuffix(fieldPath, ".level"):
+		// Log level fields should be valid log levels
+		validLevels := []string{"debug", "info", "warn", "warning", "error", "fatal", "panic"}
+		lowerValue := strings.ToLower(strings.TrimSpace(value))
+		isValid := false
+		for _, valid := range validLevels {
+			if lowerValue == valid {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			return fmt.Errorf("log level must be one of: %v", validLevels)
+		}
+
+	case strings.HasSuffix(fieldPath, ".format"):
+		// Format fields should not be empty or whitespace-only
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("format value cannot be empty or whitespace-only")
+		}
+
+	case strings.HasSuffix(fieldPath, ".quality"):
+		// Quality fields should be numeric or valid quality strings
+		if quality, err := strconv.Atoi(value); err == nil {
+			// Numeric quality (0-100)
+			if quality < 0 || quality > 100 {
+				return fmt.Errorf("quality value must be between 0 and 100, got %d", quality)
+			}
+		} else {
+			// String quality (low, medium, high)
+			validQualities := []string{"low", "medium", "high"}
+			lowerValue := strings.ToLower(strings.TrimSpace(value))
+			isValid := false
+			for _, valid := range validQualities {
+				if lowerValue == valid {
+					isValid = true
+					break
+				}
+			}
+			if !isValid {
+				return fmt.Errorf("quality value must be numeric (0-100) or one of: %v", validQualities)
+			}
+		}
+
+	case strings.Contains(fieldPath, "interval") || strings.Contains(fieldPath, "timeout") || strings.Contains(fieldPath, "duration"):
+		// Time-related fields should be numeric and positive
+		if duration, err := strconv.ParseFloat(value, 64); err != nil {
+			return fmt.Errorf("time value must be a valid number")
+		} else if duration < 0 {
+			return fmt.Errorf("time value must be positive, got %f", duration)
+		}
+
+	case strings.Contains(fieldPath, "count") || strings.Contains(fieldPath, "size") || strings.Contains(fieldPath, "max_connections"):
+		// Count/size fields should be numeric and positive
+		if count, err := strconv.Atoi(value); err != nil {
+			return fmt.Errorf("count/size value must be a valid integer")
+		} else if count < 0 {
+			return fmt.Errorf("count/size value must be positive, got %d", count)
+		}
+
+	case strings.Contains(fieldPath, "multiplier") || strings.Contains(fieldPath, "threshold"):
+		// Multiplier/threshold fields should be numeric and positive
+		if multiplier, err := strconv.ParseFloat(value, 64); err != nil {
+			return fmt.Errorf("multiplier/threshold value must be a valid number")
+		} else if multiplier < 0 {
+			return fmt.Errorf("multiplier/threshold value must be positive, got %f", multiplier)
+		}
+	}
 
 	return nil
 }
@@ -657,26 +866,4 @@ func getDefaultConfig() *Config {
 			MaxCount:        1000,
 		},
 	}
-}
-
-// Global configuration manager instance
-var globalConfigManager *ConfigManager
-var globalConfigManagerOnce sync.Once
-
-// GetConfigManager returns the global configuration manager instance.
-func GetConfigManager() *ConfigManager {
-	globalConfigManagerOnce.Do(func() {
-		globalConfigManager = NewConfigManager()
-	})
-	return globalConfigManager
-}
-
-// LoadConfig is a convenience function to load configuration using the global manager.
-func LoadConfig(configPath string) error {
-	return GetConfigManager().LoadConfig(configPath)
-}
-
-// GetConfig is a convenience function to get the current configuration.
-func GetConfig() *Config {
-	return GetConfigManager().GetConfig()
 }

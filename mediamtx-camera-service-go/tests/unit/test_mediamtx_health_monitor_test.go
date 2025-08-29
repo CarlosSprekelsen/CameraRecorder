@@ -25,33 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockHealthClient implements the MediaMTXClient interface for health testing
-type mockHealthClient struct{}
-
-func (m *mockHealthClient) Get(ctx context.Context, path string) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
-
-func (m *mockHealthClient) Post(ctx context.Context, path string, data []byte) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
-
-func (m *mockHealthClient) Put(ctx context.Context, path string, data []byte) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
-
-func (m *mockHealthClient) Delete(ctx context.Context, path string) error {
-	return nil
-}
-
-func (m *mockHealthClient) HealthCheck(ctx context.Context) error {
-	return nil
-}
-
-func (m *mockHealthClient) Close() error {
-	return nil
-}
-
 // TestHealthMonitor_Creation tests health monitor creation
 func TestHealthMonitor_Creation(t *testing.T) {
 	// Create test logger
@@ -67,7 +40,7 @@ func TestHealthMonitor_Creation(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -89,7 +62,7 @@ func TestHealthMonitor_StartStop(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -120,7 +93,7 @@ func TestHealthMonitor_GetStatus(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -146,7 +119,7 @@ func TestHealthMonitor_IsHealthy(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -171,7 +144,7 @@ func TestHealthMonitor_CircuitBreaker(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -204,7 +177,7 @@ func TestHealthMonitor_ErrorHandling(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -241,7 +214,7 @@ func TestHealthMonitor_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -281,7 +254,7 @@ func TestHealthMonitor_ContextCancellation(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor
 	healthMonitor := mediamtx.NewHealthMonitor(client, testConfig, logger)
@@ -322,7 +295,7 @@ func TestHealthMonitor_ConfigurationValidation(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockHealthClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create health monitor with invalid config
 	healthMonitor := mediamtx.NewHealthMonitor(client, invalidConfig, logger)

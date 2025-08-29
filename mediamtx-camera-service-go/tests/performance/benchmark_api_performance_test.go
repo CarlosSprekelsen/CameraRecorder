@@ -56,7 +56,7 @@ func (suite *BenchmarkSuite) Setup(b *testing.B) {
 	suite.ctx = context.Background()
 
 	// Load configuration
-	suite.configManager = config.NewConfigManager()
+	suite.configManager = config.CreateConfigManager()
 	err := suite.configManager.LoadConfig("config/default.yaml")
 	require.NoError(b, err, "Failed to load configuration")
 

@@ -55,7 +55,7 @@ func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	}
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(testConfig, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -129,7 +129,7 @@ func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 	}
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(testConfig, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -202,7 +202,7 @@ func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 	}
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(testConfig, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -270,7 +270,7 @@ func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	}
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(testConfig, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -648,7 +648,7 @@ func TestFileLifecycle_CompleteWorkflow(t *testing.T) {
 	}
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(testConfig, logger)
 	require.NoError(t, err)
 
 	t.Run("complete file lifecycle workflow", func(t *testing.T) {

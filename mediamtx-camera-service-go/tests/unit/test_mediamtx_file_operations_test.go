@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -39,24 +40,24 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 
 	// Create test recording files
 	testFiles := []struct {
-		name     string
-		content  string
-		modTime  time.Time
+		name    string
+		content string
+		modTime time.Time
 	}{
 		{
-			name:     "camera0_2025-01-15_14-30-00.mp4",
-			content:  "test recording content 1",
-			modTime:  time.Date(2025, 1, 15, 14, 30, 0, 0, time.UTC),
+			name:    "camera0_2025-01-15_14-30-00.mp4",
+			content: "test recording content 1",
+			modTime: time.Date(2025, 1, 15, 14, 30, 0, 0, time.UTC),
 		},
 		{
-			name:     "camera1_2025-01-15_15-30-00.mp4",
-			content:  "test recording content 2",
-			modTime:  time.Date(2025, 1, 15, 15, 30, 0, 0, time.UTC),
+			name:    "camera1_2025-01-15_15-30-00.mp4",
+			content: "test recording content 2",
+			modTime: time.Date(2025, 1, 15, 15, 30, 0, 0, time.UTC),
 		},
 		{
-			name:     "camera2_2025-01-15_16-30-00.mp4",
-			content:  "test recording content 3",
-			modTime:  time.Date(2025, 1, 15, 16, 30, 0, 0, time.UTC),
+			name:    "camera2_2025-01-15_16-30-00.mp4",
+			content: "test recording content 3",
+			modTime: time.Date(2025, 1, 15, 16, 30, 0, 0, time.UTC),
 		},
 	}
 
@@ -71,13 +72,11 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		RecordingsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -163,24 +162,24 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 
 	// Create test snapshot files
 	testFiles := []struct {
-		name     string
-		content  string
-		modTime  time.Time
+		name    string
+		content string
+		modTime time.Time
 	}{
 		{
-			name:     "snapshot_2025-01-15_14-30-00.jpg",
-			content:  "test snapshot content 1",
-			modTime:  time.Date(2025, 1, 15, 14, 30, 0, 0, time.UTC),
+			name:    "snapshot_2025-01-15_14-30-00.jpg",
+			content: "test snapshot content 1",
+			modTime: time.Date(2025, 1, 15, 14, 30, 0, 0, time.UTC),
 		},
 		{
-			name:     "snapshot_2025-01-15_15-30-00.jpg",
-			content:  "test snapshot content 2",
-			modTime:  time.Date(2025, 1, 15, 15, 30, 0, 0, time.UTC),
+			name:    "snapshot_2025-01-15_15-30-00.jpg",
+			content: "test snapshot content 2",
+			modTime: time.Date(2025, 1, 15, 15, 30, 0, 0, time.UTC),
 		},
 		{
-			name:     "snapshot_2025-01-15_16-30-00.jpg",
-			content:  "test snapshot content 3",
-			modTime:  time.Date(2025, 1, 15, 16, 30, 0, 0, time.UTC),
+			name:    "snapshot_2025-01-15_16-30-00.jpg",
+			content: "test snapshot content 3",
+			modTime: time.Date(2025, 1, 15, 16, 30, 0, 0, time.UTC),
 		},
 	}
 
@@ -195,13 +194,11 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		SnapshotsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -297,13 +294,11 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		RecordingsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -371,13 +366,11 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		SnapshotsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -444,13 +437,11 @@ func TestMediaMTXController_DeleteRecording(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		RecordingsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -512,13 +503,11 @@ func TestMediaMTXController_DeleteSnapshot(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		SnapshotsPath: tempDir,
-	}
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
 
 	// Create controller using proper constructor
-	controller, err := mediamtx.NewController(testConfig, logger)
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	require.NoError(t, err)
 
 	tests := []struct {

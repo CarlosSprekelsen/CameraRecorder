@@ -24,33 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockClient implements the MediaMTXClient interface for testing
-type mockPathClient struct{}
-
-func (m *mockPathClient) Get(ctx context.Context, path string) ([]byte, error) {
-	return []byte(`{"items":[]}`), nil
-}
-
-func (m *mockPathClient) Post(ctx context.Context, path string, data []byte) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
-
-func (m *mockPathClient) Put(ctx context.Context, path string, data []byte) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
-
-func (m *mockPathClient) Delete(ctx context.Context, path string) error {
-	return nil
-}
-
-func (m *mockPathClient) HealthCheck(ctx context.Context) error {
-	return nil
-}
-
-func (m *mockPathClient) Close() error {
-	return nil
-}
-
 // TestPathManager_Creation tests path manager creation
 func TestPathManager_Creation(t *testing.T) {
 	// Create test logger
@@ -62,8 +35,8 @@ func TestPathManager_Creation(t *testing.T) {
 		BaseURL: "http://localhost:9997",
 	}
 
-	// Create mock client
-	client := &mockPathClient{}
+	// Create mediamtx client
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -81,8 +54,8 @@ func TestPathManager_CreatePath(t *testing.T) {
 		BaseURL: "http://localhost:9997",
 	}
 
-	// Create mock client
-	client := &mockPathClient{}
+	// Create mediamtx client
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -117,7 +90,7 @@ func TestPathManager_DeletePath(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -147,7 +120,7 @@ func TestPathManager_GetPath(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -177,7 +150,7 @@ func TestPathManager_ListPaths(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -208,7 +181,7 @@ func TestPathManager_ValidatePath(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -238,7 +211,7 @@ func TestPathManager_PathExists(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -264,7 +237,7 @@ func TestPathManager_ErrorHandling(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -292,7 +265,7 @@ func TestPathManager_ConcurrentAccess(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
@@ -335,7 +308,7 @@ func TestPathManager_ContextCancellation(t *testing.T) {
 	}
 
 	// Create mock client
-	client := &mockPathClient{}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Create path manager
 	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
