@@ -40,6 +40,10 @@ type RecordingManager struct {
 	sessions   map[string]*RecordingSession
 	sessionsMu sync.RWMutex
 
+	// Device to session mapping for efficient lookup
+	deviceToSession map[string]string // device path -> session ID
+	deviceMu        sync.RWMutex
+
 	// File rotation settings
 	rotationSettings *RotationSettings
 
@@ -176,10 +180,11 @@ func NewRecordingManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, lo
 	ctx, cancel := context.WithCancel(context.Background())
 
 	rm := &RecordingManager{
-		ffmpegManager: ffmpegManager,
-		config:        config,
-		logger:        logger,
-		sessions:      make(map[string]*RecordingSession),
+		ffmpegManager:   ffmpegManager,
+		config:          config,
+		logger:          logger,
+		sessions:        make(map[string]*RecordingSession),
+		deviceToSession: make(map[string]string),
 		rotationSettings: &RotationSettings{
 			MaxFileSize:     100 * 1024 * 1024, // 100MB
 			MaxDuration:     10 * time.Minute,
@@ -452,13 +457,17 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, device, path str
 		}
 	}
 
-	// Update session
+	// Update session with PID
 	session.Status = "RECORDING"
+	session.PID = pid
 
-	// Store session
+	// Store session and update device mapping
 	rm.sessionsMu.Lock()
 	rm.sessions[sessionID] = session
 	rm.sessionsMu.Unlock()
+
+	// Add device to session mapping
+	rm.addDeviceSessionMapping(device, sessionID)
 
 	// Start monitoring if auto-rotation is enabled
 	if rm.rotationSettings.AutoRotate {
@@ -503,16 +512,25 @@ func (rm *RecordingManager) StopRecordingWithContinuity(ctx context.Context, ses
 	session.EndTime = &endTime
 	session.Duration = endTime.Sub(session.StartTime)
 
-	// Stop FFmpeg process - convert sessionID to PID if needed
-	// For now, we'll use a placeholder PID since the actual PID should be stored in the session
-	if err := rm.ffmpegManager.StopProcess(ctx, 0); err != nil {
-		rm.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to stop FFmpeg process")
+	// Stop FFmpeg process using stored PID
+	if session.PID > 0 {
+		if err := rm.ffmpegManager.StopProcess(ctx, session.PID); err != nil {
+			rm.logger.WithError(err).WithFields(logrus.Fields{
+				"session_id": sessionID,
+				"pid":        session.PID,
+			}).Warning("Failed to stop FFmpeg process")
+		}
+	} else {
+		rm.logger.WithField("session_id", sessionID).Warning("No PID stored for session, cannot stop FFmpeg process")
 	}
 
-	// Remove session
+	// Remove session and device mapping
 	rm.sessionsMu.Lock()
 	delete(rm.sessions, sessionID)
 	rm.sessionsMu.Unlock()
+
+	// Remove device to session mapping
+	rm.removeDeviceSessionMapping(session.Device)
 
 	rm.logger.WithField("session_id", sessionID).Info("Recording stopped with continuity maintained")
 	return nil
@@ -538,9 +556,17 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 	session.Status = "STOPPING"
 	rm.sessionsMu.Unlock()
 
-	// Stop FFmpeg process (we need to track PID in session)
-	// For now, we'll use a placeholder approach
-	// In a real implementation, we'd store the PID in the session
+	// Stop FFmpeg process using stored PID
+	if session.PID > 0 {
+		if err := rm.ffmpegManager.StopProcess(ctx, session.PID); err != nil {
+			rm.logger.WithError(err).WithFields(logrus.Fields{
+				"session_id": sessionID,
+				"pid":        session.PID,
+			}).Warning("Failed to stop FFmpeg process")
+		}
+	} else {
+		rm.logger.WithField("session_id", sessionID).Warning("No PID stored for session, cannot stop FFmpeg process")
+	}
 
 	// Update session status
 	rm.sessionsMu.Lock()
@@ -1051,20 +1077,50 @@ func (sm *StorageMonitor) checkStorage() {
 	}
 }
 
-// getStorageMetrics gets current storage usage metrics
+// getStorageMetrics gets current storage usage metrics using proper filesystem calls
 func (sm *StorageMonitor) getStorageMetrics() (*StorageMetrics, error) {
-	// This is a simplified implementation
-	// In a real implementation, you'd use syscall.Statfs or similar
-	// to get actual filesystem statistics
-
-	metrics := &StorageMetrics{
-		TotalSpace: 100 * 1024 * 1024 * 1024, // 100GB example
-		UsedSpace:  80 * 1024 * 1024 * 1024,  // 80GB example
-		LastCheck:  time.Now(),
+	// Get storage path from recordings path in main config
+	// Note: This function needs access to the main config, but we'll use a default path for now
+	storagePath := "/tmp" // Default fallback
+	if sm.config != nil {
+		// Try to get recordings path from environment or use default
+		if recordingsPath := os.Getenv("RECORDINGS_PATH"); recordingsPath != "" {
+			storagePath = recordingsPath
+		}
 	}
 
-	metrics.AvailableSpace = metrics.TotalSpace - metrics.UsedSpace
-	metrics.UsagePercent = int((metrics.UsedSpace * 100) / metrics.TotalSpace)
+	// Use syscall.Statfs to get actual filesystem statistics
+	var stat syscall.Statfs_t
+	err := syscall.Statfs(storagePath, &stat)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get filesystem stats: %w", err)
+	}
+
+	// Calculate storage metrics
+	// stat.Blocks is total blocks, stat.Bfree is free blocks, stat.Bavail is available blocks
+	blockSize := uint64(stat.Bsize)
+	totalBlocks := stat.Blocks
+	freeBlocks := stat.Bfree
+	availableBlocks := stat.Bavail
+
+	// Convert to bytes
+	totalSpace := totalBlocks * blockSize
+	availableSpace := availableBlocks * blockSize
+	usedSpace := totalSpace - (freeBlocks * blockSize)
+
+	// Calculate usage percentage
+	usagePercent := 0
+	if totalSpace > 0 {
+		usagePercent = int((usedSpace * 100) / totalSpace)
+	}
+
+	metrics := &StorageMetrics{
+		TotalSpace:     int64(totalSpace),
+		UsedSpace:      int64(usedSpace),
+		AvailableSpace: int64(availableSpace),
+		UsagePercent:   usagePercent,
+		LastCheck:      time.Now(),
+	}
 
 	return metrics, nil
 }
@@ -1330,11 +1386,15 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 		DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
 	}
 
-	// Add duration for video files (will be implemented when video metadata extraction is available)
+	// Add duration for video files using FFmpeg metadata extraction
 	if isVideo {
-		// TODO: Extract duration from video file metadata
-		// For now, set to nil as specified in the plan
-		fileMetadata.Duration = nil
+		duration, err := rm.extractVideoDuration(ctx, filePath)
+		if err != nil {
+			rm.logger.WithError(err).WithField("filename", filename).Warn("Failed to extract video duration, setting to nil")
+			fileMetadata.Duration = nil
+		} else {
+			fileMetadata.Duration = &duration
+		}
 	}
 
 	rm.logger.WithField("filename", filename).Debug("Recording info retrieved successfully")
@@ -1593,4 +1653,41 @@ type StorageInfo struct {
 	UsagePercent   int   `json:"usage_percent"`
 	WarnThreshold  int   `json:"warn_threshold"`
 	BlockThreshold int   `json:"block_threshold"`
+}
+
+// Device to session mapping helper methods
+
+// addDeviceSessionMapping adds a device to session mapping
+func (rm *RecordingManager) addDeviceSessionMapping(device, sessionID string) {
+	rm.deviceMu.Lock()
+	defer rm.deviceMu.Unlock()
+	rm.deviceToSession[device] = sessionID
+}
+
+// removeDeviceSessionMapping removes a device to session mapping
+func (rm *RecordingManager) removeDeviceSessionMapping(device string) {
+	rm.deviceMu.Lock()
+	defer rm.deviceMu.Unlock()
+	delete(rm.deviceToSession, device)
+}
+
+// getSessionIDByDevice gets session ID by device path
+func (rm *RecordingManager) getSessionIDByDevice(device string) (string, bool) {
+	rm.deviceMu.RLock()
+	defer rm.deviceMu.RUnlock()
+	sessionID, exists := rm.deviceToSession[device]
+	return sessionID, exists
+}
+
+// GetSessionByDevice gets a recording session by device path
+func (rm *RecordingManager) GetSessionByDevice(device string) (*RecordingSession, bool) {
+	sessionID, exists := rm.getSessionIDByDevice(device)
+	if !exists {
+		return nil, false
+	}
+
+	rm.sessionsMu.RLock()
+	defer rm.sessionsMu.RUnlock()
+	session, exists := rm.sessions[sessionID]
+	return session, exists
 }

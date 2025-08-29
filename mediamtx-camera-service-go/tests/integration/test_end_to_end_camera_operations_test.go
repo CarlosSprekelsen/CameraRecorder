@@ -1,6 +1,7 @@
 // +build integration,real_system
 
 //go:build integration && real_system
+// +build integration,real_system
 
 /*
 End-to-End Camera Operations Integration Test
@@ -32,6 +33,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,21 +46,22 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test environment
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// Load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("config/test.yaml")
+	err := env.ConfigManager.LoadConfig("config/test.yaml")
 	if err != nil {
 		// Fallback to default config
-		err = configManager.LoadConfig("config/default.yaml")
+		err = env.ConfigManager.LoadConfig("config/default.yaml")
 		require.NoError(t, err, "Failed to load configuration")
 	}
-
-	// Setup logging
-	logger := logging.NewLogger("integration-test")
 
 	// Initialize real implementations
 	deviceChecker := &camera.RealDeviceChecker{}
@@ -67,19 +70,19 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Initialize camera monitor
 	cameraMonitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
 
 	// Initialize MediaMTX controller
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
+	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Initialize JWT handler
-	cfg := configManager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration not available")
 
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
@@ -87,8 +90,8 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Initialize WebSocket server
 	wsServer := websocket.NewWebSocketServer(
-		configManager,
-		logger,
+		env.ConfigManager,
+		env.Logger,
 		cameraMonitor,
 		jwtHandler,
 		mediaMTXController,
@@ -337,21 +340,22 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test environment
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("config/test.yaml")
+	err := env.ConfigManager.LoadConfig("config/test.yaml")
 	if err != nil {
 		// Fallback to default config
-		err = configManager.LoadConfig("config/default.yaml")
+		err = env.ConfigManager.LoadConfig("config/default.yaml")
 		require.NoError(t, err, "Failed to load configuration")
 	}
-
-	// Setup logging
-	logger := logging.NewLogger("mock-integration-test")
 
 	// Initialize mock implementations
 	deviceChecker := &camera.RealDeviceChecker{}
@@ -360,15 +364,15 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 
 	// Initialize camera monitor
 	cameraMonitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
 
 	// Initialize MediaMTX controller (not used in this test but required for completeness)
-	_, err = mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
+	_, err = mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
 	// Test mock camera discovery
@@ -392,26 +396,29 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 
 // BenchmarkCameraOperations benchmarks camera operations
 func BenchmarkCameraOperations(b *testing.B) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(b)
+	defer utils.TeardownTestEnvironment(b, env)
+
 	// Setup
 	ctx := context.Background()
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("config/default.yaml")
+	err := env.ConfigManager.LoadConfig("config/default.yaml")
 	require.NoError(b, err, "Failed to load configuration")
 
-	logger := logging.NewLogger("benchmark-test")
 	deviceChecker := &camera.RealDeviceChecker{}
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	cameraMonitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
 
-	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
+	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(b, err, "Failed to create MediaMTX controller")
 
 	// Benchmark camera discovery

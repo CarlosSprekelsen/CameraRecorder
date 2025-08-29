@@ -33,13 +33,16 @@ func main() {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Initialize camera monitor with real implementations
-	cameraMonitor := camera.NewHybridCameraMonitor(
+	cameraMonitor, err := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to create camera monitor")
+	}
 
 	// Initialize MediaMTX controller with existing logger
 	mediaMTXController, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
@@ -65,13 +68,16 @@ func main() {
 	}
 
 	// Initialize WebSocket server
-	wsServer := websocket.NewWebSocketServer(
+	wsServer, err := websocket.NewWebSocketServer(
 		configManager,
 		logger,
 		cameraMonitor,
 		jwtHandler,
 		mediaMTXController,
 	)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to create WebSocket server")
+	}
 
 	// Start camera monitor
 	ctx := context.Background()

@@ -82,9 +82,9 @@ func NewHybridCameraMonitor(
 	deviceChecker DeviceChecker,
 	commandExecutor V4L2CommandExecutor,
 	infoParser DeviceInfoParser,
-) *HybridCameraMonitor {
+) (*HybridCameraMonitor, error) {
 	if configManager == nil {
-		panic("configManager cannot be nil - use existing internal/config/ConfigManager")
+		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
 	}
 
 	if logger == nil {
@@ -93,7 +93,7 @@ func NewHybridCameraMonitor(
 
 	cfg := configManager.GetConfig()
 	if cfg == nil {
-		panic("configuration not available - ensure config is loaded")
+		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
 	}
 
 	monitor := &HybridCameraMonitor{
@@ -153,7 +153,7 @@ func NewHybridCameraMonitor(
 		"action":                      "monitor_created",
 	}).Info("Hybrid camera monitor created")
 
-	return monitor
+	return monitor, nil
 }
 
 // handleConfigurationUpdate handles configuration hot-reload updates
@@ -394,7 +394,18 @@ func (m *HybridCameraMonitor) discoverCameras() {
 	for _, deviceNum := range m.deviceRange {
 		wg.Add(1)
 		go func(num int) {
-			defer wg.Done()
+			defer func() {
+				// Recover from panics in goroutine
+				if r := recover(); r != nil {
+					m.logger.WithFields(map[string]interface{}{
+						"device_num": num,
+						"panic":      r,
+						"action":     "panic_recovered",
+					}).Error("Recovered from panic in device check goroutine")
+				}
+				wg.Done()
+			}()
+
 			devicePath := fmt.Sprintf("/dev/video%d", num)
 
 			device, err := m.createCameraDeviceInfo(devicePath, num)
@@ -415,6 +426,15 @@ func (m *HybridCameraMonitor) discoverCameras() {
 
 	// Wait for all goroutines to complete
 	go func() {
+		defer func() {
+			// Recover from panics in goroutine
+			if r := recover(); r != nil {
+				m.logger.WithFields(map[string]interface{}{
+					"panic":  r,
+					"action": "panic_recovered",
+				}).Error("Recovered from panic in device collection goroutine")
+			}
+		}()
 		wg.Wait()
 		close(deviceChan)
 	}()
@@ -477,7 +497,7 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(device *CameraDevice) erro
 		device.Capabilities = *cached
 		device.Name = cached.CardName
 		m.cacheMutex.RUnlock()
-		
+
 		m.stats.mu.Lock()
 		m.stats.CapabilityProbesSuccessful++
 		m.stats.mu.Unlock()
@@ -649,6 +669,17 @@ func (m *HybridCameraMonitor) generateCameraEvent(eventType CameraEvent, deviceP
 	m.eventHandlersLock.RLock()
 	for _, handler := range m.eventHandlers {
 		go func(h CameraEventHandler) {
+			defer func() {
+				// Recover from panics in goroutine
+				if r := recover(); r != nil {
+					m.logger.WithFields(map[string]interface{}{
+						"handler_type": fmt.Sprintf("%T", h),
+						"panic":        r,
+						"action":       "panic_recovered",
+					}).Error("Recovered from panic in camera event handler")
+				}
+			}()
+
 			if err := h.HandleCameraEvent(context.Background(), eventData); err != nil {
 				m.logger.WithFields(map[string]interface{}{
 					"handler_type": fmt.Sprintf("%T", h),

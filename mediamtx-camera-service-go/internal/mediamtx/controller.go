@@ -610,9 +610,17 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 	session.Status = "STOPPING"
 	c.sessionsMu.Unlock()
 
-	// Stop FFmpeg process (we need to track PID in session)
-	// For now, we'll use a placeholder approach
-	// In a real implementation, we'd store the PID in the session
+	// Stop FFmpeg process using stored PID
+	if session.PID > 0 {
+		if err := c.ffmpegManager.StopProcess(ctx, session.PID); err != nil {
+			c.logger.WithError(err).WithFields(logrus.Fields{
+				"session_id": sessionID,
+				"pid":        session.PID,
+			}).Warning("Failed to stop FFmpeg process")
+		}
+	} else {
+		c.logger.WithField("session_id", sessionID).Warning("No PID stored for session, cannot stop FFmpeg process")
+	}
 
 	// Update session status
 	c.sessionsMu.Lock()
@@ -1076,4 +1084,9 @@ func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error 
 	c.logger.WithField("filename", filename).Debug("Deleting snapshot")
 
 	return c.snapshotManager.DeleteSnapshotFile(ctx, filename)
+}
+
+// GetSessionIDByDevice gets session ID by device path using optimized lookup
+func (c *controller) GetSessionIDByDevice(device string) (string, bool) {
+	return c.recordingManager.getSessionIDByDevice(device)
 }

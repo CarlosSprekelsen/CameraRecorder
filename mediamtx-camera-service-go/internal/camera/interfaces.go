@@ -10,16 +10,16 @@ import (
 type CameraEvent string
 
 const (
-	CameraEventConnected    CameraEvent = "CONNECTED"
-	CameraEventDisconnected CameraEvent = "DISCONNECTED"
+	CameraEventConnected     CameraEvent = "CONNECTED"
+	CameraEventDisconnected  CameraEvent = "DISCONNECTED"
 	CameraEventStatusChanged CameraEvent = "STATUS_CHANGED"
 )
 
 // CameraEventData represents data structure for camera events
 type CameraEventData struct {
-	DevicePath string      `json:"device_path"`
-	EventType  CameraEvent `json:"event_type"`
-	Timestamp  time.Time   `json:"timestamp"`
+	DevicePath string        `json:"device_path"`
+	EventType  CameraEvent   `json:"event_type"`
+	Timestamp  time.Time     `json:"timestamp"`
 	DeviceInfo *CameraDevice `json:"device_info,omitempty"`
 }
 
@@ -78,15 +78,15 @@ type MonitorStats struct {
 
 // CapabilityDetectionResult represents the result of device capability detection
 type CapabilityDetectionResult struct {
-	Detected              bool      `json:"detected"`
-	Accessible            bool      `json:"accessible"`
-	DeviceName            string    `json:"device_name"`
-	Driver                string    `json:"driver"`
-	Formats               []string  `json:"formats"`
-	Resolutions           []string  `json:"resolutions"`
-	FrameRates            []string  `json:"frame_rates"`
-	Error                 string    `json:"error,omitempty"`
-	TimeoutContext        string    `json:"timeout_context,omitempty"`
-	ProbeTimestamp        time.Time `json:"probe_timestamp"`
+	Detected              bool                   `json:"detected"`
+	Accessible            bool                   `json:"accessible"`
+	DeviceName            string                 `json:"device_name"`
+	Driver                string                 `json:"driver"`
+	Formats               []string               `json:"formats"`
+	Resolutions           []string               `json:"resolutions"`
+	FrameRates            []string               `json:"frame_rates"`
+	Error                 string                 `json:"error,omitempty"`
+	TimeoutContext        string                 `json:"timeout_context,omitempty"`
+	ProbeTimestamp        time.Time              `json:"probe_timestamp"`
 	StructuredDiagnostics map[string]interface{} `json:"structured_diagnostics,omitempty"`
 }

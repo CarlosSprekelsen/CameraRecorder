@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX FFmpeg Manager Unit Tests
 
@@ -8,9 +11,6 @@ Requirements Coverage:
 Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
-
-//go:build unit
-// +build unit
 
 package mediamtx_test
 
@@ -33,9 +33,9 @@ func TestFFmpegManager_Creation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -51,9 +51,9 @@ func TestFFmpegManager_StartProcess(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -83,9 +83,9 @@ func TestFFmpegManager_StopProcess(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -109,9 +109,9 @@ func TestFFmpegManager_IsProcessRunning(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -132,9 +132,9 @@ func TestFFmpegManager_StartRecording(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -166,9 +166,9 @@ func TestFFmpegManager_StopRecording(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -192,9 +192,9 @@ func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -219,9 +219,9 @@ func TestFFmpegManager_RotateFile(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -245,9 +245,9 @@ func TestFFmpegManager_GetFileInfo(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -274,9 +274,9 @@ func TestFFmpegManager_BuildCommand(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -299,9 +299,9 @@ func TestFFmpegManager_ErrorHandling(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -334,15 +334,13 @@ func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
 	ffmpegManager := mediamtx.NewFFmpegManager(testConfig, logger)
-
-	ctx := context.Background()
 
 	// Test concurrent command building
 	done := make(chan bool, 2)
@@ -372,9 +370,9 @@ func TestFFmpegManager_ContextCancellation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		ProcessKillTimeout:        2.0,
 	}
 
 	// Create FFmpeg manager
@@ -402,9 +400,9 @@ func TestFFmpegManager_ConfigurationValidation(t *testing.T) {
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "",
+		BaseURL:                   "",
 		ProcessTerminationTimeout: -1.0,
-		ProcessKillTimeout: -1.0,
+		ProcessKillTimeout:        -1.0,
 	}
 
 	// Create FFmpeg manager with invalid config

@@ -29,10 +29,9 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	ws "github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,14 +46,17 @@ func TestWebSocketRealConnection(t *testing.T) {
 		Expected: WebSocket connection can be established and basic communication works
 	*/
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test server
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	server := ws.NewWebSocketServer(configManager, logger, cameraMonitor, jwtHandler)
+	server := ws.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler)
 	require.NotNil(t, server)
 
 	// Start server
@@ -86,14 +88,17 @@ func TestPingMethodRealConnection(t *testing.T) {
 		Performance Target: <50ms response time
 	*/
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test server
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	server := ws.NewWebSocketServer(configManager, logger, cameraMonitor, jwtHandler)
+	server := ws.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler)
 	require.NotNil(t, server)
 
 	// Start server
@@ -158,14 +163,17 @@ func TestAuthenticateMethodRealConnection(t *testing.T) {
 		Performance Target: <100ms response time
 	*/
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test server
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	server := ws.NewWebSocketServer(configManager, logger, cameraMonitor, jwtHandler)
+	server := ws.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler)
 	require.NotNil(t, server)
 
 	// Start server
@@ -246,14 +254,17 @@ func TestGetCameraListMethodRealConnection(t *testing.T) {
 		Performance Target: <50ms response time
 	*/
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test server
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	server := ws.NewWebSocketServer(configManager, logger, cameraMonitor, jwtHandler)
+	server := ws.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler)
 	require.NotNil(t, server)
 
 	// Start server
@@ -347,14 +358,17 @@ func TestAuthenticationRequiredError(t *testing.T) {
 		Expected: Methods requiring authentication should return AUTHENTICATION_REQUIRED error
 	*/
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Setup test server
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	server := ws.NewWebSocketServer(configManager, logger, cameraMonitor, jwtHandler)
+	server := ws.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler)
 	require.NotNil(t, server)
 
 	// Start server

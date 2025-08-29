@@ -56,6 +56,10 @@ func ValidateConfig(config *Config) error {
 		errors = append(errors, err)
 	}
 
+	if err := validateRetentionPolicyConfig(&config.RetentionPolicy); err != nil {
+		errors = append(errors, err)
+	}
+
 	// Return combined errors if any
 	if len(errors) > 0 {
 		return &ValidationError{
@@ -567,6 +571,37 @@ func validateOptimizationConfig(config *OptimizationConfig) error {
 
 	if config.ConnectionPoolSize <= 0 {
 		return &ValidationError{Field: "performance.optimization.connection_pool_size", Message: fmt.Sprintf("connection pool size must be positive, got %d", config.ConnectionPoolSize)}
+	}
+
+	return nil
+}
+
+// validateRetentionPolicyConfig validates retention policy configuration.
+func validateRetentionPolicyConfig(config *RetentionPolicyConfig) error {
+	// Validate policy type
+	validTypes := []string{"age", "size", "manual"}
+	if !contains(validTypes, config.Type) {
+		return &ValidationError{Field: "retention_policy.type", Message: fmt.Sprintf("policy type must be one of %v, got %s", validTypes, config.Type)}
+	}
+
+	// Validate age-based policy parameters
+	if config.Type == "age" {
+		if config.MaxAgeDays <= 0 {
+			return &ValidationError{Field: "retention_policy.max_age_days", Message: fmt.Sprintf("max age days must be positive for age-based policy, got %d", config.MaxAgeDays)}
+		}
+		if config.MaxAgeDays > 365 {
+			return &ValidationError{Field: "retention_policy.max_age_days", Message: fmt.Sprintf("max age days cannot exceed 365 days, got %d", config.MaxAgeDays)}
+		}
+	}
+
+	// Validate size-based policy parameters
+	if config.Type == "size" {
+		if config.MaxSizeGB <= 0 {
+			return &ValidationError{Field: "retention_policy.max_size_gb", Message: fmt.Sprintf("max size GB must be positive for size-based policy, got %d", config.MaxSizeGB)}
+		}
+		if config.MaxSizeGB > 1000 {
+			return &ValidationError{Field: "retention_policy.max_size_gb", Message: fmt.Sprintf("max size GB cannot exceed 1000 GB, got %d", config.MaxSizeGB)}
+		}
 	}
 
 	return nil

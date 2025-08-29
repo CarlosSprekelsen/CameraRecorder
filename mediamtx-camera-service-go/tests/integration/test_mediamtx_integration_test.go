@@ -1,6 +1,7 @@
 // +build integration,real_mediamtx
 
 //go:build integration && real_mediamtx
+// +build integration,real_mediamtx
 
 /*
 MediaMTX Integration Test

@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX System Metrics Unit Tests
 
@@ -15,28 +18,23 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
-//go:build unit
-// +build unit
-
 // mockSystemMetrics implements system metrics collection for testing
 type mockSystemMetrics struct {
-	requestCount       int64
-	responseTimeTotal  float64
-	responseTimeCount  int64
-	errorCount         int64
-	activeConnections  int64
-	startTime          time.Time
-	lastUpdateTime     time.Time
+	requestCount      int64
+	responseTimeTotal float64
+	responseTimeCount int64
+	errorCount        int64
+	activeConnections int64
+	startTime         time.Time
+	lastUpdateTime    time.Time
 }
 
 func newMockSystemMetrics() *mockSystemMetrics {
@@ -80,11 +78,10 @@ func (m *mockSystemMetrics) GetMetrics() mediamtx.SystemMetrics {
 
 	return mediamtx.SystemMetrics{
 		RequestCount:      m.requestCount,
-		ResponseTimeAvg:   avgResponseTime,
+		ResponseTime:      avgResponseTime,
 		ErrorCount:        m.errorCount,
 		ActiveConnections: m.activeConnections,
-		Uptime:           time.Since(m.startTime),
-		LastUpdateTime:   m.lastUpdateTime,
+		LastCheck:         m.lastUpdateTime,
 	}
 }
 
@@ -106,11 +103,10 @@ func TestSystemMetricsBasicOperations(t *testing.T) {
 		systemMetrics := metrics.GetMetrics()
 
 		assert.Equal(t, int64(0), systemMetrics.RequestCount, "Initial request count should be 0")
-		assert.Equal(t, float64(0), systemMetrics.ResponseTimeAvg, "Initial response time average should be 0")
+		assert.Equal(t, float64(0), systemMetrics.ResponseTime, "Initial response time should be 0")
 		assert.Equal(t, int64(0), systemMetrics.ErrorCount, "Initial error count should be 0")
 		assert.Equal(t, int64(0), systemMetrics.ActiveConnections, "Initial active connections should be 0")
-		assert.NotZero(t, systemMetrics.Uptime, "Uptime should be non-zero")
-		assert.NotZero(t, systemMetrics.LastUpdateTime, "Last update time should be non-zero")
+		assert.NotZero(t, systemMetrics.LastCheck, "Last check time should be non-zero")
 	})
 
 	t.Run("IncrementRequestCount", func(t *testing.T) {
@@ -136,8 +132,7 @@ func TestSystemMetricsBasicOperations(t *testing.T) {
 		metrics.RecordResponseTime(300 * time.Millisecond)
 
 		systemMetrics := metrics.GetMetrics()
-		assert.Equal(t, int64(3), systemMetrics.ResponseTimeCount, "Should have recorded 3 response times")
-		assert.Equal(t, float64(200), systemMetrics.ResponseTimeAvg, "Average response time should be 200ms")
+		assert.Equal(t, float64(200), systemMetrics.ResponseTime, "Average response time should be 200ms")
 	})
 
 	t.Run("IncrementErrorCount", func(t *testing.T) {
@@ -203,10 +198,10 @@ func TestSystemMetricsCalculations(t *testing.T) {
 
 	t.Run("Uptime_Calculation", func(t *testing.T) {
 		metrics := newMockSystemMetrics()
-		
+
 		// Wait a bit to ensure uptime increases
 		time.Sleep(10 * time.Millisecond)
-		
+
 		systemMetrics := metrics.GetMetrics()
 		assert.True(t, systemMetrics.Uptime > 0, "Uptime should be positive")
 		assert.True(t, systemMetrics.Uptime < time.Second, "Uptime should be reasonable")

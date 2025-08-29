@@ -207,18 +207,28 @@ type SnapshotConfig struct {
 	MaxCount        int    `mapstructure:"max_count"`
 }
 
+// RetentionPolicyConfig represents file retention policy configuration.
+type RetentionPolicyConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`      // Whether retention policies are enabled
+	Type        string `mapstructure:"type"`         // "age", "size", or "manual"
+	MaxAgeDays  int    `mapstructure:"max_age_days"` // For age-based policy (default: 7)
+	MaxSizeGB   int    `mapstructure:"max_size_gb"`  // For size-based policy (default: 1)
+	AutoCleanup bool   `mapstructure:"auto_cleanup"` // Whether to automatically clean up files
+}
+
 // Config represents the complete service configuration.
 type Config struct {
-	Server        ServerConfig        `mapstructure:"server"`
-	MediaMTX      MediaMTXConfig      `mapstructure:"mediamtx"`
-	Camera        CameraConfig        `mapstructure:"camera"`
-	Logging       LoggingConfig       `mapstructure:"logging"`
-	Recording     RecordingConfig     `mapstructure:"recording"`
-	Snapshots     SnapshotConfig      `mapstructure:"snapshots"`
-	FFmpeg        FFmpegConfig        `mapstructure:"ffmpeg"`
-	Notifications NotificationsConfig `mapstructure:"notifications"`
-	Performance   PerformanceConfig   `mapstructure:"performance"`
-	Security      SecurityConfig      `mapstructure:"security"`
-	Storage       StorageConfig       `mapstructure:"storage"`
-	HealthPort    *int                `mapstructure:"health_port"` // Optional health server port for testing
+	Server          ServerConfig          `mapstructure:"server"`
+	MediaMTX        MediaMTXConfig        `mapstructure:"mediamtx"`
+	Camera          CameraConfig          `mapstructure:"camera"`
+	Logging         LoggingConfig         `mapstructure:"logging"`
+	Recording       RecordingConfig       `mapstructure:"recording"`
+	Snapshots       SnapshotConfig        `mapstructure:"snapshots"`
+	FFmpeg          FFmpegConfig          `mapstructure:"ffmpeg"`
+	Notifications   NotificationsConfig   `mapstructure:"notifications"`
+	Performance     PerformanceConfig     `mapstructure:"performance"`
+	Security        SecurityConfig        `mapstructure:"security"`
+	Storage         StorageConfig         `mapstructure:"storage"`
+	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
+	HealthPort      *int                  `mapstructure:"health_port"` // Optional health server port for testing
 }

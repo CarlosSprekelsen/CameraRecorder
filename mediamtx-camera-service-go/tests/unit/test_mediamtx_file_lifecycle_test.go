@@ -2,12 +2,11 @@
 // +build unit
 
 /*
-MediaMTX File Lifecycle Operations Test
+MediaMTX File Lifecycle Tests
 
 Requirements Coverage:
-- REQ-FUNC-009: File listing and browsing functionality
-- REQ-MTX-001: MediaMTX service integration
-- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-007: Error handling and recovery
 
 Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
@@ -22,16 +21,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("mediamtx-recording-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_recording_lifecycle")
@@ -39,7 +38,7 @@ func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create test recording file
-	fileName := "camera0_2025-01-15_14-30-00.mp4"
+	fileName := "recording_2025-01-15_14-30-00.mp4"
 	filePath := filepath.Join(tempDir, fileName)
 	content := "test recording content for lifecycle test"
 	err = os.WriteFile(filePath, []byte(content), 0644)
@@ -50,19 +49,14 @@ func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create recording manager with test directory
-	recordingManager := &mediamtx.RecordingManager{
-		Config: &mediamtx.MediaMTXConfig{
-			RecordingsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: tempDir,
 	}
 
-	// Create controller
-	controller := &mediamtx.Controller{
-		RecordingManager: recordingManager,
-		Logger:           logger,
-	}
+	// Create controller using proper constructor
+	controller, err := mediamtx.NewController(testConfig, logger)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name          string
@@ -109,7 +103,8 @@ func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 
 func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("mediamtx-snapshot-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_snapshot_lifecycle")
@@ -128,19 +123,14 @@ func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create snapshot manager with test directory
-	snapshotManager := &mediamtx.SnapshotManager{
-		Config: &mediamtx.MediaMTXConfig{
-			SnapshotsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: tempDir,
 	}
 
-	// Create controller
-	controller := &mediamtx.Controller{
-		SnapshotManager: snapshotManager,
-		Logger:          logger,
-	}
+	// Create controller using proper constructor
+	controller, err := mediamtx.NewController(testConfig, logger)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name          string
@@ -187,7 +177,8 @@ func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 
 func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("mediamtx-recording-delete-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_recording_delete_lifecycle")
@@ -205,19 +196,14 @@ func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create recording manager with test directory
-	recordingManager := &mediamtx.RecordingManager{
-		Config: &mediamtx.MediaMTXConfig{
-			RecordingsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: tempDir,
 	}
 
-	// Create controller
-	controller := &mediamtx.Controller{
-		RecordingManager: recordingManager,
-		Logger:           logger,
-	}
+	// Create controller using proper constructor
+	controller, err := mediamtx.NewController(testConfig, logger)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name          string
@@ -259,7 +245,8 @@ func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 
 func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("mediamtx-snapshot-delete-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_snapshot_delete_lifecycle")
@@ -277,19 +264,14 @@ func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create snapshot manager with test directory
-	snapshotManager := &mediamtx.SnapshotManager{
-		Config: &mediamtx.MediaMTXConfig{
-			SnapshotsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		SnapshotsPath: tempDir,
 	}
 
-	// Create controller
-	controller := &mediamtx.Controller{
-		SnapshotManager: snapshotManager,
-		Logger:          logger,
-	}
+	// Create controller using proper constructor
+	controller, err := mediamtx.NewController(testConfig, logger)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name          string
@@ -329,9 +311,10 @@ func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	}
 }
 
-func TestRecordingManager_GetRecordingInfo(t *testing.T) {
+func TestRecordingManager_GetRecordingInfoLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("recording-manager-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_recording_manager_lifecycle")
@@ -350,13 +333,16 @@ func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create recording manager
-	recordingManager := &mediamtx.RecordingManager{
-		Config: &mediamtx.MediaMTXConfig{
-			RecordingsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: tempDir,
 	}
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(testConfig, logger)
+
+	// Create recording manager using proper constructor
+	recordingManager := mediamtx.NewRecordingManager(ffmpegManager, testConfig, logger)
 
 	tests := []struct {
 		name          string
@@ -403,7 +389,8 @@ func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 
 func TestSnapshotManager_GetSnapshotInfo(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("snapshot-manager-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_snapshot_manager_lifecycle")
@@ -422,13 +409,16 @@ func TestSnapshotManager_GetSnapshotInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create snapshot manager
-	snapshotManager := &mediamtx.SnapshotManager{
-		Config: &mediamtx.MediaMTXConfig{
-			SnapshotsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		SnapshotsPath: tempDir,
 	}
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(testConfig, logger)
+
+	// Create snapshot manager using proper constructor
+	snapshotManager := mediamtx.NewSnapshotManager(ffmpegManager, testConfig, logger)
 
 	tests := []struct {
 		name          string
@@ -473,9 +463,10 @@ func TestSnapshotManager_GetSnapshotInfo(t *testing.T) {
 	}
 }
 
-func TestRecordingManager_DeleteRecording(t *testing.T) {
+func TestRecordingManager_DeleteRecordingLifecycle(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("recording-manager-delete-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_recording_manager_delete_lifecycle")
@@ -493,13 +484,16 @@ func TestRecordingManager_DeleteRecording(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create recording manager
-	recordingManager := &mediamtx.RecordingManager{
-		Config: &mediamtx.MediaMTXConfig{
-			RecordingsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: tempDir,
 	}
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(testConfig, logger)
+
+	// Create recording manager using proper constructor
+	recordingManager := mediamtx.NewRecordingManager(ffmpegManager, testConfig, logger)
 
 	tests := []struct {
 		name          string
@@ -541,7 +535,8 @@ func TestRecordingManager_DeleteRecording(t *testing.T) {
 
 func TestSnapshotManager_DeleteSnapshotFile(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("snapshot-manager-delete-lifecycle-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_snapshot_manager_delete_lifecycle")
@@ -559,13 +554,16 @@ func TestSnapshotManager_DeleteSnapshotFile(t *testing.T) {
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create snapshot manager
-	snapshotManager := &mediamtx.SnapshotManager{
-		Config: &mediamtx.MediaMTXConfig{
-			SnapshotsPath: tempDir,
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		SnapshotsPath: tempDir,
 	}
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(testConfig, logger)
+
+	// Create snapshot manager using proper constructor
+	snapshotManager := mediamtx.NewSnapshotManager(ffmpegManager, testConfig, logger)
 
 	tests := []struct {
 		name          string
@@ -607,7 +605,8 @@ func TestSnapshotManager_DeleteSnapshotFile(t *testing.T) {
 
 func TestFileLifecycle_CompleteWorkflow(t *testing.T) {
 	// Setup test logger
-	logger := logging.NewLogger("file-lifecycle-complete-workflow-test")
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
 	// Create temporary test directory
 	tempDir, err := os.MkdirTemp("", "test_file_lifecycle_workflow")
@@ -642,27 +641,15 @@ func TestFileLifecycle_CompleteWorkflow(t *testing.T) {
 	err = os.Chtimes(snapshotFilePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create managers
-	recordingManager := &mediamtx.RecordingManager{
-		Config: &mediamtx.MediaMTXConfig{
-			RecordingsPath: filepath.Join(tempDir, "recordings"),
-		},
-		Logger: logger,
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		RecordingsPath: filepath.Join(tempDir, "recordings"),
+		SnapshotsPath:  filepath.Join(tempDir, "snapshots"),
 	}
 
-	snapshotManager := &mediamtx.SnapshotManager{
-		Config: &mediamtx.MediaMTXConfig{
-			SnapshotsPath: filepath.Join(tempDir, "snapshots"),
-		},
-		Logger: logger,
-	}
-
-	// Create controller
-	controller := &mediamtx.Controller{
-		RecordingManager: recordingManager,
-		SnapshotManager:  snapshotManager,
-		Logger:           logger,
-	}
+	// Create controller using proper constructor
+	controller, err := mediamtx.NewController(testConfig, logger)
+	require.NoError(t, err)
 
 	t.Run("complete file lifecycle workflow", func(t *testing.T) {
 		// Step 1: Get recording info

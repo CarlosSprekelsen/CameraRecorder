@@ -1,6 +1,8 @@
 package security
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -265,17 +267,50 @@ func (h *JWTHandler) ValidateToken(tokenString string) (*JWTClaims, error) {
 		return nil, fmt.Errorf("token cannot be empty")
 	}
 
-	// Parse and validate the token
+	// Try to parse the token manually first to check the signing method
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		h.logger.Debug("Invalid token format - not enough parts")
+		return nil, fmt.Errorf("token validation failed")
+	}
+
+	// Decode the header to check the signing method
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		h.logger.WithError(err).Debug("Failed to decode token header")
+		return nil, fmt.Errorf("token validation failed")
+	}
+
+	var header map[string]interface{}
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
+		h.logger.WithError(err).Debug("Failed to unmarshal token header")
+		return nil, fmt.Errorf("token validation failed")
+	}
+
+	// Check the signing method
+	if alg, ok := header["alg"].(string); !ok || alg != "HS256" {
+		h.logger.WithField("algorithm", alg).Debug("Invalid signing method detected")
+		return nil, fmt.Errorf("token validation failed")
+	}
+
+	// Now parse and validate the token with the correct signing method
+	h.logger.WithField("token_length", len(tokenString)).Debug("Starting JWT token validation")
+	
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validate the signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+		h.logger.WithField("signing_method", token.Method.Alg()).Debug("Validating JWT signing method")
 		return []byte(h.secretKey), nil
 	})
 
 	if err != nil {
 		h.logger.WithError(err).Warn("JWT token validation failed")
+		h.logger.WithField("error_type", fmt.Sprintf("%T", err)).Debug("Error type analysis")
+		h.logger.WithField("error_message", err.Error()).Debug("Error message analysis")
+		
+		// Convert specific JWT library errors to our standard error message
+		if strings.Contains(err.Error(), "key is invalid") {
+			h.logger.WithError(err).Debug("Converting 'key is invalid' error to 'token validation failed'")
+			return nil, fmt.Errorf("token validation failed")
+		}
 		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 

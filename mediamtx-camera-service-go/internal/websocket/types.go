@@ -18,6 +18,8 @@ package websocket
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // JSON-RPC Error Codes (RFC 32700) - Following Python implementation
@@ -110,6 +112,7 @@ type ClientConnection struct {
 	AuthMethod    string
 	ConnectedAt   time.Time
 	Subscriptions map[string]bool
+	Conn          *websocket.Conn `json:"-"` // WebSocket connection for sending messages
 }
 
 // PerformanceMetrics tracks WebSocket server performance

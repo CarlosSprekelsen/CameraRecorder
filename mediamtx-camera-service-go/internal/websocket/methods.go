@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,24 +72,74 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 	s.methodsMutex.Lock()
 	defer s.methodsMutex.Unlock()
 
-	s.methods[name] = handler
+	// Wrap the handler to ensure security and metrics are always applied
+	wrappedHandler := func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+		startTime := time.Now()
+
+		// Apply security checks
+		if err := s.checkRateLimit(client); err != nil {
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				Error: &JsonRpcError{
+					Code:    RATE_LIMIT_EXCEEDED,
+					Message: ErrorMessages[RATE_LIMIT_EXCEEDED],
+					Data:    err.Error(),
+				},
+			}, nil
+		}
+
+		if err := s.checkMethodPermissions(client, name); err != nil {
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				Error: &JsonRpcError{
+					Code:    INSUFFICIENT_PERMISSIONS,
+					Message: ErrorMessages[INSUFFICIENT_PERMISSIONS],
+					Data:    err.Error(),
+				},
+			}, nil
+		}
+
+		// Call the original handler
+		response, err := handler(params, client)
+
+		// Record metrics
+		duration := time.Since(startTime).Seconds()
+		s.recordRequest(name, duration)
+
+		// Handle errors
+		if err != nil {
+			s.metricsMutex.Lock()
+			s.metrics.ErrorCount++
+			s.metricsMutex.Unlock()
+		}
+
+		return response, err
+	}
+
+	s.methods[name] = wrappedHandler
 	s.methodVersions[name] = version
 
 	s.logger.WithFields(logrus.Fields{
 		"method":  name,
 		"version": version,
 		"action":  "register_method",
-	}).Debug("Method registered")
+	}).Debug("Method registered with security and metrics wrapper")
 }
 
 // MethodPing implements the ping method
 // Following Python _method_ping implementation
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	startTime := time.Now()
+	
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "ping",
 		"action":    "method_call",
 	}).Debug("Ping method called")
+
+	// Record performance metrics
+	duration := time.Since(startTime).Seconds()
+	s.recordRequest("ping", duration)
 
 	// Return "pong" as specified in API documentation
 	return &JsonRpcResponse{
@@ -99,6 +151,8 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 // MethodAuthenticate implements the authenticate method
 // Following Python _method_authenticate implementation
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	startTime := time.Now()
+	
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "authenticate",
@@ -155,6 +209,10 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 		"method":    "authenticate",
 		"action":    "authentication_success",
 	}).Info("Authentication successful")
+
+	// Record performance metrics
+	duration := time.Since(startTime).Seconds()
+	s.recordRequest("authenticate", duration)
 
 	// Return authentication result following Python implementation
 	return &JsonRpcResponse{
@@ -422,9 +480,8 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 	runtime.ReadMemStats(&m)
 	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
 
-	// CPU usage is not directly available in Go runtime
-	// In a production environment, this would be implemented with system calls
-	cpuUsage := 0.0 // Will be implemented with system-specific calls in future
+	// Get CPU usage using Linux /proc/stat
+	cpuUsage := getCPUUsage()
 
 	// Get goroutines count
 	goroutines := runtime.NumGoroutine()
@@ -446,8 +503,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 
 	// Use system metrics from controller if available (Phase 1 enhancement)
 	if systemMetrics != nil {
-		// Override with controller metrics for better accuracy
-		activeConnections = int(systemMetrics.ActiveConnections)
+		// Use system metrics for response time and error rate, but keep WebSocket connection count
 		averageResponseTime = systemMetrics.ResponseTime
 		if systemMetrics.RequestCount > 0 {
 			errorRate = float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0
@@ -459,8 +515,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		result["error_counts"] = systemMetrics.ErrorCounts
 		result["last_check"] = systemMetrics.LastCheck
 
-		// Update base metrics with enhanced values
-		result["active_connections"] = activeConnections
+		// Update metrics with enhanced values (but preserve WebSocket connection count)
 		result["average_response_time"] = averageResponseTime
 		result["error_rate"] = errorRate
 	}
@@ -651,19 +706,47 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 // MethodGetServerInfo implements the get_server_info method
 // Following Python _method_get_server_info implementation
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	startTime := time.Now()
+	
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_server_info",
 		"action":    "method_call",
 	}).Debug("Get server info method called")
 
+	// Record performance metrics first
+	duration := time.Since(startTime).Seconds()
+	s.recordRequest("get_server_info", duration)
+
 	// Check authentication
 	if !client.Authenticated {
+		// Increment error count for authentication failure
+		s.metricsMutex.Lock()
+		s.metrics.ErrorCount++
+		s.metricsMutex.Unlock()
+		
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    AUTHENTICATION_REQUIRED,
 				Message: ErrorMessages[AUTHENTICATION_REQUIRED],
+			},
+		}, nil
+	}
+
+	// Check permissions
+	if err := s.checkMethodPermissions(client, "get_server_info"); err != nil {
+		// Increment error count for permission failure
+		s.metricsMutex.Lock()
+		s.metrics.ErrorCount++
+		s.metricsMutex.Unlock()
+		
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INSUFFICIENT_PERMISSIONS,
+				Message: ErrorMessages[INSUFFICIENT_PERMISSIONS],
+				Data:    err.Error(),
 			},
 		}, nil
 	}
@@ -1175,22 +1258,84 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Cleanup functionality will be implemented when retention policies are available
-	// For now, return proper error response indicating feature not yet available
+	// Get current configuration
+	cfg := s.configManager.GetConfig()
+	if cfg == nil {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    "Configuration not available",
+			},
+		}, nil
+	}
+
+	// Check if retention policy is enabled
+	if !cfg.RetentionPolicy.Enabled {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    "Retention policy is not enabled",
+			},
+		}, nil
+	}
+
+	// Perform cleanup based on retention policy
+	var deletedCount int
+	var totalSize int64
+	var err error
+
+	if cfg.RetentionPolicy.Type == "age" {
+		// Age-based cleanup
+		deletedCount, totalSize, err = s.performAgeBasedCleanup(cfg.RetentionPolicy.MaxAgeDays)
+	} else if cfg.RetentionPolicy.Type == "size" {
+		// Size-based cleanup
+		deletedCount, totalSize, err = s.performSizeBasedCleanup(cfg.RetentionPolicy.MaxSizeGB)
+	} else {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    "Unsupported retention policy type for cleanup",
+			},
+		}, nil
+	}
+
+	if err != nil {
+		s.logger.WithError(err).WithFields(logrus.Fields{
+			"client_id": client.ClientID,
+			"method":    "cleanup_old_files",
+			"action":    "cleanup_error",
+		}).Error("Error during file cleanup")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    fmt.Sprintf("Cleanup failed: %v", err),
+			},
+		}, nil
+	}
+
 	s.logger.WithFields(logrus.Fields{
-		"client_id": client.ClientID,
-		"method":    "cleanup_old_files",
-		"action":    "feature_not_available",
-	}).Warn("Cleanup functionality not yet implemented")
+		"client_id":     client.ClientID,
+		"method":        "cleanup_old_files",
+		"deleted_count": deletedCount,
+		"total_size":    totalSize,
+		"action":        "cleanup_completed",
+	}).Info("File cleanup completed successfully")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Error: &JsonRpcError{
-			Code:    INTERNAL_ERROR,
-			Message: "Feature not yet implemented",
-			Data: map[string]interface{}{
-				"reason": "Cleanup functionality requires retention policy implementation",
-			},
+		Result: map[string]interface{}{
+			"deleted_count": deletedCount,
+			"total_size":    totalSize,
+			"message":       "File cleanup completed successfully",
 		},
 	}, nil
 }
@@ -1354,24 +1499,56 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 		}
 	}
 
-	// Retention policy storage will be implemented when persistent storage is available
-	// For now, log the configuration but return proper error response
+	// Get current configuration
+	cfg := s.configManager.GetConfig()
+	if cfg == nil {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    "Configuration not available",
+			},
+		}, nil
+	}
+
+	// Update retention policy configuration
+	cfg.RetentionPolicy.Enabled = enabled
+	cfg.RetentionPolicy.Type = policyType
+
+	// Update policy-specific parameters
+	if policyType == "age" {
+		if maxAgeDays, ok := params["max_age_days"].(float64); ok {
+			cfg.RetentionPolicy.MaxAgeDays = int(maxAgeDays)
+		} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
+			cfg.RetentionPolicy.MaxAgeDays = maxAgeDays
+		}
+	} else if policyType == "size" {
+		if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
+			cfg.RetentionPolicy.MaxSizeGB = int(maxSizeGB)
+		} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
+			cfg.RetentionPolicy.MaxSizeGB = maxSizeGB
+		}
+	}
+
+	// Note: Configuration changes are applied immediately in memory
+	// For persistent changes, the configuration file should be updated
+
 	s.logger.WithFields(logrus.Fields{
 		"client_id":   client.ClientID,
 		"method":      "set_retention_policy",
 		"policy_type": policyType,
 		"enabled":     enabled,
-		"action":      "feature_not_available",
-	}).Warn("Retention policy storage not yet implemented")
+		"action":      "policy_updated",
+	}).Info("Retention policy configuration updated")
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Error: &JsonRpcError{
-			Code:    INTERNAL_ERROR,
-			Message: "Feature not yet implemented",
-			Data: map[string]interface{}{
-				"reason": "Retention policy storage requires persistent storage implementation",
-			},
+		Result: map[string]interface{}{
+			"status":      "success",
+			"policy_type": policyType,
+			"enabled":     enabled,
+			"message":     "Retention policy configuration updated successfully",
 		},
 	}, nil
 }
@@ -1856,15 +2033,19 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}, nil
 	}
 
-	// Get session ID from device (we need to track this in a real implementation)
-	// For now, we'll use a simple approach to find the session
-	sessions := s.mediaMTXController.ListAdvancedRecordingSessions()
-	var sessionID string
-	for _, session := range sessions {
-		if session.Device == devicePath && session.Status == "RECORDING" {
-			sessionID = session.ID
-			break
-		}
+	// Get session ID from device using optimized lookup
+	sessionID, exists := s.mediaMTXController.GetSessionIDByDevice(devicePath)
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "No active recording session found for device",
+				Data: map[string]interface{}{
+					"device": devicePath,
+				},
+			},
+		}, nil
 	}
 
 	if sessionID == "" {
@@ -2010,11 +2191,12 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		"download_url": fileMetadata.DownloadURL,
 	}
 
-	// Add duration if available
+	// Add duration if available (video metadata extraction is already implemented)
 	if fileMetadata.Duration != nil {
 		result["duration"] = *fileMetadata.Duration
 	} else {
-		result["duration"] = 0 // Will be implemented with video metadata extraction in future
+		// Duration is nil for non-video files or when extraction fails
+		result["duration"] = nil
 	}
 
 	return &JsonRpcResponse{
@@ -2119,4 +2301,244 @@ func GetPermissionsForRole(role string) []string {
 	default:
 		return []string{}
 	}
+}
+
+// getCPUUsage returns CPU usage percentage using Linux /proc/stat
+func getCPUUsage() float64 {
+	// Read /proc/stat to get CPU statistics
+	data, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return 0.0 // Return 0 if we can't read CPU stats
+	}
+
+	// Parse the first line (total CPU stats)
+	lines := strings.Split(string(data), "\n")
+	if len(lines) == 0 {
+		return 0.0
+	}
+
+	// Parse CPU line: cpu  user nice system idle iowait irq softirq steal guest guest_nice
+	fields := strings.Fields(lines[0])
+	if len(fields) < 5 || fields[0] != "cpu" {
+		return 0.0
+	}
+
+	// Convert fields to integers
+	var stats []int64
+	for i := 1; i < len(fields); i++ {
+		val, err := strconv.ParseInt(fields[i], 10, 64)
+		if err != nil {
+			return 0.0
+		}
+		stats = append(stats, val)
+	}
+
+	// Calculate total and idle time
+	total := int64(0)
+	for _, stat := range stats {
+		total += stat
+	}
+
+	idle := int64(0)
+	if len(stats) >= 4 {
+		idle = stats[3] // idle time is the 4th field
+	}
+
+	// Calculate CPU usage percentage
+	if total == 0 {
+		return 0.0
+	}
+
+	usage := float64(total-idle) / float64(total) * 100.0
+	return usage
+}
+
+// performAgeBasedCleanup performs age-based file cleanup
+func (s *WebSocketServer) performAgeBasedCleanup(maxAgeDays int) (int, int64, error) {
+	// Get recordings and snapshots directories from config
+	cfg := s.configManager.GetConfig()
+	if cfg == nil {
+		return 0, 0, fmt.Errorf("configuration not available")
+	}
+
+	recordingsPath := cfg.MediaMTX.RecordingsPath
+	snapshotsPath := cfg.MediaMTX.SnapshotsPath
+
+	// Calculate cutoff time
+	cutoffTime := time.Now().AddDate(0, 0, -maxAgeDays)
+
+	var totalDeleted int
+	var totalSize int64
+
+	// Clean recordings
+	deleted, size, err := s.cleanupDirectory(recordingsPath, cutoffTime)
+	if err != nil {
+		s.logger.WithError(err).WithField("path", recordingsPath).Error("Error cleaning recordings directory")
+	} else {
+		totalDeleted += deleted
+		totalSize += size
+	}
+
+	// Clean snapshots
+	deleted, size, err = s.cleanupDirectory(snapshotsPath, cutoffTime)
+	if err != nil {
+		s.logger.WithError(err).WithField("path", snapshotsPath).Error("Error cleaning snapshots directory")
+	} else {
+		totalDeleted += deleted
+		totalSize += size
+	}
+
+	return totalDeleted, totalSize, nil
+}
+
+// performSizeBasedCleanup performs size-based file cleanup
+func (s *WebSocketServer) performSizeBasedCleanup(maxSizeGB int) (int, int64, error) {
+	// Get recordings and snapshots directories from config
+	cfg := s.configManager.GetConfig()
+	if cfg == nil {
+		return 0, 0, fmt.Errorf("configuration not available")
+	}
+
+	recordingsPath := cfg.MediaMTX.RecordingsPath
+	snapshotsPath := cfg.MediaMTX.SnapshotsPath
+
+	// Calculate max size in bytes
+	maxSizeBytes := int64(maxSizeGB) * 1024 * 1024 * 1024
+
+	var totalDeleted int
+	var totalSize int64
+
+	// Clean recordings by size
+	deleted, size, err := s.cleanupDirectoryBySize(recordingsPath, maxSizeBytes)
+	if err != nil {
+		s.logger.WithError(err).WithField("path", recordingsPath).Error("Error cleaning recordings directory by size")
+	} else {
+		totalDeleted += deleted
+		totalSize += size
+	}
+
+	// Clean snapshots by size
+	deleted, size, err = s.cleanupDirectoryBySize(snapshotsPath, maxSizeBytes)
+	if err != nil {
+		s.logger.WithError(err).WithField("path", snapshotsPath).Error("Error cleaning snapshots directory by size")
+	} else {
+		totalDeleted += deleted
+		totalSize += size
+	}
+
+	return totalDeleted, totalSize, nil
+}
+
+// cleanupDirectory removes files older than cutoff time
+func (s *WebSocketServer) cleanupDirectory(dirPath string, cutoffTime time.Time) (int, int64, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read directory %s: %w", dirPath, err)
+	}
+
+	var deletedCount int
+	var totalSize int64
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(dirPath, entry.Name())
+		info, err := entry.Info()
+		if err != nil {
+			s.logger.WithError(err).WithField("file", filePath).Warn("Failed to get file info")
+			continue
+		}
+
+		if info.ModTime().Before(cutoffTime) {
+			if err := os.Remove(filePath); err != nil {
+				s.logger.WithError(err).WithField("file", filePath).Warn("Failed to delete old file")
+				continue
+			}
+
+			deletedCount++
+			totalSize += info.Size()
+
+			s.logger.WithFields(logrus.Fields{
+				"file":     filePath,
+				"size":     info.Size(),
+				"modified": info.ModTime(),
+				"action":   "file_deleted",
+			}).Debug("Deleted old file")
+		}
+	}
+
+	return deletedCount, totalSize, nil
+}
+
+// cleanupDirectoryBySize removes oldest files until directory size is under limit
+func (s *WebSocketServer) cleanupDirectoryBySize(dirPath string, maxSizeBytes int64) (int, int64, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to read directory %s: %w", dirPath, err)
+	}
+
+	// Collect file information
+	type fileInfo struct {
+		path    string
+		size    int64
+		modTime time.Time
+	}
+
+	var files []fileInfo
+	var totalSize int64
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(dirPath, entry.Name())
+		info, err := entry.Info()
+		if err != nil {
+			s.logger.WithError(err).WithField("file", filePath).Warn("Failed to get file info")
+			continue
+		}
+
+		files = append(files, fileInfo{
+			path:    filePath,
+			size:    info.Size(),
+			modTime: info.ModTime(),
+		})
+		totalSize += info.Size()
+	}
+
+	// Sort files by modification time (oldest first)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].modTime.Before(files[j].modTime)
+	})
+
+	// Remove oldest files until we're under the size limit
+	var deletedCount int
+	var deletedSize int64
+
+	for _, file := range files {
+		if totalSize <= maxSizeBytes {
+			break
+		}
+
+		if err := os.Remove(file.path); err != nil {
+			s.logger.WithError(err).WithField("file", file.path).Warn("Failed to delete file")
+			continue
+		}
+
+		deletedCount++
+		deletedSize += file.size
+		totalSize -= file.size
+
+		s.logger.WithFields(logrus.Fields{
+			"file":     file.path,
+			"size":     file.size,
+			"modified": file.modTime,
+			"action":   "file_deleted",
+		}).Debug("Deleted file for size management")
+	}
+
+	return deletedCount, deletedSize, nil
 }

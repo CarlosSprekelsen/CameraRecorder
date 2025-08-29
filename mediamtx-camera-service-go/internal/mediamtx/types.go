@@ -19,6 +19,45 @@ import (
 	"time"
 )
 
+// FFmpegConfig represents FFmpeg-specific configuration settings
+type FFmpegConfig struct {
+	Snapshot  SnapshotConfig  `mapstructure:"snapshot"`
+	Recording RecordingConfig `mapstructure:"recording"`
+}
+
+// SnapshotConfig represents snapshot operation configuration
+type SnapshotConfig struct {
+	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 5.0s
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 8.0s
+	InternalTimeout        int64         `mapstructure:"internal_timeout"`         // Default: 5000000
+	RetryAttempts          int           `mapstructure:"retry_attempts"`           // Default: 2
+	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 1.0s
+}
+
+// RecordingConfig represents recording operation configuration
+type RecordingConfig struct {
+	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0s
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 15.0s
+	InternalTimeout        int64         `mapstructure:"internal_timeout"`         // Default: 10000000
+	RetryAttempts          int           `mapstructure:"retry_attempts"`           // Default: 3
+	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 2.0s
+}
+
+// PerformanceConfig represents performance configuration settings
+type PerformanceConfig struct {
+	ResponseTimeTargets map[string]float64 `mapstructure:"response_time_targets"`
+	SnapshotTiers       map[string]float64 `mapstructure:"snapshot_tiers"`
+	Optimization        OptimizationConfig `mapstructure:"optimization"`
+}
+
+// OptimizationConfig represents optimization settings
+type OptimizationConfig struct {
+	EnableCaching           bool          `mapstructure:"enable_caching"`            // Default: true
+	CacheTTL                time.Duration `mapstructure:"cache_ttl"`                 // Default: 300s
+	MaxConcurrentOperations int           `mapstructure:"max_concurrent_operations"` // Default: 5
+	ConnectionPoolSize      int           `mapstructure:"connection_pool_size"`      // Default: 10
+}
+
 // MediaMTXConfig represents MediaMTX service configuration
 type MediaMTXConfig struct {
 	BaseURL        string               `mapstructure:"base_url"`
@@ -29,24 +68,29 @@ type MediaMTXConfig struct {
 	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
 	ConnectionPool ConnectionPoolConfig `mapstructure:"connection_pool"`
 
+	// FFmpeg and Performance Configuration (Python parity)
+	FFmpeg      FFmpegConfig      `mapstructure:"ffmpeg"`
+	Performance PerformanceConfig `mapstructure:"performance"`
+
 	// Integration with existing config
-	Host                                string    `mapstructure:"host"`
-	APIPort                             int       `mapstructure:"api_port"`
-	RTSPPort                            int       `mapstructure:"rtsp_port"`
-	WebRTCPort                          int       `mapstructure:"webrtc_port"`
-	HLSPort                             int       `mapstructure:"hls_port"`
-	ConfigPath                          string    `mapstructure:"config_path"`
-	RecordingsPath                      string    `mapstructure:"recordings_path"`
-	SnapshotsPath                       string    `mapstructure:"snapshots_path"`
-	HealthCheckInterval                 int       `mapstructure:"health_check_interval"`
-	HealthFailureThreshold              int       `mapstructure:"health_failure_threshold"`
-	HealthCircuitBreakerTimeout         int       `mapstructure:"health_circuit_breaker_timeout"`
-	HealthMaxBackoffInterval            int       `mapstructure:"health_max_backoff_interval"`
-	HealthRecoveryConfirmationThreshold int       `mapstructure:"health_recovery_confirmation_threshold"`
-	BackoffBaseMultiplier               float64   `mapstructure:"backoff_base_multiplier"`
-	BackoffJitterRange                  []float64 `mapstructure:"backoff_jitter_range"`
-	ProcessTerminationTimeout           float64   `mapstructure:"process_termination_timeout"`
-	ProcessKillTimeout                  float64   `mapstructure:"process_kill_timeout"`
+	Host                                string        `mapstructure:"host"`
+	APIPort                             int           `mapstructure:"api_port"`
+	RTSPPort                            int           `mapstructure:"rtsp_port"`
+	WebRTCPort                          int           `mapstructure:"webrtc_port"`
+	HLSPort                             int           `mapstructure:"hls_port"`
+	ConfigPath                          string        `mapstructure:"config_path"`
+	RecordingsPath                      string        `mapstructure:"recordings_path"`
+	SnapshotsPath                       string        `mapstructure:"snapshots_path"`
+	HealthCheckInterval                 int           `mapstructure:"health_check_interval"`
+	HealthFailureThreshold              int           `mapstructure:"health_failure_threshold"`
+	HealthCircuitBreakerTimeout         int           `mapstructure:"health_circuit_breaker_timeout"`
+	HealthMaxBackoffInterval            int           `mapstructure:"health_max_backoff_interval"`
+	HealthRecoveryConfirmationThreshold int           `mapstructure:"health_recovery_confirmation_threshold"`
+	BackoffBaseMultiplier               float64       `mapstructure:"backoff_base_multiplier"`
+	BackoffJitterRange                  []float64     `mapstructure:"backoff_jitter_range"`
+	ProcessTerminationTimeout           float64       `mapstructure:"process_termination_timeout"`
+	ProcessKillTimeout                  float64       `mapstructure:"process_kill_timeout"`
+	HealthCheckTimeout                  time.Duration `mapstructure:"health_check_timeout"` // Default: 5 seconds
 }
 
 // CircuitBreakerConfig represents circuit breaker configuration
@@ -142,6 +186,7 @@ type RecordingSession struct {
 	State          SessionState  `json:"state"`
 	Segments       []string      `json:"segments,omitempty"`
 	CurrentSegment string        `json:"current_segment,omitempty"`
+	PID            int           `json:"pid,omitempty"` // FFmpeg process ID for proper process management
 
 	// Enhanced use case management (Phase 2 enhancement)
 	UseCase       StreamUseCase `json:"use_case"`       // "recording", "viewing", "snapshot"
@@ -249,6 +294,7 @@ type MediaMTXController interface {
 	GetAdvancedRecordingSession(sessionID string) (*RecordingSession, bool)
 	ListAdvancedRecordingSessions() []*RecordingSession
 	RotateRecordingFile(ctx context.Context, sessionID string) error
+	GetSessionIDByDevice(device string) (string, bool)
 
 	// Advanced snapshot operations
 	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
@@ -364,6 +410,9 @@ type FFmpegManager interface {
 	StartProcess(ctx context.Context, command []string, outputPath string) (int, error)
 	StopProcess(ctx context.Context, pid int) error
 	IsProcessRunning(ctx context.Context, pid int) bool
+
+	// Command building
+	BuildCommand(args ...string) []string
 
 	// Recording operations
 	StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error)

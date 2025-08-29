@@ -151,15 +151,27 @@ func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 	// Send to all connected clients
 	s.clientsMutex.RLock()
 	for clientID, client := range s.clients {
-		if client.Authenticated {
-			// Note: In a real implementation, we would need to store the websocket.Conn
-			// alongside the ClientConnection or modify the structure to include it.
-			// For now, we'll log the notification for debugging.
-			s.logger.WithFields(logrus.Fields{
-				"client_id":  clientID,
-				"event_type": eventType,
-				"data":       data,
-			}).Debug("Would send notification to client")
+		if client.Authenticated && client.Conn != nil {
+			// Create notification message
+			notification := &JsonRpcNotification{
+				JSONRPC: "2.0",
+				Method:  eventType,
+				Params:  data.(map[string]interface{}),
+			}
+
+			// Send message to client
+			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+			if err := client.Conn.WriteJSON(notification); err != nil {
+				s.logger.WithError(err).WithFields(logrus.Fields{
+					"client_id":  clientID,
+					"event_type": eventType,
+				}).Error("Failed to send notification to client")
+			} else {
+				s.logger.WithFields(logrus.Fields{
+					"client_id":  clientID,
+					"event_type": eventType,
+				}).Debug("Notification sent to client")
+			}
 		}
 	}
 	s.clientsMutex.RUnlock()
@@ -180,9 +192,9 @@ func NewWebSocketServer(
 	cameraMonitor *camera.HybridCameraMonitor,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXController,
-) *WebSocketServer {
+) (*WebSocketServer, error) {
 	if configManager == nil {
-		panic("configManager cannot be nil - use existing internal/config/ConfigManager")
+		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
 	}
 
 	if logger == nil {
@@ -190,21 +202,21 @@ func NewWebSocketServer(
 	}
 
 	if cameraMonitor == nil {
-		panic("cameraMonitor cannot be nil - use existing internal/camera/HybridCameraMonitor")
+		return nil, fmt.Errorf("cameraMonitor cannot be nil - use existing internal/camera/HybridCameraMonitor")
 	}
 
 	if jwtHandler == nil {
-		panic("jwtHandler cannot be nil - use existing internal/security/JWTHandler")
+		return nil, fmt.Errorf("jwtHandler cannot be nil - use existing internal/security/JWTHandler")
 	}
 
 	if mediaMTXController == nil {
-		panic("mediaMTXController cannot be nil - use existing internal/mediamtx/MediaMTXController")
+		return nil, fmt.Errorf("mediaMTXController cannot be nil - use existing internal/mediamtx/MediaMTXController")
 	}
 
 	// Get configuration from config manager
 	cfg := configManager.GetConfig()
 	if cfg == nil {
-		panic("configuration not available - ensure config is loaded")
+		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
 	}
 
 	// Create server configuration
@@ -268,7 +280,7 @@ func NewWebSocketServer(
 	// Register built-in methods
 	server.registerBuiltinMethods()
 
-	return server
+	return server, nil
 }
 
 // Start starts the WebSocket server
@@ -387,6 +399,7 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		Authenticated: false,
 		ConnectedAt:   time.Now(),
 		Subscriptions: make(map[string]bool),
+		Conn:          conn,
 	}
 
 	// Add client to connections
@@ -412,6 +425,15 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 // handleClientConnection handles individual client connections
 func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *ClientConnection) {
 	defer func() {
+		// Recover from panics in goroutine
+		if r := recover(); r != nil {
+			s.logger.WithFields(logrus.Fields{
+				"client_id": client.ClientID,
+				"panic":     r,
+				"action":    "panic_recovered",
+			}).Error("Recovered from panic in client connection handler")
+		}
+
 		// Remove client from connections
 		s.clientsMutex.Lock()
 		delete(s.clients, client.ClientID)

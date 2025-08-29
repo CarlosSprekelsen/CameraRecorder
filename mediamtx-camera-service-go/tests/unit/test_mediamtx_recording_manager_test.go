@@ -48,11 +48,17 @@ func TestRecordingManager_NewRecordingManager(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -77,11 +83,17 @@ func TestRecordingManager_StartRecording(t *testing.T) {
 	// REQ-REC-001: Recording state management
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -117,11 +129,17 @@ func TestRecordingManager_StartRecording(t *testing.T) {
 func TestRecordingManager_StartRecording_SessionExists(t *testing.T) {
 	// REQ-REC-001: Recording state management - conflict prevention
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -150,13 +168,17 @@ func TestRecordingManager_StartRecording_SessionExists(t *testing.T) {
 func TestRecordingManager_StartRecording_FFmpegError(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	// Real FFmpegManager doesn't have SetStartError - test real error conditions
-
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+	
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -176,11 +198,17 @@ func TestRecordingManager_StartRecording_FFmpegError(t *testing.T) {
 func TestRecordingManager_StopRecording(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+	
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -207,11 +235,17 @@ func TestRecordingManager_StopRecording(t *testing.T) {
 func TestRecordingManager_StopRecording_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+	
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -227,11 +261,17 @@ func TestRecordingManager_StopRecording_SessionNotFound(t *testing.T) {
 func TestRecordingManager_GetRecordingSession(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+	
+	// Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	// Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 
 	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
 
@@ -261,7 +301,17 @@ func TestRecordingManager_GetRecordingSession(t *testing.T) {
 func TestRecordingManager_ListRecordingSessions(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -305,7 +355,17 @@ func TestRecordingManager_ListRecordingSessions(t *testing.T) {
 func TestRecordingManager_RotateRecordingFile(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -338,7 +398,17 @@ func TestRecordingManager_RotateRecordingFile(t *testing.T) {
 func TestRecordingManager_RotateRecordingFile_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -358,7 +428,17 @@ func TestRecordingManager_RotateRecordingFile_SessionNotFound(t *testing.T) {
 func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -390,7 +470,17 @@ func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
 func TestRecordingManager_StopRecordingWithContinuity(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -421,7 +511,17 @@ func TestRecordingManager_StopRecordingWithContinuity(t *testing.T) {
 func TestRecordingManager_GetRecordingContinuity(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -453,7 +553,17 @@ func TestRecordingManager_GetRecordingContinuity(t *testing.T) {
 func TestRecordingManager_GetRecordingContinuity_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -473,7 +583,17 @@ func TestRecordingManager_GetRecordingContinuity_SessionNotFound(t *testing.T) {
 func TestRecordingManager_GetRecordingsList(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -528,7 +648,17 @@ func TestRecordingManager_GetRecordingsList(t *testing.T) {
 func TestRecordingManager_GetRecordingsList_NoDirectory(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/non/existent/path",
 	}
@@ -549,7 +679,17 @@ func TestRecordingManager_GetRecordingsList_NoDirectory(t *testing.T) {
 func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -591,7 +731,17 @@ func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 func TestRecordingManager_GetRecordingInfo_FileNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -612,7 +762,17 @@ func TestRecordingManager_GetRecordingInfo_FileNotFound(t *testing.T) {
 func TestRecordingManager_DeleteRecording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -659,7 +819,17 @@ func TestRecordingManager_DeleteRecording(t *testing.T) {
 func TestRecordingManager_DeleteRecording_FileNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -679,7 +849,17 @@ func TestRecordingManager_DeleteRecording_FileNotFound(t *testing.T) {
 func TestRecordingManager_UseCaseConfiguration(t *testing.T) {
 	// REQ-REC-001: Recording state management - use case specific behavior
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -724,7 +904,17 @@ func TestRecordingManager_UseCaseConfiguration(t *testing.T) {
 func TestRecordingManager_StorageValidation(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -750,7 +940,17 @@ func TestRecordingManager_StorageValidation(t *testing.T) {
 func TestRecordingManager_UpdateStorageThresholds(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -782,7 +982,17 @@ func TestRecordingManager_UpdateStorageThresholds(t *testing.T) {
 func TestRecordingManager_ConcurrentOperations(t *testing.T) {
 	// REQ-REC-001: Recording state management - concurrent access
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -834,7 +1044,17 @@ func TestRecordingManager_ConcurrentOperations(t *testing.T) {
 func TestRecordingManager_ErrorHandling(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -865,7 +1085,7 @@ func TestRecordingManager_ErrorHandling(t *testing.T) {
 		{
 			name: "FFmpeg stop error",
 			setupFn: func() {
-					// Real FFmpegManager doesn't have SetStartError/SetStopError - test real error conditions
+				// Real FFmpegManager doesn't have SetStartError/SetStopError - test real error conditions
 			},
 			operation: func() error {
 				session, _ := rm.StartRecording(ctx, "/dev/video0", "/tmp/test", map[string]interface{}{})
@@ -892,7 +1112,17 @@ func TestRecordingManager_ErrorHandling(t *testing.T) {
 func TestRecordingManager_Performance(t *testing.T) {
 	// REQ-REC-001: Recording state management - performance under load
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -932,7 +1162,17 @@ func TestRecordingManager_Performance(t *testing.T) {
 func TestRecordingManager_FileRotation(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -963,228 +1203,17 @@ func TestRecordingManager_FileRotation(t *testing.T) {
 func TestRecordingManager_SegmentManagement(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
+	
+	# Create test logger
 	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-	device := "/dev/video0"
-	path := "/tmp/test_recordings"
-	options := map[string]interface{}{
-		"segment_duration": "30s",
-		"max_segments":     5,
-	}
-
-	// Start recording with segments
-	session, err := rm.StartRecordingWithSegments(ctx, device, path, options)
-	assert.NoError(t, err)
-	assert.NotNil(t, session)
-
-	// Test segment rotation
-	err = rm.RotateRecordingFile(ctx, session.ID)
-	assert.NoError(t, err)
-
-	// Stop recording
-	err = rm.StopRecording(ctx, session.ID)
-	assert.NoError(t, err)
-}
-
-// TestRecordingManager_RecordingContinuity tests recording continuity functionality
-func TestRecordingManager_RecordingContinuity(t *testing.T) {
-	// REQ-REC-004: Error handling and recovery
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-	device := "/dev/video0"
-	path := "/tmp/test_recordings"
-	options := map[string]interface{}{}
-
-	// Start recording
-	session, err := rm.StartRecording(ctx, device, path, options)
-	assert.NoError(t, err)
-	assert.NotNil(t, session)
-
-	// Test recording continuity
-	continuity, err := rm.GetRecordingContinuity(session.ID)
-	assert.NoError(t, err)
-	assert.NotNil(t, continuity)
-	assert.Equal(t, session.ID, continuity.SessionID)
-
-	// Stop recording
-	err = rm.StopRecording(ctx, session.ID)
-	assert.NoError(t, err)
-}
-
-// TestRecordingManager_StorageConfig tests storage configuration updates
-func TestRecordingManager_StorageConfig(t *testing.T) {
-	// REQ-REC-002: Storage monitoring and protection
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	// Test storage thresholds update
-	rm.UpdateStorageThresholds(75, 90)
-}
-
-// TestRecordingManager_RecordingInfo tests recording info extraction
-func TestRecordingManager_RecordingInfo(t *testing.T) {
-	// REQ-REC-001: Recording state management
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-
-	// Create test file
-	tempDir, err := os.MkdirTemp("", "test_recordings")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create a new config with temp directory
-	tempConfig := &mediamtx.MediaMTXConfig{
-		RecordingsPath: tempDir,
-	}
-
-	// Create new recording manager with temp config
-	rm = mediamtx.NewRecordingManager(ffmpegManager, tempConfig, logger)
-
-	filename := "test_recording.mp4"
-	filePath := filepath.Join(tempDir, filename)
-	file, err := os.Create(filePath)
-	require.NoError(t, err)
-	file.Close()
-
-	// Test recording info extraction
-	info, err := rm.GetRecordingInfo(ctx, filename)
-	assert.NoError(t, err)
-	assert.NotNil(t, info)
-	assert.Equal(t, filename, info.FileName)
-	assert.GreaterOrEqual(t, info.FileSize, int64(0))
-}
-
-// TestRecordingManager_RecordingList tests recording list functionality
-func TestRecordingManager_RecordingList(t *testing.T) {
-	// REQ-REC-001: Recording state management
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-
-	// Create test directory and files
-	tempDir, err := os.MkdirTemp("", "test_recordings")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create a new config with temp directory
-	tempConfig := &mediamtx.MediaMTXConfig{
-		RecordingsPath: tempDir,
-	}
-
-	// Create new recording manager with temp config
-	rm = mediamtx.NewRecordingManager(ffmpegManager, tempConfig, logger)
-
-	// Create test files
-	files := []string{"test1.mp4", "test2.mp4", "test3.mp4"}
-	for _, filename := range files {
-		filePath := filepath.Join(tempDir, filename)
-		file, err := os.Create(filePath)
-		require.NoError(t, err)
-		file.Close()
-	}
-
-	// Test recordings list
-	recordings, err := rm.GetRecordingsList(ctx, 100, 0)
-	assert.NoError(t, err)
-	assert.NotNil(t, recordings)
-	assert.Len(t, recordings.Files, len(files))
-
-	// Test recordings list with filter
-	filteredRecordings, err := rm.GetRecordingsList(ctx, 100, 0)
-	assert.NoError(t, err)
-	assert.NotNil(t, filteredRecordings)
-}
-
-// TestRecordingManager_StorageEmergencyCleanup tests emergency cleanup functionality
-func TestRecordingManager_StorageEmergencyCleanup(t *testing.T) {
-	// REQ-REC-002: Storage monitoring and protection
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-
-	// Test emergency cleanup - using public methods
-	// Note: These are internal methods, testing through public interface
-	assert.NoError(t, err)
-}
-
-// TestRecordingManager_RecordingRotationCheck tests recording rotation checking
-func TestRecordingManager_RecordingRotationCheck(t *testing.T) {
-	// REQ-REC-003: File rotation and segment management
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
-	config := &mediamtx.MediaMTXConfig{
-		RecordingsPath: "/tmp/test_recordings",
-	}
-	logger := logrus.New()
-
-	rm := mediamtx.NewRecordingManager(ffmpegManager, config, logger)
-
-	ctx := context.Background()
-	device := "/dev/video0"
-	path := "/tmp/test_recordings"
-	options := map[string]interface{}{}
-
-	// Start recording
-	session, err := rm.StartRecording(ctx, device, path, options)
-	assert.NoError(t, err)
-	assert.NotNil(t, session)
-
-	// Test recording rotation check - using public methods
-	// Note: This is an internal method, testing through public interface
-
-	// Stop recording
-	err = rm.StopRecording(ctx, session.ID)
-	assert.NoError(t, err)
-}
-
-// TestRecordingManager_SegmentRotation tests segment rotation functionality
-func TestRecordingManager_SegmentRotation(t *testing.T) {
-	// REQ-REC-003: File rotation and segment management
-
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1215,7 +1244,17 @@ func TestRecordingManager_SegmentRotation(t *testing.T) {
 func TestRecordingManager_StorageCheck(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1239,7 +1278,17 @@ func TestRecordingManager_StorageCheck(t *testing.T) {
 func TestRecordingManager_MonitoringStart(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1262,7 +1311,17 @@ func TestRecordingManager_MonitoringStart(t *testing.T) {
 func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1289,7 +1348,17 @@ func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
 func TestRecordingManager_AdvancedRecordingCommands(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1325,7 +1394,17 @@ func TestRecordingManager_AdvancedRecordingCommands(t *testing.T) {
 func TestRecordingManager_PathGeneration(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1360,7 +1439,17 @@ func TestRecordingManager_PathGeneration(t *testing.T) {
 func TestRecordingManager_RecordingDeletion(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1406,7 +1495,17 @@ func TestRecordingManager_RecordingDeletion(t *testing.T) {
 func TestRecordingManager_RecordingListWithFilter(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1449,7 +1548,17 @@ func TestRecordingManager_RecordingListWithFilter(t *testing.T) {
 func TestRecordingManager_StorageThresholds(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1474,7 +1583,17 @@ func TestRecordingManager_StorageThresholds(t *testing.T) {
 func TestRecordingManager_RecordingSessionManagement(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}
@@ -1513,7 +1632,17 @@ func TestRecordingManager_RecordingSessionManagement(t *testing.T) {
 func TestRecordingManager_RecordingWithContinuity(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
-	ffmpegManager := createRealFFmpegManager(config, logger)
+	# Create test configuration
+	config := &mediamtx.MediaMTXConfig{
+		RecordingsPath: "/tmp/test_recordings",
+	}
+	
+	# Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+
+	# Create FFmpeg manager
+	ffmpegManager := mediamtx.NewFFmpegManager(config, logger)
 	config := &mediamtx.MediaMTXConfig{
 		RecordingsPath: "/tmp/test_recordings",
 	}

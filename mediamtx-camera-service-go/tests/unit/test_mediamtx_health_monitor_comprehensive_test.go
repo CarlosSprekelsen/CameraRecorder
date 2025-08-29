@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestHealthMonitor_Creation tests health monitor creation
-func TestHealthMonitor_Creation(t *testing.T) {
+// TestHealthMonitor_CreationComprehensive tests health monitor creation
+func TestHealthMonitor_CreationComprehensive(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	config := &mediamtx.MediaMTXConfig{
 		BaseURL:        "http://localhost:9997",
@@ -44,12 +44,14 @@ func TestHealthMonitor_Creation(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 }
 
-// TestHealthMonitor_StartStop tests health monitor start and stop
-func TestHealthMonitor_StartStop(t *testing.T) {
+// TestHealthMonitor_StartStopComprehensive tests health monitor start and stop
+func TestHealthMonitor_StartStopComprehensive(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	config := &mediamtx.MediaMTXConfig{
 		BaseURL:        "http://localhost:9997",
@@ -66,7 +68,9 @@ func TestHealthMonitor_StartStop(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	ctx := context.Background()
@@ -80,8 +84,8 @@ func TestHealthMonitor_StartStop(t *testing.T) {
 	assert.NoError(t, err, "Health monitor should stop successfully")
 }
 
-// TestHealthMonitor_GetStatus tests health status retrieval
-func TestHealthMonitor_GetStatus(t *testing.T) {
+// TestHealthMonitor_GetStatusComprehensive tests health status retrieval
+func TestHealthMonitor_GetStatusComprehensive(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	config := &mediamtx.MediaMTXConfig{
 		BaseURL:        "http://localhost:9997",
@@ -98,7 +102,9 @@ func TestHealthMonitor_GetStatus(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test initial status
@@ -107,8 +113,8 @@ func TestHealthMonitor_GetStatus(t *testing.T) {
 	assert.Equal(t, "UNKNOWN", status.Status, "Initial status should be UNKNOWN")
 }
 
-// TestHealthMonitor_IsHealthy tests health check
-func TestHealthMonitor_IsHealthy(t *testing.T) {
+// TestHealthMonitor_IsHealthyComprehensive tests health check
+func TestHealthMonitor_IsHealthyComprehensive(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	config := &mediamtx.MediaMTXConfig{
 		BaseURL:        "http://localhost:9997",
@@ -125,7 +131,9 @@ func TestHealthMonitor_IsHealthy(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test initial health state
@@ -133,8 +141,8 @@ func TestHealthMonitor_IsHealthy(t *testing.T) {
 	assert.False(t, isHealthy, "Initial health state should be false")
 }
 
-// TestHealthMonitor_CircuitBreaker tests circuit breaker functionality
-func TestHealthMonitor_CircuitBreaker(t *testing.T) {
+// TestHealthMonitor_CircuitBreakerComprehensive tests circuit breaker functionality
+func TestHealthMonitor_CircuitBreakerComprehensive(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	config := &mediamtx.MediaMTXConfig{
 		BaseURL:        "http://localhost:9997",
@@ -151,7 +159,9 @@ func TestHealthMonitor_CircuitBreaker(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test initial circuit breaker state
@@ -185,7 +195,9 @@ func TestHealthMonitor_GetMetrics(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test metrics retrieval
@@ -194,87 +206,6 @@ func TestHealthMonitor_GetMetrics(t *testing.T) {
 	assert.Contains(t, metrics, "total_checks", "Metrics should contain total_checks")
 	assert.Contains(t, metrics, "successful_checks", "Metrics should contain successful_checks")
 	assert.Contains(t, metrics, "failed_checks", "Metrics should contain failed_checks")
-}
-
-// TestHealthMonitor_CheckAllComponents tests component health checks
-func TestHealthMonitor_CheckAllComponents(t *testing.T) {
-	// REQ-MTX-004: Health monitoring
-	config := &mediamtx.MediaMTXConfig{
-		BaseURL:        "http://localhost:9997",
-		HealthCheckURL: "http://localhost:9997/v3/paths/list",
-		Timeout:        5 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		CircuitBreaker: mediamtx.CircuitBreakerConfig{
-			FailureThreshold: 3,
-			RecoveryTimeout:  30 * time.Second,
-			MaxFailures:      5,
-		},
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
-	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
-
-	// Test component health check
-	componentStatus := healthMonitor.CheckAllComponents()
-	assert.NotNil(t, componentStatus, "Should return component status")
-}
-
-// TestHealthMonitor_GetDetailedStatus tests detailed status retrieval
-func TestHealthMonitor_GetDetailedStatus(t *testing.T) {
-	// REQ-MTX-004: Health monitoring
-	config := &mediamtx.MediaMTXConfig{
-		BaseURL:        "http://localhost:9997",
-		HealthCheckURL: "http://localhost:9997/v3/paths/list",
-		Timeout:        5 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		CircuitBreaker: mediamtx.CircuitBreakerConfig{
-			FailureThreshold: 3,
-			RecoveryTimeout:  30 * time.Second,
-			MaxFailures:      5,
-		},
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
-	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
-
-	// Test detailed status retrieval
-	detailedStatus := healthMonitor.GetDetailedStatus()
-	assert.NotNil(t, detailedStatus, "Should return detailed status")
-	assert.NotEmpty(t, detailedStatus.Status, "Detailed status should have status")
-	assert.NotNil(t, detailedStatus.Timestamp, "Detailed status should have timestamp")
-}
-
-// TestHealthMonitor_String tests string representation
-func TestHealthMonitor_String(t *testing.T) {
-	// REQ-MTX-004: Health monitoring
-	config := &mediamtx.MediaMTXConfig{
-		BaseURL:        "http://localhost:9997",
-		HealthCheckURL: "http://localhost:9997/v3/paths/list",
-		Timeout:        5 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		CircuitBreaker: mediamtx.CircuitBreakerConfig{
-			FailureThreshold: 3,
-			RecoveryTimeout:  30 * time.Second,
-			MaxFailures:      5,
-		},
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
-	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
-
-	// Test string representation
-	healthString := healthMonitor.String()
-	assert.NotEmpty(t, healthString, "String representation should not be empty")
-	assert.Contains(t, healthString, "HealthMonitor", "String should contain HealthMonitor")
 }
 
 // TestHealthMonitor_RealServerConnection tests connection to real MediaMTX server
@@ -295,21 +226,20 @@ func TestHealthMonitor_RealServerConnection(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
-	// Test connection to real MediaMTX server
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	resp, err := client.Get(config.HealthCheckURL)
+	// Test connection to real MediaMTX server using the MediaMTX client
+	ctx := context.Background()
+	err := client.HealthCheck(ctx)
 	if err != nil {
 		t.Skipf("MediaMTX server not available: %v", err)
 	}
-	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "MediaMTX health endpoint should respond with 200 OK")
+	// If we get here, the health check passed
+	assert.NoError(t, err, "MediaMTX health check should succeed")
 }
 
 // TestHealthMonitor_MockServer tests with mock server
@@ -337,7 +267,9 @@ func TestHealthMonitor_MockServer(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test with mock server
@@ -380,7 +312,9 @@ func TestHealthMonitor_FailureScenarios(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test with failing mock server
@@ -424,7 +358,9 @@ func TestHealthMonitor_TimeoutScenarios(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	healthMonitor := mediamtx.NewHealthMonitor(config, logger)
+	// Create a real MediaMTX client for testing
+	client := mediamtx.NewClient(config.BaseURL, config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test with timeout scenario

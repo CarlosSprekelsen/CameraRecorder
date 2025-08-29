@@ -69,13 +69,14 @@ func (suite *BenchmarkSuite) Setup(b *testing.B) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Initialize camera monitor
-	suite.cameraMonitor = camera.NewHybridCameraMonitor(
+	suite.cameraMonitor, err = camera.NewHybridCameraMonitor(
 		suite.configManager,
 		suite.logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(b, err, "Failed to create camera monitor")
 
 	// Initialize MediaMTX controller
 	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
@@ -89,13 +90,14 @@ func (suite *BenchmarkSuite) Setup(b *testing.B) {
 	require.NoError(b, err, "Failed to create JWT handler")
 
 	// Initialize WebSocket server
-	suite.wsServer = websocket.NewWebSocketServer(
+	suite.wsServer, err = websocket.NewWebSocketServer(
 		suite.configManager,
 		suite.logger,
 		suite.cameraMonitor,
 		suite.jwtHandler,
 		suite.mediaMTXController,
 	)
+	require.NoError(b, err, "Failed to create WebSocket server")
 }
 
 // Teardown cleans up the benchmark suite

@@ -30,20 +30,23 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestHybridCameraMonitor_RealSystemIntegration tests real V4L2 device integration
 func TestHybridCameraMonitor_RealSystemIntegration(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -51,14 +54,15 @@ func TestHybridCameraMonitor_RealSystemIntegration(t *testing.T) {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	// Create monitor with real dependencies using shared components
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test monitor creation
@@ -112,14 +116,19 @@ func TestHybridCameraMonitor_RealSystemIntegration(t *testing.T) {
 
 // TestHybridCameraMonitor_CapabilityProbing tests real device capability probing
 func TestHybridCameraMonitor_CapabilityProbing(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-CAM-003: Device capability probing and format detection
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("capability-probing-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -128,13 +137,14 @@ func TestHybridCameraMonitor_CapabilityProbing(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test capability probing for common V4L2 device paths
@@ -186,14 +196,19 @@ func TestHybridCameraMonitor_CapabilityProbing(t *testing.T) {
 
 // TestHybridCameraMonitor_EventHandling tests camera event handling
 func TestHybridCameraMonitor_EventHandling(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-CAM-006: Event handling with <20ms notification latency
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("event-handling-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -202,13 +217,14 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
+	monitor, err := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test event handler registration
@@ -246,14 +262,19 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 
 // TestHybridCameraMonitor_Statistics tests monitoring statistics
 func TestHybridCameraMonitor_Statistics(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-CAM-002: Real-time device status monitoring
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("statistics-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -261,14 +282,15 @@ func TestHybridCameraMonitor_Statistics(t *testing.T) {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	// Create monitor with real dependencies using shared components
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Get initial stats
@@ -305,14 +327,19 @@ func TestHybridCameraMonitor_Statistics(t *testing.T) {
 
 // TestHybridCameraMonitor_DeviceEnumeration tests device enumeration functionality
 func TestHybridCameraMonitor_DeviceEnumeration(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-CAM-001: Camera device discovery and enumeration
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("device-enumeration-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -320,14 +347,15 @@ func TestHybridCameraMonitor_DeviceEnumeration(t *testing.T) {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	// Create monitor with real dependencies using shared components
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test device enumeration without starting monitor
@@ -364,14 +392,19 @@ func TestHybridCameraMonitor_DeviceEnumeration(t *testing.T) {
 
 // TestHybridCameraMonitor_ErrorHandling tests error handling scenarios
 func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("error-handling-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -379,14 +412,15 @@ func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	// Create monitor with real dependencies using shared components
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test starting already running monitor
@@ -420,14 +454,19 @@ func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
 
 // TestHybridCameraMonitor_PerformanceBenchmark tests performance targets
 func TestHybridCameraMonitor_PerformanceBenchmark(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// REQ-CAM-005: Performance targets (<200ms detection time)
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
-	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-performance-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	// Setup logging using the shared logger
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -435,14 +474,15 @@ func TestHybridCameraMonitor_PerformanceBenchmark(t *testing.T) {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	// Create monitor with real dependencies using shared components
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test camera detection performance (<200ms target)
@@ -498,14 +538,16 @@ func TestHybridCameraMonitor_PerformanceBenchmark(t *testing.T) {
 
 // TestHybridCameraMonitor_EdgeCases tests edge cases and error conditions
 func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-edge-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -514,13 +556,14 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test edge case: Starting already running monitor
@@ -590,14 +633,16 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 
 // TestHybridCameraMonitor_ConfigurationValidation tests configuration-driven camera settings
 func TestHybridCameraMonitor_ConfigurationValidation(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-config-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -606,17 +651,18 @@ func TestHybridCameraMonitor_ConfigurationValidation(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Get initial configuration
-	initialConfig := configManager.GetConfig()
+	initialConfig := env.ConfigManager.GetConfig()
 	require.NotNil(t, initialConfig, "Initial configuration should be available")
 
 	// Validate configuration-driven settings
@@ -699,14 +745,16 @@ logging:
 		require.NoError(t, err, "Failed to unset environment variable")
 	}()
 
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err = configManager.LoadConfig(configPath)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-hot-reload-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -715,17 +763,18 @@ logging:
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Get initial configuration
-	initialConfig := configManager.GetConfig()
+	initialConfig := env.ConfigManager.GetConfig()
 	require.NotNil(t, initialConfig, "Initial configuration should be available")
 
 	// Start monitor
@@ -744,7 +793,7 @@ logging:
 
 	// Create a channel to track configuration updates
 	updateChan := make(chan *config.Config, 1)
-	configManager.AddUpdateCallback(func(cfg *config.Config) {
+	env.ConfigManager.AddUpdateCallback(func(cfg *config.Config) {
 		updateChan <- cfg
 	})
 
@@ -802,14 +851,16 @@ logging:
 
 // TestHybridCameraMonitor_MonitoringIntegration tests monitoring integration with configuration system
 func TestHybridCameraMonitor_MonitoringIntegration(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-monitoring-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -818,13 +869,14 @@ func TestHybridCameraMonitor_MonitoringIntegration(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test event handling integration
@@ -877,14 +929,16 @@ func TestHybridCameraMonitor_MonitoringIntegration(t *testing.T) {
 
 // TestHybridCameraMonitor_EventHandler tests event handler functionality
 func TestHybridCameraMonitor_EventHandler(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-event-handler-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -893,13 +947,14 @@ func TestHybridCameraMonitor_EventHandler(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
+	monitor, err := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Create a test event handler
@@ -952,14 +1007,16 @@ func (h *TestEventHandler) HandleCameraEvent(ctx context.Context, eventData came
 
 // TestHybridCameraMonitor_DefaultFormats tests default format handling
 func TestHybridCameraMonitor_DefaultFormats(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-default-formats-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -968,13 +1025,14 @@ func TestHybridCameraMonitor_DefaultFormats(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Start monitor
@@ -1097,14 +1155,16 @@ Device Caps       : 0x04a00001 Video Capture Metadata Capture Streaming Extended
 
 // TestHybridCameraMonitor_DefaultFormatsTrigger tests triggering getDefaultFormats function
 func TestHybridCameraMonitor_DefaultFormatsTrigger(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-default-formats-trigger-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -1113,13 +1173,14 @@ func TestHybridCameraMonitor_DefaultFormatsTrigger(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Test getDefaultFormats indirectly by checking if it's called when format detection fails
@@ -1159,14 +1220,16 @@ func TestHybridCameraMonitor_DefaultFormatsTrigger(t *testing.T) {
 
 // TestHybridCameraMonitor_MaxFunction tests the max function indirectly through adjustPollingInterval
 func TestHybridCameraMonitor_MaxFunction(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-max-function-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -1175,13 +1238,14 @@ func TestHybridCameraMonitor_MaxFunction(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Start monitor
@@ -1423,14 +1487,16 @@ func TestRealDeviceInfoParser_ParseSize(t *testing.T) {
 
 // TestHybridCameraMonitor_GetDefaultFormats tests the getDefaultFormats function indirectly
 func TestHybridCameraMonitor_GetDefaultFormats(t *testing.T) {
-	// Setup real configuration manager
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("../../config/development.yaml")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup real logging
-	logger := logging.NewLogger("hybrid-monitor-default-formats-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real implementations
@@ -1439,13 +1505,14 @@ func TestHybridCameraMonitor_GetDefaultFormats(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Create monitor with real dependencies
-	monitor := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
+	monitor, err := camera.NewHybridCameraMonitor(
+		env.ConfigManager,
+		env.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 	require.NotNil(t, monitor, "Monitor should be created successfully")
 
 	// Start monitor

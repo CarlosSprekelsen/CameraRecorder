@@ -99,12 +99,12 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 				if currentFormat != nil {
 					formats = append(formats, *currentFormat)
 				}
-				
+
 				currentFormat = &V4L2Format{
 					PixelFormat: currentPixelFormat,
 					FrameRates:  []string{},
 				}
-				
+
 				// Extract size from "Size: Discrete 640x480"
 				size := r.extractValue(line)
 				// Remove "Discrete " prefix if present
@@ -142,9 +142,12 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 	var frameRates []string
 
 	// Enhanced frame rate patterns for robust parsing (following Python patterns)
+	// Updated to match the actual V4L2 output format
 	frameRatePatterns := []string{
-		`(?m)^\s*(\d+(?:\.\d+)?)\s*fps\b`,            // 30.000 fps
-		`(?m)^\s*(\d+(?:\.\d+)?)\s*FPS\b`,            // 30.000 FPS
+		`\((\d+(?:\.\d+)?)\s*fps\)`,                  // (30.000 fps) - actual V4L2 format
+		`\((\d+(?:\.\d+)?)\s*FPS\)`,                  // (30.000 FPS) - uppercase variant
+		`(?m)^\s*(\d+(?:\.\d+)?)\s*fps\b`,            // 30.000 fps - standalone
+		`(?m)^\s*(\d+(?:\.\d+)?)\s*FPS\b`,            // 30.000 FPS - standalone uppercase
 		`Frame\s*rate[:\s]+(\d+(?:\.\d+)?)`,          // Frame rate: 30.0
 		`(?m)^\s*(\d+(?:\.\d+)?)\s*Hz\b`,             // 30 Hz
 		`@(\d+(?:\.\d+)?)\b`,                         // 1920x1080@60

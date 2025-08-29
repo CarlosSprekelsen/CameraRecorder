@@ -8,13 +8,20 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
 func TestConfigManager_EnvironmentOverrides(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test environment override functionality through LoadConfig
 
 	t.Run("EnvironmentOverrideThroughLoadConfig", func(t *testing.T) {
@@ -28,13 +35,12 @@ func TestConfigManager_EnvironmentOverrides(t *testing.T) {
 			os.Unsetenv("CAMERA_SERVICE_LOGGING_LEVEL")
 		}()
 
-		// Create config manager and load config
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("") // Load with empty path to trigger environment overrides
+		// Use shared config manager and load config
+		err := env.ConfigManager.LoadConfig("") // Load with empty path to trigger environment overrides
 
 		// Should handle environment overrides
 		if err == nil {
-			cfg := manager.GetConfig()
+			cfg := env.ConfigManager.GetConfig()
 			if cfg != nil {
 				assert.Equal(t, "test-host", cfg.Server.Host)
 				assert.Equal(t, 8080, cfg.Server.Port)
@@ -52,12 +58,11 @@ func TestConfigManager_EnvironmentOverrides(t *testing.T) {
 			os.Unsetenv("CAMERA_SERVICE_SERVER_PORT")
 		}()
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 
 		// Should handle empty values gracefully - config manager uses defaults
 		if err == nil {
-			cfg := manager.GetConfig()
+			cfg := env.ConfigManager.GetConfig()
 			if cfg != nil {
 				// Config manager uses default values when environment variables are empty
 				assert.NotEmpty(t, cfg.Server.Host, "Should use default host when env var is empty")
@@ -71,14 +76,20 @@ func TestConfigManager_EnvironmentOverrides(t *testing.T) {
 		os.Setenv("CAMERA_SERVICE_SERVER_PORT", "invalid")
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_PORT")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		// Should handle invalid values gracefully - should return error for invalid port
 		assert.Error(t, err, "Should return error for invalid port value")
 	})
 }
 
 func TestConfigManager_Validation(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test validation through LoadConfig
 
 	t.Run("ValidConfigFile", func(t *testing.T) {
@@ -99,11 +110,10 @@ logging:
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		assert.NoError(t, err, "Valid config should pass validation")
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8080, cfg.Server.Port)
@@ -125,8 +135,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		// Should handle validation errors
 		if err != nil {
 			assert.Error(t, err, "Invalid config should fail validation")
@@ -135,6 +144,13 @@ mediamtx:
 }
 
 func TestConfigManager_LoadConfig(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test LoadConfig method coverage
 
 	t.Run("LoadFromValidFile", func(t *testing.T) {
@@ -155,11 +171,10 @@ logging:
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
 		// Config manager uses defaults when there are parsing issues
 		assert.NotEmpty(t, cfg.Server.Host, "Should have a host value")
@@ -173,8 +188,7 @@ logging:
 	})
 
 	t.Run("LoadFromInvalidFile", func(t *testing.T) {
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("/nonexistent/file.yaml")
+		err := env.ConfigManager.LoadConfig("/nonexistent/file.yaml")
 		// Config manager handles missing files gracefully and uses defaults
 		assert.NoError(t, err, "Should handle missing file gracefully")
 	})
@@ -194,23 +208,28 @@ server:
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		// Config manager handles invalid YAML gracefully and uses defaults
 		assert.NoError(t, err, "Should handle invalid YAML gracefully")
 
 		// Verify that config was loaded with defaults
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg, "Should have config with defaults")
 	})
 }
 
 func TestConfigManager_GetConfig(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test GetConfig method
 
 	t.Run("GetConfigBeforeLoad", func(t *testing.T) {
-		manager := config.NewConfigManager()
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		// Should return config even if not loaded
 		assert.NotNil(t, cfg)
 	})
@@ -228,11 +247,10 @@ server:
 		err := os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8080, cfg.Server.Port)
@@ -240,23 +258,35 @@ server:
 }
 
 func TestConfigManager_UpdateCallback(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test AddUpdateCallback method
 
 	t.Run("AddUpdateCallback", func(t *testing.T) {
-		manager := config.NewConfigManager()
-
 		callback := func(cfg *config.Config) {
 			// Callback function for testing
 		}
 
-		manager.AddUpdateCallback(callback)
+		env.ConfigManager.AddUpdateCallback(callback)
 
 		// Should not panic when adding callback
-		assert.NotNil(t, manager)
+		assert.NotNil(t, env.ConfigManager)
 	})
 }
 
 func TestConfigManager_DirectMethodCoverage(t *testing.T) {
+	// REQ-E1-S1.1-004: Default value fallback
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test methods that need direct coverage
 
 	t.Run("ApplyEnvironmentOverridesDirect", func(t *testing.T) {
@@ -270,27 +300,25 @@ func TestConfigManager_DirectMethodCoverage(t *testing.T) {
 			os.Unsetenv("CAMERA_SERVICE_LOGGING_LEVEL")
 		}()
 
-		// Create config manager and config
-		manager := config.NewConfigManager()
+		// Use shared config manager and config
 		cfg := &config.Config{}
 
 		// Call the method directly using reflection to access unexported method
 		// This is for testing coverage only
-		managerType := reflect.TypeOf(manager)
+		managerType := reflect.TypeOf(env.ConfigManager)
 		method, found := managerType.MethodByName("applyEnvironmentOverrides")
 		if found {
 			// Call the method using reflection
-			args := []reflect.Value{reflect.ValueOf(manager), reflect.ValueOf(cfg)}
+			args := []reflect.Value{reflect.ValueOf(env.ConfigManager), reflect.ValueOf(cfg)}
 			method.Func.Call(args)
 		}
 
 		// Verify the method was called (coverage only)
-		assert.NotNil(t, manager)
+		assert.NotNil(t, env.ConfigManager)
 	})
 
 	t.Run("ValidateConfigDirect", func(t *testing.T) {
-		// Create config manager and valid config
-		manager := config.NewConfigManager()
+		// Use shared config manager and valid config
 		cfg := &config.Config{
 			Server: config.ServerConfig{
 				Host: "127.0.0.1",
@@ -303,11 +331,11 @@ func TestConfigManager_DirectMethodCoverage(t *testing.T) {
 		}
 
 		// Call the method directly using reflection to access unexported method
-		managerType := reflect.TypeOf(manager)
+		managerType := reflect.TypeOf(env.ConfigManager)
 		method, found := managerType.MethodByName("validateConfig")
 		if found {
 			// Call the method using reflection
-			args := []reflect.Value{reflect.ValueOf(manager), reflect.ValueOf(cfg)}
+			args := []reflect.Value{reflect.ValueOf(env.ConfigManager), reflect.ValueOf(cfg)}
 			results := method.Func.Call(args)
 
 			// Check if method returned an error
@@ -320,6 +348,6 @@ func TestConfigManager_DirectMethodCoverage(t *testing.T) {
 		}
 
 		// Verify the method was called (coverage only)
-		assert.NotNil(t, manager)
+		assert.NotNil(t, env.ConfigManager)
 	})
 }

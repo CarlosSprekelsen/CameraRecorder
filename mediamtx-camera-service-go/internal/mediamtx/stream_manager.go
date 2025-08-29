@@ -75,8 +75,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		return nil, NewStreamErrorWithErr(name, "create_stream", "failed to marshal request", err)
 	}
 
-	// Send request
-	responseData, err := sm.client.Post(ctx, "/v3/streams/add", data)
+	// Send request - MediaMTX uses paths, not streams
+	responseData, err := sm.client.Post(ctx, "/v3/paths/add", data)
 	if err != nil {
 		return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
 	}
@@ -137,7 +137,7 @@ func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, sour
 func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 	sm.logger.WithField("stream_id", id).Debug("Deleting MediaMTX stream")
 
-	err := sm.client.Delete(ctx, fmt.Sprintf("/v3/streams/delete/%s", id))
+	err := sm.client.Delete(ctx, fmt.Sprintf("/v3/paths/delete/%s", id))
 	if err != nil {
 		return NewStreamErrorWithErr(id, "delete_stream", "failed to delete stream", err)
 	}
@@ -150,7 +150,7 @@ func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, error) {
 	sm.logger.WithField("stream_id", id).Debug("Getting MediaMTX stream")
 
-	data, err := sm.client.Get(ctx, fmt.Sprintf("/v3/streams/get/%s", id))
+	data, err := sm.client.Get(ctx, fmt.Sprintf("/v3/paths/get/%s", id))
 	if err != nil {
 		return nil, NewStreamErrorWithErr(id, "get_stream", "failed to get stream", err)
 	}
@@ -167,7 +167,7 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, err
 func (sm *streamManager) ListStreams(ctx context.Context) ([]*Stream, error) {
 	sm.logger.Debug("Listing MediaMTX streams")
 
-	data, err := sm.client.Get(ctx, "/v3/streams/list")
+	data, err := sm.client.Get(ctx, "/v3/paths/list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list streams: %w", err)
 	}

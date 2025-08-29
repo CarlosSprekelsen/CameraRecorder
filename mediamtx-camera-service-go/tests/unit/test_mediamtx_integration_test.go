@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX Integration Unit Tests
 
@@ -14,9 +17,6 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-//go:build unit
-// +build unit
-
 package mediamtx_test
 
 import (
@@ -24,23 +24,24 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 // TestMediaMTXController tests the MediaMTX controller functionality
 func TestMediaMTXController(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-006: Health monitoring and status reporting
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test controller initialization
 	t.Run("controller_initialization", func(t *testing.T) {
-		controller := mediamtx.NewController(configManager, logger)
+		controller := mediamtx.NewController(env.ConfigManager, env.Logger)
 		require.NotNil(t, controller)
 		assert.NotNil(t, controller.GetConfig())
 		assert.NotNil(t, controller.GetLogger())
@@ -48,7 +49,7 @@ func TestMediaMTXController(t *testing.T) {
 
 	// Test configuration loading
 	t.Run("configuration_loading", func(t *testing.T) {
-		controller := mediamtx.NewController(configManager, logger)
+		controller := mediamtx.NewController(env.ConfigManager, env.Logger)
 
 		// Test MediaMTX configuration
 		config := controller.GetConfig()
@@ -59,7 +60,7 @@ func TestMediaMTXController(t *testing.T) {
 
 	// Test health monitoring
 	t.Run("health_monitoring", func(t *testing.T) {
-		controller := mediamtx.NewController(configManager, logger)
+		controller := mediamtx.NewController(env.ConfigManager, env.Logger)
 
 		// Test health status
 		status := controller.GetHealthStatus()
@@ -70,7 +71,7 @@ func TestMediaMTXController(t *testing.T) {
 
 	// Test connection management
 	t.Run("connection_management", func(t *testing.T) {
-		controller := mediamtx.NewController(configManager, logger)
+		controller := mediamtx.NewController(env.ConfigManager, env.Logger)
 
 		// Test connection status
 		connected := controller.IsConnected()
@@ -80,19 +81,22 @@ func TestMediaMTXController(t *testing.T) {
 
 // TestPathManager tests the MediaMTX path management functionality
 func TestPathManager(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-001: MediaMTX path creation and management
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test path manager initialization
 	t.Run("path_manager_initialization", func(t *testing.T) {
-		pathManager := mediamtx.NewPathManager(configManager, logger)
+		pathManager := mediamtx.NewPathManager(env.ConfigManager, env.Logger)
 		require.NotNil(t, pathManager)
 	})
 
 	// Test path creation
 	t.Run("path_creation", func(t *testing.T) {
-		pathManager := mediamtx.NewPathManager(configManager, logger)
+		pathManager := mediamtx.NewPathManager(env.ConfigManager, env.Logger)
 
 		// Test creating a path
 		pathConfig := &mediamtx.PathConfig{
@@ -164,19 +168,22 @@ func TestPathManager(t *testing.T) {
 
 // TestStreamManager tests the MediaMTX stream management functionality
 func TestStreamManager(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-002: Stream lifecycle management
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test stream manager initialization
 	t.Run("stream_manager_initialization", func(t *testing.T) {
-		streamManager := mediamtx.NewStreamManager(configManager, logger)
+		streamManager := mediamtx.NewStreamManager(env.ConfigManager, env.Logger)
 		require.NotNil(t, streamManager)
 	})
 
 	// Test stream creation
 	t.Run("stream_creation", func(t *testing.T) {
-		streamManager := mediamtx.NewStreamManager(configManager, logger)
+		streamManager := mediamtx.NewStreamManager(env.ConfigManager, env.Logger)
 
 		// Test creating a stream
 		streamConfig := &mediamtx.StreamConfig{
@@ -249,19 +256,22 @@ func TestStreamManager(t *testing.T) {
 
 // TestRecordingManager tests the MediaMTX recording management functionality
 func TestRecordingManager(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-004: Recording session management
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test recording manager initialization
 	t.Run("recording_manager_initialization", func(t *testing.T) {
-		recordingManager := mediamtx.NewRecordingManager(configManager, logger)
+		recordingManager := mediamtx.NewRecordingManager(env.ConfigManager, env.Logger)
 		require.NotNil(t, recordingManager)
 	})
 
 	// Test recording session creation
 	t.Run("recording_session_creation", func(t *testing.T) {
-		recordingManager := mediamtx.NewRecordingManager(configManager, logger)
+		recordingManager := mediamtx.NewRecordingManager(env.ConfigManager, env.Logger)
 
 		// Test creating a recording session
 		sessionConfig := &mediamtx.RecordingSessionConfig{
@@ -341,19 +351,22 @@ func TestRecordingManager(t *testing.T) {
 
 // TestSnapshotManager tests the MediaMTX snapshot management functionality
 func TestSnapshotManager(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-005: Snapshot capture and management
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test snapshot manager initialization
 	t.Run("snapshot_manager_initialization", func(t *testing.T) {
-		snapshotManager := mediamtx.NewSnapshotManager(configManager, logger)
+		snapshotManager := mediamtx.NewSnapshotManager(env.ConfigManager, env.Logger)
 		require.NotNil(t, snapshotManager)
 	})
 
 	// Test snapshot capture
 	t.Run("snapshot_capture", func(t *testing.T) {
-		snapshotManager := mediamtx.NewSnapshotManager(configManager, logger)
+		snapshotManager := mediamtx.NewSnapshotManager(env.ConfigManager, env.Logger)
 
 		// Test capturing a snapshot
 		snapshotConfig := &mediamtx.SnapshotConfig{
@@ -410,19 +423,22 @@ func TestSnapshotManager(t *testing.T) {
 
 // TestFFmpegManager tests the MediaMTX FFmpeg integration functionality
 func TestFFmpegManager(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-003: FFmpeg integration and command generation
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test FFmpeg manager initialization
 	t.Run("ffmpeg_manager_initialization", func(t *testing.T) {
-		ffmpegManager := mediamtx.NewFFmpegManager(configManager, logger)
+		ffmpegManager := mediamtx.NewFFmpegManager(env.ConfigManager, env.Logger)
 		require.NotNil(t, ffmpegManager)
 	})
 
 	// Test FFmpeg command generation
 	t.Run("ffmpeg_command_generation", func(t *testing.T) {
-		ffmpegManager := mediamtx.NewFFmpegManager(configManager, logger)
+		ffmpegManager := mediamtx.NewFFmpegManager(env.ConfigManager, env.Logger)
 
 		// Test generating FFmpeg command
 		commandConfig := &mediamtx.FFmpegCommandConfig{
@@ -445,7 +461,7 @@ func TestFFmpegManager(t *testing.T) {
 
 	// Test FFmpeg execution
 	t.Run("ffmpeg_execution", func(t *testing.T) {
-		ffmpegManager := mediamtx.NewFFmpegManager(configManager, logger)
+		ffmpegManager := mediamtx.NewFFmpegManager(env.ConfigManager, env.Logger)
 
 		// Test executing FFmpeg command
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -462,7 +478,7 @@ func TestFFmpegManager(t *testing.T) {
 
 	// Test FFmpeg process management
 	t.Run("ffmpeg_process_management", func(t *testing.T) {
-		ffmpegManager := mediamtx.NewFFmpegManager(configManager, logger)
+		ffmpegManager := mediamtx.NewFFmpegManager(env.ConfigManager, env.Logger)
 
 		// Test starting a process
 		process, err := ffmpegManager.StartProcess(context.Background(), "ffmpeg -version")
@@ -483,19 +499,22 @@ func TestFFmpegManager(t *testing.T) {
 
 // TestHealthMonitor tests the MediaMTX health monitoring functionality
 func TestHealthMonitor(t *testing.T) {
-	// Setup
-	configManager := config.NewConfigManager()
-	logger := logging.NewLogger("test")
+	// REQ-MEDIA-007: Error handling and recovery
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test health monitor initialization
 	t.Run("health_monitor_initialization", func(t *testing.T) {
-		healthMonitor := mediamtx.NewHealthMonitor(configManager, logger)
+		healthMonitor := mediamtx.NewHealthMonitor(env.ConfigManager, env.Logger)
 		require.NotNil(t, healthMonitor)
 	})
 
 	// Test health status monitoring
 	t.Run("health_status_monitoring", func(t *testing.T) {
-		healthMonitor := mediamtx.NewHealthMonitor(configManager, logger)
+		healthMonitor := mediamtx.NewHealthMonitor(env.ConfigManager, env.Logger)
 
 		// Test getting health status
 		status := healthMonitor.GetStatus()

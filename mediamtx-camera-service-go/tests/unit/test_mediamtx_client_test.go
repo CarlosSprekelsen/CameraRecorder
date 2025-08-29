@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX Client Unit Tests
 
@@ -8,9 +11,6 @@ Requirements Coverage:
 Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
-
-//go:build unit
-// +build unit
 
 package mediamtx_test
 
@@ -33,10 +33,10 @@ func TestClient_Creation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -52,10 +52,10 @@ func TestClient_Get(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -82,10 +82,10 @@ func TestClient_Post(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -113,10 +113,10 @@ func TestClient_Put(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -144,10 +144,10 @@ func TestClient_Delete(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -172,10 +172,10 @@ func TestClient_HealthCheck(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -200,10 +200,10 @@ func TestClient_Close(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -222,10 +222,10 @@ func TestClient_ErrorHandling(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client with invalid URL
@@ -262,10 +262,10 @@ func TestClient_ConcurrentAccess(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -305,10 +305,10 @@ func TestClient_ContextCancellation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 30 * time.Second,
+		BaseURL:       "http://localhost:9997",
+		Timeout:       30 * time.Second,
 		RetryAttempts: 3,
-		RetryDelay: 1 * time.Second,
+		RetryDelay:    1 * time.Second,
 	}
 
 	// Create client
@@ -336,10 +336,10 @@ func TestClient_ConfigurationValidation(t *testing.T) {
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "",
-		Timeout: -1 * time.Second,
+		BaseURL:       "",
+		Timeout:       -1 * time.Second,
 		RetryAttempts: -1,
-		RetryDelay: -1 * time.Second,
+		RetryDelay:    -1 * time.Second,
 	}
 
 	// Create client with invalid config

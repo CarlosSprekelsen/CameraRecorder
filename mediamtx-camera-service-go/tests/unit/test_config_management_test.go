@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // cleanupCameraServiceEnvVars cleans up all CAMERA_SERVICE environment variables
@@ -79,14 +80,33 @@ Requirements Coverage:
 
 Test Categories: Unit
 API Documentation Reference: N/A (Configuration system)
+
+COMMON PATTERN: This file demonstrates the correct way to use test utilities
+instead of creating individual components in each test function.
+
+ANTI-PATTERN (OLD WAY):
+   manager := config.NewConfigManager()
+   // Creates 40+ instances across this file
+
+CORRECT PATTERN (NEW WAY):
+   env := utils.SetupTestEnvironment(t)
+   defer utils.TeardownTestEnvironment(t, env)
+   // Uses shared utilities, reduces duplication
 */
 
 func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 	// REQ-E1-S1.1-001: Configuration loading from YAML files
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	// Clean up any existing environment variables that might interfere
 	cleanupCameraServiceEnvVars()
 
-	tempDir := t.TempDir()
+	// Use the test environment's temporary directory and config manager
+	tempDir := env.TempDir
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
 	// Create a valid YAML configuration file
@@ -186,36 +206,33 @@ performance:
 camera:
   poll_interval: 0.05
   detection_timeout: 1.5
-  device_range: "[0, 4]"
+  device_range: [0, 4]
   enable_capability_detection: false
   auto_start_streams: false
   capability_timeout: 3.0
   capability_retry_interval: 0.5
-  capability_max_retries: 2
+  capability_max_retries: 3
 
 logging:
-  level: "DEBUG"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  level: "debug"
+  format: "json"
   file_enabled: false
-  file_path: "/test/logs/test.log"
-  max_file_size: 5242880
-  backup_count: 3
+  file_path: "/tmp/test.log"
   console_enabled: true
 
 recording:
   enabled: true
   format: "mp4"
-  quality: "medium"
-  segment_duration: 1800
-  max_segment_size: 262144000
-  auto_cleanup: false
-  cleanup_interval: 43200
-  max_age: 302400
-  max_size: 5368709120
+  quality: "high"
+  default_path: "/tmp/test_recordings"
+  fallback_path: "/tmp/test_fallback"
+  default_rotation_size: 104857600
+  default_max_duration: 3600
+  default_retention_days: 7
 
 snapshots:
   enabled: true
-  format: "png"
+  format: "jpeg"
   quality: 85
   max_width: 1280
   max_height: 720
@@ -223,16 +240,16 @@ snapshots:
   cleanup_interval: 1800
   max_age: 43200
   max_count: 500
-}
+`
 
 	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	// Load configuration
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
+	// This eliminates the 40+ ConfigManager instances that were created in this file
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Validate loaded configuration
@@ -318,28 +335,25 @@ snapshots:
 	assert.False(t, cfg.Camera.AutoStartStreams)
 	assert.Equal(t, 3.0, cfg.Camera.CapabilityTimeout)
 	assert.Equal(t, 0.5, cfg.Camera.CapabilityRetryInterval)
-	assert.Equal(t, 2, cfg.Camera.CapabilityMaxRetries)
+	assert.Equal(t, 3, cfg.Camera.CapabilityMaxRetries)
 
-	assert.Equal(t, "DEBUG", cfg.Logging.Level)
-	assert.Equal(t, "%(asctime)s - %(name)s - %(levelname)s - %(message)s", cfg.Logging.Format)
+	assert.Equal(t, "debug", cfg.Logging.Level)
+	assert.Equal(t, "json", cfg.Logging.Format)
 	assert.False(t, cfg.Logging.FileEnabled)
-	assert.Equal(t, "/test/logs/test.log", cfg.Logging.FilePath)
-	assert.Equal(t, int64(5242880), cfg.Logging.MaxFileSize)
-	assert.Equal(t, 3, cfg.Logging.BackupCount)
+	assert.Equal(t, "/tmp/test.log", cfg.Logging.FilePath)
 	assert.True(t, cfg.Logging.ConsoleEnabled)
 
 	assert.True(t, cfg.Recording.Enabled)
 	assert.Equal(t, "mp4", cfg.Recording.Format)
-	assert.Equal(t, "medium", cfg.Recording.Quality)
-	assert.Equal(t, 1800, cfg.Recording.SegmentDuration)
-	assert.Equal(t, int64(262144000), cfg.Recording.MaxSegmentSize)
-	assert.False(t, cfg.Recording.AutoCleanup)
-	assert.Equal(t, 43200, cfg.Recording.CleanupInterval)
-	assert.Equal(t, 302400, cfg.Recording.MaxAge)
-	assert.Equal(t, int64(5368709120), cfg.Recording.MaxSize)
+	assert.Equal(t, "high", cfg.Recording.Quality)
+	assert.Equal(t, "/tmp/test_recordings", cfg.Recording.DefaultPath)
+	assert.Equal(t, "/tmp/test_fallback", cfg.Recording.FallbackPath)
+	assert.Equal(t, int64(104857600), cfg.Recording.DefaultRotationSize)
+	assert.Equal(t, 3600, cfg.Recording.DefaultMaxDuration)
+	assert.Equal(t, 7, cfg.Recording.DefaultRetentionDays)
 
 	assert.True(t, cfg.Snapshots.Enabled)
-	assert.Equal(t, "png", cfg.Snapshots.Format)
+	assert.Equal(t, "jpeg", cfg.Snapshots.Format)
 	assert.Equal(t, 85, cfg.Snapshots.Quality)
 	assert.Equal(t, 1280, cfg.Snapshots.MaxWidth)
 	assert.Equal(t, 720, cfg.Snapshots.MaxHeight)
@@ -351,13 +365,20 @@ snapshots:
 
 func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 	// REQ-E1-S1.1-004: Default value fallback
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "nonexistent.yaml")
 
-	manager := config.NewConfigManager()
-	err := manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
+	// This eliminates the 40+ ConfigManager instances that were created in this file
+	err := env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err) // Should not error, should use defaults
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Should have default values
@@ -381,6 +402,12 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 
 func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {
 	// Test invalid YAML handling
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "invalid.yaml")
 
@@ -397,10 +424,11 @@ server:
 	err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 	require.NoError(t, err)
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
+	// This eliminates the 40+ ConfigManager instances that were created in this file
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err) // Should not error, should use defaults
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Should have default values due to invalid YAML
@@ -410,6 +438,12 @@ server:
 
 func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 	// Test empty YAML file handling
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "empty.yaml")
 
@@ -417,10 +451,11 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 	err := os.WriteFile(configPath, []byte(""), 0644)
 	require.NoError(t, err)
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
+	// This eliminates the 40+ ConfigManager instances that were created in this file
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err) // Should not error, should use defaults
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Should have default values
@@ -430,8 +465,13 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 
 func TestConfigManager_EnvironmentVariableOverrides(t *testing.T) {
 	// REQ-E1-S1.1-002: Environment variable overrides
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_config.yaml")
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	// Create minimal YAML file
 	yamlContent := `
@@ -455,10 +495,9 @@ server:
 		os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
 	}()
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Environment variables should override YAML values
@@ -470,8 +509,13 @@ server:
 
 func TestConfigManager_ThreadSafety(t *testing.T) {
 	// REQ-E1-S1.1-005: Thread-safe configuration access
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_config.yaml")
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	yamlContent := `
 server:
@@ -482,14 +526,12 @@ server:
 	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	manager := config.NewConfigManager()
-
 	// Load configuration in goroutine
 	done := make(chan bool)
 	go func() {
-		err := manager.LoadConfig(configPath)
+		err := env.ConfigManager.LoadConfig(configPath)
 		assert.NoError(t, err)
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 9000, cfg.Server.Port)
@@ -497,7 +539,7 @@ server:
 	}()
 
 	// Access configuration concurrently
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	assert.NotNil(t, cfg)
 
 	<-done
@@ -744,13 +786,17 @@ func TestConfigValidation_InvalidConfig(t *testing.T) {
 
 func TestConfigManager_GetConfig_ThreadSafe(t *testing.T) {
 	// Test thread-safe access to configuration
-	manager := config.NewConfigManager()
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Access configuration from multiple goroutines
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
 		go func() {
-			cfg := manager.GetConfig()
+			cfg := env.ConfigManager.GetConfig()
 			assert.NotNil(t, cfg)
 			done <- true
 		}()
@@ -764,17 +810,20 @@ func TestConfigManager_GetConfig_ThreadSafe(t *testing.T) {
 
 func TestConfigManager_AddUpdateCallback(t *testing.T) {
 	// Test configuration update callback functionality
-	manager := config.NewConfigManager()
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	callback := func(cfg *config.Config) {
 		assert.NotNil(t, cfg)
 	}
 
-	manager.AddUpdateCallback(callback)
+	env.ConfigManager.AddUpdateCallback(callback)
 
 	// Load configuration to trigger callback
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_config.yaml")
+	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	yamlContent := `
 server:
@@ -785,9 +834,9 @@ server:
 	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
 	require.NoError(t, err)
 
-	err = manager.LoadConfig(configPath)
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Verify the configuration was loaded correctly
@@ -797,8 +846,13 @@ server:
 
 func TestConfigManager_HotReload(t *testing.T) {
 	// REQ-E1-S1.1-006: Hot reload capability
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_config.yaml")
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	// Create initial configuration
 	initialYAML := `
@@ -813,10 +867,9 @@ server:
 	os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Verify initial configuration
@@ -873,15 +926,19 @@ server:
 	os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
 
 	// Stop the manager
-	manager.Stop()
+	env.ConfigManager.Stop()
 
 	// Verify configuration is still accessible after stop
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	assert.NotNil(t, cfg)
 	assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 }
@@ -1089,14 +1146,18 @@ performance:
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// COMMON PATTERN: Use shared test environment instead of individual components
+			// This eliminates the need to create ConfigManager and Logger in every test
+			env := utils.SetupTestEnvironment(t)
+			defer utils.TeardownTestEnvironment(t, env)
+
 			// Set environment variable
 			os.Setenv(tc.envKey, tc.envValue)
 			defer os.Unsetenv(tc.envKey)
 
-			manager := config.NewConfigManager()
-			err := manager.LoadConfig(configPath)
+			err := env.ConfigManager.LoadConfig(configPath)
 			require.NoError(t, err)
-			cfg := manager.GetConfig()
+			cfg := env.ConfigManager.GetConfig()
 			require.NotNil(t, cfg)
 
 			// Verify environment variable override
@@ -1245,14 +1306,18 @@ snapshots:
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// COMMON PATTERN: Use shared test environment instead of individual components
+			// This eliminates the need to create ConfigManager and Logger in every test
+			env := utils.SetupTestEnvironment(t)
+			defer utils.TeardownTestEnvironment(t, env)
+
 			// Set environment variable
 			os.Setenv(tc.envKey, tc.envValue)
 			defer os.Unsetenv(tc.envKey)
 
-			manager := config.NewConfigManager()
-			err := manager.LoadConfig(configPath)
+			err := env.ConfigManager.LoadConfig(configPath)
 			require.NoError(t, err)
-			cfg := manager.GetConfig()
+			cfg := env.ConfigManager.GetConfig()
 			require.NotNil(t, cfg)
 
 			// Verify type conversion
@@ -1292,7 +1357,7 @@ func TestConfigManager_EnvironmentVariablePrecedence(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
 	// Create YAML with some values
-	        	yamlContent := `
+	yamlContent := `
 server:
   host: "127.0.0.1"
   port: 9000
@@ -1320,10 +1385,14 @@ mediamtx:
 		os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
 	}()
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Verify precedence: environment variables override file values
@@ -1357,14 +1426,18 @@ server:
 
 	// Test Unicode characters in environment variables
 	t.Run("unicode_characters", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		unicodeHost := "192.168.1.100-测试"
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", unicodeHost)
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig(configPath)
+		err := env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		assert.Equal(t, unicodeHost, cfg.Server.Host)
@@ -1372,14 +1445,18 @@ server:
 
 	// Test special characters in environment variables
 	t.Run("special_characters", func(t *testing.T) {
-		specialPath := "/path/with/spaces and special chars!@
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		specialPath := "/path/with/spaces and special chars!@#"
 		os.Setenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH", specialPath)
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig(configPath)
+		err := env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		assert.Equal(t, specialPath, cfg.Server.WebSocketPath)
@@ -1387,13 +1464,17 @@ server:
 
 	// Test empty environment variables
 	t.Run("empty_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "")
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig(configPath)
+		err := env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Should fall back to file value
@@ -1402,14 +1483,18 @@ server:
 
 	// Test very large environment variables
 	t.Run("large_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		largeValue := strings.Repeat("a", 10000) // 10KB string
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", largeValue)
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig(configPath)
+		err := env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		assert.Equal(t, largeValue, cfg.Server.Host)
@@ -1423,6 +1508,11 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 
 	// Test required field validation
 	t.Run("required_field_validation", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		// Test empty required fields
 		invalidYAML := `
 server:
@@ -1442,14 +1532,18 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
 
 	// Test data type validation
 	t.Run("data_type_validation", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		invalidYAML := `
 server:
   host: "127.0.0.1"
@@ -1467,8 +1561,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		// Viper catches type conversion errors before validation
 		assert.Contains(t, err.Error(), "failed to unmarshal config")
@@ -1476,6 +1569,11 @@ mediamtx:
 
 	// Test range validation
 	t.Run("range_validation", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		invalidYAML := `
 server:
   host: "127.0.0.1"
@@ -1495,8 +1593,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -1526,8 +1623,12 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -1561,8 +1662,12 @@ camera:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -1603,8 +1708,12 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -1662,10 +1771,14 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(largeYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should be valid
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify large values are loaded correctly
@@ -1725,10 +1838,14 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(boundaryYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should be valid
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify boundary values are loaded correctly
@@ -1750,13 +1867,13 @@ snapshots:
 server:
   host: "127.0.0.1"
   port: 8002
-  websocket_path: "/ws/with/special/chars!@
+  websocket_path: "/ws/with/special/chars!@#$%"
   max_connections: 100
 
 mediamtx:
   host: "127.0.0.1"
   api_port: 9997
-  config_path: "/path/with/spaces and special chars!@
+  config_path: "/path/with/spaces and special chars!@#$%"
   recordings_path: "/path/with/unicode/测试"
   snapshots_path: "/path/with/emoji/📷"
   
@@ -1769,9 +1886,9 @@ mediamtx:
 
 logging:
   level: "INFO"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s with special chars!@
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s with special chars!@#$%"
   file_enabled: true
-  file_path: "/path/with/special/chars!@
+  file_path: "/path/with/special/chars!@#$%"
   max_file_size: 10485760
   backup_count: 5
   console_enabled: true
@@ -1780,25 +1897,35 @@ logging:
 		err := os.WriteFile(configPath, []byte(specialYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should be valid
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify special characters are handled correctly
-		assert.Equal(t, "/ws/with/special/chars!@
-		assert.Equal(t, "/path/with/spaces and special chars!@
+		assert.Equal(t, "/ws/with/special/chars!@#$%", cfg.Server.WebSocketPath)
+		assert.Equal(t, "/path/with/spaces and special chars!@#$%", cfg.MediaMTX.ConfigPath)
 		assert.Equal(t, "/path/with/unicode/测试", cfg.MediaMTX.RecordingsPath)
 		assert.Equal(t, "/path/with/emoji/📷", cfg.MediaMTX.SnapshotsPath)
-		assert.Contains(t, cfg.Logging.Format, "special chars!@
-		assert.Equal(t, "/path/with/special/chars!@
+		assert.Contains(t, cfg.Logging.Format, "special chars!@#$%")
+		assert.Equal(t, "/path/with/special/chars!@#$%", cfg.Logging.FilePath)
 	})
 }
 
 func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 	// Test file system edge cases
-	tempDir := t.TempDir()
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	tempDir := env.TempDir
 
 	// Test file permission errors
 	t.Run("file_permission_errors", func(t *testing.T) {
@@ -1813,10 +1940,9 @@ server:
 		err := os.WriteFile(configPath, []byte(yamlContent), 0444) // Read-only
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should still be able to read
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
@@ -1839,10 +1965,9 @@ server:
 		err = os.Symlink(originalPath, symlinkPath)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(symlinkPath)
+		err = env.ConfigManager.LoadConfig(symlinkPath)
 		require.NoError(t, err) // Should handle symlinks correctly
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "192.168.1.100", cfg.Server.Host)
 		assert.Equal(t, 9000, cfg.Server.Port)
@@ -1864,10 +1989,9 @@ server:
 		err = os.WriteFile(configPath, []byte(yamlContent), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should handle deep paths correctly
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "10.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8080, cfg.Server.Port)
@@ -1876,7 +2000,13 @@ server:
 
 func TestGlobalConfigFunctions(t *testing.T) {
 	// Test global configuration manager functions
-	tempDir := t.TempDir()
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	tempDir := env.TempDir
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
 	yamlContent := `
@@ -1931,8 +2061,15 @@ mediamtx:
 }
 
 func TestConfigValidation_ComprehensiveCoverage(t *testing.T) {
+	// REQ-E1-S1.1-001: Configuration validation comprehensive coverage
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	// Test comprehensive validation coverage
-	tempDir := t.TempDir()
+	tempDir := env.TempDir
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
 	// Test validation with invalid configuration
@@ -1955,8 +2092,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -1984,8 +2120,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(incompleteYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -2016,8 +2151,7 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(outOfRangeYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
@@ -2070,16 +2204,22 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(invalidEnumYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "validation error")
 	})
 }
 
 func TestConfigManager_HotReload_Comprehensive(t *testing.T) {
+	// REQ-E1-S1.1-001: Configuration hot reload comprehensive functionality
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
 	// Test comprehensive hot reload functionality
-	tempDir := t.TempDir()
+	tempDir := env.TempDir
 	configPath := filepath.Join(tempDir, "test_config.yaml")
 
 	// Initial configuration
@@ -2108,8 +2248,7 @@ mediamtx:
 	os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-	manager := config.NewConfigManager()
-	err = manager.LoadConfig(configPath)
+	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err)
 
 	// Test callback notification
@@ -2117,7 +2256,7 @@ mediamtx:
 		callbackCalled := make(chan bool, 1)
 		var callbackConfig *config.Config
 
-		manager.AddUpdateCallback(func(cfg *config.Config) {
+		env.ConfigManager.AddUpdateCallback(func(cfg *config.Config) {
 			callbackConfig = cfg
 			callbackCalled <- true
 		})
@@ -2163,11 +2302,11 @@ mediamtx:
 		callback1Called := make(chan bool, 1)
 		callback2Called := make(chan bool, 1)
 
-		manager.AddUpdateCallback(func(cfg *config.Config) {
+		env.ConfigManager.AddUpdateCallback(func(cfg *config.Config) {
 			callback1Called <- true
 		})
 
-		manager.AddUpdateCallback(func(cfg *config.Config) {
+		env.ConfigManager.AddUpdateCallback(func(cfg *config.Config) {
 			callback2Called <- true
 		})
 
@@ -2211,7 +2350,7 @@ mediamtx:
 
 	// Test callback panic handling
 	t.Run("callback_panic_handling", func(t *testing.T) {
-		manager.AddUpdateCallback(func(cfg *config.Config) {
+		env.ConfigManager.AddUpdateCallback(func(cfg *config.Config) {
 			panic("test panic")
 		})
 
@@ -2292,8 +2431,13 @@ mediamtx:
 
 func TestConfigValidation_DetailedCoverage(t *testing.T) {
 	// Test detailed validation coverage for all validation functions
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "test_config.yaml")
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+	
+	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	// Test codec validation
 	t.Run("codec_validation", func(t *testing.T) {
@@ -2325,11 +2469,10 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(codecYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "high", cfg.MediaMTX.Codec.VideoProfile)
 		assert.Equal(t, "4.0", cfg.MediaMTX.Codec.VideoLevel)
@@ -2369,11 +2512,10 @@ mediamtx:
 		err := os.WriteFile(configPath, []byte(streamYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, 20.0, cfg.MediaMTX.StreamReadiness.Timeout)
 		assert.Equal(t, 5, cfg.MediaMTX.StreamReadiness.RetryAttempts)
@@ -2421,11 +2563,10 @@ ffmpeg:
 		err := os.WriteFile(configPath, []byte(ffmpegYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, 5.0, cfg.FFmpeg.Snapshot.ProcessCreationTimeout)
 		assert.Equal(t, 10.0, cfg.FFmpeg.Snapshot.ExecutionTimeout)
@@ -2468,11 +2609,10 @@ notifications:
 		err := os.WriteFile(configPath, []byte(notificationsYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, 5.0, cfg.Notifications.WebSocket.DeliveryTimeout)
 		assert.Equal(t, 3, cfg.Notifications.WebSocket.RetryAttempts)
@@ -2528,11 +2668,10 @@ performance:
 		err := os.WriteFile(configPath, []byte(performanceYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, 30.0, cfg.Performance.ResponseTimeTargets.SnapshotCapture)
 		assert.Equal(t, 80.0, cfg.Performance.ResponseTimeTargets.RecordingStart)
@@ -2552,17 +2691,20 @@ performance:
 
 func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 	// Test comprehensive edge cases
-	tempDir := t.TempDir()
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test with non-existent directory
 	t.Run("non_existent_directory", func(t *testing.T) {
 		nonExistentPath := filepath.Join(tempDir, "nonexistent", "config.yaml")
 
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig(nonExistentPath)
+		err := env.ConfigManager.LoadConfig(nonExistentPath)
 		require.NoError(t, err) // Should use defaults
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
 	})
@@ -2573,11 +2715,10 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 		err := os.WriteFile(configPath, []byte(""), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should use defaults
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
 	})
@@ -2593,11 +2734,10 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
 		err := os.WriteFile(configPath, []byte(commentsYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should use defaults
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
 	})
@@ -2610,17 +2750,21 @@ server:
   host: "127.0.0.1"
   port: 8002
 
-  websocket_path: "/ws
+  websocket_path: "/ws"
   max_connections: 100
 `
 		err := os.WriteFile(configPath, []byte(malformedYAML), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err) // Should use defaults due to YAML parsing error
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host) // Default value
 	})
@@ -2639,7 +2783,7 @@ server:
 
 		// Add many comments to make it large
 		for i := 0; i < 1000; i++ {
-			largeYAML.WriteString(fmt.Sprintf("
+			largeYAML.WriteString(fmt.Sprintf("  # Comment %d\n", i))
 		}
 
 		largeYAML.WriteString("\nmediamtx:\n")
@@ -2655,11 +2799,15 @@ server:
 		err := os.WriteFile(configPath, []byte(largeYAML.String()), 0644)
 		require.NoError(t, err)
 
-		manager := config.NewConfigManager()
-		err = manager.LoadConfig(configPath)
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
@@ -2669,6 +2817,11 @@ server:
 func TestConfigManager_ApplyEnvironmentOverrides(t *testing.T) {
 	// REQ-E1-S1.1-002: Environment variable overrides
 	// Test the applyEnvironmentOverrides method specifically
+	
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 	
 	cleanupCameraServiceEnvVars()
 	
@@ -2682,13 +2835,11 @@ func TestConfigManager_ApplyEnvironmentOverrides(t *testing.T) {
 	
 	defer cleanupCameraServiceEnvVars()
 	
-	manager := config.NewConfigManager()
-	
 	// Load config with environment overrides
-	err := manager.LoadConfig("")
+	err := env.ConfigManager.LoadConfig("")
 	require.NoError(t, err)
 	
-	cfg := manager.GetConfig()
+	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 	
 	// Verify environment overrides were applied
@@ -2707,10 +2858,13 @@ func TestConfigManager_ValidateConfig(t *testing.T) {
 	cleanupCameraServiceEnvVars()
 	
 	t.Run("valid_configuration", func(t *testing.T) {
-		manager := config.NewConfigManager()
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
 		
 		// Load a valid configuration
-		tempDir := t.TempDir()
+		tempDir := env.TempDir
 		configPath := filepath.Join(tempDir, "valid_config.yaml")
 		
 		validYAML := `
@@ -2749,47 +2903,53 @@ snapshots:
 		err := os.WriteFile(configPath, []byte(validYAML), 0644)
 		require.NoError(t, err)
 		
-		err = manager.LoadConfig(configPath)
+		err = env.ConfigManager.LoadConfig(configPath)
 		require.NoError(t, err)
 		
 		// The validateConfig method should be called during LoadConfig
 		// and should not return an error for valid configuration
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
 	})
 	
 	t.Run("invalid_port_configuration", func(t *testing.T) {
-		manager := config.NewConfigManager()
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
 		
 		// Set invalid port via environment variable
 		os.Setenv("CAMERA_SERVICE_SERVER_PORT", "99999") // Invalid port
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_PORT")
 		
 		// Load config - should handle invalid port gracefully
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		// Note: The current implementation may not validate ports strictly
 		// This test documents the current behavior
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// The actual behavior depends on the implementation
 	})
 	
 	t.Run("invalid_host_configuration", func(t *testing.T) {
-		manager := config.NewConfigManager()
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
 		
 		// Set invalid host via environment variable
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "invalid-host-name-with-spaces")
 		defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 		
 		// Load config - should handle invalid host gracefully
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		// Note: The current implementation may not validate hosts strictly
 		// This test documents the current behavior
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// The actual behavior depends on the implementation
 	})
@@ -2801,16 +2961,20 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
 	cleanupCameraServiceEnvVars()
 	
 	t.Run("empty_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		// Test with empty environment variables
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "")
 		os.Setenv("CAMERA_SERVICE_SERVER_PORT", "")
 		defer cleanupCameraServiceEnvVars()
 		
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		require.NoError(t, err)
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// Should use default values
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
@@ -2818,16 +2982,20 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
 	})
 	
 	t.Run("whitespace_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		// Test with whitespace-only environment variables
 		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "   ")
 		os.Setenv("CAMERA_SERVICE_SERVER_PORT", "   ")
 		defer cleanupCameraServiceEnvVars()
 		
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		require.NoError(t, err)
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// Should use default values
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
@@ -2835,23 +3003,32 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
 	})
 	
 	t.Run("special_characters_in_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		// Test with special characters in environment variables
-		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "127.0.0.1
-		os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", "DEBUG
+		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "127.0.0.1")
+		os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", "DEBUG")
 		defer cleanupCameraServiceEnvVars()
 		
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		require.NoError(t, err)
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// Should handle special characters appropriately
-		assert.Equal(t, "127.0.0.1
-		assert.Equal(t, "DEBUG
+		assert.Equal(t, "127.0.0.1", cfg.Server.Host)
+		assert.Equal(t, "DEBUG", cfg.Logging.Level)
 	})
 	
 	t.Run("very_long_environment_variables", func(t *testing.T) {
+		// COMMON PATTERN: Use shared test environment instead of individual components
+		// This eliminates the need to create ConfigManager and Logger in every test
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
 		// Test with very long environment variables
 		longHost := strings.Repeat("a", 1000)
 		longLevel := strings.Repeat("DEBUG", 100)
@@ -2860,11 +3037,10 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
 		os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", longLevel)
 		defer cleanupCameraServiceEnvVars()
 		
-		manager := config.NewConfigManager()
-		err := manager.LoadConfig("")
+		err := env.ConfigManager.LoadConfig("")
 		require.NoError(t, err)
 		
-		cfg := manager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		// Should handle long values appropriately
 		assert.Equal(t, longHost, cfg.Server.Host)

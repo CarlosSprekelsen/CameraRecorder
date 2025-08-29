@@ -249,6 +249,134 @@ func (cm *ConfigManager) GetConfig() *Config {
 	return cm.config
 }
 
+// SaveConfig saves the current configuration to the configuration file.
+func (cm *ConfigManager) SaveConfig() error {
+	cm.lock.Lock()
+	defer cm.lock.Unlock()
+
+	if cm.config == nil {
+		return fmt.Errorf("no configuration to save")
+	}
+
+	if cm.configPath == "" {
+		return fmt.Errorf("no configuration file path set")
+	}
+
+	cm.logger.WithFields(logrus.Fields{
+		"config_path": cm.configPath,
+		"action":      "save_config",
+	}).Info("Saving configuration to file")
+
+	// Create a new Viper instance for saving
+	v := viper.New()
+	v.SetConfigFile(cm.configPath)
+	v.SetConfigType("yaml")
+
+	// Set all configuration values
+	cm.setConfigValues(v, cm.config)
+
+	// Ensure the directory exists
+	configDir := filepath.Dir(cm.configPath)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Write the configuration to file
+	if err := v.WriteConfig(); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	cm.logger.WithFields(logrus.Fields{
+		"config_path": cm.configPath,
+		"action":      "save_config",
+		"status":      "success",
+	}).Info("Configuration saved successfully")
+
+	return nil
+}
+
+// setConfigValues recursively sets configuration values in Viper
+func (cm *ConfigManager) setConfigValues(v *viper.Viper, config *Config) {
+	// Server configuration
+	v.Set("server.host", config.Server.Host)
+	v.Set("server.port", config.Server.Port)
+	v.Set("server.websocket_path", config.Server.WebSocketPath)
+	v.Set("server.max_connections", config.Server.MaxConnections)
+	v.Set("server.read_timeout", config.Server.ReadTimeout)
+	v.Set("server.write_timeout", config.Server.WriteTimeout)
+	v.Set("server.ping_interval", config.Server.PingInterval)
+	v.Set("server.pong_wait", config.Server.PongWait)
+	v.Set("server.max_message_size", config.Server.MaxMessageSize)
+
+	// MediaMTX configuration
+	v.Set("mediamtx.host", config.MediaMTX.Host)
+	v.Set("mediamtx.api_port", config.MediaMTX.APIPort)
+	v.Set("mediamtx.rtsp_port", config.MediaMTX.RTSPPort)
+	v.Set("mediamtx.webrtc_port", config.MediaMTX.WebRTCPort)
+	v.Set("mediamtx.hls_port", config.MediaMTX.HLSPort)
+	v.Set("mediamtx.config_path", config.MediaMTX.ConfigPath)
+	v.Set("mediamtx.recordings_path", config.MediaMTX.RecordingsPath)
+	v.Set("mediamtx.snapshots_path", config.MediaMTX.SnapshotsPath)
+	v.Set("mediamtx.health_check_interval", config.MediaMTX.HealthCheckInterval)
+	v.Set("mediamtx.health_failure_threshold", config.MediaMTX.HealthFailureThreshold)
+	v.Set("mediamtx.health_circuit_breaker_timeout", config.MediaMTX.HealthCircuitBreakerTimeout)
+	v.Set("mediamtx.health_max_backoff_interval", config.MediaMTX.HealthMaxBackoffInterval)
+	v.Set("mediamtx.health_recovery_confirmation_threshold", config.MediaMTX.HealthRecoveryConfirmationThreshold)
+	v.Set("mediamtx.backoff_base_multiplier", config.MediaMTX.BackoffBaseMultiplier)
+	v.Set("mediamtx.backoff_jitter_range", config.MediaMTX.BackoffJitterRange)
+	v.Set("mediamtx.process_termination_timeout", config.MediaMTX.ProcessTerminationTimeout)
+	v.Set("mediamtx.process_kill_timeout", config.MediaMTX.ProcessKillTimeout)
+	v.Set("mediamtx.health_check_timeout", config.MediaMTX.HealthCheckTimeout)
+
+	// Camera configuration
+	v.Set("camera.poll_interval", config.Camera.PollInterval)
+	v.Set("camera.detection_timeout", config.Camera.DetectionTimeout)
+	v.Set("camera.device_range", config.Camera.DeviceRange)
+	v.Set("camera.enable_capability_detection", config.Camera.EnableCapabilityDetection)
+	v.Set("camera.auto_start_streams", config.Camera.AutoStartStreams)
+	v.Set("camera.capability_timeout", config.Camera.CapabilityTimeout)
+	v.Set("camera.capability_retry_interval", config.Camera.CapabilityRetryInterval)
+	v.Set("camera.capability_max_retries", config.Camera.CapabilityMaxRetries)
+
+	// Logging configuration
+	v.Set("logging.level", config.Logging.Level)
+	v.Set("logging.format", config.Logging.Format)
+	v.Set("logging.file_enabled", config.Logging.FileEnabled)
+	v.Set("logging.file_path", config.Logging.FilePath)
+	v.Set("logging.max_file_size", config.Logging.MaxFileSize)
+	v.Set("logging.backup_count", config.Logging.BackupCount)
+	v.Set("logging.console_enabled", config.Logging.ConsoleEnabled)
+
+	// Recording configuration
+	v.Set("recording.enabled", config.Recording.Enabled)
+	v.Set("recording.format", config.Recording.Format)
+	v.Set("recording.quality", config.Recording.Quality)
+	v.Set("recording.segment_duration", config.Recording.SegmentDuration)
+	v.Set("recording.max_segment_size", config.Recording.MaxSegmentSize)
+	v.Set("recording.auto_cleanup", config.Recording.AutoCleanup)
+	v.Set("recording.cleanup_interval", config.Recording.CleanupInterval)
+	v.Set("recording.max_age", config.Recording.MaxAge)
+	v.Set("recording.max_size", config.Recording.MaxSize)
+
+	// Snapshots configuration
+	v.Set("snapshots.enabled", config.Snapshots.Enabled)
+	v.Set("snapshots.format", config.Snapshots.Format)
+	v.Set("snapshots.quality", config.Snapshots.Quality)
+	v.Set("snapshots.max_width", config.Snapshots.MaxWidth)
+	v.Set("snapshots.max_height", config.Snapshots.MaxHeight)
+	v.Set("snapshots.auto_cleanup", config.Snapshots.AutoCleanup)
+	v.Set("snapshots.cleanup_interval", config.Snapshots.CleanupInterval)
+	v.Set("snapshots.max_age", config.Snapshots.MaxAge)
+	v.Set("snapshots.max_count", config.Snapshots.MaxCount)
+
+	// Retention policy configuration
+	v.Set("retention_policy.enabled", config.RetentionPolicy.Enabled)
+	v.Set("retention_policy.type", config.RetentionPolicy.Type)
+	v.Set("retention_policy.max_age_days", config.RetentionPolicy.MaxAgeDays)
+	v.Set("retention_policy.max_size_gb", config.RetentionPolicy.MaxSizeGB)
+	v.Set("retention_policy.auto_cleanup", config.RetentionPolicy.AutoCleanup)
+}
+
 // AddUpdateCallback adds a callback function to be called when configuration is updated.
 func (cm *ConfigManager) AddUpdateCallback(callback func(*Config)) {
 	cm.lock.Lock()
@@ -287,6 +415,7 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.health_circuit_breaker_timeout", 60)
 	v.SetDefault("mediamtx.health_max_backoff_interval", 120)
 	v.SetDefault("mediamtx.health_recovery_confirmation_threshold", 3)
+	v.SetDefault("mediamtx.health_check_timeout", "5s")
 	v.SetDefault("mediamtx.backoff_base_multiplier", 2.0)
 	v.SetDefault("mediamtx.backoff_jitter_range", []float64{0.8, 1.2})
 	v.SetDefault("mediamtx.process_termination_timeout", 3.0)
@@ -353,6 +482,13 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("camera.capability_timeout", 5.0)
 	v.SetDefault("camera.capability_retry_interval", 1.0)
 	v.SetDefault("camera.capability_max_retries", 3)
+
+	// Retention policy defaults
+	v.SetDefault("retention_policy.enabled", true)
+	v.SetDefault("retention_policy.type", "age")
+	v.SetDefault("retention_policy.max_age_days", 7)
+	v.SetDefault("retention_policy.max_size_gb", 1)
+	v.SetDefault("retention_policy.auto_cleanup", true)
 
 	// Logging defaults
 	v.SetDefault("logging.level", "INFO")

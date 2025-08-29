@@ -270,7 +270,7 @@ func marshalCreateStreamRequest(name, source string) ([]byte, error) {
 // marshalCreatePathRequest marshals a path creation request
 func marshalCreatePathRequest(path *Path) ([]byte, error) {
 	config := make(map[string]interface{})
-	
+
 	// Convert path fields to config map
 	if path.SourceOnDemand {
 		config["sourceOnDemand"] = path.SourceOnDemand

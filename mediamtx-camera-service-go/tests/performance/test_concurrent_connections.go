@@ -61,6 +61,8 @@ func NewStressTestSuite() *StressTestSuite {
 
 // Setup initializes the stress test suite
 func (suite *StressTestSuite) Setup(t *testing.T) {
+	// REQ-STRESS-001: Concurrent WebSocket connections
+	
 	// Create context with timeout
 	suite.ctx, suite.cancel = context.WithTimeout(context.Background(), 300*time.Second)
 
@@ -78,13 +80,14 @@ func (suite *StressTestSuite) Setup(t *testing.T) {
 	infoParser := &camera.RealDeviceInfoParser{}
 
 	// Initialize camera monitor
-	suite.cameraMonitor = camera.NewHybridCameraMonitor(
+	suite.cameraMonitor, err = camera.NewHybridCameraMonitor(
 		suite.configManager,
 		suite.logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 
 	// Initialize MediaMTX controller
 	suite.mediaMTXController, err = mediamtx.NewControllerWithConfigManager(suite.configManager, suite.logger.Logger)
@@ -98,13 +101,14 @@ func (suite *StressTestSuite) Setup(t *testing.T) {
 	require.NoError(t, err, "Failed to create JWT handler")
 
 	// Initialize WebSocket server
-	suite.wsServer = websocket.NewWebSocketServer(
+	suite.wsServer, err = websocket.NewWebSocketServer(
 		suite.configManager,
 		suite.logger,
 		suite.cameraMonitor,
 		suite.jwtHandler,
 		suite.mediaMTXController,
 	)
+	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Start WebSocket server
 	err = suite.wsServer.Start()

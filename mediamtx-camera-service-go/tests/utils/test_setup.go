@@ -1,10 +1,25 @@
-// +build unit
-
 //go:build unit
-// +build unit
 
 /*
-Test Setup Utilities
+Test Setup Utilities - COMMON PATTERNS FOR ALL TESTERS
+
+This file provides centralized test utilities to eliminate code duplication and ensure
+consistent test environment setup across all test files.
+
+COMMON PATTERN USAGE:
+Instead of creating individual components in each test:
+   configManager := config.NewConfigManager()
+   logger := logging.NewLogger("test")
+
+Use the shared utilities:
+   env := utils.SetupTestEnvironment(t)
+   // env.ConfigManager and env.Logger are ready to use
+
+ANTI-PATTERNS TO AVOID:
+- DON'T create ConfigManager in every test (100+ instances found)
+- DON'T create Logger with hardcoded names in every test (50+ instances found)
+- DON'T duplicate environment setup code across test files
+- DON'T create test directories manually in each test
 
 Requirements Coverage:
 - REQ-TEST-001: Test environment setup
@@ -38,6 +53,7 @@ import (
 )
 
 // TestEnvironment provides test environment setup and management
+// This is the PRIMARY utility that should be used in most test cases
 type TestEnvironment struct {
 	ConfigManager *config.ConfigManager
 	Logger        *logging.Logger
@@ -46,12 +62,35 @@ type TestEnvironment struct {
 }
 
 // MediaMTXTestEnvironment provides MediaMTX-specific test environment
+// Use this when testing MediaMTX-related functionality
 type MediaMTXTestEnvironment struct {
 	*TestEnvironment
 	Controller mediamtx.MediaMTXController
 }
 
+// WebSocketTestEnvironment provides complete WebSocket testing environment
+// Use this when testing WebSocket server functionality
+type WebSocketTestEnvironment struct {
+	*MediaMTXTestEnvironment
+	JWTHandler      *security.JWTHandler
+	CameraMonitor   *camera.HybridCameraMonitor
+	WebSocketServer *websocket.WebSocketServer
+}
+
 // SetupTestEnvironment creates a proper test environment with configuration
+//
+// COMMON PATTERN: Use this function instead of creating individual components
+//
+// Example usage:
+//
+//	func TestMyFeature(t *testing.T) {
+//	    env := utils.SetupTestEnvironment(t)
+//	    defer utils.TeardownTestEnvironment(t, env)
+//
+//	    // Use env.ConfigManager and env.Logger
+//	    result := myFunction(env.ConfigManager, env.Logger)
+//	    require.NotNil(t, result)
+//	}
 func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	// Create temporary directory for test data
 	tempDir, err := os.MkdirTemp("", "camera-service-test-*")
@@ -83,6 +122,19 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 }
 
 // SetupMediaMTXTestEnvironment creates a test environment with real MediaMTX controller
+//
+// COMMON PATTERN: Use this when testing MediaMTX functionality
+//
+// Example usage:
+//
+//	func TestMediaMTXFeature(t *testing.T) {
+//	    env := utils.SetupMediaMTXTestEnvironment(t)
+//	    defer utils.TeardownMediaMTXTestEnvironment(t, env)
+//
+//	    // Use env.Controller for MediaMTX operations
+//	    result, err := env.Controller.CreatePath("test", "/dev/video0")
+//	    require.NoError(t, err)
+//	}
 func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 	// Setup base test environment
 	baseEnv := SetupTestEnvironment(t)
@@ -97,15 +149,20 @@ func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 	}
 }
 
-// WebSocketTestEnvironment provides complete WebSocket testing environment
-type WebSocketTestEnvironment struct {
-	*MediaMTXTestEnvironment
-	JWTHandler      *security.JWTHandler
-	CameraMonitor   *camera.HybridCameraMonitor
-	WebSocketServer *websocket.WebSocketServer
-}
-
 // SetupWebSocketTestEnvironment creates a complete WebSocket test environment
+//
+// COMMON PATTERN: Use this when testing WebSocket server functionality
+//
+// Example usage:
+//
+//	func TestWebSocketFeature(t *testing.T) {
+//	    env := utils.SetupWebSocketTestEnvironment(t)
+//	    defer utils.TeardownWebSocketTestEnvironment(t, env)
+//
+//	    // Use env.WebSocketServer for WebSocket operations
+//	    err := env.WebSocketServer.Start()
+//	    require.NoError(t, err)
+//	}
 func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 	// Setup MediaMTX test environment
 	mediaEnv := SetupMediaMTXTestEnvironment(t)
@@ -118,22 +175,24 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	cameraMonitor := camera.NewHybridCameraMonitor(
+	cameraMonitor, err := camera.NewHybridCameraMonitor(
 		mediaEnv.ConfigManager,
 		mediaEnv.Logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
 	)
+	require.NoError(t, err, "Failed to create camera monitor")
 
 	// Create WebSocket server with all dependencies
-	webSocketServer := websocket.NewWebSocketServer(
+	webSocketServer, err := websocket.NewWebSocketServer(
 		mediaEnv.ConfigManager,
 		mediaEnv.Logger,
 		cameraMonitor,
 		jwtHandler,
 		mediaEnv.Controller,
 	)
+	require.NoError(t, err, "Failed to create WebSocket server")
 
 	return &WebSocketTestEnvironment{
 		MediaMTXTestEnvironment: mediaEnv,
@@ -144,6 +203,7 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 }
 
 // TeardownWebSocketTestEnvironment cleans up WebSocket test environment
+// Always call this in defer statements to ensure proper cleanup
 func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironment) {
 	if env != nil {
 		// Stop camera monitor
@@ -161,6 +221,7 @@ func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironmen
 }
 
 // TeardownMediaMTXTestEnvironment cleans up MediaMTX test environment
+// Always call this in defer statements to ensure proper cleanup
 func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment) {
 	if env != nil && env.Controller != nil {
 		// Stop controller with timeout
@@ -179,6 +240,7 @@ func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment)
 }
 
 // TeardownTestEnvironment cleans up test environment
+// Always call this in defer statements to ensure proper cleanup
 func TeardownTestEnvironment(t *testing.T, env *TestEnvironment) {
 	if env != nil && env.TempDir != "" {
 		err := os.RemoveAll(env.TempDir)
@@ -187,6 +249,7 @@ func TeardownTestEnvironment(t *testing.T, env *TestEnvironment) {
 }
 
 // SetupRealMediaMTXController creates a real MediaMTX controller for testing
+// Use this when you need a MediaMTX controller but not the full environment
 func SetupRealMediaMTXController(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) mediamtx.MediaMTXController {
 	controller, err := mediamtx.NewControllerWithConfigManager(configManager, logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
@@ -194,6 +257,7 @@ func SetupRealMediaMTXController(t *testing.T, configManager *config.ConfigManag
 }
 
 // CreateTestMediaMTXConfig creates test-specific MediaMTX configuration
+// Use this when you need custom MediaMTX configuration for specific tests
 func CreateTestMediaMTXConfig(tempDir string) *config.MediaMTXConfig {
 	return &config.MediaMTXConfig{
 		Host:               "localhost",
@@ -204,7 +268,42 @@ func CreateTestMediaMTXConfig(tempDir string) *config.MediaMTXConfig {
 	}
 }
 
-// copyTestConfig copies the test configuration file to the specified path
+// SetupTestJWTHandler creates a JWT handler for testing
+// Use this when you need JWT authentication in tests
+func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *security.JWTHandler {
+	cfg := configManager.GetConfig()
+	require.NotNil(t, cfg, "Configuration should be available")
+
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	require.NoError(t, err, "Failed to create JWT handler")
+
+	return jwtHandler
+}
+
+// GenerateTestToken creates a test JWT token for authentication
+// Use this when you need authenticated requests in tests
+func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
+	token, err := jwtHandler.GenerateToken(userID, role, 24) // 24 hours expiry
+	require.NoError(t, err, "Failed to generate test token")
+	return token
+}
+
+// CreateAuthenticatedClient creates an authenticated client connection for testing
+// Use this when testing WebSocket client connections
+func CreateAuthenticatedClient(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) *websocket.ClientConnection {
+	_ = GenerateTestToken(t, jwtHandler, userID, role) // Generate token for authentication
+
+	return &websocket.ClientConnection{
+		ClientID:      "test_client_" + userID,
+		Authenticated: true,
+		UserID:        userID,
+		Role:          role,
+		ConnectedAt:   time.Now(),
+		Subscriptions: make(map[string]bool),
+	}
+}
+
+// Helper function to copy test configuration
 func copyTestConfig(destPath string) error {
 	// Read the test configuration from fixtures
 	sourcePath := "tests/fixtures/test_config.yaml"
@@ -224,7 +323,7 @@ func copyTestConfig(destPath string) error {
 	return os.WriteFile(destPath, sourceData, 0644)
 }
 
-// createMinimalTestConfig creates a minimal test configuration
+// Helper function to create minimal test configuration
 func createMinimalTestConfig(configPath string) error {
 	minimalConfig := `# Minimal Test Configuration
 mediamtx:
@@ -283,7 +382,7 @@ logging:
 	return os.WriteFile(configPath, []byte(minimalConfig), 0644)
 }
 
-// createTestDirectories creates necessary test directories
+// Helper function to create test directories
 func createTestDirectories(tempDir string) error {
 	dirs := []string{
 		filepath.Join(tempDir, "recordings"),
@@ -316,6 +415,7 @@ func GetTestConfigPath() string {
 }
 
 // ValidateTestConfiguration validates that test configuration is properly set up
+// Use this to ensure your test environment is correctly configured
 func ValidateTestConfiguration(t *testing.T, configManager *config.ConfigManager) {
 	cfg := configManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration should not be nil")
@@ -330,6 +430,7 @@ func ValidateTestConfiguration(t *testing.T, configManager *config.ConfigManager
 }
 
 // ValidateMediaMTXController validates that MediaMTX controller is properly set up
+// Use this to ensure your MediaMTX controller is correctly initialized
 func ValidateMediaMTXController(t *testing.T, controller mediamtx.MediaMTXController) {
 	require.NotNil(t, controller, "MediaMTX controller should not be nil")
 
@@ -343,37 +444,5 @@ func ValidateMediaMTXController(t *testing.T, controller mediamtx.MediaMTXContro
 	// But we do require that the controller is properly initialized
 	if err != nil {
 		t.Logf("MediaMTX health check failed (expected if MediaMTX not running): %v", err)
-	}
-}
-
-// SetupTestJWTHandler creates a JWT handler for testing
-func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *security.JWTHandler {
-	cfg := configManager.GetConfig()
-	require.NotNil(t, cfg, "Configuration should be available")
-
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
-	require.NoError(t, err, "Failed to create JWT handler")
-
-	return jwtHandler
-}
-
-// GenerateTestToken creates a test JWT token for authentication
-func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
-	token, err := jwtHandler.GenerateToken(userID, role, 24) // 24 hours expiry
-	require.NoError(t, err, "Failed to generate test token")
-	return token
-}
-
-// CreateAuthenticatedClient creates an authenticated client connection for testing
-func CreateAuthenticatedClient(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) *websocket.ClientConnection {
-	_ = GenerateTestToken(t, jwtHandler, userID, role) // Generate token for authentication
-
-	return &websocket.ClientConnection{
-		ClientID:      "test_client_" + userID,
-		Authenticated: true,
-		UserID:        userID,
-		Role:          role,
-		ConnectedAt:   time.Now(),
-		Subscriptions: make(map[string]bool),
 	}
 }

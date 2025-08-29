@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
 MediaMTX Health Monitor Unit Tests
 
@@ -8,9 +11,6 @@ Requirements Coverage:
 Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
-
-//go:build unit
-// +build unit
 
 package mediamtx_test
 
@@ -60,9 +60,9 @@ func TestHealthMonitor_Creation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -82,9 +82,9 @@ func TestHealthMonitor_StartStop(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -113,9 +113,9 @@ func TestHealthMonitor_GetStatus(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -139,9 +139,9 @@ func TestHealthMonitor_IsHealthy(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -164,9 +164,9 @@ func TestHealthMonitor_CircuitBreaker(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -197,9 +197,9 @@ func TestHealthMonitor_ErrorHandling(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -234,9 +234,9 @@ func TestHealthMonitor_ConcurrentAccess(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -274,9 +274,9 @@ func TestHealthMonitor_ContextCancellation(t *testing.T) {
 
 	// Create test configuration
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		HealthCheckInterval: 5,
-		HealthFailureThreshold: 3,
+		BaseURL:                     "http://localhost:9997",
+		HealthCheckInterval:         5,
+		HealthFailureThreshold:      3,
 		HealthCircuitBreakerTimeout: 30,
 	}
 
@@ -315,9 +315,9 @@ func TestHealthMonitor_ConfigurationValidation(t *testing.T) {
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "",
-		HealthCheckInterval: -1,
-		HealthFailureThreshold: 0,
+		BaseURL:                     "",
+		HealthCheckInterval:         -1,
+		HealthFailureThreshold:      0,
 		HealthCircuitBreakerTimeout: -1,
 	}
 

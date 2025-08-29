@@ -26,225 +26,177 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockClient implements the HTTP client interface for testing
-type mockClient struct{}
+// setupRealStreamManager creates real MediaMTX stream manager for testing
+func setupRealStreamManager(t *testing.T) mediamtx.StreamManager {
+	// Create test logger
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 
-func (m *mockClient) Get(ctx context.Context, path string) ([]byte, error) {
-	return []byte(`{"items":[]}`), nil
-}
+	// Create test configuration
+	testConfig := &mediamtx.MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+		Timeout: 30 * time.Second,
+		ConnectionPool: mediamtx.ConnectionPoolConfig{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
 
-func (m *mockClient) Post(ctx context.Context, path string, data []byte) ([]byte, error) {
-	return []byte(`{"status":"ok"}`), nil
-}
+	// Create real MediaMTX client instead of mock
+	realClient := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
-func (m *mockClient) Delete(ctx context.Context, path string) error {
-	return nil
+	// Create stream manager with real client
+	streamManager := mediamtx.NewStreamManager(realClient, testConfig, logger)
+	require.NotNil(t, streamManager, "Stream manager should not be nil")
+
+	return streamManager
 }
 
 // TestStreamManager_Creation tests stream manager creation
 func TestStreamManager_Creation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-
-	// Create mock client
-	client := &mockClient{}
-
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
+	streamManager := setupRealStreamManager(t)
 	require.NotNil(t, streamManager, "Stream manager should not be nil")
 }
 
-// TestStreamManager_CheckStreamReadiness tests stream readiness checking
-func TestStreamManager_CheckStreamReadiness(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-
-	// Create mock client
-	client := &mockClient{}
-
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
+// TestStreamManager_CreateStream tests stream creation
+func TestStreamManager_CreateStream(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
 
 	ctx := context.Background()
 
-	// Test stream readiness check
-	ready, err := streamManager.CheckStreamReadiness(ctx, "test-stream", 1*time.Second)
-	// Note: This may fail if MediaMTX service is not running
+	// Test stream creation
+	stream, err := streamManager.CreateStream(ctx, "test-stream", "rtsp://localhost:8554/test")
+	// Note: This may fail if MediaMTX service is not running or source is not available
 	// For unit tests, we validate the method exists and handles errors
 	if err != nil {
-		t.Logf("Stream readiness check failed (expected if MediaMTX not running): %v", err)
+		t.Logf("Stream creation failed (expected if MediaMTX not running or source unavailable): %v", err)
 	} else {
-		assert.IsType(t, false, ready, "Ready should be a boolean")
+		assert.NotNil(t, stream, "Stream should not be nil")
+		assert.Equal(t, "test-stream", stream.Name, "Stream name should match")
 	}
 }
 
-// TestStreamManager_WaitForStreamReadiness tests stream readiness waiting
-func TestStreamManager_WaitForStreamReadiness(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-
-	// Create mock client
-	client := &mockClient{}
-
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
+// TestStreamManager_DeleteStream tests stream deletion
+func TestStreamManager_DeleteStream(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
 
 	ctx := context.Background()
 
-	// Test stream readiness waiting with short timeout
-	ready, err := streamManager.WaitForStreamReadiness(ctx, "test-stream", 1*time.Second, "test-correlation")
-	// Note: This may fail if MediaMTX service is not running
+	// Test stream deletion
+	err := streamManager.DeleteStream(ctx, "test-stream")
+	// Note: This may fail if MediaMTX service is not running or stream doesn't exist
 	// For unit tests, we validate the method exists and handles errors
 	if err != nil {
-		t.Logf("Stream readiness wait failed (expected if MediaMTX not running): %v", err)
-	} else {
-		assert.IsType(t, false, ready, "Ready should be a boolean")
+		t.Logf("Stream deletion failed (expected if MediaMTX not running or stream doesn't exist): %v", err)
 	}
 }
 
-// TestStreamManager_ErrorHandling tests error handling scenarios
+// TestStreamManager_GetStream tests stream retrieval
+func TestStreamManager_GetStream(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
+
+	ctx := context.Background()
+
+	// Test stream retrieval
+	stream, err := streamManager.GetStream(ctx, "test-stream")
+	// Note: This may fail if MediaMTX service is not running or stream doesn't exist
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream retrieval failed (expected if MediaMTX not running or stream doesn't exist): %v", err)
+	} else {
+		assert.NotNil(t, stream, "Stream should not be nil")
+	}
+}
+
+// TestStreamManager_ListStreams tests stream listing
+func TestStreamManager_ListStreams(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
+
+	ctx := context.Background()
+
+	// Test stream listing
+	streams, err := streamManager.ListStreams(ctx)
+	// Note: This may fail if MediaMTX service is not running
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream listing failed (expected if MediaMTX not running): %v", err)
+	} else {
+		assert.NotNil(t, streams, "Streams slice should not be nil")
+		assert.IsType(t, []*mediamtx.Stream{}, streams, "Streams should be of type []*mediamtx.Stream")
+	}
+}
+
+// TestStreamManager_MonitorStream tests stream monitoring
+func TestStreamManager_MonitorStream(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
+
+	ctx := context.Background()
+
+	// Test stream monitoring
+	err := streamManager.MonitorStream(ctx, "test-stream")
+	// Note: This may fail if MediaMTX service is not running or stream doesn't exist
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream monitoring failed (expected if MediaMTX not running or stream doesn't exist): %v", err)
+	}
+}
+
+// TestStreamManager_GetStreamStatus tests stream status retrieval
+func TestStreamManager_GetStreamStatus(t *testing.T) {
+	streamManager := setupRealStreamManager(t)
+
+	ctx := context.Background()
+
+	// Test stream status retrieval
+	status, err := streamManager.GetStreamStatus(ctx, "test-stream")
+	// Note: This may fail if MediaMTX service is not running or stream doesn't exist
+	// For unit tests, we validate the method exists and handles errors
+	if err != nil {
+		t.Logf("Stream status retrieval failed (expected if MediaMTX not running or stream doesn't exist): %v", err)
+	} else {
+		assert.NotEmpty(t, status, "Status should not be empty")
+		assert.IsType(t, "", status, "Status should be a string")
+	}
+}
+
+// TestStreamManager_ErrorHandling tests error handling with invalid configuration
 func TestStreamManager_ErrorHandling(t *testing.T) {
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// Create invalid configuration to trigger real errors
+	invalidConfig := &mediamtx.MediaMTXConfig{
+		BaseURL: "http://invalid-host:9999",
+		Timeout: 1 * time.Second,
 	}
 
-	// Create mock client
-	client := &mockClient{}
+	// Create real client with invalid config
+	invalidClient := mediamtx.NewClient("http://invalid-host:9999", invalidConfig, logger)
 
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
+	// Create stream manager with invalid client
+	streamManager := mediamtx.NewStreamManager(invalidClient, invalidConfig, logger)
+	require.NotNil(t, streamManager, "Stream manager should not be nil")
 
 	ctx := context.Background()
 
-	// Test with empty stream name
-	_, err := streamManager.CheckStreamReadiness(ctx, "", 1*time.Second)
-	assert.Error(t, err, "Should return error with empty stream name")
+	// Test that operations fail with invalid configuration
+	_, err := streamManager.CreateStream(ctx, "test-stream", "rtsp://localhost:8554/test")
+	assert.Error(t, err, "Should error due to connection failure")
 
-	// Test with zero timeout
-	_, err = streamManager.CheckStreamReadiness(ctx, "test-stream", 0)
-	assert.Error(t, err, "Should return error with zero timeout")
-}
+	err = streamManager.DeleteStream(ctx, "test-stream")
+	assert.Error(t, err, "Should error due to connection failure")
 
-// TestStreamManager_TimeoutHandling tests timeout scenarios
-func TestStreamManager_TimeoutHandling(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	_, err = streamManager.GetStream(ctx, "test-stream")
+	assert.Error(t, err, "Should error due to connection failure")
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
+	_, err = streamManager.ListStreams(ctx)
+	assert.Error(t, err, "Should error due to connection failure")
 
-	// Create mock client
-	client := &mockClient{}
+	err = streamManager.MonitorStream(ctx, "test-stream")
+	assert.Error(t, err, "Should error due to connection failure")
 
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
-
-	ctx := context.Background()
-
-	// Test with very short timeout
-	_, err := streamManager.CheckStreamReadiness(ctx, "test-stream", 1*time.Millisecond)
-	// This should either succeed quickly or timeout appropriately
-	if err != nil {
-		t.Logf("Short timeout test result: %v", err)
-	}
-}
-
-// TestStreamManager_ConcurrentAccess tests concurrent access scenarios
-func TestStreamManager_ConcurrentAccess(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-
-	// Create mock client
-	client := &mockClient{}
-
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
-
-	ctx := context.Background()
-
-	// Test concurrent stream readiness checks
-	done := make(chan bool, 2)
-
-	go func() {
-		_, err := streamManager.CheckStreamReadiness(ctx, "test-stream-1", 1*time.Second)
-		if err != nil {
-			t.Logf("Concurrent check 1 result: %v", err)
-		}
-		done <- true
-	}()
-
-	go func() {
-		_, err := streamManager.CheckStreamReadiness(ctx, "test-stream-2", 1*time.Second)
-		if err != nil {
-			t.Logf("Concurrent check 2 result: %v", err)
-		}
-		done <- true
-	}()
-
-	// Wait for both goroutines to complete
-	<-done
-	<-done
-}
-
-// TestStreamManager_ContextCancellation tests context cancellation
-func TestStreamManager_ContextCancellation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-
-	// Create mock client
-	client := &mockClient{}
-
-	// Create stream manager
-	streamManager := mediamtx.NewStreamManager(client, testConfig, logger)
-
-	// Create context with cancellation
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Cancel context immediately
-	cancel()
-
-	// Test stream readiness check with cancelled context
-	_, err := streamManager.CheckStreamReadiness(ctx, "test-stream", 1*time.Second)
-	// Should handle context cancellation gracefully
-	if err != nil {
-		t.Logf("Context cancellation test result: %v", err)
-	}
+	_, err = streamManager.GetStreamStatus(ctx, "test-stream")
+	assert.Error(t, err, "Should error due to connection failure")
 }

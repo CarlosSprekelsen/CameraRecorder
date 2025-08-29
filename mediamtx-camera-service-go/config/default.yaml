@@ -150,5 +150,13 @@ storage:
   default_path: "/opt/camera-service/recordings"
   fallback_path: "/tmp/recordings"
 
+# Retention policy configuration
+retention_policy:
+  enabled: true       # Whether retention policies are enabled
+  type: "age"         # "age", "size", or "manual"
+  max_age_days: 7     # For age-based policy (default: 7 days)
+  max_size_gb: 1      # For size-based policy (default: 1 GB)
+  auto_cleanup: true  # Whether to automatically clean up files
+
 # Optional health server port for testing
 health_port: 8080

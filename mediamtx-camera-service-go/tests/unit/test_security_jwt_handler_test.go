@@ -238,6 +238,379 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 	})
 }
 
+// TestJWTHandler_RateLimiting tests rate limiting functionality
+func TestJWTHandler_RateLimiting(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	// Set rate limit to 3 requests per 1 second window
+	handler.SetRateLimit(3, time.Second)
+
+	t.Run("check_rate_limit_first_request", func(t *testing.T) {
+		// First request should be allowed
+		allowed := handler.CheckRateLimit("client1")
+		assert.True(t, allowed)
+	})
+
+	t.Run("check_rate_limit_within_limit", func(t *testing.T) {
+		// Multiple requests within limit should be allowed
+		for i := 0; i < 3; i++ {
+			allowed := handler.CheckRateLimit("client2")
+			assert.True(t, allowed)
+		}
+	})
+
+	t.Run("check_rate_limit_exceeded", func(t *testing.T) {
+		// Exceed rate limit
+		for i := 0; i < 3; i++ {
+			handler.CheckRateLimit("client3")
+		}
+		// Fourth request should be blocked
+		allowed := handler.CheckRateLimit("client3")
+		assert.False(t, allowed)
+	})
+
+	t.Run("check_rate_limit_window_reset", func(t *testing.T) {
+		// Fill up the window
+		for i := 0; i < 3; i++ {
+			handler.CheckRateLimit("client4")
+		}
+		// Wait for window to reset
+		time.Sleep(1100 * time.Millisecond)
+		// Should be allowed again
+		allowed := handler.CheckRateLimit("client4")
+		assert.True(t, allowed)
+	})
+}
+
+// TestJWTHandler_RecordRequest tests the RecordRequest function
+func TestJWTHandler_RecordRequest(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("record_request_new_client", func(t *testing.T) {
+		// Record request for new client
+		handler.RecordRequest("new_client")
+
+		// Check rate info
+		rateInfo := handler.GetClientRateInfo("new_client")
+		assert.NotNil(t, rateInfo)
+		assert.Equal(t, "new_client", rateInfo.ClientID)
+		assert.Equal(t, int64(1), rateInfo.RequestCount)
+	})
+
+	t.Run("record_request_existing_client", func(t *testing.T) {
+		// Record multiple requests
+		handler.RecordRequest("existing_client")
+		handler.RecordRequest("existing_client")
+		handler.RecordRequest("existing_client")
+
+		// Check rate info
+		rateInfo := handler.GetClientRateInfo("existing_client")
+		assert.NotNil(t, rateInfo)
+		assert.Equal(t, int64(3), rateInfo.RequestCount)
+	})
+
+	t.Run("record_request_window_reset", func(t *testing.T) {
+		// Set short window for testing
+		handler.SetRateLimit(10, 100*time.Millisecond)
+
+		// Record request
+		handler.RecordRequest("window_client")
+
+		// Wait for window to reset
+		time.Sleep(150 * time.Millisecond)
+
+		// Record another request
+		handler.RecordRequest("window_client")
+
+		// Should reset to 1
+		rateInfo := handler.GetClientRateInfo("window_client")
+		assert.NotNil(t, rateInfo)
+		assert.Equal(t, int64(1), rateInfo.RequestCount)
+	})
+}
+
+// TestJWTHandler_GetClientRateInfo tests the GetClientRateInfo function
+func TestJWTHandler_GetClientRateInfo(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("get_client_rate_info_nonexistent", func(t *testing.T) {
+		// Get info for non-existent client
+		rateInfo := handler.GetClientRateInfo("nonexistent_client")
+		assert.Nil(t, rateInfo)
+	})
+
+	t.Run("get_client_rate_info_existing", func(t *testing.T) {
+		// Record some requests
+		handler.RecordRequest("test_client")
+		handler.RecordRequest("test_client")
+
+		// Get rate info
+		rateInfo := handler.GetClientRateInfo("test_client")
+		assert.NotNil(t, rateInfo)
+		assert.Equal(t, "test_client", rateInfo.ClientID)
+		assert.Equal(t, int64(2), rateInfo.RequestCount)
+		assert.NotZero(t, rateInfo.LastRequest)
+		assert.NotZero(t, rateInfo.WindowStart)
+	})
+
+	t.Run("get_client_rate_info_copy", func(t *testing.T) {
+		// Record request
+		handler.RecordRequest("copy_client")
+
+		// Get rate info
+		rateInfo1 := handler.GetClientRateInfo("copy_client")
+		rateInfo2 := handler.GetClientRateInfo("copy_client")
+
+		// Should be different instances (copies)
+		assert.NotSame(t, rateInfo1, rateInfo2)
+		assert.Equal(t, rateInfo1.ClientID, rateInfo2.ClientID)
+		assert.Equal(t, rateInfo1.RequestCount, rateInfo2.RequestCount)
+	})
+}
+
+// TestJWTHandler_SetRateLimit tests the SetRateLimit function
+func TestJWTHandler_SetRateLimit(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("set_rate_limit_default", func(t *testing.T) {
+		// Set default rate limit
+		handler.SetRateLimit(100, time.Minute)
+
+		// Test that it's applied
+		for i := 0; i < 100; i++ {
+			allowed := handler.CheckRateLimit("default_client")
+			assert.True(t, allowed)
+		}
+		// 101st request should be blocked
+		allowed := handler.CheckRateLimit("default_client")
+		assert.False(t, allowed)
+	})
+
+	t.Run("set_rate_limit_high", func(t *testing.T) {
+		// Set high rate limit
+		handler.SetRateLimit(1000, time.Hour)
+
+		// Test that it's applied
+		for i := 0; i < 1000; i++ {
+			allowed := handler.CheckRateLimit("high_limit_client")
+			assert.True(t, allowed)
+		}
+		// 1001st request should be blocked
+		allowed := handler.CheckRateLimit("high_limit_client")
+		assert.False(t, allowed)
+	})
+
+	t.Run("set_rate_limit_low", func(t *testing.T) {
+		// Set low rate limit
+		handler.SetRateLimit(1, time.Second)
+
+		// First request should be allowed
+		allowed := handler.CheckRateLimit("low_limit_client")
+		assert.True(t, allowed)
+
+		// Second request should be blocked
+		allowed = handler.CheckRateLimit("low_limit_client")
+		assert.False(t, allowed)
+	})
+}
+
+// TestJWTHandler_CleanupExpiredClients tests the CleanupExpiredClients function
+func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("cleanup_expired_clients", func(t *testing.T) {
+		// Record requests for multiple clients
+		handler.RecordRequest("active_client")
+		handler.RecordRequest("expired_client1")
+		handler.RecordRequest("expired_client2")
+
+		// Wait for some clients to become inactive
+		time.Sleep(100 * time.Millisecond)
+
+		// Update activity for active client
+		handler.RecordRequest("active_client")
+
+		// Cleanup clients inactive for more than 50ms
+		handler.CleanupExpiredClients(50 * time.Millisecond)
+
+		// Active client should still exist
+		rateInfo := handler.GetClientRateInfo("active_client")
+		assert.NotNil(t, rateInfo)
+
+		// Expired clients should be removed
+		rateInfo = handler.GetClientRateInfo("expired_client1")
+		assert.Nil(t, rateInfo)
+
+		rateInfo = handler.GetClientRateInfo("expired_client2")
+		assert.Nil(t, rateInfo)
+	})
+
+	t.Run("cleanup_no_expired_clients", func(t *testing.T) {
+		// Record request for active client
+		handler.RecordRequest("recent_client")
+
+		// Cleanup with long inactive duration
+		handler.CleanupExpiredClients(1 * time.Hour)
+
+		// Client should still exist
+		rateInfo := handler.GetClientRateInfo("recent_client")
+		assert.NotNil(t, rateInfo)
+	})
+}
+
+// TestJWTHandler_ValidateToken_EdgeCases tests edge cases for ValidateToken
+func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("validate_token_missing_required_fields", func(t *testing.T) {
+		// Create token missing required fields
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "test_user",
+			// Missing role, iat, exp
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		claims, err := handler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Nil(t, claims)
+		assert.Contains(t, err.Error(), "missing required field")
+	})
+
+	t.Run("validate_token_invalid_role", func(t *testing.T) {
+		// Create token with invalid role
+		now := time.Now().Unix()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "test_user",
+			"role":    "invalid_role",
+			"iat":     now,
+			"exp":     now + 3600,
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		claims, err := handler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Nil(t, claims)
+		assert.Contains(t, err.Error(), "invalid role")
+	})
+
+	t.Run("validate_token_invalid_timestamps", func(t *testing.T) {
+		// Create token with invalid timestamp types
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "test_user",
+			"role":    "admin",
+			"iat":     "invalid_timestamp",
+			"exp":     "invalid_timestamp",
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		claims, err := handler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Nil(t, claims)
+		// The actual error message may vary, so we check for any validation error
+		assert.Contains(t, err.Error(), "token validation failed")
+	})
+
+	t.Run("validate_token_wrong_signing_method", func(t *testing.T) {
+		// Create token with wrong signing method
+		now := time.Now().Unix()
+		token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+			"user_id": "test_user",
+			"role":    "admin",
+			"iat":     now,
+			"exp":     now + 3600,
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		claims, err := handler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Nil(t, claims)
+		// The actual error message may vary, so we check for any validation error
+		assert.Contains(t, err.Error(), "token validation failed")
+	})
+}
+
+// TestJWTHandler_IsTokenExpired_EdgeCases tests edge cases for IsTokenExpired
+func TestJWTHandler_IsTokenExpired_EdgeCases(t *testing.T) {
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	handler, err := security.NewJWTHandler("test_secret")
+	require.NoError(t, err)
+
+	t.Run("is_token_expired_empty_token", func(t *testing.T) {
+		// Test empty token
+		expired := handler.IsTokenExpired("")
+		assert.True(t, expired)
+
+		// Test whitespace token
+		expired = handler.IsTokenExpired("   ")
+		assert.True(t, expired)
+	})
+
+	t.Run("is_token_expired_invalid_token", func(t *testing.T) {
+		// Test invalid token format
+		expired := handler.IsTokenExpired("invalid.token.format")
+		assert.True(t, expired)
+	})
+
+	t.Run("is_token_expired_missing_exp", func(t *testing.T) {
+		// Create token without exp field
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "test_user",
+			"role":    "admin",
+			"iat":     time.Now().Unix(),
+			// Missing exp
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		expired := handler.IsTokenExpired(tokenString)
+		assert.True(t, expired)
+	})
+
+	t.Run("is_token_expired_invalid_exp_type", func(t *testing.T) {
+		// Create token with invalid exp type
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "test_user",
+			"role":    "admin",
+			"iat":     time.Now().Unix(),
+			"exp":     "invalid_exp",
+		})
+
+		tokenString, err := token.SignedString([]byte("test_secret"))
+		require.NoError(t, err)
+
+		expired := handler.IsTokenExpired(tokenString)
+		assert.True(t, expired)
+	})
+}
+
 // Performance benchmarks for JWT handler
 func BenchmarkJWTHandler_TokenGeneration(b *testing.B) {
 	handler, err := security.NewJWTHandler("test_secret")
@@ -271,5 +644,19 @@ func BenchmarkJWTHandler_TokenValidation(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func BenchmarkJWTHandler_RateLimitCheck(b *testing.B) {
+	handler, err := security.NewJWTHandler("test_secret")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	handler.SetRateLimit(1000, time.Minute)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.CheckRateLimit("benchmark_client")
 	}
 }

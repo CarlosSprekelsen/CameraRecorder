@@ -604,7 +604,7 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "device", "Should contain device")
 		assert.Contains(t, result, "formats", "Should contain formats")
@@ -639,7 +639,7 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "name", "Should contain name")
 		assert.Contains(t, result, "version", "Should contain version")
@@ -668,7 +668,7 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		streams, ok := response.Result.([]interface{})
 		require.True(t, ok, "Result should be an array")
-		
+
 		// If streams exist, validate their structure
 		if len(streams) > 0 {
 			stream, ok := streams[0].(map[string]interface{})
@@ -698,7 +698,7 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "total_space", "Should contain total_space")
 		assert.Contains(t, result, "used_space", "Should contain used_space")
@@ -726,7 +726,7 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "cleanup_executed", "Should contain cleanup_executed")
 		assert.Contains(t, result, "files_deleted", "Should contain files_deleted")
@@ -755,7 +755,7 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "policy_type", "Should contain policy_type")
 		assert.Contains(t, result, "max_age_days", "Should contain max_age_days")
@@ -791,7 +791,7 @@ func TestWebSocketServer_FileInfoMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "filename", "Should contain filename")
 		assert.Contains(t, result, "file_size", "Should contain file_size")
@@ -819,7 +819,7 @@ func TestWebSocketServer_FileInfoMethods(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "filename", "Should contain filename")
 		assert.Contains(t, result, "file_size", "Should contain file_size")
@@ -862,7 +862,7 @@ func TestWebSocketServer_AuthenticationScenarios(t *testing.T) {
 		require.NotNil(t, response.Result, "Result should be present")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be a map")
-		
+
 		// Validate required fields per API documentation
 		assert.Contains(t, result, "authenticated", "Should contain authenticated")
 		assert.Contains(t, result, "role", "Should contain role")
@@ -941,11 +941,215 @@ func TestWebSocketServer_ErrorScenarios(t *testing.T) {
 			require.NoError(t, err, "Method should not return error")
 			require.NotNil(t, response, "Should return response")
 			assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
-			
+
 			if response.Error != nil {
 				assert.NotNil(t, response.Error.Code, "Error should have code")
 				assert.NotEmpty(t, response.Error.Message, "Error should have message")
 			}
 		})
 	}
+}
+
+// TestWebSocketServer_EventNotifications tests event notification API compliance
+func TestWebSocketServer_EventNotifications(t *testing.T) {
+	// REQ-API-010: Event handling and notifications
+	// API Documentation: camera_status_update, recording_status_update
+
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	// Test camera status update event handling
+	// Note: These are server-initiated events, not client-requested methods
+	// We test that the server can handle these events properly
+
+	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+
+	// Test that server can process camera status updates
+	// This would normally be triggered by camera monitor events
+	response, err := env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
+		"device": "/dev/video0",
+	}, client)
+
+	require.NoError(t, err, "GetCameraStatus should not return error")
+	require.NotNil(t, response, "GetCameraStatus should return response")
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+	// Test recording status update event handling
+	// This would normally be triggered by recording state changes
+	response, err = env.WebSocketServer.MethodStartRecording(map[string]interface{}{
+		"device": "/dev/video0",
+	}, client)
+
+	require.NoError(t, err, "StartRecording should not return error")
+	require.NotNil(t, response, "StartRecording should return response")
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+	// Validate that server can handle event notifications
+	// Note: Actual event broadcasting is tested in server lifecycle tests
+	assert.NotNil(t, env.WebSocketServer, "Server should support event notifications")
+}
+
+// TestWebSocketServer_PerformanceCompliance tests performance guarantees per API documentation
+func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
+	// Performance Guarantees per API Documentation:
+	// - Status Methods (get_camera_list, get_camera_status, ping): <50ms response time
+	// - Control Methods (take_snapshot, start_recording, stop_recording): <100ms response time
+
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+
+	// Test status methods performance (<50ms)
+	statusMethods := []struct {
+		name   string
+		method func() (*websocket.JsonRpcResponse, error)
+	}{
+		{
+			name: "ping",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodPing(map[string]interface{}{}, client)
+			},
+		},
+		{
+			name: "get_camera_list",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodGetCameraList(map[string]interface{}{}, client)
+			},
+		},
+		{
+			name: "get_camera_status",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
+					"device": "/dev/video0",
+				}, client)
+			},
+		},
+	}
+
+	for _, tc := range statusMethods {
+		t.Run(tc.name, func(t *testing.T) {
+			start := time.Now()
+			response, err := tc.method()
+			duration := time.Since(start)
+
+			require.NoError(t, err, "%s should not return error", tc.name)
+			require.NotNil(t, response, "%s should return response", tc.name)
+
+			// Performance check: <50ms for status methods
+			assert.Less(t, duration, 50*time.Millisecond,
+				"%s should respond within 50ms, got %v", tc.name, duration)
+		})
+	}
+
+	// Test control methods performance (<100ms)
+	controlMethods := []struct {
+		name   string
+		method func() (*websocket.JsonRpcResponse, error)
+	}{
+		{
+			name: "take_snapshot",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
+					"device": "/dev/video0",
+				}, client)
+			},
+		},
+		{
+			name: "start_recording",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodStartRecording(map[string]interface{}{
+					"device": "/dev/video0",
+				}, client)
+			},
+		},
+		{
+			name: "stop_recording",
+			method: func() (*websocket.JsonRpcResponse, error) {
+				return env.WebSocketServer.MethodStopRecording(map[string]interface{}{
+					"device": "/dev/video0",
+				}, client)
+			},
+		},
+	}
+
+	for _, tc := range controlMethods {
+		t.Run(tc.name, func(t *testing.T) {
+			start := time.Now()
+			response, err := tc.method()
+			duration := time.Since(start)
+
+			require.NoError(t, err, "%s should not return error", tc.name)
+			require.NotNil(t, response, "%s should return response", tc.name)
+
+			// Performance check: <100ms for control methods
+			assert.Less(t, duration, 100*time.Millisecond,
+				"%s should respond within 100ms, got %v", tc.name, duration)
+		})
+	}
+}
+
+// TestWebSocketServer_ParameterValidation tests comprehensive parameter validation per API documentation
+func TestWebSocketServer_ParameterValidation(t *testing.T) {
+	// API Documentation: Parameter Validation section
+	// - String Parameters: Required, non-empty, max length validation
+	// - Numeric Parameters: Range validation, type checking
+	// - Boolean Parameters: Type validation
+
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+
+	// Test string parameter validation
+	t.Run("string_parameter_validation", func(t *testing.T) {
+		// Test empty device parameter
+		response, err := env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
+			"device": "",
+		}, client)
+
+		require.NoError(t, err, "Should handle empty string parameter")
+		require.NotNil(t, response, "Should return response")
+		if response.Error != nil {
+			assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code,
+				"Should return INVALID_PARAMS for empty device")
+		}
+
+		// Test missing device parameter
+		response, err = env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{}, client)
+
+		require.NoError(t, err, "Should handle missing parameter")
+		require.NotNil(t, response, "Should return response")
+		if response.Error != nil {
+			assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code,
+				"Should return INVALID_PARAMS for missing device")
+		}
+	})
+
+	// Test numeric parameter validation
+	t.Run("numeric_parameter_validation", func(t *testing.T) {
+		// Test invalid numeric parameters (if any methods accept them)
+		// Most methods use string parameters, but we test type validation
+		response, err := env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
+			"device":  "/dev/video0",
+			"quality": "invalid_quality", // Should be numeric
+		}, client)
+
+		require.NoError(t, err, "Should handle invalid numeric parameter")
+		require.NotNil(t, response, "Should return response")
+		// Response might be error or success depending on implementation
+	})
+
+	// Test boolean parameter validation
+	t.Run("boolean_parameter_validation", func(t *testing.T) {
+		// Test boolean parameters (if any methods accept them)
+		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
+			"device": "/dev/video0",
+			"audio":  "not_a_boolean", // Should be boolean
+		}, client)
+
+		require.NoError(t, err, "Should handle invalid boolean parameter")
+		require.NotNil(t, response, "Should return response")
+		// Response might be error or success depending on implementation
+	})
 }

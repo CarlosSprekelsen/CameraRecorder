@@ -203,9 +203,13 @@ func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *MediaMTXConfig
 	cfg.MediaMTX.ProcessTerminationTimeout = mediaMTXConfig.ProcessTerminationTimeout
 	cfg.MediaMTX.ProcessKillTimeout = mediaMTXConfig.ProcessKillTimeout
 
-	// Note: SaveConfig method doesn't exist in ConfigManager
-	// Configuration updates would need to be handled through the existing config system
-	ci.logger.Info("MediaMTX configuration updated in memory (file save not implemented)")
+	// Save configuration to file
+	if err := ci.configManager.SaveConfig(); err != nil {
+		ci.logger.WithError(err).Error("Failed to save configuration to file")
+		return fmt.Errorf("failed to save configuration: %w", err)
+	}
+
+	ci.logger.Info("MediaMTX configuration updated and saved to file")
 	return nil
 }
 

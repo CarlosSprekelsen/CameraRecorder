@@ -16,6 +16,7 @@ package mediamtx
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -296,11 +297,7 @@ func (pi *PathIntegration) generatePathName(device string) string {
 	}
 
 	// Replace slashes with underscores
-	for i := 0; i < len(pathName); i++ {
-		if pathName[i] == '/' {
-			pathName = pathName[:i] + "_" + pathName[i+1:]
-		}
-	}
+	pathName = strings.ReplaceAll(pathName, "/", "_")
 
 	return pathName
 }

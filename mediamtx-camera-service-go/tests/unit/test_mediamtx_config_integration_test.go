@@ -15,49 +15,49 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx_test
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestConfigIntegration_Creation tests config integration creation
 func TestConfigIntegration_Creation(t *testing.T) {
-	// Create test config manager
-	configManager := config.NewConfigManager()
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 	require.NotNil(t, configIntegration, "Config integration should not be nil")
-	
+
 	// Verify config integration has required fields
 	assert.NotNil(t, configIntegration, "Config integration should be created successfully")
 }
 
 // TestConfigIntegration_GetMediaMTXConfig_WithRealServer tests MediaMTX config retrieval against real server
 func TestConfigIntegration_GetMediaMTXConfig_WithRealServer(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-001: MediaMTX service integration
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test config retrieval
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -68,11 +68,11 @@ func TestConfigIntegration_GetMediaMTXConfig_WithRealServer(t *testing.T) {
 	assert.Equal(t, 9997, mediaMTXConfig.APIPort, "API port should match config")
 	assert.Contains(t, mediaMTXConfig.BaseURL, ":9997", "Base URL should contain correct port")
 	assert.Contains(t, mediaMTXConfig.HealthCheckURL, "/v3/paths/list", "Health check URL should contain correct path")
-	
+
 	// Verify circuit breaker configuration (using actual values)
 	assert.Greater(t, mediaMTXConfig.CircuitBreaker.FailureThreshold, 0, "Circuit breaker failure threshold should be positive")
 	assert.Greater(t, int64(mediaMTXConfig.CircuitBreaker.RecoveryTimeout), int64(0), "Circuit breaker recovery timeout should be positive")
-	
+
 	// Verify connection pool configuration (using actual values)
 	assert.Equal(t, 100, mediaMTXConfig.ConnectionPool.MaxIdleConns, "Connection pool max idle conns should be set")
 	assert.Equal(t, 10, mediaMTXConfig.ConnectionPool.MaxIdleConnsPerHost, "Connection pool max idle conns per host should be set")
@@ -81,15 +81,15 @@ func TestConfigIntegration_GetMediaMTXConfig_WithRealServer(t *testing.T) {
 
 // TestConfigIntegration_GetMediaMTXConfig_NilConfig tests error handling for nil config
 func TestConfigIntegration_GetMediaMTXConfig_NilConfig(t *testing.T) {
-	// Create config manager without loading config (will be nil)
-	configManager := config.NewConfigManager()
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test config retrieval with nil config
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -106,17 +106,19 @@ func TestConfigIntegration_GetMediaMTXConfig_NilConfig(t *testing.T) {
 
 // TestConfigIntegration_ValidateMediaMTXConfig_ValidConfig tests config validation with valid config
 func TestConfigIntegration_ValidateMediaMTXConfig_ValidConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Get valid config
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -129,12 +131,15 @@ func TestConfigIntegration_ValidateMediaMTXConfig_ValidConfig(t *testing.T) {
 
 // TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig tests config validation with invalid config
 func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration with nil config manager
-	configIntegration := mediamtx.NewConfigIntegration(nil, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Create config integration with nil config manager (testing error case)
+	configIntegration := mediamtx.NewConfigIntegration(nil, env.Logger.Logger)
 
 	// Test validation with invalid configs
 	testCases := []struct {
@@ -146,8 +151,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 		{
 			name: "EmptyHost",
 			config: &mediamtx.MediaMTXConfig{
-				Host:     "",
-				APIPort:  9997,
+				Host:           "",
+				APIPort:        9997,
 				RecordingsPath: "/tmp/recordings",
 				SnapshotsPath:  "/tmp/snapshots",
 			},
@@ -157,8 +162,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 		{
 			name: "InvalidAPIPort",
 			config: &mediamtx.MediaMTXConfig{
-				Host:     "localhost",
-				APIPort:  0,
+				Host:           "localhost",
+				APIPort:        0,
 				RecordingsPath: "/tmp/recordings",
 				SnapshotsPath:  "/tmp/snapshots",
 			},
@@ -168,8 +173,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 		{
 			name: "EmptyRecordingsPath",
 			config: &mediamtx.MediaMTXConfig{
-				Host:     "localhost",
-				APIPort:  9997,
+				Host:           "localhost",
+				APIPort:        9997,
 				RecordingsPath: "",
 				SnapshotsPath:  "/tmp/snapshots",
 			},
@@ -179,8 +184,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 		{
 			name: "EmptySnapshotsPath",
 			config: &mediamtx.MediaMTXConfig{
-				Host:     "localhost",
-				APIPort:  9997,
+				Host:           "localhost",
+				APIPort:        9997,
 				RecordingsPath: "/tmp/recordings",
 				SnapshotsPath:  "",
 			},
@@ -204,17 +209,19 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 
 // TestConfigIntegration_GetRecordingConfig tests recording config retrieval
 func TestConfigIntegration_GetRecordingConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test recording config retrieval
 	recordingConfig, err := configIntegration.GetRecordingConfig()
@@ -227,17 +234,19 @@ func TestConfigIntegration_GetRecordingConfig(t *testing.T) {
 
 // TestConfigIntegration_GetSnapshotConfig tests snapshot config retrieval
 func TestConfigIntegration_GetSnapshotConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test snapshot config retrieval
 	snapshotConfig, err := configIntegration.GetSnapshotConfig()
@@ -250,17 +259,19 @@ func TestConfigIntegration_GetSnapshotConfig(t *testing.T) {
 
 // TestConfigIntegration_GetFFmpegConfig tests FFmpeg config retrieval
 func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test FFmpeg config retrieval
 	ffmpegConfig, err := configIntegration.GetFFmpegConfig()
@@ -273,17 +284,19 @@ func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
 
 // TestConfigIntegration_GetCameraConfig tests camera config retrieval
 func TestConfigIntegration_GetCameraConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test camera config retrieval
 	cameraConfig, err := configIntegration.GetCameraConfig()
@@ -296,17 +309,19 @@ func TestConfigIntegration_GetCameraConfig(t *testing.T) {
 
 // TestConfigIntegration_GetPerformanceConfig tests performance config retrieval
 func TestConfigIntegration_GetPerformanceConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Test performance config retrieval
 	performanceConfig, err := configIntegration.GetPerformanceConfig()
@@ -319,17 +334,19 @@ func TestConfigIntegration_GetPerformanceConfig(t *testing.T) {
 
 // TestConfigIntegration_UpdateMediaMTXConfig tests MediaMTX config update
 func TestConfigIntegration_UpdateMediaMTXConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Create updated config with valid BaseURL
 	updatedConfig := &mediamtx.MediaMTXConfig{
@@ -348,23 +365,23 @@ func TestConfigIntegration_UpdateMediaMTXConfig(t *testing.T) {
 			MaxIdleConnsPerHost: 10,
 			IdleConnTimeout:     90 * time.Second,
 		},
-		Host:           "localhost",
-		APIPort:        9997,
-		RTSPPort:       8554,
-		WebRTCPort:     8889,
-		HLSPort:        8888,
-		ConfigPath:     "/tmp/mediamtx.yml",
-		RecordingsPath: "/tmp/recordings",
-		SnapshotsPath:  "/tmp/snapshots",
-		HealthCheckInterval: 10,
-		HealthFailureThreshold: 3,
-		HealthCircuitBreakerTimeout: 30,
-		HealthMaxBackoffInterval: 60,
+		Host:                                "localhost",
+		APIPort:                             9997,
+		RTSPPort:                            8554,
+		WebRTCPort:                          8889,
+		HLSPort:                             8888,
+		ConfigPath:                          "/tmp/mediamtx.yml",
+		RecordingsPath:                      "/tmp/recordings",
+		SnapshotsPath:                       "/tmp/snapshots",
+		HealthCheckInterval:                 10,
+		HealthFailureThreshold:              3,
+		HealthCircuitBreakerTimeout:         30,
+		HealthMaxBackoffInterval:            60,
 		HealthRecoveryConfirmationThreshold: 2,
-		BackoffBaseMultiplier: 2.0,
-		BackoffJitterRange: []float64{0.1, 0.5},
-		ProcessTerminationTimeout: 5.0,
-		ProcessKillTimeout: 2.0,
+		BackoffBaseMultiplier:               2.0,
+		BackoffJitterRange:                  []float64{0.1, 0.5},
+		ProcessTerminationTimeout:           5.0,
+		ProcessKillTimeout:                  2.0,
 	}
 
 	// Test config update
@@ -382,22 +399,24 @@ func TestConfigIntegration_UpdateMediaMTXConfig(t *testing.T) {
 
 // TestConfigIntegration_UpdateMediaMTXConfig_InvalidConfig tests config update with invalid config
 func TestConfigIntegration_UpdateMediaMTXConfig_InvalidConfig(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Create invalid config (missing required fields)
 	invalidConfig := &mediamtx.MediaMTXConfig{
-		Host:     "", // Empty host
-		APIPort:  9997,
+		Host:           "", // Empty host
+		APIPort:        9997,
 		RecordingsPath: "/tmp/recordings",
 		SnapshotsPath:  "/tmp/snapshots",
 	}
@@ -410,17 +429,20 @@ func TestConfigIntegration_UpdateMediaMTXConfig_InvalidConfig(t *testing.T) {
 
 // TestConfigIntegration_RealMediaMTXServerConnection tests connection to real MediaMTX server
 func TestConfigIntegration_RealMediaMTXServerConnection(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-001: MediaMTX service integration
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Get MediaMTX config
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -452,20 +474,22 @@ func TestConfigIntegration_RealMediaMTXServerConnection(t *testing.T) {
 
 // TestConfigIntegration_WatchConfigChanges tests config change watching (not implemented)
 func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
-	// Create test config manager and load test configuration
-	configManager := config.NewConfigManager()
-	err := configManager.LoadConfig("tests/fixtures/test_config.yaml")
-	require.NoError(t, err, "Failed to load test configuration")
-	
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// REQ-MTX-006: Configuration integration
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	// Load test configuration using the shared config manager
+	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	// Create config integration using shared components
+	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
 
 	// Create real MediaMTX controller using test utilities
-	realController, err := mediamtx.NewControllerWithConfigManager(configManager, logger)
+	realController, err := mediamtx.NewControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 
 	// Test config change watching with real controller
