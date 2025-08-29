@@ -817,11 +817,22 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 	// Convert streams to response format
 	streamList := make([]map[string]interface{}, 0, len(streams))
 	for _, stream := range streams {
+		// Convert MediaMTX API structure to our response format
+		sourceStr := ""
+		if stream.Source != nil {
+			sourceStr = stream.Source.Type
+		}
+		
+		status := "NOT_READY"
+		if stream.Ready {
+			status = "READY"
+		}
+		
 		streamList = append(streamList, map[string]interface{}{
-			"id":     stream.ID,
+			"id":     stream.Name, // Use Name as ID for backward compatibility
 			"name":   stream.Name,
-			"source": stream.Source,
-			"status": stream.Status,
+			"source": sourceStr,
+			"status": status,
 		})
 	}
 

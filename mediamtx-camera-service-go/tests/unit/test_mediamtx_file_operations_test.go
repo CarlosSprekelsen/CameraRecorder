@@ -23,22 +23,18 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMediaMTXController_ListRecordings(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_recordings")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test recording files
+	// Create test recording files in the test environment's recordings directory
 	testFiles := []struct {
 		name    string
 		content string
@@ -61,9 +57,10 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 		},
 	}
 
-	// Create test files
+	// Create test files in the test environment's recordings directory
+	recordingsDir := filepath.Join(env.TempDir, "recordings")
 	for _, tf := range testFiles {
-		filePath := filepath.Join(tempDir, tf.name)
+		filePath := filepath.Join(recordingsDir, tf.name)
 		err := os.WriteFile(filePath, []byte(tf.content), 0644)
 		require.NoError(t, err)
 
@@ -72,12 +69,14 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err := env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -151,16 +150,11 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 }
 
 func TestMediaMTXController_ListSnapshots(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_snapshots")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test snapshot files
+	// Create test snapshot files in the test environment's snapshots directory
 	testFiles := []struct {
 		name    string
 		content string
@@ -183,9 +177,10 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 		},
 	}
 
-	// Create test files
+	// Create test files in the test environment's snapshots directory
+	snapshotsDir := filepath.Join(env.TempDir, "snapshots")
 	for _, tf := range testFiles {
-		filePath := filepath.Join(tempDir, tf.name)
+		filePath := filepath.Join(snapshotsDir, tf.name)
 		err := os.WriteFile(filePath, []byte(tf.content), 0644)
 		require.NoError(t, err)
 
@@ -194,12 +189,14 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err := env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -273,20 +270,16 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 }
 
 func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_recording_info")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test recording file
+	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
-	filePath := filepath.Join(tempDir, fileName)
+	recordingsDir := filepath.Join(env.TempDir, "recordings")
+	filePath := filepath.Join(recordingsDir, fileName)
 	content := "test recording content for info test"
-	err = os.WriteFile(filePath, []byte(content), 0644)
+	err := os.WriteFile(filePath, []byte(content), 0644)
 	require.NoError(t, err)
 
 	// Set file modification time
@@ -294,12 +287,14 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err = env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -330,9 +325,10 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 			if tt.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, fileInfo)
+					} else {
+			assert.NoError(t, err)
+			assert.NotNil(t, fileInfo)
+			if fileInfo != nil {
 				assert.Equal(t, tt.filename, fileInfo.FileName)
 				assert.True(t, fileInfo.FileSize > 0)
 				assert.NotZero(t, fileInfo.CreatedAt)
@@ -340,25 +336,22 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 				assert.Contains(t, fileInfo.DownloadURL, "/files/recordings/")
 				assert.Contains(t, fileInfo.DownloadURL, tt.filename)
 			}
+		}
 		})
 	}
 }
 
 func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_snapshot_info")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test snapshot file
+	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
-	filePath := filepath.Join(tempDir, fileName)
+	snapshotsDir := filepath.Join(env.TempDir, "snapshots")
+	filePath := filepath.Join(snapshotsDir, fileName)
 	content := "test snapshot content for info test"
-	err = os.WriteFile(filePath, []byte(content), 0644)
+	err := os.WriteFile(filePath, []byte(content), 0644)
 	require.NoError(t, err)
 
 	// Set file modification time
@@ -366,12 +359,14 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 	err = os.Chtimes(filePath, modTime, modTime)
 	require.NoError(t, err)
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err = env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -402,9 +397,10 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 			if tt.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, fileInfo)
+					} else {
+			assert.NoError(t, err)
+			assert.NotNil(t, fileInfo)
+			if fileInfo != nil {
 				assert.Equal(t, tt.filename, fileInfo.FileName)
 				assert.True(t, fileInfo.FileSize > 0)
 				assert.NotZero(t, fileInfo.CreatedAt)
@@ -412,6 +408,7 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 				assert.Contains(t, fileInfo.DownloadURL, "/files/snapshots/")
 				assert.Contains(t, fileInfo.DownloadURL, tt.filename)
 			}
+		}
 		})
 	}
 }

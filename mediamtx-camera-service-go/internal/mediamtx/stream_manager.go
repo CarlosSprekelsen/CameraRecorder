@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -62,33 +63,266 @@ func NewStreamManager(client MediaMTXClient, config *MediaMTXConfig, logger *log
 	}
 }
 
-// CreateStream creates a new stream
+// StartRecordingStream starts a stream optimized for recording with file rotation
+func (sm *streamManager) StartRecordingStream(ctx context.Context, devicePath string) (*Stream, error) {
+	return sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
+}
+
+// StartViewingStream starts a stream optimized for live viewing
+func (sm *streamManager) StartViewingStream(ctx context.Context, devicePath string) (*Stream, error) {
+	return sm.startStreamForUseCase(ctx, devicePath, UseCaseViewing)
+}
+
+// StartSnapshotStream starts a stream optimized for quick snapshot capture
+func (sm *streamManager) StartSnapshotStream(ctx context.Context, devicePath string) (*Stream, error) {
+	return sm.startStreamForUseCase(ctx, devicePath, UseCaseSnapshot)
+}
+
+// startStreamForUseCase starts a stream for the specified use case
+func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath string, useCase StreamUseCase) (*Stream, error) {
+	// Validate device path
+	if err := sm.validateDevicePath(devicePath); err != nil {
+		return nil, err
+	}
+
+	// Generate stream name with use case suffix
+	streamName := sm.generateStreamName(devicePath, useCase)
+
+	// Get use case configuration
+	useCaseConfig, exists := sm.useCaseConfigs[useCase]
+	if !exists {
+		return nil, fmt.Errorf("unsupported use case: %s", useCase)
+	}
+
+	// Build FFmpeg command
+	ffmpegCommand := sm.buildFFmpegCommand(devicePath, streamName)
+
+	// Create path configuration with use case specific settings
+	pathConfig := map[string]interface{}{
+		"runOnDemand":             ffmpegCommand,
+		"runOnDemandRestart":      useCaseConfig.RunOnDemandRestart,
+		"runOnDemandStartTimeout": useCaseConfig.RunOnDemandStartTimeout,
+		"runOnDemandCloseAfter":   useCaseConfig.RunOnDemandCloseAfter,
+		"runOnUnDemand":           "",
+	}
+
+	// Marshal request
+	data, err := json.Marshal(pathConfig)
+	if err != nil {
+		return nil, NewStreamErrorWithErr(streamName, "create_stream", "failed to marshal request", err)
+	}
+
+	// Send request to MediaMTX path API
+	responseData, err := sm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", streamName), data)
+	if err != nil {
+		// Check if this is a "path already exists" error (idempotent success)
+		if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+			sm.logger.WithField("stream_name", streamName).Info("MediaMTX path already exists, treating as success")
+			// Return a mock stream response for idempotent success
+			stream := &Stream{
+				Name:     streamName,
+				ConfName: streamName,
+				Ready:    false,
+				Tracks:   []string{},
+				Readers:  []PathReader{},
+			}
+			return stream, nil
+		}
+		return nil, NewStreamErrorWithErr(streamName, "create_stream", "failed to create stream", err)
+	}
+
+	// Handle MediaMTX API response: successful path creation returns empty body
+	if len(responseData) == 0 {
+		// Empty response means successful path creation (validated against actual MediaMTX API)
+		stream := &Stream{
+			Name:     streamName,
+			ConfName: streamName,
+			Ready:    false,
+			Tracks:   []string{},
+			Readers:  []PathReader{},
+		}
+		sm.logger.WithFields(logrus.Fields{
+			"stream_name": streamName,
+			"use_case":    useCase,
+			"device_path": devicePath,
+		}).Info("MediaMTX stream created successfully with use case configuration")
+		return stream, nil
+	}
+
+	// If response has content, try to parse it (for error cases or future API changes)
+	stream, err := parseStreamResponse(responseData)
+	if err != nil {
+		return nil, NewStreamErrorWithErr(streamName, "create_stream", "failed to parse stream response", err)
+	}
+
+	sm.logger.WithFields(logrus.Fields{
+		"stream_name": streamName,
+		"use_case":    useCase,
+		"device_path": devicePath,
+	}).Info("MediaMTX stream created successfully with use case configuration")
+
+	return stream, nil
+}
+
+// validateDevicePath validates device path format and accessibility
+func (sm *streamManager) validateDevicePath(devicePath string) error {
+	if devicePath == "" {
+		return fmt.Errorf("device path cannot be empty")
+	}
+
+	// Validate device path format (matches Python implementation)
+	if !strings.HasPrefix(devicePath, "/dev/video") && !strings.HasPrefix(devicePath, "/dev/custom") {
+		return fmt.Errorf("invalid device path format: %s. Must be /dev/video<N> or /dev/custom<name>", devicePath)
+	}
+
+	return nil
+}
+
+// generateStreamName generates stream name for the given device and use case
+func (sm *streamManager) generateStreamName(devicePath string, useCase StreamUseCase) string {
+	// Extract device number from path (matches Python implementation)
+	parts := strings.Split(devicePath, "/")
+	deviceName := parts[len(parts)-1]
+
+	var baseName string
+	if strings.HasPrefix(deviceName, "video") {
+		deviceNum := deviceName[5:] // Remove "video" prefix
+		baseName = fmt.Sprintf("camera%s", deviceNum)
+	} else {
+		baseName = deviceName
+	}
+
+	// Add use case suffix
+	useCaseConfig := sm.useCaseConfigs[useCase]
+	streamName := baseName + useCaseConfig.Suffix
+
+	return streamName
+}
+
+// buildFFmpegCommand builds FFmpeg command for camera stream
+func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) string {
+	return fmt.Sprintf(
+		"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency "+
+			"-f rtsp rtsp://localhost:8554/%s",
+		devicePath, streamName)
+}
+
+// CreateStream creates a new stream (legacy method for backward compatibility)
 func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Stream, error) {
 	sm.logger.WithFields(logrus.Fields{
 		"name":   name,
 		"source": source,
 	}).Debug("Creating MediaMTX stream")
 
-	// Marshal request
-	data, err := marshalCreateStreamRequest(name, source)
-	if err != nil {
-		return nil, NewStreamErrorWithErr(name, "create_stream", "failed to marshal request", err)
+	// Validate stream name
+	if name == "" {
+		return nil, fmt.Errorf("stream name cannot be empty")
 	}
 
-	// Send request - MediaMTX uses paths, not streams
-	responseData, err := sm.client.Post(ctx, "/v3/paths/add", data)
-	if err != nil {
-		return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
-	}
+	// Check if source is a USB device path (starts with /dev/video)
+	if strings.HasPrefix(source, "/dev/video") {
+		// Create FFmpeg command for USB device publishing (like Python implementation)
+		ffmpegCommand := fmt.Sprintf(
+			"ffmpeg -f v4l2 -i %s -c:v libx264 -profile:v baseline -level 3.0 "+
+				"-pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:8554/%s",
+			source, name)
 
-	// Parse response
-	stream, err := parseStreamResponse(responseData)
-	if err != nil {
-		return nil, NewStreamErrorWithErr(name, "create_stream", "failed to parse stream response", err)
-	}
+		// Use the new function that matches Python implementation
+		data, err := marshalCreateUSBPathRequest(name, ffmpegCommand)
+		if err != nil {
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to marshal request", err)
+		}
 
-	sm.logger.WithField("stream_id", stream.ID).Info("MediaMTX stream created successfully")
-	return stream, nil
+		// Send request to MediaMTX path API
+		responseData, err := sm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
+		if err != nil {
+			// Check if this is a "path already exists" error (idempotent success)
+			if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
+				// Return a mock stream response for idempotent success
+				stream := &Stream{
+					Name:     name,
+					ConfName: name,
+					Ready:    false,
+					Tracks:   []string{},
+					Readers:  []PathReader{},
+				}
+				return stream, nil
+			}
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
+		}
+
+		// Handle MediaMTX API response: successful path creation returns empty body
+		if len(responseData) == 0 {
+			// Empty response means successful path creation (validated against actual MediaMTX API)
+			stream := &Stream{
+				Name:     name,
+				ConfName: name,
+				Ready:    false,
+				Tracks:   []string{},
+				Readers:  []PathReader{},
+			}
+			sm.logger.WithField("stream_name", stream.Name).Info("MediaMTX stream created successfully with FFmpeg publishing")
+			return stream, nil
+		}
+
+		// If response has content, try to parse it (for error cases or future API changes)
+		stream, err := parseStreamResponse(responseData)
+		if err != nil {
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to parse stream response", err)
+		}
+
+		sm.logger.WithField("stream_name", stream.Name).Info("MediaMTX stream created successfully with FFmpeg publishing")
+		return stream, nil
+	} else {
+		// For non-USB sources (RTSP URLs, etc.), use direct source
+		data, err := marshalCreateStreamRequest(name, source)
+		if err != nil {
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to marshal request", err)
+		}
+
+		// Send request - MediaMTX uses paths, not streams
+		responseData, err := sm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
+		if err != nil {
+			// Check if this is a "path already exists" error (idempotent success)
+			if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
+				// Return a mock stream response for idempotent success
+				stream := &Stream{
+					Name:     name,
+					ConfName: name,
+					Ready:    false,
+					Tracks:   []string{},
+					Readers:  []PathReader{},
+				}
+				return stream, nil
+			}
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
+		}
+
+		// Handle MediaMTX API response: successful path creation returns empty body
+		if len(responseData) == 0 {
+			// Empty response means successful path creation (validated against actual MediaMTX API)
+			stream := &Stream{
+				Name:     name,
+				ConfName: name,
+				Ready:    false,
+				Tracks:   []string{},
+				Readers:  []PathReader{},
+			}
+			sm.logger.WithField("stream_name", stream.Name).Info("MediaMTX stream created successfully")
+			return stream, nil
+		}
+
+		// If response has content, try to parse it (for error cases or future API changes)
+		stream, err := parseStreamResponse(responseData)
+		if err != nil {
+			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to parse stream response", err)
+		}
+
+		sm.logger.WithField("stream_name", stream.Name).Info("MediaMTX stream created successfully")
+		return stream, nil
+	}
 }
 
 // CreateStreamWithUseCase creates a new stream with use case specific configuration
@@ -208,7 +442,11 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, id string) (string
 		return "", NewStreamErrorWithErr(id, "get_stream_status", "failed to get stream", err)
 	}
 
-	return stream.Status, nil
+	// Convert MediaMTX ready status to our status format
+	if stream.Ready {
+		return "READY", nil
+	}
+	return "NOT_READY", nil
 }
 
 // CheckStreamReadiness checks if a stream is ready for operations (enhanced existing stream manager)

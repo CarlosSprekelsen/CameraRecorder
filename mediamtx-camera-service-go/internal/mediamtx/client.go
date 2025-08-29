@@ -213,13 +213,46 @@ func parseHealthResponse(data []byte) (*HealthStatus, error) {
 	}, nil
 }
 
-// parseStreamResponse parses a single stream response
+// parseStreamResponse parses a single stream response from MediaMTX API
 func parseStreamResponse(data []byte) (*Stream, error) {
+	// Handle empty response (successful path creation returns empty body)
+	if len(data) == 0 {
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_stream")
+	}
+	
+	// Parse directly into Stream struct (matches MediaMTX API)
 	var stream Stream
 	if err := json.Unmarshal(data, &stream); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse stream response", err.Error(), "parse_stream")
 	}
+	
 	return &stream, nil
+}
+
+// extractSourceString extracts source information from MediaMTX API response
+func extractSourceString(source interface{}) string {
+	if source == nil {
+		return ""
+	}
+	
+	// Handle different source formats from MediaMTX API
+	switch v := source.(type) {
+	case string:
+		return v
+	case map[string]interface{}:
+		if sourceType, ok := v["type"].(string); ok {
+			return sourceType
+		}
+	}
+	return ""
+}
+
+// determineStatus converts MediaMTX ready status to our status format
+func determineStatus(ready bool) string {
+	if ready {
+		return "READY"
+	}
+	return "PENDING"
 }
 
 // parsePathResponse parses a single path response
@@ -318,6 +351,15 @@ func marshalCreatePathRequest(path *Path) ([]byte, error) {
 func marshalUpdatePathRequest(config map[string]interface{}) ([]byte, error) {
 	request := updatePathRequest{
 		Config: config,
+	}
+	return json.Marshal(request)
+}
+
+// marshalCreateUSBPathRequest marshals a USB device path creation request (matches Python implementation)
+func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
+	request := map[string]interface{}{
+		"runOnDemand":        ffmpegCommand,
+		"runOnDemandRestart": true,
 	}
 	return json.Marshal(request)
 }

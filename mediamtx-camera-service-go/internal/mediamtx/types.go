@@ -107,16 +107,42 @@ type ConnectionPoolConfig struct {
 	IdleConnTimeout     time.Duration `mapstructure:"idle_conn_timeout"`
 }
 
-// Stream represents a MediaMTX stream
+// Stream represents a MediaMTX stream (matches actual MediaMTX API response)
 type Stream struct {
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Path      string            `json:"path"`
-	Source    string            `json:"source"`
-	Status    string            `json:"status"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
+	Name          string       `json:"name"`
+	ConfName      string       `json:"confName"`
+	Source        *PathSource  `json:"source"`
+	Ready         bool         `json:"ready"`
+	ReadyTime     *string      `json:"readyTime"`
+	Tracks        []string     `json:"tracks"`
+	BytesReceived int64        `json:"bytesReceived"`
+	BytesSent     int64        `json:"bytesSent"`
+	Readers       []PathReader `json:"readers"`
+}
+
+// PathSource represents the source configuration for a MediaMTX path
+type PathSource struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+}
+
+// PathReader represents a reader connected to a MediaMTX path
+type PathReader struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+}
+
+// MediaMTXPathResponse represents the actual response from MediaMTX /v3/paths/get/{name} endpoint
+type MediaMTXPathResponse struct {
+	Name          string        `json:"name"`
+	ConfName      string        `json:"confName"`
+	Source        interface{}   `json:"source"` // Can be null, string, or object
+	Ready         bool          `json:"ready"`
+	ReadyTime     interface{}   `json:"readyTime"` // Can be null or timestamp
+	Tracks        []interface{} `json:"tracks"`
+	BytesReceived int64         `json:"bytesReceived"`
+	BytesSent     int64         `json:"bytesSent"`
+	Readers       []interface{} `json:"readers"`
 }
 
 // Path represents a MediaMTX path configuration
@@ -366,7 +392,12 @@ type PathManager interface {
 
 // StreamManager interface defines stream management operations
 type StreamManager interface {
-	// Stream operations
+	// Use case-specific stream operations (matches Python implementation)
+	StartRecordingStream(ctx context.Context, devicePath string) (*Stream, error)
+	StartViewingStream(ctx context.Context, devicePath string) (*Stream, error)
+	StartSnapshotStream(ctx context.Context, devicePath string) (*Stream, error)
+
+	// Legacy stream operations (for backward compatibility)
 	CreateStream(ctx context.Context, name, source string) (*Stream, error)
 	DeleteStream(ctx context.Context, id string) error
 	GetStream(ctx context.Context, id string) (*Stream, error)

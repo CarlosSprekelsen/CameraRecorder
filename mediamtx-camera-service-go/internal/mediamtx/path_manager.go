@@ -1,3 +1,5 @@
+package mediamtx
+
 /*
 MediaMTX Path Manager Implementation
 
@@ -10,8 +12,6 @@ Requirements Coverage:
 Test Categories: Unit/Integration
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
-
-package mediamtx
 
 import (
 	"context"
@@ -44,6 +44,16 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		"source":  source,
 		"options": options,
 	}).Debug("Creating MediaMTX path")
+
+	// Validate path name
+	if name == "" {
+		return fmt.Errorf("path name cannot be empty")
+	}
+
+	// Validate source
+	if source == "" {
+		return fmt.Errorf("source cannot be empty")
+	}
 
 	// Create path request
 	path := &Path{
@@ -101,7 +111,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	}
 
 	// Send request
-	_, err = pm.client.Post(ctx, "/v3/paths/add", data)
+	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
 		return NewPathErrorWithErr(name, "create_path", "failed to create path", err)
 	}

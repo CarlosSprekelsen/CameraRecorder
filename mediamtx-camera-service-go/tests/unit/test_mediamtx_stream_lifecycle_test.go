@@ -26,6 +26,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test configuration for MediaMTX tests
+var testConfig = &mediamtx.MediaMTXConfig{
+	Host:                                "localhost",
+	APIPort:                             9997,
+	RTSPPort:                            8554,
+	WebRTCPort:                          8889,
+	HLSPort:                             8888,
+	ConfigPath:                          "/tmp/mediamtx.yml",
+	RecordingsPath:                      "/tmp/recordings",
+	SnapshotsPath:                       "/tmp/snapshots",
+	HealthCheckInterval:                 30,
+	HealthFailureThreshold:              3,
+	HealthCircuitBreakerTimeout:         60,
+	HealthMaxBackoffInterval:            300,
+	HealthRecoveryConfirmationThreshold: 2,
+	BackoffBaseMultiplier:               2.0,
+	ProcessTerminationTimeout:           10,
+	ProcessKillTimeout:                  5,
+}
+
+var testLogger = createTestLogger()
+
 func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -51,16 +73,27 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create mock  and config
-			mediamtx	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+			// Create mock client and config
+			client := mediamtx.NewClient("http://localhost:9997", testConfig, testLogger)
 			config := &mediamtx.MediaMTXConfig{}
-			logger := createTestLogger()
 
 			// Create stream manager
-			sm := mediamtx.NewStreamManager(mediamtxClient, config, logger)
+			sm := mediamtx.NewStreamManager(client, config, testLogger)
 
-			// Test CreateStream (public interface method)
-			stream, err := sm.CreateStream(context.Background(), "camera0", "/dev/video0")
+			// Test use case-specific methods (matches Python implementation)
+			var stream *mediamtx.Stream
+			var err error
+			
+			switch tt.useCase {
+			case mediamtx.UseCaseRecording:
+				stream, err = sm.StartRecordingStream(context.Background(), "/dev/video0")
+			case mediamtx.UseCaseViewing:
+				stream, err = sm.StartViewingStream(context.Background(), "/dev/video0")
+			case mediamtx.UseCaseSnapshot:
+				stream, err = sm.StartSnapshotStream(context.Background(), "/dev/video0")
+			default:
+				t.Fatalf("Unsupported use case: %s", tt.useCase)
+			}
 
 			// Verify no error for valid use cases
 			require.NoError(t, err)
@@ -72,25 +105,24 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 
 func TestStreamManager_UseCaseConfigurations(t *testing.T) {
 	// Create stream manager to access configurations
-	mediamtx	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, testLogger)
 	config := &mediamtx.MediaMTXConfig{}
-	logger := createTestLogger()
 
-	sm := mediamtx.NewStreamManager(mediamtxClient, config, logger)
+	sm := mediamtx.NewStreamManager(client, config, testLogger)
 
 	// Test that the stream manager can be created and used
 	assert.NotNil(t, sm, "Stream manager should not be nil")
 
-	// Test that streams can be created using public interface
-	recordingStream, err := sm.CreateStream(context.Background(), "camera0", "/dev/video0")
+	// Test that streams can be created using use case-specific methods
+	recordingStream, err := sm.StartRecordingStream(context.Background(), "/dev/video0")
 	require.NoError(t, err)
 	assert.NotNil(t, recordingStream)
 
-	viewingStream, err := sm.CreateStream(context.Background(), "camera1", "/dev/video1")
+	viewingStream, err := sm.StartViewingStream(context.Background(), "/dev/video1")
 	require.NoError(t, err)
 	assert.NotNil(t, viewingStream)
 
-	snapshotStream, err := sm.CreateStream(context.Background(), "camera2", "/dev/video2")
+	snapshotStream, err := sm.StartSnapshotStream(context.Background(), "/dev/video2")
 	require.NoError(t, err)
 	assert.NotNil(t, snapshotStream)
 }
@@ -101,12 +133,11 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 	t.Run("stream manager interface compliance", func(t *testing.T) {
 		// Create mock components
-		mediamtx	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+		client := mediamtx.NewClient("http://localhost:9997", testConfig, testLogger)
 		config := &mediamtx.MediaMTXConfig{}
-		logger := createTestLogger()
 
 		// Create stream manager
-		sm := mediamtx.NewStreamManager(mediamtxClient, config, logger)
+		sm := mediamtx.NewStreamManager(client, config, testLogger)
 
 		// Test that the interface methods work
 		assert.NotNil(t, sm, "Stream manager should not be nil")
@@ -120,11 +151,10 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 func TestStreamManager_InvalidUseCase(t *testing.T) {
 	// Create stream manager
-	mediamtx	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, testLogger)
 	config := &mediamtx.MediaMTXConfig{}
-	logger := createTestLogger()
 
-	sm := mediamtx.NewStreamManager(mediamtxClient, config, logger)
+	sm := mediamtx.NewStreamManager(client, config, testLogger)
 
 	// Test with invalid stream name
 	stream, err := sm.CreateStream(context.Background(), "", "/dev/video0")
@@ -132,7 +162,7 @@ func TestStreamManager_InvalidUseCase(t *testing.T) {
 	// Verify error for invalid stream name
 	assert.Error(t, err)
 	assert.Nil(t, stream)
-	assert.Contains(t, err.Error(), "stream name")
+	assert.Contains(t, err.Error(), "stream name cannot be empty")
 }
 
 // Helper function to create test logger

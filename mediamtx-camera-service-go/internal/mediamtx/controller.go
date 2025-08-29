@@ -284,7 +284,7 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 	// Calculate metrics
 	activeStreams := 0
 	for _, stream := range streams {
-		if stream.Status == "READY" || stream.Status == "PUBLISHING" {
+		if stream.Ready {
 			activeStreams++
 		}
 	}

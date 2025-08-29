@@ -38,6 +38,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -325,11 +326,16 @@ func copyTestConfig(destPath string) error {
 
 // Helper function to create minimal test configuration
 func createMinimalTestConfig(configPath string) error {
-	minimalConfig := `# Minimal Test Configuration
+	// Extract the temp directory from the config path
+	tempDir := filepath.Dir(configPath)
+
+	minimalConfig := fmt.Sprintf(`# Minimal Test Configuration
 mediamtx:
   host: "localhost"
   api_port: 9997
   health_check_timeout: "5s"
+  recordings_path: "%s/recordings"
+  snapshots_path: "%s/snapshots"
 
 # Recording Configuration
 recording:
@@ -367,8 +373,8 @@ security:
 storage:
   warn_percent: 80
   block_percent: 90
-  default_path: "/tmp/test_storage"
-  fallback_path: "/tmp/test_storage_fallback"
+  default_path: "%s/storage"
+  fallback_path: "%s/fallback"
 
 camera:
   detection_timeout: 2.0
@@ -390,7 +396,7 @@ logging:
   level: "debug"
   format: "json"
   output: "stdout"
-`
+`, tempDir, tempDir, tempDir, tempDir)
 
 	return os.WriteFile(configPath, []byte(minimalConfig), 0644)
 }

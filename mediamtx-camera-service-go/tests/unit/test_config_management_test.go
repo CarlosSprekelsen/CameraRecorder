@@ -778,7 +778,7 @@ func TestConfigValidation_InvalidConfig(t *testing.T) {
 	err := config.ValidateConfig(cfg)
 	assert.Error(t, err)
 
-	// Check that validation error contains field information
+	// Check that configuration validation failed contains field information
 	validationErr, ok := err.(*config.ValidationError)
 	assert.True(t, ok)
 	assert.Contains(t, validationErr.Error(), "configuration validation failed")
@@ -1537,7 +1537,7 @@ mediamtx:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test data type validation
@@ -1598,7 +1598,7 @@ mediamtx:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test enumeration validation
@@ -1633,7 +1633,7 @@ snapshots:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test nested structure validation
@@ -1672,7 +1672,7 @@ camera:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test cross-field validation
@@ -1718,7 +1718,7 @@ snapshots:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 }
 
@@ -2107,7 +2107,7 @@ mediamtx:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test validation with missing required fields
@@ -2135,7 +2135,7 @@ mediamtx:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test validation with out-of-range values
@@ -2166,7 +2166,7 @@ mediamtx:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 
 	// Test validation with invalid enum values
@@ -2219,7 +2219,7 @@ snapshots:
 
 		err = env.ConfigManager.LoadConfig(configPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation error")
+		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
 }
 
@@ -2898,7 +2898,7 @@ snapshots:
 		// Check that error message is descriptive and comprehensive
 		assert.True(t, len(errorMessage) > 100, "Error message should be comprehensive")
 		assert.Contains(t, errorMessage, "configuration validation failed")
-		assert.Contains(t, errorMessage, "validation error")
+		assert.Contains(t, errorMessage, "configuration validation failed")
 
 		// Check for specific validation details
 		assert.True(t, strings.Contains(errorMessage, "host") ||
@@ -2910,7 +2910,7 @@ snapshots:
 
 		// Check for actionable information
 		assert.True(t, strings.Contains(errorMessage, "required") ||
-			strings.Contains(errorMessage, "validation error") ||
+			strings.Contains(errorMessage, "configuration validation failed") ||
 			strings.Contains(errorMessage, "must") ||
 			strings.Contains(errorMessage, "should"),
 			"Error message should contain actionable guidance")

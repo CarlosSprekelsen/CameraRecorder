@@ -816,12 +816,12 @@ func TestMediaMTXController_StreamPathResponseParsing(t *testing.T) {
 		assert.NotNil(t, streams, "Streams should not be nil")
 		// If there are streams, test getting individual stream
 		if len(streams) > 0 {
-			stream, err := controller.GetStream(ctx, streams[0].ID)
+			stream, err := controller.GetStream(ctx, streams[0].Name)
 			if err != nil {
 				t.Logf("Individual stream retrieval failed: %v", err)
 			} else {
 				assert.NotNil(t, stream, "Individual stream should not be nil")
-				assert.Equal(t, streams[0].ID, stream.ID, "Stream ID should match")
+				assert.Equal(t, streams[0].Name, stream.Name, "Stream name should match")
 			}
 		}
 	}

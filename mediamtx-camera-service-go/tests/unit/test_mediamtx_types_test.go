@@ -81,32 +81,27 @@ func TestConnectionPoolConfig_Validation(t *testing.T) {
 
 // TestStream_Serialization tests Stream serialization
 func TestStream_Serialization(t *testing.T) {
-	// Test stream creation and field access
-	now := time.Now()
+	// Test stream creation and field access (matches MediaMTX API structure)
 	stream := &mediamtx.Stream{
-		ID:        "test-stream-123",
-		Name:      "Test Stream",
-		Path:      "/test/path",
-		Source:    "/dev/video0",
-		Status:    "ACTIVE",
-		CreatedAt: now,
-		UpdatedAt: now,
-		Metadata: map[string]string{
-			"camera_type": "USB",
-			"resolution":  "1920x1080",
-		},
+		Name:          "test-stream-123",
+		ConfName:      "test-stream-123",
+		Source:        &mediamtx.PathSource{Type: "rtspSource", ID: ""},
+		Ready:         true,
+		ReadyTime:     nil,
+		Tracks:        []string{"video", "audio"},
+		BytesReceived: 1024,
+		BytesSent:     2048,
+		Readers:       []mediamtx.PathReader{},
 	}
 
 	assert.NotNil(t, stream)
-	assert.Equal(t, "test-stream-123", stream.ID)
-	assert.Equal(t, "Test Stream", stream.Name)
-	assert.Equal(t, "/test/path", stream.Path)
-	assert.Equal(t, "/dev/video0", stream.Source)
-	assert.Equal(t, "ACTIVE", stream.Status)
-	assert.Equal(t, now, stream.CreatedAt)
-	assert.Equal(t, now, stream.UpdatedAt)
-	assert.Equal(t, "USB", stream.Metadata["camera_type"])
-	assert.Equal(t, "1920x1080", stream.Metadata["resolution"])
+	assert.Equal(t, "test-stream-123", stream.Name)
+	assert.Equal(t, "test-stream-123", stream.ConfName)
+	assert.Equal(t, "rtspSource", stream.Source.Type)
+	assert.True(t, stream.Ready)
+	assert.Equal(t, []string{"video", "audio"}, stream.Tracks)
+	assert.Equal(t, int64(1024), stream.BytesReceived)
+	assert.Equal(t, int64(2048), stream.BytesSent)
 }
 
 // TestPath_Configuration tests Path configuration

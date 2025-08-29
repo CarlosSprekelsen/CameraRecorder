@@ -279,7 +279,14 @@ func TestPathIntegration_DeletePathForCamera(t *testing.T) {
 		invalidPathIntegration := mediamtx.NewPathIntegration(invalidPathManager, realCameraMonitor, configManager, logrusLogger)
 
 		ctx := context.Background()
-		err := invalidPathIntegration.DeletePathForCamera(ctx, "/dev/video0")
+
+		// Try to create a path first (this will fail due to invalid config)
+		err := invalidPathIntegration.CreatePathForCamera(ctx, "/dev/video0")
+		// This should fail due to connection error
+		assert.Error(t, err)
+
+		// Now try to delete it - this should also fail due to connection error
+		err = invalidPathIntegration.DeletePathForCamera(ctx, "/dev/video0")
 		// Should error due to connection failure
 		assert.Error(t, err)
 	})
