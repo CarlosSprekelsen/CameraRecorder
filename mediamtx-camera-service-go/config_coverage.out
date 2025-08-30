@@ -134,7 +134,7 @@ github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_mana
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:396.5,396.36 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:396.36,403.22 2 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:404.43,406.29 1 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:406.29,408.8 1 1
+github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:406.29,408.8 1 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:409.7,409.65 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:409.65,411.8 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/config/config_manager.go:412.27,415.13 3 0
