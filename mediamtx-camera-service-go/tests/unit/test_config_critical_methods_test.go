@@ -509,5 +509,4 @@ func TestConfigManager_DirectMethodCoverage(t *testing.T) {
 
 	// Test methods that need direct coverage
 
-
 }

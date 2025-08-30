@@ -309,8 +309,6 @@ func (cm *ConfigManager) validateFinalConfiguration(config *Config) error {
 	return nil
 }
 
-
-
 // startFileWatching starts watching the configuration file for changes.
 func (cm *ConfigManager) startFileWatching() error {
 	// Stop existing watcher if any
@@ -359,6 +357,7 @@ func (cm *ConfigManager) stopFileWatching() {
 			cm.logger.WithError(err).Warn("Error closing file watcher")
 		}
 		cm.watcher = nil
+		cm.logger.Debug("File watcher stopped and cleaned up")
 	}
 }
 
@@ -373,40 +372,59 @@ func (cm *ConfigManager) watchFileChanges() {
 		select {
 		case <-cm.stopChan:
 			return
-		case event, ok := <-cm.watcher.Events:
-			if !ok {
+		default:
+			// Check if watcher is still valid before accessing its channels
+			cm.watcherLock.RLock()
+			if cm.watcher == nil {
+				cm.watcherLock.RUnlock()
 				return
 			}
+			events := cm.watcher.Events
+			errors := cm.watcher.Errors
+			cm.watcherLock.RUnlock()
 
-			// Check if the changed file is our config file
-			if event.Name == cm.configPath {
-				cm.logger.WithFields(logrus.Fields{
-					"file":  event.Name,
-					"event": event.Op.String(),
-				}).Debug("Configuration file change detected")
-
-				// Handle different event types
-				switch event.Op {
-				case fsnotify.Write, fsnotify.Create:
-					// Debounce reload to avoid multiple rapid reloads
-					if reloadTimer != nil {
-						reloadTimer.Stop()
-					}
-					reloadTimer = time.AfterFunc(100*time.Millisecond, func() {
-						cm.reloadConfiguration()
-					})
-				case fsnotify.Remove:
-					cm.logger.Warn("Configuration file was removed, hot reload disabled")
-					cm.stopFileWatching()
-					return // Exit the goroutine when file is removed
+			// Use a select with timeout to avoid blocking indefinitely
+			select {
+			case <-cm.stopChan:
+				return
+			case event, ok := <-events:
+				if !ok {
+					return
 				}
-			}
 
-		case err, ok := <-cm.watcher.Errors:
-			if !ok {
-				return
+				// Check if the changed file is our config file
+				if event.Name == cm.configPath {
+					cm.logger.WithFields(logrus.Fields{
+						"file":  event.Name,
+						"event": event.Op.String(),
+					}).Debug("Configuration file change detected")
+
+					// Handle different event types
+					switch event.Op {
+					case fsnotify.Write, fsnotify.Create:
+						// Debounce reload to avoid multiple rapid reloads
+						if reloadTimer != nil {
+							reloadTimer.Stop()
+						}
+						reloadTimer = time.AfterFunc(100*time.Millisecond, func() {
+							cm.reloadConfiguration()
+						})
+					case fsnotify.Remove:
+						cm.logger.Warn("Configuration file was removed, hot reload disabled")
+						cm.stopFileWatching()
+						return // Exit the goroutine when file is removed
+					}
+				}
+
+			case err, ok := <-errors:
+				if !ok {
+					return
+				}
+				cm.logger.WithError(err).Error("File watcher error")
+			case <-time.After(100 * time.Millisecond):
+				// Continue loop to check stopChan and watcher validity
+				continue
 			}
-			cm.logger.WithError(err).Error("File watcher error")
 		}
 	}
 }
@@ -736,10 +754,6 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("storage.default_path", "/opt/camera-service/recordings")
 	v.SetDefault("storage.fallback_path", "/tmp/recordings")
 }
-
-
-
-
 
 // notifyConfigUpdated notifies all registered callbacks of configuration updates.
 func (cm *ConfigManager) notifyConfigUpdated(oldConfig, newConfig *Config) {
