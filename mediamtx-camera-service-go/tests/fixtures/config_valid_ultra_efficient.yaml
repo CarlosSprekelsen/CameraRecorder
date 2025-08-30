@@ -1,4 +1,4 @@
-# Default configuration for MediaMTX Camera Service - UltraEfficient for Edge/IoT
+# UltraEfficient Configuration for Edge/IoT Devices
 # Optimized for minimal power consumption and resource usage
 # Based on resource optimization test results: CPU=6.00%, Memory=0.45MB, PowerScore=6.09
 
@@ -137,21 +137,18 @@ performance:
     max_concurrent_operations: 3  # Reduced from 10
     connection_pool_size: 2  # Reduced from 5
 
-# Security configuration optimized for edge devices
 security:
   rate_limit_requests: 50  # Reduced from 100 for edge devices
   rate_limit_window: 2m    # Increased from 1m
   jwt_secret_key: "edge-device-secret-key-change-in-production"
   jwt_expiry_hours: 48     # Increased from 24 for stability
 
-# Storage configuration optimized for edge devices
 storage:
   warn_percent: 70    # Reduced from 80 for early warning
   block_percent: 85   # Reduced from 90 for safety
   default_path: "/opt/camera-service/recordings"
   fallback_path: "/tmp/recordings"
 
-# Retention policy optimized for edge devices
 retention_policy:
   enabled: true
   type: "age"
@@ -159,5 +156,4 @@ retention_policy:
   max_size_gb: 0.5     # Reduced from 1 GB
   auto_cleanup: true
 
-# Health server port for edge device monitoring
 health_port: 8080

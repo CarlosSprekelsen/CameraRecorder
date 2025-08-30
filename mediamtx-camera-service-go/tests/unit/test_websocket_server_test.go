@@ -55,8 +55,8 @@ func TestWebSocketServerInstantiation(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test dependencies
 	cameraMonitor := &camera.HybridCameraMonitor{}
@@ -448,8 +448,8 @@ func TestClientConnectionManagement(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
@@ -505,8 +505,8 @@ func TestServerLifecycle(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
@@ -541,8 +541,8 @@ func TestApiCompliance(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
@@ -611,8 +611,8 @@ func TestPerformanceMetrics(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
@@ -647,8 +647,8 @@ func TestJwtTokenValidation(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
@@ -704,11 +704,11 @@ func TestServerErrorHandling(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
-	jwtHandler, err := security.JWTHandler("test-secret-key-for-testing-only")
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
@@ -764,11 +764,11 @@ func TestServerMetricsComprehensive(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
-	jwtHandler, err := security.JWTHandler("test-secret-key-for-testing-only")
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
@@ -818,11 +818,11 @@ func TestServerLifecycleComprehensive(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	cameraMonitor := &camera.HybridCameraMonitor{}
-	jwtHandler, err := security.JWTHandler("test-secret-key-for-testing-only")
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
 	require.NoError(t, err)
@@ -967,12 +967,12 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 	// REQ-SEC-002: WebSocket server shall enforce role-based access control
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test dependencies using existing patterns
 	cameraMonitor := &camera.HybridCameraMonitor{}
-	jwtHandler, err := security.JWTHandler("test-secret-key-for-testing-only")
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)

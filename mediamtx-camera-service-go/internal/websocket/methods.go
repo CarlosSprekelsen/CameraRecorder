@@ -130,7 +130,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 // Following Python _method_ping implementation
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
-	
+
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "ping",
@@ -152,7 +152,7 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 // Following Python _method_authenticate implementation
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
-	
+
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "authenticate",
@@ -707,7 +707,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 // Following Python _method_get_server_info implementation
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
-	
+
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_server_info",
@@ -724,7 +724,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 		s.metricsMutex.Lock()
 		s.metrics.ErrorCount++
 		s.metricsMutex.Unlock()
-		
+
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
@@ -740,7 +740,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 		s.metricsMutex.Lock()
 		s.metrics.ErrorCount++
 		s.metricsMutex.Unlock()
-		
+
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
@@ -822,12 +822,12 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 		if stream.Source != nil {
 			sourceStr = stream.Source.Type
 		}
-		
+
 		status := "NOT_READY"
 		if stream.Ready {
 			status = "READY"
 		}
-		
+
 		streamList = append(streamList, map[string]interface{}{
 			"id":     stream.Name, // Use Name as ID for backward compatibility
 			"name":   stream.Name,

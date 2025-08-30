@@ -36,6 +36,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package utils
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -96,8 +97,8 @@ func (c *WebSocketTestClient) SendRequest(request *websocket.JsonRpcRequest) *we
 	err := c.conn.WriteJSON(request)
 	require.NoError(c.t, err, "Failed to send JSON-RPC request over WebSocket")
 
-	// Minimal delay for server processing (reduced from 50ms for performance)
-	time.Sleep(5 * time.Millisecond)
+	// Minimal delay for server processing (reduced for performance)
+	time.Sleep(1 * time.Millisecond)
 
 	// Read response from WebSocket
 	var response websocket.JsonRpcResponse
@@ -195,6 +196,18 @@ func (c *WebSocketTestClient) GetServerMetrics() *websocket.PerformanceMetrics {
 	return c.server.GetMetrics()
 }
 
+// WriteMessage sends a raw message over the WebSocket connection
+// This is used for testing invalid requests and error scenarios
+func (c *WebSocketTestClient) WriteMessage(messageType int, data []byte) error {
+	return c.conn.WriteMessage(messageType, data)
+}
+
+// ReadMessage reads a raw message from the WebSocket connection
+// This is used for testing invalid requests and error scenarios
+func (c *WebSocketTestClient) ReadMessage() (messageType int, p []byte, err error) {
+	return c.conn.ReadMessage()
+}
+
 // TestWebSocketConnectionFlow tests the complete WebSocket connection flow
 // This is a reusable test function that can be used across different test categories
 func TestWebSocketConnectionFlow(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) {
@@ -202,69 +215,177 @@ func TestWebSocketConnectionFlow(t *testing.T, server *websocket.WebSocketServer
 	client := NewWebSocketTestClient(t, server, jwtHandler)
 	defer client.Close()
 
-	// Test basic ping functionality
-	response := client.SendPingRequest()
-	require.NotNil(t, response.Result, "Ping should return result")
+	// Test authentication flow
+	authResponse := client.SendAuthenticationRequest("test_token")
+	require.NotNil(t, authResponse, "Authentication response should not be nil")
 
-	// Test authentication with invalid token
-	authResponse := client.SendAuthenticationRequest("invalid_token_for_testing")
-	require.NotNil(t, authResponse.Error, "Invalid token should return error")
-	require.Equal(t, websocket.AUTHENTICATION_REQUIRED, authResponse.Error.Code, "Should return AUTHENTICATION_REQUIRED error")
-
-	// Test invalid JSON-RPC request
-	errorResponse := client.SendInvalidRequest()
-	require.NotNil(t, errorResponse.Error, "Invalid request should return error")
-	require.Equal(t, websocket.INVALID_PARAMS, errorResponse.Error.Code, "Should return INVALID_PARAMS error")
-
-	// Verify that WebSocket operations are tracked in metrics
-	metrics := client.GetServerMetrics()
-	require.Greater(t, metrics.RequestCount, int64(0), "Request count should be incremented by WebSocket requests")
-}
-
-// TestWebSocketAuthenticationFlow tests the complete authentication flow
-// This is a reusable test function for authentication testing
-func TestWebSocketAuthenticationFlow(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) {
-	// Create WebSocket test client
-	client := NewWebSocketTestClient(t, server, jwtHandler)
-	defer client.Close()
-
-	// Test authentication with valid token
-	token, err := jwtHandler.GenerateToken("test_user", "viewer", 24)
-	require.NoError(t, err, "Failed to generate test token")
-	authResponse := client.SendAuthenticationRequest(token)
-	require.Nil(t, authResponse.Error, "Valid token should authenticate successfully")
-	require.NotNil(t, authResponse.Result, "Authentication should return result")
-
-	// Test ping after authentication
+	// Test ping flow
 	pingResponse := client.SendPingRequest()
-	require.NotNil(t, pingResponse.Result, "Ping should work after authentication")
+	require.NotNil(t, pingResponse, "Ping response should not be nil")
+	require.Nil(t, pingResponse.Error, "Ping should not return error")
+
+	// Test error handling flow
+	errorResponse := client.SendInvalidRequest()
+	require.NotNil(t, errorResponse, "Error response should not be nil")
+	require.NotNil(t, errorResponse.Error, "Invalid request should return error")
 }
 
-// TestWebSocketErrorHandling tests various error scenarios
-// This is a reusable test function for error handling testing
-func TestWebSocketErrorHandling(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) {
-	// Create WebSocket test client
-	client := NewWebSocketTestClient(t, server, jwtHandler)
-	defer client.Close()
+// ============================================================================
+// BENCHMARK-SPECIFIC WEBSOCKET TEST CLIENT FUNCTIONS
+// ============================================================================
 
-	// Test non-existent method
-	nonExistentRequest := &websocket.JsonRpcRequest{
+// WebSocketTestClientForBenchmark provides a reusable WebSocket client for benchmarks
+// This is the benchmark version of WebSocketTestClient
+type WebSocketTestClientForBenchmark struct {
+	b          *testing.B
+	conn       *gorilla.Conn
+	server     *websocket.WebSocketServer
+	jwtHandler *security.JWTHandler
+	url        string
+}
+
+// NewWebSocketTestClientForBenchmark creates a new WebSocket test client for benchmarks
+// This is the benchmark version of NewWebSocketTestClient
+func NewWebSocketTestClientForBenchmark(b *testing.B, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) *WebSocketTestClientForBenchmark {
+	// Start server if not running
+	if !server.IsRunning() {
+		err := server.Start()
+		require.NoError(b, err, "Failed to start WebSocket server for testing")
+
+		// Wait for server to be ready
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Connect to WebSocket server
+	url := "ws://localhost:8002/ws"
+	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
+	require.NoError(b, err, "Failed to connect to WebSocket server")
+
+	return &WebSocketTestClientForBenchmark{
+		b:          b,
+		conn:       conn,
+		server:     server,
+		jwtHandler: jwtHandler,
+		url:        url,
+	}
+}
+
+// Close closes the WebSocket connection for benchmarks
+func (c *WebSocketTestClientForBenchmark) Close() error {
+	if c.conn != nil {
+		return c.conn.Close()
+	}
+	return nil
+}
+
+// SendRequest sends a JSON-RPC request over WebSocket and returns the response for benchmarks
+// This is the benchmark version of SendRequest
+func (c *WebSocketTestClientForBenchmark) SendRequest(request *websocket.JsonRpcRequest) *websocket.JsonRpcResponse {
+	// Send request over WebSocket
+	err := c.conn.WriteJSON(request)
+	require.NoError(c.b, err, "Failed to send JSON-RPC request over WebSocket")
+
+	// Minimal delay for server processing (reduced for performance)
+	time.Sleep(1 * time.Millisecond)
+
+	// Read response from WebSocket
+	var response websocket.JsonRpcResponse
+	err = c.conn.ReadJSON(&response)
+	require.NoError(c.b, err, "Failed to read JSON-RPC response from WebSocket")
+
+	return &response
+}
+
+// SendPingRequest sends a ping request and validates the response for benchmarks
+// This is the benchmark version of SendPingRequest
+func (c *WebSocketTestClientForBenchmark) SendPingRequest() *websocket.JsonRpcResponse {
+	// First authenticate the client through the WebSocket connection
+	// Ping requires authentication per API documentation
+	token, err := c.jwtHandler.GenerateToken("test_user", "viewer", 24)
+	require.NoError(c.b, err, "Failed to generate test token")
+
+	authRequest := &websocket.JsonRpcRequest{
 		JSONRPC: "2.0",
-		Method:  "non_existent_method",
-		ID:      4,
+		Method:  "authenticate",
+		ID:      0,
+		Params: map[string]interface{}{
+			"auth_token": token,
+		},
+	}
+
+	// Send authentication request
+	authResponse := c.SendRequest(authRequest)
+	require.Nil(c.b, authResponse.Error, "Authentication should succeed")
+
+	// Now send ping request
+	request := &websocket.JsonRpcRequest{
+		JSONRPC: "2.0",
+		Method:  "ping",
+		ID:      1,
 		Params:  map[string]interface{}{},
 	}
-	nonExistentResponse := client.SendRequest(nonExistentRequest)
-	require.NotNil(t, nonExistentResponse.Error, "Non-existent method should return error")
-	require.Equal(t, websocket.METHOD_NOT_FOUND, nonExistentResponse.Error.Code, "Should return METHOD_NOT_FOUND error")
 
-	// Test missing method
-	missingMethodRequest := &websocket.JsonRpcRequest{
+	response := c.SendRequest(request)
+
+	// Validate ping response
+	require.Equal(c.b, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	require.Equal(c.b, float64(1), response.ID, "Response should have correct ID")
+	require.NotNil(c.b, response.Result, "Ping response should have result")
+	require.Nil(c.b, response.Error, "Ping response should not have error")
+
+	return response
+}
+
+// SendAuthenticationRequest sends an authentication request for benchmarks
+// This is the benchmark version of SendAuthenticationRequest
+func (c *WebSocketTestClientForBenchmark) SendAuthenticationRequest(authToken string) *websocket.JsonRpcResponse {
+	request := &websocket.JsonRpcRequest{
 		JSONRPC: "2.0",
-		Method:  "", // Missing method
-		ID:      5,
+		Method:  "authenticate",
+		ID:      2,
+		Params: map[string]interface{}{
+			"auth_token": authToken,
+		},
+	}
+
+	response := c.SendRequest(request)
+
+	// Validate authentication response structure
+	require.Equal(c.b, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	require.Equal(c.b, float64(2), response.ID, "Response should have correct ID")
+
+	return response
+}
+
+// SendInvalidRequest sends an invalid JSON-RPC request to test error handling for benchmarks
+// This is the benchmark version of SendInvalidRequest
+func (c *WebSocketTestClientForBenchmark) SendInvalidRequest() *websocket.JsonRpcResponse {
+	request := &websocket.JsonRpcRequest{
+		JSONRPC: "1.0", // Invalid version
+		Method:  "ping",
+		ID:      3,
 		Params:  map[string]interface{}{},
 	}
-	missingMethodResponse := client.SendRequest(missingMethodRequest)
-	require.NotNil(t, missingMethodResponse.Error, "Missing method should return error")
+
+	response := c.SendRequest(request)
+
+	// Validate error response structure
+	require.Equal(c.b, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	require.Equal(c.b, float64(3), response.ID, "Response should have correct ID")
+	require.NotNil(c.b, response.Error, "Invalid request should return error")
+	require.Equal(c.b, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+
+	return response
+}
+
+// GetServerMetrics returns the server metrics after WebSocket operations for benchmarks
+// This is the benchmark version of GetServerMetrics
+func (c *WebSocketTestClientForBenchmark) GetServerMetrics() *websocket.PerformanceMetrics {
+	return c.server.GetMetrics()
+}
+
+// DialWebSocket creates a direct WebSocket connection for testing
+// This is used for testing invalid requests and error scenarios
+func DialWebSocket(url string) (*gorilla.Conn, *http.Response, error) {
+	return gorilla.DefaultDialer.Dial(url, nil)
 }

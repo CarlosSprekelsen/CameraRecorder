@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
@@ -33,27 +32,25 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 	// REQ-SYS-002: Component health state tracking
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-snapshot-test")
 	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
 	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	ctx := context.Background()
 
-	// Start controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller should start successfully")
-	defer controller.Stop(ctx)
+	// Controller is already started by SetupMediaMTXTestEnvironment
+	// No need to start it again
+	defer env.Controller.Stop(ctx)
 
 	t.Run("TakeAdvancedSnapshot_Integration", func(t *testing.T) {
 		// Test taking a snapshot - this calls the real snapshot manager
@@ -63,8 +60,8 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 			"quality": 85,
 			"format":  "jpg",
 		}
-		
-		snapshot, err := controller.TakeAdvancedSnapshot(ctx, "/dev/video0", filepath.Join(env.TempDir, "test_snapshot"), options)
+
+		snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, "/dev/video0", filepath.Join(env.TempDir, "test_snapshot"), options)
 		if err != nil {
 			t.Logf("Snapshot creation failed (expected if camera not available): %v", err)
 		} else {
@@ -76,7 +73,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 		// Test getting a snapshot - this calls the real snapshot manager
 		// Note: This may fail if no snapshots exist
 		// For unit tests, we validate the method exists and handles errors
-		snapshot, exists := controller.GetAdvancedSnapshot("non-existent-id")
+		snapshot, exists := env.Controller.GetAdvancedSnapshot("non-existent-id")
 		assert.False(t, exists, "Non-existent snapshot should not exist")
 		assert.Nil(t, snapshot, "Non-existent snapshot should be nil")
 	})
@@ -84,7 +81,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 	t.Run("ListAdvancedSnapshots_Integration", func(t *testing.T) {
 		// Test listing snapshots - this calls the real snapshot manager
 		// For unit tests, we validate the method exists and handles errors
-		snapshots := controller.ListAdvancedSnapshots()
+		snapshots := env.Controller.ListAdvancedSnapshots()
 		assert.NotNil(t, snapshots, "Snapshots list should not be nil")
 		// Note: List may be empty if no snapshots have been taken
 	})
@@ -93,7 +90,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 		// Test deleting a snapshot - this calls the real snapshot manager
 		// Note: This may fail if snapshot doesn't exist
 		// For unit tests, we validate the method exists and handles errors
-		err := controller.DeleteAdvancedSnapshot(ctx, "non-existent-id")
+		err := env.Controller.DeleteAdvancedSnapshot(ctx, "non-existent-id")
 		if err != nil {
 			t.Logf("Snapshot deletion failed (expected if snapshot doesn't exist): %v", err)
 		}
@@ -102,7 +99,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 	t.Run("CleanupOldSnapshots_Integration", func(t *testing.T) {
 		// Test cleanup functionality - this calls the real snapshot manager
 		// For unit tests, we validate the method exists and handles errors
-		err := controller.CleanupOldSnapshots(ctx, 24*time.Hour, 100)
+		err := env.Controller.CleanupOldSnapshots(ctx, 24*time.Hour, 100)
 		if err != nil {
 			t.Logf("Snapshot cleanup failed: %v", err)
 		}

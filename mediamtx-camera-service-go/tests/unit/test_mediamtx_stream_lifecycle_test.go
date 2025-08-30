@@ -54,8 +54,8 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// COMMON PATTERN: Use shared test environment instead of individual components
-			env := utils.SetupTestEnvironment(t)
-			defer utils.TeardownTestEnvironment(t, env)
+			env := utils.SetupMediaMTXTestEnvironment(t)
+			defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 			// NEW PATTERN: Use centralized MediaMTX client setup
 			client := utils.SetupMediaMTXTestClient(t, env)
@@ -73,7 +73,7 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 			// Test use case-specific methods (matches Python implementation)
 			var stream *mediamtx.Stream
 			var err error
-			
+
 			switch tt.useCase {
 			case mediamtx.UseCaseRecording:
 				stream, err = sm.StartRecordingStream(context.Background(), "/dev/video0")
@@ -95,8 +95,8 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 
 func TestStreamManager_UseCaseConfigurations(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -134,8 +134,8 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 	t.Run("stream manager interface compliance", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := utils.SetupMediaMTXTestEnvironment(t)
+		defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 		// NEW PATTERN: Use centralized MediaMTX client setup
 		client := utils.SetupMediaMTXTestClient(t, env)
@@ -162,8 +162,8 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 func TestStreamManager_InvalidUseCase(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)

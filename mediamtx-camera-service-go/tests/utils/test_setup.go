@@ -12,7 +12,7 @@ Instead of creating individual components in each test:
    logger := logging.NewLogger("test")
 
 Use the shared utilities:
-   env := utils.SetupTestEnvironment(t)
+   env := utils.SetupMediaMTXTestEnvironment(t)
    // env.ConfigManager and env.Logger are ready to use
 
 ANTI-PATTERNS TO AVOID:
@@ -94,8 +94,8 @@ type SecurityTestEnvironment struct {
 // Example usage:
 //
 //	func TestMyFeature(t *testing.T) {
-//	    env := utils.SetupTestEnvironment(t)
-//	    defer utils.TeardownTestEnvironment(t, env)
+//	    env := utils.SetupMediaMTXTestEnvironment(t)
+//	    defer utils.TeardownMediaMTXTestEnvironment(t, env)
 //
 //	    // Use env.ConfigManager and env.Logger
 //	    result := myFunction(env.ConfigManager, env.Logger)
@@ -349,6 +349,17 @@ func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *sec
 	return jwtHandler
 }
 
+// SetupTestJWTHandlerForBenchmark creates a test JWT handler for benchmarks
+func SetupTestJWTHandlerForBenchmark(b *testing.B, configManager *config.ConfigManager) *security.JWTHandler {
+	cfg := configManager.GetConfig()
+	require.NotNil(b, cfg, "Configuration should be available")
+
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	require.NoError(b, err, "Failed to create JWT handler")
+
+	return jwtHandler
+}
+
 // GenerateTestToken creates a test JWT token for authentication
 // Use this when you need authenticated requests in tests
 func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
@@ -543,7 +554,7 @@ func createTestDirectories(tempDir string) error {
 // GetTestConfigPath returns the path to the test configuration file
 func GetTestConfigPath() string {
 	// Try to find test config in fixtures first
-	fixturePath := "tests/fixtures/test_config.yaml"
+	fixturePath := "tests/fixtures/config_valid_minimal.yaml"
 	if _, err := os.Stat(fixturePath); err == nil {
 		return fixturePath
 	}
@@ -582,5 +593,280 @@ func ValidateMediaMTXController(t *testing.T, controller mediamtx.MediaMTXContro
 	// But we do require that the controller is properly initialized
 	if err != nil {
 		t.Logf("MediaMTX health check failed (expected if MediaMTX not running): %v", err)
+	}
+}
+
+// MediaMTXClientTestEnvironment provides MediaMTX client testing environment
+type MediaMTXClientTestEnvironment struct {
+	*TestEnvironment
+	Client mediamtx.MediaMTXClient
+	Config *mediamtx.MediaMTXConfig
+}
+
+// SetupMediaMTXTestClient creates a MediaMTX test client with default configuration
+func SetupMediaMTXTestClient(t *testing.T, env *MediaMTXTestEnvironment) *MediaMTXClientTestEnvironment {
+	clientConfig := &mediamtx.MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+		Timeout: 10 * time.Second,
+		ConnectionPool: mediamtx.ConnectionPoolConfig{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     30 * time.Second,
+		},
+	}
+
+	client := mediamtx.NewClient("http://localhost:9997", clientConfig, env.Logger.Logger)
+	require.NotNil(t, client, "MediaMTX client should be created successfully")
+
+	return &MediaMTXClientTestEnvironment{
+		TestEnvironment: env.TestEnvironment,
+		Client:          client,
+		Config:          clientConfig,
+	}
+}
+
+// SetupMediaMTXTestClientWithConfig creates a MediaMTX test client with custom configuration
+func SetupMediaMTXTestClientWithConfig(t *testing.T, env *MediaMTXTestEnvironment, config *mediamtx.MediaMTXConfig) *MediaMTXClientTestEnvironment {
+	client := mediamtx.NewClient("http://localhost:9997", config, env.Logger.Logger)
+	require.NotNil(t, client, "MediaMTX client should be created successfully")
+
+	return &MediaMTXClientTestEnvironment{
+		TestEnvironment: env.TestEnvironment,
+		Client:          client,
+		Config:          config,
+	}
+}
+
+// TeardownMediaMTXTestClient cleans up MediaMTX test client resources
+func TeardownMediaMTXTestClient(t *testing.T, client *MediaMTXClientTestEnvironment) {
+	// Close client if it has a Close method
+	if closer, ok := client.Client.(interface{ Close() error }); ok {
+		err := closer.Close()
+		if err != nil {
+			t.Logf("Error closing MediaMTX client: %v", err)
+		}
+	}
+}
+
+// TestMediaMTXConnection tests if MediaMTX service is accessible
+func TestMediaMTXConnection(t *testing.T, client *MediaMTXClientTestEnvironment) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := client.Client.Get(ctx, "/v3/config/global/get")
+	return err == nil
+}
+
+// CreateMediaMTXTestConfigWithTimeout creates a MediaMTX client config with custom timeout
+func CreateMediaMTXTestConfigWithTimeout(tempDir string, timeout time.Duration) *mediamtx.MediaMTXConfig {
+	return &mediamtx.MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+		Timeout: timeout,
+		ConnectionPool: mediamtx.ConnectionPoolConfig{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     30 * time.Second,
+		},
+	}
+}
+
+// SetupMediaMTXHealthMonitor creates a MediaMTX health monitor for testing
+func SetupMediaMTXHealthMonitor(t *testing.T, client *MediaMTXClientTestEnvironment) mediamtx.HealthMonitor {
+	healthMonitor := mediamtx.NewHealthMonitor(client.Client, client.Config, client.TestEnvironment.Logger.Logger)
+	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
+	return healthMonitor
+}
+
+// SetupMediaMTXStreamManager creates a MediaMTX stream manager for testing
+func SetupMediaMTXStreamManager(t *testing.T, client *MediaMTXClientTestEnvironment) mediamtx.StreamManager {
+	streamManager := mediamtx.NewStreamManager(client.Client, client.Config, client.TestEnvironment.Logger.Logger)
+	require.NotNil(t, streamManager, "Stream manager should be created successfully")
+	return streamManager
+}
+
+// CreateMediaMTXTestPath creates a test MediaMTX path for testing
+func CreateMediaMTXTestPath(name string) *mediamtx.Path {
+	return &mediamtx.Path{
+		ID:     name,
+		Name:   name,
+		Source: "rtsp://localhost:8554/test",
+	}
+}
+
+// CreateMediaMTXTestStream creates a test MediaMTX stream for testing
+func CreateMediaMTXTestStream(name string) *mediamtx.Stream {
+	return &mediamtx.Stream{
+		Name:     name,
+		ConfName: name,
+		Ready:    true,
+		Tracks:   []string{"video", "audio"},
+		Source:   &mediamtx.PathSource{Type: "rtsp", ID: "test"},
+		Readers:  []mediamtx.PathReader{},
+	}
+}
+
+// SetupMediaMTXPathManager creates a MediaMTX path manager for testing
+func SetupMediaMTXPathManager(t *testing.T, client *MediaMTXClientTestEnvironment) mediamtx.PathManager {
+	pathManager := mediamtx.NewPathManager(client.Client, client.Config, client.TestEnvironment.Logger.Logger)
+	require.NotNil(t, pathManager, "Path manager should be created successfully")
+	return pathManager
+}
+
+// ============================================================================
+// BENCHMARK-SPECIFIC UTILITY FUNCTIONS
+// ============================================================================
+
+// SetupTestEnvironmentForBenchmark creates a test environment for benchmarks
+// This is the benchmark version of SetupTestEnvironment
+func SetupTestEnvironmentForBenchmark(b *testing.B) *TestEnvironment {
+	// Create temporary directory for test data
+	tempDir, err := os.MkdirTemp("", "camera-service-benchmark-*")
+	require.NoError(b, err, "Failed to create temp directory")
+
+	// Copy test configuration to temp directory
+	configPath := filepath.Join(tempDir, "test_config.yaml")
+	err = copyTestConfig(configPath)
+	require.NoError(b, err, "Failed to copy test configuration")
+
+	// Initialize configuration manager
+	configManager := config.CreateConfigManager()
+	err = configManager.LoadConfig(configPath)
+	require.NoError(b, err, "Failed to load test configuration")
+
+	// Initialize logger
+	logger := logging.NewLogger("benchmark-environment")
+
+	// Create test directories
+	err = createTestDirectories(tempDir)
+	require.NoError(b, err, "Failed to create test directories")
+
+	return &TestEnvironment{
+		ConfigManager: configManager,
+		Logger:        logger,
+		TempDir:       tempDir,
+		ConfigPath:    configPath,
+	}
+}
+
+// SetupMediaMTXTestEnvironmentForBenchmark creates a test environment with real MediaMTX controller for benchmarks
+// This is the benchmark version of SetupMediaMTXTestEnvironment
+func SetupMediaMTXTestEnvironmentForBenchmark(b *testing.B) *MediaMTXTestEnvironment {
+	// Setup base test environment
+	baseEnv := SetupTestEnvironmentForBenchmark(b)
+
+	// Create real MediaMTX controller
+	controller, err := mediamtx.ControllerWithConfigManager(baseEnv.ConfigManager, baseEnv.Logger.Logger)
+	require.NoError(b, err, "Failed to create real MediaMTX controller")
+
+	// Start the controller so it can perform health checks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = controller.Start(ctx)
+	require.NoError(b, err, "Failed to start MediaMTX controller")
+
+	return &MediaMTXTestEnvironment{
+		TestEnvironment: baseEnv,
+		Controller:      controller,
+	}
+}
+
+// SetupWebSocketTestEnvironmentForBenchmark creates a complete WebSocket test environment for benchmarks
+// This is the benchmark version of SetupWebSocketTestEnvironment
+func SetupWebSocketTestEnvironmentForBenchmark(b *testing.B) *WebSocketTestEnvironment {
+	// Setup MediaMTX test environment
+	mediaEnv := SetupMediaMTXTestEnvironmentForBenchmark(b)
+
+	// Create JWT handler
+	jwtHandler := SetupTestJWTHandlerForBenchmark(b, mediaEnv.ConfigManager)
+
+	// Create camera monitor with real implementations
+	deviceChecker := &camera.RealDeviceChecker{}
+	commandExecutor := &camera.RealV4L2CommandExecutor{}
+	infoParser := &camera.RealDeviceInfoParser{}
+
+	cameraMonitor, err := camera.NewHybridCameraMonitor(
+		mediaEnv.ConfigManager,
+		mediaEnv.Logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(b, err, "Failed to create camera monitor")
+
+	// Create WebSocket server with all dependencies
+	webSocketServer, err := websocket.NewWebSocketServer(
+		mediaEnv.ConfigManager,
+		mediaEnv.Logger,
+		cameraMonitor,
+		jwtHandler,
+		mediaEnv.Controller,
+	)
+	require.NoError(b, err, "Failed to create WebSocket server")
+
+	return &WebSocketTestEnvironment{
+		MediaMTXTestEnvironment: mediaEnv,
+		JWTHandler:              jwtHandler,
+		CameraMonitor:           cameraMonitor,
+		WebSocketServer:         webSocketServer,
+	}
+}
+
+// TeardownWebSocketTestEnvironmentForBenchmark cleans up WebSocket test environment for benchmarks
+// This is the benchmark version of TeardownWebSocketTestEnvironment
+func TeardownWebSocketTestEnvironmentForBenchmark(b *testing.B, env *WebSocketTestEnvironment) {
+	if env != nil {
+		// Stop camera monitor
+		if env.CameraMonitor != nil {
+			err := env.CameraMonitor.Stop()
+			if err != nil {
+				b.Logf("Warning: Failed to stop camera monitor: %v", err)
+			}
+		}
+
+		// Stop WebSocket server
+		if env.WebSocketServer != nil {
+			env.WebSocketServer.Stop()
+		}
+
+		// Teardown MediaMTX environment
+		if env.MediaMTXTestEnvironment != nil {
+			TeardownMediaMTXTestEnvironmentForBenchmark(b, env.MediaMTXTestEnvironment)
+		}
+	}
+}
+
+// TeardownMediaMTXTestEnvironmentForBenchmark cleans up MediaMTX test environment for benchmarks
+// This is the benchmark version of TeardownMediaMTXTestEnvironment
+func TeardownMediaMTXTestEnvironmentForBenchmark(b *testing.B, env *MediaMTXTestEnvironment) {
+	if env != nil {
+		// Stop MediaMTX controller
+		if env.Controller != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			err := env.Controller.Stop(ctx)
+			if err != nil {
+				b.Logf("Warning: Failed to stop MediaMTX controller: %v", err)
+			}
+		}
+
+		// Teardown base environment
+		if env.TestEnvironment != nil {
+			TeardownTestEnvironmentForBenchmark(b, env.TestEnvironment)
+		}
+	}
+}
+
+// TeardownTestEnvironmentForBenchmark cleans up test environment for benchmarks
+// This is the benchmark version of TeardownTestEnvironment
+func TeardownTestEnvironmentForBenchmark(b *testing.B, env *TestEnvironment) {
+	if env != nil {
+		// Clean up temporary directory
+		if env.TempDir != "" {
+			err := os.RemoveAll(env.TempDir)
+			if err != nil {
+				b.Logf("Warning: Failed to remove temp directory %s: %v", env.TempDir, err)
+			}
+		}
 	}
 }

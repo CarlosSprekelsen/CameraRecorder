@@ -29,8 +29,8 @@ import (
 // setupRealStreamManager creates real MediaMTX stream manager for testing
 func setupRealStreamManager(t *testing.T) mediamtx.StreamManager {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -159,8 +159,8 @@ func TestStreamManager_GetStreamStatus(t *testing.T) {
 // TestStreamManager_ErrorHandling tests error handling with invalid configuration
 func TestStreamManager_ErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create invalid configuration to trigger real errors
 	invalidConfig := &mediamtx.MediaMTXConfig{
@@ -200,8 +200,8 @@ func TestStreamManager_ErrorHandling(t *testing.T) {
 // TestStreamManager_CreateStreamWithUseCase_Coverage tests use case stream creation (stimulates CreateStreamWithUseCase)
 func TestStreamManager_CreateStreamWithUseCase_Coverage(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -231,8 +231,8 @@ func TestStreamManager_CreateStreamWithUseCase_Coverage(t *testing.T) {
 // TestStreamManager_CheckStreamReadiness_Coverage tests stream readiness checking (stimulates CheckStreamReadiness)
 func TestStreamManager_CheckStreamReadiness_Coverage(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -262,8 +262,8 @@ func TestStreamManager_CheckStreamReadiness_Coverage(t *testing.T) {
 // TestStreamManager_WaitForStreamReadiness_Coverage tests stream readiness waiting (stimulates WaitForStreamReadiness)
 func TestStreamManager_WaitForStreamReadiness_Coverage(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)

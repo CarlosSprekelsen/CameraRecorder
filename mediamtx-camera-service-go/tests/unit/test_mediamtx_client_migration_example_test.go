@@ -41,8 +41,8 @@ func TestMediaMTXClientMigrationExample(t *testing.T) {
 	// REQ-MTX-002: MediaMTX client configuration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -70,8 +70,8 @@ func TestMediaMTXClientWithCustomConfig(t *testing.T) {
 	// REQ-MTX-002: MediaMTX client configuration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create custom configuration with shorter timeout for testing
 	customConfig := utils.CreateMediaMTXTestConfigWithTimeout(env.TempDir, 5*time.Second)
@@ -90,8 +90,8 @@ func TestMediaMTXHealthMonitorSetup(t *testing.T) {
 	// REQ-MTX-003: MediaMTX health monitoring
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -127,8 +127,8 @@ func TestMediaMTXStreamManagerSetup(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -162,11 +162,11 @@ func TestMediaMTXTestDataCreation(t *testing.T) {
 
 	// Test path creation
 	testPath := utils.CreateMediaMTXTestPath("test-path")
-	assert.Equal(t, "test-path", testPath["name"], "Path name should be set correctly")
-	assert.Equal(t, "rtsp", testPath["source"].(map[string]interface{})["type"], "Source type should be rtsp")
+	assert.Equal(t, "test-path", testPath.Name, "Path name should be set correctly")
+	assert.Equal(t, "rtsp://localhost:8554/test", testPath.Source, "Source should be set correctly")
 
 	// Test stream creation
 	testStream := utils.CreateMediaMTXTestStream("test-stream")
-	assert.Equal(t, "test-stream", testStream["name"], "Stream name should be set correctly")
-	assert.Equal(t, "rtsp://localhost:8554/test-stream", testStream["source"].(map[string]interface{})["url"], "Stream URL should be set correctly")
+	assert.Equal(t, "test-stream", testStream.Name, "Stream name should be set correctly")
+	assert.Equal(t, "test-stream", testStream.ConfName, "Stream conf name should be set correctly")
 }

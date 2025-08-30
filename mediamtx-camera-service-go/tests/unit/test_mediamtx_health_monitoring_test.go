@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
@@ -103,41 +102,38 @@ func TestHealthMonitorBasicOperations(t *testing.T) {
 	// REQ-SYS-001: System health monitoring and status reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-health-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	t.Run("Start_Stop_Operations", func(t *testing.T) {
 		ctx := context.Background()
 
 		// Test start operation
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
 
 		// Test stop operation
-		err = controller.Stop(ctx)
+		err = env.Controller.Stop(ctx)
 		require.NoError(t, err, "Controller should stop successfully")
 	})
 
 	t.Run("HealthStatus_InitialState", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get health status from real controller
-		status, err := controller.GetHealth(ctx)
+		status, err := env.Controller.GetHealth(ctx)
 		if err != nil {
 			t.Logf("Health status retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -148,12 +144,12 @@ func TestHealthMonitorBasicOperations(t *testing.T) {
 
 	t.Run("Metrics_InitialState", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get metrics from real controller
-		metrics, err := controller.GetMetrics(ctx)
+		metrics, err := env.Controller.GetMetrics(ctx)
 		if err != nil {
 			t.Logf("Metrics retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -167,41 +163,38 @@ func TestHealthMonitorCircuitBreaker(t *testing.T) {
 	// REQ-SYS-003: Circuit breaker pattern implementation
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-health-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	t.Run("Controller_StartStop", func(t *testing.T) {
 		ctx := context.Background()
 
 		// Test start operation
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
 
 		// Test stop operation
-		err = controller.Stop(ctx)
+		err = env.Controller.Stop(ctx)
 		require.NoError(t, err, "Controller should stop successfully")
 	})
 
 	t.Run("Controller_HealthStatus", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get health status from real controller
-		status, err := controller.GetHealth(ctx)
+		status, err := env.Controller.GetHealth(ctx)
 		if err != nil {
 			t.Logf("Health status retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -216,29 +209,26 @@ func TestHealthMonitorStateTracking(t *testing.T) {
 	// REQ-SYS-004: Health state persistence across restarts
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-health-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	t.Run("Controller_StateTracking", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Test controller state tracking
-		status, err := controller.GetHealth(ctx)
+		status, err := env.Controller.GetHealth(ctx)
 		if err != nil {
 			t.Logf("Health status retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -249,12 +239,12 @@ func TestHealthMonitorStateTracking(t *testing.T) {
 
 	t.Run("Controller_MetricsTracking", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Test metrics tracking
-		metrics, err := controller.GetMetrics(ctx)
+		metrics, err := env.Controller.GetMetrics(ctx)
 		if err != nil {
 			t.Logf("Metrics retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -268,29 +258,26 @@ func TestHealthMonitorMetrics(t *testing.T) {
 	// REQ-SYS-001: System health monitoring and status reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-health-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	t.Run("Controller_Metrics", func(t *testing.T) {
 		ctx := context.Background()
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get metrics from real controller
-		metrics, err := controller.GetMetrics(ctx)
+		metrics, err := env.Controller.GetMetrics(ctx)
 		if err != nil {
 			t.Logf("Metrics retrieval failed (expected if MediaMTX not running): %v", err)
 			return
@@ -304,30 +291,27 @@ func TestHealthMonitorContextHandling(t *testing.T) {
 	// Test context handling for health monitor operations
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-health-monitor-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	t.Run("Controller_ContextHandling", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// Test controller with context
-		err := controller.Start(ctx)
+		err := env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
 
-		err = controller.Stop(ctx)
+		err = env.Controller.Stop(ctx)
 		require.NoError(t, err, "Controller should stop successfully")
 	})
 }
@@ -337,66 +321,60 @@ func TestHealthMonitorEdgeCases(t *testing.T) {
 
 	t.Run("Controller_MultipleStartStop", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := utils.SetupMediaMTXTestEnvironment(t)
+		defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
 
 		// Setup test logging
-		logger := logging.NewLogger("mediamtx-health-monitor-test")
-		err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-		require.NoError(t, err, "Failed to setup logging")
 
 		// Create real MediaMTX controller (not mock - following testing guide)
-		controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-		require.NoError(t, err, "Controller should be created successfully")
+		// Controller is available as env.Controller
+		// Controller is already created by SetupMediaMTXTestEnvironment
 
 		ctx := context.Background()
 
 		// First start operation
-		err = controller.Start(ctx)
+		err = env.Controller.Start(ctx)
 		require.NoError(t, err, "First start should succeed")
 
 		// Second start should fail (controller already running)
-		err = controller.Start(ctx)
+		err = env.Controller.Start(ctx)
 		assert.Error(t, err, "Second start should fail - controller already running")
 		assert.Contains(t, err.Error(), "already running", "Error should indicate controller is already running")
 
 		// Stop operation
-		err = controller.Stop(ctx)
+		err = env.Controller.Stop(ctx)
 		require.NoError(t, err, "Stop should succeed")
 
 		// Second stop should fail (controller not running)
-		err = controller.Stop(ctx)
+		err = env.Controller.Stop(ctx)
 		assert.Error(t, err, "Second stop should fail - controller not running")
 	})
 
 	t.Run("Controller_StatusConsistency", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := utils.SetupMediaMTXTestEnvironment(t)
+		defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
 
 		// Setup test logging
-		logger := logging.NewLogger("mediamtx-health-monitor-test")
-		err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-		require.NoError(t, err, "Failed to setup logging")
 
 		// Create real MediaMTX controller (not mock - following testing guide)
-		controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-		require.NoError(t, err, "Controller should be created successfully")
+		// Controller is available as env.Controller
+		// Controller is already created by SetupMediaMTXTestEnvironment
 
 		ctx := context.Background()
-		err = controller.Start(ctx)
+		err = env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get status multiple times
-		status1, err1 := controller.GetHealth(ctx)
-		status2, err2 := controller.GetHealth(ctx)
+		status1, err1 := env.Controller.GetHealth(ctx)
+		status2, err2 := env.Controller.GetHealth(ctx)
 
 		if err1 != nil || err2 != nil {
 			t.Logf("Health status retrieval failed (expected if MediaMTX not running): %v, %v", err1, err2)
@@ -410,29 +388,26 @@ func TestHealthMonitorEdgeCases(t *testing.T) {
 
 	t.Run("Controller_MetricsConsistency", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := utils.SetupMediaMTXTestEnvironment(t)
+		defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
 
 		// Setup test logging
-		logger := logging.NewLogger("mediamtx-health-monitor-test")
-		err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-		require.NoError(t, err, "Failed to setup logging")
 
 		// Create real MediaMTX controller (not mock - following testing guide)
-		controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-		require.NoError(t, err, "Controller should be created successfully")
+		// Controller is available as env.Controller
+		// Controller is already created by SetupMediaMTXTestEnvironment
 
 		ctx := context.Background()
-		err = controller.Start(ctx)
+		err = env.Controller.Start(ctx)
 		require.NoError(t, err, "Controller should start successfully")
-		defer controller.Stop(ctx)
+		defer env.Controller.Stop(ctx)
 
 		// Get metrics multiple times
-		metrics1, err1 := controller.GetMetrics(ctx)
-		metrics2, err2 := controller.GetMetrics(ctx)
+		metrics1, err1 := env.Controller.GetMetrics(ctx)
+		metrics2, err2 := env.Controller.GetMetrics(ctx)
 
 		if err1 != nil || err2 != nil {
 			t.Logf("Metrics retrieval failed (expected if MediaMTX not running): %v, %v", err1, err2)
@@ -452,33 +427,30 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 	// REQ-SYS-002: Component health state tracking
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Setup test logging
-	logger := logging.NewLogger("mediamtx-integration-test")
-	err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&env.ConfigManager.GetConfig().Logging))
-	require.NoError(t, err, "Failed to setup logging")
 
 	// Create real MediaMTX controller (not mock - following testing guide)
-	controller, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, logger.Logger)
-	require.NoError(t, err, "Controller should be created successfully")
+	// Controller is available as env.Controller
+	// Controller is already created by SetupMediaMTXTestEnvironment
 
 	ctx := context.Background()
 
 	// Start controller
-	err = controller.Start(ctx)
+	err = env.Controller.Start(ctx)
 	require.NoError(t, err, "Controller should start successfully")
-	defer controller.Stop(ctx)
+	defer env.Controller.Stop(ctx)
 
 	t.Run("GetStreams_Integration", func(t *testing.T) {
 		// Test stream listing - this calls the real HTTP client
 		// Note: This may fail if MediaMTX service is not running
 		// For unit tests, we validate the method exists and handles errors
-		streams, err := controller.GetStreams(ctx)
+		streams, err := env.Controller.GetStreams(ctx)
 		if err != nil {
 			t.Logf("Stream listing failed (expected if MediaMTX not running): %v", err)
 		} else {
@@ -490,7 +462,7 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 		// Test path listing - this calls the real HTTP client
 		// Note: This may fail if MediaMTX service is not running
 		// For unit tests, we validate the method exists and handles errors
-		paths, err := controller.GetPaths(ctx)
+		paths, err := env.Controller.GetPaths(ctx)
 		if err != nil {
 			t.Logf("Path listing failed (expected if MediaMTX not running): %v", err)
 		} else {
@@ -502,7 +474,7 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 		// Test system metrics - this calls the real HTTP client
 		// Note: This may fail if MediaMTX service is not running
 		// For unit tests, we validate the method exists and handles errors
-		systemMetrics, err := controller.GetSystemMetrics(ctx)
+		systemMetrics, err := env.Controller.GetSystemMetrics(ctx)
 		if err != nil {
 			t.Logf("System metrics retrieval failed (expected if MediaMTX not running): %v", err)
 		} else {
@@ -514,7 +486,7 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 		// Test stream creation - this calls the real HTTP client
 		// Note: This may fail if MediaMTX service is not running
 		// For unit tests, we validate the method exists and handles errors
-		stream, err := controller.CreateStream(ctx, "test-stream", "/dev/video0")
+		stream, err := env.Controller.CreateStream(ctx, "test-stream", "/dev/video0")
 		if err != nil {
 			t.Logf("Stream creation failed (expected if MediaMTX not running): %v", err)
 		} else {
@@ -530,7 +502,7 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 			Name:   "test-path",
 			Source: "/dev/video0",
 		}
-		err := controller.CreatePath(ctx, path)
+		err := env.Controller.CreatePath(ctx, path)
 		if err != nil {
 			t.Logf("Path creation failed (expected if MediaMTX not running): %v", err)
 		}

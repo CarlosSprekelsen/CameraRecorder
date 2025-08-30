@@ -18,7 +18,12 @@ Control Point Validation: Epic E3 - Must handle 1000+ connections with <50ms res
 package websocket_test
 
 import (
+	"context"
 	"testing"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
+	"github.com/stretchr/testify/require"
 )
 
 // ============================================================================
@@ -26,25 +31,304 @@ import (
 // ============================================================================
 
 // BenchmarkAPIResponseTime benchmarks API response times
-// TODO: Implement benchmark using shared test environment when benchmark support is added
 func BenchmarkAPIResponseTime(b *testing.B) {
-	b.Skip("Benchmark not yet implemented with shared test environment")
+	// REQ-PERF-001: API response time performance (<50ms for status methods)
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	// Create WebSocket test client for benchmarks
+	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark ping response time
+		response := client.SendPingRequest()
+		require.NotNil(b, response, "Ping response should not be nil")
+		require.Nil(b, response.Error, "Ping should not return error")
+	}
 }
 
 // BenchmarkCameraDiscovery benchmarks camera discovery performance
-// TODO: Implement benchmark using shared test environment when benchmark support is added
 func BenchmarkCameraDiscovery(b *testing.B) {
-	b.Skip("Benchmark not yet implemented with shared test environment")
+	// REQ-PERF-002: Camera discovery performance
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start camera monitor
+	err := env.CameraMonitor.Start(context.Background())
+	require.NoError(b, err, "Failed to start camera monitor")
+	defer env.CameraMonitor.Stop()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark camera discovery
+		cameras := env.CameraMonitor.GetConnectedCameras()
+		_ = len(cameras) // Use result to prevent optimization
+	}
 }
 
 // BenchmarkHealthCheck benchmarks health check performance
-// TODO: Implement benchmark using shared test environment when benchmark support is added
 func BenchmarkHealthCheck(b *testing.B) {
-	b.Skip("Benchmark not yet implemented with shared test environment")
+	// REQ-PERF-003: Health check performance
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark health check
+		health, err := env.Controller.GetHealth(context.Background())
+		require.NoError(b, err, "Health check should not fail")
+		_ = health.Status // Use result to prevent optimization
+	}
 }
 
 // BenchmarkJWTTokenGeneration benchmarks JWT token performance
-// TODO: Implement benchmark using shared test environment when benchmark support is added
 func BenchmarkJWTTokenGeneration(b *testing.B) {
-	b.Skip("Benchmark not yet implemented with shared test environment")
+	// REQ-PERF-004: JWT token performance
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark JWT token generation
+		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
+		require.NoError(b, err, "Token generation should not fail")
+		require.NotEmpty(b, token, "Generated token should not be empty")
+	}
+}
+
+// BenchmarkWebSocketConnectionCreation benchmarks WebSocket connection creation
+func BenchmarkWebSocketConnectionCreation(b *testing.B) {
+	// REQ-PERF-007: Concurrent operation performance (1000+ connections)
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark connection creation
+		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		client.Close()
+	}
+}
+
+// BenchmarkWebSocketPingThroughput benchmarks WebSocket ping throughput
+func BenchmarkWebSocketPingThroughput(b *testing.B) {
+	// REQ-PERF-001: API response time performance (<50ms for status methods)
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	// Create WebSocket test client for benchmarks
+	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark ping throughput
+		response := client.SendPingRequest()
+		require.NotNil(b, response, "Ping response should not be nil")
+		require.Nil(b, response.Error, "Ping should not return error")
+	}
+}
+
+// BenchmarkConcurrentWebSocketConnections benchmarks concurrent WebSocket connections
+func BenchmarkConcurrentWebSocketConnections(b *testing.B) {
+	// REQ-PERF-007: Concurrent operation performance (1000+ connections)
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	// Benchmark concurrent connections
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			// Create and use WebSocket connection
+			client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+			
+			// Send a ping request
+			response := client.SendPingRequest()
+			require.NotNil(b, response, "Ping response should not be nil")
+			
+			client.Close()
+		}
+	})
+}
+
+// BenchmarkMemoryUsage benchmarks memory usage patterns
+func BenchmarkMemoryUsage(b *testing.B) {
+	// REQ-PERF-008: Memory usage performance
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Create multiple connections to test memory usage
+		clients := make([]*utils.WebSocketTestClientForBenchmark, 10)
+		
+		for j := 0; j < 10; j++ {
+			clients[j] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		}
+		
+		// Use connections
+		for j := 0; j < 10; j++ {
+			response := clients[j].SendPingRequest()
+			require.NotNil(b, response, "Ping response should not be nil")
+		}
+		
+		// Close connections
+		for j := 0; j < 10; j++ {
+			clients[j].Close()
+		}
+	}
+}
+
+// BenchmarkAuthenticationFlow benchmarks the complete authentication flow
+func BenchmarkAuthenticationFlow(b *testing.B) {
+	// REQ-PERF-004: JWT token performance
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Create WebSocket client
+		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		
+		// Generate token
+		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
+		require.NoError(b, err, "Token generation should not fail")
+		
+		// Send authentication request
+		authResponse := client.SendAuthenticationRequest(token)
+		require.NotNil(b, authResponse, "Auth response should not be nil")
+		require.Nil(b, authResponse.Error, "Authentication should succeed")
+		
+		client.Close()
+	}
+}
+
+// BenchmarkErrorHandling benchmarks error handling performance
+func BenchmarkErrorHandling(b *testing.B) {
+	// REQ-ERROR-003: WebSocket server shall handle invalid JSON-RPC requests gracefully
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	// Create WebSocket test client for benchmarks
+	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		// Benchmark error handling with invalid requests
+		response := client.SendInvalidRequest()
+		require.NotNil(b, response, "Error response should not be nil")
+		require.NotNil(b, response.Error, "Invalid request should return error")
+	}
+}
+
+// BenchmarkLongRunningOperations benchmarks long-running operation stability
+func BenchmarkLongRunningOperations(b *testing.B) {
+	// REQ-RELIABILITY-001: Long-running stability (24/7 operation)
+
+	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
+	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+
+	// Start WebSocket server
+	err := env.WebSocketServer.Start()
+	require.NoError(b, err, "Failed to start WebSocket server")
+	defer env.WebSocketServer.Stop()
+
+	// Create WebSocket test client for benchmarks
+	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	// Simulate long-running operations
+	for i := 0; i < b.N; i++ {
+		// Perform multiple operations to simulate long-running workload
+		for j := 0; j < 10; j++ {
+			response := client.SendPingRequest()
+			require.NotNil(b, response, "Ping response should not be nil")
+			require.Nil(b, response.Error, "Ping should not return error")
+		}
+		
+		// Small delay to simulate real-world usage
+		time.Sleep(1 * time.Millisecond)
+	}
 }

@@ -28,8 +28,8 @@ import (
 // TestHealthMonitor_Creation tests health monitor creation
 func TestHealthMonitor_Creation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -43,8 +43,8 @@ func TestHealthMonitor_Creation(t *testing.T) {
 // TestHealthMonitor_StartStop tests health monitor lifecycle
 func TestHealthMonitor_StartStop(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -73,8 +73,8 @@ func TestHealthMonitor_StartStop(t *testing.T) {
 // TestHealthMonitor_GetStatus tests health status retrieval
 func TestHealthMonitor_GetStatus(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -98,8 +98,8 @@ func TestHealthMonitor_GetStatus(t *testing.T) {
 // TestHealthMonitor_IsHealthy tests health check
 func TestHealthMonitor_IsHealthy(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -122,8 +122,8 @@ func TestHealthMonitor_IsHealthy(t *testing.T) {
 // TestHealthMonitor_CircuitBreaker tests circuit breaker functionality
 func TestHealthMonitor_CircuitBreaker(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -154,8 +154,8 @@ func TestHealthMonitor_CircuitBreaker(t *testing.T) {
 // TestHealthMonitor_ErrorHandling tests error handling scenarios
 func TestHealthMonitor_ErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -184,8 +184,8 @@ func TestHealthMonitor_ErrorHandling(t *testing.T) {
 // TestHealthMonitor_ConcurrentAccess tests concurrent access scenarios
 func TestHealthMonitor_ConcurrentAccess(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -223,8 +223,8 @@ func TestHealthMonitor_ConcurrentAccess(t *testing.T) {
 // TestHealthMonitor_ContextCancellation tests context cancellation
 func TestHealthMonitor_ContextCancellation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -263,8 +263,8 @@ func TestHealthMonitor_ContextCancellation(t *testing.T) {
 // TestHealthMonitor_ConfigurationValidation tests configuration validation
 func TestHealthMonitor_ConfigurationValidation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
@@ -289,8 +289,8 @@ func TestHealthMonitor_ConfigurationValidation(t *testing.T) {
 // TestHealthMonitor_CheckAllComponents_Coverage tests component health checking (stimulates CheckAllComponents)
 func TestHealthMonitor_CheckAllComponents_Coverage(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -317,8 +317,8 @@ func TestHealthMonitor_CheckAllComponents_Coverage(t *testing.T) {
 // TestHealthMonitor_GetDetailedStatus_Coverage tests detailed status retrieval (stimulates GetDetailedStatus)
 func TestHealthMonitor_GetDetailedStatus_Coverage(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -342,8 +342,8 @@ func TestHealthMonitor_GetDetailedStatus_Coverage(t *testing.T) {
 // TestHealthMonitor_PerformRealHealthCheck tests real health check (stimulates performRealHealthCheck, getBasicStatus)
 func TestHealthMonitor_PerformRealHealthCheck(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -377,8 +377,8 @@ func TestHealthMonitor_PerformRealHealthCheck(t *testing.T) {
 // TestHealthMonitor_BackoffAndRetry tests backoff and retry logic (stimulates getBackoffDelay, shouldRetry, retryWithBackoff)
 func TestHealthMonitor_BackoffAndRetry(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)

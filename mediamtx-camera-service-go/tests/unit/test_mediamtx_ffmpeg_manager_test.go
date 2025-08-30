@@ -48,8 +48,8 @@ func TestFFmpegManager_Creation(t *testing.T) {
 // TestFFmpegManager_StartProcess tests process start functionality
 func TestFFmpegManager_StartProcess(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -133,8 +133,8 @@ func TestFFmpegManager_IsProcessRunning(t *testing.T) {
 // TestFFmpegManager_StartRecording tests recording start functionality
 func TestFFmpegManager_StartRecording(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -200,8 +200,8 @@ func TestFFmpegManager_StopRecording(t *testing.T) {
 // TestFFmpegManager_TakeSnapshot tests snapshot functionality
 func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -233,8 +233,8 @@ func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 // TestFFmpegManager_RotateFile tests file rotation functionality
 func TestFFmpegManager_RotateFile(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -266,8 +266,8 @@ func TestFFmpegManager_RotateFile(t *testing.T) {
 // TestFFmpegManager_GetFileInfo tests file info retrieval
 func TestFFmpegManager_GetFileInfo(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -326,8 +326,8 @@ func TestFFmpegManager_BuildCommand(t *testing.T) {
 // TestFFmpegManager_ErrorHandling tests error handling scenarios
 func TestFFmpegManager_ErrorHandling(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -401,8 +401,8 @@ func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
 // TestFFmpegManager_ContextCancellation tests context cancellation
 func TestFFmpegManager_ContextCancellation(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -457,8 +457,8 @@ func TestFFmpegManager_ConfigurationValidation(t *testing.T) {
 // TestFFmpegManager_ProcessManagement tests process management functionality
 func TestFFmpegManager_ProcessManagement(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -492,8 +492,8 @@ func TestFFmpegManager_ProcessManagement(t *testing.T) {
 // TestFFmpegManager_Integration tests integration scenarios
 func TestFFmpegManager_Integration(t *testing.T) {
 	// Setup test environment with proper cleanup
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -521,8 +521,8 @@ func TestFFmpegManager_Integration(t *testing.T) {
 
 // TestFFmpegManager_SegmentedRecording tests segmented recording functionality
 func TestFFmpegManager_SegmentedRecording(t *testing.T) {
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -544,7 +544,7 @@ func TestFFmpegManager_SegmentedRecording(t *testing.T) {
 
 	// Create segmented recording
 	err := ffmpegManager.CreateSegmentedRecording(ctx, device, outputPath, settings)
-	
+
 	// This might fail due to device availability, but we test the function call
 	if err != nil {
 		t.Logf("CreateSegmentedRecording failed (expected if device not available): %v", err)
@@ -572,8 +572,8 @@ func TestFFmpegManager_SegmentedRecording(t *testing.T) {
 
 // TestFFmpegManager_SegmentedRecordingCommandBuilding tests segmented recording command building
 func TestFFmpegManager_SegmentedRecordingCommandBuilding(t *testing.T) {
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -594,7 +594,7 @@ func TestFFmpegManager_SegmentedRecordingCommandBuilding(t *testing.T) {
 	// This tests the internal command building logic
 	// Note: This is testing the public interface that uses the internal function
 	err := ffmpegManager.CreateSegmentedRecording(context.Background(), device, outputPath, settings)
-	
+
 	if err != nil {
 		// If it fails, it should be due to device availability, not command building
 		t.Logf("CreateSegmentedRecording failed (expected if device not available): %v", err)

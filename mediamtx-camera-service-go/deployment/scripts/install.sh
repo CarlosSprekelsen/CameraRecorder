@@ -351,48 +351,118 @@ install_camera_service() {
     # Set ownership
     chown "$SERVICE_USER:$SERVICE_GROUP" "$BINARY_NAME"
     
-    # Create default configuration
-    cat > "$INSTALL_DIR/config/default.yaml" << 'EOF'
+    # Copy UltraEfficient configuration for edge/IoT devices
+    log_message "Installing UltraEfficient configuration for edge/IoT devices..."
+    
+    # Copy the UltraEfficient configuration
+    if [ -f "$PROJECT_ROOT/config/ultra-efficient-edge.yaml" ]; then
+        cp "$PROJECT_ROOT/config/ultra-efficient-edge.yaml" "$INSTALL_DIR/config/default.yaml"
+        log_success "UltraEfficient configuration copied"
+    else
+        log_warning "UltraEfficient configuration not found, using fallback configuration"
+        
+        # Create fallback UltraEfficient configuration
+        cat > "$INSTALL_DIR/config/default.yaml" << 'EOF'
+# UltraEfficient Configuration for Edge/IoT Devices
+# Optimized for minimal power consumption and resource usage
+
 server:
   host: "0.0.0.0"
-  port: 8080
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 10
+  read_timeout: 10s
+  write_timeout: 5s
+  ping_interval: 60s
+  pong_wait: 120s
+  max_message_size: 524288
 
 mediamtx:
   host: "localhost"
   api_port: 9997
-  health_check_url: "http://localhost:9997/v3/paths/list"
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/etc/mediamtx/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  health_check_interval: 60
+  health_failure_threshold: 5
+  health_circuit_breaker_timeout: 120
+  health_max_backoff_interval: 600
+  health_recovery_confirmation_threshold: 3
+  backoff_base_multiplier: 1.5
+  backoff_jitter_range: [0.1, 0.2]
+  process_termination_timeout: 15.0
+  process_kill_timeout: 10.0
+  health_check_timeout: 10s
 
 camera:
-  scan_interval: "30s"
-  device_paths:
-    - "/dev/video0"
-    - "/dev/video1"
+  poll_interval: 2.0
+  detection_timeout: 15.0
+  device_range: [0, 9]
+  enable_capability_detection: false
+  auto_start_streams: false
+  capability_timeout: 10.0
+  capability_retry_interval: 2.0
+  capability_max_retries: 2
 
 logging:
-  level: "info"
+  level: "warn"
   format: "json"
-
-security:
-  jwt_secret_key: "your-secret-key-change-in-production"
-  rate_limit_requests: 100
-  rate_limit_window: "1m"
+  file_enabled: true
+  file_path: "/var/log/camera-service.log"
+  max_file_size: 5242880
+  backup_count: 3
+  console_enabled: false
 
 recording:
-  default_rotation_size: 100
-  segment_duration: "1h"
-  max_segment_size: 1000
-  cleanup_interval: "24h"
+  enabled: false
+  format: "mp4"
+  quality: "low"
+  segment_duration: 600
+  max_segment_size: 52428800
+  auto_cleanup: true
+  cleanup_interval: 7200
+  max_age: 2592000
+  max_size: 536870912
+  default_rotation_size: 52428800
+  default_max_duration: 12h
+  default_retention_days: 30
 
 snapshots:
-  interval: "5s"
-  cleanup_interval: "1h"
+  enabled: true
+  format: "jpeg"
+  quality: 70
+  max_width: 1280
+  max_height: 720
+  auto_cleanup: true
+  cleanup_interval: 7200
+  max_age: 2592000
+  max_count: 500
+
+security:
+  rate_limit_requests: 50
+  rate_limit_window: 2m
+  jwt_secret_key: "edge-device-secret-key-change-in-production"
+  jwt_expiry_hours: 48
 
 storage:
-  warn_percent: 80
-  block_percent: 90
+  warn_percent: 70
+  block_percent: 85
   default_path: "/opt/camera-service/recordings"
   fallback_path: "/tmp/recordings"
+
+retention_policy:
+  enabled: true
+  type: "age"
+  max_age_days: 30
+  max_size_gb: 0.5
+  auto_cleanup: true
+
+health_port: 8080
 EOF
+    fi
     
     # Create systemd service
     cat > /etc/systemd/system/camera-service.service << EOF

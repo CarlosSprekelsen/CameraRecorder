@@ -27,8 +27,8 @@ import (
 // TestPathManager_Creation tests path manager creation
 func TestPathManager_Creation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -42,8 +42,8 @@ func TestPathManager_Creation(t *testing.T) {
 // TestPathManager_CreatePath tests path creation
 func TestPathManager_CreatePath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -79,8 +79,8 @@ func TestPathManager_CreatePath(t *testing.T) {
 // TestPathManager_DeletePath tests path deletion
 func TestPathManager_DeletePath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -111,8 +111,8 @@ func TestPathManager_DeletePath(t *testing.T) {
 // TestPathManager_GetPath tests path retrieval
 func TestPathManager_GetPath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -143,8 +143,8 @@ func TestPathManager_GetPath(t *testing.T) {
 // TestPathManager_ListPaths tests path listing
 func TestPathManager_ListPaths(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -176,8 +176,8 @@ func TestPathManager_ListPaths(t *testing.T) {
 // TestPathManager_ValidatePath tests path validation
 func TestPathManager_ValidatePath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -208,8 +208,8 @@ func TestPathManager_ValidatePath(t *testing.T) {
 // TestPathManager_PathExists tests path existence check
 func TestPathManager_PathExists(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -236,8 +236,8 @@ func TestPathManager_PathExists(t *testing.T) {
 // TestPathManager_ErrorHandling tests error handling scenarios
 func TestPathManager_ErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -260,8 +260,8 @@ func TestPathManager_ErrorHandling(t *testing.T) {
 // TestPathManager_ConcurrentAccess tests concurrent access scenarios
 func TestPathManager_ConcurrentAccess(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)
@@ -305,8 +305,8 @@ func TestPathManager_ConcurrentAccess(t *testing.T) {
 // TestPathManager_ContextCancellation tests context cancellation
 func TestPathManager_ContextCancellation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
 	client := utils.SetupMediaMTXTestClient(t, env)

@@ -35,8 +35,8 @@ import (
 func setupRealComponents(t *testing.T) (*mediamtx.PathIntegration, *camera.HybridCameraMonitor, *config.ConfigManager) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Setup test configuration manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")

@@ -44,8 +44,8 @@ func TestRecordingManager_NewRecordingManager(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -86,8 +86,8 @@ func TestRecordingManager_StartRecording(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -138,8 +138,8 @@ func TestRecordingManager_StartRecording_SessionExists(t *testing.T) {
 	// REQ-REC-001: Recording state management - conflict prevention
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -193,8 +193,8 @@ func TestRecordingManager_StartRecording_FFmpegError(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -227,8 +227,8 @@ func TestRecordingManager_StopRecording(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -268,8 +268,8 @@ func TestRecordingManager_StopRecording_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -294,8 +294,8 @@ func TestRecordingManager_GetRecordingSession(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -338,8 +338,8 @@ func TestRecordingManager_ListRecordingSessions(t *testing.T) {
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -408,8 +408,8 @@ func TestRecordingManager_RotateRecordingFile(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -451,8 +451,8 @@ func TestRecordingManager_RotateRecordingFile_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -477,8 +477,8 @@ func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -518,8 +518,8 @@ func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
 // TestRecordingManager_StopRecordingWithContinuity tests stopping recording with continuity
 func TestRecordingManager_StopRecordingWithContinuity(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -543,8 +543,8 @@ func TestRecordingManager_GetRecordingContinuity(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -585,8 +585,8 @@ func TestRecordingManager_GetRecordingContinuity_SessionNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -611,8 +611,8 @@ func TestRecordingManager_GetRecordingsList(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -672,8 +672,8 @@ func TestRecordingManager_GetRecordingsList_NoDirectory(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -699,8 +699,8 @@ func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -747,8 +747,8 @@ func TestRecordingManager_GetRecordingInfo_FileNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -774,8 +774,8 @@ func TestRecordingManager_DeleteRecording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -827,8 +827,8 @@ func TestRecordingManager_DeleteRecording_FileNotFound(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -853,8 +853,8 @@ func TestRecordingManager_UseCaseConfiguration(t *testing.T) {
 	// REQ-REC-001: Recording state management - use case specific behavior
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -910,8 +910,8 @@ func TestRecordingManager_StorageValidation(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -948,8 +948,8 @@ func TestRecordingManager_UpdateStorageThresholds(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -992,8 +992,8 @@ func TestRecordingManager_ConcurrentOperations(t *testing.T) {
 	// REQ-REC-001: Recording state management - concurrent access
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1055,8 +1055,8 @@ func TestRecordingManager_ErrorHandling(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1125,8 +1125,8 @@ func TestRecordingManager_Performance(t *testing.T) {
 	// REQ-REC-001: Recording state management - performance under load
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1179,8 +1179,8 @@ func TestRecordingManager_FileRotation(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1220,8 +1220,8 @@ func TestRecordingManager_SegmentManagement(t *testing.T) {
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1263,8 +1263,8 @@ func TestRecordingManager_StorageCheck(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1307,8 +1307,8 @@ func TestRecordingManager_MonitoringStart(t *testing.T) {
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1351,8 +1351,8 @@ func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration
 	config := &mediamtx.MediaMTXConfig{
@@ -1393,8 +1393,8 @@ func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
 // TestRecordingManager_AdvancedRecordingCommands tests advanced recording command building
 func TestRecordingManager_AdvancedRecordingCommand(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1429,8 +1429,8 @@ func TestRecordingManager_AdvancedRecordingCommand(t *testing.T) {
 // TestRecordingManager_MonitoringAndRotation tests monitoring and rotation functions
 func TestRecordingManager_MonitoringAndRotation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1463,8 +1463,8 @@ func TestRecordingManager_MonitoringAndRotation(t *testing.T) {
 // TestRecordingManager_StorageAndCleanup tests storage and cleanup functions
 func TestRecordingManager_StorageAndCleanup(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1495,8 +1495,8 @@ func TestRecordingManager_StorageAndCleanup(t *testing.T) {
 // TestRecordingManager_GetStorageMetrics tests storage metrics retrieval
 func TestRecordingManager_GetStorageMetrics(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1511,8 +1511,8 @@ func TestRecordingManager_GetStorageMetrics(t *testing.T) {
 // TestRecordingManager_UpdateStorageConfig tests storage configuration updates
 func TestRecordingManager_UpdateStorageConfig(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1527,8 +1527,8 @@ func TestRecordingManager_UpdateStorageConfig(t *testing.T) {
 // TestRecordingManager_DeviceSessionMapping tests device session mapping functions
 func TestRecordingManager_DeviceSessionMapping(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1549,8 +1549,8 @@ func TestRecordingManager_DeviceSessionMapping(t *testing.T) {
 // TestRecordingManager_UseCaseCleanup tests use case cleanup functions
 func TestRecordingManager_UseCaseCleanup(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1579,8 +1579,8 @@ func TestRecordingManager_UseCaseCleanup(t *testing.T) {
 // TestRecordingManager_ScheduledCleanup tests scheduled cleanup functions
 func TestRecordingManager_ScheduledCleanup(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
@@ -1619,8 +1619,8 @@ func TestRecordingManager_ScheduledCleanup(t *testing.T) {
 // TestRecordingManager_AutoStop tests auto stop functionality
 func TestRecordingManager_AutoStop(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create recording manager
 	config := &mediamtx.MediaMTXConfig{}
