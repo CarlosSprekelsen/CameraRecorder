@@ -14,11 +14,14 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package security_test
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +30,10 @@ import (
 // TestJWTHandler_TokenGeneration tests JWT token generation functionality
 func TestJWTHandler_TokenGeneration(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
+
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
 	tests := []struct {
 		name        string
@@ -67,10 +74,8 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler, err := security.NewJWTHandler("test_secret_key")
-			require.NoError(t, err)
-
-			token, err := handler.GenerateToken(tt.userID, tt.role, tt.expiryHours)
+			// Use shared JWT handler instead of creating new one
+			token, err := env.JWTHandler.GenerateToken(tt.userID, tt.role, tt.expiryHours)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -88,47 +93,43 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 func TestJWTHandler_TokenValidation(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret_key")
-	require.NoError(t, err)
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
-	// Generate a valid token
-	token, err := handler.GenerateToken("test_user", "admin", 24)
-	require.NoError(t, err)
+	// Generate a valid token using shared utility
+	token := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
 
-	// Test valid token validation
-	claims, err := handler.ValidateToken(token)
-	assert.NoError(t, err)
-	assert.NotNil(t, claims)
+	// Test valid token validation using shared utility
+	claims := utils.ValidateTestToken(t, env.JWTHandler, token)
 	assert.Equal(t, "test_user", claims.UserID)
 	assert.Equal(t, "admin", claims.Role)
 	assert.Greater(t, claims.EXP, claims.IAT)
 
 	// Test invalid token
 	invalidToken := "invalid.jwt.token"
-	claims, err = handler.ValidateToken(invalidToken)
+	_, err := env.JWTHandler.ValidateToken(invalidToken)
 	assert.Error(t, err)
-	assert.Nil(t, claims)
 
 	// Test empty token
-	claims, err = handler.ValidateToken("")
+	_, err = env.JWTHandler.ValidateToken("")
 	assert.Error(t, err)
-	assert.Nil(t, claims)
 
 	// Test token with wrong secret
 	wrongHandler, err := security.NewJWTHandler("wrong_secret_key")
 	require.NoError(t, err)
 
-	claims, err = wrongHandler.ValidateToken(token)
+	_, err = wrongHandler.ValidateToken(token)
 	assert.Error(t, err)
-	assert.Nil(t, claims)
 }
 
 // TestJWTHandler_ExpiryHandling tests JWT token expiry functionality
 func TestJWTHandler_ExpiryHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret_key")
-	require.NoError(t, err)
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
 	// Generate a token with very short expiry (1 second)
 	// We need to create a token that expires in 1 second
@@ -147,53 +148,49 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	// Token should be valid immediately
-	assert.False(t, handler.IsTokenExpired(tokenString))
+	assert.False(t, env.JWTHandler.IsTokenExpired(tokenString))
 
 	// Wait for token to expire
 	time.Sleep(2 * time.Second)
 
 	// Token should be expired
-	assert.True(t, handler.IsTokenExpired(tokenString))
+	assert.True(t, env.JWTHandler.IsTokenExpired(tokenString))
 
 	// Validation should fail for expired token
-	claims, err := handler.ValidateToken(tokenString)
+	_, err = env.JWTHandler.ValidateToken(tokenString)
 	assert.Error(t, err)
-	assert.Nil(t, claims)
 }
 
 // Edge case tests for missing coverage
 func TestJWTHandler_EdgeCases(t *testing.T) {
-	handler, err := security.NewJWTHandler("test_secret")
-	require.NoError(t, err)
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("get_secret_key", func(t *testing.T) {
-		secret := handler.GetSecretKey()
-		assert.Equal(t, "test_secret", secret)
+		secret := env.JWTHandler.GetSecretKey()
+		assert.NotEmpty(t, secret)
 	})
 
 	t.Run("get_algorithm", func(t *testing.T) {
-		algo := handler.GetAlgorithm()
+		algo := env.JWTHandler.GetAlgorithm()
 		assert.Equal(t, "HS256", algo)
 	})
 
 	t.Run("token_with_special_characters", func(t *testing.T) {
-		token, err := handler.GenerateToken("user@domain.com", "admin", 1)
-		require.NoError(t, err)
+		token := utils.GenerateTestTokenWithExpiry(t, env.JWTHandler, "user@domain.com", "admin", 1)
 
-		// Validate the token
-		claims, err := handler.ValidateToken(token)
-		require.NoError(t, err)
+		// Validate the token using shared utility
+		claims := utils.ValidateTestToken(t, env.JWTHandler, token)
 		assert.Equal(t, "user@domain.com", claims.UserID)
 		assert.Equal(t, "admin", claims.Role)
 	})
 
 	t.Run("very_long_user_id", func(t *testing.T) {
 		longUserID := strings.Repeat("a", 1000)
-		token, err := handler.GenerateToken(longUserID, "viewer", 1)
-		require.NoError(t, err)
+		token := utils.GenerateTestTokenWithExpiry(t, env.JWTHandler, longUserID, "viewer", 1)
 
-		claims, err := handler.ValidateToken(token)
-		require.NoError(t, err)
+		claims := utils.ValidateTestToken(t, env.JWTHandler, token)
 		assert.Equal(t, longUserID, claims.UserID)
 	})
 }
@@ -242,22 +239,23 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 func TestJWTHandler_RateLimiting(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
-	require.NoError(t, err)
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
 	// Set rate limit to 3 requests per 1 second window
-	handler.SetRateLimit(3, time.Second)
+	env.JWTHandler.SetRateLimit(3, time.Second)
 
 	t.Run("check_rate_limit_first_request", func(t *testing.T) {
 		// First request should be allowed
-		allowed := handler.CheckRateLimit("client1")
+		allowed := env.JWTHandler.CheckRateLimit("client1")
 		assert.True(t, allowed)
 	})
 
 	t.Run("check_rate_limit_within_limit", func(t *testing.T) {
 		// Multiple requests within limit should be allowed
 		for i := 0; i < 3; i++ {
-			allowed := handler.CheckRateLimit("client2")
+			allowed := env.JWTHandler.CheckRateLimit("client2")
 			assert.True(t, allowed)
 		}
 	})
@@ -265,22 +263,22 @@ func TestJWTHandler_RateLimiting(t *testing.T) {
 	t.Run("check_rate_limit_exceeded", func(t *testing.T) {
 		// Exceed rate limit
 		for i := 0; i < 3; i++ {
-			handler.CheckRateLimit("client3")
+			env.JWTHandler.CheckRateLimit("client3")
 		}
 		// Fourth request should be blocked
-		allowed := handler.CheckRateLimit("client3")
+		allowed := env.JWTHandler.CheckRateLimit("client3")
 		assert.False(t, allowed)
 	})
 
 	t.Run("check_rate_limit_window_reset", func(t *testing.T) {
 		// Fill up the window
 		for i := 0; i < 3; i++ {
-			handler.CheckRateLimit("client4")
+			env.JWTHandler.CheckRateLimit("client4")
 		}
 		// Wait for window to reset
 		time.Sleep(1100 * time.Millisecond)
 		// Should be allowed again
-		allowed := handler.CheckRateLimit("client4")
+		allowed := env.JWTHandler.CheckRateLimit("client4")
 		assert.True(t, allowed)
 	})
 }
@@ -289,15 +287,16 @@ func TestJWTHandler_RateLimiting(t *testing.T) {
 func TestJWTHandler_RecordRequest(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
-	require.NoError(t, err)
+	// Use shared security test environment
+	env := utils.SetupSecurityTestEnvironment(t)
+	defer utils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("record_request_new_client", func(t *testing.T) {
 		// Record request for new client
-		handler.RecordRequest("new_client")
+		env.JWTHandler.RecordRequest("new_client")
 
 		// Check rate info
-		rateInfo := handler.GetClientRateInfo("new_client")
+		rateInfo := env.JWTHandler.GetClientRateInfo("new_client")
 		assert.NotNil(t, rateInfo)
 		assert.Equal(t, "new_client", rateInfo.ClientID)
 		assert.Equal(t, int64(1), rateInfo.RequestCount)
@@ -305,31 +304,31 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 
 	t.Run("record_request_existing_client", func(t *testing.T) {
 		// Record multiple requests
-		handler.RecordRequest("existing_client")
-		handler.RecordRequest("existing_client")
-		handler.RecordRequest("existing_client")
+		env.JWTHandler.RecordRequest("existing_client")
+		env.JWTHandler.RecordRequest("existing_client")
+		env.JWTHandler.RecordRequest("existing_client")
 
 		// Check rate info
-		rateInfo := handler.GetClientRateInfo("existing_client")
+		rateInfo := env.JWTHandler.GetClientRateInfo("existing_client")
 		assert.NotNil(t, rateInfo)
 		assert.Equal(t, int64(3), rateInfo.RequestCount)
 	})
 
 	t.Run("record_request_window_reset", func(t *testing.T) {
 		// Set short window for testing
-		handler.SetRateLimit(10, 100*time.Millisecond)
+		env.JWTHandler.SetRateLimit(10, 100*time.Millisecond)
 
 		// Record request
-		handler.RecordRequest("window_client")
+		env.JWTHandler.RecordRequest("window_client")
 
 		// Wait for window to reset
 		time.Sleep(150 * time.Millisecond)
 
 		// Record another request
-		handler.RecordRequest("window_client")
+		env.JWTHandler.RecordRequest("window_client")
 
 		// Should reset to 1
-		rateInfo := handler.GetClientRateInfo("window_client")
+		rateInfo := env.JWTHandler.GetClientRateInfo("window_client")
 		assert.NotNil(t, rateInfo)
 		assert.Equal(t, int64(1), rateInfo.RequestCount)
 	})
@@ -531,13 +530,14 @@ func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, claims)
 		// The actual error message may vary, so we check for any validation error
-		assert.Contains(t, err.Error(), "token validation failed")
+		assert.Contains(t, err.Error(), "Token used before issued")
 	})
 
 	t.Run("validate_token_wrong_signing_method", func(t *testing.T) {
-		// Create token with wrong signing method
+		// Create a token with HS256 but manually change the header to RS256
+		// This simulates an algorithm confusion attack
 		now := time.Now().Unix()
-		token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"user_id": "test_user",
 			"role":    "admin",
 			"iat":     now,
@@ -547,11 +547,36 @@ func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
 		tokenString, err := token.SignedString([]byte("test_secret"))
 		require.NoError(t, err)
 
-		claims, err := handler.ValidateToken(tokenString)
+		// Manually modify the header to change algorithm from HS256 to RS256
+		parts := strings.Split(tokenString, ".")
+		if len(parts) != 3 {
+			t.Fatal("Invalid token format")
+		}
+
+		// Decode header
+		headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+		require.NoError(t, err)
+
+		var header map[string]interface{}
+		err = json.Unmarshal(headerBytes, &header)
+		require.NoError(t, err)
+
+		// Change algorithm to RS256
+		header["alg"] = "RS256"
+
+		// Re-encode header
+		newHeaderBytes, err := json.Marshal(header)
+		require.NoError(t, err)
+		newHeader := base64.RawURLEncoding.EncodeToString(newHeaderBytes)
+
+		// Reconstruct token with modified header
+		modifiedToken := newHeader + "." + parts[1] + "." + parts[2]
+
+		claims, err := handler.ValidateToken(modifiedToken)
 		assert.Error(t, err)
 		assert.Nil(t, claims)
-		// The actual error message may vary, so we check for any validation error
-		assert.Contains(t, err.Error(), "token validation failed")
+		// With the fixed implementation, RS256 should be rejected with "unsupported signing method"
+		assert.Contains(t, err.Error(), "unsupported signing method")
 	})
 }
 

@@ -16,6 +16,7 @@ package mediamtx_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -63,7 +64,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 			"format":  "jpg",
 		}
 		
-		snapshot, err := controller.TakeAdvancedSnapshot(ctx, "/dev/video0", "/tmp/test_snapshot", options)
+		snapshot, err := controller.TakeAdvancedSnapshot(ctx, "/dev/video0", filepath.Join(env.TempDir, "test_snapshot"), options)
 		if err != nil {
 			t.Logf("Snapshot creation failed (expected if camera not available): %v", err)
 		} else {

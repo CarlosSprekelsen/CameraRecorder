@@ -36,23 +36,24 @@ func TestValidateConfig_ValidConfiguration(t *testing.T) {
 			MaxConnections: 100,
 		},
 		MediaMTX: config.MediaMTXConfig{
-			Host:           "localhost",
-			APIPort:        9997,
-			RTSPPort:       8554,
-			WebRTCPort:     8889,
-			HLSPort:        8888,
-			ConfigPath:     "/tmp/config.yml",
-			RecordingsPath: "/tmp/recordings",
-			SnapshotsPath:  "/tmp/snapshots",
-			HealthCheckInterval: 30,
-			HealthFailureThreshold: 3,
-			HealthCircuitBreakerTimeout: 60,
-			HealthMaxBackoffInterval: 300,
-			BackoffBaseMultiplier: 2.0,
-			BackoffJitterRange: []float64{0.1, 0.5},
-			ProcessTerminationTimeout: 30.0,
-			ProcessKillTimeout: 10.0,
-			HealthCheckTimeout: 5 * time.Second,
+			Host:                                "localhost",
+			APIPort:                             9997,
+			RTSPPort:                            8554,
+			WebRTCPort:                          8889,
+			HLSPort:                             8888,
+			ConfigPath:                          "/tmp/config.yml",
+			RecordingsPath:                      "/tmp/recordings",
+			SnapshotsPath:                       "/tmp/snapshots",
+			HealthCheckInterval:                 30,
+			HealthFailureThreshold:              3,
+			HealthCircuitBreakerTimeout:         60,
+			HealthMaxBackoffInterval:            300,
+			HealthRecoveryConfirmationThreshold: 2,
+			BackoffBaseMultiplier:               2.0,
+			BackoffJitterRange:                  []float64{0.1, 0.5},
+			ProcessTerminationTimeout:           30.0,
+			ProcessKillTimeout:                  10.0,
+			HealthCheckTimeout:                  5 * time.Second,
 			StreamReadiness: config.StreamReadinessConfig{
 				Timeout:                     10.0,
 				RetryAttempts:               3,
@@ -575,19 +576,32 @@ func TestValidateConfig_BoundaryValues(t *testing.T) {
 			MaxConnections: 1, // Valid: minimum connections
 		},
 		MediaMTX: config.MediaMTXConfig{
-			Host:           "localhost",
-			APIPort:        65535, // Valid: maximum port
-			RTSPPort:       65535, // Valid: maximum port
-			WebRTCPort:     65535, // Valid: maximum port
-			HLSPort:        65535, // Valid: maximum port
-			ConfigPath:     "/tmp/config.yml",
-			RecordingsPath: "/tmp/recordings",
-			SnapshotsPath:  "/tmp/snapshots",
-			HealthCheckInterval: 30, // Valid: positive value
-			HealthFailureThreshold: 3, // Valid: positive value
-			HealthCircuitBreakerTimeout: 60, // Valid: positive value
-			HealthMaxBackoffInterval: 300, // Valid: positive value
-			HealthRecoveryConfirmationThreshold: 2, // Valid: positive value
+			Host:                                "localhost",
+			APIPort:                             65535, // Valid: maximum port
+			RTSPPort:                            65535, // Valid: maximum port
+			WebRTCPort:                          65535, // Valid: maximum port
+			HLSPort:                             65535, // Valid: maximum port
+			ConfigPath:                          "/tmp/config.yml",
+			RecordingsPath:                      "/tmp/recordings",
+			SnapshotsPath:                       "/tmp/snapshots",
+			HealthCheckInterval:                 30,                  // Valid: positive value
+			HealthFailureThreshold:              3,                   // Valid: positive value
+			HealthCircuitBreakerTimeout:         60,                  // Valid: positive value
+			HealthMaxBackoffInterval:            300,                 // Valid: positive value
+			HealthRecoveryConfirmationThreshold: 2,                   // Valid: positive value
+			BackoffBaseMultiplier:               2.0,                 // Valid: positive value
+			BackoffJitterRange:                  []float64{0.1, 0.5}, // Valid: positive values
+			ProcessTerminationTimeout:           30.0,                // Valid: positive value
+			ProcessKillTimeout:                  10.0,                // Valid: positive value
+			HealthCheckTimeout:                  5 * time.Second,     // Valid: positive value
+			StreamReadiness: config.StreamReadinessConfig{
+				Timeout:                     10.0, // Valid: positive value
+				RetryAttempts:               3,    // Valid: positive value
+				RetryDelay:                  2.0,  // Valid: positive value
+				CheckInterval:               5.0,  // Valid: positive value
+				EnableProgressNotifications: true,
+				GracefulFallback:            true,
+			},
 			Codec: config.CodecConfig{
 				VideoProfile: "main",    // Valid profile
 				VideoLevel:   "4.0",     // Valid level
@@ -670,9 +684,10 @@ func TestValidateConfig_BoundaryValues(t *testing.T) {
 				SlowResponseThreshold:         2.0,  // Valid: positive value
 			},
 			Optimization: config.OptimizationConfig{
-				EnableCaching: true,
-				CacheTTL:      3600,
+				EnableCaching:           true,
+				CacheTTL:                3600,
 				MaxConcurrentOperations: 10,
+				ConnectionPoolSize:      20,
 			},
 		},
 		Security: config.SecurityConfig{

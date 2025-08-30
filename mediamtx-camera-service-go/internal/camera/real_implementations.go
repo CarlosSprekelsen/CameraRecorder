@@ -312,9 +312,13 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 		for _, match := range matches {
 			if len(match) > 1 {
 				rate := strings.TrimSpace(match[1])
-				if rate != "" && !seenRates[rate] {
-					frameRates = append(frameRates, rate)
-					seenRates[rate] = true
+				if rate != "" {
+					// Normalize frame rate like Python implementation
+					normalizedRate := r.normalizeFrameRate(rate)
+					if normalizedRate != "" && !seenRates[normalizedRate] {
+						frameRates = append(frameRates, normalizedRate)
+						seenRates[normalizedRate] = true
+					}
 				}
 			}
 		}
@@ -324,14 +328,18 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 }
 
 // normalizeFrameRate normalizes frame rate values to a standard format
+// Matches Python implementation: converts to float and back to string to normalize
 func (r *RealDeviceInfoParser) normalizeFrameRate(rate string) string {
-	// Convert to float and back to standardize format
+	// Convert to float and back to string to normalize (like Python)
 	if f, err := strconv.ParseFloat(rate, 64); err == nil {
-		// Format with 3 decimal places for consistency
-		return fmt.Sprintf("%.3f", f)
+		// Extended frame rate range for high-end cameras (1-300 fps like Python)
+		if f >= 1 && f <= 300 {
+			// Format with 3 decimal places for consistency with test expectations
+			return fmt.Sprintf("%.3f", f)
+		}
 	}
-	// If parsing fails, return the original rate
-	return rate
+	// If parsing fails or out of range, return empty string (filtered out)
+	return ""
 }
 
 // Helper methods for RealDeviceInfoParser

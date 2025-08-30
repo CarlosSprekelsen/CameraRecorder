@@ -1,8 +1,6 @@
 package security
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -262,62 +260,43 @@ func (h *JWTHandler) CleanupExpiredClients(maxInactive time.Duration) {
 
 // ValidateToken validates a JWT token and extracts claims.
 // Returns the claims if valid, nil if invalid or expired.
+// Matches Python implementation security model: uses JWT library validation with explicit algorithm restriction.
 func (h *JWTHandler) ValidateToken(tokenString string) (*JWTClaims, error) {
 	if strings.TrimSpace(tokenString) == "" {
 		return nil, fmt.Errorf("token cannot be empty")
 	}
 
-	// Try to parse the token manually first to check the signing method
-	parts := strings.Split(tokenString, ".")
-	if len(parts) != 3 {
-		h.logger.Debug("Invalid token format - not enough parts")
-		return nil, fmt.Errorf("token validation failed")
-	}
+	// Use JWT library validation with explicit algorithm restriction (like Python)
+	// This prevents algorithm confusion attacks and follows security best practices
+	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Validate algorithm explicitly (like Python's algorithms=[self.algorithm])
+		if token.Method.Alg() != "HS256" {
+			h.logger.WithField("algorithm", token.Method.Alg()).Warn("Unsupported signing method detected")
+			return nil, fmt.Errorf("unsupported signing method: %v", token.Method.Alg())
+		}
 
-	// Decode the header to check the signing method
-	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		h.logger.WithError(err).Debug("Failed to decode token header")
-		return nil, fmt.Errorf("token validation failed")
-	}
-
-	var header map[string]interface{}
-	if err := json.Unmarshal(headerBytes, &header); err != nil {
-		h.logger.WithError(err).Debug("Failed to unmarshal token header")
-		return nil, fmt.Errorf("token validation failed")
-	}
-
-	// Check the signing method
-	if alg, ok := header["alg"].(string); !ok || alg != "HS256" {
-		h.logger.WithField("algorithm", alg).Debug("Invalid signing method detected")
-		return nil, fmt.Errorf("token validation failed")
-	}
-
-	// Now parse and validate the token with the correct signing method
-	h.logger.WithField("token_length", len(tokenString)).Debug("Starting JWT token validation")
-	
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		h.logger.WithField("signing_method", token.Method.Alg()).Debug("Validating JWT signing method")
+		h.logger.WithField("signing_method", token.Method.Alg()).Debug("JWT signing method validated")
 		return []byte(h.secretKey), nil
 	})
 
 	if err != nil {
+		// Log the specific error for security auditing (like Python)
 		h.logger.WithError(err).Warn("JWT token validation failed")
-		h.logger.WithField("error_type", fmt.Sprintf("%T", err)).Debug("Error type analysis")
-		h.logger.WithField("error_message", err.Error()).Debug("Error message analysis")
-		
-		// Convert specific JWT library errors to our standard error message
-		if strings.Contains(err.Error(), "key is invalid") {
-			h.logger.WithError(err).Debug("Converting 'key is invalid' error to 'token validation failed'")
-			return nil, fmt.Errorf("token validation failed")
-		}
-		return nil, fmt.Errorf("token validation failed: %w", err)
+
+		// Return the original error for proper error handling (like Python)
+		// Don't mask specific error types that could indicate security issues
+		return nil, err
 	}
 
 	// Extract claims
 	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		h.logger.Warn("JWT token claims are invalid")
+	if !ok {
+		h.logger.Warn("JWT token claims are not MapClaims")
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	if !token.Valid {
+		h.logger.Warn("JWT token is not valid")
 		return nil, fmt.Errorf("invalid token claims")
 	}
 

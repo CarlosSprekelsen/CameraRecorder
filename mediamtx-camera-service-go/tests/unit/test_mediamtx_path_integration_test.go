@@ -50,24 +50,18 @@ func setupRealComponents(t *testing.T) (*mediamtx.PathIntegration, *camera.Hybri
 		t.Skipf("Skipping test - logging setup failed: %v", err)
 	}
 
-	// Create logrus logger for MediaMTX components
-	logrusLogger := logrus.New()
-	logrusLogger.SetLevel(logrus.DebugLevel)
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
 
-	// Create real MediaMTX client and path manager
-	mediamtxConfig := &mediamtx.MediaMTXConfig{
-		Host:    "localhost",
-		APIPort: 9997,
-		Timeout: 30 * time.Second,
-		ConnectionPool: mediamtx.ConnectionPoolConfig{
-			MaxIdleConns:        10,
-			MaxIdleConnsPerHost: 2,
-			IdleConnTimeout:     90 * time.Second,
-		},
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	realClient := mediamtx.NewClient("http://localhost:9997", mediamtxConfig, logrusLogger)
-	realPathManager := mediamtx.NewPathManager(realClient, mediamtxConfig, logrusLogger)
+	// NEW PATTERN: Use centralized path manager setup
+	realPathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	// Create real camera monitor
 	realDeviceChecker := &camera.RealDeviceChecker{}
@@ -86,7 +80,7 @@ func setupRealComponents(t *testing.T) (*mediamtx.PathIntegration, *camera.Hybri
 	}
 
 	// Create path integration with real components
-	pathIntegration := mediamtx.NewPathIntegration(realPathManager, realCameraMonitor, env.ConfigManager, logrusLogger)
+	pathIntegration := mediamtx.NewPathIntegration(realPathManager, realCameraMonitor, env.ConfigManager, env.Logger.Logger)
 
 	return pathIntegration, realCameraMonitor, env.ConfigManager
 }
@@ -280,14 +274,16 @@ func TestPathIntegration_DeletePathForCamera(t *testing.T) {
 
 		ctx := context.Background()
 
-		// Try to create a path first (this will fail due to invalid config)
-		err := invalidPathIntegration.CreatePathForCamera(ctx, "/dev/video0")
-		// This should fail due to connection error
-		assert.Error(t, err)
+		// First create a path with valid config to ensure it exists in tracking
+		validPathIntegration, _, _ := setupRealComponents(t)
+		err := validPathIntegration.CreatePathForCamera(ctx, "/dev/video0")
+		if err != nil {
+			t.Skip("Skipping test - cannot create test path")
+		}
 
-		// Now try to delete it - this should also fail due to connection error
+		// Now try to delete it with invalid config - this should fail due to connection error
 		err = invalidPathIntegration.DeletePathForCamera(ctx, "/dev/video0")
-		// Should error due to connection failure
+		// Should error due to connection failure when trying to delete the actual path
 		assert.Error(t, err)
 	})
 }

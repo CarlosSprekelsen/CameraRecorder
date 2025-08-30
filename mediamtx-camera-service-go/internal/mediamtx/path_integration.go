@@ -107,7 +107,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 			"device": device,
 			"path":   existingPath,
 		}).Debug("Path already exists for camera")
-		return nil
+		return fmt.Errorf("path already exists for device: %s", device)
 	}
 	pi.cameraPathsMu.Unlock()
 
@@ -169,7 +169,7 @@ func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device strin
 	if !exists {
 		pi.cameraPathsMu.Unlock()
 		pi.logger.WithField("device", device).Debug("No path found for camera")
-		return nil
+		return nil // Idempotent operation - no error for non-existent paths
 	}
 	pi.cameraPathsMu.Unlock()
 

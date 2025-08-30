@@ -16,15 +16,14 @@ package mediamtx_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -414,32 +413,30 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 }
 
 func TestMediaMTXController_DeleteRecording(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_recording_delete")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test recording file
+	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
-	filePath := filepath.Join(tempDir, fileName)
+	recordingsDir := filepath.Join(env.TempDir, "recordings")
+	filePath := filepath.Join(recordingsDir, fileName)
 	content := "test recording content for delete test"
-	err = os.WriteFile(filePath, []byte(content), 0644)
+	err := os.WriteFile(filePath, []byte(content), 0644)
 	require.NoError(t, err)
 
 	// Verify file exists
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err = env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -480,32 +477,30 @@ func TestMediaMTXController_DeleteRecording(t *testing.T) {
 }
 
 func TestMediaMTXController_DeleteSnapshot(t *testing.T) {
-	// Setup test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// Setup test environment using proper utilities
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "test_snapshot_delete")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create test snapshot file
+	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
-	filePath := filepath.Join(tempDir, fileName)
+	snapshotsDir := filepath.Join(env.TempDir, "snapshots")
+	filePath := filepath.Join(snapshotsDir, fileName)
 	content := "test snapshot content for delete test"
-	err = os.WriteFile(filePath, []byte(content), 0644)
+	err := os.WriteFile(filePath, []byte(content), 0644)
 	require.NoError(t, err)
 
 	// Verify file exists
 	_, err = os.Stat(filePath)
 	require.NoError(t, err)
 
-	// Create test configuration manager
-	configManager := config.CreateConfigManager()
+	// Start the controller
+	ctx := context.Background()
+	err = env.Controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+	defer env.Controller.Stop(ctx)
 
-	// Create controller using proper constructor
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger)
-	require.NoError(t, err)
+	// Use the controller from the test environment
+	controller := env.Controller
 
 	tests := []struct {
 		name          string
@@ -557,14 +552,14 @@ func TestFileMetadata_JSONSerialization(t *testing.T) {
 	}
 
 	// Serialize to JSON
-	// jsonData, err := json.Marshal(metadata) // This line was removed as per the new_code
-	// assert.NoError(t, err) // This line was removed as per the new_code
-	// assert.NotEmpty(t, jsonData) // This line was removed as per the new_code
+	jsonData, err := json.Marshal(metadata)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, jsonData)
 
 	// Deserialize from JSON
 	var deserialized mediamtx.FileMetadata
-	// err = json.Unmarshal(jsonData, &deserialized) // This line was removed as per the new_code
-	// assert.NoError(t, err) // This line was removed as per the new_code
+	err = json.Unmarshal(jsonData, &deserialized)
+	assert.NoError(t, err)
 
 	// Verify fields
 	assert.Equal(t, metadata.FileName, deserialized.FileName)
@@ -594,14 +589,14 @@ func TestFileListResponse_JSONSerialization(t *testing.T) {
 	}
 
 	// Serialize to JSON
-	// jsonData, err := json.Marshal(response) // This line was removed as per the new_code
-	// assert.NoError(t, err) // This line was removed as per the new_code
-	// assert.NotEmpty(t, jsonData) // This line was removed as per the new_code
+	jsonData, err := json.Marshal(response)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, jsonData)
 
 	// Deserialize from JSON
 	var deserialized mediamtx.FileListResponse
-	// err = json.Unmarshal(jsonData, &deserialized) // This line was removed as per the new_code
-	// assert.NoError(t, err) // This line was removed as per the new_code
+	err = json.Unmarshal(jsonData, &deserialized)
+	assert.NoError(t, err)
 
 	// Verify fields
 	assert.Len(t, deserialized.Files, 1)

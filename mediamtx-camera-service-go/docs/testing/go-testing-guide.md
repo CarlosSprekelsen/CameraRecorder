@@ -90,8 +90,12 @@ go test -coverpkg=./internal/security ./tests/unit/test_security_framework_test.
 ### Mandatory Directory Structure
 ```
 tests/
-├── unit/           # One test file per Go module (your main work)
+├── unit/           # One test file per Go module
+|   └──`test_<feature>_<aspect>_test.go`  # unit tests (using existing utils)
 ├── integration/    # End-to-end API tests
+|   ├── test_websocket_integration.go      # All WebSocket tests (using existing utils)
+|   ├── test_mediamtx_integration.go       # All MediaMTX tests (using existing utils)  
+|   └── test_e2e_integration.go            # True end-to-end workflows (using existing utils)
 ├── performance/    # Load/stress tests for reliability
 ├── fixtures/       # Test data files (.yaml, .json, mock data)
 ├── utils/          # Helper functions (setupTest, generateToken, etc.)
@@ -351,12 +355,28 @@ All test runners and utilities are located in `tests/tools/`:
 - `setup_test_environment.sh`: Test environment setup
 - `validate_test_environment.sh`: Environment validation
 
+### **🚨 MANDATORY: External Testing Requires Build Tags**
+
+**ALL test execution MUST include build tags:**
+
+```bash
+# REQUIRED - External testing (package *_test) needs build tags
+go test -tags="unit" ./tests/unit/
+go test -tags="integration,real_system" ./tests/integration/
+go test -tags="performance" ./tests/performance/
+
+# WRONG - This will exclude all test files
+go test ./tests/unit/
+```
+
+**Why:** External testing uses build constraints that exclude files without matching tags.
+
 ### Usage Guidelines
 ```bash
 # For most testing needs, use go test directly
-go test ./...
-go test -tags="unit,real_system,real_mediamtx" ./tests/unit/...
-go test -tags="integration,real_system,real_mediamtx" ./tests/integration/...
+go test -tags="unit" ./tests/unit/
+go test -tags="integration,real_system" ./tests/integration/
+go test -tags="performance" ./tests/performance/
 
 # Use tools only for specialized orchestration
 ./tests/tools/run_all_tests.sh

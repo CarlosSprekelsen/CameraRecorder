@@ -845,9 +845,7 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"streams": streamList,
-		},
+		Result:  streamList,
 	}, nil
 }
 
@@ -1344,9 +1342,10 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"deleted_count": deletedCount,
-			"total_size":    totalSize,
-			"message":       "File cleanup completed successfully",
+			"cleanup_executed": true,
+			"files_deleted":    deletedCount,
+			"space_freed":      totalSize,
+			"message":          "File cleanup completed successfully",
 		},
 	}, nil
 }
@@ -1553,14 +1552,31 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 		"action":      "policy_updated",
 	}).Info("Retention policy configuration updated")
 
+	// Build response result based on policy type
+	result := map[string]interface{}{
+		"policy_type": policyType,
+		"enabled":     enabled,
+		"message":     "Retention policy configuration updated successfully",
+	}
+
+	// Include policy-specific parameters in response
+	if policyType == "age" {
+		if maxAgeDays, ok := params["max_age_days"].(float64); ok {
+			result["max_age_days"] = int(maxAgeDays)
+		} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
+			result["max_age_days"] = maxAgeDays
+		}
+	} else if policyType == "size" {
+		if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
+			result["max_size_gb"] = int(maxSizeGB)
+		} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
+			result["max_size_gb"] = maxSizeGB
+		}
+	}
+
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"status":      "success",
-			"policy_type": policyType,
-			"enabled":     enabled,
-			"message":     "Retention policy configuration updated successfully",
-		},
+		Result:  result,
 	}, nil
 }
 

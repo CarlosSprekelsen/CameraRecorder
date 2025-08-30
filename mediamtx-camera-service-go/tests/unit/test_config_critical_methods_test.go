@@ -6,7 +6,6 @@ package config_test
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -414,7 +413,7 @@ logging:
 		err := env.ConfigManager.LoadConfig("/nonexistent/file.yaml")
 		// Config manager should return error for missing files
 		assert.Error(t, err, "Should return error for missing file")
-		assert.Contains(t, err.Error(), "cannot read configuration file")
+		assert.Contains(t, err.Error(), "configuration file does not exist")
 	})
 
 	t.Run("LoadFromInvalidYAML", func(t *testing.T) {
@@ -510,65 +509,5 @@ func TestConfigManager_DirectMethodCoverage(t *testing.T) {
 
 	// Test methods that need direct coverage
 
-	t.Run("ApplyEnvironmentOverridesDirect", func(t *testing.T) {
-		// Set environment variables
-		os.Setenv("CAMERA_SERVICE_SERVER_HOST", "direct-test-host")
-		os.Setenv("CAMERA_SERVICE_SERVER_PORT", "9090")
-		os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", "DEBUG")
-		defer func() {
-			os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
-			os.Unsetenv("CAMERA_SERVICE_SERVER_PORT")
-			os.Unsetenv("CAMERA_SERVICE_LOGGING_LEVEL")
-		}()
 
-		// Use shared config manager and config
-		cfg := &config.Config{}
-
-		// Call the method directly using reflection to access unexported method
-		// This is for testing coverage only
-		managerType := reflect.TypeOf(env.ConfigManager)
-		method, found := managerType.MethodByName("applyEnvironmentOverrides")
-		if found {
-			// Call the method using reflection
-			args := []reflect.Value{reflect.ValueOf(env.ConfigManager), reflect.ValueOf(cfg)}
-			method.Func.Call(args)
-		}
-
-		// Verify the method was called (coverage only)
-		assert.NotNil(t, env.ConfigManager)
-	})
-
-	t.Run("ValidateConfigDirect", func(t *testing.T) {
-		// Use shared config manager and valid config
-		cfg := &config.Config{
-			Server: config.ServerConfig{
-				Host: "127.0.0.1",
-				Port: 8080,
-			},
-			MediaMTX: config.MediaMTXConfig{
-				Host:    "localhost",
-				APIPort: 9997,
-			},
-		}
-
-		// Call the method directly using reflection to access unexported method
-		managerType := reflect.TypeOf(env.ConfigManager)
-		method, found := managerType.MethodByName("validateConfig")
-		if found {
-			// Call the method using reflection
-			args := []reflect.Value{reflect.ValueOf(env.ConfigManager), reflect.ValueOf(cfg)}
-			results := method.Func.Call(args)
-
-			// Check if method returned an error
-			if len(results) > 0 {
-				err := results[0].Interface()
-				if err != nil {
-					assert.NoError(t, err.(error), "Valid config should not return error")
-				}
-			}
-		}
-
-		// Verify the method was called (coverage only)
-		assert.NotNil(t, env.ConfigManager)
-	})
 }

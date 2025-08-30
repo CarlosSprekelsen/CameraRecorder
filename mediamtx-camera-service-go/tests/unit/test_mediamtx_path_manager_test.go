@@ -19,46 +19,44 @@ import (
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestPathManager_Creation tests path manager creation
 func TestPathManager_Creation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
 
-	// Create mediamtx client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 	require.NotNil(t, pathManager, "Path manager should not be nil")
 }
 
 // TestPathManager_CreatePath tests path creation
 func TestPathManager_CreatePath(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mediamtx client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -80,20 +78,22 @@ func TestPathManager_CreatePath(t *testing.T) {
 
 // TestPathManager_DeletePath tests path deletion
 func TestPathManager_DeletePath(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -110,20 +110,22 @@ func TestPathManager_DeletePath(t *testing.T) {
 
 // TestPathManager_GetPath tests path retrieval
 func TestPathManager_GetPath(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -140,20 +142,22 @@ func TestPathManager_GetPath(t *testing.T) {
 
 // TestPathManager_ListPaths tests path listing
 func TestPathManager_ListPaths(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -171,20 +175,22 @@ func TestPathManager_ListPaths(t *testing.T) {
 
 // TestPathManager_ValidatePath tests path validation
 func TestPathManager_ValidatePath(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -201,20 +207,22 @@ func TestPathManager_ValidatePath(t *testing.T) {
 
 // TestPathManager_PathExists tests path existence check
 func TestPathManager_PathExists(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -227,20 +235,16 @@ func TestPathManager_PathExists(t *testing.T) {
 
 // TestPathManager_ErrorHandling tests error handling scenarios
 func TestPathManager_ErrorHandling(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -255,20 +259,22 @@ func TestPathManager_ErrorHandling(t *testing.T) {
 
 // TestPathManager_ConcurrentAccess tests concurrent access scenarios
 func TestPathManager_ConcurrentAccess(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
+
+	// Test MediaMTX connection
+	isAccessible := utils.TestMediaMTXConnection(t, client)
+	if !isAccessible {
+		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	ctx := context.Background()
 
@@ -298,20 +304,16 @@ func TestPathManager_ConcurrentAccess(t *testing.T) {
 
 // TestPathManager_ContextCancellation tests context cancellation
 func TestPathManager_ContextCancellation(t *testing.T) {
-	// Create test logger
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
-	// Create test configuration
-	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
+	// NEW PATTERN: Use centralized MediaMTX client setup
+	client := utils.SetupMediaMTXTestClient(t, env)
+	defer utils.TeardownMediaMTXTestClient(t, client)
 
-	// Create mock client
-	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
-
-	// Create path manager
-	pathManager := mediamtx.NewPathManager(client, testConfig, logger)
+	// NEW PATTERN: Use centralized path manager setup
+	pathManager := utils.SetupMediaMTXPathManager(t, client)
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())

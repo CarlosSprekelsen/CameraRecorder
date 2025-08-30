@@ -53,7 +53,7 @@ func TestConfigIntegration_GetMediaMTXConfig_WithRealServer(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -114,7 +114,7 @@ func TestConfigIntegration_ValidateMediaMTXConfig_ValidConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -217,7 +217,7 @@ func TestConfigIntegration_GetRecordingConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -242,7 +242,7 @@ func TestConfigIntegration_GetSnapshotConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -267,7 +267,7 @@ func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -292,7 +292,7 @@ func TestConfigIntegration_GetCameraConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -317,7 +317,7 @@ func TestConfigIntegration_GetPerformanceConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -342,7 +342,7 @@ func TestConfigIntegration_UpdateMediaMTXConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -407,7 +407,7 @@ func TestConfigIntegration_UpdateMediaMTXConfig_InvalidConfig(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -438,7 +438,7 @@ func TestConfigIntegration_RealMediaMTXServerConnection(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components
@@ -482,7 +482,7 @@ func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
 	defer utils.TeardownTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
-	err := env.ConfigManager.LoadConfig("tests/fixtures/test_config.yaml")
+	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// Create config integration using shared components

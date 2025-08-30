@@ -35,26 +35,8 @@ type SessionManager struct {
 	wg            sync.WaitGroup
 }
 
-// NewSessionManager creates a new session manager with default configuration.
-// Starts automatic cleanup of expired sessions.
-func NewSessionManager() *SessionManager {
-	manager := &SessionManager{
-		sessions:              make(map[string]*Session),
-		logger:                logrus.New(),
-		defaultSessionTimeout: 24 * time.Hour,  // Default 24 hours
-		cleanupInterval:       5 * time.Minute, // Cleanup every 5 minutes
-		stopChan:              make(chan struct{}),
-	}
-
-	// Start automatic cleanup
-	manager.startCleanup()
-
-	manager.logger.WithField("timeout", manager.defaultSessionTimeout).Info("Session manager initialized")
-	return manager
-}
-
-// NewSessionManagerWithConfig creates a new session manager with custom configuration.
-func NewSessionManagerWithConfig(sessionTimeout, cleanupInterval time.Duration) *SessionManager {
+// NewSessionManager creates a new session manager with custom configuration.
+func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionManager {
 	manager := &SessionManager{
 		sessions:              make(map[string]*Session),
 		logger:                logrus.New(),

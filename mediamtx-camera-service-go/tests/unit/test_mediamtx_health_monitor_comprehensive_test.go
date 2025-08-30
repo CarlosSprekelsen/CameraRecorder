@@ -136,9 +136,9 @@ func TestHealthMonitor_IsHealthyComprehensive(t *testing.T) {
 	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
-	// Test initial health state
+	// Test initial health state - should be false until first health check
 	isHealthy := healthMonitor.IsHealthy()
-	assert.False(t, isHealthy, "Initial health state should be false")
+	assert.False(t, isHealthy, "Initial health state should be false until first health check")
 }
 
 // TestHealthMonitor_CircuitBreakerComprehensive tests circuit breaker functionality
@@ -164,15 +164,15 @@ func TestHealthMonitor_CircuitBreakerComprehensive(t *testing.T) {
 	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
-	// Test initial circuit breaker state
+	// Test initial circuit breaker state - should be open until first health check
 	isOpen := healthMonitor.IsCircuitOpen()
-	assert.False(t, isOpen, "Initial circuit breaker should be closed")
+	assert.True(t, isOpen, "Initial circuit breaker should be open until first health check")
 
-	// Test recording success
+	// Test recording success - should close the circuit
 	healthMonitor.RecordSuccess()
-	assert.False(t, healthMonitor.IsCircuitOpen(), "Circuit should remain closed after success")
+	assert.False(t, healthMonitor.IsCircuitOpen(), "Circuit should close after success")
 
-	// Test recording failure
+	// Test recording failure - should remain closed for single failure
 	healthMonitor.RecordFailure()
 	assert.False(t, healthMonitor.IsCircuitOpen(), "Circuit should remain closed after single failure")
 }
@@ -203,9 +203,9 @@ func TestHealthMonitor_GetMetrics(t *testing.T) {
 	// Test metrics retrieval
 	metrics := healthMonitor.GetMetrics()
 	assert.NotNil(t, metrics, "Should return metrics")
-	assert.Contains(t, metrics, "total_checks", "Metrics should contain total_checks")
-	assert.Contains(t, metrics, "successful_checks", "Metrics should contain successful_checks")
-	assert.Contains(t, metrics, "failed_checks", "Metrics should contain failed_checks")
+	assert.Contains(t, metrics, "circuit_state", "Metrics should contain circuit_state")
+	assert.Contains(t, metrics, "failure_count", "Metrics should contain failure_count")
+	assert.Contains(t, metrics, "health_status", "Metrics should contain health_status")
 }
 
 // TestHealthMonitor_RealServerConnection tests connection to real MediaMTX server

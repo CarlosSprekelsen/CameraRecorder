@@ -1,4 +1,4 @@
-//go:build unit
+//go:build unit || integration || performance
 
 /*
 Test Setup Utilities - COMMON PATTERNS FOR ALL TESTERS
@@ -78,6 +78,15 @@ type WebSocketTestEnvironment struct {
 	WebSocketServer *websocket.WebSocketServer
 }
 
+// SecurityTestEnvironment provides complete security testing environment
+// Use this when testing security-related functionality
+type SecurityTestEnvironment struct {
+	*TestEnvironment
+	JWTHandler     *security.JWTHandler
+	RoleManager    *security.PermissionChecker
+	SessionManager *security.SessionManager
+}
+
 // SetupTestEnvironment creates a proper test environment with configuration
 //
 // COMMON PATTERN: Use this function instead of creating individual components
@@ -144,9 +153,68 @@ func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 	controller, err := mediamtx.ControllerWithConfigManager(baseEnv.ConfigManager, baseEnv.Logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 
+	// Start the controller so it can perform health checks
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Failed to start MediaMTX controller")
+
 	return &MediaMTXTestEnvironment{
 		TestEnvironment: baseEnv,
 		Controller:      controller,
+	}
+}
+
+// SetupSecurityTestEnvironment creates a complete security test environment
+// Use this when testing security-related functionality
+//
+// COMMON PATTERN: Use this function instead of creating individual security components
+//
+// Example usage:
+//
+//	func TestSecurityFeature(t *testing.T) {
+//	    env := utils.SetupSecurityTestEnvironment(t)
+//	    defer utils.TeardownSecurityTestEnvironment(t, env)
+//
+//	    // Use env.JWTHandler, env.RoleManager, env.SessionManager
+//	    token := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
+//	    require.NotEmpty(t, token)
+//	}
+func SetupSecurityTestEnvironment(t *testing.T) *SecurityTestEnvironment {
+	// Create base test environment
+	baseEnv := SetupTestEnvironment(t)
+
+	// Use existing JWT handler creation pattern (config-based)
+	jwtHandler := SetupTestJWTHandler(t, baseEnv.ConfigManager)
+
+	// Create role manager
+	roleManager := SetupTestRoleManager(t)
+
+	// Create session manager
+	sessionManager := SetupTestSessionManager(t)
+
+	return &SecurityTestEnvironment{
+		TestEnvironment: baseEnv,
+		JWTHandler:      jwtHandler,
+		RoleManager:     roleManager,
+		SessionManager:  sessionManager,
+	}
+}
+
+// TeardownSecurityTestEnvironment cleans up security test environment
+// Always call this in defer statements to ensure proper cleanup
+func TeardownSecurityTestEnvironment(t *testing.T, env *SecurityTestEnvironment) {
+	if env != nil {
+		// Stop session manager cleanup goroutine
+		if env.SessionManager != nil {
+			env.SessionManager.Stop()
+		}
+
+		// Teardown base environment
+		if env.TestEnvironment != nil {
+			TeardownTestEnvironment(t, env.TestEnvironment)
+		}
 	}
 }
 
@@ -289,6 +357,53 @@ func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID str
 	return token
 }
 
+// GenerateTestTokenWithExpiry creates a test JWT token with custom expiry
+// Use this when you need specific token expiry times for testing
+func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string, expiryHours int) string {
+	token, err := jwtHandler.GenerateToken(userID, role, expiryHours)
+	require.NoError(t, err, "Failed to generate test token with custom expiry")
+	return token
+}
+
+// GenerateExpiredTestToken creates an expired JWT token for testing expiry scenarios
+// Use this when testing token expiry functionality
+func GenerateExpiredTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
+	// Generate token with 0 hours = immediate expiry
+	token, err := jwtHandler.GenerateToken(userID, role, 0)
+	require.NoError(t, err, "Failed to generate expired test token")
+	return token
+}
+
+// SetupTestRoleManager creates a role manager for testing
+// Use this when testing role-based access control
+func SetupTestRoleManager(t *testing.T) *security.PermissionChecker {
+	return security.NewPermissionChecker()
+}
+
+// SetupTestSessionManager creates a session manager for testing
+// Use this when testing session management
+func SetupTestSessionManager(t *testing.T) *security.SessionManager {
+	return security.NewSessionManager(30*time.Minute, 1*time.Minute)
+}
+
+// CreateTestSession creates a test session for session management testing
+// Use this when testing session-related functionality
+func CreateTestSession(t *testing.T, sessionManager *security.SessionManager, userID string, role security.Role) *security.Session {
+	session, err := sessionManager.CreateSession(userID, role)
+	require.NoError(t, err, "Failed to create test session")
+	require.NotNil(t, session, "Test session should not be nil")
+	return session
+}
+
+// ValidateTestToken validates a test token and returns claims
+// Use this when you need to verify token contents
+func ValidateTestToken(t *testing.T, jwtHandler *security.JWTHandler, token string) *security.JWTClaims {
+	claims, err := jwtHandler.ValidateToken(token)
+	require.NoError(t, err, "Failed to validate test token")
+	require.NotNil(t, claims, "Token claims should not be nil")
+	return claims
+}
+
 // CreateAuthenticatedClient creates an authenticated client connection for testing
 // Use this when testing WebSocket client connections
 func CreateAuthenticatedClient(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) *websocket.ClientConnection {
@@ -385,11 +500,15 @@ camera:
     max_retries: 3
     timeout: 5.0
 
-websocket:
+server:
   host: "localhost"
   port: 8002
+  websocket_path: "/ws"
+  max_connections: 1000
   read_timeout: "30s"
   write_timeout: "30s"
+  ping_interval: "30s"
+  pong_wait: "60s"
   max_message_size: 1048576
 
 logging:

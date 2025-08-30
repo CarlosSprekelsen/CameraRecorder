@@ -487,6 +487,14 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Validate input parameters for security
+	if device == "" {
+		return nil, fmt.Errorf("device path is required")
+	}
+	if path == "" {
+		return nil, fmt.Errorf("recording path is required")
+	}
+
 	// Generate session ID
 	sessionID := generateSessionID(device)
 
@@ -543,6 +551,11 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 func (c *controller) StopRecording(ctx context.Context, sessionID string) error {
 	if !c.isRunning {
 		return fmt.Errorf("controller is not running")
+	}
+
+	// Validate input parameters for security
+	if sessionID == "" {
+		return fmt.Errorf("session ID is required")
 	}
 
 	return c.stopRecordingInternal(ctx, sessionID)
@@ -954,6 +967,11 @@ func (c *controller) UpdateSnapshotSettings(settings *SnapshotSettings) {
 func (c *controller) GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error) {
 	if !c.isRunning {
 		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Validate input parameters for security
+	if sessionID == "" {
+		return nil, fmt.Errorf("session ID is required")
 	}
 
 	c.logger.WithField("session_id", sessionID).Debug("Getting recording status")

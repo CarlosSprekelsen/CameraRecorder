@@ -1,7 +1,5 @@
-// +build unit
-
-//go:build unit
-// +build unit
+//go:build integration
+// +build integration
 
 /*
 Integration Validation Unit Test
@@ -20,7 +18,7 @@ Test Categories: Unit/Integration/Security/Performance/Reliability
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package integration_test
+package websocket_test
 
 import (
 	"context"
@@ -93,7 +91,7 @@ func (suite *IntegrationValidationTestSuite) Setup(t *testing.T) {
 	cfg := suite.configManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration not available")
 
-	suite.jwtHandler, err = security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	suite.jwtHandler, err = security.JWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(t, err, "Failed to create JWT handler")
 
 	// Initialize WebSocket server

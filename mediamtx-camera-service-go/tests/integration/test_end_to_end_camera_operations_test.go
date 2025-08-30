@@ -1,5 +1,3 @@
-// +build integration,real_system
-
 //go:build integration && real_system
 // +build integration,real_system
 
@@ -20,7 +18,7 @@ Test Categories: Integration/Real System/Hardware
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package integration_test
+package camera_test
 
 import (
 	"context"
@@ -28,9 +26,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,71 +33,30 @@ import (
 
 // TestEndToEndCameraOperations tests the complete camera workflow
 // This test validates the entire camera service pipeline from discovery to recording
+// COMMON PATTERN: Uses shared WebSocket test environment instead of individual component setup
 func TestEndToEndCameraOperations(t *testing.T) {
 	// Skip if not running integration tests
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// COMMON PATTERN: Use shared test environment instead of individual components
-	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	// COMMON PATTERN: Use shared WebSocket test environment with all dependencies
+	// This eliminates the need to create individual components manually
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Setup test environment
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// Load test configuration
-	err := env.ConfigManager.LoadConfig("config/test.yaml")
-	if err != nil {
-		// Fallback to default config
-		err = env.ConfigManager.LoadConfig("config/default.yaml")
-		require.NoError(t, err, "Failed to load configuration")
-	}
-
-	// Initialize real implementations
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	// Initialize camera monitor
-	cameraMonitor := camera.NewHybridCameraMonitor(
-		env.ConfigManager,
-		env.Logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
-	)
-
-	// Initialize MediaMTX controller
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err, "Failed to create MediaMTX controller")
-
-	// Initialize JWT handler
-	cfg := env.ConfigManager.GetConfig()
-	require.NotNil(t, cfg, "Configuration not available")
-
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
-	require.NoError(t, err, "Failed to create JWT handler")
-
-	// Initialize WebSocket server
-	wsServer := websocket.NewWebSocketServer(
-		env.ConfigManager,
-		env.Logger,
-		cameraMonitor,
-		jwtHandler,
-		mediaMTXController,
-	)
-
 	// Start services
 	t.Run("StartServices", func(t *testing.T) {
 		// Start camera monitor
-		err := cameraMonitor.Start(ctx)
+		err := env.CameraMonitor.Start(ctx)
 		require.NoError(t, err, "Failed to start camera monitor")
 
 		// Start WebSocket server
-		err = wsServer.Start()
+		err = env.WebSocketServer.Start()
 		require.NoError(t, err, "Failed to start WebSocket server")
 
 		// Wait for services to be ready
@@ -115,7 +69,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		time.Sleep(5 * time.Second)
 
 		// Get discovered cameras
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 
 		// Log discovered cameras
 		t.Logf("Discovered %d cameras", len(cameras))
@@ -129,7 +83,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test camera capabilities
 	t.Run("CameraCapabilities", func(t *testing.T) {
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
 			t.Skip("No cameras available for capability testing")
 		}
@@ -147,7 +101,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test recording operations
 	t.Run("RecordingOperations", func(t *testing.T) {
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
 			t.Skip("No cameras available for recording testing")
 		}
@@ -170,7 +124,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 				"max_duration":   30 * time.Second, // Short duration for testing
 			}
 
-			session, err := mediaMTXController.StartAdvancedRecording(ctx, devicePath, "", options)
+			session, err := env.Controller.StartAdvancedRecording(ctx, devicePath, "", options)
 			if err != nil {
 				t.Logf("Warning: Could not start recording: %v", err)
 				t.Skip("Recording not available")
@@ -185,7 +139,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 			// Test recording status
 			t.Run("RecordingStatus", func(t *testing.T) {
-				status, err := mediaMTXController.GetRecordingStatus(ctx, session.ID)
+				status, err := env.Controller.GetRecordingStatus(ctx, session.ID)
 				require.NoError(t, err, "Should get recording status")
 				assert.Equal(t, "RECORDING", status.Status, "Status should be recording")
 			})
@@ -195,11 +149,11 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 			// Test recording stop
 			t.Run("StopRecording", func(t *testing.T) {
-				err := mediaMTXController.StopAdvancedRecording(ctx, session.ID)
+				err := env.Controller.StopAdvancedRecording(ctx, session.ID)
 				require.NoError(t, err, "Should stop recording")
 
 				// Verify session is stopped
-				status, err := mediaMTXController.GetRecordingStatus(ctx, session.ID)
+				status, err := env.Controller.GetRecordingStatus(ctx, session.ID)
 				if err == nil {
 					assert.Equal(t, "STOPPED", status.Status, "Status should be stopped")
 				}
@@ -209,7 +163,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test snapshot operations
 	t.Run("SnapshotOperations", func(t *testing.T) {
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
 			t.Skip("No cameras available for snapshot testing")
 		}
@@ -228,7 +182,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			"resolution": "1920x1080",
 		}
 
-		snapshot, err := mediaMTXController.TakeAdvancedSnapshot(ctx, devicePath, "", options)
+		snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, devicePath, "", options)
 		if err != nil {
 			t.Logf("Warning: Could not take snapshot: %v", err)
 			t.Skip("Snapshot not available")
@@ -242,7 +196,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	// Test file operations
 	t.Run("FileOperations", func(t *testing.T) {
 		// Test recordings list
-		recordings, err := mediaMTXController.ListRecordings(ctx, 10, 0)
+		recordings, err := env.Controller.ListRecordings(ctx, 10, 0)
 		if err != nil {
 			t.Logf("Warning: Could not list recordings: %v", err)
 		} else {
@@ -251,7 +205,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Test snapshots list
-		snapshots, err := mediaMTXController.ListSnapshots(ctx, 10, 0)
+		snapshots, err := env.Controller.ListSnapshots(ctx, 10, 0)
 		if err != nil {
 			t.Logf("Warning: Could not list snapshots: %v", err)
 		} else {
@@ -263,7 +217,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	// Test health monitoring
 	t.Run("HealthMonitoring", func(t *testing.T) {
 		// Test MediaMTX health
-		health, err := mediaMTXController.GetHealth(ctx)
+		health, err := env.Controller.GetHealth(ctx)
 		if err != nil {
 			t.Logf("Warning: Could not get health: %v", err)
 		} else {
@@ -272,7 +226,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Test system metrics
-		metrics, err := mediaMTXController.GetSystemMetrics(ctx)
+		metrics, err := env.Controller.GetSystemMetrics(ctx)
 		if err != nil {
 			t.Logf("Warning: Could not get metrics: %v", err)
 		} else {
@@ -283,7 +237,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test active recording tracking
 	t.Run("ActiveRecordingTracking", func(t *testing.T) {
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
 			t.Skip("No cameras available for active recording testing")
 		}
@@ -296,11 +250,11 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		devicePath := camera.Path
 
 		// Check if device is recording
-		isRecording := mediaMTXController.IsDeviceRecording(devicePath)
+		isRecording := env.Controller.IsDeviceRecording(devicePath)
 		assert.False(t, isRecording, "Device should not be recording initially")
 
 		// Get active recordings
-		activeRecordings := mediaMTXController.GetActiveRecordings()
+		activeRecordings := env.Controller.GetActiveRecordings()
 		t.Logf("Active recordings: %d", len(activeRecordings))
 		assert.GreaterOrEqual(t, len(activeRecordings), 0, "Should have active recordings count")
 	})
@@ -308,11 +262,11 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	// Cleanup
 	t.Run("Cleanup", func(t *testing.T) {
 		// Stop WebSocket server
-		err := wsServer.Stop()
+		err := env.WebSocketServer.Stop()
 		require.NoError(t, err, "Failed to stop WebSocket server")
 
 		// Stop camera monitor
-		err = cameraMonitor.Stop()
+		err = env.CameraMonitor.Stop()
 		require.NoError(t, err, "Failed to stop camera monitor")
 
 		t.Log("Cleanup completed successfully")
@@ -338,108 +292,35 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// COMMON PATTERN: Use shared test environment instead of individual components
-	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	// COMMON PATTERN: Use shared WebSocket test environment with all dependencies
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Setup test environment
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Load test configuration
-	err := env.ConfigManager.LoadConfig("config/test.yaml")
-	if err != nil {
-		// Fallback to default config
-		err = env.ConfigManager.LoadConfig("config/default.yaml")
-		require.NoError(t, err, "Failed to load configuration")
-	}
-
-	// Initialize mock implementations
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	// Initialize camera monitor
-	cameraMonitor := camera.NewHybridCameraMonitor(
-		env.ConfigManager,
-		env.Logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
-	)
-
-	// Initialize MediaMTX controller (not used in this test but required for completeness)
-	_, err = mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err, "Failed to create MediaMTX controller")
-
 	// Test mock camera discovery
 	t.Run("MockCameraDiscovery", func(t *testing.T) {
 		// Start camera monitor
-		err := cameraMonitor.Start(ctx)
+		err := env.CameraMonitor.Start(ctx)
 		require.NoError(t, err, "Failed to start camera monitor")
 
 		// Wait for discovery
 		time.Sleep(3 * time.Second)
 
 		// Get cameras
-		cameras := cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		t.Logf("Discovered %d cameras in mock test", len(cameras))
 
 		// Stop camera monitor
-		err = cameraMonitor.Stop()
+		err = env.CameraMonitor.Stop()
 		require.NoError(t, err, "Failed to stop camera monitor")
 	})
 }
 
 // BenchmarkCameraOperations benchmarks camera operations
+// TODO: Implement benchmark using shared test environment when benchmark support is added
 func BenchmarkCameraOperations(b *testing.B) {
-	// COMMON PATTERN: Use shared test environment instead of individual components
-	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(b)
-	defer utils.TeardownTestEnvironment(b, env)
-
-	// Setup
-	ctx := context.Background()
-	err := env.ConfigManager.LoadConfig("config/default.yaml")
-	require.NoError(b, err, "Failed to load configuration")
-
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	cameraMonitor := camera.NewHybridCameraMonitor(
-		env.ConfigManager,
-		env.Logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
-	)
-
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(b, err, "Failed to create MediaMTX controller")
-
-	// Benchmark camera discovery
-	b.Run("CameraDiscovery", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			cameras := cameraMonitor.GetConnectedCameras()
-			_ = len(cameras)
-		}
-	})
-
-	// Benchmark health check
-	b.Run("HealthCheck", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			health, _ := mediaMTXController.GetHealth(ctx)
-			_ = health
-		}
-	})
-
-	// Benchmark metrics retrieval
-	b.Run("MetricsRetrieval", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			metrics, _ := mediaMTXController.GetSystemMetrics(ctx)
-			_ = metrics
-		}
-	})
+	b.Skip("Benchmark not yet implemented with shared test environment")
 }

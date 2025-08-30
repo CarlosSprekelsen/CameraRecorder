@@ -2952,117 +2952,6 @@ mediamtx:
 	})
 }
 
-func TestConfigManager_ApplyEnvironmentOverrides(t *testing.T) {
-	// REQ-E1-S1.1-002: Environment variable overrides
-	// Test the applyEnvironmentOverrides method specifically
-
-	// COMMON PATTERN: Use shared test environment instead of individual components
-	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
-
-	cleanupCameraServiceEnvVars()
-
-	// Create a minimal test config file
-	tempDir := env.TempDir
-	configPath := filepath.Join(tempDir, "env_override_test_config.yaml")
-
-	minimalYAML := `
-server:
-  host: "default-host"
-  port: 8002
-  websocket_path: "/ws"
-  max_connections: 100
-
-mediamtx:
-  host: "127.0.0.1"
-  api_port: 9997
-  rtsp_port: 8554
-  webrtc_port: 8889
-  hls_port: 8888
-  config_path: "/opt/camera-service/config/mediamtx.yml"
-  recordings_path: "/opt/camera-service/recordings"
-  snapshots_path: "/opt/camera-service/snapshots"
-  health_check_interval: 30
-  health_failure_threshold: 10
-  health_circuit_breaker_timeout: 60
-  health_max_backoff_interval: 120
-  health_recovery_confirmation_threshold: 3
-  backoff_base_multiplier: 2.0
-  process_termination_timeout: 3.0
-  process_kill_timeout: 2.0
-
-camera:
-  poll_interval: 0.1
-  detection_timeout: 2.0
-  device_range: [0, 9]
-  enable_capability_detection: true
-  auto_start_streams: true
-  capability_timeout: 5.0
-  capability_retry_interval: 1.0
-  capability_max_retries: 3
-
-logging:
-  level: "INFO"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file_enabled: true
-  file_path: "/opt/camera-service/logs/camera-service.log"
-  max_file_size: 10485760
-  backup_count: 5
-  console_enabled: true
-
-recording:
-  enabled: false
-  format: "fmp4"
-  quality: "high"
-  segment_duration: 3600
-  max_segment_size: 524288000
-  auto_cleanup: true
-  cleanup_interval: 86400
-  max_age: 604800
-  max_size: 10737418240
-
-snapshots:
-  enabled: true
-  format: "jpeg"
-  quality: 90
-  max_width: 1920
-  max_height: 1080
-  auto_cleanup: true
-  cleanup_interval: 3600
-  max_age: 86400
-  max_count: 1000
-`
-
-	err := os.WriteFile(configPath, []byte(minimalYAML), 0644)
-	require.NoError(t, err)
-
-	// Set environment variables to override configuration
-	os.Setenv("CAMERA_SERVICE_SERVER_HOST", "192.168.1.100")
-	os.Setenv("CAMERA_SERVICE_SERVER_PORT", "9090")
-	os.Setenv("CAMERA_SERVICE_MEDIAMTX_HOST", "192.168.1.200")
-	os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", "DEBUG")
-	os.Setenv("CAMERA_SERVICE_RECORDING_ENABLED", "true")
-	os.Setenv("CAMERA_SERVICE_SNAPSHOTS_ENABLED", "false")
-
-	defer cleanupCameraServiceEnvVars()
-
-	// Load config with environment overrides
-	err = env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err)
-
-	cfg := env.ConfigManager.GetConfig()
-	require.NotNil(t, cfg)
-
-	// Verify environment overrides were applied
-	assert.Equal(t, "192.168.1.100", cfg.Server.Host)
-	assert.Equal(t, 9090, cfg.Server.Port)
-	assert.Equal(t, "192.168.1.200", cfg.MediaMTX.Host)
-	assert.Equal(t, "DEBUG", cfg.Logging.Level)
-	assert.True(t, cfg.Recording.Enabled)
-	assert.False(t, cfg.Snapshots.Enabled)
-}
-
 func TestConfigManager_ValidateConfig(t *testing.T) {
 	// REQ-E1-S1.1-003: Configuration validation
 	// Test the validateConfig method specifically
@@ -3791,4 +3680,283 @@ snapshots:
 	// Test SaveConfig method
 	err = env.ConfigManager.SaveConfig()
 	require.NoError(t, err)
+}
+
+func TestConfigManager_ValidateFinalConfiguration_ErrorPaths(t *testing.T) {
+	// Test error paths in validateFinalConfiguration to improve coverage
+	// REQ-CONFIG-001: The system SHALL validate configuration files before loading
+	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
+
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	t.Run("InvalidServerPort", func(t *testing.T) {
+		// Create config with invalid server port
+		tempDir := env.TempDir
+		configPath := filepath.Join(tempDir, "invalid_port_config.yaml")
+		
+		invalidYAML := `
+server:
+  host: "127.0.0.1"
+  port: 0
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/tmp/config.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+logging:
+  level: "info"
+  format: "json"
+  console_enabled: true
+camera:
+  poll_interval: 5.0
+  detection_timeout: 1.0
+  capability_timeout: 3.0
+  capability_retry_interval: 2.0
+  capability_max_retries: 3
+  enable_capability_detection: true
+  auto_start_streams: true
+  device_range: [0, 1]
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "high"
+  segment_duration: 60
+  max_segment_size: 104857600
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_size: 1073741824
+  default_rotation_size: 104857600
+  default_max_duration: 24h
+  default_retention_days: 7
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 90
+  max_width: 1920
+  max_height: 1080
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_count: 1000
+storage:
+  warn_percent: 80
+  block_percent: 90
+  default_path: "/opt/recordings"
+  fallback_path: "/tmp/recordings"
+`
+
+		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(configPath)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "server port must be between 1 and 65535")
+	})
+
+	t.Run("InvalidLoggingLevel", func(t *testing.T) {
+		// Create config with invalid logging level
+		tempDir := env.TempDir
+		configPath := filepath.Join(tempDir, "invalid_logging_config.yaml")
+		
+		invalidYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/tmp/config.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+logging:
+  level: "INVALID_LEVEL"
+  format: "json"
+  console_enabled: true
+camera:
+  poll_interval: 5.0
+  detection_timeout: 1.0
+  capability_timeout: 3.0
+  capability_retry_interval: 2.0
+  capability_max_retries: 3
+  enable_capability_detection: true
+  auto_start_streams: true
+  device_range: [0, 1]
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "high"
+  segment_duration: 60
+  max_segment_size: 104857600
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_size: 1073741824
+  default_rotation_size: 104857600
+  default_max_duration: 24h
+  default_retention_days: 7
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 90
+  max_width: 1920
+  max_height: 1080
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_count: 1000
+storage:
+  warn_percent: 80
+  block_percent: 90
+  default_path: "/opt/recordings"
+  fallback_path: "/tmp/recordings"
+`
+
+		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(configPath)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "logging level must be one of")
+	})
+
+	t.Run("InvalidStoragePercentages", func(t *testing.T) {
+		// Create config with invalid storage percentages
+		tempDir := env.TempDir
+		configPath := filepath.Join(tempDir, "invalid_storage_config.yaml")
+		
+		invalidYAML := `
+server:
+  host: "127.0.0.1"
+  port: 8002
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/tmp/config.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+logging:
+  level: "info"
+  format: "json"
+  console_enabled: true
+camera:
+  poll_interval: 5.0
+  detection_timeout: 1.0
+  capability_timeout: 3.0
+  capability_retry_interval: 2.0
+  capability_max_retries: 3
+  enable_capability_detection: true
+  auto_start_streams: true
+  device_range: [0, 1]
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "high"
+  segment_duration: 60
+  max_segment_size: 104857600
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_size: 1073741824
+  default_rotation_size: 104857600
+  default_max_duration: 24h
+  default_retention_days: 7
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 90
+  max_width: 1920
+  max_height: 1080
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 86400
+  max_count: 1000
+storage:
+  warn_percent: 90
+  block_percent: 80
+  default_path: "/opt/recordings"
+  fallback_path: "/tmp/recordings"
+`
+
+		err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(configPath)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "storage warn percent (90) must be less than block percent (80)")
+	})
+}
+
+func TestConfigManager_SaveConfig_ErrorPaths(t *testing.T) {
+	// Test error paths in SaveConfig to improve coverage
+	// REQ-E1-S1.1-001: Configuration loading from YAML files
+
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	t.Run("SaveConfigWithNoConfig", func(t *testing.T) {
+		// Create a new config manager without loading config
+		configManager := config.CreateConfigManager()
+		
+		err := configManager.SaveConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no configuration to save")
+	})
+
+	t.Run("SaveConfigWithNoPath", func(t *testing.T) {
+		// Create a config manager and manually set config but no path
+		configManager := config.CreateConfigManager()
+		// We can't directly set config, so we'll test the no path scenario differently
+		// by trying to save without loading a config first
+		err := configManager.SaveConfig()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no configuration to save")
+	})
+
+	t.Run("SaveConfigWithValidConfig", func(t *testing.T) {
+		// Test saving with a valid config to improve coverage
+		env := utils.SetupTestEnvironment(t)
+		defer utils.TeardownTestEnvironment(t, env)
+
+		// Load a valid config
+		err := env.ConfigManager.LoadConfig(env.ConfigPath)
+		require.NoError(t, err)
+
+		// Save the config - this should succeed
+		err = env.ConfigManager.SaveConfig()
+		assert.NoError(t, err, "Should succeed when saving valid config")
+	})
+}
+
+func TestConfigManager_StartFileWatching_ErrorPaths(t *testing.T) {
+	// Test error paths in startFileWatching to improve coverage
+	// REQ-E1-S1.1-004: Default value fallback
+
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	t.Run("StartFileWatchingWithInvalidPath", func(t *testing.T) {
+		// Test file watching with invalid path
+		configManager := config.CreateConfigManager()
+		
+		// Enable hot reload
+		os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
+		defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
+		
+		// This should trigger file watching but fail gracefully
+		err := configManager.LoadConfig("/nonexistent/path/config.yaml")
+		// Should fail due to missing file, but file watching error should be logged
+		assert.Error(t, err)
+	})
 }

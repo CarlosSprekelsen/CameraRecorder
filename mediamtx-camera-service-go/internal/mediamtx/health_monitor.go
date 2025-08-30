@@ -95,7 +95,7 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		client:                    client,
 		config:                    config,
 		logger:                    logger,
-		state:                     CircuitClosed,
+		state:                     CircuitOpen, // Start as unhealthy until first health check
 		failureThreshold:          config.CircuitBreaker.FailureThreshold,
 		maxFailures:               config.CircuitBreaker.MaxFailures,
 		recoveryTimeout:           config.CircuitBreaker.RecoveryTimeout,
@@ -209,10 +209,10 @@ func (h *healthMonitor) RecordSuccess() {
 	}
 	h.consecutiveFailures = 0
 
-	// Transition from half-open to closed
-	if h.state == CircuitHalfOpen {
+	// Transition from open or half-open to closed
+	if h.state == CircuitOpen || h.state == CircuitHalfOpen {
 		h.state = CircuitClosed
-		h.logger.Info("Circuit breaker transitioned from HALF_OPEN to CLOSED")
+		h.logger.Info("Circuit breaker transitioned to CLOSED")
 	}
 }
 
