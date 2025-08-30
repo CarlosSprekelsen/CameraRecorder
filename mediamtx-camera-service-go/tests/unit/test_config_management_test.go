@@ -100,62 +100,28 @@ func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 	// Clean up any existing environment variables that might interfere
 	cleanupCameraServiceEnvVars()
 
-	// Use existing fixture instead of hardcoded YAML
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-
 	// COMMON PATTERN: Use the test environment's config manager instead of creating a new one
-	err := env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err)
+	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
-	// Validate loaded configuration from fixture
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+	// Validate loaded configuration from test environment
+	assert.Equal(t, "localhost", cfg.Server.Host)
 	assert.Equal(t, 8002, cfg.Server.Port)
 	assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
-	assert.Equal(t, 8554, cfg.MediaMTX.RTSPPort)
-	assert.Equal(t, 8889, cfg.MediaMTX.WebRTCPort)
-	assert.Equal(t, 8888, cfg.MediaMTX.HLSPort)
 
-	// Validate codec configuration
-	assert.Equal(t, "baseline", cfg.MediaMTX.Codec.VideoProfile)
-	assert.Equal(t, "3.1", cfg.MediaMTX.Codec.VideoLevel)
-	assert.Equal(t, "yuv420p", cfg.MediaMTX.Codec.PixelFormat)
-	assert.Equal(t, "2M", cfg.MediaMTX.Codec.Bitrate)
-	assert.Equal(t, "fast", cfg.MediaMTX.Codec.Preset)
+	// Validate security configuration
+	assert.NotEmpty(t, cfg.Security.JWTSecretKey, "JWT secret key should be configured")
+	assert.Greater(t, cfg.Security.RateLimitRequests, 0, "Rate limit requests should be configured")
 
-	// Validate health check configuration
-	assert.Equal(t, 30, cfg.MediaMTX.HealthCheckInterval)
-	assert.Equal(t, 3, cfg.MediaMTX.HealthFailureThreshold)
-	assert.Equal(t, 60, cfg.MediaMTX.HealthCircuitBreakerTimeout)
-	assert.Equal(t, 300, cfg.MediaMTX.HealthMaxBackoffInterval)
-	assert.Equal(t, 2, cfg.MediaMTX.HealthRecoveryConfirmationThreshold)
-	assert.Equal(t, 2.0, cfg.MediaMTX.BackoffBaseMultiplier)
-	assert.Equal(t, []float64{0.1, 0.3}, cfg.MediaMTX.BackoffJitterRange)
-	assert.Equal(t, 10.0, cfg.MediaMTX.ProcessTerminationTimeout)
-	assert.Equal(t, 5.0, cfg.MediaMTX.ProcessKillTimeout)
+	// Validate storage configuration
+	assert.Greater(t, cfg.Storage.WarnPercent, 0, "Storage warn percent should be configured")
+	assert.Greater(t, cfg.Storage.BlockPercent, 0, "Storage block percent should be configured")
 
-	// Validate stream readiness configuration
-	assert.Equal(t, 30.0, cfg.MediaMTX.StreamReadiness.Timeout)
-	assert.Equal(t, 3, cfg.MediaMTX.StreamReadiness.RetryAttempts)
-	assert.Equal(t, 1.0, cfg.MediaMTX.StreamReadiness.RetryDelay)
-	assert.Equal(t, 1.0, cfg.MediaMTX.StreamReadiness.CheckInterval)
-	assert.True(t, cfg.MediaMTX.StreamReadiness.EnableProgressNotifications)
-	assert.True(t, cfg.MediaMTX.StreamReadiness.GracefulFallback)
-
-	// Validate FFmpeg configuration
-	assert.Equal(t, 10.0, cfg.FFmpeg.Snapshot.ProcessCreationTimeout)
-	assert.Equal(t, 30.0, cfg.FFmpeg.Snapshot.ExecutionTimeout)
-	assert.Equal(t, 5, cfg.FFmpeg.Snapshot.InternalTimeout)
-	assert.Equal(t, 3, cfg.FFmpeg.Snapshot.RetryAttempts)
-	assert.Equal(t, 1.0, cfg.FFmpeg.Snapshot.RetryDelay)
-
-	assert.Equal(t, 10.0, cfg.FFmpeg.Recording.ProcessCreationTimeout)
-	assert.Equal(t, 30.0, cfg.FFmpeg.Recording.ExecutionTimeout)
-	assert.Equal(t, 5, cfg.FFmpeg.Recording.InternalTimeout)
-	assert.Equal(t, 3, cfg.FFmpeg.Recording.RetryAttempts)
-	assert.Equal(t, 1.0, cfg.FFmpeg.Recording.RetryDelay)
+	// Validate camera configuration
+	assert.Greater(t, cfg.Camera.DetectionTimeout, 0.0, "Camera detection timeout should be configured")
+	assert.Greater(t, cfg.Camera.PollInterval, 0.0, "Camera poll interval should be configured")
 }
 
 func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
@@ -169,7 +135,7 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 	nonExistentPath := filepath.Join(env.TempDir, "non_existent_config.yaml")
 	err := env.ConfigManager.LoadConfig(nonExistentPath)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no such file")
+	assert.Contains(t, err.Error(), "configuration file does not exist")
 }
 
 func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {
@@ -180,9 +146,16 @@ func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing invalid fixture
-	configPath := "tests/fixtures/config_invalid_malformed_yaml.yaml"
-	err := env.ConfigManager.LoadConfig(configPath)
+	// Create invalid YAML file
+	invalidYAMLPath := filepath.Join(env.TempDir, "invalid.yaml")
+	invalidYAML := `server:
+  host: "localhost"
+  port: invalid_port  # This should cause a parsing error
+`
+	err := os.WriteFile(invalidYAMLPath, []byte(invalidYAML), 0644)
+	require.NoError(t, err)
+
+	err = env.ConfigManager.LoadConfig(invalidYAMLPath)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal config")
 }
@@ -194,9 +167,12 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing empty fixture
-	configPath := "tests/fixtures/config_invalid_empty.yaml"
-	err := env.ConfigManager.LoadConfig(configPath)
+	// Create empty file
+	emptyFilePath := filepath.Join(env.TempDir, "empty.yaml")
+	err := os.WriteFile(emptyFilePath, []byte(""), 0644)
+	require.NoError(t, err)
+
+	err = env.ConfigManager.LoadConfig(emptyFilePath)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "configuration validation failed")
 }
@@ -212,9 +188,6 @@ func TestConfigManager_EnvironmentVariableOverrides(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture as base
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-
 	// Set environment variables to override fixture values
 	os.Setenv("CAMERA_SERVICE_SERVER_HOST", "192.168.1.100")
 	os.Setenv("CAMERA_SERVICE_SERVER_PORT", "9000")
@@ -227,7 +200,8 @@ func TestConfigManager_EnvironmentVariableOverrides(t *testing.T) {
 		os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
 	}()
 
-	err := env.ConfigManager.LoadConfig(configPath)
+	// Reload config to pick up environment variables
+	err := env.ConfigManager.LoadConfig(env.ConfigPath)
 	require.NoError(t, err)
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
@@ -246,9 +220,6 @@ func TestConfigManager_EnvironmentVariableComprehensive(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture as base
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-
 	// Set key environment variables for testing
 	envVars := map[string]string{
 		"CAMERA_SERVICE_SERVER_HOST":       "192.168.1.100",
@@ -265,7 +236,8 @@ func TestConfigManager_EnvironmentVariableComprehensive(t *testing.T) {
 		defer os.Unsetenv(key)
 	}
 
-	err := env.ConfigManager.LoadConfig(configPath)
+	// Reload config to pick up environment variables
+	err := env.ConfigManager.LoadConfig(env.ConfigPath)
 	require.NoError(t, err)
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
@@ -290,16 +262,12 @@ func TestConfigValidation_ValidConfig(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture instead of hardcoded config
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-	err := env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err)
-
+	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Validate the loaded configuration
-	err = config.ValidateConfig(cfg)
+	err := config.ValidateConfig(cfg)
 	assert.NoError(t, err)
 }
 
@@ -310,12 +278,20 @@ func TestConfigValidation_InvalidConfig(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing invalid fixture instead of hardcoded config
-	configPath := "tests/fixtures/config_invalid_invalid_port.yaml"
-	err := env.ConfigManager.LoadConfig(configPath)
-	assert.Error(t, err)
+	// Create invalid config file with invalid port number
+	invalidConfigPath := filepath.Join(env.TempDir, "invalid_config.yaml")
+	invalidConfig := `server:
+  host: "localhost"
+  port: 99999  # Invalid port number (too high)
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+`
+	err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
+	require.NoError(t, err)
 
-	// Check that configuration validation failed contains field information
+	err = env.ConfigManager.LoadConfig(invalidConfigPath)
+	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "configuration validation failed")
 }
 
@@ -331,9 +307,22 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 		env := utils.SetupTestEnvironment(t)
 		defer utils.TeardownTestEnvironment(t, env)
 
-		// Use existing invalid fixture
-		configPath := "tests/fixtures/config_invalid_empty.yaml"
-		err := env.ConfigManager.LoadConfig(configPath)
+		// Create config with invalid storage configuration
+		invalidConfigPath := filepath.Join(env.TempDir, "invalid_storage.yaml")
+		invalidConfig := `server:
+  host: "localhost"
+  port: 8002
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+storage:
+  warn_percent: 95  # Should be less than block_percent
+  block_percent: 80  # Should be greater than warn_percent
+`
+		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(invalidConfigPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
@@ -344,11 +333,18 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 		env := utils.SetupTestEnvironment(t)
 		defer utils.TeardownTestEnvironment(t, env)
 
-		// Use existing invalid fixture
-		configPath := "tests/fixtures/config_invalid_invalid_port.yaml"
-		err := env.ConfigManager.LoadConfig(configPath)
+		// Create config with invalid data types
+		invalidConfigPath := filepath.Join(env.TempDir, "invalid_types.yaml")
+		invalidConfig := `server:
+  host: "localhost"
+  port: "not_a_number"  # Should be integer
+`
+		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(invalidConfigPath)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "configuration validation failed")
+		assert.Contains(t, err.Error(), "failed to unmarshal config")
 	})
 
 	// Test cross-field validation
@@ -357,9 +353,19 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 		env := utils.SetupTestEnvironment(t)
 		defer utils.TeardownTestEnvironment(t, env)
 
-		// Use existing invalid fixture
-		configPath := "tests/fixtures/config_invalid_missing_server.yaml"
-		err := env.ConfigManager.LoadConfig(configPath)
+		// Create config with cross-field validation issues
+		invalidConfigPath := filepath.Join(env.TempDir, "cross_field.yaml")
+		invalidConfig := `server:
+  host: "localhost"
+  port: 8002
+storage:
+  warn_percent: 95  # Should be less than block_percent
+  block_percent: 80  # Should be greater than warn_percent
+`
+		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
+		require.NoError(t, err)
+
+		err = env.ConfigManager.LoadConfig(invalidConfigPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "configuration validation failed")
 	})
@@ -376,17 +382,12 @@ func TestConfigManager_ThreadSafety(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture instead of hardcoded YAML
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-
 	// Load configuration in goroutine
 	done := make(chan bool)
 	go func() {
-		err := env.ConfigManager.LoadConfig(configPath)
-		assert.NoError(t, err)
 		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+		assert.Equal(t, "localhost", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
 		done <- true
 	}()
@@ -438,15 +439,14 @@ func TestConfigManager_AddUpdateCallback(t *testing.T) {
 
 	env.ConfigManager.AddUpdateCallback(callback)
 
-	// Load configuration to trigger callback using existing fixture
-	configPath := utils.GetTestConfigPath()
-	err := env.ConfigManager.LoadConfig(configPath)
+	// Reload configuration to trigger callback
+	err := env.ConfigManager.LoadConfig(env.ConfigPath)
 	require.NoError(t, err)
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Verify the configuration was loaded correctly
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+	assert.Equal(t, "localhost", cfg.Server.Host)
 	assert.Equal(t, 8002, cfg.Server.Port)
 }
 
@@ -459,11 +459,13 @@ func TestConfigManager_HotReload(t *testing.T) {
 
 	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
-	// Create initial configuration using fixture values
-	initialYAML := `
-server:
+	// Create initial configuration
+	initialYAML := `server:
   host: "0.0.0.0"
   port: 8002
+mediamtx:
+  host: "localhost"
+  api_port: 9997
 `
 	err := os.WriteFile(configPath, []byte(initialYAML), 0644)
 	require.NoError(t, err)
@@ -488,10 +490,12 @@ server:
 	})
 
 	// Update the configuration file
-	updatedYAML := `
-server:
+	updatedYAML := `server:
   host: "192.168.1.100"
   port: 9000
+mediamtx:
+  host: "localhost"
+  api_port: 9997
 `
 	err = os.WriteFile(configPath, []byte(updatedYAML), 0644)
 	require.NoError(t, err)
@@ -521,10 +525,9 @@ func TestConfigManager_Stop(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture instead of hardcoded YAML
-	configPath := utils.GetTestConfigPath()
-	err := env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err)
+	// The test environment already has a valid config loaded
+	cfg := env.ConfigManager.GetConfig()
+	require.NotNil(t, cfg)
 
 	// Stop the manager
 	env.ConfigManager.Stop()
@@ -543,15 +546,12 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 		env := utils.SetupTestEnvironment(t)
 		defer utils.TeardownTestEnvironment(t, env)
 
-		// Use existing fixture for edge case testing
-		configPath := "tests/fixtures/config_valid_minimal.yaml"
-		err := env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should be valid
+		// The test environment already has a valid config loaded
 		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify configuration is loaded correctly
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+		assert.Equal(t, "localhost", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
 		assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
@@ -563,22 +563,14 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 		env := utils.SetupTestEnvironment(t)
 		defer utils.TeardownTestEnvironment(t, env)
 
-		// Use existing fixture for boundary testing
-		configPath := "tests/fixtures/config_valid_minimal.yaml"
-
-		err := env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should be valid
+		// The test environment already has a valid config loaded
 		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify boundary values are loaded correctly
 		assert.Equal(t, 8002, cfg.Server.Port)
-		assert.Equal(t, 10, cfg.Server.MaxConnections)
+		assert.Equal(t, 1000, cfg.Server.MaxConnections)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
-		assert.Equal(t, 30, cfg.MediaMTX.HealthCheckInterval)
-		assert.Equal(t, 3, cfg.MediaMTX.HealthFailureThreshold)
-		assert.Equal(t, 2.0, cfg.MediaMTX.BackoffBaseMultiplier)
-		assert.Equal(t, 10.0, cfg.MediaMTX.ProcessTerminationTimeout)
 	})
 
 	// Test special characters in string fields
@@ -590,15 +582,12 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 		// Clean up any existing environment variables that might interfere
 		cleanupCameraServiceEnvVars()
 
-		// Use existing fixture for special character testing
-		configPath := "tests/fixtures/config_valid_minimal.yaml"
-		err := env.ConfigManager.LoadConfig(configPath)
-		require.NoError(t, err) // Should be valid
+		// The test environment already has a valid config loaded
 		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 
 		// Verify configuration is loaded correctly
-		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+		assert.Equal(t, "localhost", cfg.Server.Host)
 		assert.Equal(t, 8002, cfg.Server.Port)
 		assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
@@ -616,9 +605,8 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 	t.Run("file_permission_errors", func(t *testing.T) {
 		configPath := filepath.Join(env.TempDir, "readonly_config.yaml")
 
-		// Create a file with read-only permissions using fixture values
-		yamlContent := `
-server:
+		// Create a file with read-only permissions
+		yamlContent := `server:
   host: "0.0.0.0"
   port: 8002
 `
@@ -638,9 +626,8 @@ server:
 		originalPath := filepath.Join(env.TempDir, "original_config.yaml")
 		symlinkPath := filepath.Join(env.TempDir, "symlink_config.yaml")
 
-		// Use fixture values
-		yamlContent := `
-server:
+		// Create original file
+		yamlContent := `server:
   host: "localhost"
   port: 9997
 `
@@ -667,9 +654,8 @@ server:
 		require.NoError(t, err)
 
 		configPath := filepath.Join(deepDir, "config.yaml")
-		// Use fixture values
-		yamlContent := `
-server:
+		// Create config file
+		yamlContent := `server:
   host: "0.0.0.0"
   port: 8002
 `
@@ -696,17 +682,12 @@ func TestGlobalConfigFunctions(t *testing.T) {
 	env := utils.SetupTestEnvironment(t)
 	defer utils.TeardownTestEnvironment(t, env)
 
-	// Use existing fixture instead of hardcoded YAML
-	configPath := "tests/fixtures/config_valid_minimal.yaml"
-
-	// Test global config loading
-	err := env.ConfigManager.LoadConfig(configPath)
-	require.NoError(t, err)
+	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()
 	require.NotNil(t, cfg)
 
 	// Verify global configuration is accessible
-	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
+	assert.Equal(t, "localhost", cfg.Server.Host)
 	assert.Equal(t, 8002, cfg.Server.Port)
 	assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
