@@ -1461,35 +1461,10 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
-		// First authenticate the client
+		// Authenticate using utility method
 		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
 		require.NoError(t, err, "Failed to generate test token")
-
-		authRequest := &websocket.JsonRpcRequest{
-			JSONRPC: "2.0",
-			Method:  "authenticate",
-			ID:      0,
-			Params: map[string]interface{}{
-				"auth_token": token,
-			},
-		}
-		authResponse := client.SendRequest(authRequest)
-		require.Nil(t, authResponse.Error, "Authentication should succeed")
-
-		// First authenticate the client
-		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
-		require.NoError(t, err, "Failed to generate test token")
-
-		authRequest := &websocket.JsonRpcRequest{
-			JSONRPC: "2.0",
-			Method:  "authenticate",
-			ID:      0,
-			Params: map[string]interface{}{
-				"auth_token": token,
-			},
-		}
-		authResponse := client.SendRequest(authRequest)
-		require.Nil(t, authResponse.Error, "Authentication should succeed")
+		client.SendAuthenticationRequest(token)
 
 		// Send multiple rapid requests to exercise checkRateLimit
 		for i := 0; i < 25; i++ {
@@ -1520,20 +1495,10 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
-		// First authenticate the client
+		// Authenticate using utility method
 		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
 		require.NoError(t, err, "Failed to generate test token")
-
-		authRequest := &websocket.JsonRpcRequest{
-			JSONRPC: "2.0",
-			Method:  "authenticate",
-			ID:      0,
-			Params: map[string]interface{}{
-				"auth_token": token,
-			},
-		}
-		authResponse := client.SendRequest(authRequest)
-		require.Nil(t, authResponse.Error, "Authentication should succeed")
+		client.SendAuthenticationRequest(token)
 
 		// Test various methods that might trigger events (broadcastEvent, addEventHandler)
 		methods := []string{"get_camera_list", "get_server_info", "get_status", "get_metrics"}
@@ -1566,20 +1531,10 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
-		// First authenticate the client with operator role for recording operations
+		// Authenticate with operator role for recording operations
 		token, err := env.JWTHandler.GenerateToken("test_user", "operator", 24)
 		require.NoError(t, err, "Failed to generate test token")
-
-		authRequest := &websocket.JsonRpcRequest{
-			JSONRPC: "2.0",
-			Method:  "authenticate",
-			ID:      0,
-			Params: map[string]interface{}{
-				"auth_token": token,
-			},
-		}
-		authResponse := client.SendRequest(authRequest)
-		require.Nil(t, authResponse.Error, "Authentication should succeed")
+		client.SendAuthenticationRequest(token)
 
 		// Test recording operations that might trigger notifyRecordingStatusUpdate
 		devices := []string{"/dev/video0", "/dev/video1"}
@@ -1667,6 +1622,11 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
+		// Authenticate using utility method
+		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
+		require.NoError(t, err, "Failed to generate test token")
+		client.SendAuthenticationRequest(token)
+
 		// Test comprehensive set of methods that might trigger event broadcasting
 		methods := []string{
 			"get_camera_list", "get_server_info", "get_status", "get_metrics",
@@ -1720,20 +1680,10 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
-		// First authenticate the client with operator role for recording operations
+		// Authenticate with operator role for recording operations
 		token, err := env.JWTHandler.GenerateToken("test_user", "operator", 24)
 		require.NoError(t, err, "Failed to generate test token")
-
-		authRequest := &websocket.JsonRpcRequest{
-			JSONRPC: "2.0",
-			Method:  "authenticate",
-			ID:      0,
-			Params: map[string]interface{}{
-				"auth_token": token,
-			},
-		}
-		authResponse := client.SendRequest(authRequest)
-		require.Nil(t, authResponse.Error, "Authentication should succeed")
+		client.SendAuthenticationRequest(token)
 
 		// Test comprehensive recording operations through WebSocket
 		recordingOperations := []map[string]interface{}{
