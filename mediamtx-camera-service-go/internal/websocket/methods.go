@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -255,6 +256,9 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 	connectedCount := 0
 
 	for devicePath, camera := range cameras {
+		// Convert device path to camera identifier for API response
+		cameraID := s.getCameraIdentifierFromDevicePath(devicePath)
+
 		// Get resolution from first format if available
 		resolution := ""
 		if len(camera.Formats) > 0 {
@@ -270,7 +274,7 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 		}
 
 		cameraData := map[string]interface{}{
-			"device":     devicePath,
+			"device":     cameraID, // Use camera identifier instead of device path
 			"status":     string(camera.Status),
 			"name":       camera.Name,
 			"resolution": resolution,
@@ -325,8 +329,8 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 	}
 
 	// Extract device parameter
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
+	cameraID, ok := params["device"].(string)
+	if !ok || cameraID == "" {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
@@ -337,15 +341,30 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Get camera status from camera monitor
-	camera, exists := s.cameraMonitor.GetDevice(device)
-	if !exists {
+	// Validate camera identifier format
+	if !s.validateCameraIdentifier(cameraID) {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    INVALID_PARAMS,
-				Message: "Camera not found",
-				Data:    fmt.Sprintf("Camera device %s not found", device),
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    fmt.Sprintf("Invalid camera identifier format: %s. Expected format: camera[0-9]+", cameraID),
+			},
+		}, nil
+	}
+
+	// Convert camera identifier to device path for internal lookup
+	devicePath := s.getDevicePathFromCameraIdentifier(cameraID)
+
+	// Get camera status from camera monitor
+	camera, exists := s.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    CAMERA_NOT_FOUND,
+				Message: ErrorMessages[CAMERA_NOT_FOUND],
+				Data:    fmt.Sprintf("Camera '%s' not found", cameraID),
 			},
 		}, nil
 	}
@@ -359,9 +378,9 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 
 	// Build streams object following API documentation exactly
 	streams := map[string]string{
-		"rtsp":   fmt.Sprintf("rtsp://localhost:8554/%s", s.getStreamNameFromDevicePath(device)),
-		"webrtc": fmt.Sprintf("webrtc://localhost:8002/%s", s.getStreamNameFromDevicePath(device)),
-		"hls":    fmt.Sprintf("http://localhost:8002/hls/%s.m3u8", s.getStreamNameFromDevicePath(device)),
+		"rtsp":   fmt.Sprintf("rtsp://localhost:8554/%s", s.getStreamNameFromDevicePath(devicePath)),
+		"webrtc": fmt.Sprintf("webrtc://localhost:8002/%s", s.getStreamNameFromDevicePath(devicePath)),
+		"hls":    fmt.Sprintf("http://localhost:8002/hls/%s.m3u8", s.getStreamNameFromDevicePath(devicePath)),
 	}
 
 	// Build capabilities object following API documentation exactly
@@ -387,7 +406,7 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 
 	s.logger.WithFields(logrus.Fields{
 		"client_id": client.ClientID,
-		"device":    device,
+		"device":    cameraID,
 		"method":    "get_camera_status",
 		"status":    string(camera.Status),
 		"action":    "camera_status_success",
@@ -397,7 +416,7 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
-			"device":       device,
+			"device":       cameraID,
 			"status":       string(camera.Status),
 			"name":         camera.Name,
 			"resolution":   resolution,
@@ -920,6 +939,18 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 				Code:    INTERNAL_ERROR,
 				Message: ErrorMessages[INTERNAL_ERROR],
 				Data:    fmt.Sprintf("Error getting recordings list: %v", err),
+			},
+		}, nil
+	}
+
+	// Check if no recordings found
+	if fileList.Total == 0 {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "No recordings found",
+				Data:    "No recording files found in storage",
 			},
 		}, nil
 	}
@@ -1655,6 +1686,18 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 		}, nil
 	}
 
+	// Check if no snapshots found
+	if fileList.Total == 0 {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: "No snapshots found",
+				Data:    "No snapshot files found in storage",
+			},
+		}, nil
+	}
+
 	// Convert FileMetadata to map for JSON response
 	files := make([]map[string]interface{}, len(fileList.Files))
 	for i, file := range fileList.Files {
@@ -1749,11 +1792,9 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Camera device not found",
-				Data: map[string]interface{}{
-					"device": devicePath,
-				},
+				Code:    CAMERA_NOT_FOUND,
+				Message: ErrorMessages[CAMERA_NOT_FOUND],
+				Data:    fmt.Sprintf("Camera device %s not found", devicePath),
 			},
 		}, nil
 	}
@@ -1927,8 +1968,8 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Camera device not found",
+				Code:    CAMERA_NOT_FOUND,
+				Message: ErrorMessages[CAMERA_NOT_FOUND],
 				Data: map[string]interface{}{
 					"device":              devicePath,
 					"error_category":      errorMetadata["category"],
@@ -2033,8 +2074,8 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}, nil
 	}
 
-	devicePath, ok := params["device"].(string)
-	if !ok || devicePath == "" {
+	cameraID, ok := params["device"].(string)
+	if !ok || cameraID == "" {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
@@ -2045,17 +2086,30 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}, nil
 	}
 
+	// Validate camera identifier format
+	if !s.validateCameraIdentifier(cameraID) {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    fmt.Sprintf("Invalid camera identifier format: %s. Expected format: camera[0-9]+", cameraID),
+			},
+		}, nil
+	}
+
+	// Convert camera identifier to device path for internal operations
+	devicePath := s.getDevicePathFromCameraIdentifier(cameraID)
+
 	// Validate camera device exists
 	_, exists := s.cameraMonitor.GetDevice(devicePath)
 	if !exists {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: "Camera device not found",
-				Data: map[string]interface{}{
-					"device": devicePath,
-				},
+				Code:    CAMERA_NOT_FOUND,
+				Message: ErrorMessages[CAMERA_NOT_FOUND],
+				Data:    fmt.Sprintf("Camera device %s not found", devicePath),
 			},
 		}, nil
 	}
@@ -2114,7 +2168,7 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 	s.logger.WithFields(logrus.Fields{
 		"client_id":  client.ClientID,
 		"method":     "stop_recording",
-		"device":     devicePath,
+		"device":     cameraID,
 		"session_id": sessionID,
 		"action":     "stop_recording_success",
 	}).Info("Successfully stopped recording using MediaMTX controller")
@@ -2123,7 +2177,7 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		JSONRPC: "2.0",
 		Result: map[string]interface{}{
 			"session_id": sessionID,
-			"device":     devicePath,
+			"device":     cameraID,
 			"status":     "STOPPED",
 		},
 	}, nil
@@ -2568,4 +2622,47 @@ func (s *WebSocketServer) cleanupDirectoryBySize(dirPath string, maxSizeBytes in
 	}
 
 	return deletedCount, deletedSize, nil
+}
+
+// Abstraction layer mapping functions
+// These functions handle the conversion between camera identifiers (camera0, camera1)
+// and device paths (/dev/video0, /dev/video1) to maintain proper API abstraction
+
+// getCameraIdentifierFromDevicePath converts a device path to a camera identifier
+// Example: /dev/video0 -> camera0
+func (s *WebSocketServer) getCameraIdentifierFromDevicePath(devicePath string) string {
+	// Extract the number from /dev/video{N}
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		number := strings.TrimPrefix(devicePath, "/dev/video")
+		return fmt.Sprintf("camera%s", number)
+	}
+	// If it's already a camera identifier, return as is
+	if strings.HasPrefix(devicePath, "camera") {
+		return devicePath
+	}
+	// Fallback: return the original path
+	return devicePath
+}
+
+// getDevicePathFromCameraIdentifier converts a camera identifier to a device path
+// Example: camera0 -> /dev/video0
+func (s *WebSocketServer) getDevicePathFromCameraIdentifier(cameraID string) string {
+	// Extract the number from camera{N}
+	if strings.HasPrefix(cameraID, "camera") {
+		number := strings.TrimPrefix(cameraID, "camera")
+		return fmt.Sprintf("/dev/video%s", number)
+	}
+	// If it's already a device path, return as is
+	if strings.HasPrefix(cameraID, "/dev/video") {
+		return cameraID
+	}
+	// Fallback: return the original identifier
+	return cameraID
+}
+
+// validateCameraIdentifier validates that a camera identifier follows the correct pattern
+func (s *WebSocketServer) validateCameraIdentifier(cameraID string) bool {
+	// Must match pattern camera[0-9]+
+	matched, _ := regexp.MatchString(`^camera[0-9]+$`, cameraID)
+	return matched
 }

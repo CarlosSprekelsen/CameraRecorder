@@ -23,12 +23,22 @@ import (
 type FFmpegConfig struct {
 	Snapshot  SnapshotConfig  `mapstructure:"snapshot"`
 	Recording RecordingConfig `mapstructure:"recording"`
+	// Fallback defaults for when configuration is missing
+	FallbackDefaults FFmpegFallbackDefaults `mapstructure:"fallback_defaults"`
+}
+
+// FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations
+type FFmpegFallbackDefaults struct {
+	RetryDelay             time.Duration `mapstructure:"retry_delay"`             // Default: 1.0 second
+	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0 seconds
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`       // Default: 30.0 seconds
+	MaxBackoffDelay        time.Duration `mapstructure:"max_backoff_delay"`       // Default: 30.0 seconds
 }
 
 // SnapshotConfig represents snapshot operation configuration
 type SnapshotConfig struct {
-	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 5.0s
-	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 8.0s
+	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0s
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 30.0s
 	InternalTimeout        int64         `mapstructure:"internal_timeout"`         // Default: 5000000
 	RetryAttempts          int           `mapstructure:"retry_attempts"`           // Default: 2
 	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 1.0s
@@ -36,8 +46,8 @@ type SnapshotConfig struct {
 
 // RecordingConfig represents recording operation configuration
 type RecordingConfig struct {
-	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0s
-	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 15.0s
+	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 15.0s
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 60.0s
 	InternalTimeout        int64         `mapstructure:"internal_timeout"`         // Default: 10000000
 	RetryAttempts          int           `mapstructure:"retry_attempts"`           // Default: 3
 	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 2.0s
@@ -91,6 +101,15 @@ type MediaMTXConfig struct {
 	ProcessTerminationTimeout           float64       `mapstructure:"process_termination_timeout"`
 	ProcessKillTimeout                  float64       `mapstructure:"process_kill_timeout"`
 	HealthCheckTimeout                  time.Duration `mapstructure:"health_check_timeout"` // Default: 5 seconds
+	// Health monitoring defaults
+	HealthMonitorDefaults               HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
+}
+
+// HealthMonitorDefaults represents health monitoring default values
+type HealthMonitorDefaults struct {
+	CheckInterval    time.Duration `mapstructure:"check_interval"`    // Default: 5.0 seconds
+	MaxBackoffDelay  time.Duration `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
+	ShutdownTimeout  time.Duration `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
 }
 
 // CircuitBreakerConfig represents circuit breaker configuration

@@ -61,7 +61,7 @@ func TestWebSocket_ErrorMessages(t *testing.T) {
 	// REQ-API-004: Error code and message management
 
 	// Test JSON-RPC 2.0 error messages
-	assert.Equal(t, "Authentication required", websocket.ErrorMessages[websocket.AUTHENTICATION_REQUIRED])
+	assert.Equal(t, "Authentication failed or token expired", websocket.ErrorMessages[websocket.AUTHENTICATION_REQUIRED])
 	assert.Equal(t, "Rate limit exceeded", websocket.ErrorMessages[websocket.RATE_LIMIT_EXCEEDED])
 	assert.Equal(t, "Insufficient permissions", websocket.ErrorMessages[websocket.INSUFFICIENT_PERMISSIONS])
 	assert.Equal(t, "Camera not found or disconnected", websocket.ErrorMessages[websocket.CAMERA_NOT_FOUND])

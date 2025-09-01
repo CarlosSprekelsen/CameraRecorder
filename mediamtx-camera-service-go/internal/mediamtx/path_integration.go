@@ -219,7 +219,15 @@ func (pi *PathIntegration) ListActivePaths() []*Path {
 
 // monitorCameraChanges monitors camera changes and updates paths accordingly
 func (pi *PathIntegration) monitorCameraChanges(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Second)
+	// Use configurable ticker interval (default 5 seconds)
+	tickerInterval := 5 * time.Second // Default fallback
+	if pi.configManager != nil {
+		cfg := pi.configManager.GetConfig()
+		if cfg != nil && cfg.MediaMTX.HealthMonitorDefaults.CheckInterval > 0 {
+			tickerInterval = time.Duration(cfg.MediaMTX.HealthMonitorDefaults.CheckInterval * float64(time.Second))
+		}
+	}
+	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 
 	for {

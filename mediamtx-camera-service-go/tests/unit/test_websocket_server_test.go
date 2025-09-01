@@ -35,6 +35,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -47,6 +48,154 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// stubMediaMTXController is a stub implementation for unit testing
+// This prevents circuit breaker issues during WebSocket unit tests
+type stubMediaMTXController struct{}
+
+func (s *stubMediaMTXController) Start(ctx context.Context) error { return nil }
+func (s *stubMediaMTXController) Stop(ctx context.Context) error  { return nil }
+func (s *stubMediaMTXController) IsRunning() bool                 { return true }
+
+// Health and status
+func (s *stubMediaMTXController) GetHealth(ctx context.Context) (*mediamtx.HealthStatus, error) {
+	return &mediamtx.HealthStatus{Status: "healthy"}, nil
+}
+func (s *stubMediaMTXController) GetMetrics(ctx context.Context) (*mediamtx.Metrics, error) {
+	return &mediamtx.Metrics{}, nil
+}
+func (s *stubMediaMTXController) GetSystemMetrics(ctx context.Context) (*mediamtx.SystemMetrics, error) {
+	return &mediamtx.SystemMetrics{}, nil
+}
+
+// Stream management
+func (s *stubMediaMTXController) GetStreams(ctx context.Context) ([]*mediamtx.Stream, error) {
+	return []*mediamtx.Stream{}, nil
+}
+func (s *stubMediaMTXController) GetStream(ctx context.Context, id string) (*mediamtx.Stream, error) {
+	return &mediamtx.Stream{}, nil
+}
+func (s *stubMediaMTXController) CreateStream(ctx context.Context, name, source string) (*mediamtx.Stream, error) {
+	return &mediamtx.Stream{}, nil
+}
+func (s *stubMediaMTXController) DeleteStream(ctx context.Context, id string) error {
+	return nil
+}
+
+// Path management
+func (s *stubMediaMTXController) GetPaths(ctx context.Context) ([]*mediamtx.Path, error) {
+	return []*mediamtx.Path{}, nil
+}
+func (s *stubMediaMTXController) GetPath(ctx context.Context, name string) (*mediamtx.Path, error) {
+	return &mediamtx.Path{}, nil
+}
+func (s *stubMediaMTXController) CreatePath(ctx context.Context, path *mediamtx.Path) error {
+	return nil
+}
+func (s *stubMediaMTXController) DeletePath(ctx context.Context, name string) error {
+	return nil
+}
+
+// Recording operations
+func (s *stubMediaMTXController) StartRecording(ctx context.Context, device, path string) (*mediamtx.RecordingSession, error) {
+	return &mediamtx.RecordingSession{ID: "test-session"}, nil
+}
+func (s *stubMediaMTXController) StopRecording(ctx context.Context, sessionID string) error {
+	return nil
+}
+func (s *stubMediaMTXController) TakeSnapshot(ctx context.Context, device, path string) (*mediamtx.Snapshot, error) {
+	return &mediamtx.Snapshot{ID: "test-snapshot"}, nil
+}
+func (s *stubMediaMTXController) GetRecordingStatus(ctx context.Context, sessionID string) (*mediamtx.RecordingSession, error) {
+	return &mediamtx.RecordingSession{ID: "test-session"}, nil
+}
+
+// File listing operations
+func (s *stubMediaMTXController) ListRecordings(ctx context.Context, limit, offset int) (*mediamtx.FileListResponse, error) {
+	return &mediamtx.FileListResponse{}, nil
+}
+func (s *stubMediaMTXController) ListSnapshots(ctx context.Context, limit, offset int) (*mediamtx.FileListResponse, error) {
+	return &mediamtx.FileListResponse{}, nil
+}
+func (s *stubMediaMTXController) GetRecordingInfo(ctx context.Context, filename string) (*mediamtx.FileMetadata, error) {
+	return &mediamtx.FileMetadata{}, nil
+}
+func (s *stubMediaMTXController) GetSnapshotInfo(ctx context.Context, filename string) (*mediamtx.FileMetadata, error) {
+	return &mediamtx.FileMetadata{}, nil
+}
+func (s *stubMediaMTXController) DeleteRecording(ctx context.Context, filename string) error {
+	return nil
+}
+func (s *stubMediaMTXController) DeleteSnapshot(ctx context.Context, filename string) error {
+	return nil
+}
+
+// Advanced recording operations
+func (s *stubMediaMTXController) StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*mediamtx.RecordingSession, error) {
+	return &mediamtx.RecordingSession{ID: "test-session"}, nil
+}
+func (s *stubMediaMTXController) StopAdvancedRecording(ctx context.Context, sessionID string) error {
+	return nil
+}
+func (s *stubMediaMTXController) GetAdvancedRecordingSession(sessionID string) (*mediamtx.RecordingSession, bool) {
+	return &mediamtx.RecordingSession{ID: "test-session"}, true
+}
+func (s *stubMediaMTXController) ListAdvancedRecordingSessions() []*mediamtx.RecordingSession {
+	return []*mediamtx.RecordingSession{}
+}
+func (s *stubMediaMTXController) RotateRecordingFile(ctx context.Context, sessionID string) error {
+	return nil
+}
+func (s *stubMediaMTXController) GetSessionIDByDevice(device string) (string, bool) {
+	return "test-session", true
+}
+
+// Advanced snapshot operations
+func (s *stubMediaMTXController) TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*mediamtx.Snapshot, error) {
+	return &mediamtx.Snapshot{ID: "test-snapshot"}, nil
+}
+func (s *stubMediaMTXController) GetAdvancedSnapshot(snapshotID string) (*mediamtx.Snapshot, bool) {
+	return &mediamtx.Snapshot{ID: "test-snapshot"}, true
+}
+func (s *stubMediaMTXController) ListAdvancedSnapshots() []*mediamtx.Snapshot {
+	return []*mediamtx.Snapshot{}
+}
+func (s *stubMediaMTXController) DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error {
+	return nil
+}
+func (s *stubMediaMTXController) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
+	return nil
+}
+func (s *stubMediaMTXController) GetSnapshotSettings() *mediamtx.SnapshotSettings {
+	return &mediamtx.SnapshotSettings{}
+}
+func (s *stubMediaMTXController) UpdateSnapshotSettings(settings *mediamtx.SnapshotSettings) {
+}
+
+// Configuration
+func (s *stubMediaMTXController) GetConfig(ctx context.Context) (*mediamtx.MediaMTXConfig, error) {
+	return &mediamtx.MediaMTXConfig{}, nil
+}
+func (s *stubMediaMTXController) UpdateConfig(ctx context.Context, config *mediamtx.MediaMTXConfig) error {
+	return nil
+}
+
+// Active recording management (Phase 2 enhancement)
+func (s *stubMediaMTXController) IsDeviceRecording(devicePath string) bool {
+	return false
+}
+func (s *stubMediaMTXController) StartActiveRecording(devicePath, sessionID, streamName string) error {
+	return nil
+}
+func (s *stubMediaMTXController) StopActiveRecording(devicePath string) error {
+	return nil
+}
+func (s *stubMediaMTXController) GetActiveRecordings() map[string]*mediamtx.ActiveRecording {
+	return make(map[string]*mediamtx.ActiveRecording)
+}
+func (s *stubMediaMTXController) GetActiveRecording(devicePath string) *mediamtx.ActiveRecording {
+	return nil
+}
 
 // TestWebSocketServerInstantiation tests WebSocket server creation and configuration
 func TestWebSocketServerInstantiation(t *testing.T) {
@@ -434,7 +583,7 @@ func TestErrorCodeMapping(t *testing.T) {
 	assert.NotEmpty(t, websocket.ErrorMessages[websocket.INTERNAL_ERROR])
 
 	// Test specific error messages
-	assert.Equal(t, "Authentication required", websocket.ErrorMessages[websocket.AUTHENTICATION_REQUIRED])
+	assert.Equal(t, "Authentication failed or token expired", websocket.ErrorMessages[websocket.AUTHENTICATION_REQUIRED])
 	assert.Equal(t, "Rate limit exceeded", websocket.ErrorMessages[websocket.RATE_LIMIT_EXCEEDED])
 	assert.Equal(t, "Insufficient permissions", websocket.ErrorMessages[websocket.INSUFFICIENT_PERMISSIONS])
 	assert.Equal(t, "Method not found", websocket.ErrorMessages[websocket.METHOD_NOT_FOUND])
@@ -1407,23 +1556,20 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 	// Test private server functions (handleWebSocket, handleClientConnection, handleMessage, etc.)
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	// Ensure tests run sequentially to avoid port conflicts
+	// Note: Tests are already sequential by default, no t.Parallel() needed
+
+	env := utils.SetupWebSocketUnitTestEnvironment(t)
 	defer utils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test handleWebSocket, handleClientConnection, handleMessage through real WebSocket connections
 	t.Run("test_websocket_connection_handlers", func(t *testing.T) {
-		// Create a new server instance for this test
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		// Start server to register handleWebSocket
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		// Create a new server instance for this test
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Use WebSocket utility to create real connection - exercises handleWebSocket, handleClientConnection
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
@@ -1447,16 +1593,11 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 
 	// Test checkRateLimit through rapid WebSocket requests
 	t.Run("test_rate_limit_through_websocket", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
@@ -1481,16 +1622,11 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 
 	// Test event handling functions through WebSocket operations
 	t.Run("test_event_handling_functions", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
@@ -1517,14 +1653,21 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 
 	// Test recording operations that might trigger notifyRecordingStatusUpdate
 	t.Run("test_recording_notifications", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
+		// Ensure previous server is fully stopped before starting new one
+		time.Sleep(100 * time.Millisecond)
+
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
+
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		err = testServer.Start()
-		require.NoError(t, err)
+		// Don't start the server here - let NewWebSocketTestClient handle it with the free port
 		defer func() {
 			if testServer.IsRunning() {
 				testServer.Stop()
+				// Give server time to fully stop
+				time.Sleep(50 * time.Millisecond)
 			}
 		}()
 
@@ -1537,7 +1680,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		client.SendAuthenticationRequest(token)
 
 		// Test recording operations that might trigger notifyRecordingStatusUpdate
-		devices := []string{"/dev/video0", "/dev/video1"}
+		devices := []string{"camera0", "camera1"}
 
 		for _, device := range devices {
 			// Start recording request
@@ -1568,26 +1711,41 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 
 	// Test multiple concurrent connections to exercise connection management
 	t.Run("test_multiple_connections", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
+
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
+		// Start the server once with a free port
+		port := utils.GetFreePort()
+		serverConfig := testServer.GetConfig()
+		if serverConfig != nil {
+			newConfig := *serverConfig
+			newConfig.Port = port
+			testServer.SetConfig(&newConfig)
+		}
+
 		err = testServer.Start()
-		require.NoError(t, err)
+		require.NoError(t, err, "Failed to start WebSocket server")
 		defer func() {
 			if testServer.IsRunning() {
 				testServer.Stop()
 			}
 		}()
 
-		// Create multiple WebSocket connections to exercise connection management
+		// Give server time to start
+		time.Sleep(200 * time.Millisecond)
+
+		// Create multiple WebSocket connections to the same server
 		clients := make([]*utils.WebSocketTestClient, 3)
 		for i := 0; i < 3; i++ {
-			client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
-			clients[i] = client
-			defer client.Close()
+			// Create client that connects to the already-running server
+			clients[i] = utils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
+			defer clients[i].Close()
 
 			// Send ping from each connection
-			response := client.SendPingRequest()
+			response := clients[i].SendPingRequest()
 			require.NotNil(t, response.Result, "Ping should work for connection %d", i)
 		}
 
@@ -1603,21 +1761,16 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 	// Test advanced scenarios for remaining private functions
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := utils.SetupWebSocketUnitTestEnvironment(t)
 	defer utils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test broadcastEvent and addEventHandler through comprehensive WebSocket operations
 	t.Run("test_event_broadcasting_comprehensive", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
@@ -1666,16 +1819,11 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 
 	// Test notifyRecordingStatusUpdate through comprehensive recording WebSocket operations
 	t.Run("test_recording_notifications_comprehensive", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
@@ -1687,10 +1835,10 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 
 		// Test comprehensive recording operations through WebSocket
 		recordingOperations := []map[string]interface{}{
-			{"device": "/dev/video0", "format": "mp4", "quality": "high"},
-			{"device": "/dev/video1", "format": "avi", "quality": "medium"},
-			{"device": "/dev/video0", "format": "mp4", "duration": 300},
-			{"device": "/dev/video1", "format": "mp4", "max_size": 1024 * 1024 * 100},
+			{"device": "camera0", "format": "mp4", "quality": "high"},
+			{"device": "camera1", "format": "avi", "quality": "medium"},
+			{"device": "camera0", "format": "mp4", "duration": 300},
+			{"device": "camera1", "format": "mp4", "max_size": 1024 * 1024 * 100},
 		}
 
 		for _, params := range recordingOperations {
@@ -1719,8 +1867,8 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 
 		// Test snapshot operations
 		snapshotOperations := []map[string]interface{}{
-			{"device": "/dev/video0", "format": "jpeg", "quality": 85},
-			{"device": "/dev/video1", "format": "png", "quality": 90},
+			{"device": "camera0", "format": "jpeg", "quality": 85},
+			{"device": "camera1", "format": "png", "quality": 90},
 		}
 
 		for _, params := range snapshotOperations {
@@ -1737,16 +1885,11 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 
 	// Test advanced error scenarios to exercise sendErrorResponse
 	t.Run("test_advanced_error_scenarios", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
-		require.NoError(t, err, "Failed to create test WebSocket server")
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
+		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
@@ -1768,21 +1911,21 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 
 	// Test multiple concurrent connections with different operations
 	t.Run("test_concurrent_operations", func(t *testing.T) {
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, env.Controller)
+		// Create a stub MediaMTX controller for unit testing to avoid circuit breaker issues
+		stubController := &stubMediaMTXController{}
+
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		err = testServer.Start()
-		require.NoError(t, err)
-		defer func() {
-			if testServer.IsRunning() {
-				testServer.Stop()
-			}
-		}()
+		// Start the server once and get the port
+		firstClient := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		defer firstClient.Close()
+		port := firstClient.GetPort()
 
-		// Create multiple clients with different operations
+		// Create multiple clients with different operations using the same server
 		clients := make([]*utils.WebSocketTestClient, 5)
 		for i := 0; i < 5; i++ {
-			client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+			client := utils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
 			clients[i] = client
 			defer client.Close()
 

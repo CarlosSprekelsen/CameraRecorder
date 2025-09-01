@@ -136,7 +136,7 @@ func (c *Client) Authenticate(token string) (*AuthResponse, error) {
   "jsonrpc": "2.0",
   "error": {
     "code": -32001,
-    "message": "Authentication failed",
+    "message": "Authentication failed or token expired",
     "data": {
       "reason": "Invalid or expired token"
     }
@@ -306,7 +306,7 @@ Get status for a specific camera device.
 **Authentication:** Required (viewer role)
 
 **Parameters:**
-- device: string - Camera device path (required)
+- device: string - Camera identifier (e.g., "camera0", "camera1") (required)
 
 **Returns:** Camera status object with all standard fields and metrics
 
@@ -321,7 +321,7 @@ Get status for a specific camera device.
   "jsonrpc": "2.0",
   "method": "get_camera_status",
   "params": {
-    "device": "/dev/video0"
+    "device": "camera0"
   },
   "id": 3
 }
@@ -330,7 +330,7 @@ Get status for a specific camera device.
 {
   "jsonrpc": "2.0",
   "result": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "status": "CONNECTED",
     "name": "Camera 0",
     "resolution": "1920x1080",
@@ -406,7 +406,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 **Authentication:** Required (viewer role)
 
 **Parameters:**
-- device: string - Camera device path (required)
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Camera capabilities object with supported formats, resolutions, and FPS options
 
@@ -421,7 +421,7 @@ Get detailed capabilities and supported formats for a specific camera device.
   "jsonrpc": "2.0",
   "method": "get_camera_capabilities",
   "params": {
-    "device": "/dev/video0"
+    "device": "camera0"
   },
   "id": 4
 }
@@ -430,7 +430,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 {
   "jsonrpc": "2.0",
   "result": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "formats": ["YUYV", "MJPEG", "RGB24"],
     "resolutions": ["1920x1080", "1280x720", "640x480"],
     "fps_options": [15, 30, 60],
@@ -441,7 +441,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 ```
 
 **Response Fields:**
-- `device`: Camera device path (string)
+- `device`: Camera device identifier (string)
 - `formats`: Array of supported pixel formats (array of strings)
 - `resolutions`: Array of supported resolutions (array of strings)
 - `fps_options`: Array of supported frame rates (array of integers)
@@ -484,9 +484,9 @@ func (c *Client) GetCameraCapabilities(device string) (*CameraCapabilitiesRespon
 {
   "jsonrpc": "2.0",
   "error": {
-    "code": -32602,
-    "message": "Invalid parameters",
-    "data": "device parameter is required"
+    "code": -32004,
+    "message": "Camera not found or disconnected",
+    "data": "Camera 'camera0' not found"
   },
   "id": 4
 }
@@ -502,7 +502,7 @@ Capture a snapshot from the specified camera.
 **Authentication:** Required (operator role)
 
 **Parameters:**
-- device: string - Camera device path (required)
+- device: string - Camera identifier (e.g., "camera0", "camera1") (required)
 - filename: string - Custom filename (optional)
 
 **Returns:** Snapshot information object with filename, timestamp, and status
@@ -518,7 +518,7 @@ Capture a snapshot from the specified camera.
   "jsonrpc": "2.0",
   "method": "take_snapshot",
   "params": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "filename": "snapshot_001.jpg"
   },
   "id": 4
@@ -528,7 +528,7 @@ Capture a snapshot from the specified camera.
 {
   "jsonrpc": "2.0",
   "result": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "filename": "snapshot_001.jpg",
     "status": "completed",
     "timestamp": "2025-01-15T14:30:00Z",
@@ -583,7 +583,7 @@ Start recording video from the specified camera.
 **Authentication:** Required (operator role)
 
 **Parameters:**
-- device: string - Camera device path (required)
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 - duration: number - Recording duration in seconds (optional)
 - format: string - Recording format ("mp4", "mkv") (optional)
 
@@ -600,7 +600,7 @@ Start recording video from the specified camera.
   "jsonrpc": "2.0",
   "method": "start_recording",
   "params": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "duration": 3600,
     "format": "mp4"
   },
@@ -611,7 +611,7 @@ Start recording video from the specified camera.
 {
   "jsonrpc": "2.0",
   "result": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "session_id": "550e8400-e29b-41d4-a716-446655440000",
     "filename": "camera0_2025-01-15_14-30-00.mp4",
     "status": "STARTED",
@@ -669,7 +669,7 @@ Stop active recording for the specified camera.
 **Authentication:** Required (operator role)
 
 **Parameters:**
-- device: string - Camera device path (required)
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Recording completion information with final file details
 
@@ -684,7 +684,7 @@ Stop active recording for the specified camera.
   "jsonrpc": "2.0",
   "method": "stop_recording",
   "params": {
-    "device": "/dev/video0"
+    "device": "camera0"
   },
   "id": 6
 }
@@ -693,7 +693,7 @@ Stop active recording for the specified camera.
 {
   "jsonrpc": "2.0",
   "result": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "session_id": "550e8400-e29b-41d4-a716-446655440000",
     "filename": "camera0_2025-01-15_14-30-00.mp4",
     "status": "STOPPED",
@@ -1170,7 +1170,13 @@ type JsonRpcError struct {
 
 ## Error Codes
 
-Standard JSON-RPC 2.0 error codes plus service-specific codes:
+### Standard JSON-RPC 2.0 Error Codes
+- **-32600**: Invalid Request
+- **-32601**: Method not found
+- **-32602**: Invalid parameters
+- **-32603**: Internal server error
+
+### Service-Specific Error Codes
 - **-32001**: Authentication failed or token expired
 - **-32002**: Rate limit exceeded
 - **-32003**: Insufficient permissions (role-based access control)
@@ -2057,7 +2063,7 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
 All API parameters are validated according to the following rules:
 
 #### String Parameters
-- **Device paths**: Must match pattern `/dev/video[0-9]+`
+- **Camera identifiers**: Must match pattern `camera[0-9]+` (e.g., "camera0", "camera1")
 - **Filenames**: Must be valid filename characters, no path traversal
 - **JWT tokens**: Must be valid JWT format
 - **API keys**: Must be 32+ character alphanumeric strings

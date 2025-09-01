@@ -72,6 +72,15 @@ type MediaMTXConfig struct {
 	ProcessKillTimeout                  float64               `mapstructure:"process_kill_timeout"`
 	StreamReadiness                     StreamReadinessConfig `mapstructure:"stream_readiness"`
 	HealthCheckTimeout                  time.Duration         `mapstructure:"health_check_timeout"` // Default: 5 seconds
+	// Health monitoring defaults
+	HealthMonitorDefaults               HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
+}
+
+// HealthMonitorDefaults represents health monitoring default values
+type HealthMonitorDefaults struct {
+	CheckInterval    float64 `mapstructure:"check_interval"`    // Default: 5.0 seconds
+	MaxBackoffDelay  float64 `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
+	ShutdownTimeout  float64 `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
 }
 
 // FFmpegSnapshotConfig represents FFmpeg snapshot configuration.
@@ -96,6 +105,16 @@ type FFmpegRecordingConfig struct {
 type FFmpegConfig struct {
 	Snapshot  FFmpegSnapshotConfig  `mapstructure:"snapshot"`
 	Recording FFmpegRecordingConfig `mapstructure:"recording"`
+	// Fallback defaults for when configuration is missing
+	FallbackDefaults FFmpegFallbackDefaults `mapstructure:"fallback_defaults"`
+}
+
+// FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations
+type FFmpegFallbackDefaults struct {
+	RetryDelay             float64 `mapstructure:"retry_delay"`             // Default: 1.0 second
+	ProcessCreationTimeout float64 `mapstructure:"process_creation_timeout"` // Default: 10.0 seconds
+	ExecutionTimeout       float64 `mapstructure:"execution_timeout"`       // Default: 30.0 seconds
+	MaxBackoffDelay        float64 `mapstructure:"max_backoff_delay"`       // Default: 30.0 seconds
 }
 
 // WebSocketNotificationConfig represents WebSocket notification configuration.
@@ -231,4 +250,12 @@ type Config struct {
 	Storage         StorageConfig         `mapstructure:"storage"`
 	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
 	HealthPort      *int                  `mapstructure:"health_port"` // Optional health server port for testing
+	// Server operation defaults
+	ServerDefaults  ServerDefaults        `mapstructure:"server_defaults"`
+}
+
+// ServerDefaults represents server operation default values
+type ServerDefaults struct {
+	ShutdownTimeout     float64 `mapstructure:"shutdown_timeout"`     // Default: 30.0 seconds
+	CameraMonitorTicker float64 `mapstructure:"camera_monitor_ticker"` // Default: 5.0 seconds
 }

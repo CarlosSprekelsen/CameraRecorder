@@ -2,7 +2,7 @@
 // +build integration
 
 /*
-Integration Validation Unit Test
+Integration Validation Tests - SIMPLIFIED
 
 Requirements Coverage:
 - REQ-INT-001: Component integration validation
@@ -14,11 +14,11 @@ Requirements Coverage:
 - REQ-INT-007: State consistency validation
 - REQ-INT-008: Component recovery validation
 
-Test Categories: Unit/Integration/Security/Performance/Reliability
+Test Categories: Integration/Security/Performance/Reliability
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package websocket_test
+package integration_test
 
 import (
 	"context"
@@ -29,103 +29,22 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// IntegrationValidationTestSuite provides integration validation testing
-type IntegrationValidationTestSuite struct {
-	testEnv            *utils.TestEnvironment
-	configManager      *config.ConfigManager
-	logger             *logging.Logger
-	cameraMonitor      *camera.HybridCameraMonitor
-	mediaMTXController mediamtx.MediaMTXController
-	jwtHandler         *security.JWTHandler
-	wsServer           *websocket.WebSocketServer
-	ctx                context.Context
-}
-
-// NewIntegrationValidationTestSuite creates a new integration validation test suite
-func NewIntegrationValidationTestSuite() *IntegrationValidationTestSuite {
-	return &IntegrationValidationTestSuite{}
-}
-
-// Setup initializes the integration validation test suite
-func (suite *IntegrationValidationTestSuite) Setup(t *testing.T) {
-	// Create context
-	suite.ctx = context.Background()
-
-	// Setup test environment with proper configuration
-	suite.testEnv = utils.SetupTestEnvironment(t)
-	suite.configManager = suite.testEnv.ConfigManager
-	suite.logger = suite.testEnv.Logger
-
-	// Validate test configuration
-	utils.ValidateTestConfiguration(t, suite.configManager)
-
-	// Initialize real implementations
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	// Initialize camera monitor
-	suite.cameraMonitor = camera.NewHybridCameraMonitor(
-		suite.configManager,
-		suite.logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
-	)
-
-	// Initialize MediaMTX controller
-	var err error
-	suite.mediaMTXController, err = mediamtx.ControllerWithConfigManager(suite.configManager, suite.logger.Logger)
-	require.NoError(t, err, "Failed to create MediaMTX controller")
-
-	// Initialize JWT handler
-	cfg := suite.configManager.GetConfig()
-	require.NotNil(t, cfg, "Configuration not available")
-
-	suite.jwtHandler, err = security.JWTHandler(cfg.Security.JWTSecretKey)
-	require.NoError(t, err, "Failed to create JWT handler")
-
-	// Initialize WebSocket server
-	suite.wsServer = websocket.NewWebSocketServer(
-		suite.configManager,
-		suite.logger,
-		suite.cameraMonitor,
-		suite.jwtHandler,
-		suite.mediaMTXController,
-	)
-}
-
-// Teardown cleans up the integration validation test suite
-func (suite *IntegrationValidationTestSuite) Teardown(t *testing.T) {
-	if suite.wsServer != nil {
-		err := suite.wsServer.Stop()
-		require.NoError(t, err, "Failed to stop WebSocket server")
-	}
-
-	// Cleanup test environment
-	if suite.testEnv != nil {
-		utils.TeardownTestEnvironment(t, suite.testEnv)
-	}
-}
-
 // TestComponentIntegration tests component integration validation
 func TestComponentIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	ctx := context.Background()
 
 	t.Run("ConfigurationIntegration", func(t *testing.T) {
 		// Test configuration integration
-		cfg := suite.configManager.GetConfig()
+		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg, "Configuration should not be nil")
 
 		// Validate configuration structure
@@ -139,41 +58,41 @@ func TestComponentIntegration(t *testing.T) {
 
 	t.Run("CameraMonitorIntegration", func(t *testing.T) {
 		// Test camera monitor integration
-		require.NotNil(t, suite.cameraMonitor, "Camera monitor should not be nil")
+		require.NotNil(t, env.CameraMonitor, "Camera monitor should not be nil")
 
 		// Test camera discovery
-		cameras := suite.cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		assert.NotNil(t, cameras, "Camera list should not be nil")
 		assert.GreaterOrEqual(t, len(cameras), 0, "Camera count should be non-negative")
 	})
 
 	t.Run("MediaMTXControllerIntegration", func(t *testing.T) {
 		// Test MediaMTX controller integration
-		require.NotNil(t, suite.mediaMTXController, "MediaMTX controller should not be nil")
+		require.NotNil(t, env.Controller, "MediaMTX controller should not be nil")
 
 		// Test health check
-		health, err := suite.mediaMTXController.GetHealth(suite.ctx)
+		health, err := env.Controller.GetHealth(ctx)
 		require.NoError(t, err, "Health check should succeed")
 		require.NotNil(t, health, "Health status should not be nil")
 		assert.NotEmpty(t, health.Status, "Health status should not be empty")
 
 		// Test system metrics
-		metrics, err := suite.mediaMTXController.GetSystemMetrics(suite.ctx)
+		metrics, err := env.Controller.GetSystemMetrics(ctx)
 		require.NoError(t, err, "System metrics should succeed")
 		require.NotNil(t, metrics, "System metrics should not be nil")
 	})
 
 	t.Run("JWTHandlerIntegration", func(t *testing.T) {
 		// Test JWT handler integration
-		require.NotNil(t, suite.jwtHandler, "JWT handler should not be nil")
+		require.NotNil(t, env.JWTHandler, "JWT handler should not be nil")
 
 		// Test token generation
-		token, err := suite.jwtHandler.GenerateToken("test-user", "admin", 1)
+		token, err := env.JWTHandler.GenerateToken("test-user", "admin", 1)
 		require.NoError(t, err, "Token generation should succeed")
 		assert.NotEmpty(t, token, "Generated token should not be empty")
 
 		// Test token validation
-		claims, err := suite.jwtHandler.ValidateToken(token)
+		claims, err := env.JWTHandler.ValidateToken(token)
 		require.NoError(t, err, "Token validation should succeed")
 		require.NotNil(t, claims, "Claims should not be nil")
 		assert.Equal(t, "test-user", claims.UserID, "UserID should match")
@@ -182,30 +101,32 @@ func TestComponentIntegration(t *testing.T) {
 
 	t.Run("WebSocketServerIntegration", func(t *testing.T) {
 		// Test WebSocket server integration
-		require.NotNil(t, suite.wsServer, "WebSocket server should not be nil")
+		require.NotNil(t, env.WebSocketServer, "WebSocket server should not be nil")
 
 		// Test server start
-		err := suite.wsServer.Start()
+		err := env.WebSocketServer.Start()
 		require.NoError(t, err, "WebSocket server should start successfully")
 
 		// Wait for server to be ready
 		time.Sleep(1 * time.Second)
 
 		// Test server stop
-		err = suite.wsServer.Stop()
+		err = env.WebSocketServer.Stop()
 		require.NoError(t, err, "WebSocket server should stop successfully")
 	})
 }
 
 // TestDataFlowIntegration tests data flow integration validation
 func TestDataFlowIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	ctx := context.Background()
 
 	t.Run("CameraToMediaMTXFlow", func(t *testing.T) {
 		// Test camera data flow to MediaMTX
-		cameras := suite.cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 
 		if len(cameras) > 0 {
 			// Test with actual camera
@@ -225,13 +146,13 @@ func TestDataFlowIntegration(t *testing.T) {
 				"max_duration":   5 * time.Second,
 			}
 
-			session, err := suite.mediaMTXController.StartAdvancedRecording(suite.ctx, camera.Path, "", options)
+			session, err := env.Controller.StartAdvancedRecording(ctx, camera.Path, "", options)
 			if err == nil {
 				require.NotNil(t, session, "Recording session should be created")
 				assert.Equal(t, camera.Path, session.Device, "Session device should match camera")
 
 				// Test session status
-				status, err := suite.mediaMTXController.GetRecordingStatus(suite.ctx, session.ID)
+				status, err := env.Controller.GetRecordingStatus(ctx, session.ID)
 				require.NoError(t, err, "Should get recording status")
 				assert.Equal(t, "RECORDING", status.Status, "Status should be recording")
 
@@ -239,7 +160,7 @@ func TestDataFlowIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 
 				// Stop recording
-				err = suite.mediaMTXController.StopAdvancedRecording(suite.ctx, session.ID)
+				err = env.Controller.StopAdvancedRecording(ctx, session.ID)
 				require.NoError(t, err, "Should stop recording")
 			} else {
 				t.Logf("Recording flow test skipped: %v", err)
@@ -251,67 +172,69 @@ func TestDataFlowIntegration(t *testing.T) {
 
 	t.Run("ConfigurationToComponentsFlow", func(t *testing.T) {
 		// Test configuration flow to components
-		_ = suite.configManager.GetConfig()
+		_ = env.ConfigManager.GetConfig()
 
 		// Test JWT configuration flow
-		token, err := suite.jwtHandler.GenerateToken("config-test-user", "admin", 1)
+		token, err := env.JWTHandler.GenerateToken("config-test-user", "admin", 1)
 		require.NoError(t, err, "JWT token generation should work with configuration")
 
-		claims, err := suite.jwtHandler.ValidateToken(token)
+		claims, err := env.JWTHandler.ValidateToken(token)
 		require.NoError(t, err, "JWT token validation should work with configuration")
 		assert.Equal(t, "config-test-user", claims.UserID, "UserID should match configuration")
 
 		// Test rate limiting configuration flow
-		suite.jwtHandler.RecordRequest("test-client")
-		rateInfo := suite.jwtHandler.GetClientRateInfo("test-client")
+		env.JWTHandler.RecordRequest("test-client")
+		rateInfo := env.JWTHandler.GetClientRateInfo("test-client")
 		assert.NotNil(t, rateInfo, "Rate info should be available")
 		assert.Equal(t, "test-client", rateInfo.ClientID, "Client ID should match")
 	})
 
 	t.Run("LoggingIntegration", func(t *testing.T) {
 		// Test logging integration across components
-		require.NotNil(t, suite.logger, "Logger should not be nil")
+		require.NotNil(t, env.Logger, "Logger should not be nil")
 
 		// Test logging from different components
-		suite.logger.Info("Integration validation test started")
+		env.Logger.Info("Integration validation test started")
 
 		// Test camera monitor logging
-		cameras := suite.cameraMonitor.GetConnectedCameras()
-		suite.logger.WithField("camera_count", fmt.Sprintf("%d", len(cameras))).Info("Camera discovery completed")
+		cameras := env.CameraMonitor.GetConnectedCameras()
+		env.Logger.WithField("camera_count", fmt.Sprintf("%d", len(cameras))).Info("Camera discovery completed")
 
 		// Test MediaMTX controller logging
-		health, err := suite.mediaMTXController.GetHealth(suite.ctx)
+		health, err := env.Controller.GetHealth(ctx)
 		if err == nil {
-			suite.logger.WithField("health_status", health.Status).Info("Health check completed")
+			env.Logger.WithField("health_status", health.Status).Info("Health check completed")
 		}
 
 		// Test JWT handler logging
-		_, err = suite.jwtHandler.GenerateToken("logging-test-user", "admin", 1)
+		_, err = env.JWTHandler.GenerateToken("logging-test-user", "admin", 1)
 		if err == nil {
-			suite.logger.WithField("token_generated", "true").Info("JWT token generated")
+			env.Logger.WithField("token_generated", "true").Info("JWT token generated")
 		}
 	})
 }
 
 // TestErrorHandlingIntegration tests error handling integration
 func TestErrorHandlingIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	ctx := context.Background()
 
 	t.Run("ComponentErrorPropagation", func(t *testing.T) {
 		// Test error propagation between components
 
 		// Test invalid recording session
-		_, err := suite.mediaMTXController.GetRecordingStatus(suite.ctx, "non-existent-session")
+		_, err := env.Controller.GetRecordingStatus(ctx, "non-existent-session")
 		assert.Error(t, err, "Should return error for non-existent session")
 
 		// Test invalid snapshot device
-		_, err = suite.mediaMTXController.TakeAdvancedSnapshot(suite.ctx, "/dev/nonexistent", "", map[string]interface{}{})
+		_, err = env.Controller.TakeAdvancedSnapshot(ctx, "/dev/nonexistent", "", map[string]interface{}{})
 		assert.Error(t, err, "Should return error for non-existent device")
 
 		// Test invalid JWT token
-		_, err = suite.jwtHandler.ValidateToken("invalid-token")
+		_, err = env.JWTHandler.ValidateToken("invalid-token")
 		assert.Error(t, err, "Should return error for invalid token")
 	})
 
@@ -323,9 +246,9 @@ func TestErrorHandlingIntegration(t *testing.T) {
 		err := invalidConfigManager.LoadConfig("non-existent-config.yaml")
 		assert.Error(t, err, "Should return error for non-existent config file")
 
-		// Test with nil configuration
+		// Test with nil configuration - GetConfig returns default config when config is nil
 		cfg := invalidConfigManager.GetConfig()
-		assert.Nil(t, cfg, "Should return nil for invalid configuration")
+		assert.NotNil(t, cfg, "Should return default config when config is nil")
 	})
 
 	t.Run("ResourceErrorHandling", func(t *testing.T) {
@@ -335,7 +258,7 @@ func TestErrorHandlingIntegration(t *testing.T) {
 		// This would test storage space validation integration
 
 		// Test camera device errors
-		cameras := suite.cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
 			t.Log("No cameras available for resource error testing")
 		}
@@ -344,24 +267,24 @@ func TestErrorHandlingIntegration(t *testing.T) {
 
 // TestSecurityIntegration tests security integration validation
 func TestSecurityIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
 
 	t.Run("AuthenticationIntegration", func(t *testing.T) {
 		// Test authentication integration
 
 		// Test valid authentication
-		token, err := suite.jwtHandler.GenerateToken("security-test-user", "admin", 1)
+		token, err := env.JWTHandler.GenerateToken("security-test-user", "admin", 1)
 		require.NoError(t, err, "Token generation should succeed")
 
-		claims, err := suite.jwtHandler.ValidateToken(token)
+		claims, err := env.JWTHandler.ValidateToken(token)
 		require.NoError(t, err, "Token validation should succeed")
 		assert.Equal(t, "security-test-user", claims.UserID, "UserID should match")
 		assert.Equal(t, "admin", claims.Role, "Role should match")
 
 		// Test invalid authentication
-		_, err = suite.jwtHandler.ValidateToken("invalid-token")
+		_, err = env.JWTHandler.ValidateToken("invalid-token")
 		assert.Error(t, err, "Invalid token should be rejected")
 	})
 
@@ -372,10 +295,10 @@ func TestSecurityIntegration(t *testing.T) {
 
 		// Test rate limiting
 		for i := 0; i < 10; i++ {
-			suite.jwtHandler.RecordRequest(clientID)
+			env.JWTHandler.RecordRequest(clientID)
 		}
 
-		rateInfo := suite.jwtHandler.GetClientRateInfo(clientID)
+		rateInfo := env.JWTHandler.GetClientRateInfo(clientID)
 		assert.NotNil(t, rateInfo, "Rate info should be available")
 		assert.Equal(t, clientID, rateInfo.ClientID, "Client ID should match")
 		assert.GreaterOrEqual(t, rateInfo.RequestCount, int64(10), "Request count should be tracked")
@@ -385,35 +308,37 @@ func TestSecurityIntegration(t *testing.T) {
 		// Test permission integration
 
 		// Test admin role permissions
-		adminToken, err := suite.jwtHandler.GenerateToken("admin-user", "admin", 1)
+		adminToken, err := env.JWTHandler.GenerateToken("admin-user", "admin", 1)
 		require.NoError(t, err, "Admin token generation should succeed")
 
-		adminClaims, err := suite.jwtHandler.ValidateToken(adminToken)
+		adminClaims, err := env.JWTHandler.ValidateToken(adminToken)
 		require.NoError(t, err, "Admin token validation should succeed")
 		assert.Equal(t, "admin", adminClaims.Role, "Role should be admin")
 
-		// Test user role permissions
-		userToken, err := suite.jwtHandler.GenerateToken("user-user", "user", 1)
-		require.NoError(t, err, "User token generation should succeed")
+		// Test viewer role permissions
+		viewerToken, err := env.JWTHandler.GenerateToken("viewer-user", "viewer", 1)
+		require.NoError(t, err, "Viewer token generation should succeed")
 
-		userClaims, err := suite.jwtHandler.ValidateToken(userToken)
-		require.NoError(t, err, "User token validation should succeed")
-		assert.Equal(t, "user", userClaims.Role, "Role should be user")
+		viewerClaims, err := env.JWTHandler.ValidateToken(viewerToken)
+		require.NoError(t, err, "Viewer token validation should succeed")
+		assert.Equal(t, "viewer", viewerClaims.Role, "Role should be viewer")
 	})
 }
 
 // TestPerformanceIntegration tests performance integration validation
 func TestPerformanceIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	ctx := context.Background()
 
 	t.Run("ResponseTimeIntegration", func(t *testing.T) {
 		// Test response time integration
 
 		// Test health check response time
 		start := time.Now()
-		health, err := suite.mediaMTXController.GetHealth(suite.ctx)
+		health, err := env.Controller.GetHealth(ctx)
 		healthTime := time.Since(start)
 
 		require.NoError(t, err, "Health check should succeed")
@@ -422,7 +347,7 @@ func TestPerformanceIntegration(t *testing.T) {
 
 		// Test system metrics response time
 		start = time.Now()
-		metrics, err := suite.mediaMTXController.GetSystemMetrics(suite.ctx)
+		metrics, err := env.Controller.GetSystemMetrics(ctx)
 		metricsTime := time.Since(start)
 
 		require.NoError(t, err, "System metrics should succeed")
@@ -431,7 +356,7 @@ func TestPerformanceIntegration(t *testing.T) {
 
 		// Test camera discovery response time
 		start = time.Now()
-		cameras := suite.cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		cameraTime := time.Since(start)
 
 		assert.NotNil(t, cameras, "Camera list should not be nil")
@@ -450,7 +375,7 @@ func TestPerformanceIntegration(t *testing.T) {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-				_, err := suite.mediaMTXController.GetHealth(suite.ctx)
+				_, err := env.Controller.GetHealth(ctx)
 				results[index] = err
 			}(i)
 		}
@@ -469,7 +394,7 @@ func TestPerformanceIntegration(t *testing.T) {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-				cameras := suite.cameraMonitor.GetConnectedCameras()
+				cameras := env.CameraMonitor.GetConnectedCameras()
 				cameraResults[index] = cameras
 			}(i)
 		}
@@ -486,25 +411,25 @@ func TestPerformanceIntegration(t *testing.T) {
 		// Test memory integration
 
 		// Test memory usage during operations
-		initialCameras := suite.cameraMonitor.GetConnectedCameras()
+		initialCameras := env.CameraMonitor.GetConnectedCameras()
 
 		// Perform multiple operations
 		for i := 0; i < 100; i++ {
-			_, err := suite.mediaMTXController.GetHealth(suite.ctx)
+			_, err := env.Controller.GetHealth(ctx)
 			assert.NoError(t, err, "Health check should succeed")
 
-			cameras := suite.cameraMonitor.GetConnectedCameras()
+			cameras := env.CameraMonitor.GetConnectedCameras()
 			assert.NotNil(t, cameras, "Camera discovery should succeed")
 
-			token, err := suite.jwtHandler.GenerateToken("memory-test-user", "user", 1)
+			token, err := env.JWTHandler.GenerateToken("memory-test-user", "viewer", 1)
 			assert.NoError(t, err, "Token generation should succeed")
 
-			_, err = suite.jwtHandler.ValidateToken(token)
+			_, err = env.JWTHandler.ValidateToken(token)
 			assert.NoError(t, err, "Token validation should succeed")
 		}
 
 		// Verify system still works
-		finalCameras := suite.cameraMonitor.GetConnectedCameras()
+		finalCameras := env.CameraMonitor.GetConnectedCameras()
 		assert.NotNil(t, finalCameras, "Final camera discovery should succeed")
 		assert.Equal(t, len(initialCameras), len(finalCameras), "Camera count should remain consistent")
 	})
@@ -512,21 +437,23 @@ func TestPerformanceIntegration(t *testing.T) {
 
 // TestReliabilityIntegration tests reliability integration validation
 func TestReliabilityIntegration(t *testing.T) {
-	suite := NewIntegrationValidationTestSuite()
-	suite.Setup(t)
-	defer suite.Teardown(t)
+	// COMMON PATTERN: Use shared WebSocket test environment
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	ctx := context.Background()
 
 	t.Run("ComponentRecovery", func(t *testing.T) {
 		// Test component recovery integration
 
 		// Test WebSocket server recovery
-		err := suite.wsServer.Start()
+		err := env.WebSocketServer.Start()
 		require.NoError(t, err, "WebSocket server should start")
 
-		err = suite.wsServer.Stop()
+		err = env.WebSocketServer.Stop()
 		require.NoError(t, err, "WebSocket server should stop")
 
-		err = suite.wsServer.Start()
+		err = env.WebSocketServer.Start()
 		require.NoError(t, err, "WebSocket server should restart successfully")
 	})
 
@@ -534,11 +461,11 @@ func TestReliabilityIntegration(t *testing.T) {
 		// Test error recovery integration
 
 		// Test invalid operations and recovery
-		_, err := suite.mediaMTXController.GetRecordingStatus(suite.ctx, "invalid-session")
+		_, err := env.Controller.GetRecordingStatus(ctx, "invalid-session")
 		assert.Error(t, err, "Should return error for invalid session")
 
 		// Verify system still works after error
-		health, err := suite.mediaMTXController.GetHealth(suite.ctx)
+		health, err := env.Controller.GetHealth(ctx)
 		require.NoError(t, err, "System should work after error")
 		require.NotNil(t, health, "Health status should be available")
 	})
@@ -547,10 +474,10 @@ func TestReliabilityIntegration(t *testing.T) {
 		// Test state consistency integration
 
 		// Test active recording tracking consistency
-		_ = suite.mediaMTXController.GetActiveRecordings()
+		_ = env.Controller.GetActiveRecordings()
 
 		// Perform operations
-		cameras := suite.cameraMonitor.GetConnectedCameras()
+		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) > 0 {
 			var camera *camera.CameraDevice
 			for _, cam := range cameras {
@@ -568,15 +495,15 @@ func TestReliabilityIntegration(t *testing.T) {
 				"max_duration":   3 * time.Second,
 			}
 
-			session, err := suite.mediaMTXController.StartAdvancedRecording(suite.ctx, camera.Path, "", options)
+			session, err := env.Controller.StartAdvancedRecording(ctx, camera.Path, "", options)
 			if err == nil {
 				require.NotNil(t, session, "Recording session should be created")
 
 				// Check active recording state
-				isRecording := suite.mediaMTXController.IsDeviceRecording(camera.Path)
+				isRecording := env.Controller.IsDeviceRecording(camera.Path)
 				assert.True(t, isRecording, "Device should be marked as recording")
 
-				activeRecording := suite.mediaMTXController.GetActiveRecording(camera.Path)
+				activeRecording := env.Controller.GetActiveRecording(camera.Path)
 				require.NotNil(t, activeRecording, "Active recording should be tracked")
 				assert.Equal(t, camera.Path, activeRecording.DevicePath, "Active recording device should match")
 
@@ -584,20 +511,20 @@ func TestReliabilityIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 
 				// Stop recording
-				err = suite.mediaMTXController.StopAdvancedRecording(suite.ctx, session.ID)
+				err = env.Controller.StopAdvancedRecording(ctx, session.ID)
 				require.NoError(t, err, "Should stop recording")
 
 				// Check active recording state after stop
-				isRecording = suite.mediaMTXController.IsDeviceRecording(camera.Path)
+				isRecording = env.Controller.IsDeviceRecording(camera.Path)
 				assert.False(t, isRecording, "Device should not be marked as recording after stop")
 
-				activeRecording = suite.mediaMTXController.GetActiveRecording(camera.Path)
+				activeRecording = env.Controller.GetActiveRecording(camera.Path)
 				assert.Nil(t, activeRecording, "Active recording should be cleared after stop")
 			}
 		}
 
 		// Verify final state consistency
-		finalRecordings := suite.mediaMTXController.GetActiveRecordings()
+		finalRecordings := env.Controller.GetActiveRecordings()
 		assert.NotNil(t, finalRecordings, "Final recordings state should be available")
 	})
 }

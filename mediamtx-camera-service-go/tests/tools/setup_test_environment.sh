@@ -32,7 +32,7 @@ log_error() {
 
 # Generate test JWT secret
 generate_jwt_secret() {
-    log_info "Generating test JWT secret..."
+    # Don't use log_info here as it gets captured by command substitution
     openssl rand -hex 32
 }
 
@@ -40,20 +40,25 @@ generate_jwt_secret() {
 create_test_api_keys() {
     log_info "Creating test API keys file..."
     
+    # Generate keys separately to avoid command substitution issues
+    user_key=$(openssl rand -hex 16)
+    admin_key=$(openssl rand -hex 16)
+    viewer_key=$(openssl rand -hex 16)
+    
     cat > /tmp/test_api_keys.json << EOF
 {
     "test_user": {
-        "key": "test_api_key_$(openssl rand -hex 16)",
+        "key": "test_api_key_${user_key}",
         "role": "operator",
         "permissions": ["view", "control"]
     },
     "test_admin": {
-        "key": "test_admin_key_$(openssl rand -hex 16)",
+        "key": "test_admin_key_${admin_key}",
         "role": "admin",
         "permissions": ["view", "control", "admin"]
     },
     "test_viewer": {
-        "key": "test_viewer_key_$(openssl rand -hex 16)",
+        "key": "test_viewer_key_${viewer_key}",
         "role": "viewer",
         "permissions": ["view"]
     }

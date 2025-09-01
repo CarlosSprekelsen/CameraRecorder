@@ -18,7 +18,7 @@ import (
 
 func main() {
 	// Load configuration
-	configManager := config.NewConfigManager()
+	configManager := config.CreateConfigManager()
 	if err := configManager.LoadConfig("config/default.yaml"); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// Initialize JWT handler with configuration
-	jwtHandler, err := security.JWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
 	}
@@ -99,8 +99,12 @@ func main() {
 	<-sigChan
 	logger.Info("Received shutdown signal, stopping services...")
 
-	// Graceful shutdown
-	_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// Graceful shutdown with configurable timeout
+	shutdownTimeout := 30 * time.Second // Default fallback
+	if cfg.ServerDefaults.ShutdownTimeout > 0 {
+		shutdownTimeout = time.Duration(cfg.ServerDefaults.ShutdownTimeout * float64(time.Second))
+	}
+	_, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := wsServer.Stop(); err != nil {

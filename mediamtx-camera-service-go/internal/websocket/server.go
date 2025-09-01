@@ -339,8 +339,13 @@ func (s *WebSocketServer) Stop() error {
 
 	s.logger.Info("Stopping WebSocket server")
 
-	// Signal shutdown
-	close(s.stopChan)
+	// Signal shutdown - use select to avoid closing already closed channel
+	select {
+	case <-s.stopChan:
+		// Channel already closed, do nothing
+	default:
+		close(s.stopChan)
+	}
 
 	// Close all client connections
 	s.clientsMutex.Lock()
@@ -352,7 +357,7 @@ func (s *WebSocketServer) Stop() error {
 
 	// Shutdown HTTP server
 	if s.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), s.config.ShutdownTimeout)
 		defer cancel()
 		if err := s.server.Shutdown(ctx); err != nil {
 			s.logger.WithError(err).Error("Error shutting down HTTP server")
@@ -576,16 +581,31 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Security extensions: Permission check (Phase 1 enhancement)
-	if err := s.checkMethodPermissions(client, request.Method); err != nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			ID:      request.ID,
-			Error: &JsonRpcError{
-				Code:    INSUFFICIENT_PERMISSIONS,
-				Message: ErrorMessages[INSUFFICIENT_PERMISSIONS],
-				Data:    err.Error(),
-			},
-		}, nil
+	// Skip permission check for authenticate method
+	if request.Method != "authenticate" {
+		if err := s.checkMethodPermissions(client, request.Method); err != nil {
+			// Check if client is not authenticated
+			if !client.Authenticated {
+				return &JsonRpcResponse{
+					JSONRPC: "2.0",
+					ID:      request.ID,
+					Error: &JsonRpcError{
+						Code:    AUTHENTICATION_REQUIRED,
+						Message: ErrorMessages[AUTHENTICATION_REQUIRED],
+					},
+				}, nil
+			}
+
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error: &JsonRpcError{
+					Code:    INSUFFICIENT_PERMISSIONS,
+					Message: ErrorMessages[INSUFFICIENT_PERMISSIONS],
+					Data:    err.Error(),
+				},
+			}, nil
+		}
 	}
 
 	// Call method handler
@@ -673,4 +693,14 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 // IsRunning returns whether the server is currently running
 func (s *WebSocketServer) IsRunning() bool {
 	return s.running
+}
+
+// GetConfig returns the server configuration (for testing purposes)
+func (s *WebSocketServer) GetConfig() *ServerConfig {
+	return s.config
+}
+
+// SetConfig sets the server configuration (for testing purposes)
+func (s *WebSocketServer) SetConfig(config *ServerConfig) {
+	s.config = config
 }

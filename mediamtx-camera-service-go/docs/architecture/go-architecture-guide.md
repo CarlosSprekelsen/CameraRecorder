@@ -51,6 +51,8 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 ┌────────────────────────────────────────────────────────────┐
 │                    Client Applications                      │
 │            (Web browsers, mobile apps, etc.)               │
+│  • Use camera identifiers (camera0, camera1)               │
+│  • Hardware-independent interface                          │
 └─────────────────────┬──────────────────────────────────────┘
                       │ WebSocket JSON-RPC 2.0
 ┌─────────────────────▼──────────────────────────────────────┐
@@ -61,18 +63,21 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 │     • JSON-RPC 2.0 protocol handling                      │
 │     • Real-time notifications (<20ms latency)             │
 │     • Authentication and authorization (golang-jwt/jwt/v4) │
+│     • API abstraction layer (camera0 ↔ /dev/video0)       │
 ├─────────────────────────────────────────────────────────────┤
 │             Camera Discovery Monitor (goroutines)         │
 │     • USB camera detection (<200ms)                       │
 │     • Camera status tracking                              │
 │     • Hot-plug event handling                             │
 │     • Concurrent monitoring with channels                 │
+│     • Internal device path management (/dev/video*)       │
 ├─────────────────────────────────────────────────────────────┤
 │            MediaMTX Path Manager (net/http)               │
 │     • Dynamic path creation via REST API                  │
 │     • FFmpeg command generation                           │
 │     • Path lifecycle management                           │
 │     • Error handling and recovery                         │
+│     • Internal device path operations                     │
 ├─────────────────────────────────────────────────────────────┤
 │               Health & Monitoring (logrus)                │
 │     • Service health checks                               │
@@ -89,11 +94,14 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 │     • FFmpeg process management                           │
 │     • Multi-protocol support                              │
 │     • Recording and snapshot generation                   │
+│     • Internal device path operations                     │
 └─────────────────────┬───────────────────────────────────────┘
                       │ FFmpeg Processes
 ┌─────────────────────▼───────────────────────────────────────┐
 │                 USB Cameras                                 │
 │         /dev/video0, /dev/video1, etc.                     │
+│  • Hardware layer (internal only)                          │
+│  • Not exposed to clients                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -127,7 +135,82 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 
 ## Core Architecture Patterns
 
-### 1. Stream Lifecycle Management
+### 1. API Abstraction Layer
+
+The system implements a critical abstraction layer that separates client-facing API from internal hardware implementation. This ensures clean separation of concerns and provides a stable, hardware-independent interface.
+
+#### Architectural Layers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                             │
+│  • Works with camera identifiers (camera0, camera1)         │
+│  • No knowledge of internal device paths                    │
+│  • Clean, abstract API interface                           │
+│  • Hardware-independent client code                        │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   API ABSTRACTION LAYER                     │
+│  • Validates camera identifiers (camera[0-9]+)             │
+│  • Maps camera0 → /dev/video0 internally                   │
+│  • Returns camera identifiers in responses                 │
+│  • Hides internal implementation details                   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  INTERNAL IMPLEMENTATION                    │
+│  • Works with device paths (/dev/video0, /dev/video1)      │
+│  • MediaMTX controller uses device paths                   │
+│  • Camera monitor uses device paths                        │
+│  • Hardware-specific operations                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Implementation Details
+
+**Camera Identifier Mapping**
+```go
+// API Layer: Client uses camera identifiers
+func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+    cameraID := params["device"].(string) // "camera0"
+    
+    // Validate camera identifier format
+    if !s.validateCameraIdentifier(cameraID) {
+        return errorResponse("Invalid camera identifier format: camera[0-9]+")
+    }
+    
+    // Convert to device path for internal operations
+    devicePath := s.getDevicePathFromCameraIdentifier(cameraID) // "camera0" → "/dev/video0"
+    
+    // Internal operations use device paths
+    snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(ctx, devicePath, options)
+    
+    // Return camera identifier in response
+    return &JsonRpcResponse{
+        Result: map[string]interface{}{
+            "device": cameraID, // Return "camera0", not "/dev/video0"
+            "file_path": snapshot.FilePath,
+        },
+    }
+}
+```
+
+**Benefits of Abstraction Layer**
+- **Hardware Independence**: Clients work with logical names, not hardware paths
+- **Future-Proof**: Internal mapping can change without breaking API
+- **Security**: No exposure of internal file system paths
+- **Clean Interface**: Simple, consistent API for all clients
+- **Maintainability**: Clear separation between API and implementation
+
+**Testing Implications**
+- **Unit Tests**: Should use camera identifiers (`camera0`, `camera1`) for API testing
+- **Integration Tests**: Can test both abstraction layer and internal mapping
+- **Hardware Tests**: Real hardware tests use device paths internally
+
+### 2. Stream Lifecycle Management
 
 Stream lifecycle management ensures reliable recording operations while maintaining power efficiency through on-demand activation.
 

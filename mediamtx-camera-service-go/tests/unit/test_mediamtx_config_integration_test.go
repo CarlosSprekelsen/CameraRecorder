@@ -257,7 +257,7 @@ func TestConfigIntegration_GetSnapshotConfig(t *testing.T) {
 	assert.NotNil(t, snapshotConfig, "Snapshot config should be retrieved successfully")
 }
 
-// TestConfigIntegration_GetFFmpegConfig tests FFmpeg config retrieval
+// TestConfigIntegration_GetFFmpegConfig tests FFmpeg config retrieval and timeout validation
 func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
 	// REQ-MTX-006: Configuration integration
 
@@ -278,8 +278,17 @@ func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
 	require.NoError(t, err, "Should retrieve FFmpeg config successfully")
 	require.NotNil(t, ffmpegConfig, "FFmpeg config should not be nil")
 
-	// Verify FFmpeg config values (these will be default values from config system)
-	assert.NotNil(t, ffmpegConfig, "FFmpeg config should be retrieved successfully")
+	// Verify FFmpeg config values from test fixture
+	// These values should match what's defined in tests/fixtures/test_config.yaml
+	assert.Equal(t, 5.0, ffmpegConfig.Snapshot.ProcessCreationTimeout, "Snapshot process creation timeout should be loaded from file")
+	assert.Equal(t, 15.0, ffmpegConfig.Snapshot.ExecutionTimeout, "Snapshot execution timeout should be loaded from file")
+	assert.Equal(t, 1, ffmpegConfig.Snapshot.RetryAttempts, "Snapshot retry attempts should be loaded from file")
+	assert.Equal(t, 0.5, ffmpegConfig.Snapshot.RetryDelay, "Snapshot retry delay should be loaded from file")
+
+	assert.Equal(t, 10.0, ffmpegConfig.Recording.ProcessCreationTimeout, "Recording process creation timeout should be loaded from file")
+	assert.Equal(t, 30.0, ffmpegConfig.Recording.ExecutionTimeout, "Recording execution timeout should be loaded from file")
+	assert.Equal(t, 2, ffmpegConfig.Recording.RetryAttempts, "Recording retry attempts should be loaded from file")
+	assert.Equal(t, 1.0, ffmpegConfig.Recording.RetryDelay, "Recording retry delay should be loaded from file")
 }
 
 // TestConfigIntegration_GetCameraConfig tests camera config retrieval

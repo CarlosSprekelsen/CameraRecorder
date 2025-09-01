@@ -32,6 +32,11 @@ mediamtx:
   process_termination_timeout: 15.0  # Increased from 10.0
   process_kill_timeout: 10.0  # Increased from 5.0
   health_check_timeout: 10s  # Increased from 5s
+  # Health monitoring defaults for edge devices
+  health_monitor_defaults:
+    check_interval: 60.0              # 60 seconds for edge devices
+    max_backoff_delay: 120.0          # 120 seconds for edge devices
+    shutdown_timeout: 30.0            # 30 seconds for edge devices
   codec:
     video_profile: "baseline"
     video_level: "3.0"  # Reduced from 3.1 for efficiency
@@ -103,6 +108,12 @@ ffmpeg:
     internal_timeout: 10  # Increased from 5
     retry_attempts: 2  # Reduced from 3
     retry_delay: 2.0  # Increased from 1.0
+  # Fallback defaults for edge devices
+  fallback_defaults:
+    retry_delay: 2.0               # 2 seconds for edge devices
+    process_creation_timeout: 15.0 # 15 seconds for edge devices
+    execution_timeout: 60.0        # 60 seconds for edge devices
+    max_backoff_delay: 120.0       # 120 seconds for edge devices
 
 notifications:
   websocket:
@@ -161,3 +172,8 @@ retention_policy:
 
 # Health server port for edge device monitoring
 health_port: 8080
+
+# Server operation defaults for edge devices
+server_defaults:
+  shutdown_timeout: 30.0              # 30 seconds for edge devices
+  camera_monitor_ticker: 60.0         # 60 seconds for edge devices

@@ -36,6 +36,8 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package utils
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -46,6 +48,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// GetFreePort returns a free port by letting the OS assign one
+// This is the same approach used in the Python test suite
+func GetFreePort() int {
+	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 8002 // fallback
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 8002 // fallback
+	}
+	defer l.Close()
+
+	return l.Addr().(*net.TCPAddr).Port
+}
+
 // WebSocketTestClient provides a reusable WebSocket client for testing
 // This should be used in integration, performance, and security tests
 type WebSocketTestClient struct {
@@ -54,24 +73,91 @@ type WebSocketTestClient struct {
 	server     *websocket.WebSocketServer
 	jwtHandler *security.JWTHandler
 	url        string
+	port       int
 }
 
-// NewWebSocketTestClient creates a new WebSocket test client
+// NewWebSocketTestClient creates a new WebSocket test client with free port
 // This is the PRIMARY utility for WebSocket integration testing
 func NewWebSocketTestClient(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) *WebSocketTestClient {
-	// Start server if not running
-	if !server.IsRunning() {
-		err := server.Start()
-		require.NoError(t, err, "Failed to start WebSocket server for testing")
+	// Get a free port (same approach as Python test suite)
+	port := GetFreePort()
+	t.Logf("Using free port: %d", port)
 
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+	// Create a new server configuration with the free port
+	serverConfig := server.GetConfig()
+	if serverConfig == nil {
+		// Fallback to default config if server config is nil
+		serverConfig = websocket.DefaultServerConfig()
+	}
+
+	// Create a new config with the free port
+	newConfig := *serverConfig
+	newConfig.Port = port
+
+	// Create a new server instance with the free port
+	// We need to get the dependencies from the original server
+	// This is a bit of a hack, but it's the cleanest way to handle this
+	// The server doesn't expose its dependencies, so we'll create a new one
+	// with the same dependencies but different port
+
+	// For now, let's try a different approach - create a new server with the config
+	// but we need the dependencies from the original server
+	// Let me check if we can access the server's dependencies
+
+	// Since we can't easily access the server's dependencies, let's try to modify the original server's config
+	// and restart it if needed
+
+	if server.IsRunning() {
+		// Stop the server first
+		server.Stop()
+		time.Sleep(100 * time.Millisecond) // Give it time to stop
+	}
+
+	// Set the new config
+	server.SetConfig(&newConfig)
+
+	// Start the server with the new config
+	err := server.Start()
+	require.NoError(t, err, "Failed to start WebSocket server for testing")
+
+	// Give server a moment to initialize
+	time.Sleep(200 * time.Millisecond)
+
+	// Wait for server to be ready - use retry logic to handle race condition
+	maxRetries := 30
+	retryDelay := 100 * time.Millisecond
+	for i := 0; i < maxRetries; i++ {
+		// First check if the port is listening (TCP level check)
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", port), 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			// Port is listening, now try WebSocket connection
+			url := fmt.Sprintf("ws://localhost:%d/ws", port)
+			wsConn, _, err := gorilla.DefaultDialer.Dial(url, nil)
+			if err == nil {
+				// Server is ready, close test connection and create real one
+				wsConn.Close()
+				t.Logf("WebSocket server ready after %d attempts on port %d", i+1, port)
+				break
+			}
+			t.Logf("Port listening but WebSocket not ready, attempt %d/%d: %v", i+1, maxRetries, err)
+		} else {
+			t.Logf("Port not listening, attempt %d/%d: %v", i+1, maxRetries, err)
+		}
+
+		// Wait a bit before retrying
+		time.Sleep(retryDelay)
+
+		// If this is the last retry, fail the test
+		if i == maxRetries-1 {
+			require.NoError(t, err, "Failed to connect to WebSocket server after %d retries on port %d", maxRetries, port)
+		}
 	}
 
 	// Connect to WebSocket server
-	url := "ws://localhost:8002/ws"
+	url := fmt.Sprintf("ws://localhost:%d/ws", port)
 	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
-	require.NoError(t, err, "Failed to connect to WebSocket server")
+	require.NoError(t, err, "Failed to connect to WebSocket server on port %d", port)
 
 	return &WebSocketTestClient{
 		t:          t,
@@ -79,6 +165,25 @@ func NewWebSocketTestClient(t *testing.T, server *websocket.WebSocketServer, jwt
 		server:     server,
 		jwtHandler: jwtHandler,
 		url:        url,
+		port:       port,
+	}
+}
+
+// NewWebSocketTestClientForExistingServer creates a WebSocket test client that connects to an already-running server
+// Use this when you want to create multiple clients for the same server
+func NewWebSocketTestClientForExistingServer(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler, port int) *WebSocketTestClient {
+	// Connect to the already-running WebSocket server
+	url := fmt.Sprintf("ws://localhost:%d/ws", port)
+	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
+	require.NoError(t, err, "Failed to connect to WebSocket server on port %d", port)
+
+	return &WebSocketTestClient{
+		t:          t,
+		conn:       conn,
+		server:     server,
+		jwtHandler: jwtHandler,
+		url:        url,
+		port:       port,
 	}
 }
 
@@ -88,6 +193,11 @@ func (c *WebSocketTestClient) Close() error {
 		return c.conn.Close()
 	}
 	return nil
+}
+
+// GetPort returns the port number used by this client
+func (c *WebSocketTestClient) GetPort() int {
+	return c.port
 }
 
 // SendRequest sends a JSON-RPC request over WebSocket and returns the response

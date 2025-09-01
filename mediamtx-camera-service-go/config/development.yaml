@@ -16,6 +16,27 @@ mediamtx:
   recordings_path: "./recordings"
   snapshots_path: "./snapshots"
   
+  # FFmpeg Configuration - Performance-based timeouts
+  ffmpeg:
+    snapshot:
+      process_creation_timeout: 10s  # Time to start FFmpeg process
+      execution_timeout: 30s         # Time for FFmpeg to complete snapshot
+      internal_timeout: 5000000      # Internal timeout in microseconds
+      retry_attempts: 2              # Number of retry attempts
+      retry_delay: 1s                # Delay between retries
+    recording:
+      process_creation_timeout: 15s  # Time to start FFmpeg process
+      execution_timeout: 60s         # Time for FFmpeg to complete recording
+      internal_timeout: 10000000     # Internal timeout in microseconds
+      retry_attempts: 3              # Number of retry attempts
+      retry_delay: 2s                # Delay between retries
+    # Fallback defaults for when configuration is missing
+    fallback_defaults:
+      retry_delay: 1.0               # 1 second
+      process_creation_timeout: 10.0 # 10 seconds
+      execution_timeout: 30.0        # 30 seconds
+      max_backoff_delay: 30.0        # 30 seconds
+  
   # Health monitoring configuration
   health_check_interval: 30
   health_failure_threshold: 10
@@ -26,6 +47,11 @@ mediamtx:
   backoff_jitter_range: [0.8, 1.2]
   process_termination_timeout: 3.0
   process_kill_timeout: 2.0
+  # Health monitoring defaults
+  health_monitor_defaults:
+    check_interval: 5.0              # 5 seconds
+    max_backoff_delay: 30.0          # 30 seconds
+    shutdown_timeout: 30.0           # 30 seconds
 
 camera:
   poll_interval: 0.05  # Reduced from 0.1s to 0.05s (50ms) for faster detection
@@ -67,3 +93,8 @@ snapshots:
   cleanup_interval: 3600
   max_age: 86400
   max_count: 1000
+
+# Server operation defaults
+server_defaults:
+  shutdown_timeout: 30.0              # 30 seconds
+  camera_monitor_ticker: 5.0          # 5 seconds

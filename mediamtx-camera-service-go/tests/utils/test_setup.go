@@ -275,10 +275,14 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 // Always call this in defer statements to ensure proper cleanup
 func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironment) {
 	if env != nil {
+		t.Log("Starting WebSocket test environment teardown")
+		
 		// Stop camera monitor
 		if env.CameraMonitor != nil {
 			if err := env.CameraMonitor.Stop(); err != nil {
 				t.Logf("Warning: Failed to stop camera monitor: %v", err)
+			} else {
+				t.Log("Camera monitor stopped successfully")
 			}
 		}
 
@@ -286,6 +290,8 @@ func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironmen
 		if env.MediaMTXTestEnvironment != nil {
 			TeardownMediaMTXTestEnvironment(t, env.MediaMTXTestEnvironment)
 		}
+		
+		t.Log("WebSocket test environment teardown completed")
 	}
 }
 
@@ -293,12 +299,16 @@ func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironmen
 // Always call this in defer statements to ensure proper cleanup
 func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment) {
 	if env != nil && env.Controller != nil {
+		t.Log("Starting MediaMTX controller teardown")
+		
 		// Stop controller with timeout
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if err := env.Controller.Stop(ctx); err != nil {
 			t.Logf("Warning: Failed to stop MediaMTX controller: %v", err)
+		} else {
+			t.Log("MediaMTX controller stopped successfully")
 		}
 	}
 
@@ -306,6 +316,8 @@ func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment)
 	if env != nil && env.TestEnvironment != nil {
 		TeardownTestEnvironment(t, env.TestEnvironment)
 	}
+	
+	t.Log("MediaMTX test environment teardown completed")
 }
 
 // TeardownTestEnvironment cleans up test environment
@@ -323,6 +335,40 @@ func SetupRealMediaMTXController(t *testing.T, configManager *config.ConfigManag
 	controller, err := mediamtx.ControllerWithConfigManager(configManager, logger.Logger)
 	require.NoError(t, err, "Failed to create real MediaMTX controller")
 	return controller
+}
+
+// SetupWebSocketUnitTestEnvironment creates a WebSocket test environment without MediaMTX dependencies
+// Use this for unit tests to avoid circuit breaker issues
+func SetupWebSocketUnitTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
+	// Setup base test environment (config, logger, temp dir) without MediaMTX
+	baseEnv := SetupTestEnvironment(t)
+
+	// Create JWT handler
+	jwtHandler := SetupTestJWTHandler(t, baseEnv.ConfigManager)
+
+	// Create camera monitor with real implementations
+	deviceChecker := &camera.RealDeviceChecker{}
+	commandExecutor := &camera.RealV4L2CommandExecutor{}
+	infoParser := &camera.RealDeviceInfoParser{}
+
+	cameraMonitor, err := camera.NewHybridCameraMonitor(
+		baseEnv.ConfigManager,
+		baseEnv.Logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Failed to create camera monitor")
+
+	return &WebSocketTestEnvironment{
+		MediaMTXTestEnvironment: &MediaMTXTestEnvironment{
+			TestEnvironment: baseEnv,
+			Controller:      nil, // No MediaMTX controller for unit tests
+		},
+		JWTHandler:    jwtHandler,
+		CameraMonitor: cameraMonitor,
+		WebSocketServer: nil, // Will be created by individual tests
+	}
 }
 
 // CreateTestMediaMTXConfig creates test-specific MediaMTX configuration

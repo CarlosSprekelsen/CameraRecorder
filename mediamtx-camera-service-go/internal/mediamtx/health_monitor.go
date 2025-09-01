@@ -99,7 +99,7 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		failureThreshold:          config.CircuitBreaker.FailureThreshold,
 		maxFailures:               config.CircuitBreaker.MaxFailures,
 		recoveryTimeout:           config.CircuitBreaker.RecoveryTimeout,
-		checkInterval:             5 * time.Second, // Default check interval
+		checkInterval:             getHealthCheckInterval(config), // Use configured check interval with fallback
 		consecutiveFailures:       0,
 		circuitBreakerActivations: 0,
 		recoveryCount:             0,
@@ -108,6 +108,14 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		cancel:                    cancel,
 		stopChan:                  make(chan struct{}),
 	}
+}
+
+// getHealthCheckInterval returns the health check interval with fallback to default
+func getHealthCheckInterval(config *MediaMTXConfig) time.Duration {
+	if config.HealthMonitorDefaults.CheckInterval > 0 {
+		return config.HealthMonitorDefaults.CheckInterval
+	}
+	return 5 * time.Second // Default fallback
 }
 
 // Start starts the health monitoring
@@ -146,11 +154,29 @@ func (h *healthMonitor) Stop(ctx context.Context) error {
 	select {
 	case <-h.stopChan:
 		// Channel already closed
+		h.logger.Debug("Health monitor stop channel already closed")
 	default:
 		close(h.stopChan)
+		h.logger.Debug("Health monitor stop channel closed")
 	}
 
-	h.wg.Wait()
+	// Wait for goroutine to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		h.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		h.logger.Info("Health monitor stopped successfully")
+	case <-ctx.Done():
+		h.logger.Warn("Health monitor stop timed out")
+		return ctx.Err()
+	case <-time.After(5 * time.Second):
+		h.logger.Warn("Health monitor stop timed out after 5 seconds")
+		return fmt.Errorf("health monitor stop timed out")
+	}
 
 	return nil
 }
@@ -322,7 +348,10 @@ func (h *healthMonitor) performHealthCheck() {
 
 	if err != nil {
 		h.logger.WithError(err).Warn("Health check failed")
-		h.RecordFailure()
+		// Record failure without acquiring lock (already held)
+		h.failureCount++
+		h.consecutiveFailures++
+		h.lastFailureTime = h.lastCheckTime
 		h.healthStatus = HealthStatus{
 			Status:    "UNHEALTHY",
 			Timestamp: h.lastCheckTime,
@@ -330,7 +359,14 @@ func (h *healthMonitor) performHealthCheck() {
 		}
 	} else {
 		h.logger.Debug("Health check successful")
-		h.RecordSuccess()
+		// Record success without acquiring lock (already held)
+		h.failureCount = 0
+		h.lastSuccessTime = h.lastCheckTime
+		if h.consecutiveFailures > 0 {
+			h.recoveryCount++
+			h.lastRecoveryTime = h.lastCheckTime
+		}
+		h.consecutiveFailures = 0
 		h.healthStatus = HealthStatus{
 			Status:    "HEALTHY",
 			Timestamp: h.lastCheckTime,
@@ -348,7 +384,10 @@ func (h *healthMonitor) getBackoffDelay(attempt int) time.Duration {
 	delay := baseDelay + time.Duration(jitter)
 
 	// Cap at maximum delay
-	maxDelay := 30 * time.Second
+	maxDelay := h.config.HealthMonitorDefaults.MaxBackoffDelay
+	if maxDelay == 0 {
+		maxDelay = 30 * time.Second // Default fallback
+	}
 	if delay > maxDelay {
 		delay = maxDelay
 	}
@@ -537,7 +576,10 @@ func (h *healthMonitor) performRealHealthCheck() (*HealthStatus, error) {
 	// Use configurable timeout from MediaMTXConfig.HealthCheckTimeout
 	timeout := h.config.HealthCheckTimeout
 	if timeout == 0 {
-		timeout = 5 * time.Second // Default fallback
+		timeout = h.config.HealthMonitorDefaults.ShutdownTimeout // Use configured timeout
+		if timeout == 0 {
+			timeout = 5 * time.Second // Default fallback
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

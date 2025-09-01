@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // REQ-CONFIG-001: Configuration types must support all required fields for API compliance
@@ -461,4 +464,74 @@ func TestConfig_HealthPortOptional(t *testing.T) {
 	}
 	assert.NotNil(t, cfg2.HealthPort)
 	assert.Equal(t, 8081, *cfg2.HealthPort)
+}
+
+// TestFFmpegConfig_DefaultValues tests that FFmpeg manager sets proper defaults
+func TestFFmpegConfig_DefaultValues(t *testing.T) {
+	// REQ-CONFIG-001: FFmpeg configuration must support snapshot and recording settings with defaults
+	// Create a minimal MediaMTX config without FFmpeg settings to test defaults
+	minimalConfig := &mediamtx.MediaMTXConfig{
+		Host:     "localhost",
+		APIPort:  9997,
+		RTSPPort: 8554,
+	}
+
+	// Create FFmpeg manager - should set defaults
+	manager := mediamtx.NewFFmpegManager(minimalConfig, logrus.New())
+
+	// Verify default values are set
+	assert.Equal(t, 10*time.Second, minimalConfig.FFmpeg.Snapshot.ProcessCreationTimeout, "Snapshot process creation timeout should be 10s")
+	assert.Equal(t, 30*time.Second, minimalConfig.FFmpeg.Snapshot.ExecutionTimeout, "Snapshot execution timeout should be 30s")
+	assert.Equal(t, 2, minimalConfig.FFmpeg.Snapshot.RetryAttempts, "Snapshot retry attempts should be 2")
+	assert.Equal(t, 1*time.Second, minimalConfig.FFmpeg.Snapshot.RetryDelay, "Snapshot retry delay should be 1s")
+
+	assert.Equal(t, 15*time.Second, minimalConfig.FFmpeg.Recording.ProcessCreationTimeout, "Recording process creation timeout should be 15s")
+	assert.Equal(t, 60*time.Second, minimalConfig.FFmpeg.Recording.ExecutionTimeout, "Recording execution timeout should be 60s")
+	assert.Equal(t, 3, minimalConfig.FFmpeg.Recording.RetryAttempts, "Recording retry attempts should be 3")
+	assert.Equal(t, 2*time.Second, minimalConfig.FFmpeg.Recording.RetryDelay, "Recording retry delay should be 2s")
+
+	// Verify manager was created successfully
+	require.NotNil(t, manager, "FFmpeg manager should be created successfully")
+}
+
+// TestFFmpegConfig_CustomValues tests that custom values override defaults
+func TestFFmpegConfig_CustomValues(t *testing.T) {
+	// REQ-CONFIG-001: FFmpeg configuration must support custom timeout values
+	// Create config with custom FFmpeg settings
+	customConfig := &mediamtx.MediaMTXConfig{
+		Host:     "localhost",
+		APIPort:  9997,
+		RTSPPort: 8554,
+		FFmpeg: mediamtx.FFmpegConfig{
+			Snapshot: mediamtx.SnapshotConfig{
+				ProcessCreationTimeout: 5 * time.Second,
+				ExecutionTimeout:       20 * time.Second,
+				RetryAttempts:          1,
+				RetryDelay:             500 * time.Millisecond,
+			},
+			Recording: mediamtx.RecordingConfig{
+				ProcessCreationTimeout: 8 * time.Second,
+				ExecutionTimeout:       45 * time.Second,
+				RetryAttempts:          2,
+				RetryDelay:             1 * time.Second,
+			},
+		},
+	}
+
+	// Create FFmpeg manager
+	manager := mediamtx.NewFFmpegManager(customConfig, logrus.New())
+
+	// Verify custom values are preserved
+	assert.Equal(t, 5*time.Second, customConfig.FFmpeg.Snapshot.ProcessCreationTimeout, "Custom snapshot process creation timeout should be preserved")
+	assert.Equal(t, 20*time.Second, customConfig.FFmpeg.Snapshot.ExecutionTimeout, "Custom snapshot execution timeout should be preserved")
+	assert.Equal(t, 1, customConfig.FFmpeg.Snapshot.RetryAttempts, "Custom snapshot retry attempts should be preserved")
+	assert.Equal(t, 500*time.Millisecond, customConfig.FFmpeg.Snapshot.RetryDelay, "Custom snapshot retry delay should be preserved")
+
+	assert.Equal(t, 8*time.Second, customConfig.FFmpeg.Recording.ProcessCreationTimeout, "Custom recording process creation timeout should be preserved")
+	assert.Equal(t, 45*time.Second, customConfig.FFmpeg.Recording.ExecutionTimeout, "Custom recording execution timeout should be preserved")
+	assert.Equal(t, 2, customConfig.FFmpeg.Recording.RetryAttempts, "Custom recording retry attempts should be preserved")
+	assert.Equal(t, 1*time.Second, customConfig.FFmpeg.Recording.RetryDelay, "Custom recording retry delay should be preserved")
+
+	// Verify manager was created successfully
+	require.NotNil(t, manager, "FFmpeg manager should be created successfully")
 }

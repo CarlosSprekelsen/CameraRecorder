@@ -180,7 +180,7 @@ func TestWebSocketServer_RecordingMethods(t *testing.T) {
 
 	// Test start recording with required parameters
 	response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	// Validate JSON-RPC response structure
@@ -210,7 +210,7 @@ func TestWebSocketServer_RecordingMethods(t *testing.T) {
 
 	// Test start recording with optional parameters
 	response, err = env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-		"device":   "/dev/video0",
+		"device":   "camera0",
 		"duration": 3600,
 		"format":   "mp4",
 	}, client)
@@ -242,7 +242,7 @@ func TestWebSocketServer_RecordingMethods(t *testing.T) {
 
 	// Test stop recording
 	response, err = env.WebSocketServer.MethodStopRecording(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	// Validate JSON-RPC response structure
@@ -282,7 +282,7 @@ func TestWebSocketServer_SnapshotMethods(t *testing.T) {
 
 	// Test take snapshot with required parameters
 	response, err := env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	// Validate JSON-RPC response structure
@@ -311,7 +311,7 @@ func TestWebSocketServer_SnapshotMethods(t *testing.T) {
 
 	// Test take snapshot with optional filename parameter
 	response, err = env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
-		"device":   "/dev/video0",
+		"device":   "camera0",
 		"filename": "custom_snapshot.jpg",
 	}, client)
 
@@ -565,7 +565,7 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 
 	// Test get camera status
 	response, err = env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	// Validate JSON-RPC response structure
@@ -587,7 +587,7 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 
 	// Test get camera capabilities
 	response, err = env.WebSocketServer.MethodGetCameraCapabilities(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	// Validate JSON-RPC response structure
@@ -660,24 +660,27 @@ func TestWebSocketServer_AdminMethods(t *testing.T) {
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 
 	if response.Error != nil {
-		// Expected if MediaMTX not running
+		// Expected if MediaMTX controller is not running or unavailable
 		assert.NotNil(t, response.Error.Code, "Error should have code")
 		assert.NotEmpty(t, response.Error.Message, "Error should have message")
+		t.Logf("MediaMTX controller error (expected if not running): %s", response.Error.Message)
 	} else {
 		// Validate successful response structure per API documentation
 		require.NotNil(t, response.Result, "Result should be present")
-		streams, ok := response.Result.([]interface{})
-		require.True(t, ok, "Result should be an array")
 
-		// If streams exist, validate their structure
+		// The implementation returns []map[string]interface{} per API documentation
+		streams, ok := response.Result.([]map[string]interface{})
+		require.True(t, ok, "Result should be an array of maps")
+
+		// Validate stream structure if streams exist (empty array is valid when no streams are active)
 		if len(streams) > 0 {
-			stream, ok := streams[0].(map[string]interface{})
-			require.True(t, ok, "Stream should be a map")
+			stream := streams[0]
+			assert.Contains(t, stream, "id", "Should contain id")
 			assert.Contains(t, stream, "name", "Should contain name")
 			assert.Contains(t, stream, "source", "Should contain source")
-			assert.Contains(t, stream, "ready", "Should contain ready")
-			assert.Contains(t, stream, "readers", "Should contain readers")
-			assert.Contains(t, stream, "bytes_sent", "Should contain bytes_sent")
+			assert.Contains(t, stream, "status", "Should contain status")
+		} else {
+			t.Log("No active streams (expected when no recordings are running)")
 		}
 	}
 
@@ -967,7 +970,7 @@ func TestWebSocketServer_EventNotifications(t *testing.T) {
 	// Test that server can process camera status updates
 	// This would normally be triggered by camera monitor events
 	response, err := env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	require.NoError(t, err, "GetCameraStatus should not return error")
@@ -977,7 +980,7 @@ func TestWebSocketServer_EventNotifications(t *testing.T) {
 	// Test recording status update event handling
 	// This would normally be triggered by recording state changes
 	response, err = env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-		"device": "/dev/video0",
+		"device": "camera0",
 	}, client)
 
 	require.NoError(t, err, "StartRecording should not return error")
@@ -1021,7 +1024,7 @@ func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
 			name: "get_camera_status",
 			method: func() (*websocket.JsonRpcResponse, error) {
 				return env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
-					"device": "/dev/video0",
+					"device": "camera0",
 				}, client)
 			},
 		},
@@ -1051,7 +1054,7 @@ func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
 			name: "take_snapshot",
 			method: func() (*websocket.JsonRpcResponse, error) {
 				return env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
-					"device": "/dev/video0",
+					"device": "camera0",
 				}, client)
 			},
 		},
@@ -1059,7 +1062,7 @@ func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
 			name: "start_recording",
 			method: func() (*websocket.JsonRpcResponse, error) {
 				return env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-					"device": "/dev/video0",
+					"device": "camera0",
 				}, client)
 			},
 		},
@@ -1067,7 +1070,7 @@ func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
 			name: "stop_recording",
 			method: func() (*websocket.JsonRpcResponse, error) {
 				return env.WebSocketServer.MethodStopRecording(map[string]interface{}{
-					"device": "/dev/video0",
+					"device": "camera0",
 				}, client)
 			},
 		},
@@ -1131,7 +1134,7 @@ func TestWebSocketServer_ParameterValidation(t *testing.T) {
 		// Test invalid numeric parameters (if any methods accept them)
 		// Most methods use string parameters, but we test type validation
 		response, err := env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
-			"device":  "/dev/video0",
+			"device":  "camera0",
 			"quality": "invalid_quality", // Should be numeric
 		}, client)
 
@@ -1144,7 +1147,7 @@ func TestWebSocketServer_ParameterValidation(t *testing.T) {
 	t.Run("boolean_parameter_validation", func(t *testing.T) {
 		// Test boolean parameters (if any methods accept them)
 		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 			"audio":  "not_a_boolean", // Should be boolean
 		}, client)
 
@@ -1176,7 +1179,7 @@ func TestWebSocketServer_CoverageGaps(t *testing.T) {
 		assert.NotNil(t, response)
 
 		// Test MethodGetCameraStatus with various parameters (30.8% coverage)
-		testDevices := []string{"/dev/video0", "/dev/video1", "/dev/video2"}
+		testDevices := []string{"camera0", "camera1", "camera2"}
 		for _, device := range testDevices {
 			response, err = env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
 				"device": device,
@@ -1194,7 +1197,7 @@ func TestWebSocketServer_CoverageGaps(t *testing.T) {
 
 		// Test MethodStopRecording (36.4% coverage)
 		response, err = env.WebSocketServer.MethodStopRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 		}, adminClient)
 		require.NoError(t, err)
 		assert.NotNil(t, response)
@@ -1278,7 +1281,7 @@ func TestWebSocketServer_CoverageGaps(t *testing.T) {
 
 		// Test MethodTakeSnapshot (58.3% coverage)
 		response, err := env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
-			"device":  "/dev/video0",
+			"device":  "camera0",
 			"quality": 85,
 		}, adminClient)
 		require.NoError(t, err)
@@ -1286,7 +1289,7 @@ func TestWebSocketServer_CoverageGaps(t *testing.T) {
 
 		// Test MethodStartRecording (54.1% coverage)
 		response, err = env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 			"audio":  true,
 		}, adminClient)
 		require.NoError(t, err)
@@ -1622,7 +1625,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording methods that use getStreamNameFromDevicePath
-		devices := []string{"/dev/video0", "/dev/video1", "invalid_device"}
+		devices := []string{"camera0", "camera1", "invalid_device"}
 
 		for _, device := range devices {
 			// Test start recording - exercises getStreamNameFromDevicePath
@@ -1721,7 +1724,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording operations that might trigger notifications
-		devices := []string{"/dev/video0", "/dev/video1"}
+		devices := []string{"camera0", "camera1"}
 
 		for _, device := range devices {
 			// Start recording - might trigger status update notifications
@@ -1794,9 +1797,9 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 		// Test various device path formats that might exercise getStreamNameFromDevicePath
 		devicePaths := []string{
-			"/dev/video0",
-			"/dev/video1",
-			"/dev/video2",
+			"camera0",
+			"camera1",
+			"camera2",
 			"video0", // Without /dev prefix
 			"video1",
 			"invalid_device",
@@ -1915,10 +1918,10 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 		// Test comprehensive recording scenarios that might trigger notifications
 		recordingScenarios := []map[string]interface{}{
-			{"device": "/dev/video0", "format": "mp4", "quality": "high"},
-			{"device": "/dev/video1", "format": "avi", "quality": "medium"},
-			{"device": "/dev/video0", "format": "mp4", "duration": 300},               // 5 minutes
-			{"device": "/dev/video1", "format": "mp4", "max_size": 1024 * 1024 * 100}, // 100MB limit
+			{"device": "camera0", "format": "mp4", "quality": "high"},
+			{"device": "camera1", "format": "avi", "quality": "medium"},
+			{"device": "camera0", "format": "mp4", "duration": 300},               // 5 minutes
+			{"device": "camera1", "format": "mp4", "max_size": 1024 * 1024 * 100}, // 100MB limit
 		}
 
 		for _, params := range recordingScenarios {
@@ -1938,8 +1941,8 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 		// Test snapshot operations that might also trigger notifications
 		snapshotParams := []map[string]interface{}{
-			{"device": "/dev/video0", "format": "jpeg", "quality": 85},
-			{"device": "/dev/video1", "format": "png", "quality": 90},
+			{"device": "camera0", "format": "jpeg", "quality": 85},
+			{"device": "camera1", "format": "png", "quality": 90},
 		}
 
 		for _, params := range snapshotParams {
@@ -1964,7 +1967,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 		// Test recording methods that use getStreamNameFromDevicePath
 		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 		}, client)
 		require.NoError(t, err, "StartRecording should not return error")
 		require.NotNil(t, response, "StartRecording should return response")
@@ -2022,14 +2025,14 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 		// Test recording operations that might trigger notifications
 		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 		}, client)
 		require.NoError(t, err, "StartRecording should not return error")
 		require.NotNil(t, response, "StartRecording should return response")
 
 		// Test stop recording
 		response, err = env.WebSocketServer.MethodStopRecording(map[string]interface{}{
-			"device": "/dev/video0",
+			"device": "camera0",
 		}, client)
 		require.NoError(t, err, "StopRecording should not return error")
 		require.NotNil(t, response, "StopRecording should return response")
@@ -2095,5 +2098,65 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 		}, viewerClient)
 		require.NoError(t, err, "SetRetentionPolicy should handle permission errors gracefully")
 		require.NotNil(t, response, "SetRetentionPolicy should return response")
+	})
+
+	// Test real stream workflow with get_streams
+	t.Run("test_real_stream_workflow", func(t *testing.T) {
+		adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+
+		// Step 1: Verify no streams initially
+		response, err := env.WebSocketServer.MethodGetStreams(map[string]interface{}{}, adminClient)
+		require.NoError(t, err, "GetStreams should not return error")
+		require.NotNil(t, response, "GetStreams should return response")
+
+		if response.Error == nil {
+			streams, ok := response.Result.([]map[string]interface{})
+			require.True(t, ok, "Result should be an array of maps")
+			t.Logf("Initial streams count: %d", len(streams))
+		}
+
+		// Step 2: Take a snapshot to create a stream
+		response, err = env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
+			"device": "camera0",
+		}, adminClient)
+		require.NoError(t, err, "TakeSnapshot should not return error")
+		require.NotNil(t, response, "TakeSnapshot should return response")
+
+		if response.Error == nil {
+			t.Log("Snapshot taken successfully, stream should be created")
+
+			// Step 3: Verify stream appears in get_streams
+			// Wait a moment for the stream to be registered
+			time.Sleep(2 * time.Second)
+
+			response, err = env.WebSocketServer.MethodGetStreams(map[string]interface{}{}, adminClient)
+			require.NoError(t, err, "GetStreams should not return error")
+			require.NotNil(t, response, "GetStreams should return response")
+
+			if response.Error == nil {
+				streams, ok := response.Result.([]map[string]interface{})
+				require.True(t, ok, "Result should be an array of maps")
+
+				if len(streams) > 0 {
+					t.Logf("Found %d active streams after snapshot", len(streams))
+					stream := streams[0]
+					assert.Contains(t, stream, "id", "Should contain id")
+					assert.Contains(t, stream, "name", "Should contain name")
+					assert.Contains(t, stream, "source", "Should contain source")
+					assert.Contains(t, stream, "status", "Should contain status")
+
+					// Verify stream name matches expected pattern
+					name, ok := stream["name"].(string)
+					require.True(t, ok, "Name should be a string")
+					assert.Contains(t, name, "camera", "Stream name should contain 'camera'")
+				} else {
+					t.Log("No streams found after snapshot (stream may have closed automatically)")
+				}
+			} else {
+				t.Logf("MediaMTX controller error: %s", response.Error.Message)
+			}
+		} else {
+			t.Logf("Snapshot failed: %s", response.Error.Message)
+		}
 	})
 }

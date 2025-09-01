@@ -52,12 +52,12 @@ type ffmpegManager struct {
 
 // PerformanceMetrics tracks performance metrics for operations
 type PerformanceMetrics struct {
-	OperationType    string
-	TotalOperations  int64
-	SuccessfulOps    int64
-	FailedOps        int64
-	AverageDuration  time.Duration
-	LastOperation    time.Time
+	OperationType       string
+	TotalOperations     int64
+	SuccessfulOps       int64
+	FailedOps           int64
+	AverageDuration     time.Duration
+	LastOperation       time.Time
 	ResponseTimeTargets map[string]float64
 }
 
@@ -82,10 +82,10 @@ type FFmpegProcess struct {
 func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManager {
 	// Set default FFmpeg configuration if not provided (Python parity)
 	if config.FFmpeg.Snapshot.ProcessCreationTimeout == 0 {
-		config.FFmpeg.Snapshot.ProcessCreationTimeout = 5 * time.Second
+		config.FFmpeg.Snapshot.ProcessCreationTimeout = 10 * time.Second
 	}
 	if config.FFmpeg.Snapshot.ExecutionTimeout == 0 {
-		config.FFmpeg.Snapshot.ExecutionTimeout = 8 * time.Second
+		config.FFmpeg.Snapshot.ExecutionTimeout = 30 * time.Second
 	}
 	if config.FFmpeg.Snapshot.InternalTimeout == 0 {
 		config.FFmpeg.Snapshot.InternalTimeout = 5000000
@@ -98,10 +98,10 @@ func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManag
 	}
 
 	if config.FFmpeg.Recording.ProcessCreationTimeout == 0 {
-		config.FFmpeg.Recording.ProcessCreationTimeout = 10 * time.Second
+		config.FFmpeg.Recording.ProcessCreationTimeout = 15 * time.Second
 	}
 	if config.FFmpeg.Recording.ExecutionTimeout == 0 {
-		config.FFmpeg.Recording.ExecutionTimeout = 15 * time.Second
+		config.FFmpeg.Recording.ExecutionTimeout = 60 * time.Second
 	}
 	if config.FFmpeg.Recording.InternalTimeout == 0 {
 		config.FFmpeg.Recording.InternalTimeout = 10000000
@@ -111,6 +111,20 @@ func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManag
 	}
 	if config.FFmpeg.Recording.RetryDelay == 0 {
 		config.FFmpeg.Recording.RetryDelay = 2 * time.Second
+	}
+
+	// Set default fallback values if not provided
+	if config.FFmpeg.FallbackDefaults.RetryDelay == 0 {
+		config.FFmpeg.FallbackDefaults.RetryDelay = 1 * time.Second
+	}
+	if config.FFmpeg.FallbackDefaults.ProcessCreationTimeout == 0 {
+		config.FFmpeg.FallbackDefaults.ProcessCreationTimeout = 10 * time.Second
+	}
+	if config.FFmpeg.FallbackDefaults.ExecutionTimeout == 0 {
+		config.FFmpeg.FallbackDefaults.ExecutionTimeout = 30 * time.Second
+	}
+	if config.FFmpeg.FallbackDefaults.MaxBackoffDelay == 0 {
+		config.FFmpeg.FallbackDefaults.MaxBackoffDelay = 30 * time.Second
 	}
 
 	// Set default performance targets (Python parity)
@@ -125,14 +139,14 @@ func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManag
 
 	if config.Performance.SnapshotTiers == nil {
 		config.Performance.SnapshotTiers = map[string]float64{
-			"tier1_rtsp_ready_check_timeout": 1.0,
-			"tier2_activation_timeout":       3.0,
+			"tier1_rtsp_ready_check_timeout":   1.0,
+			"tier2_activation_timeout":         3.0,
 			"tier2_activation_trigger_timeout": 1.0,
-			"tier3_direct_capture_timeout":   5.0,
-			"total_operation_timeout":        10.0,
-			"immediate_response_threshold":    0.5,
-			"acceptable_response_threshold":  2.0,
-			"slow_response_threshold":        5.0,
+			"tier3_direct_capture_timeout":     5.0,
+			"total_operation_timeout":          10.0,
+			"immediate_response_threshold":     0.5,
+			"acceptable_response_threshold":    2.0,
+			"slow_response_threshold":          5.0,
 		}
 	}
 
@@ -436,7 +450,7 @@ func (fm *ffmpegManager) StopRecording(ctx context.Context, pid int) error {
 func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath string) error {
 	startTime := time.Now()
 	operationType := "snapshot_capture"
-	
+
 	fm.logger.WithFields(logrus.Fields{
 		"device":         device,
 		"output_path":    outputPath,
@@ -482,11 +496,11 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		processCreationTimeout = cfg.ProcessCreationTimeout
 		executionTimeout = cfg.ExecutionTimeout
 	default:
-		// Default values if config is not provided
+		// Default values if config is not provided (should not happen with proper config)
 		retryAttempts = 2
-		retryDelay = 1 * time.Second
-		processCreationTimeout = 5 * time.Second
-		executionTimeout = 8 * time.Second
+		retryDelay = fm.config.FFmpeg.FallbackDefaults.RetryDelay
+		processCreationTimeout = fm.config.FFmpeg.FallbackDefaults.ProcessCreationTimeout
+		executionTimeout = fm.config.FFmpeg.FallbackDefaults.ExecutionTimeout
 	}
 
 	correlationID := fmt.Sprintf("retry_%s_%d", operation, time.Now().Unix())
@@ -502,10 +516,10 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 
 		// Create context with timeout for process creation
 		processCtx, cancel := context.WithTimeout(ctx, processCreationTimeout)
-		
+
 		// Create command
 		cmd := exec.CommandContext(processCtx, command[0], command[1:]...)
-		
+
 		// Start process with timeout
 		if err := cmd.Start(); err != nil {
 			cancel()
@@ -514,7 +528,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("Failed to start FFmpeg process")
-			
+
 			if attempt < retryAttempts {
 				backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
 				fm.logger.WithFields(logrus.Fields{
@@ -527,7 +541,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 			}
 			return lastErr
 		}
-		
+
 		cancel() // Cancel process creation timeout
 
 		// Execute with timeout
@@ -552,7 +566,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("FFmpeg operation failed")
-			
+
 		case <-execCtx.Done():
 			cancel()
 			// Cleanup the process
@@ -568,8 +582,8 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		if attempt < retryAttempts {
 			backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
 			fm.logger.WithFields(logrus.Fields{
-				"attempt":       attempt,
-				"backoff_delay": backoffDelay,
+				"attempt":        attempt,
+				"backoff_delay":  backoffDelay,
 				"correlation_id": correlationID,
 			}).Debug("Retrying FFmpeg operation after backoff")
 			time.Sleep(backoffDelay)
@@ -584,17 +598,17 @@ func (fm *ffmpegManager) calculateBackoffDelay(baseDelay time.Duration, attempt 
 	// Exponential backoff: baseDelay * 2^attempt
 	backoffMultiplier := 1 << uint(attempt)
 	delay := time.Duration(float64(baseDelay) * float64(backoffMultiplier))
-	
+
 	// Add jitter to prevent thundering herd
 	jitter := time.Duration(rand.Int63n(int64(delay) / 4))
 	delay += jitter
-	
-	// Cap maximum delay at 30 seconds
-	maxDelay := 30 * time.Second
+
+	// Cap maximum delay at configured value
+	maxDelay := fm.config.FFmpeg.FallbackDefaults.MaxBackoffDelay
 	if delay > maxDelay {
 		delay = maxDelay
 	}
-	
+
 	return delay
 }
 

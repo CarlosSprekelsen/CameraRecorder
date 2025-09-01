@@ -1,5 +1,5 @@
-//go:build integration && real_system
-// +build integration,real_system
+//go:build integration
+// +build integration
 
 /*
 End-to-End Camera Operations Integration Test
@@ -18,14 +18,17 @@ Test Categories: Integration/Real System/Hardware
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package camera_test
+package integration_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,7 +102,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		t.Logf("Camera: %s, Path: %s", camera.Name, camera.Path)
 	})
 
-	// Test recording operations
+	// Test recording operations with file verification
 	t.Run("RecordingOperations", func(t *testing.T) {
 		cameras := env.CameraMonitor.GetConnectedCameras()
 		if len(cameras) == 0 {
@@ -119,7 +122,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 				"use_case":       "recording",
 				"priority":       1,
 				"auto_cleanup":   true,
-				"retention_days": 1, // Short retention for testing
+				"retention_days": 1,
 				"quality":        "medium",
 				"max_duration":   30 * time.Second, // Short duration for testing
 			}
@@ -157,6 +160,41 @@ func TestEndToEndCameraOperations(t *testing.T) {
 				if err == nil {
 					assert.Equal(t, "STOPPED", status.Status, "Status should be stopped")
 				}
+
+				// Verify recording file exists after stop
+				t.Run("RecordingFileVerification", func(t *testing.T) {
+					// Get recording info to find the file path
+					recordings, err := env.Controller.ListRecordings(ctx, 10, 0)
+					if err == nil && len(recordings.Files) > 0 {
+						// Find the most recent recording file
+						var latestRecording *mediamtx.FileMetadata
+						for _, recording := range recordings.Files {
+							if latestRecording == nil || recording.CreatedAt.After(latestRecording.CreatedAt) {
+								latestRecording = recording
+							}
+						}
+
+						if latestRecording != nil {
+							// Construct file path from recording info
+							cfg := env.ConfigManager.GetConfig()
+							recordingsDir := cfg.MediaMTX.RecordingsPath
+							filePath := filepath.Join(recordingsDir, latestRecording.FileName)
+
+							// Verify file exists
+							fileInfo, err := os.Stat(filePath)
+							require.NoError(t, err, "Recording file should exist on disk")
+							assert.True(t, fileInfo.Size() > 0, "Recording file should not be empty")
+							assert.False(t, fileInfo.IsDir(), "Recording should be a file, not directory")
+
+							// Verify file is accessible
+							file, err := os.Open(filePath)
+							require.NoError(t, err, "Recording file should be readable")
+							defer file.Close()
+
+							t.Logf("Recording file verified: %s (size: %d bytes)", filePath, fileInfo.Size())
+						}
+					}
+				})
 			})
 		})
 	})
@@ -191,6 +229,22 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		require.NotNil(t, snapshot, "Snapshot should be created")
 		t.Logf("Snapshot created: %s", snapshot.ID)
 		assert.NotEmpty(t, snapshot.FilePath, "Snapshot should have file path")
+
+		// Verify file actually exists
+		t.Run("SnapshotFileVerification", func(t *testing.T) {
+			fileInfo, err := os.Stat(snapshot.FilePath)
+			require.NoError(t, err, "Snapshot file should exist on disk")
+			assert.True(t, fileInfo.Size() > 0, "Snapshot file should not be empty")
+			assert.False(t, fileInfo.IsDir(), "Snapshot should be a file, not directory")
+
+			// Verify file is accessible
+			file, err := os.Open(snapshot.FilePath)
+			require.NoError(t, err, "Snapshot file should be readable")
+			defer file.Close()
+
+			// Verify file has correct permissions
+			assert.True(t, fileInfo.Mode().IsRegular(), "Snapshot should be a regular file")
+		})
 	})
 
 	// Test file operations

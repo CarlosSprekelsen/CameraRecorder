@@ -63,8 +63,11 @@ func NewPermissionChecker() *PermissionChecker {
 		"ping",
 		"get_camera_list",
 		"get_camera_status",
+		"get_camera_capabilities",
 		"list_recordings",
 		"list_snapshots",
+		"get_recording_info",
+		"get_snapshot_info",
 		"get_streams",
 	}
 
@@ -73,6 +76,8 @@ func NewPermissionChecker() *PermissionChecker {
 		"take_snapshot",
 		"start_recording",
 		"stop_recording",
+		"delete_recording",
+		"delete_snapshot",
 	}
 
 	// Admin permissions (system management operations)
@@ -80,6 +85,8 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_metrics",
 		"get_status",
 		"get_server_info",
+		"get_storage_info",
+		"set_retention_policy",
 		"cleanup_old_files",
 	}
 
