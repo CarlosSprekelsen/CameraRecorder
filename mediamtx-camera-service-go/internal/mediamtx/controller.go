@@ -806,6 +806,16 @@ func (c *controller) UpdateConfig(ctx context.Context, config *MediaMTXConfig) e
 	return nil
 }
 
+// GetRecordingManager returns the recording manager for cleanup operations
+func (c *controller) GetRecordingManager() *RecordingManager {
+	return c.recordingManager
+}
+
+// GetSnapshotManager returns the snapshot manager for cleanup operations
+func (c *controller) GetSnapshotManager() *SnapshotManager {
+	return c.snapshotManager
+}
+
 // validateConfig validates the MediaMTX configuration
 func validateConfig(config *MediaMTXConfig) error {
 	if config == nil {
@@ -1137,28 +1147,7 @@ func (c *controller) DeleteAdvancedSnapshot(ctx context.Context, snapshotID stri
 	return c.snapshotManager.DeleteSnapshot(ctx, snapshotID)
 }
 
-// CleanupOldSnapshots cleans up old snapshots
-func (c *controller) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	if !c.isRunning {
-		return fmt.Errorf("controller is not running")
-	}
 
-	return c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount)
-}
-
-// CleanupOldRecordings cleans up old recording files
-func (c *controller) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	if !c.isRunning {
-		return fmt.Errorf("controller is not running")
-	}
-
-	c.logger.WithFields(logrus.Fields{
-		"max_age":   maxAge,
-		"max_count": maxCount,
-	}).Debug("Cleaning up old recordings")
-
-	return c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount)
-}
 
 // GetSnapshotSettings gets current snapshot settings
 func (c *controller) GetSnapshotSettings() *SnapshotSettings {

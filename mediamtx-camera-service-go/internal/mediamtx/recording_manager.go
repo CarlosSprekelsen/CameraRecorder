@@ -1736,7 +1736,7 @@ func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge tim
 	if len(recordings.Files)-deletedCount > maxCount {
 		remainingFiles := recordings.Files[deletedCount:]
 		excessCount := len(remainingFiles) - maxCount
-		
+
 		for i := 0; i < excessCount; i++ {
 			file := remainingFiles[i]
 			if err := rm.DeleteRecording(ctx, file.FileName); err != nil {

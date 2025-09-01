@@ -254,6 +254,16 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 	)
 	require.NoError(t, err, "Failed to create camera monitor")
 
+	// Start camera monitor to discover cameras
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	err = cameraMonitor.Start(ctx)
+	require.NoError(t, err, "Failed to start camera monitor")
+
+	// Wait for camera discovery
+	time.Sleep(2 * time.Second)
+
 	// Create WebSocket server with all dependencies
 	webSocketServer, err := websocket.NewWebSocketServer(
 		mediaEnv.ConfigManager,
@@ -364,14 +374,14 @@ func CleanupTestArtifacts(t *testing.T, controller mediamtx.MediaMTXController) 
 	defer cancel()
 
 	// Clean up old snapshots (keep only last 5, max age 1 minute for tests)
-	if err := controller.CleanupOldSnapshots(ctx, 1*time.Minute, 5); err != nil {
+	if err := controller.GetSnapshotManager().CleanupOldSnapshots(ctx, 1*time.Minute, 5); err != nil {
 		t.Logf("Warning: Failed to cleanup old snapshots: %v", err)
 	} else {
 		t.Log("Old snapshots cleaned up successfully")
 	}
 
 	// Clean up old recordings (keep only last 3, max age 1 minute for tests)
-	if err := controller.CleanupOldRecordings(ctx, 1*time.Minute, 3); err != nil {
+	if err := controller.GetRecordingManager().CleanupOldRecordings(ctx, 1*time.Minute, 3); err != nil {
 		t.Logf("Warning: Failed to cleanup old recordings: %v", err)
 	} else {
 		t.Log("Old recordings cleaned up successfully")

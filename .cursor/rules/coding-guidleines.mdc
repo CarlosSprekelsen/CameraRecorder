@@ -1,49 +1,7 @@
-# Go Coding Standards
-
-**Version:** 1.0  
-**Authors:** Project Team  
-**Date:** 2025-01-15  
-**Status:** Approved  
-**Related Epic/Story:** Go Implementation Standards  
-
-**Purpose:**  
-Define Go-specific coding standards, package structure, and concurrency patterns for the MediaMTX Camera Service Go implementation. These standards ensure consistency, maintainability, and performance optimization.
-
 ---
-
-## 1. Code Organization and Package Structure
-
-### Directory Layout
-```
-mediamtx-camera-service-go/
-├── cmd/server/main.go              # Application entry point
-├── internal/                       # Private application code
-│   ├── websocket/                  # WebSocket JSON-RPC server
-│   ├── camera/                     # Camera discovery and management
-│   ├── mediamtx/                   # MediaMTX integration
-│   ├── config/                     # Configuration management
-│   └── auth/                       # Authentication and authorization
-├── pkg/                           # Public packages (reusable)
-│   ├── jsonrpc/                   # JSON-RPC protocol handling
-│   └── types/                     # Shared data types
-├── docs/                          # Documentation
-└── tests/                         # Integration tests
-```
-
-### Package Naming Conventions
-- Use **snake_case** for package names (e.g., `camera_discovery`, `json_rpc`)
-- Keep package names short and descriptive
-- Avoid generic names like `utils`, `helpers`, or `common`
-- Use plural names for packages containing multiple related types
-
-### File Naming Conventions
-- Use **snake_case** for Go files (e.g., `camera_monitor.go`, `websocket_server.go`)
-- Group related functionality in the same file
-- Keep files under 500 lines when possible
-- Use descriptive names that indicate the file's purpose
-
+description: go code generation
+alwaysApply: false
 ---
-
 ## 2. Code Style and Formatting
 
 ### Go Formatting

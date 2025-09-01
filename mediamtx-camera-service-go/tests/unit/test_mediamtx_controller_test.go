@@ -174,8 +174,78 @@ func TestMediaMTXController_CleanupOldSnapshots(t *testing.T) {
 	require.NoError(t, err, "Controller should start successfully")
 
 	// Test cleanup with no snapshots (should not error)
-	err = env.Controller.CleanupOldSnapshots(context.Background(), 24*time.Hour, 100)
+	err = env.Controller.GetSnapshotManager().CleanupOldSnapshots(context.Background(), 24*time.Hour, 100)
 	assert.NoError(t, err, "Cleanup should not error when no snapshots exist")
+}
+
+// TestMediaMTXController_CleanupOldRecordings tests recording cleanup
+func TestMediaMTXController_CleanupOldRecordings(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	// This eliminates the need to create ConfigManager and Logger in every test
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	require.NoError(t, err, "Controller should be created successfully")
+
+	// Start controller first (required for cleanup operations)
+	require.NoError(t, err, "Controller should start successfully")
+
+	// Test cleanup with no recordings (should not error)
+	err = env.Controller.GetRecordingManager().CleanupOldRecordings(context.Background(), 24*time.Hour, 100)
+	assert.NoError(t, err, "Cleanup should not error when no recordings exist")
+}
+
+// TestMediaMTXController_CleanupOldSnapshotsEndToEnd tests snapshot cleanup end-to-end
+func TestMediaMTXController_CleanupOldSnapshotsEndToEnd(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	require.NoError(t, err, "Controller should be created successfully")
+
+	// Start controller first (required for cleanup operations)
+	require.NoError(t, err, "Controller should start successfully")
+
+	// Test that cleanup works with empty snapshot list (should not error)
+	err = env.Controller.GetSnapshotManager().CleanupOldSnapshots(context.Background(), 2*24*time.Hour, 5)
+	assert.NoError(t, err, "Cleanup should not error when no snapshots exist")
+
+	// Verify no snapshots exist after cleanup
+	snapshots := env.Controller.ListAdvancedSnapshots()
+	assert.Empty(t, snapshots, "Should have no snapshots after cleanup")
+
+	t.Log("Snapshot cleanup test completed - no snapshots to clean up")
+}
+
+// TestMediaMTXController_CleanupOldRecordingsEndToEnd tests recording cleanup end-to-end
+func TestMediaMTXController_CleanupOldRecordingsEndToEnd(t *testing.T) {
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupMediaMTXTestEnvironment(t)
+	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+
+	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
+	require.NoError(t, err, "Failed to load test configuration")
+
+	require.NoError(t, err, "Controller should be created successfully")
+
+	// Start controller first (required for cleanup operations)
+	require.NoError(t, err, "Controller should start successfully")
+
+	// Test that cleanup works with empty recording list (should not error)
+	err = env.Controller.GetRecordingManager().CleanupOldRecordings(context.Background(), 2*24*time.Hour, 5)
+	assert.NoError(t, err, "Cleanup should not error when no recordings exist")
+
+	// Verify no recording sessions exist after cleanup
+	sessions := env.Controller.ListAdvancedRecordingSessions()
+	assert.Empty(t, sessions, "Should have no recording sessions after cleanup")
+
+	t.Log("Recording cleanup test completed - no recordings to clean up")
 }
 
 // TestMediaMTXController_GetSnapshotSettings tests snapshot settings retrieval

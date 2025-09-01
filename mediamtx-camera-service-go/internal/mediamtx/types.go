@@ -346,16 +346,16 @@ type MediaMTXController interface {
 	GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool)
 	ListAdvancedSnapshots() []*Snapshot
 	DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error
-	CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error
 	GetSnapshotSettings() *SnapshotSettings
 	UpdateSnapshotSettings(settings *SnapshotSettings)
-
-	// Advanced recording operations
-	CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error
 
 	// Configuration
 	GetConfig(ctx context.Context) (*MediaMTXConfig, error)
 	UpdateConfig(ctx context.Context, config *MediaMTXConfig) error
+
+	// Manager access for cleanup operations
+	GetRecordingManager() *RecordingManager
+	GetSnapshotManager() *SnapshotManager
 
 	// Lifecycle
 	Start(ctx context.Context) error

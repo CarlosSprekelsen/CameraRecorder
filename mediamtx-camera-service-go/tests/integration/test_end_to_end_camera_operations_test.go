@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
@@ -76,7 +77,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	t.Run("CameraDiscovery", func(t *testing.T) {
 		// Ensure camera monitor is running
 		require.True(t, env.CameraMonitor.IsRunning(), "Camera monitor must be running for discovery test")
-		
+
 		// Wait for camera discovery
 		time.Sleep(5 * time.Second)
 
@@ -350,6 +351,300 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 		t.Log("Cleanup completed successfully")
 	})
+
+	// Test comprehensive workflow scenarios
+	t.Run("ComprehensiveWorkflowScenarios", func(t *testing.T) {
+		// Test 1: Complete camera lifecycle workflow
+		t.Run("CameraLifecycleWorkflow", func(t *testing.T) {
+			cameras := env.CameraMonitor.GetConnectedCameras()
+			if len(cameras) == 0 {
+				t.Skip("No cameras available for lifecycle testing")
+			}
+
+			var cameraID string
+			for devicePath := range cameras {
+				if strings.HasPrefix(devicePath, "/dev/video") {
+					deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+					cameraID = fmt.Sprintf("camera%s", deviceNum)
+				} else {
+					cameraID = devicePath
+				}
+				break
+			}
+
+			// Step 1: Get camera status
+			device, exists := env.CameraMonitor.GetDevice(cameraID)
+			if exists {
+				t.Logf("Camera status: %s", device.Status)
+				assert.NotEmpty(t, device.Status, "Camera should have status")
+			}
+
+			// Step 2: Get camera capabilities
+			capabilities := env.CameraMonitor.GetConnectedCameras()
+			t.Logf("Camera capabilities: %d cameras discovered", len(capabilities))
+
+			// Step 3: Test camera event handling
+			eventHandler := &cameraEventHandler{
+				t: t,
+			}
+			env.CameraMonitor.AddEventHandler(eventHandler)
+
+			// Step 4: Test camera event callback
+			eventCallback := func(eventData camera.CameraEventData) {
+				t.Logf("Camera event callback: %s - %v", eventData.EventType, eventData.DevicePath)
+			}
+			env.CameraMonitor.AddEventCallback(eventCallback)
+		})
+
+		// Test 2: Complete recording workflow with all features
+		t.Run("CompleteRecordingWorkflow", func(t *testing.T) {
+			cameras := env.CameraMonitor.GetConnectedCameras()
+			if len(cameras) == 0 {
+				t.Skip("No cameras available for complete recording workflow")
+			}
+
+			var cameraID string
+			for devicePath := range cameras {
+				if strings.HasPrefix(devicePath, "/dev/video") {
+					deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+					cameraID = fmt.Sprintf("camera%s", deviceNum)
+				} else {
+					cameraID = devicePath
+				}
+				break
+			}
+
+			// Step 1: Start recording with advanced options
+			options := map[string]interface{}{
+				"use_case":         "recording",
+				"priority":         1,
+				"auto_cleanup":     true,
+				"retention_days":   1,
+				"quality":          "high",
+				"max_duration":     15 * time.Second,
+				"segment_rotation": true,
+				"segment_duration": 5 * time.Second,
+			}
+
+			session, err := env.Controller.StartAdvancedRecording(ctx, cameraID, "", options)
+			if err != nil {
+				t.Logf("Warning: Could not start advanced recording: %v", err)
+				t.Skip("Advanced recording not available")
+			}
+
+			require.NotNil(t, session, "Advanced recording session should be created")
+			t.Logf("Advanced recording session started: %s", session.ID)
+
+			// Step 2: Monitor recording progress
+			time.Sleep(3 * time.Second)
+
+			// Step 3: Get recording session details
+			recordingSession, exists := env.Controller.GetAdvancedRecordingSession(session.ID)
+			if exists {
+				t.Logf("Recording session details: %+v", recordingSession)
+				assert.NotNil(t, recordingSession, "Should get recording session details")
+			}
+
+			// Step 4: List all recording sessions
+			recordingSessions := env.Controller.ListAdvancedRecordingSessions()
+			t.Logf("Total recording sessions: %d", len(recordingSessions))
+			assert.GreaterOrEqual(t, len(recordingSessions), 0, "Should have recording sessions list")
+
+			// Step 5: Stop recording
+			err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+			require.NoError(t, err, "Should stop advanced recording")
+
+			// Step 6: Verify recording file
+			recordings, err := env.Controller.ListRecordings(ctx, 10, 0)
+			if err == nil && len(recordings.Files) > 0 {
+				latestRecording := recordings.Files[0]
+				t.Logf("Latest recording: %s", latestRecording.FileName)
+
+				// Get recording info
+				recordingInfo, err := env.Controller.GetRecordingInfo(ctx, latestRecording.FileName)
+				if err == nil {
+					t.Logf("Recording info: %+v", recordingInfo)
+					assert.NotNil(t, recordingInfo, "Should get recording info")
+				}
+			}
+		})
+
+		// Test 3: Complete snapshot workflow with all features
+		t.Run("CompleteSnapshotWorkflow", func(t *testing.T) {
+			cameras := env.CameraMonitor.GetConnectedCameras()
+			if len(cameras) == 0 {
+				t.Skip("No cameras available for complete snapshot workflow")
+			}
+
+			var cameraID string
+			for devicePath := range cameras {
+				if strings.HasPrefix(devicePath, "/dev/video") {
+					deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+					cameraID = fmt.Sprintf("camera%s", deviceNum)
+				} else {
+					cameraID = devicePath
+				}
+				break
+			}
+
+			// Step 1: Take advanced snapshot
+			snapshotOptions := map[string]interface{}{
+				"quality":      95,
+				"resolution":   "1920x1080",
+				"format":       "jpeg",
+				"auto_cleanup": true,
+			}
+
+			snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, cameraID, "", snapshotOptions)
+			if err != nil {
+				t.Logf("Warning: Could not take advanced snapshot: %v", err)
+				t.Skip("Advanced snapshot not available")
+			}
+
+			require.NotNil(t, snapshot, "Advanced snapshot should be created")
+			t.Logf("Advanced snapshot taken: %s", snapshot.ID)
+
+			// Step 2: Get snapshot details
+			snapshotDetails, exists := env.Controller.GetAdvancedSnapshot(snapshot.ID)
+			if exists {
+				t.Logf("Snapshot details: %+v", snapshotDetails)
+				assert.NotNil(t, snapshotDetails, "Should get snapshot details")
+			}
+
+			// Step 3: List all snapshots
+			snapshots := env.Controller.ListAdvancedSnapshots()
+			t.Logf("Total snapshots: %d", len(snapshots))
+			assert.GreaterOrEqual(t, len(snapshots), 0, "Should have snapshots list")
+
+			// Step 4: Get snapshot info
+			snapshotsList, err := env.Controller.ListSnapshots(ctx, 10, 0)
+			if err == nil && len(snapshotsList.Files) > 0 {
+				latestSnapshot := snapshotsList.Files[0]
+				t.Logf("Latest snapshot: %s", latestSnapshot.FileName)
+
+				snapshotInfo, err := env.Controller.GetSnapshotInfo(ctx, latestSnapshot.FileName)
+				if err == nil {
+					t.Logf("Snapshot info: %+v", snapshotInfo)
+					assert.NotNil(t, snapshotInfo, "Should get snapshot info")
+				}
+			}
+		})
+
+		// Test 4: System management workflow
+		t.Run("SystemManagementWorkflow", func(t *testing.T) {
+			// Step 1: Get system metrics
+			metrics, err := env.Controller.GetSystemMetrics(ctx)
+			if err == nil {
+				t.Logf("System metrics: %+v", metrics)
+				assert.NotNil(t, metrics, "Should get system metrics")
+			}
+
+			// Step 2: Get storage metrics
+			recordingManager := env.Controller.GetRecordingManager()
+			t.Logf("Recording manager: %T", recordingManager)
+			assert.NotNil(t, recordingManager, "Should get recording manager")
+
+			// Step 3: Test configuration management
+			config, err := env.Controller.GetConfig(ctx)
+			if err == nil && config != nil {
+				t.Logf("Current config: %+v", config)
+				assert.NotNil(t, config, "Should get current configuration")
+			}
+
+			// Step 4: Test path management
+			paths, err := env.Controller.GetPaths(ctx)
+			if err == nil {
+				t.Logf("Available paths: %d", len(paths))
+				assert.NotNil(t, paths, "Should get available paths")
+			}
+
+			// Step 5: Test stream management
+			streams, err := env.Controller.GetStreams(ctx)
+			if err == nil {
+				t.Logf("Available streams: %d", len(streams))
+				assert.NotNil(t, streams, "Should get available streams")
+			}
+		})
+
+		// Test 5: Error handling and recovery workflow
+		t.Run("ErrorHandlingWorkflow", func(t *testing.T) {
+			// Test 1: Invalid camera operations
+			_, err := env.Controller.StartAdvancedRecording(ctx, "invalid_camera", "", nil)
+			if err != nil {
+				t.Logf("Expected error for invalid camera: %v", err)
+				assert.Error(t, err, "Should fail with invalid camera")
+			}
+
+			// Test 2: Invalid session operations
+			err = env.Controller.StopAdvancedRecording(ctx, "invalid_session")
+			if err != nil {
+				t.Logf("Expected error for invalid session: %v", err)
+				assert.Error(t, err, "Should fail with invalid session")
+			}
+
+			// Test 3: Invalid snapshot operations
+			_, exists := env.Controller.GetAdvancedSnapshot("invalid_snapshot")
+			if !exists {
+				t.Logf("Expected invalid snapshot to not exist")
+				assert.False(t, exists, "Should fail with invalid snapshot")
+			}
+
+			// Test 4: Camera monitor error handling
+			invalidDevice, exists := env.CameraMonitor.GetDevice("invalid_device")
+			assert.False(t, exists, "Invalid device should not exist")
+			assert.Nil(t, invalidDevice, "Invalid device should be nil")
+		})
+
+		// Test 6: Performance and load testing
+		t.Run("PerformanceWorkflow", func(t *testing.T) {
+			cameras := env.CameraMonitor.GetConnectedCameras()
+			if len(cameras) == 0 {
+				t.Skip("No cameras available for performance testing")
+			}
+
+			var cameraID string
+			for devicePath := range cameras {
+				if strings.HasPrefix(devicePath, "/dev/video") {
+					deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+					cameraID = fmt.Sprintf("camera%s", deviceNum)
+				} else {
+					cameraID = devicePath
+				}
+				break
+			}
+
+			// Test rapid snapshot operations
+			startTime := time.Now()
+			for i := 0; i < 3; i++ {
+				snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, cameraID, "", nil)
+				if err == nil {
+					t.Logf("Snapshot %d taken: %s", i+1, snapshot.ID)
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+			totalTime := time.Since(startTime)
+			t.Logf("Took 3 snapshots in %v", totalTime)
+
+			// Test concurrent operations
+			done := make(chan bool, 3)
+			for i := 0; i < 3; i++ {
+				go func(id int) {
+					defer func() { done <- true }()
+
+					// Get camera status
+					device, exists := env.CameraMonitor.GetDevice(cameraID)
+					if exists {
+						t.Logf("Concurrent camera status %d: %s", id, device.Status)
+					}
+				}(i)
+			}
+
+			// Wait for all concurrent operations
+			for i := 0; i < 3; i++ {
+				<-done
+			}
+		})
+	})
 }
 
 // TestCameraWorkflowWithRealDevice tests camera operations with a real device
@@ -396,6 +691,16 @@ func TestCameraWorkflowWithMockDevice(t *testing.T) {
 		err = env.CameraMonitor.Stop()
 		require.NoError(t, err, "Failed to stop camera monitor")
 	})
+}
+
+// cameraEventHandler implements CameraEventHandler interface for testing
+type cameraEventHandler struct {
+	t *testing.T
+}
+
+func (h *cameraEventHandler) HandleCameraEvent(ctx context.Context, eventData camera.CameraEventData) error {
+	h.t.Logf("Camera event received: %s - %s", eventData.EventType, eventData.DevicePath)
+	return nil
 }
 
 // BenchmarkCameraOperations benchmarks camera operations

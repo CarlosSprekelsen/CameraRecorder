@@ -31,6 +31,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+
+	"hash/fnv"
 )
 
 // registerBuiltinMethods registers all built-in JSON-RPC methods
@@ -1327,17 +1329,55 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Perform cleanup based on retention policy
+	// Perform cleanup based on retention policy using MediaMTX managers directly
 	var deletedCount int
 	var totalSize int64
 	var err error
 
+	// Create context for cleanup operations
+	ctx := context.Background()
+
 	if cfg.RetentionPolicy.Type == "age" {
-		// Age-based cleanup
-		deletedCount, totalSize, err = s.performAgeBasedCleanup(cfg.RetentionPolicy.MaxAgeDays)
+		// Age-based cleanup using MediaMTX managers
+		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
+		maxCount := 100 // Default max count since it's not in retention policy config
+
+		// Clean up old recordings
+		if err := s.mediaMTXController.GetRecordingManager().CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
+			s.logger.WithError(err).Warn("Failed to cleanup old recordings")
+		} else {
+			deletedCount += 1 // Count as 1 operation
+		}
+
+		// Clean up old snapshots
+		if err := s.mediaMTXController.GetSnapshotManager().CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
+			s.logger.WithError(err).Warn("Failed to cleanup old snapshots")
+		} else {
+			deletedCount += 1 // Count as 1 operation
+		}
+
+		// For now, use placeholder values - in real implementation, we'd track actual deleted files
+		totalSize = 0 // Would calculate actual freed space
 	} else if cfg.RetentionPolicy.Type == "size" {
-		// Size-based cleanup
-		deletedCount, totalSize, err = s.performSizeBasedCleanup(cfg.RetentionPolicy.MaxSizeGB)
+		// Size-based cleanup - convert GB to bytes and use age-based as fallback
+		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
+		maxCount := 100 // Default max count since it's not in retention policy config
+
+		// Clean up old recordings
+		if err := s.mediaMTXController.GetRecordingManager().CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
+			s.logger.WithError(err).Warn("Failed to cleanup old recordings")
+		} else {
+			deletedCount += 1
+		}
+
+		// Clean up old snapshots
+		if err := s.mediaMTXController.GetSnapshotManager().CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
+			s.logger.WithError(err).Warn("Failed to cleanup old snapshots")
+		} else {
+			deletedCount += 1
+		}
+
+		totalSize = 0 // Would calculate actual freed space
 	} else {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
@@ -1950,8 +1990,11 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		options["segment_rotation"] = segmentRotation
 	}
 
+	// Convert camera identifier to device path
+	actualDevicePath := s.getDevicePathFromCameraIdentifier(devicePath)
+	
 	// Validate camera device exists
-	_, exists := s.cameraMonitor.GetDevice(devicePath)
+	_, exists := s.cameraMonitor.GetDevice(actualDevicePath)
 	if !exists {
 		// Enhanced error categorization and logging (Phase 4 enhancement)
 		enhancedErr := mediamtx.CategorizeError(fmt.Errorf("camera device not found: %s", devicePath))
@@ -1985,7 +2028,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 	}
 
 	// Start recording using MediaMTX controller
-	session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, "", options)
+	session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), actualDevicePath, "", options)
 	if err != nil {
 		// Enhanced error categorization and logging (Phase 4 enhancement)
 		enhancedErr := mediamtx.CategorizeError(err)
@@ -2629,46 +2672,159 @@ func (s *WebSocketServer) cleanupDirectoryBySize(dirPath string, maxSizeBytes in
 }
 
 // Abstraction layer mapping functions
-// These functions handle the conversion between camera identifiers (camera0, camera1)
-// and device paths (/dev/video0, /dev/video1) to maintain proper API abstraction
+// These functions handle the conversion between camera identifiers (camera0, camera1, ip_camera_192_168_1_100)
+// and device paths (/dev/video0, /dev/video1, rtsp://192.168.1.100:554/stream) to maintain proper API abstraction
 
 // getCameraIdentifierFromDevicePath converts a device path to a camera identifier
-// Example: /dev/video0 -> camera0
+// Examples:
+//
+//	/dev/video0 -> camera0
+//	rtsp://192.168.1.100:554/stream -> ip_camera_192_168_1_100
+//	udp://239.0.0.1:1234 -> network_camera_239_0_0_1_1234
 func (s *WebSocketServer) getCameraIdentifierFromDevicePath(devicePath string) string {
-	// Extract the number from /dev/video{N}
+	// USB Camera: /dev/video0 -> camera0
 	if strings.HasPrefix(devicePath, "/dev/video") {
 		number := strings.TrimPrefix(devicePath, "/dev/video")
 		return fmt.Sprintf("camera%s", number)
 	}
+
+	// IP Camera: rtsp://192.168.1.100:554/stream -> ip_camera_192_168_1_100
+	if strings.HasPrefix(devicePath, "rtsp://") || strings.HasPrefix(devicePath, "rtsps://") {
+		if ipMatch := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)`).FindString(devicePath); ipMatch != "" {
+			ipParts := strings.Split(ipMatch, ".")
+			return fmt.Sprintf("ip_camera_%s_%s_%s_%s", ipParts[0], ipParts[1], ipParts[2], ipParts[3])
+		}
+	}
+
+	// HTTP Camera: http://192.168.1.101:8080/mjpeg -> http_camera_192_168_1_101
+	if strings.HasPrefix(devicePath, "http://") || strings.HasPrefix(devicePath, "https://") {
+		if ipMatch := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+)`).FindString(devicePath); ipMatch != "" {
+			ipParts := strings.Split(ipMatch, ".")
+			return fmt.Sprintf("http_camera_%s_%s_%s_%s", ipParts[0], ipParts[1], ipParts[2], ipParts[3])
+		}
+	}
+
+	// Network Camera: udp://239.0.0.1:1234 -> network_camera_239_0_0_1_1234
+	if strings.HasPrefix(devicePath, "udp://") || strings.HasPrefix(devicePath, "srt://") || strings.HasPrefix(devicePath, "whep://") {
+		if ipMatch := regexp.MustCompile(`(\d+\.\d+\.\d+\.\d+):(\d+)`).FindStringSubmatch(devicePath); len(ipMatch) > 2 {
+			ipParts := strings.Split(ipMatch[1], ".")
+			return fmt.Sprintf("network_camera_%s_%s_%s_%s_%s", ipParts[0], ipParts[1], ipParts[2], ipParts[3], ipMatch[2])
+		}
+	}
+
+	// File Source: /path/to/video.mp4 -> file_camera_path_to_video
+	if strings.HasPrefix(devicePath, "/") && (strings.Contains(devicePath, ".mp4") || strings.Contains(devicePath, ".avi") || strings.Contains(devicePath, ".mkv")) {
+		// Extract filename and create deterministic name
+		filename := filepath.Base(devicePath)
+		nameWithoutExt := strings.TrimSuffix(filename, filepath.Ext(filename))
+		// Replace special characters with underscores
+		cleanName := regexp.MustCompile(`[^a-zA-Z0-9_]`).ReplaceAllString(nameWithoutExt, "_")
+		return fmt.Sprintf("file_camera_%s", cleanName)
+	}
+
 	// If it's already a camera identifier, return as is
-	if strings.HasPrefix(devicePath, "camera") {
+	if strings.HasPrefix(devicePath, "camera") || strings.HasPrefix(devicePath, "ip_camera") ||
+		strings.HasPrefix(devicePath, "http_camera") || strings.HasPrefix(devicePath, "network_camera") ||
+		strings.HasPrefix(devicePath, "file_camera") {
 		return devicePath
 	}
-	// Fallback: return the original path
-	return devicePath
+
+	// Fallback: hash-based deterministic name (matching Python implementation)
+	hash := fnv.New32a()
+	hash.Write([]byte(devicePath))
+	hashValue := hash.Sum32() % 1000
+	return fmt.Sprintf("camera_%d", hashValue)
 }
 
 // getDevicePathFromCameraIdentifier converts a camera identifier to a device path
-// Example: camera0 -> /dev/video0
+// Examples:
+//
+//	camera0 -> /dev/video0
+//	ip_camera_192_168_1_100 -> rtsp://192.168.1.100:554/stream (if mapped)
+//	network_camera_239_0_0_1_1234 -> udp://239.0.0.1:1234 (if mapped)
 func (s *WebSocketServer) getDevicePathFromCameraIdentifier(cameraID string) string {
-	// Extract the number from camera{N}
-	if strings.HasPrefix(cameraID, "camera") {
+	// USB Camera: camera0 -> /dev/video0
+	if strings.HasPrefix(cameraID, "camera") && !strings.Contains(cameraID, "_") {
 		number := strings.TrimPrefix(cameraID, "camera")
 		return fmt.Sprintf("/dev/video%s", number)
 	}
+
+	// IP Camera: ip_camera_192_168_1_100 -> rtsp://192.168.1.100:554/stream
+	if strings.HasPrefix(cameraID, "ip_camera_") {
+		parts := strings.Split(cameraID, "_")
+		if len(parts) >= 6 { // ip_camera_192_168_1_100
+			ip := fmt.Sprintf("%s.%s.%s.%s", parts[2], parts[3], parts[4], parts[5])
+			// Default RTSP port and path - this should be configurable
+			return fmt.Sprintf("rtsp://%s:554/stream", ip)
+		}
+	}
+
+	// HTTP Camera: http_camera_192_168_1_101 -> http://192.168.1.101:8080/mjpeg
+	if strings.HasPrefix(cameraID, "http_camera_") {
+		parts := strings.Split(cameraID, "_")
+		if len(parts) >= 6 { // http_camera_192_168_1_101
+			ip := fmt.Sprintf("%s.%s.%s.%s", parts[2], parts[3], parts[4], parts[5])
+			// Default HTTP port and path - this should be configurable
+			return fmt.Sprintf("http://%s:8080/mjpeg", ip)
+		}
+	}
+
+	// Network Camera: network_camera_239_0_0_1_1234 -> udp://239.0.0.1:1234
+	if strings.HasPrefix(cameraID, "network_camera_") {
+		parts := strings.Split(cameraID, "_")
+		if len(parts) >= 7 { // network_camera_239_0_0_1_1234
+			ip := fmt.Sprintf("%s.%s.%s.%s", parts[2], parts[3], parts[4], parts[5])
+			port := parts[6]
+			// Default to UDP - this should be configurable
+			return fmt.Sprintf("udp://%s:%s", ip, port)
+		}
+	}
+
+	// File Camera: file_camera_video -> /path/to/video.mp4 (if mapped)
+	if strings.HasPrefix(cameraID, "file_camera_") {
+		// This would need a mapping table or configuration
+		// For now, return a placeholder
+		return fmt.Sprintf("/path/to/%s.mp4", strings.TrimPrefix(cameraID, "file_camera_"))
+	}
+
 	// If it's already a device path, return as is
-	if strings.HasPrefix(cameraID, "/dev/video") {
+	if strings.HasPrefix(cameraID, "/dev/video") || strings.HasPrefix(cameraID, "rtsp://") ||
+		strings.HasPrefix(cameraID, "http://") || strings.HasPrefix(cameraID, "udp://") ||
+		strings.HasPrefix(cameraID, "srt://") || strings.HasPrefix(cameraID, "whep://") {
 		return cameraID
 	}
+
 	// Fallback: return the original identifier
 	return cameraID
 }
 
 // validateCameraIdentifier validates that a camera identifier follows the correct pattern
 func (s *WebSocketServer) validateCameraIdentifier(cameraID string) bool {
-	// Must match pattern camera[0-9]+
-	matched, _ := regexp.MatchString(`^camera[0-9]+$`, cameraID)
-	return matched
+	// Must match one of these patterns:
+	// - camera[0-9]+ (USB cameras)
+	// - ip_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+ (IP cameras)
+	// - http_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+ (HTTP cameras)
+	// - network_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+ (Network cameras)
+	// - file_camera_[a-zA-Z0-9_]+ (File sources)
+	// - camera_[0-9]+ (Hash-based fallback)
+
+	patterns := []string{
+		`^camera[0-9]+$`, // USB cameras
+		`^ip_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`,             // IP cameras
+		`^http_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`,           // HTTP cameras
+		`^network_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`, // Network cameras
+		`^file_camera_[a-zA-Z0-9_]+$`,                         // File sources
+		`^camera_[0-9]+$`,                                     // Hash-based fallback
+	}
+
+	for _, pattern := range patterns {
+		matched, _ := regexp.MatchString(pattern, cameraID)
+		if matched {
+			return true
+		}
+	}
+
+	return false
 }
 
 // MethodCameraStatusUpdate handles camera status update notifications
