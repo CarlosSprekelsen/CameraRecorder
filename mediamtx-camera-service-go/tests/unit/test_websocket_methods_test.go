@@ -25,6 +25,7 @@ Real Component Usage: Real MediaMTX controller, real JWT authentication, real ca
 package websocket_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -172,8 +173,7 @@ func TestWebSocketServer_FileListingMethods(t *testing.T) {
 
 // TestWebSocketServer_RecordingMethods tests recording operations API compliance
 func TestWebSocketServer_RecordingMethods(t *testing.T) {
-	env, cleanup := setupWebSocketTestEnvironment(t)
-	defer cleanup()
+	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with operator role
 	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
@@ -274,8 +274,7 @@ func TestWebSocketServer_RecordingMethods(t *testing.T) {
 
 // TestWebSocketServer_SnapshotMethods tests snapshot operations API compliance
 func TestWebSocketServer_SnapshotMethods(t *testing.T) {
-	env, cleanup := setupWebSocketTestEnvironment(t)
-	defer cleanup()
+	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with operator role
 	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
@@ -616,8 +615,7 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 
 // TestWebSocketServer_AdminMethods tests admin-only methods API compliance
 func TestWebSocketServer_AdminMethods(t *testing.T) {
-	env, cleanup := setupWebSocketTestEnvironment(t)
-	defer cleanup()
+	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with admin role
 	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
@@ -2157,6 +2155,332 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 			}
 		} else {
 			t.Logf("Snapshot failed: %s", response.Error.Message)
+		}
+	})
+}
+
+// TestWebSocketServer_NotificationMethods tests notification API compliance
+// REQ-API-020: WebSocket server shall support camera_status_update notifications
+// REQ-API-021: Notifications shall include device, status, name, resolution, fps, and streams
+// REQ-API-022: WebSocket server shall support recording_status_update notifications
+// REQ-API-023: Notifications shall include device, status, filename, and duration
+func TestWebSocketServer_NotificationMethods(t *testing.T) {
+	env := utils.SetupWebSocketTestEnvironment(t)
+	defer utils.TeardownWebSocketTestEnvironment(t, env)
+
+	// Create authenticated client with operator role
+	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+
+	t.Run("test_camera_status_update_valid_params", func(t *testing.T) {
+		// Test with valid parameters per API documentation
+		response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+			"device":     "/dev/video0",
+			"status":     "CONNECTED",
+			"name":       "Camera 0",
+			"resolution": "1920x1080",
+			"fps":        30,
+			"streams": map[string]interface{}{
+				"rtsp":   "rtsp://localhost:8554/camera0",
+				"webrtc": "http://localhost:8889/camera0/webrtc",
+				"hls":    "http://localhost:8888/camera0",
+			},
+		}, client)
+
+		// Validate JSON-RPC response structure
+		require.NoError(t, err, "CameraStatusUpdate should not return error")
+		require.NotNil(t, response, "CameraStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return success result
+		require.NotNil(t, response.Result, "Result should be present")
+		result, ok := response.Result.(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		// Validate required fields per API documentation
+		assert.Equal(t, true, result["success"], "Should indicate success")
+		assert.Equal(t, "camera_status_update", result["notification"], "Should specify notification type")
+		assert.Equal(t, "/dev/video0", result["device"], "Should return device")
+		assert.Equal(t, "CONNECTED", result["status"], "Should return status")
+		assert.Equal(t, true, result["broadcast"], "Should indicate broadcast")
+	})
+
+	t.Run("test_camera_status_update_missing_device", func(t *testing.T) {
+		// Test with missing required device parameter
+		response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+			"status":     "CONNECTED",
+			"name":       "Camera 0",
+			"resolution": "1920x1080",
+		}, client)
+
+		require.NoError(t, err, "CameraStatusUpdate should not return error")
+		require.NotNil(t, response, "CameraStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for missing device
+		require.NotNil(t, response.Error, "Should return error for missing device")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "device parameter is required", "Error data should specify missing parameter")
+	})
+
+	t.Run("test_camera_status_update_missing_status", func(t *testing.T) {
+		// Test with missing required status parameter
+		response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+			"device":     "/dev/video0",
+			"name":       "Camera 0",
+			"resolution": "1920x1080",
+		}, client)
+
+		require.NoError(t, err, "CameraStatusUpdate should not return error")
+		require.NotNil(t, response, "CameraStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for missing status
+		require.NotNil(t, response.Error, "Should return error for missing status")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "status parameter is required", "Error data should specify missing parameter")
+	})
+
+	t.Run("test_camera_status_update_invalid_status", func(t *testing.T) {
+		// Test with invalid status value
+		response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+			"device": "/dev/video0",
+			"status": "INVALID_STATUS",
+		}, client)
+
+		require.NoError(t, err, "CameraStatusUpdate should not return error")
+		require.NotNil(t, response, "CameraStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for invalid status
+		require.NotNil(t, response.Error, "Should return error for invalid status")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "status must be one of", "Error data should specify valid status values")
+	})
+
+	t.Run("test_camera_status_update_valid_statuses", func(t *testing.T) {
+		// Test all valid status values per API documentation
+		validStatuses := []string{"CONNECTED", "DISCONNECTED", "ERROR", "RECORDING", "IDLE"}
+
+		for _, status := range validStatuses {
+			t.Run(fmt.Sprintf("status_%s", status), func(t *testing.T) {
+				response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+					"device": "/dev/video0",
+					"status": status,
+				}, client)
+
+				require.NoError(t, err, "CameraStatusUpdate should not return error for status %s", status)
+				require.NotNil(t, response, "CameraStatusUpdate should return response for status %s", status)
+				assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+				// Should return success for valid status
+				require.NotNil(t, response.Result, "Result should be present for status %s", status)
+				result, ok := response.Result.(map[string]interface{})
+				require.True(t, ok, "Result should be a map for status %s", status)
+				assert.Equal(t, true, result["success"], "Should indicate success for status %s", status)
+				assert.Equal(t, status, result["status"], "Should return correct status %s", status)
+			})
+		}
+	})
+
+	t.Run("test_recording_status_update_valid_params", func(t *testing.T) {
+		// Test with valid parameters per API documentation
+		response, err := env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+			"device":   "/dev/video0",
+			"status":   "STARTED",
+			"filename": "camera0_2025-01-15_14-30-00.mp4",
+			"duration": 0,
+		}, client)
+
+		// Validate JSON-RPC response structure
+		require.NoError(t, err, "RecordingStatusUpdate should not return error")
+		require.NotNil(t, response, "RecordingStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return success result
+		require.NotNil(t, response.Result, "Result should be present")
+		result, ok := response.Result.(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		// Validate required fields per API documentation
+		assert.Equal(t, true, result["success"], "Should indicate success")
+		assert.Equal(t, "recording_status_update", result["notification"], "Should specify notification type")
+		assert.Equal(t, "/dev/video0", result["device"], "Should return device")
+		assert.Equal(t, "STARTED", result["status"], "Should return status")
+		assert.Equal(t, true, result["broadcast"], "Should indicate broadcast")
+	})
+
+	t.Run("test_recording_status_update_missing_device", func(t *testing.T) {
+		// Test with missing required device parameter
+		response, err := env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+			"status":   "STARTED",
+			"filename": "camera0_2025-01-15_14-30-00.mp4",
+		}, client)
+
+		require.NoError(t, err, "RecordingStatusUpdate should not return error")
+		require.NotNil(t, response, "RecordingStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for missing device
+		require.NotNil(t, response.Error, "Should return error for missing device")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "device parameter is required", "Error data should specify missing parameter")
+	})
+
+	t.Run("test_recording_status_update_missing_status", func(t *testing.T) {
+		// Test with missing required status parameter
+		response, err := env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+			"device":   "/dev/video0",
+			"filename": "camera0_2025-01-15_14-30-00.mp4",
+		}, client)
+
+		require.NoError(t, err, "RecordingStatusUpdate should not return error")
+		require.NotNil(t, response, "RecordingStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for missing status
+		require.NotNil(t, response.Error, "Should return error for missing status")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "status parameter is required", "Error data should specify missing parameter")
+	})
+
+	t.Run("test_recording_status_update_invalid_status", func(t *testing.T) {
+		// Test with invalid status value
+		response, err := env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+			"device": "/dev/video0",
+			"status": "INVALID_STATUS",
+		}, client)
+
+		require.NoError(t, err, "RecordingStatusUpdate should not return error")
+		require.NotNil(t, response, "RecordingStatusUpdate should return response")
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+		// Should return error for invalid status
+		require.NotNil(t, response.Error, "Should return error for invalid status")
+		assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code, "Should return INVALID_PARAMS error")
+		assert.Equal(t, websocket.ErrorMessages[websocket.INVALID_PARAMS], response.Error.Message, "Should have correct error message")
+		assert.Contains(t, response.Error.Data, "status must be one of", "Error data should specify valid status values")
+	})
+
+	t.Run("test_recording_status_update_valid_statuses", func(t *testing.T) {
+		// Test all valid status values per API documentation
+		validStatuses := []string{"STARTED", "STOPPED", "ERROR", "PAUSED", "RESUMED"}
+
+		for _, status := range validStatuses {
+			t.Run(fmt.Sprintf("status_%s", status), func(t *testing.T) {
+				response, err := env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+					"device": "/dev/video0",
+					"status": status,
+				}, client)
+
+				require.NoError(t, err, "RecordingStatusUpdate should not return error for status %s", status)
+				require.NotNil(t, response, "RecordingStatusUpdate should return response for status %s", status)
+				assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+
+				// Should return success for valid status
+				require.NotNil(t, response.Result, "Result should be present for status %s", status)
+				result, ok := response.Result.(map[string]interface{})
+				require.True(t, ok, "Result should be a map for status %s", status)
+				assert.Equal(t, true, result["success"], "Should indicate success for status %s", status)
+				assert.Equal(t, status, result["status"], "Should return correct status %s", status)
+			})
+		}
+	})
+
+	t.Run("test_notification_methods_authentication", func(t *testing.T) {
+		// Test that unauthenticated clients get proper error responses
+		unauthenticatedClient := &websocket.ClientConnection{
+			ClientID:      "test_unauth_client",
+			Authenticated: false,
+			Role:          "",
+		}
+
+		// Test camera status update with unauthenticated client
+		response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+			"device": "/dev/video0",
+			"status": "CONNECTED",
+		}, unauthenticatedClient)
+
+		require.NoError(t, err, "CameraStatusUpdate should not return error")
+		require.NotNil(t, response, "CameraStatusUpdate should return response")
+
+		// Should get authentication error for unauthenticated access
+		// API Documentation: -32001 = Authentication failed or token expired
+		if response.Error != nil {
+			assert.Equal(t, websocket.AUTHENTICATION_REQUIRED, response.Error.Code,
+				"CameraStatusUpdate should return AUTHENTICATION_REQUIRED (-32001) for unauthenticated client per API documentation")
+		}
+
+		// Test recording status update with unauthenticated client
+		response, err = env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+			"device": "/dev/video0",
+			"status": "STARTED",
+		}, unauthenticatedClient)
+
+		require.NoError(t, err, "RecordingStatusUpdate should not return error")
+		require.NotNil(t, response, "RecordingStatusUpdate should return response")
+
+		// Should get authentication error for unauthenticated access
+		if response.Error != nil {
+			assert.Equal(t, websocket.AUTHENTICATION_REQUIRED, response.Error.Code,
+				"RecordingStatusUpdate should return AUTHENTICATION_REQUIRED (-32001) for unauthenticated client per API documentation")
+		}
+	})
+
+	t.Run("test_notification_methods_role_permissions", func(t *testing.T) {
+		// Test that different roles can access notification methods
+		viewerClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
+		operatorClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+		adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+
+		testClients := []struct {
+			name   string
+			client *websocket.ClientConnection
+			role   string
+		}{
+			{"viewer", viewerClient, "viewer"},
+			{"operator", operatorClient, "operator"},
+			{"admin", adminClient, "admin"},
+		}
+
+		for _, tc := range testClients {
+			t.Run(fmt.Sprintf("role_%s", tc.role), func(t *testing.T) {
+				// Test camera status update
+				response, err := env.WebSocketServer.MethodCameraStatusUpdate(map[string]interface{}{
+					"device": "/dev/video0",
+					"status": "CONNECTED",
+				}, tc.client)
+
+				require.NoError(t, err, "CameraStatusUpdate should not return error for %s role", tc.role)
+				require.NotNil(t, response, "CameraStatusUpdate should return response for %s role", tc.role)
+
+				// All roles should be able to send notifications
+				if response.Error == nil {
+					result, ok := response.Result.(map[string]interface{})
+					require.True(t, ok, "Result should be a map for %s role", tc.role)
+					assert.Equal(t, true, result["success"], "Should indicate success for %s role", tc.role)
+				}
+
+				// Test recording status update
+				response, err = env.WebSocketServer.MethodRecordingStatusUpdate(map[string]interface{}{
+					"device": "/dev/video0",
+					"status": "STARTED",
+				}, tc.client)
+
+				require.NoError(t, err, "RecordingStatusUpdate should not return error for %s role", tc.role)
+				require.NotNil(t, response, "RecordingStatusUpdate should return response for %s role", tc.role)
+
+				// All roles should be able to send notifications
+				if response.Error == nil {
+					result, ok := response.Result.(map[string]interface{})
+					require.True(t, ok, "Result should be a map for %s role", tc.role)
+					assert.Equal(t, true, result["success"], "Should indicate success for %s role", tc.role)
+				}
+			})
 		}
 	})
 }

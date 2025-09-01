@@ -1691,3 +1691,70 @@ func (rm *RecordingManager) GetSessionByDevice(device string) (*RecordingSession
 	session, exists := rm.sessions[sessionID]
 	return session, exists
 }
+
+// CleanupOldRecordings cleans up old recording files based on age and count limits
+func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error {
+	rm.logger.WithFields(logrus.Fields{
+		"max_age":   maxAge,
+		"max_count": maxCount,
+	}).Debug("Starting cleanup of old recordings")
+
+	// Get recordings list
+	recordings, err := rm.GetRecordingsList(ctx, 1000, 0) // Get all recordings for cleanup
+	if err != nil {
+		return fmt.Errorf("failed to get recordings list: %w", err)
+	}
+
+	if len(recordings.Files) == 0 {
+		rm.logger.Debug("No recordings found for cleanup")
+		return nil
+	}
+
+	// Sort recordings by modification time (oldest first)
+	sort.Slice(recordings.Files, func(i, j int) bool {
+		return recordings.Files[i].ModifiedAt.Before(recordings.Files[j].ModifiedAt)
+	})
+
+	cutoffTime := time.Now().Add(-maxAge)
+	var deletedCount int
+	var deletedSize int64
+
+	// Delete old recordings based on age
+	for _, file := range recordings.Files {
+		if file.ModifiedAt.Before(cutoffTime) {
+			if err := rm.DeleteRecording(ctx, file.FileName); err != nil {
+				rm.logger.WithError(err).WithField("filename", file.FileName).Warn("Failed to delete old recording")
+				continue
+			}
+			deletedCount++
+			deletedSize += file.FileSize
+			rm.logger.WithField("filename", file.FileName).Debug("Deleted old recording file")
+		}
+	}
+
+	// If we still have too many files, delete oldest ones
+	if len(recordings.Files)-deletedCount > maxCount {
+		remainingFiles := recordings.Files[deletedCount:]
+		excessCount := len(remainingFiles) - maxCount
+		
+		for i := 0; i < excessCount; i++ {
+			file := remainingFiles[i]
+			if err := rm.DeleteRecording(ctx, file.FileName); err != nil {
+				rm.logger.WithError(err).WithField("filename", file.FileName).Warn("Failed to delete excess recording")
+				continue
+			}
+			deletedCount++
+			deletedSize += file.FileSize
+			rm.logger.WithField("filename", file.FileName).Debug("Deleted excess recording file")
+		}
+	}
+
+	rm.logger.WithFields(logrus.Fields{
+		"deleted_count": deletedCount,
+		"deleted_size":  deletedSize,
+		"max_age":       maxAge,
+		"max_count":     maxCount,
+	}).Info("Cleanup of old recordings completed")
+
+	return nil
+}

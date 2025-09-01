@@ -16,6 +16,8 @@ package mediamtx
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,6 +51,49 @@ type controller struct {
 	recordingMutex   sync.RWMutex
 }
 
+// Abstraction layer mapping functions
+// These functions handle the conversion between camera identifiers (camera0, camera1)
+// and device paths (/dev/video0, /dev/video1) to maintain proper API abstraction
+
+// getCameraIdentifierFromDevicePath converts a device path to a camera identifier
+// Example: /dev/video0 -> camera0
+func (c *controller) getCameraIdentifierFromDevicePath(devicePath string) string {
+	// Extract the number from /dev/video{N}
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		number := strings.TrimPrefix(devicePath, "/dev/video")
+		return fmt.Sprintf("camera%s", number)
+	}
+	// If it's already a camera identifier, return as is
+	if strings.HasPrefix(devicePath, "camera") {
+		return devicePath
+	}
+	// Fallback: return the original path
+	return devicePath
+}
+
+// getDevicePathFromCameraIdentifier converts a camera identifier to a device path
+// Example: camera0 -> /dev/video0
+func (c *controller) getDevicePathFromCameraIdentifier(cameraID string) string {
+	// Extract the number from camera{N}
+	if strings.HasPrefix(cameraID, "camera") {
+		number := strings.TrimPrefix(cameraID, "camera")
+		return fmt.Sprintf("/dev/video%s", number)
+	}
+	// If it's already a device path, return as is
+	if strings.HasPrefix(cameraID, "/dev/video") {
+		return cameraID
+	}
+	// Fallback: return the original identifier
+	return cameraID
+}
+
+// validateCameraIdentifier validates that a camera identifier follows the correct pattern
+func (c *controller) validateCameraIdentifier(cameraID string) bool {
+	// Must match pattern camera[0-9]+
+	matched, _ := regexp.MatchString(`^camera[0-9]+$`, cameraID)
+	return matched
+}
+
 // Active recording management methods (Phase 2 enhancement)
 
 // IsDeviceRecording checks if a device is currently recording
@@ -56,7 +101,15 @@ func (c *controller) IsDeviceRecording(devicePath string) bool {
 	c.recordingMutex.RLock()
 	defer c.recordingMutex.RUnlock()
 
-	_, exists := c.activeRecordings[devicePath]
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var actualDevicePath string
+	if c.validateCameraIdentifier(devicePath) {
+		actualDevicePath = c.getDevicePathFromCameraIdentifier(devicePath)
+	} else {
+		actualDevicePath = devicePath
+	}
+
+	_, exists := c.activeRecordings[actualDevicePath]
 	return exists
 }
 
@@ -65,15 +118,23 @@ func (c *controller) StartActiveRecording(devicePath, sessionID, streamName stri
 	c.recordingMutex.Lock()
 	defer c.recordingMutex.Unlock()
 
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var actualDevicePath string
+	if c.validateCameraIdentifier(devicePath) {
+		actualDevicePath = c.getDevicePathFromCameraIdentifier(devicePath)
+	} else {
+		actualDevicePath = devicePath
+	}
+
 	// Check for existing recording
-	if _, exists := c.activeRecordings[devicePath]; exists {
+	if _, exists := c.activeRecordings[actualDevicePath]; exists {
 		return fmt.Errorf("device %s is already recording", devicePath)
 	}
 
 	// Create active recording entry
-	c.activeRecordings[devicePath] = &ActiveRecording{
+	c.activeRecordings[actualDevicePath] = &ActiveRecording{
 		SessionID:  sessionID,
-		DevicePath: devicePath,
+		DevicePath: devicePath, // Store camera identifier for API consistency
 		StartTime:  time.Now(),
 		StreamName: streamName,
 		Status:     "RECORDING",
@@ -93,14 +154,22 @@ func (c *controller) StopActiveRecording(devicePath string) error {
 	c.recordingMutex.Lock()
 	defer c.recordingMutex.Unlock()
 
-	recording, exists := c.activeRecordings[devicePath]
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var actualDevicePath string
+	if c.validateCameraIdentifier(devicePath) {
+		actualDevicePath = c.getDevicePathFromCameraIdentifier(devicePath)
+	} else {
+		actualDevicePath = devicePath
+	}
+
+	recording, exists := c.activeRecordings[actualDevicePath]
 	if !exists {
 		return fmt.Errorf("no active recording found for device %s", devicePath)
 	}
 
 	// Update status and remove from active recordings
 	recording.Status = "STOPPED"
-	delete(c.activeRecordings, devicePath)
+	delete(c.activeRecordings, actualDevicePath)
 
 	c.logger.WithFields(logrus.Fields{
 		"device_path": devicePath,
@@ -119,9 +188,11 @@ func (c *controller) GetActiveRecordings() map[string]*ActiveRecording {
 	// Return a copy to avoid race conditions
 	activeRecordings := make(map[string]*ActiveRecording)
 	for devicePath, recording := range c.activeRecordings {
-		activeRecordings[devicePath] = &ActiveRecording{
+		// Convert device path back to camera identifier for API consistency
+		cameraID := c.getCameraIdentifierFromDevicePath(devicePath)
+		activeRecordings[cameraID] = &ActiveRecording{
 			SessionID:  recording.SessionID,
-			DevicePath: recording.DevicePath,
+			DevicePath: cameraID, // Return camera identifier for API consistency
 			StartTime:  recording.StartTime,
 			StreamName: recording.StreamName,
 			Status:     recording.Status,
@@ -131,23 +202,20 @@ func (c *controller) GetActiveRecordings() map[string]*ActiveRecording {
 	return activeRecordings
 }
 
-// GetActiveRecording returns active recording for a specific device
+// GetActiveRecording gets active recording details for a device
 func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 	c.recordingMutex.RLock()
 	defer c.recordingMutex.RUnlock()
 
-	if recording, exists := c.activeRecordings[devicePath]; exists {
-		// Return a copy to avoid race conditions
-		return &ActiveRecording{
-			SessionID:  recording.SessionID,
-			DevicePath: recording.DevicePath,
-			StartTime:  recording.StartTime,
-			StreamName: recording.StreamName,
-			Status:     recording.Status,
-		}
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var actualDevicePath string
+	if c.validateCameraIdentifier(devicePath) {
+		actualDevicePath = c.getDevicePathFromCameraIdentifier(devicePath)
+	} else {
+		actualDevicePath = devicePath
 	}
 
-	return nil
+	return c.activeRecordings[actualDevicePath]
 }
 
 // ControllerWithConfigManager creates a new MediaMTX controller with configuration integration
@@ -495,25 +563,43 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		return nil, fmt.Errorf("recording path is required")
 	}
 
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	var cameraID string
+
+	if c.validateCameraIdentifier(device) {
+		// Device is a camera identifier (e.g., "camera0")
+		cameraID = device
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logrus.Fields{
+			"camera_id":   cameraID,
+			"device_path": devicePath,
+		}).Debug("Converted camera identifier to device path")
+	} else {
+		// Device is already a device path (e.g., "/dev/video0")
+		devicePath = device
+		cameraID = c.getCameraIdentifierFromDevicePath(device)
+	}
+
 	// Generate session ID
-	sessionID := generateSessionID(device)
+	sessionID := generateSessionID(devicePath)
 
 	// Check if session already exists
 	c.sessionsMu.Lock()
 	if _, exists := c.sessions[sessionID]; exists {
 		c.sessionsMu.Unlock()
-		return nil, NewRecordingError(sessionID, device, "start_recording", "session already exists")
+		return nil, NewRecordingError(sessionID, devicePath, "start_recording", "session already exists")
 	}
 	c.sessionsMu.Unlock()
 
 	// Create recording session
 	session := &RecordingSession{
 		ID:        sessionID,
-		Device:    device,
+		Device:    cameraID, // Store camera identifier for API consistency
 		Path:      path,
 		Status:    "STARTING",
 		StartTime: time.Now(),
-		FilePath:  generateRecordingPath(device, sessionID),
+		FilePath:  generateRecordingPath(devicePath, sessionID),
 	}
 
 	// Start FFmpeg recording
@@ -524,9 +610,9 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		"crf":    "23",
 	}
 
-	pid, err := c.ffmpegManager.StartRecording(ctx, device, session.FilePath, options)
+	pid, err := c.ffmpegManager.StartRecording(ctx, devicePath, session.FilePath, options)
 	if err != nil {
-		return nil, NewRecordingErrorWithErr(sessionID, device, "start_recording", "failed to start FFmpeg recording", err)
+		return nil, NewRecordingErrorWithErr(sessionID, devicePath, "start_recording", "failed to start FFmpeg recording", err)
 	}
 
 	// Update session status
@@ -537,11 +623,17 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 	c.sessions[sessionID] = session
 	c.sessionsMu.Unlock()
 
+	// Start tracking active recording for API consistency
+	if err := c.StartActiveRecording(cameraID, sessionID, ""); err != nil {
+		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to start active recording tracking")
+	}
+
 	c.logger.WithFields(logrus.Fields{
-		"session_id": sessionID,
-		"device":     device,
-		"path":       path,
-		"pid":        pid,
+		"session_id":  sessionID,
+		"device":      cameraID,
+		"device_path": devicePath,
+		"path":        path,
+		"pid":         pid,
 	}).Info("Recording session started")
 
 	return session, nil
@@ -605,6 +697,11 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 
 	c.sessionsMu.Unlock()
 
+	// Stop tracking active recording for API consistency
+	if err := c.StopActiveRecording(session.Device); err != nil {
+		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to stop active recording tracking")
+	}
+
 	c.logger.WithFields(logrus.Fields{
 		"session_id": sessionID,
 		"device":     session.Device,
@@ -621,12 +718,35 @@ func (c *controller) TakeSnapshot(ctx context.Context, device, path string) (*Sn
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Validate input parameters for security
+	if device == "" {
+		return nil, fmt.Errorf("device path is required")
+	}
+
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	var cameraID string
+
+	if c.validateCameraIdentifier(device) {
+		// Device is a camera identifier (e.g., "camera0")
+		cameraID = device
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logrus.Fields{
+			"camera_id":   cameraID,
+			"device_path": devicePath,
+		}).Debug("Converted camera identifier to device path")
+	} else {
+		// Device is already a device path (e.g., "/dev/video0")
+		devicePath = device
+		cameraID = c.getCameraIdentifierFromDevicePath(device)
+	}
+
 	// Generate snapshot ID and path
-	snapshotID := generateSnapshotID(device)
-	snapshotPath := generateSnapshotPath(device, snapshotID)
+	snapshotID := generateSnapshotID(devicePath)
+	snapshotPath := generateSnapshotPath(devicePath, snapshotID)
 
 	// Take snapshot using FFmpeg
-	err := c.ffmpegManager.TakeSnapshot(ctx, device, snapshotPath)
+	err := c.ffmpegManager.TakeSnapshot(ctx, devicePath, snapshotPath)
 	if err != nil {
 		return nil, NewFFmpegErrorWithErr(0, "snapshot", "take_snapshot", "failed to take snapshot", err)
 	}
@@ -639,7 +759,7 @@ func (c *controller) TakeSnapshot(ctx context.Context, device, path string) (*Sn
 
 	snapshot := &Snapshot{
 		ID:       snapshotID,
-		Device:   device,
+		Device:   cameraID, // Store camera identifier for API consistency
 		Path:     path,
 		FilePath: snapshotPath,
 		Size:     fileSize,
@@ -648,7 +768,8 @@ func (c *controller) TakeSnapshot(ctx context.Context, device, path string) (*Sn
 
 	c.logger.WithFields(logrus.Fields{
 		"snapshot_id": snapshotID,
-		"device":      device,
+		"device":      cameraID,
+		"device_path": devicePath,
 		"path":        path,
 		"file_size":   fileSize,
 	}).Info("Snapshot taken")
@@ -748,11 +869,31 @@ func generateSnapshotID(device string) string {
 
 // generateRecordingPath generates a recording file path
 func generateRecordingPath(device, sessionID string) string {
+	// Handle camera identifiers in file naming
+	if strings.HasPrefix(device, "camera") {
+		// Convert camera0 to camera0 for consistent naming
+		return fmt.Sprintf("/tmp/recordings/%s_%s.mp4", device, sessionID)
+	}
+	// Handle device paths by extracting the device name
+	if strings.HasPrefix(device, "/dev/video") {
+		deviceName := strings.TrimPrefix(device, "/dev/")
+		return fmt.Sprintf("/tmp/recordings/%s_%s.mp4", deviceName, sessionID)
+	}
 	return fmt.Sprintf("/tmp/recordings/%s_%s.mp4", device, sessionID)
 }
 
 // generateSnapshotPath generates a snapshot file path
 func generateSnapshotPath(device, snapshotID string) string {
+	// Handle camera identifiers in file naming
+	if strings.HasPrefix(device, "camera") {
+		// Convert camera0 to camera0 for consistent naming
+		return fmt.Sprintf("/tmp/snapshots/%s_%s.jpg", device, snapshotID)
+	}
+	// Handle device paths by extracting the device name
+	if strings.HasPrefix(device, "/dev/video") {
+		deviceName := strings.TrimPrefix(device, "/dev/")
+		return fmt.Sprintf("/tmp/snapshots/%s_%s.jpg", deviceName, snapshotID)
+	}
 	return fmt.Sprintf("/tmp/snapshots/%s_%s.jpg", device, snapshotID)
 }
 
@@ -773,8 +914,26 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 		return nil, fmt.Errorf("device path is required")
 	}
 
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	var cameraID string
+
+	if c.validateCameraIdentifier(device) {
+		// Device is a camera identifier (e.g., "camera0")
+		cameraID = device
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logrus.Fields{
+			"camera_id":   cameraID,
+			"device_path": devicePath,
+		}).Debug("Converted camera identifier to device path")
+	} else {
+		// Device is already a device path (e.g., "/dev/video0")
+		devicePath = device
+		cameraID = c.getCameraIdentifierFromDevicePath(device)
+	}
+
 	// Create advanced recording session with full state management
-	session, err := c.recordingManager.StartRecording(ctx, device, path, options)
+	session, err := c.recordingManager.StartRecording(ctx, devicePath, path, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start advanced recording: %w", err)
 	}
@@ -788,6 +947,14 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 	session.State = SessionStateRecording
 	session.ContinuityID = generateContinuityID()
 	session.Segments = make([]string, 0)
+
+	// Store the camera identifier in the session for API consistency
+	session.Device = cameraID
+
+	// Start tracking active recording for API consistency
+	if err := c.StartActiveRecording(cameraID, session.ID, ""); err != nil {
+		c.logger.WithError(err).WithField("session_id", session.ID).Warning("Failed to start active recording tracking")
+	}
 
 	c.logger.WithFields(logrus.Fields{
 		"session_id":    session.ID,
@@ -829,6 +996,11 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 		// Update state even if stop fails
 		session.State = SessionStateError
 		return fmt.Errorf("failed to stop advanced recording: %w", err)
+	}
+
+	// Stop tracking active recording for API consistency
+	if err := c.StopActiveRecording(session.Device); err != nil {
+		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to stop active recording tracking")
 	}
 
 	// Persist session state for Python equivalence
@@ -901,8 +1073,26 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 		"options": options,
 	}).Info("Taking multi-tier advanced snapshot")
 
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	var cameraID string
+
+	if c.validateCameraIdentifier(device) {
+		// Device is a camera identifier (e.g., "camera0")
+		cameraID = device
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logrus.Fields{
+			"camera_id":   cameraID,
+			"device_path": devicePath,
+		}).Debug("Converted camera identifier to device path")
+	} else {
+		// Device is already a device path (e.g., "/dev/video0")
+		devicePath = device
+		cameraID = c.getCameraIdentifierFromDevicePath(device)
+	}
+
 	// Use enhanced snapshot manager with multi-tier capability
-	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, device, path, options)
+	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, path, options)
 	if err != nil {
 		c.logger.WithError(err).WithFields(logrus.Fields{
 			"device": device,
@@ -911,11 +1101,14 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 		return nil, err
 	}
 
+	// Store the camera identifier in the snapshot for API consistency
+	snapshot.Device = cameraID
+
 	// Log tier information for monitoring
 	if snapshot.Metadata != nil {
 		if tierUsed, ok := snapshot.Metadata["tier_used"]; ok {
 			c.logger.WithFields(logrus.Fields{
-				"device":    device,
+				"device":    cameraID,
 				"tier_used": tierUsed,
 				"file_size": snapshot.Size,
 			}).Info("Multi-tier snapshot completed successfully")
@@ -951,6 +1144,20 @@ func (c *controller) CleanupOldSnapshots(ctx context.Context, maxAge time.Durati
 	}
 
 	return c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount)
+}
+
+// CleanupOldRecordings cleans up old recording files
+func (c *controller) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error {
+	if !c.isRunning {
+		return fmt.Errorf("controller is not running")
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"max_age":   maxAge,
+		"max_count": maxCount,
+	}).Debug("Cleaning up old recordings")
+
+	return c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount)
 }
 
 // GetSnapshotSettings gets current snapshot settings
@@ -1062,5 +1269,13 @@ func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error 
 
 // GetSessionIDByDevice gets session ID by device path using optimized lookup
 func (c *controller) GetSessionIDByDevice(device string) (string, bool) {
-	return c.recordingManager.getSessionIDByDevice(device)
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	if c.validateCameraIdentifier(device) {
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+	} else {
+		devicePath = device
+	}
+
+	return c.recordingManager.getSessionIDByDevice(devicePath)
 }

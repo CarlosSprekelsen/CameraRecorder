@@ -22,12 +22,13 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
@@ -52,22 +53,30 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// Start services
+	// Start services BEFORE running subtests
+	// Start camera monitor
+	err := env.CameraMonitor.Start(ctx)
+	require.NoError(t, err, "Failed to start camera monitor")
+
+	// Start WebSocket server
+	err = env.WebSocketServer.Start()
+	require.NoError(t, err, "Failed to start WebSocket server")
+
+	// Wait for services to be ready
+	time.Sleep(2 * time.Second)
+
+	// Test service startup
 	t.Run("StartServices", func(t *testing.T) {
-		// Start camera monitor
-		err := env.CameraMonitor.Start(ctx)
-		require.NoError(t, err, "Failed to start camera monitor")
-
-		// Start WebSocket server
-		err = env.WebSocketServer.Start()
-		require.NoError(t, err, "Failed to start WebSocket server")
-
-		// Wait for services to be ready
-		time.Sleep(2 * time.Second)
+		// Verify services are running
+		assert.True(t, env.CameraMonitor.IsRunning(), "Camera monitor should be running")
+		assert.True(t, env.WebSocketServer.IsRunning(), "WebSocket server should be running")
 	})
 
 	// Test camera discovery
 	t.Run("CameraDiscovery", func(t *testing.T) {
+		// Ensure camera monitor is running
+		require.True(t, env.CameraMonitor.IsRunning(), "Camera monitor must be running for discovery test")
+		
 		// Wait for camera discovery
 		time.Sleep(5 * time.Second)
 
@@ -92,14 +101,20 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Test first camera capabilities
-		var camera *camera.CameraDevice
-		for _, cam := range cameras {
-			camera = cam
+		var cameraID string
+		for devicePath := range cameras {
+			// Convert device path to camera identifier for API consistency
+			if strings.HasPrefix(devicePath, "/dev/video") {
+				deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+				cameraID = fmt.Sprintf("camera%s", deviceNum)
+			} else {
+				cameraID = devicePath
+			}
 			break
 		}
 
 		// Get camera capabilities - skip for now as method doesn't exist
-		t.Logf("Camera: %s, Path: %s", camera.Name, camera.Path)
+		t.Logf("Camera Path: %s", cameraID)
 	})
 
 	// Test recording operations with file verification
@@ -109,15 +124,21 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			t.Skip("No cameras available for recording testing")
 		}
 
-		var camera *camera.CameraDevice
-		for _, cam := range cameras {
-			camera = cam
-			break
-		}
-		devicePath := camera.Path
-
 		// Test recording start
 		t.Run("StartRecording", func(t *testing.T) {
+			// Get camera ID for this specific test
+			var cameraID string
+			for devicePath := range cameras {
+				// Convert device path to camera identifier for API consistency
+				if strings.HasPrefix(devicePath, "/dev/video") {
+					deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+					cameraID = fmt.Sprintf("camera%s", deviceNum)
+				} else {
+					cameraID = devicePath
+				}
+				break
+			}
+
 			options := map[string]interface{}{
 				"use_case":       "recording",
 				"priority":       1,
@@ -127,7 +148,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 				"max_duration":   30 * time.Second, // Short duration for testing
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, devicePath, "", options)
+			session, err := env.Controller.StartAdvancedRecording(ctx, cameraID, "", options)
 			if err != nil {
 				t.Logf("Warning: Could not start recording: %v", err)
 				t.Skip("Recording not available")
@@ -138,7 +159,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 			// Verify session is active
 			assert.Equal(t, "RECORDING", session.Status, "Session should be recording")
-			assert.Equal(t, devicePath, session.Device, "Session should match device")
+			assert.Equal(t, cameraID, session.Device, "Session should match device")
 
 			// Test recording status
 			t.Run("RecordingStatus", func(t *testing.T) {
@@ -206,12 +227,17 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			t.Skip("No cameras available for snapshot testing")
 		}
 
-		var camera *camera.CameraDevice
-		for _, cam := range cameras {
-			camera = cam
+		var cameraID string
+		for devicePath := range cameras {
+			// Convert device path to camera identifier for API consistency
+			if strings.HasPrefix(devicePath, "/dev/video") {
+				deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+				cameraID = fmt.Sprintf("camera%s", deviceNum)
+			} else {
+				cameraID = devicePath
+			}
 			break
 		}
-		devicePath := camera.Path
 
 		// Test snapshot capture
 		options := map[string]interface{}{
@@ -220,7 +246,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			"resolution": "1920x1080",
 		}
 
-		snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, devicePath, "", options)
+		snapshot, err := env.Controller.TakeAdvancedSnapshot(ctx, cameraID, "", options)
 		if err != nil {
 			t.Logf("Warning: Could not take snapshot: %v", err)
 			t.Skip("Snapshot not available")
@@ -296,15 +322,14 @@ func TestEndToEndCameraOperations(t *testing.T) {
 			t.Skip("No cameras available for active recording testing")
 		}
 
-		var camera *camera.CameraDevice
-		for _, cam := range cameras {
-			camera = cam
+		var cameraID string
+		for devicePath := range cameras {
+			cameraID = devicePath
 			break
 		}
-		devicePath := camera.Path
 
 		// Check if device is recording
-		isRecording := env.Controller.IsDeviceRecording(devicePath)
+		isRecording := env.Controller.IsDeviceRecording(cameraID)
 		assert.False(t, isRecording, "Device should not be recording initially")
 
 		// Get active recordings

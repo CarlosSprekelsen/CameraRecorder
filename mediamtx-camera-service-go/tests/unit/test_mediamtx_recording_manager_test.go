@@ -61,7 +61,7 @@ func TestRecordingManager_NewRecordingManager(t *testing.T) {
 
 	// Test that the manager can perform basic operations
 	ctx := context.Background()
-	device := "/dev/video0"
+	device := "camera0"
 	path := "/tmp/test_recordings"
 	options := map[string]interface{}{}
 

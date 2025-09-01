@@ -107,8 +107,8 @@ func TestMediaMTXPathIntegration(t *testing.T) {
 	t.Run("PathValidation", func(t *testing.T) {
 		// Test path validation
 		testPaths := []string{
-			"/dev/video0",
-			"/dev/video1",
+			"camera0",
+			"camera1",
 			"rtsp://192.168.1.100:554/stream",
 			"http://192.168.1.100:8080/stream",
 		}
@@ -136,8 +136,8 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 	t.Run("StreamCreation", func(t *testing.T) {
 		// Test stream creation with different devices
 		testDevices := []string{
-			"/dev/video0",
-			"/dev/video1",
+			"camera0",
+			"camera1",
 		}
 
 		for _, device := range testDevices {
@@ -185,7 +185,7 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 
 	t.Run("StreamLifecycle", func(t *testing.T) {
 		// Test complete stream lifecycle
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Start recording
 		options := map[string]interface{}{
@@ -240,7 +240,7 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 
 	t.Run("RecordingOperations", func(t *testing.T) {
 		// Test various recording operations
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Test 1: Basic recording
 		t.Run("BasicRecording", func(t *testing.T) {
@@ -329,7 +329,7 @@ func TestMediaMTXSnapshotIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("SnapshotCapture", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Test snapshot capture
 		options := map[string]interface{}{
@@ -378,7 +378,7 @@ func TestMediaMTXActiveRecordingTracking(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("ActiveRecordingStatus", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Check initial status
 		isRecording := env.Controller.IsDeviceRecording(device)
@@ -557,7 +557,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("AutomaticStopAfterDuration", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Start recording with short duration
 		options := map[string]interface{}{
@@ -600,7 +600,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 	})
 
 	t.Run("DurationAccuracy", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Test different duration formats
 		durationTests := []struct {
@@ -651,7 +651,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 	})
 
 	t.Run("DurationOverride", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Start recording with long duration
 		options := map[string]interface{}{
@@ -688,7 +688,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 	})
 
 	t.Run("MultipleDurationFormats", func(t *testing.T) {
-		device := "/dev/video0"
+		device := "camera0"
 
 		// Test different duration parameter formats
 		durationFormats := []map[string]interface{}{

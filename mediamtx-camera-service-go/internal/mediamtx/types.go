@@ -29,10 +29,10 @@ type FFmpegConfig struct {
 
 // FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations
 type FFmpegFallbackDefaults struct {
-	RetryDelay             time.Duration `mapstructure:"retry_delay"`             // Default: 1.0 second
+	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 1.0 second
 	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0 seconds
-	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`       // Default: 30.0 seconds
-	MaxBackoffDelay        time.Duration `mapstructure:"max_backoff_delay"`       // Default: 30.0 seconds
+	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 30.0 seconds
+	MaxBackoffDelay        time.Duration `mapstructure:"max_backoff_delay"`        // Default: 30.0 seconds
 }
 
 // SnapshotConfig represents snapshot operation configuration
@@ -102,14 +102,14 @@ type MediaMTXConfig struct {
 	ProcessKillTimeout                  float64       `mapstructure:"process_kill_timeout"`
 	HealthCheckTimeout                  time.Duration `mapstructure:"health_check_timeout"` // Default: 5 seconds
 	// Health monitoring defaults
-	HealthMonitorDefaults               HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
+	HealthMonitorDefaults HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
 }
 
 // HealthMonitorDefaults represents health monitoring default values
 type HealthMonitorDefaults struct {
-	CheckInterval    time.Duration `mapstructure:"check_interval"`    // Default: 5.0 seconds
-	MaxBackoffDelay  time.Duration `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
-	ShutdownTimeout  time.Duration `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
+	CheckInterval   time.Duration `mapstructure:"check_interval"`    // Default: 5.0 seconds
+	MaxBackoffDelay time.Duration `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
+	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
 }
 
 // CircuitBreakerConfig represents circuit breaker configuration
@@ -349,6 +349,9 @@ type MediaMTXController interface {
 	CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error
 	GetSnapshotSettings() *SnapshotSettings
 	UpdateSnapshotSettings(settings *SnapshotSettings)
+
+	// Advanced recording operations
+	CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error
 
 	// Configuration
 	GetConfig(ctx context.Context) (*MediaMTXConfig, error)

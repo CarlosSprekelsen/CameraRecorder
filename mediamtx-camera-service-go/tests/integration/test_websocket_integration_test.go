@@ -139,7 +139,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			JSONRPC: "2.0",
 			Method:  "get_camera_status",
 			Params: map[string]interface{}{
-				"device": "/dev/video0",
+				"device": "camera0",
 			},
 			ID: 4,
 		}
@@ -160,7 +160,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			JSONRPC: "2.0",
 			Method:  "take_snapshot",
 			Params: map[string]interface{}{
-				"device":   "/dev/video0",
+				"device":   "camera0",
 				"filename": "test_snapshot.jpg",
 				"quality":  85,
 			},
@@ -183,7 +183,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			JSONRPC: "2.0",
 			Method:  "start_recording",
 			Params: map[string]interface{}{
-				"device":           "/dev/video0",
+				"device":           "camera0",
 				"duration_seconds": 30,
 				"format":           "mp4",
 				"quality":          23,
@@ -207,7 +207,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			JSONRPC: "2.0",
 			Method:  "stop_recording",
 			Params: map[string]interface{}{
-				"device": "/dev/video0",
+				"device": "camera0",
 			},
 			ID: 7,
 		}

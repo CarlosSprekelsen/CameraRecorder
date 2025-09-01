@@ -24,6 +24,7 @@ import (
 
 // JSON-RPC Error Codes (RFC 32700) - Following Python implementation
 const (
+	INVALID_REQUEST          = -32600
 	AUTHENTICATION_REQUIRED  = -32001
 	RATE_LIMIT_EXCEEDED      = -32002
 	INSUFFICIENT_PERMISSIONS = -32003
@@ -49,6 +50,7 @@ const (
 // ErrorMessages maps error codes to their corresponding messages
 // Following Go API Documentation exactly
 var ErrorMessages = map[int]string{
+	INVALID_REQUEST:                "Invalid Request",
 	AUTHENTICATION_REQUIRED:        "Authentication failed or token expired",
 	RATE_LIMIT_EXCEEDED:            "Rate limit exceeded",
 	INSUFFICIENT_PERMISSIONS:       "Insufficient permissions",

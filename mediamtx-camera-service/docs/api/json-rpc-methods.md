@@ -1017,7 +1017,7 @@ Custom error codes:
 Standard JSON-RPC 2.0 error codes plus service-specific codes:
 - **-32001**: Authentication failed or token expired
 - **-32002**: Rate limit exceeded
-- **-32003**: Insufficient permissions (role-based access control)
+- **-32003**: Insufficient permissions
 - **-32004**: Camera not found or disconnected
 - **-32005**: Recording already in progress
 - **-32006**: MediaMTX service unavailable  
@@ -1025,9 +1025,9 @@ Standard JSON-RPC 2.0 error codes plus service-specific codes:
 - **-32008**: Camera capability not supported
 
 ### Enhanced Recording Management Error Codes
-- **-1006**: Camera is currently recording (device already has active recording)
-- **-1008**: Storage space is low (available storage below 10%)
-- **-1010**: Storage space is critical (available storage below 5%)
+- **-1006**: Camera is currently recording
+- **-1008**: Storage space is low
+- **-1010**: Storage space is critical
 
 ---
 

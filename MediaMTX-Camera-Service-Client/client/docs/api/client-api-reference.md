@@ -178,7 +178,7 @@ GET http://localhost:8003/health/ready
 ### **Service-Specific Errors**
 - `-32001`: Authentication failed or token expired
 - `-32002`: Rate limit exceeded
-- `-32003`: Insufficient permissions (role-based access control)
+- `-32003`: Insufficient permissions
 - `-32004`: Camera not found or disconnected
 - `-32005`: Recording already in progress
 - `-32006`: MediaMTX service unavailable

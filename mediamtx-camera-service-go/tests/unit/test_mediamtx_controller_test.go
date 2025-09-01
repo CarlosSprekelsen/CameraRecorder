@@ -93,7 +93,7 @@ func TestMediaMTXController_TakeAdvancedSnapshot(t *testing.T) {
 
 	// Note: This test requires actual camera hardware [exists]
 	// For unit testing, we test the method signature and error handling
-	snapshot, err := env.Controller.TakeAdvancedSnapshot(context.Background(), "/dev/video0", filepath.Join(env.TempDir, "test_snapshot"), options)
+	snapshot, err := env.Controller.TakeAdvancedSnapshot(context.Background(), "camera0", filepath.Join(env.TempDir, "test_snapshot"), options)
 	// In unit tests, we expect an error when camera is not available (which is normal for unit tests)
 	// The test validates that the method signature works and error handling is correct
 	if err != nil {
@@ -327,7 +327,7 @@ func TestMediaMTXController_ErrorHandling(t *testing.T) {
 	require.NoError(t, err, "Controller should stop successfully")
 
 	// Test operations with stopped controller
-	_, err = env.Controller.TakeAdvancedSnapshot(context.Background(), "/dev/video0", filepath.Join(env.TempDir, "test"), nil)
+	_, err = env.Controller.TakeAdvancedSnapshot(context.Background(), "camera0", filepath.Join(env.TempDir, "test"), nil)
 	assert.Error(t, err, "Should return error when controller not running")
 	assert.Contains(t, err.Error(), "not running", "Error should indicate controller not running")
 
@@ -435,7 +435,7 @@ func TestMediaMTXController_RecordingManagement(t *testing.T) {
 	assert.NotNil(t, snapshots, "Snapshots should not be nil")
 
 	// Test device recording status
-	isRecording := env.Controller.IsDeviceRecording("/dev/video0")
+	isRecording := env.Controller.IsDeviceRecording("camera0")
 	assert.IsType(t, false, isRecording, "Should return boolean")
 
 	// Test active recordings
@@ -460,10 +460,10 @@ func TestMediaMTXController_StartStopRecording(t *testing.T) {
 	require.NoError(t, err, "Controller should start successfully")
 
 	// Test StartRecording - this is the core functionality
-	session, err := env.Controller.StartRecording(context.Background(), "/dev/video0", "/tmp/test_recording")
+	session, err := env.Controller.StartRecording(context.Background(), "camera0", "/tmp/test_recording")
 	require.NoError(t, err, "StartRecording should succeed")
 	require.NotNil(t, session, "Session should not be nil")
-	assert.Equal(t, "/dev/video0", session.Device, "Device should match")
+	assert.Equal(t, "camera0", session.Device, "Device should match")
 	assert.Equal(t, "RECORDING", session.Status, "Status should be RECORDING")
 	assert.NotEmpty(t, session.ID, "Session ID should not be empty")
 
@@ -500,10 +500,10 @@ func TestMediaMTXController_AdvancedRecording(t *testing.T) {
 		"quality": "high",
 	}
 
-	session, err := env.Controller.StartAdvancedRecording(context.Background(), "/dev/video0", "/tmp/test_advanced_recording", options)
+	session, err := env.Controller.StartAdvancedRecording(context.Background(), "camera0", "/tmp/test_advanced_recording", options)
 	require.NoError(t, err, "StartAdvancedRecording should succeed")
 	require.NotNil(t, session, "Advanced session should not be nil")
-	assert.Equal(t, "/dev/video0", session.Device, "Device should match")
+	assert.Equal(t, "camera0", session.Device, "Device should match")
 	assert.NotEmpty(t, session.ID, "Session ID should not be empty")
 
 	// Test GetAdvancedRecordingSession
@@ -539,7 +539,7 @@ func TestMediaMTXController_RecordingStatusAndLookup(t *testing.T) {
 	assert.Error(t, statusErr, "Should fail with non-existent session")
 
 	// Test GetSessionIDByDevice with non-existent device
-	sessionID, exists := env.Controller.GetSessionIDByDevice("/dev/video1")
+	sessionID, exists := env.Controller.GetSessionIDByDevice("camera1")
 	assert.False(t, exists, "Non-existent device should not have session")
 	assert.Empty(t, sessionID, "Session ID should be empty for non-existent device")
 
@@ -570,7 +570,7 @@ func TestMediaMTXController_RecordingErrorHandling(t *testing.T) {
 	assert.Error(t, startErr, "Should fail with empty device")
 
 	// Test StartRecording with empty path
-	_, startErr = env.Controller.StartRecording(context.Background(), "/dev/video0", "")
+	_, startErr = env.Controller.StartRecording(context.Background(), "camera0", "")
 	assert.Error(t, startErr, "Should fail with empty path")
 
 	// Test StopRecording with empty session ID
@@ -664,7 +664,7 @@ func TestMediaMTXController_ActiveRecordingManagement(t *testing.T) {
 	require.NoError(t, err, "Controller should start successfully")
 
 	// Test device recording status (should be false initially)
-	isRecording := env.Controller.IsDeviceRecording("/dev/video0")
+	isRecording := env.Controller.IsDeviceRecording("camera0")
 	assert.False(t, isRecording, "Device should not be recording initially")
 
 	// Test active recordings (should be empty initially)
@@ -672,34 +672,34 @@ func TestMediaMTXController_ActiveRecordingManagement(t *testing.T) {
 	assert.Empty(t, activeRecordings, "Active recordings should be empty initially")
 
 	// Test getting active recording for non-existent device
-	activeRecording := env.Controller.GetActiveRecording("/dev/video0")
+	activeRecording := env.Controller.GetActiveRecording("camera0")
 	assert.Nil(t, activeRecording, "Active recording should be nil for non-existent device")
 
 	// Test starting active recording
-	err = env.Controller.StartActiveRecording("/dev/video0", "test-session-123", "test-stream")
+	err = env.Controller.StartActiveRecording("camera0", "test-session-123", "test-stream")
 	require.NoError(t, err, "Should start active recording successfully")
 
 	// Verify recording is now active
-	isRecording = env.Controller.IsDeviceRecording("/dev/video0")
+	isRecording = env.Controller.IsDeviceRecording("camera0")
 	assert.True(t, isRecording, "Device should now be recording")
 
 	// Verify active recordings contains the device
 	activeRecordings = env.Controller.GetActiveRecordings()
 	assert.NotEmpty(t, activeRecordings, "Active recordings should not be empty")
-	assert.Contains(t, activeRecordings, "/dev/video0", "Active recordings should contain device")
+	assert.Contains(t, activeRecordings, "camera0", "Active recordings should contain device")
 
 	// Test getting active recording for existing device
-	activeRecording = env.Controller.GetActiveRecording("/dev/video0")
+	activeRecording = env.Controller.GetActiveRecording("camera0")
 	assert.NotNil(t, activeRecording, "Active recording should not be nil for existing device")
 	assert.Equal(t, "test-session-123", activeRecording.SessionID, "Session ID should match")
 	assert.Equal(t, "test-stream", activeRecording.StreamName, "Stream name should match")
 
 	// Test stopping active recording
-	err = env.Controller.StopActiveRecording("/dev/video0")
+	err = env.Controller.StopActiveRecording("camera0")
 	require.NoError(t, err, "Should stop active recording successfully")
 
 	// Verify recording is no longer active
-	isRecording = env.Controller.IsDeviceRecording("/dev/video0")
+	isRecording = env.Controller.IsDeviceRecording("camera0")
 	assert.False(t, isRecording, "Device should no longer be recording")
 
 	// Verify active recordings is empty again
@@ -992,12 +992,12 @@ func TestMediaMTXController_AdvancedRecordingErrorHandling(t *testing.T) {
 func TestMediaMTXController_RecordingErrorTypes(t *testing.T) {
 	// Test NewRecordingErrorWithErr function
 	originalErr := fmt.Errorf("original error")
-	recordingErr := mediamtx.NewRecordingErrorWithErr("test-session", "/dev/video0", "test_operation", "test message", originalErr)
+	recordingErr := mediamtx.NewRecordingErrorWithErr("test-session", "camera0", "test_operation", "test message", originalErr)
 
 	assert.NotNil(t, recordingErr, "Recording error should not be nil")
 	assert.Contains(t, recordingErr.Error(), "test message", "Error should contain the message")
 	assert.Contains(t, recordingErr.Error(), "test-session", "Error should contain session ID")
-	assert.Contains(t, recordingErr.Error(), "/dev/video0", "Error should contain device")
+	assert.Contains(t, recordingErr.Error(), "camera0", "Error should contain device")
 	assert.Contains(t, recordingErr.Error(), "test_operation", "Error should contain operation")
 
 	// Test IsRecordingError function
@@ -1135,7 +1135,7 @@ func TestMediaMTXController_TakeSnapshot(t *testing.T) {
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Test TakeSnapshot to stimulate TakeSnapshot and generateSnapshotPath
-	snapshot, err := env.Controller.TakeSnapshot(context.Background(), "/dev/video0", "jpg")
+	snapshot, err := env.Controller.TakeSnapshot(context.Background(), "camera0", "jpg")
 	if err != nil {
 		t.Logf("TakeSnapshot failed (expected if camera not available): %v", err)
 	} else {
