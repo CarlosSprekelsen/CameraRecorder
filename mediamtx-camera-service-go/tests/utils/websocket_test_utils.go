@@ -8,7 +8,7 @@ and security tests that need to test real WebSocket connections.
 
 COMMON PATTERN USAGE:
 Instead of duplicating WebSocket connection code in every test:
-   conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8002/ws", nil)
+   	conn, _, err := websocket.DefaultDialer.Dial(GetTestWebSocketURL(), nil)
 
 Use the shared utilities:
    client := utils.NewWebSocketTestClient(t, server, jwtHandler)
@@ -367,7 +367,7 @@ func NewWebSocketTestClientForBenchmark(b *testing.B, server *websocket.WebSocke
 	}
 
 	// Connect to WebSocket server
-	url := "ws://localhost:8002/ws"
+	url := GetTestWebSocketURL()
 	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
 	require.NoError(b, err, "Failed to connect to WebSocket server")
 

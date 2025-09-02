@@ -15,6 +15,14 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 
 package utils
 
+import (
+	"path/filepath"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+)
+
 // ============================================================================
 // PRIMARY CLASSIFICATION (Test Level)
 // ============================================================================
@@ -176,4 +184,82 @@ func GetValidBuildTags() []string {
 		TestRealMediaMTX, TestRealWebSocket, TestRealSystem, TestSudoRequired,
 		TestEdgeCase, TestSanity, TestHardware, TestNetwork,
 	}
+}
+
+// ============================================================================
+// TEST CONFIGURATION CONSTANTS
+// ============================================================================
+
+// TestServicePorts defines standard test service ports
+const (
+	TestMediaMTXAPIPort    = 9997
+	TestMediaMTXRTSPPort   = 8554
+	TestMediaMTXWebRTCPort = 8889
+	TestMediaMTXHLSPort    = 8888
+	TestWebSocketPort      = 8002
+)
+
+// TestServiceHosts defines standard test service hosts
+const (
+	TestMediaMTXHost  = "localhost"
+	TestWebSocketHost = "localhost"
+)
+
+// TestServiceURLs defines standard test service URLs
+const (
+	TestMediaMTXAPIURL  = "http://localhost:9997"
+	TestMediaMTXRTSPURL = "rtsp://localhost:8554"
+	TestWebSocketURL    = "ws://localhost:8002/ws"
+)
+
+// TestServiceEndpoints defines standard test service endpoints
+const (
+	TestMediaMTXHealthEndpoint = "/v3/paths/list"
+	TestWebSocketPath          = "/ws"
+)
+
+// ============================================================================
+// TEST CONFIGURATION UTILITY FUNCTIONS
+// ============================================================================
+
+// GetTestMediaMTXConfig returns a standard test MediaMTX configuration
+func GetTestMediaMTXConfig(tempDir string) *config.MediaMTXConfig {
+	return &config.MediaMTXConfig{
+		Host:               TestMediaMTXHost,
+		APIPort:            TestMediaMTXAPIPort,
+		HealthCheckTimeout: 5 * time.Second,
+		RecordingsPath:     filepath.Join(tempDir, "recordings"),
+		SnapshotsPath:      filepath.Join(tempDir, "snapshots"),
+	}
+}
+
+// GetTestMediaMTXClientConfig returns a standard test MediaMTX client configuration
+func GetTestMediaMTXClientConfig(timeout time.Duration) *mediamtx.MediaMTXConfig {
+	return &mediamtx.MediaMTXConfig{
+		BaseURL: TestMediaMTXAPIURL,
+		Timeout: timeout,
+		ConnectionPool: mediamtx.ConnectionPoolConfig{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     30 * time.Second,
+		},
+	}
+}
+
+// GetTestWebSocketURL returns the standard test WebSocket URL
+func GetTestWebSocketURL() string {
+	return TestWebSocketURL
+}
+
+// GetTestMediaMTXHealthURL returns the standard test MediaMTX health check URL
+func GetTestMediaMTXHealthURL() string {
+	return TestMediaMTXAPIURL + TestMediaMTXHealthEndpoint
+}
+
+// GetTestRTSPURL returns the standard test RTSP URL with path
+func GetTestRTSPURL(path string) string {
+	if path == "" {
+		path = "test"
+	}
+	return TestMediaMTXRTSPURL + "/" + path
 }

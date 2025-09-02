@@ -508,13 +508,7 @@ func SetupWebSocketUnitTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 // CreateTestMediaMTXConfig creates test-specific MediaMTX configuration
 // Use this when you need custom MediaMTX configuration for specific tests
 func CreateTestMediaMTXConfig(tempDir string) *config.MediaMTXConfig {
-	return &config.MediaMTXConfig{
-		Host:               "localhost",
-		APIPort:            9997,
-		HealthCheckTimeout: 5 * time.Second,
-		RecordingsPath:     filepath.Join(tempDir, "recordings"),
-		SnapshotsPath:      filepath.Join(tempDir, "snapshots"),
-	}
+	return GetTestMediaMTXConfig(tempDir)
 }
 
 // SetupTestJWTHandler creates a JWT handler for testing
@@ -611,54 +605,88 @@ func CreateAuthenticatedClient(t *testing.T, jwtHandler *security.JWTHandler, us
 }
 
 // Helper function to copy test configuration
+// PRIORITIZES ENVIRONMENT VARIABLES over config files for tests
 func copyTestConfig(destPath string) error {
-	// Read the test configuration from fixtures
-	sourcePath := "tests/fixtures/test_config.yaml"
-
-	// Check if source file exists
-	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		// Create a minimal test config if fixture doesn't exist
-		return createMinimalTestConfig(destPath)
-	}
-
-	// Copy the file
-	sourceData, err := os.ReadFile(sourcePath)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(destPath, sourceData, 0644)
+	// For tests, we prioritize environment variables over config files
+	// This ensures consistent test behavior regardless of fixture state
+	return createEnvironmentBasedTestConfig(destPath)
 }
 
-// Helper function to create minimal test configuration
-func createMinimalTestConfig(configPath string) error {
+// Helper function to create test configuration based on environment variables
+// PRIORITIZES ENVIRONMENT VARIABLES over config files for consistent test behavior
+func createEnvironmentBasedTestConfig(configPath string) error {
 	// Extract the temp directory from the config path
 	tempDir := filepath.Dir(configPath)
 
-	minimalConfig := fmt.Sprintf(`# Minimal Test Configuration
+	// Get JWT secret from environment variable (PRIORITY 1)
+	jwtSecret := os.Getenv("CAMERA_SERVICE_JWT_SECRET")
+	if jwtSecret == "" {
+		// Fallback to a test-specific secret if environment variable not set
+		jwtSecret = "test-jwt-secret-key-for-unit-testing-only-not-for-production"
+	}
+
+	// Get API keys path from environment variable (PRIORITY 1)
+	apiKeysPath := os.Getenv("CAMERA_SERVICE_API_KEYS_PATH")
+	if apiKeysPath == "" {
+		apiKeysPath = "/tmp/test_api_keys.json"
+	}
+
+	// Create test config that prioritizes environment variables
+	testConfig := fmt.Sprintf(`# Test Configuration - Environment Variables PRIORITY
+# This config is generated from environment variables, not fixtures
+# REASON: Tests must use environment variables for consistent behavior
+# REASON: Fixtures can become stale and cause test failures
+# REASON: Environment variables are managed by setup_test_environment.sh
+
 mediamtx:
-  host: "localhost"
-  api_port: 9997
-  health_check_timeout: "5s"
+  host: "%s"
+  api_port: %s
+  rtsp_port: %s
+  webrtc_port: %s
+  hls_port: %s
   recordings_path: "%s/recordings"
   snapshots_path: "%s/snapshots"
+  health_check_timeout: 5s
 
-# Recording Configuration
+server:
+  host: "localhost"
+  port: %s
+  websocket_path: "/ws"
+  max_connections: 100
+  read_timeout: 5s
+  write_timeout: 1s
+  ping_interval: 30s
+  pong_wait: 60s
+  max_message_size: 1048576
+
+security:
+  jwt_secret_key: "%s"
+  jwt_expiry_hours: 24
+  rate_limit_requests: 100
+  rate_limit_window: "1m"
+
+logging:
+  level: "info"
+  format: "json"
+  console_enabled: true
+
+camera:
+  poll_interval: 5.0
+  detection_timeout: 10.0
+  device_range: [0, 9]
+  enable_capability_detection: true
+
 recording:
   enabled: true
   format: "mp4"
-  quality: "high"
+  quality: "medium"
   segment_duration: 300
   max_segment_size: 104857600
   auto_cleanup: true
   cleanup_interval: 3600
   max_age: 604800
   max_size: 1073741824
-  default_rotation_size: 104857600  # 100MB
-  default_max_duration: 3600        # 1 hour
-  default_retention_days: 7
 
-# Snapshots Configuration
 snapshots:
   enabled: true
   format: "jpeg"
@@ -666,49 +694,20 @@ snapshots:
   max_width: 1920
   max_height: 1080
   auto_cleanup: true
-  cleanup_interval: 86400
-  max_age: 2592000
+  cleanup_interval: 3600
+  max_age: 604800
   max_count: 1000
+`,
+		os.Getenv("CAMERA_SERVICE_MEDIAMTX_API_URL"), // Use env var if available
+		os.Getenv("CAMERA_SERVICE_MEDIAMTX_API_PORT"),
+		os.Getenv("CAMERA_SERVICE_MEDIAMTX_RTSP_PORT"),
+		os.Getenv("CAMERA_SERVICE_MEDIAMTX_WEBRTC_PORT"),
+		os.Getenv("CAMERA_SERVICE_MEDIAMTX_HLS_PORT"),
+		tempDir, tempDir,
+		os.Getenv("CAMERA_SERVICE_WEBSOCKET_PORT"),
+		jwtSecret)
 
-security:
-  jwt_secret_key: "test-secret-key-for-unit-testing-only-not-for-production"
-  jwt_expiry_hours: 24
-  rate_limit_requests: 100
-  rate_limit_window: "1m"
-
-storage:
-  warn_percent: 80
-  block_percent: 90
-  default_path: "%s/storage"
-  fallback_path: "%s/fallback"
-
-camera:
-  detection_timeout: 2.0
-  poll_interval: 0.1
-  device_range: [0, 9]
-  capability_detection:
-    enabled: true
-    max_retries: 3
-    timeout: 5.0
-
-server:
-  host: "localhost"
-  port: 8002
-  websocket_path: "/ws"
-  max_connections: 1000
-  read_timeout: "30s"
-  write_timeout: "30s"
-  ping_interval: "30s"
-  pong_wait: "60s"
-  max_message_size: 1048576
-
-logging:
-  level: "debug"
-  format: "json"
-  output: "stdout"
-`, tempDir, tempDir, tempDir, tempDir)
-
-	return os.WriteFile(configPath, []byte(minimalConfig), 0644)
+	return os.WriteFile(configPath, []byte(testConfig), 0644)
 }
 
 // Helper function to create test directories
@@ -786,7 +785,7 @@ type MediaMTXClientTestEnvironment struct {
 // SetupMediaMTXTestClient creates a MediaMTX test client with default configuration
 func SetupMediaMTXTestClient(t *testing.T, env *MediaMTXTestEnvironment) *MediaMTXClientTestEnvironment {
 	clientConfig := &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
+		BaseURL: TestMediaMTXAPIURL,
 		Timeout: 10 * time.Second,
 		ConnectionPool: mediamtx.ConnectionPoolConfig{
 			MaxIdleConns:        10,
@@ -795,7 +794,7 @@ func SetupMediaMTXTestClient(t *testing.T, env *MediaMTXTestEnvironment) *MediaM
 		},
 	}
 
-	client := mediamtx.NewClient("http://localhost:9997", clientConfig, env.Logger.Logger)
+	client := mediamtx.NewClient(TestMediaMTXAPIURL, clientConfig, env.Logger.Logger)
 	require.NotNil(t, client, "MediaMTX client should be created successfully")
 
 	return &MediaMTXClientTestEnvironment{
@@ -807,7 +806,7 @@ func SetupMediaMTXTestClient(t *testing.T, env *MediaMTXTestEnvironment) *MediaM
 
 // SetupMediaMTXTestClientWithConfig creates a MediaMTX test client with custom configuration
 func SetupMediaMTXTestClientWithConfig(t *testing.T, env *MediaMTXTestEnvironment, config *mediamtx.MediaMTXConfig) *MediaMTXClientTestEnvironment {
-	client := mediamtx.NewClient("http://localhost:9997", config, env.Logger.Logger)
+	client := mediamtx.NewClient(TestMediaMTXAPIURL, config, env.Logger.Logger)
 	require.NotNil(t, client, "MediaMTX client should be created successfully")
 
 	return &MediaMTXClientTestEnvironment{
@@ -839,15 +838,7 @@ func TestMediaMTXConnection(t *testing.T, client *MediaMTXClientTestEnvironment)
 
 // CreateMediaMTXTestConfigWithTimeout creates a MediaMTX client config with custom timeout
 func CreateMediaMTXTestConfigWithTimeout(tempDir string, timeout time.Duration) *mediamtx.MediaMTXConfig {
-	return &mediamtx.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: timeout,
-		ConnectionPool: mediamtx.ConnectionPoolConfig{
-			MaxIdleConns:        10,
-			MaxIdleConnsPerHost: 2,
-			IdleConnTimeout:     30 * time.Second,
-		},
-	}
+	return GetTestMediaMTXClientConfig(timeout)
 }
 
 // SetupMediaMTXHealthMonitor creates a MediaMTX health monitor for testing
@@ -869,7 +860,7 @@ func CreateMediaMTXTestPath(name string) *mediamtx.Path {
 	return &mediamtx.Path{
 		ID:     name,
 		Name:   name,
-		Source: "rtsp://localhost:8554/test",
+		Source: GetTestRTSPURL("test"),
 	}
 }
 
