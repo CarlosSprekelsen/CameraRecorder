@@ -197,6 +197,14 @@ func (s *stubMediaMTXController) GetActiveRecording(devicePath string) *mediamtx
 	return nil
 }
 
+// Manager access for cleanup operations
+func (s *stubMediaMTXController) GetRecordingManager() *mediamtx.RecordingManager {
+	return nil
+}
+func (s *stubMediaMTXController) GetSnapshotManager() *mediamtx.SnapshotManager {
+	return nil
+}
+
 // TestWebSocketServerInstantiation tests WebSocket server creation and configuration
 func TestWebSocketServerInstantiation(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint

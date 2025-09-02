@@ -92,14 +92,14 @@ github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_val
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:235.19,237.3 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:239.2,241.35 3 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:241.35,242.36 1 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:242.36,244.9 2 0
+github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:242.36,244.9 2 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:248.2,248.12 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:248.12,250.3 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:252.2,252.15 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:256.84,259.21 2 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:259.21,261.3 1 0
+github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:259.21,261.3 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:263.2,264.30 2 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:265.11,266.20 1 0
+github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:265.11,266.20 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:267.15,268.25 1 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:269.14,270.49 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/security/input_validator.go:270.49,272.4 1 1
