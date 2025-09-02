@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -115,9 +116,8 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 
 		// Handle errors
 		if err != nil {
-			s.metricsMutex.Lock()
-			s.metrics.ErrorCount++
-			s.metricsMutex.Unlock()
+			// Use atomic operation for ErrorCount
+			atomic.AddInt64(&s.metrics.ErrorCount, 1)
 		}
 
 		return response, err
@@ -757,9 +757,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 	// Check authentication
 	if !client.Authenticated {
 		// Increment error count for authentication failure
-		s.metricsMutex.Lock()
-		s.metrics.ErrorCount++
-		s.metricsMutex.Unlock()
+		atomic.AddInt64(&s.metrics.ErrorCount, 1)
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
@@ -773,9 +771,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 	// Check permissions
 	if err := s.checkMethodPermissions(client, "get_server_info"); err != nil {
 		// Increment error count for permission failure
-		s.metricsMutex.Lock()
-		s.metrics.ErrorCount++
-		s.metricsMutex.Unlock()
+		atomic.AddInt64(&s.metrics.ErrorCount, 1)
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",

@@ -119,6 +119,7 @@ type ClientConnection struct {
 
 // PerformanceMetrics tracks WebSocket server performance
 // Following Python PerformanceMetrics class
+// Note: RequestCount, ErrorCount, and ActiveConnections use atomic operations for thread safety
 type PerformanceMetrics struct {
 	RequestCount      int64
 	ResponseTimes     map[string][]float64

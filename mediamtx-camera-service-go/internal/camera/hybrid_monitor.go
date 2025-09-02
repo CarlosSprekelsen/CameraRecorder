@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
@@ -140,7 +141,7 @@ func NewHybridCameraMonitor(
 		// State
 		knownDevices:     make(map[string]*CameraDevice),
 		capabilityStates: make(map[string]*DeviceCapabilityState),
-		stopChan:         make(chan struct{}),
+		stopChan:         make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
 
 		// Caching
 		capabilityCache: make(map[string]*V4L2Capabilities),
@@ -182,10 +183,10 @@ func (m *HybridCameraMonitor) initializeCameraSources() {
 	for _, deviceNum := range m.deviceRange {
 		m.cameraSources = append(m.cameraSources, CameraSource{
 			Type:        "usb",
-			Identifier:  fmt.Sprintf("camera%d", deviceNum),
-			Source:      fmt.Sprintf("/dev/video%d", deviceNum),
+			Identifier:  "camera" + strconv.Itoa(deviceNum),
+			Source:      "/dev/video" + strconv.Itoa(deviceNum),
 			Enabled:     true,
-			Description: fmt.Sprintf("USB Camera %d", deviceNum),
+			Description: "USB Camera " + strconv.Itoa(deviceNum),
 		})
 	}
 
@@ -400,7 +401,7 @@ func (m *HybridCameraMonitor) AddEventHandler(handler CameraEventHandler) {
 
 	m.eventHandlers = append(m.eventHandlers, handler)
 	m.logger.WithFields(map[string]interface{}{
-		"handler_type": fmt.Sprintf("%T", handler),
+		"handler_type": fmt.Sprintf("%T", handler), // Keep fmt.Sprintf for type reflection
 		"action":       "event_handler_added",
 	}).Debug("Added camera event handler")
 }
@@ -448,7 +449,7 @@ func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 			}).Info("Camera monitoring loop stopped")
 			return
 		case <-ticker.C:
-			m.discoverCameras()
+			m.discoverCameras(ctx)
 			m.adjustPollingInterval()
 		}
 	}
@@ -456,7 +457,7 @@ func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 
 // discoverCameras scans for currently connected cameras using parallel processing
 // Enhanced to support multiple camera types beyond USB cameras
-func (m *HybridCameraMonitor) discoverCameras() {
+func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 	m.stats.mu.Lock()
 	m.stats.PollingCycles++
 	m.stats.mu.Unlock()
@@ -485,7 +486,7 @@ func (m *HybridCameraMonitor) discoverCameras() {
 				wg.Done()
 			}()
 
-			device, err := m.createCameraDeviceInfoFromSource(src)
+			device, err := m.createCameraDeviceInfoFromSource(ctx, src)
 			if err != nil {
 				m.logger.WithFields(map[string]interface{}{
 					"source": src.Identifier,
@@ -521,25 +522,25 @@ func (m *HybridCameraMonitor) discoverCameras() {
 		currentDevices[device.Path] = device
 	}
 
-	m.processDeviceStateChanges(currentDevices)
+	m.processDeviceStateChanges(ctx, currentDevices)
 }
 
 // createCameraDeviceInfoFromSource creates device information for a given camera source
-func (m *HybridCameraMonitor) createCameraDeviceInfoFromSource(source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createCameraDeviceInfoFromSource(ctx context.Context, source CameraSource) (*CameraDevice, error) {
 	switch source.Type {
 	case "usb":
-		return m.createUSBCameraDeviceInfo(source)
+		return m.createUSBCameraDeviceInfo(ctx, source)
 	case "rtsp", "http", "network":
-		return m.createNetworkCameraDeviceInfo(source)
+		return m.createNetworkCameraDeviceInfo(ctx, source)
 	case "file":
-		return m.createFileCameraDeviceInfo(source)
+		return m.createFileCameraDeviceInfo(ctx, source)
 	default:
-		return m.createGenericCameraDeviceInfo(source)
+		return m.createGenericCameraDeviceInfo(ctx, source)
 	}
 }
 
 // createUSBCameraDeviceInfo creates device information for USB cameras
-func (m *HybridCameraMonitor) createUSBCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createUSBCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
 	// Extract device number from source path
 	var deviceNum int
 	_, err := fmt.Sscanf(source.Source, "/dev/video%d", &deviceNum)
@@ -547,11 +548,11 @@ func (m *HybridCameraMonitor) createUSBCameraDeviceInfo(source CameraSource) (*C
 		return nil, fmt.Errorf("invalid USB device path: %s", source.Source)
 	}
 
-	return m.createCameraDeviceInfo(source.Source, deviceNum)
+	return m.createCameraDeviceInfo(ctx, source.Source, deviceNum)
 }
 
 // createCameraDeviceInfo creates device information for a given path with lazy capability detection
-func (m *HybridCameraMonitor) createCameraDeviceInfo(devicePath string, deviceNum int) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createCameraDeviceInfo(ctx context.Context, devicePath string, deviceNum int) (*CameraDevice, error) {
 	// Check if device file exists
 	if !m.deviceChecker.Exists(devicePath) {
 		return nil, fmt.Errorf("device does not exist")
@@ -576,7 +577,7 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(devicePath string, deviceNu
 		device.Name = existingDevice.Name
 	} else if m.enableCapabilityDetection {
 		// Only probe capabilities on first detection (lazy detection)
-		if err := m.probeDeviceCapabilities(device); err != nil {
+		if err := m.probeDeviceCapabilities(ctx, device); err != nil {
 			device.Status = DeviceStatusError
 			device.Error = err.Error()
 			m.logger.WithFields(map[string]interface{}{
@@ -586,14 +587,14 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(devicePath string, deviceNu
 			}).Debug("Failed to probe device capabilities")
 		}
 	} else {
-		device.Name = fmt.Sprintf("Video Device %d", deviceNum)
+		device.Name = "Video Device " + strconv.Itoa(deviceNum)
 	}
 
 	return device, nil
 }
 
 // createNetworkCameraDeviceInfo creates device information for network cameras
-func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
 	// For network cameras, we assume they're connected if we can reach them
 	// In a real implementation, you might want to test connectivity
 
@@ -621,7 +622,7 @@ func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(source CameraSource)
 }
 
 // createFileCameraDeviceInfo creates device information for file-based cameras
-func (m *HybridCameraMonitor) createFileCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createFileCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
 	// Check if file exists
 	if !m.deviceChecker.Exists(source.Source) {
 		return &CameraDevice{
@@ -655,7 +656,7 @@ func (m *HybridCameraMonitor) createFileCameraDeviceInfo(source CameraSource) (*
 }
 
 // createGenericCameraDeviceInfo creates device information for generic camera types
-func (m *HybridCameraMonitor) createGenericCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createGenericCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
 	device := &CameraDevice{
 		Path:   source.Source,
 		Name:   source.Description,
@@ -680,7 +681,7 @@ func (m *HybridCameraMonitor) createGenericCameraDeviceInfo(source CameraSource)
 }
 
 // probeDeviceCapabilities probes device capabilities using v4l2-ctl with caching
-func (m *HybridCameraMonitor) probeDeviceCapabilities(device *CameraDevice) error {
+func (m *HybridCameraMonitor) probeDeviceCapabilities(ctx context.Context, device *CameraDevice) error {
 	// Check cache first
 	m.cacheMutex.RLock()
 	if cached, exists := m.capabilityCache[device.Path]; exists {
@@ -700,7 +701,6 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(device *CameraDevice) erro
 	m.stats.mu.Unlock()
 
 	// Execute v4l2-ctl --device /dev/videoX --info
-	ctx := context.Background()
 	infoOutput, err := m.commandExecutor.ExecuteCommand(ctx, device.Path, "--info")
 	if err != nil {
 		m.stats.mu.Lock()
@@ -779,7 +779,7 @@ func (m *HybridCameraMonitor) getDefaultFormats() []V4L2Format {
 }
 
 // processDeviceStateChanges processes changes in device state
-func (m *HybridCameraMonitor) processDeviceStateChanges(currentDevices map[string]*CameraDevice) {
+func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, currentDevices map[string]*CameraDevice) {
 	m.stateLock.Lock()
 	defer m.stateLock.Unlock()
 
@@ -800,7 +800,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(currentDevices map[strin
 			}).Info("New V4L2 device discovered")
 
 			// Generate event
-			m.generateCameraEvent(CameraEventConnected, path, device)
+			m.generateCameraEvent(ctx, CameraEventConnected, path, device)
 		} else {
 			// Update existing device
 			existing.LastSeen = device.LastSeen
@@ -820,7 +820,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(currentDevices map[strin
 				}).Info("V4L2 device status changed")
 
 				// Generate event
-				m.generateCameraEvent(CameraEventStatusChanged, path, device)
+				m.generateCameraEvent(ctx, CameraEventStatusChanged, path, device)
 			}
 		}
 	}
@@ -841,13 +841,13 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(currentDevices map[strin
 			}).Info("V4L2 device disconnected")
 
 			// Generate event
-			m.generateCameraEvent(CameraEventDisconnected, path, device)
+			m.generateCameraEvent(ctx, CameraEventDisconnected, path, device)
 		}
 	}
 }
 
 // generateCameraEvent generates camera events and notifies handlers
-func (m *HybridCameraMonitor) generateCameraEvent(eventType CameraEvent, devicePath string, device *CameraDevice) {
+func (m *HybridCameraMonitor) generateCameraEvent(ctx context.Context, eventType CameraEvent, devicePath string, device *CameraDevice) {
 	eventData := CameraEventData{
 		DevicePath: devicePath,
 		EventType:  eventType,
@@ -863,16 +863,16 @@ func (m *HybridCameraMonitor) generateCameraEvent(eventType CameraEvent, deviceP
 				// Recover from panics in goroutine
 				if r := recover(); r != nil {
 					m.logger.WithFields(map[string]interface{}{
-						"handler_type": fmt.Sprintf("%T", h),
+						"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
 						"panic":        r,
 						"action":       "panic_recovered",
 					}).Error("Recovered from panic in camera event handler")
 				}
 			}()
 
-			if err := h.HandleCameraEvent(context.Background(), eventData); err != nil {
+			if err := h.HandleCameraEvent(ctx, eventData); err != nil {
 				m.logger.WithFields(map[string]interface{}{
-					"handler_type": fmt.Sprintf("%T", h),
+					"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
 					"error":        err.Error(),
 					"action":       "event_handler_error",
 				}).Error("Error in camera event handler")

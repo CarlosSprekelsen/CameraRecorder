@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -61,7 +62,7 @@ func (c *controller) getCameraIdentifierFromDevicePath(devicePath string) string
 	// Extract the number from /dev/video{N}
 	if strings.HasPrefix(devicePath, "/dev/video") {
 		number := strings.TrimPrefix(devicePath, "/dev/video")
-		return fmt.Sprintf("camera%s", number)
+		return "camera" + number
 	}
 	// If it's already a camera identifier, return as is
 	if strings.HasPrefix(devicePath, "camera") {
@@ -77,7 +78,7 @@ func (c *controller) getDevicePathFromCameraIdentifier(cameraID string) string {
 	// Extract the number from camera{N}
 	if strings.HasPrefix(cameraID, "camera") {
 		number := strings.TrimPrefix(cameraID, "camera")
-		return fmt.Sprintf("/dev/video%s", number)
+		return "/dev/video" + number
 	}
 	// If it's already a device path, return as is
 	if strings.HasPrefix(cameraID, "/dev/video") {
@@ -831,7 +832,7 @@ func validateConfig(config *MediaMTXConfig) error {
 	}
 
 	if config.RetryAttempts < 0 {
-		return NewConfigurationError("retry_attempts", fmt.Sprintf("%d", config.RetryAttempts), "retry attempts cannot be negative")
+		return NewConfigurationError("retry_attempts", strconv.Itoa(config.RetryAttempts), "retry attempts cannot be negative")
 	}
 
 	if config.RetryDelay <= 0 {
@@ -840,7 +841,7 @@ func validateConfig(config *MediaMTXConfig) error {
 
 	// Validate circuit breaker configuration
 	if config.CircuitBreaker.FailureThreshold <= 0 {
-		return NewConfigurationError("circuit_breaker.failure_threshold", fmt.Sprintf("%d", config.CircuitBreaker.FailureThreshold), "failure threshold must be positive")
+		return NewConfigurationError("circuit_breaker.failure_threshold", strconv.Itoa(config.CircuitBreaker.FailureThreshold), "failure threshold must be positive")
 	}
 
 	if config.CircuitBreaker.RecoveryTimeout <= 0 {
@@ -848,16 +849,16 @@ func validateConfig(config *MediaMTXConfig) error {
 	}
 
 	if config.CircuitBreaker.MaxFailures <= 0 {
-		return NewConfigurationError("circuit_breaker.max_failures", fmt.Sprintf("%d", config.CircuitBreaker.MaxFailures), "max failures must be positive")
+		return NewConfigurationError("circuit_breaker.max_failures", strconv.Itoa(config.CircuitBreaker.MaxFailures), "max failures must be positive")
 	}
 
 	// Validate connection pool configuration
 	if config.ConnectionPool.MaxIdleConns <= 0 {
-		return NewConfigurationError("connection_pool.max_idle_conns", fmt.Sprintf("%d", config.ConnectionPool.MaxIdleConns), "max idle connections must be positive")
+		return NewConfigurationError("connection_pool.max_idle_conns", strconv.Itoa(config.ConnectionPool.MaxIdleConns), "max idle connections must be positive")
 	}
 
 	if config.ConnectionPool.MaxIdleConnsPerHost <= 0 {
-		return NewConfigurationError("connection_pool.max_idle_conns_per_host", fmt.Sprintf("%d", config.ConnectionPool.MaxIdleConnsPerHost), "max idle connections per host must be positive")
+		return NewConfigurationError("connection_pool.max_idle_conns_per_host", strconv.Itoa(config.ConnectionPool.MaxIdleConnsPerHost), "max idle connections per host must be positive")
 	}
 
 	if config.ConnectionPool.IdleConnTimeout <= 0 {
@@ -869,12 +870,12 @@ func validateConfig(config *MediaMTXConfig) error {
 
 // generateSessionID generates a unique session ID
 func generateSessionID(device string) string {
-	return fmt.Sprintf("rec_%s_%d", device, time.Now().UnixNano())
+	return "rec_" + device + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
 // generateSnapshotID generates a unique snapshot ID
 func generateSnapshotID(device string) string {
-	return fmt.Sprintf("snap_%s_%d", device, time.Now().UnixNano())
+	return "snap_" + device + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
 // generateRecordingPath generates a recording file path

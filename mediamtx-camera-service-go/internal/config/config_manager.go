@@ -33,7 +33,7 @@ func CreateConfigManager() *ConfigManager {
 		updateCallbacks: make([]func(*Config), 0),
 		defaultConfig:   getDefaultConfig(),
 		logger:          logrus.New(),
-		stopChan:        make(chan struct{}),
+		stopChan:        make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
 	}
 }
 

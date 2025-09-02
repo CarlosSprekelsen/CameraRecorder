@@ -21,7 +21,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
@@ -283,7 +285,7 @@ func NewWebSocketServer(
 		eventHandlers: make([]func(string, interface{}), 0),
 
 		// Graceful shutdown
-		stopChan: make(chan struct{}),
+		stopChan: make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
 		stopOnce: sync.Once{},
 	}
 
@@ -428,9 +430,8 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			delete(s.clients, client.ClientID)
 			s.clientsMutex.Unlock()
 
-			s.metricsMutex.Lock()
-			s.metrics.ActiveConnections--
-			s.metricsMutex.Unlock()
+			// Use atomic operation for metrics update
+			atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
 			cleanupResults <- nil
 		}(client)
@@ -493,7 +494,7 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 	// Generate client ID with proper synchronization
 	s.clientsMutex.Lock()
 	s.clientCounter++
-	clientID := fmt.Sprintf("client_%d", s.clientCounter)
+	clientID := "client_" + strconv.FormatInt(s.clientCounter, 10)
 	s.clientsMutex.Unlock()
 
 	// Create client connection
@@ -510,10 +511,8 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 	s.clients[clientID] = client
 	s.clientsMutex.Unlock()
 
-	// Update metrics with proper synchronization
-	s.metricsMutex.Lock()
-	s.metrics.ActiveConnections++
-	s.metricsMutex.Unlock()
+	// Update metrics with atomic operation
+	atomic.AddInt64(&s.metrics.ActiveConnections, 1)
 
 	s.logger.WithFields(logrus.Fields{
 		"client_id": clientID,
@@ -542,10 +541,8 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 		delete(s.clients, client.ClientID)
 		s.clientsMutex.Unlock()
 
-		// Update metrics with proper synchronization
-		s.metricsMutex.Lock()
-		s.metrics.ActiveConnections--
-		s.metricsMutex.Unlock()
+		// Update metrics with atomic operation
+		atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
 		// Close connection
 		conn.Close()
@@ -724,10 +721,8 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	// Call method handler
 	response, err := handler(request.Params, client)
 	if err != nil {
-		// Update error metrics with proper synchronization
-		s.metricsMutex.Lock()
-		s.metrics.ErrorCount++
-		s.metricsMutex.Unlock()
+		// Update error metrics with atomic operation
+		atomic.AddInt64(&s.metrics.ErrorCount, 1)
 
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
@@ -771,10 +766,13 @@ func (s *WebSocketServer) sendErrorResponse(conn *websocket.Conn, id interface{}
 
 // recordRequest records performance metrics for a request
 func (s *WebSocketServer) recordRequest(method string, duration float64) {
+	// Use atomic operation for RequestCount
+	atomic.AddInt64(&s.metrics.RequestCount, 1)
+
+	// ResponseTimes still needs mutex protection due to map operations
 	s.metricsMutex.Lock()
 	defer s.metricsMutex.Unlock()
 
-	s.metrics.RequestCount++
 	if s.metrics.ResponseTimes[method] == nil {
 		s.metrics.ResponseTimes[method] = make([]float64, 0)
 	}
@@ -783,6 +781,12 @@ func (s *WebSocketServer) recordRequest(method string, duration float64) {
 
 // GetMetrics returns current performance metrics
 func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
+	// Use atomic operations for reading counters
+	requestCount := atomic.LoadInt64(&s.metrics.RequestCount)
+	errorCount := atomic.LoadInt64(&s.metrics.ErrorCount)
+	activeConnections := atomic.LoadInt64(&s.metrics.ActiveConnections)
+
+	// ResponseTimes still needs mutex protection due to map operations
 	s.metricsMutex.RLock()
 	defer s.metricsMutex.RUnlock()
 
@@ -804,10 +808,10 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 	}
 
 	return &PerformanceMetrics{
-		RequestCount:      s.metrics.RequestCount,
+		RequestCount:      requestCount,
 		ResponseTimes:     responseTimesCopy,
-		ErrorCount:        s.metrics.ErrorCount,
-		ActiveConnections: s.metrics.ActiveConnections,
+		ErrorCount:        errorCount,
+		ActiveConnections: activeConnections,
 		StartTime:         s.metrics.StartTime,
 	}
 }

@@ -106,7 +106,7 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		healthMetrics:             make(map[string]interface{}),
 		ctx:                       ctx,
 		cancel:                    cancel,
-		stopChan:                  make(chan struct{}),
+		stopChan:                  make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
 	}
 }
 

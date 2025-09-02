@@ -42,7 +42,7 @@ func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionMa
 		logger:                logrus.New(),
 		defaultSessionTimeout: sessionTimeout,
 		cleanupInterval:       cleanupInterval,
-		stopChan:              make(chan struct{}),
+		stopChan:              make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
 	}
 
 	// Start automatic cleanup
