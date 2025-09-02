@@ -275,7 +275,7 @@ func TestHealthMonitor_ConfigurationValidation(t *testing.T) {
 	}
 
 	// Create mock client with invalid config
-	client := mediamtx.NewClient(utils.CreateTestHTTPURLWithFreePort(""), invalidConfig, env.Logger.Logger)
+	client := mediamtx.NewClient("http://localhost:9997", invalidConfig, env.Logger.Logger)
 
 	// Create health monitor with invalid config
 	healthMonitor := mediamtx.NewHealthMonitor(client, invalidConfig, env.Logger.Logger)

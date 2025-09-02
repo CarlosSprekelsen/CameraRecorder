@@ -593,7 +593,11 @@ func TestLogging_ConcurrentRotationSafety(t *testing.T) {
 func TestLogging_ComprehensiveErrorHandling(t *testing.T) {
 	// REQ-LOG-001: Error logging with stack traces
 
-	logger := logging.NewLogger("error-test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Test various error scenarios
 	testCases := []struct {

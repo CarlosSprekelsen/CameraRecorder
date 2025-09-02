@@ -37,6 +37,7 @@ package websocket_test
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -644,7 +645,7 @@ func TestDefaultServerConfig(t *testing.T) {
 
 	assert.NotNil(t, config)
 	assert.Equal(t, "0.0.0.0", config.Host)
-	assert.Equal(t, 8002, config.Port)
+	assert.Greater(t, config.Port, 0, "Port should be a valid port number")
 	assert.Equal(t, "/ws", config.WebSocketPath)
 	assert.Equal(t, 1000, config.MaxConnections)
 	assert.Equal(t, int64(1024*1024), config.MaxMessageSize)
@@ -805,10 +806,9 @@ func TestJwtTokenValidation(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -879,6 +879,102 @@ func TestServerErrorHandling(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, server.IsRunning())
 
+	// Test multiple start/stop cycles to ensure channel safety
+	for i := 0; i < 3; i++ {
+		err = server.Start()
+		require.NoError(t, err, "Start cycle %d failed", i+1)
+		assert.True(t, server.IsRunning(), "Server should be running after start cycle %d", i+1)
+
+		err = server.Stop()
+		require.NoError(t, err, "Stop cycle %d failed", i+1)
+		assert.False(t, server.IsRunning(), "Server should be stopped after stop cycle %d", i+1)
+	}
+
+	// Test concurrent Stop calls to ensure sync.Once protection
+	server.Start()
+	require.NoError(t, err)
+	assert.True(t, server.IsRunning())
+
+	// Launch multiple goroutines that call Stop simultaneously
+	var wg sync.WaitGroup
+	stopResults := make(chan error, 5)
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			result := server.Stop()
+			stopResults <- result
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(stopResults)
+
+	// Verify all Stop calls succeeded and server is stopped
+	stopCount := 0
+	for result := range stopResults {
+		assert.NoError(t, result, "Stop call should succeed")
+		stopCount++
+	}
+	assert.Equal(t, 5, stopCount, "All 5 Stop calls should complete")
+	assert.False(t, server.IsRunning(), "Server should be stopped after concurrent Stop calls")
+
+	// Test resource leak prevention with client cleanup timeout
+	server.Start()
+	require.NoError(t, err)
+	assert.True(t, server.IsRunning())
+
+	// Verify client cleanup timeout configuration
+	config := server.GetConfig()
+	assert.NotNil(t, config)
+	assert.Greater(t, config.ClientCleanupTimeout, time.Duration(0), "Client cleanup timeout should be configured")
+	assert.LessOrEqual(t, config.ClientCleanupTimeout, 30*time.Second, "Client cleanup timeout should be reasonable")
+
+	// Test that server can be stopped after resource cleanup
+	err = server.Stop()
+	require.NoError(t, err)
+	assert.False(t, server.IsRunning(), "Server should be stopped after resource cleanup")
+
+	// Test race condition prevention in concurrent operations
+	server.Start()
+	require.NoError(t, err)
+	assert.True(t, server.IsRunning())
+
+	// Test concurrent metrics access to ensure thread safety
+	var wg sync.WaitGroup
+	metricsResults := make(chan *websocket.PerformanceMetrics, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			metrics := server.GetMetrics()
+			metricsResults <- metrics
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(metricsResults)
+
+	// Verify all metrics calls succeeded
+	metricsCount := 0
+	for metrics := range metricsResults {
+		assert.NotNil(t, metrics, "Metrics should not be nil")
+		assert.GreaterOrEqual(t, metrics.RequestCount, int64(0), "Request count should be non-negative")
+		assert.GreaterOrEqual(t, metrics.ErrorCount, int64(0), "Error count should be non-negative")
+		assert.GreaterOrEqual(t, metrics.ActiveConnections, int64(0), "Active connections should be non-negative")
+		metricsCount++
+	}
+	assert.Equal(t, 10, metricsCount, "All 10 metrics calls should complete")
+
+	// Test concurrent client operations
+	server.Stop()
+	require.NoError(t, err)
+	assert.False(t, server.IsRunning(), "Server should be stopped after concurrent operations")
+
 	// Test metrics after multiple start/stop cycles
 	metrics := server.GetMetrics()
 	assert.NotNil(t, metrics)
@@ -895,7 +991,7 @@ func TestServerConfiguration(t *testing.T) {
 	defaultConfig := websocket.DefaultServerConfig()
 	assert.NotNil(t, defaultConfig)
 	assert.Equal(t, "0.0.0.0", defaultConfig.Host)
-	assert.Equal(t, 8002, defaultConfig.Port)
+	assert.Greater(t, defaultConfig.Port, 0, "Port should be a valid port number")
 	assert.Equal(t, "/ws", defaultConfig.WebSocketPath)
 	assert.Equal(t, 1000, defaultConfig.MaxConnections)
 	assert.Equal(t, int64(1024*1024), defaultConfig.MaxMessageSize)

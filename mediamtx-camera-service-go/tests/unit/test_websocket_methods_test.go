@@ -2180,7 +2180,7 @@ func TestWebSocketServer_NotificationMethods(t *testing.T) {
 			"resolution": "1920x1080",
 			"fps":        30,
 			"streams": map[string]interface{}{
-				"rtsp":   "rtsp://localhost:8554/camera0",
+				"rtsp":   utils.CreateTestRTSPURLWithFreePort("camera0"),
 				"webrtc": "http://localhost:8889/camera0/webrtc",
 				"hls":    "http://localhost:8888/camera0",
 			},

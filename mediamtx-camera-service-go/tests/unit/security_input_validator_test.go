@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
@@ -330,8 +329,11 @@ func TestInputValidator_SanitizeString(t *testing.T) {
 }
 
 func TestInputValidator_SanitizeMap(t *testing.T) {
-	logger := logging.NewLogger("test")
-	validator := security.NewInputValidator(logger, nil)
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	validator := security.NewInputValidator(env.Logger, nil)
 
 	// Test map sanitization
 	input := map[string]interface{}{

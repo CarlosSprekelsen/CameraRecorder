@@ -131,7 +131,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 	// Execute multi-tier snapshot capture
 	snapshot, err := sm.takeSnapshotMultiTier(ctx, device, snapshotPath, options, tierConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute multi-tier snapshot capture: %w", err)
 	}
 
 	// Store snapshot (existing logic)

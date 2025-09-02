@@ -151,6 +151,7 @@ type ServerConfig struct {
 	PongWait        time.Duration `mapstructure:"pong_wait"`
 	MaxMessageSize  int64         `mapstructure:"max_message_size"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"` // Default: 30 seconds
+	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"` // Default: 10 seconds
 }
 
 // DefaultServerConfig returns default WebSocket server configuration
@@ -167,5 +168,6 @@ func DefaultServerConfig() *ServerConfig {
 		PongWait:        60 * time.Second, // Keep reasonable for connection stability
 		MaxMessageSize:  1024 * 1024,      // 1MB
 		ShutdownTimeout: 30 * time.Second, // Default shutdown timeout
+		ClientCleanupTimeout: 10 * time.Second, // Default client cleanup timeout
 	}
 }

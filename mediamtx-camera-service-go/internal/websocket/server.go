@@ -35,6 +35,14 @@ import (
 
 // WebSocketServer implements the WebSocket JSON-RPC 2.0 server
 // Following Python WebSocketJsonRpcServer patterns with Go-specific optimizations
+//
+// Thread Safety: This struct is designed to be thread-safe for concurrent operations.
+// All shared state is protected by appropriate mutexes:
+// - clientsMutex: Protects clients map and clientCounter
+// - metricsMutex: Protects metrics struct
+// - methodsMutex: Protects methods map
+// - eventHandlersMutex: Protects eventHandlers slice
+// - stopOnce: Ensures single close operation on stopChan
 type WebSocketServer struct {
 	// Configuration
 	config *ServerConfig
@@ -57,7 +65,7 @@ type WebSocketServer struct {
 	// Client connection management
 	clients       map[string]*ClientConnection
 	clientsMutex  sync.RWMutex
-	clientCounter int64
+	clientCounter int64 // Protected by clientsMutex
 
 	// Method registration
 	methods        map[string]MethodHandler
@@ -74,6 +82,7 @@ type WebSocketServer struct {
 
 	// Graceful shutdown
 	stopChan chan struct{}
+	stopOnce sync.Once
 	wg       sync.WaitGroup
 }
 
@@ -275,6 +284,7 @@ func NewWebSocketServer(
 
 		// Graceful shutdown
 		stopChan: make(chan struct{}),
+		stopOnce: sync.Once{},
 	}
 
 	// Register built-in methods
@@ -314,6 +324,7 @@ func (s *WebSocketServer) Start() error {
 		defer s.wg.Done()
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.WithError(err).Error("WebSocket server failed")
+			// Note: Error is logged but not returned as this is in a goroutine
 		}
 	}()
 
@@ -339,21 +350,13 @@ func (s *WebSocketServer) Stop() error {
 
 	s.logger.Info("Stopping WebSocket server")
 
-	// Signal shutdown - use select to avoid closing already closed channel
-	select {
-	case <-s.stopChan:
-		// Channel already closed, do nothing
-	default:
+	// Signal shutdown - use sync.Once to ensure single close operation
+	s.stopOnce.Do(func() {
 		close(s.stopChan)
-	}
+	})
 
-	// Close all client connections
-	s.clientsMutex.Lock()
-	for clientID := range s.clients {
-		s.logger.WithField("client_id", clientID).Debug("Closing client connection")
-		// Note: Actual connection closing will be handled by the connection handler
-	}
-	s.clientsMutex.Unlock()
+	// Close all client connections with timeout
+	s.closeAllClientConnections()
 
 	// Shutdown HTTP server
 	if s.server != nil {
@@ -361,6 +364,7 @@ func (s *WebSocketServer) Stop() error {
 		defer cancel()
 		if err := s.server.Shutdown(ctx); err != nil {
 			s.logger.WithError(err).Error("Error shutting down HTTP server")
+			// Note: Error is logged but not returned as this is cleanup operation
 		}
 	}
 
@@ -371,6 +375,100 @@ func (s *WebSocketServer) Stop() error {
 
 	s.logger.Info("WebSocket server stopped successfully")
 	return nil
+}
+
+// closeAllClientConnections closes all client connections with timeout
+func (s *WebSocketServer) closeAllClientConnections() {
+	s.logger.Info("Starting client connection cleanup")
+
+	// Create cleanup context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), s.config.ClientCleanupTimeout)
+	defer cancel()
+
+	// Get list of clients to close
+	s.clientsMutex.Lock()
+	clientsToClose := make([]*ClientConnection, 0, len(s.clients))
+	for clientID, client := range s.clients {
+		clientsToClose = append(clientsToClose, client)
+		s.logger.WithField("client_id", clientID).Debug("Queuing client connection for cleanup")
+	}
+	s.clientsMutex.Unlock()
+
+	if len(clientsToClose) == 0 {
+		s.logger.Debug("No client connections to clean up")
+		return
+	}
+
+	// Close connections concurrently with timeout
+	var wg sync.WaitGroup
+	cleanupResults := make(chan error, len(clientsToClose))
+
+	for _, client := range clientsToClose {
+		wg.Add(1)
+		go func(client *ClientConnection) {
+			defer wg.Done()
+
+			// Set close deadline
+			client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+
+			// Send close message
+			closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutdown")
+			if err := client.Conn.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(5*time.Second)); err != nil {
+				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to send close message")
+			}
+
+			// Close connection
+			if err := client.Conn.Close(); err != nil {
+				cleanupResults <- fmt.Errorf("failed to close connection for client %s: %w", client.ClientID, err)
+				return
+			}
+
+			// Remove client from map and update metrics atomically
+			s.clientsMutex.Lock()
+			delete(s.clients, client.ClientID)
+			s.clientsMutex.Unlock()
+
+			s.metricsMutex.Lock()
+			s.metrics.ActiveConnections--
+			s.metricsMutex.Unlock()
+
+			cleanupResults <- nil
+		}(client)
+	}
+
+	// Wait for cleanup with timeout
+	cleanupDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(cleanupDone)
+	}()
+
+	select {
+	case <-ctx.Done():
+		s.logger.Warn("Client cleanup timeout reached, forcing connection closure")
+		// Force close remaining connections
+		for _, client := range clientsToClose {
+			client.Conn.Close()
+		}
+	case <-cleanupDone:
+		s.logger.Debug("All client connections cleaned up successfully")
+	}
+
+	// Check cleanup results
+	close(cleanupResults)
+	errorCount := 0
+	for err := range cleanupResults {
+		if err != nil {
+			errorCount++
+			s.logger.WithError(err).Warn("Client cleanup error")
+		}
+	}
+
+	if errorCount > 0 {
+		s.logger.WithField("error_count", fmt.Sprintf("%d", errorCount)).Warn("Some client connections had cleanup errors")
+	} else {
+		s.logger.Info("All client connections cleaned up successfully")
+	}
 }
 
 // handleWebSocket handles WebSocket upgrade and connection management
@@ -392,7 +490,7 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate client ID
+	// Generate client ID with proper synchronization
 	s.clientsMutex.Lock()
 	s.clientCounter++
 	clientID := fmt.Sprintf("client_%d", s.clientCounter)
@@ -407,12 +505,12 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		Conn:          conn,
 	}
 
-	// Add client to connections
+	// Add client to connections and update metrics atomically
 	s.clientsMutex.Lock()
 	s.clients[clientID] = client
 	s.clientsMutex.Unlock()
 
-	// Update metrics
+	// Update metrics with proper synchronization
 	s.metricsMutex.Lock()
 	s.metrics.ActiveConnections++
 	s.metricsMutex.Unlock()
@@ -439,12 +537,12 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 			}).Error("Recovered from panic in client connection handler")
 		}
 
-		// Remove client from connections
+		// Remove client from connections and update metrics atomically
 		s.clientsMutex.Lock()
 		delete(s.clients, client.ClientID)
 		s.clientsMutex.Unlock()
 
-		// Update metrics
+		// Update metrics with proper synchronization
 		s.metricsMutex.Lock()
 		s.metrics.ActiveConnections--
 		s.metricsMutex.Unlock()
@@ -472,22 +570,37 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 	ticker := time.NewTicker(s.config.PingInterval)
 	defer ticker.Stop()
 
+	// Create message handling context with timeout
+	msgCtx, msgCancel := context.WithCancel(context.Background())
+	defer msgCancel()
+
 	// Message handling loop
 	for {
 		select {
 		case <-s.stopChan:
+			s.logger.WithField("client_id", client.ClientID).Debug("Server shutdown signal received, closing client connection")
+			return
+		case <-msgCtx.Done():
+			s.logger.WithField("client_id", client.ClientID).Debug("Message context cancelled, closing client connection")
 			return
 		case <-ticker.C:
+			// Set write deadline for ping
+			conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
 			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(s.config.WriteTimeout)); err != nil {
 				s.logger.WithError(err).WithField("client_id", client.ClientID).Error("Failed to send ping")
 				return
 			}
 		default:
-			// Read message
+			// Set read deadline for message
+			conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
+
+			// Read message with timeout
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					s.logger.WithError(err).WithField("client_id", client.ClientID).Error("WebSocket read error")
+				} else if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					s.logger.WithField("client_id", client.ClientID).Debug("Client connection closed normally")
 				}
 				return
 			}
@@ -611,6 +724,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	// Call method handler
 	response, err := handler(request.Params, client)
 	if err != nil {
+		// Update error metrics with proper synchronization
 		s.metricsMutex.Lock()
 		s.metrics.ErrorCount++
 		s.metricsMutex.Unlock()
@@ -681,9 +795,17 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 	// Note: averageResponseTime and errorRate calculations are available for future use
 	// when extending the metrics functionality
 
+	// Create a deep copy to prevent race conditions
+	responseTimesCopy := make(map[string][]float64)
+	for method, times := range s.metrics.ResponseTimes {
+		timesCopy := make([]float64, len(times))
+		copy(timesCopy, times)
+		responseTimesCopy[method] = timesCopy
+	}
+
 	return &PerformanceMetrics{
 		RequestCount:      s.metrics.RequestCount,
-		ResponseTimes:     s.metrics.ResponseTimes,
+		ResponseTimes:     responseTimesCopy,
 		ErrorCount:        s.metrics.ErrorCount,
 		ActiveConnections: s.metrics.ActiveConnections,
 		StartTime:         s.metrics.StartTime,

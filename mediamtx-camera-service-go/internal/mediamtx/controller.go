@@ -1108,7 +1108,7 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 			"device": device,
 			"path":   path,
 		}).Error("Multi-tier snapshot failed")
-		return nil, err
+		return nil, fmt.Errorf("failed to take multi-tier snapshot for device %s: %w", device, err)
 	}
 
 	// Store the camera identifier in the snapshot for API consistency
@@ -1146,8 +1146,6 @@ func (c *controller) DeleteAdvancedSnapshot(ctx context.Context, snapshotID stri
 
 	return c.snapshotManager.DeleteSnapshot(ctx, snapshotID)
 }
-
-
 
 // GetSnapshotSettings gets current snapshot settings
 func (c *controller) GetSnapshotSettings() *SnapshotSettings {

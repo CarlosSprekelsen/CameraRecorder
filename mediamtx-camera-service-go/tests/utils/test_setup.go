@@ -119,27 +119,30 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 
 	// OVERRIDE HARDCODED PORTS WITH FREE PORTS TO PREVENT CONFLICTS
 	// Use GetFreePort() from websocket_test_utils.go to get free ports
-	wsPort := utils.GetFreePort()
-	mediaMTXAPIPort := utils.GetFreePort()
-	mediaMTXRTSPPort := utils.GetFreePort()
-	mediaMTXHLSPort := utils.GetFreePort()
-	mediaMTXWebRTCPort := utils.GetFreePort()
+	wsPort := GetFreePort()
+	mediaMTXAPIPort := GetFreePort()
+	mediaMTXRTSPPort := GetFreePort()
+	mediaMTXHLSPort := GetFreePort()
+	mediaMTXWebRTCPort := GetFreePort()
 
-	t.Logf("Using free ports - WebSocket: %d, MediaMTX API: %d, RTSP: %d, HLS: %d, WebRTC: %d", 
+	t.Logf("Using free ports - WebSocket: %d, MediaMTX API: %d, RTSP: %d, HLS: %d, WebRTC: %d",
 		wsPort, mediaMTXAPIPort, mediaMTXRTSPPort, mediaMTXHLSPort, mediaMTXWebRTCPort)
 
+	// Get current config and update ports
+	currentConfig := configManager.GetConfig()
+
 	// Update server port
-	configManager.Config.Server.Port = wsPort
+	currentConfig.Server.Port = wsPort
 
 	// Update MediaMTX ports
-	configManager.Config.MediaMTX.APIPort = mediaMTXAPIPort
-	configManager.Config.MediaMTX.RTSPPort = mediaMTXRTSPPort
-	configManager.Config.MediaMTX.HLSPort = mediaMTXHLSPort
-	configManager.Config.MediaMTX.WebRTCPort = mediaMTXWebRTCPort
+	currentConfig.MediaMTX.APIPort = mediaMTXAPIPort
+	currentConfig.MediaMTX.RTSPPort = mediaMTXRTSPPort
+	currentConfig.MediaMTX.HLSPort = mediaMTXHLSPort
+	currentConfig.MediaMTX.WebRTCPort = mediaMTXWebRTCPort
 
 	// Update MediaMTX host URLs to use free ports
-	configManager.Config.MediaMTX.BaseURL = fmt.Sprintf("http://localhost:%d", mediaMTXAPIPort)
-	configManager.Config.MediaMTX.HealthCheckURL = fmt.Sprintf("http://localhost:%d/v3/paths/list", mediaMTXAPIPort)
+	currentConfig.MediaMTX.BaseURL = fmt.Sprintf("http://localhost:%d", mediaMTXAPIPort)
+	currentConfig.MediaMTX.HealthCheckURL = fmt.Sprintf("http://localhost:%d/v3/paths/list", mediaMTXAPIPort)
 
 	// Initialize logger
 	logger := logging.NewLogger("test-environment")

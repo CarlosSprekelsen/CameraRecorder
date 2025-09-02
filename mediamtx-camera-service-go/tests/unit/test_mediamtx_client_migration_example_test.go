@@ -9,7 +9,7 @@ MediaMTX clients in each test to using the new centralized utilities.
 
 OLD PATTERN (to be migrated):
    testConfig := &mediamtx.MediaMTXConfig{...}
-   client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
+   	client := mediamtx.NewClient(utils.CreateTestHTTPURLWithFreePort(""), testConfig, logger)
 
 NEW PATTERN (using utilities):
    client := utils.SetupMediaMTXTestClient(t, env)
@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,9 +45,9 @@ func TestMediaMTXClientMigrationExample(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	// OLD PATTERN (to be migrated):
+	// testConfig := &mediamtx.MediaMTXConfig{...}
+	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Test MediaMTX connection
 	isAccessible := utils.TestMediaMTXConnection(t, client)

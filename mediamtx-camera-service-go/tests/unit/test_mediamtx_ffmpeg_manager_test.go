@@ -34,9 +34,9 @@ func TestFFmpegManager_Creation(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration - use free port instead of hardcoded one
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -57,9 +57,9 @@ func TestFFmpegManager_StartProcess(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration - use free port instead of hardcoded one
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -90,9 +90,9 @@ func TestFFmpegManager_StopProcess(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration - use free port instead of hardcoded one
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -117,9 +117,9 @@ func TestFFmpegManager_IsProcessRunning(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration - use free port instead of hardcoded one
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
+		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -145,7 +145,7 @@ func TestFFmpegManager_StartRecording(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -183,7 +183,7 @@ func TestFFmpegManager_StopRecording(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -214,7 +214,7 @@ func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -248,7 +248,7 @@ func TestFFmpegManager_RotateFile(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -282,7 +282,7 @@ func TestFFmpegManager_GetFileInfo(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -314,7 +314,7 @@ func TestFFmpegManager_BuildCommand(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -344,7 +344,7 @@ func TestFFmpegManager_ErrorHandling(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -380,7 +380,7 @@ func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -421,7 +421,7 @@ func TestFFmpegManager_ContextCancellation(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -479,7 +479,7 @@ func TestFFmpegManager_ProcessManagement(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,
@@ -515,7 +515,7 @@ func TestFFmpegManager_Integration(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - MediaMTX API port must stay hardcoded for real service connection
 	testConfig := &mediamtx.MediaMTXConfig{
 		BaseURL:                   "http://localhost:9997",
 		ProcessTerminationTimeout: 5.0,

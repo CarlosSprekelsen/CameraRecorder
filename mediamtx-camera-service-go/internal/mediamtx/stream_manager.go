@@ -82,7 +82,7 @@ func (sm *streamManager) StartSnapshotStream(ctx context.Context, devicePath str
 func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath string, useCase StreamUseCase) (*Stream, error) {
 	// Validate device path
 	if err := sm.validateDevicePath(devicePath); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate device path %s: %w", devicePath, err)
 	}
 
 	// Generate stream name with use case suffix

@@ -64,7 +64,7 @@ func TestPathManager_CreatePath(t *testing.T) {
 	// Test path creation
 	options := map[string]interface{}{
 		"source_on_demand": true,
-		"run_on_demand":    fmt.Sprintf("ffmpeg -i /dev/video0 -c:v libx264 -f rtsp %s", utils.CreateTestRTSPURLWithFreePort("test")),
+		"run_on_demand":    "ffmpeg -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:8554/test",
 	}
 
 	err := pathManager.CreatePath(ctx, "test-path", "/dev/video0", options)

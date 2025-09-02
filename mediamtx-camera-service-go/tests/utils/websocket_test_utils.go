@@ -505,30 +505,8 @@ func DialWebSocket(url string) (*gorilla.Conn, *http.Response, error) {
 // TEST CONFIGURATION HELPERS WITH FREE PORTS
 // ============================================================================
 
-// CreateTestMediaMTXConfig creates a MediaMTX test configuration with free ports
-// This replaces hardcoded port usage in tests
-func CreateTestMediaMTXConfig() *mediamtx.MediaMTXConfig {
-	apiPort := GetFreePort()
-	rtspPort := GetFreePort()
-	hlsPort := GetFreePort()
-	webrtcPort := GetFreePort()
-
-	return &mediamtx.MediaMTXConfig{
-		BaseURL:        fmt.Sprintf("http://localhost:%d", apiPort),
-		HealthCheckURL: fmt.Sprintf("http://localhost:%d/v3/paths/list", apiPort),
-		Timeout:        30 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		Host:           "localhost",
-		APIPort:        apiPort,
-		RTSPPort:       rtspPort,
-		WebRTCPort:     webrtcPort,
-		HLSPort:        hlsPort,
-	}
-}
-
 // CreateTestServerConfig creates a server test configuration with free port
-// This replaces hardcoded port usage in tests
+// This replaces hardcoded port usage in tests for TEST SERVERS ONLY
 func CreateTestServerConfig() *websocket.ServerConfig {
 	port := GetFreePort()
 	
@@ -537,57 +515,29 @@ func CreateTestServerConfig() *websocket.ServerConfig {
 	return config
 }
 
-// CreateTestPathWithFreePorts creates a test path configuration with free ports
-// This replaces hardcoded port usage in tests
-func CreateTestPathWithFreePorts() *mediamtx.Path {
-	rtspPort := GetFreePort()
-	
-	return &mediamtx.Path{
-		ID:                         "test-path-123",
-		Name:                       "Test Path",
-		Source:                     "/dev/video0",
-		SourceOnDemand:             true,
-		SourceOnDemandStartTimeout: 5 * time.Second,
-		SourceOnDemandCloseAfter:   30 * time.Second,
-		PublishUser:                "publisher",
-		PublishPass:                "publishpass",
-		ReadUser:                   "reader",
-		ReadPass:                   "readpass",
-		RunOnDemand:                fmt.Sprintf("ffmpeg -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:%d/test", rtspPort),
-		RunOnDemandRestart:         true,
-		RunOnDemandCloseAfter:      60 * time.Second,
-		RunOnDemandStartTimeout:    10 * time.Second,
-	}
-}
-
-// CreateTestStreamWithFreePorts creates a test stream configuration with free ports
-// This replaces hardcoded port usage in tests
-func CreateTestStreamWithFreePorts() *mediamtx.Stream {
-	rtspPort := GetFreePort()
-	
-	return &mediamtx.Stream{
-		Name:          "test-stream-123",
-		ConfName:      "test-stream-123",
-		Source:        &mediamtx.PathSource{Type: "rtspSource", ID: ""},
-		Ready:         true,
-		ReadyTime:     nil,
-		Tracks:        []string{"video", "audio"},
-		BytesReceived: 1024,
-		BytesSent:     2048,
-		Readers:       []mediamtx.PathReader{},
-	}
-}
-
-// CreateTestRTSPURLWithFreePort creates an RTSP URL with a free port
-// This replaces hardcoded port usage in tests
+// CreateTestRTSPURLWithFreePort creates an RTSP URL with a free port for TEST SERVERS ONLY
+// This is for mock/test RTSP servers, NOT for MediaMTX RTSP service
 func CreateTestRTSPURLWithFreePort(path string) string {
 	rtspPort := GetFreePort()
 	return fmt.Sprintf("rtsp://localhost:%d/%s", rtspPort, path)
 }
 
-// CreateTestHTTPURLWithFreePort creates an HTTP URL with a free port
-// This replaces hardcoded port usage in tests
+// CreateTestHTTPURLWithFreePort creates an HTTP URL with a free port for TEST SERVERS ONLY
+// This is for mock/test HTTP servers, NOT for MediaMTX API service
 func CreateTestHTTPURLWithFreePort(path string) string {
 	port := GetFreePort()
 	return fmt.Sprintf("http://localhost:%d/%s", port, path)
 }
+
+// ============================================================================
+// IMPORTANT: MediaMTX Service Ports Must Stay Hardcoded
+// ============================================================================
+// 
+// DO NOT use GetFreePort() for these ports as they connect to real services:
+// - Port 9997: MediaMTX API server (EXTERNAL SERVICE)
+// - Port 8554: MediaMTX RTSP server (EXTERNAL SERVICE) 
+// - Port 8889: MediaMTX WebRTC server (EXTERNAL SERVICE)
+// - Port 8888: MediaMTX HLS server (EXTERNAL SERVICE)
+//
+// ONLY use GetFreePort() for test servers created within tests
+// ============================================================================

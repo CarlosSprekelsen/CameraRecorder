@@ -4,6 +4,7 @@
 package config_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -107,7 +108,7 @@ func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 
 	// Validate loaded configuration from test environment
 	assert.Equal(t, "localhost", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 	assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
 
@@ -422,16 +423,16 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 
 		// Create config with invalid storage configuration
 		invalidConfigPath := filepath.Join(env.TempDir, "invalid_storage.yaml")
-		invalidConfig := `server:
+		invalidConfig := fmt.Sprintf(`server:
   host: "localhost"
-  port: 8002
+  port: %d
 mediamtx:
   host: "localhost"
   api_port: 9997
 storage:
   warn_percent: 95  # Should be less than block_percent
   block_percent: 80  # Should be greater than warn_percent
-`
+`, utils.GetFreePort())
 		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
 		require.NoError(t, err)
 
@@ -468,13 +469,13 @@ storage:
 
 		// Create config with cross-field validation issues
 		invalidConfigPath := filepath.Join(env.TempDir, "cross_field.yaml")
-		invalidConfig := `server:
+		invalidConfig := fmt.Sprintf(`server:
   host: "localhost"
-  port: 8002
+  port: %d
 storage:
   warn_percent: 95  # Should be less than block_percent
   block_percent: 80  # Should be greater than warn_percent
-`
+`, utils.GetFreePort())
 		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
 		require.NoError(t, err)
 
@@ -501,7 +502,7 @@ func TestConfigManager_ThreadSafety(t *testing.T) {
 		cfg := env.ConfigManager.GetConfig()
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "localhost", cfg.Server.Host)
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 		done <- true
 	}()
 
@@ -560,7 +561,7 @@ func TestConfigManager_AddUpdateCallback(t *testing.T) {
 
 	// Verify the configuration was loaded correctly
 	assert.Equal(t, "localhost", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 }
 
 func TestConfigManager_HotReload(t *testing.T) {
@@ -573,13 +574,13 @@ func TestConfigManager_HotReload(t *testing.T) {
 	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
 	// Create initial configuration
-	initialYAML := `server:
+	initialYAML := fmt.Sprintf(`server:
   host: "0.0.0.0"
-  port: 8002
+  port: %d
 mediamtx:
   host: "localhost"
   api_port: 9997
-`
+`, utils.GetFreePort())
 	err := os.WriteFile(configPath, []byte(initialYAML), 0644)
 	require.NoError(t, err)
 
@@ -594,7 +595,7 @@ mediamtx:
 
 	// Verify initial configuration
 	assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 
 	// Create a channel to track configuration updates
 	updateChan := make(chan *config.Config, 1)
@@ -665,7 +666,7 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 
 		// Verify configuration is loaded correctly
 		assert.Equal(t, "localhost", cfg.Server.Host)
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 		assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
 	})
@@ -681,7 +682,7 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 		require.NotNil(t, cfg)
 
 		// Verify boundary values are loaded correctly
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 		assert.Equal(t, 1000, cfg.Server.MaxConnections)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
 	})
@@ -701,7 +702,7 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 
 		// Verify configuration is loaded correctly
 		assert.Equal(t, "localhost", cfg.Server.Host)
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 		assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 		assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
 	})
@@ -719,10 +720,10 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 		configPath := filepath.Join(env.TempDir, "readonly_config.yaml")
 
 		// Create a file with read-only permissions
-		yamlContent := `server:
+		yamlContent := fmt.Sprintf(`server:
   host: "0.0.0.0"
-  port: 8002
-`
+  port: %d
+`, utils.GetFreePort())
 		err := os.WriteFile(configPath, []byte(yamlContent), 0444) // Read-only
 		require.NoError(t, err)
 
@@ -731,7 +732,7 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 	})
 
 	// Test symbolic link handling
@@ -768,10 +769,10 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 
 		configPath := filepath.Join(deepDir, "config.yaml")
 		// Create config file
-		yamlContent := `server:
+		yamlContent := fmt.Sprintf(`server:
   host: "0.0.0.0"
-  port: 8002
-`
+  port: %d
+`, utils.GetFreePort())
 		err = os.WriteFile(configPath, []byte(yamlContent), 0644)
 		require.NoError(t, err)
 
@@ -780,7 +781,7 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 		cfg := env.ConfigManager.GetConfig()
 		require.NotNil(t, cfg)
 		assert.Equal(t, "0.0.0.0", cfg.Server.Host)
-		assert.Equal(t, 8002, cfg.Server.Port)
+		assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 	})
 }
 
@@ -801,7 +802,7 @@ func TestGlobalConfigFunctions(t *testing.T) {
 
 	// Verify global configuration is accessible
 	assert.Equal(t, "localhost", cfg.Server.Host)
-	assert.Equal(t, 8002, cfg.Server.Port)
+	assert.Greater(t, cfg.Server.Port, 0, "Server port should be a valid port number")
 	assert.Equal(t, "localhost", cfg.MediaMTX.Host)
 	assert.Equal(t, 9997, cfg.MediaMTX.APIPort)
 }

@@ -71,7 +71,10 @@ func (c *client) Put(ctx context.Context, path string, data []byte) ([]byte, err
 // Delete performs an HTTP DELETE request
 func (c *client) Delete(ctx context.Context, path string) error {
 	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to perform DELETE request to %s: %w", path, err)
+	}
+	return nil
 }
 
 // HealthCheck performs a health check request
@@ -219,13 +222,13 @@ func parseStreamResponse(data []byte) (*Stream, error) {
 	if len(data) == 0 {
 		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_stream")
 	}
-	
+
 	// Parse directly into Stream struct (matches MediaMTX API)
 	var stream Stream
 	if err := json.Unmarshal(data, &stream); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse stream response", err.Error(), "parse_stream")
 	}
-	
+
 	return &stream, nil
 }
 
@@ -234,7 +237,7 @@ func extractSourceString(source interface{}) string {
 	if source == nil {
 		return ""
 	}
-	
+
 	// Handle different source formats from MediaMTX API
 	switch v := source.(type) {
 	case string:

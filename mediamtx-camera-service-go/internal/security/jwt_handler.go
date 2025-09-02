@@ -285,7 +285,7 @@ func (h *JWTHandler) ValidateToken(tokenString string) (*JWTClaims, error) {
 
 		// Return the original error for proper error handling (like Python)
 		// Don't mask specific error types that could indicate security issues
-		return nil, err
+		return nil, fmt.Errorf("failed to validate JWT token: %w", err)
 	}
 
 	// Extract claims

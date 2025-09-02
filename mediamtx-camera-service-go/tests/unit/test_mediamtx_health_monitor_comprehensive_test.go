@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -297,18 +298,10 @@ func TestHealthMonitor_FailureScenarios(t *testing.T) {
 	}))
 	defer mockServer.Close()
 
-	config := &mediamtx.MediaMTXConfig{
-		BaseURL:        mockServer.URL,
-		HealthCheckURL: mockServer.URL + "/health",
-		Timeout:        5 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		CircuitBreaker: mediamtx.CircuitBreakerConfig{
-			FailureThreshold: 2,
-			RecoveryTimeout:  30 * time.Second,
-			MaxFailures:      3,
-		},
-	}
+	// Create config with mock server URLs but use helper for other settings
+	config := utils.CreateTestMediaMTXConfig()
+	config.BaseURL = mockServer.URL
+	config.HealthCheckURL = mockServer.URL + "/health"
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
@@ -343,18 +336,11 @@ func TestHealthMonitor_TimeoutScenarios(t *testing.T) {
 	}))
 	defer mockServer.Close()
 
-	config := &mediamtx.MediaMTXConfig{
-		BaseURL:        mockServer.URL,
-		HealthCheckURL: mockServer.URL + "/health",
-		Timeout:        1 * time.Second, // Short timeout
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		CircuitBreaker: mediamtx.CircuitBreakerConfig{
-			FailureThreshold: 2,
-			RecoveryTimeout:  30 * time.Second,
-			MaxFailures:      3,
-		},
-	}
+	// Create config with mock server URLs but use helper for other settings
+	config := utils.CreateTestMediaMTXConfig()
+	config.BaseURL = mockServer.URL
+	config.HealthCheckURL = mockServer.URL + "/health"
+	config.Timeout = 1 * time.Second // Short timeout for testing
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 

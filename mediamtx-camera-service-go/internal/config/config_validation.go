@@ -132,7 +132,7 @@ func validateMediaMTXConfig(config *MediaMTXConfig) error {
 
 	// Validate codec configuration
 	if err := validateCodecConfig(&config.Codec); err != nil {
-		return err
+		return fmt.Errorf("failed to validate codec configuration: %w", err)
 	}
 
 	// Validate health monitoring configuration
@@ -178,7 +178,7 @@ func validateMediaMTXConfig(config *MediaMTXConfig) error {
 
 	// Validate stream readiness configuration
 	if err := validateStreamReadinessConfig(&config.StreamReadiness); err != nil {
-		return err
+		return fmt.Errorf("failed to validate stream readiness configuration: %w", err)
 	}
 
 	return nil
