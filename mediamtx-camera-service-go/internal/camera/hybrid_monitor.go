@@ -74,16 +74,16 @@ type HybridCameraMonitor struct {
 
 	// Mutex for thread safety
 	stateLock sync.RWMutex
-	
+
 	// Running state
 	running bool
-	
+
 	// Event handlers mutex
 	eventHandlersLock sync.RWMutex
-	
+
 	// Cache mutex
 	cacheMutex sync.RWMutex
-	
+
 	// Polling failure count
 	pollingFailureCount int
 }
@@ -198,7 +198,7 @@ func (m *HybridCameraMonitor) initializeCameraSources() {
 func (m *HybridCameraMonitor) addIPCameraSources() {
 	// Example IP camera sources - these should come from configuration
 	// In a real implementation, this would read from config file or environment variables
-	
+
 	// Example RTSP camera
 	m.cameraSources = append(m.cameraSources, CameraSource{
 		Type:        "rtsp",
@@ -477,9 +477,9 @@ func (m *HybridCameraMonitor) discoverCameras() {
 				// Recover from panics in goroutine
 				if r := recover(); r != nil {
 					m.logger.WithFields(map[string]interface{}{
-						"source":     src.Identifier,
-						"panic":      r,
-						"action":     "panic_recovered",
+						"source": src.Identifier,
+						"panic":  r,
+						"action": "panic_recovered",
 					}).Error("Recovered from panic in device check goroutine")
 				}
 				wg.Done()
@@ -596,11 +596,11 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(devicePath string, deviceNu
 func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
 	// For network cameras, we assume they're connected if we can reach them
 	// In a real implementation, you might want to test connectivity
-	
+
 	device := &CameraDevice{
-		Path:        source.Source,
-		Name:        source.Description,
-		Status:      DeviceStatusConnected, // Assume connected for network cameras
+		Path:   source.Source,
+		Name:   source.Description,
+		Status: DeviceStatusConnected, // Assume connected for network cameras
 		Capabilities: V4L2Capabilities{
 			DriverName: "network_camera",
 			CardName:   source.Description,
