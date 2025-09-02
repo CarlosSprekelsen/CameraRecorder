@@ -1018,7 +1018,11 @@ func (c *Client) GetStreams() ([]StreamInfo, error) {
 The server sends real-time notifications for camera events.
 
 ### camera_status_update
-Sent when a camera connects, disconnects, or changes status.
+**NOTIFICATION EVENT** - Sent when a camera connects, disconnects, or changes status.
+
+**Type:** Server-to-Client Notification (not callable method)
+
+**Authentication:** Not applicable (server-generated event)
 
 **Status:** ✅ Implemented
 
@@ -1101,8 +1105,14 @@ func (c *Client) ListenForNotifications() (<-chan NotificationType, error) {
 }
 ```
 
+**Note:** These are server-generated notifications, not client-callable methods. Clients should listen for these events rather than calling them.
+
 ### recording_status_update
-Sent when recording starts, stops, or encounters an error.
+**NOTIFICATION EVENT** - Sent when recording starts, stops, or encounters an error.
+
+**Type:** Server-to-Client Notification (not callable method)
+
+**Authentication:** Not applicable (server-generated event)
 
 **Status:** ✅ Implemented
 

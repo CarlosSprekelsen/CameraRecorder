@@ -144,6 +144,17 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 		"action":    "method_call",
 	}).Debug("Ping method called")
 
+	// Check authentication (required per API documentation)
+	if !client.Authenticated {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    AUTHENTICATION_REQUIRED,
+				Message: ErrorMessages[AUTHENTICATION_REQUIRED],
+			},
+		}, nil
+	}
+
 	// Record performance metrics
 	duration := time.Since(startTime).Seconds()
 	s.recordRequest("ping", duration)

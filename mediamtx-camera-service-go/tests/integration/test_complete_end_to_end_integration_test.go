@@ -143,9 +143,12 @@ func testAuthenticationAndAuthorization(t *testing.T, conn *websocket.Conn, env 
 			},
 		}
 
-		_, err := sendWebSocketRequest(conn, request)
-		assert.Error(t, err, "Invalid authentication should fail")
-		assert.Contains(t, err.Error(), "Authentication failed or token expired", "Error should match API documentation")
+		response, err := sendWebSocketRequest(conn, request)
+		require.NoError(t, err, "Should get JSON-RPC response for invalid authentication")
+		require.NotNil(t, response, "Should get response for invalid authentication")
+		require.NotNil(t, response.Error, "Invalid authentication should return error response")
+		assert.Equal(t, -32001, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED (-32001)")
+		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
 	// Test protected method without authentication
@@ -159,9 +162,13 @@ func testAuthenticationAndAuthorization(t *testing.T, conn *websocket.Conn, env 
 			},
 		}
 
-		_, err := sendWebSocketRequest(conn, request)
-		assert.Error(t, err, "Unauthenticated access should fail")
-		assert.Contains(t, err.Error(), "Authentication failed", "Error should match API documentation")
+		response, err := sendWebSocketRequest(conn, request)
+		// For unauthenticated access, we should get a JSON-RPC error response, not a Go error
+		require.NoError(t, err, "Should get JSON-RPC response for unauthenticated access")
+		require.NotNil(t, response, "Should get response for unauthenticated access")
+		require.NotNil(t, response.Error, "Unauthenticated access should return error response")
+		assert.Equal(t, -32001, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED (-32001)")
+		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
 	// Test role-based access control
@@ -198,9 +205,12 @@ func testAuthenticationAndAuthorization(t *testing.T, conn *websocket.Conn, env 
 			},
 		}
 
-		_, err = sendWebSocketRequest(conn, recordingRequest)
-		assert.Error(t, err, "Viewer should not be able to start recording")
-		assert.Contains(t, err.Error(), "Insufficient permissions", "Error should match API documentation")
+		recordingResponse, err := sendWebSocketRequest(conn, recordingRequest)
+		require.NoError(t, err, "Should get JSON-RPC response for insufficient permissions")
+		require.NotNil(t, recordingResponse, "Should get response for insufficient permissions")
+		require.NotNil(t, recordingResponse.Error, "Insufficient permissions should return error response")
+		assert.Equal(t, -32003, recordingResponse.Error.Code, "Error code should be INSUFFICIENT_PERMISSIONS (-32003)")
+		assert.Contains(t, recordingResponse.Error.Message, "Insufficient permissions", "Error message should match API documentation")
 	})
 }
 
@@ -286,9 +296,12 @@ func testCameraDiscoveryAndStatus(t *testing.T, conn *websocket.Conn, token stri
 			}
 
 			statusResponse, err := sendWebSocketRequest(conn, statusRequest)
-			if err != nil {
+			require.NoError(t, err, "Should get JSON-RPC response for camera status")
+
+			// Check if we got an error response (camera not available)
+			if statusResponse.Error != nil {
 				// If camera is not available, that's acceptable
-				assert.Contains(t, err.Error(), "Camera not found or disconnected",
+				assert.Contains(t, statusResponse.Error.Message, "Camera not found or disconnected",
 					"Error should match API documentation for unavailable camera")
 				continue
 			}
@@ -388,10 +401,13 @@ func testSnapshotOperations(t *testing.T, conn *websocket.Conn, token string, en
 		}
 
 		response, err := sendWebSocketRequest(conn, request)
-		if err != nil {
+		require.NoError(t, err, "Should get JSON-RPC response for snapshot")
+
+		// Check if we got an error response (camera not available)
+		if response.Error != nil {
 			// If snapshot fails due to camera unavailability, that's acceptable
 			// but we should validate the error message matches API documentation
-			assert.Contains(t, err.Error(), "Camera not found or disconnected",
+			assert.Contains(t, response.Error.Message, "Camera not found or disconnected",
 				"Error should match API documentation for camera unavailability")
 			t.Skip("Camera not available for snapshot testing")
 		}
@@ -427,9 +443,11 @@ func testSnapshotOperations(t *testing.T, conn *websocket.Conn, token string, en
 		}
 
 		response, err := sendWebSocketRequest(conn, request)
-		if err != nil {
+		require.NoError(t, err, "Should get JSON-RPC response for list snapshots")
+
+		if response.Error != nil {
 			// If no snapshots exist, that's acceptable
-			assert.Contains(t, err.Error(), "Invalid parameters", "Error should match API documentation")
+			assert.Contains(t, response.Error.Message, "Invalid parameters", "Error should match API documentation")
 		} else {
 			// Validate response format per API documentation
 			result, ok := response.Result.(map[string]interface{})
@@ -523,10 +541,13 @@ func testRecordingOperations(t *testing.T, conn *websocket.Conn, token string, e
 		}
 
 		response, err := sendWebSocketRequest(conn, request)
-		if err != nil {
+		require.NoError(t, err, "Should get JSON-RPC response for recording")
+
+		// Check if we got an error response (camera not available)
+		if response.Error != nil {
 			// If recording fails due to camera unavailability, that's acceptable
 			// but we should validate the error message matches API documentation
-			assert.Contains(t, err.Error(), "Camera not found or disconnected",
+			assert.Contains(t, response.Error.Message, "Camera not found or disconnected",
 				"Error should match API documentation for camera unavailability")
 			t.Skip("Camera not available for recording testing")
 		}
@@ -559,9 +580,11 @@ func testRecordingOperations(t *testing.T, conn *websocket.Conn, token string, e
 			}
 
 			stopResponse, err := sendWebSocketRequest(conn, stopRequest)
-			if err != nil {
+			require.NoError(t, err, "Should get JSON-RPC response for stop recording")
+
+			if stopResponse.Error != nil {
 				// If no active recording, that's acceptable per API documentation
-				assert.Contains(t, err.Error(), "No active recording session found for device",
+				assert.Contains(t, stopResponse.Error.Message, "No active recording session found for device",
 					"Error should match API documentation")
 			} else {
 				// Validate recording stopped successfully
@@ -570,7 +593,7 @@ func testRecordingOperations(t *testing.T, conn *websocket.Conn, token string, e
 			}
 
 			// Verify recording file was created (if recording succeeded)
-			if err == nil {
+			if stopResponse.Error == nil {
 				// Wait a bit for file finalization
 				time.Sleep(1 * time.Second)
 
@@ -587,7 +610,9 @@ func testRecordingOperations(t *testing.T, conn *websocket.Conn, token string, e
 				}
 
 				listResponse, err := sendWebSocketRequest(conn, listRequest)
-				if err == nil {
+				require.NoError(t, err, "Should get JSON-RPC response for list recordings")
+
+				if listResponse.Error == nil {
 					// Validate recordings list response
 					listResult, ok := listResponse.Result.(map[string]interface{})
 					require.True(t, ok, "List result should be an object")
@@ -643,9 +668,11 @@ func testRecordingOperations(t *testing.T, conn *websocket.Conn, token string, e
 		}
 
 		response, err := sendWebSocketRequest(conn, request)
-		if err != nil {
+		require.NoError(t, err, "Should get JSON-RPC response for list recordings")
+
+		if response.Error != nil {
 			// If no recordings exist, that's acceptable
-			assert.Contains(t, err.Error(), "Invalid parameters", "Error should match API documentation")
+			assert.Contains(t, response.Error.Message, "Invalid parameters", "Error should match API documentation")
 		} else {
 			// Validate response format per API documentation
 			result, ok := response.Result.(map[string]interface{})
@@ -895,9 +922,12 @@ func testErrorHandlingAndEdgeCases(t *testing.T, conn *websocket.Conn, token str
 			},
 		}
 
-		_, err := sendWebSocketRequest(conn, request)
-		assert.Error(t, err, "Invalid parameters should fail")
-		assert.Contains(t, err.Error(), "Invalid parameters", "Error should match API documentation")
+		response, err := sendWebSocketRequest(conn, request)
+		require.NoError(t, err, "Should get JSON-RPC response for invalid parameters")
+		require.NotNil(t, response, "Should get response for invalid parameters")
+		require.NotNil(t, response.Error, "Invalid parameters should return error response")
+		assert.Equal(t, -32602, response.Error.Code, "Error code should be INVALID_PARAMS (-32602)")
+		assert.Contains(t, response.Error.Message, "Invalid parameters", "Error message should match API documentation")
 	})
 
 	// Test non-existent method
@@ -911,8 +941,11 @@ func testErrorHandlingAndEdgeCases(t *testing.T, conn *websocket.Conn, token str
 			},
 		}
 
-		_, err := sendWebSocketRequest(conn, request)
-		assert.Error(t, err, "Non-existent method should fail")
+		response, err := sendWebSocketRequest(conn, request)
+		require.NoError(t, err, "Should get JSON-RPC response for non-existent method")
+		require.NotNil(t, response, "Should get response for non-existent method")
+		require.NotNil(t, response.Error, "Non-existent method should return error response")
+		assert.Equal(t, -32601, response.Error.Code, "Error code should be METHOD_NOT_FOUND (-32601)")
 		// Error message should indicate method not found
 	})
 
@@ -948,10 +981,7 @@ func sendWebSocketRequest(conn *websocket.Conn, request *ws.JsonRpcRequest) (*ws
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// Check for JSON-RPC error
-	if response.Error != nil {
-		return nil, fmt.Errorf("JSON-RPC error: %s (code: %d)", response.Error.Message, response.Error.Code)
-	}
-
+	// Return the response regardless of whether it contains an error
+	// JSON-RPC 2.0 errors are part of the response, not Go errors
 	return &response, nil
 }
