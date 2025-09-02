@@ -21,30 +21,20 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestMediaMTXConfig_Validation tests MediaMTXConfig validation
 func TestMediaMTXConfig_Validation(t *testing.T) {
-	// Test valid configuration
-	validConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:        "http://localhost:9997",
-		HealthCheckURL: "http://localhost:9997/v3/paths/list",
-		Timeout:        30 * time.Second,
-		RetryAttempts:  3,
-		RetryDelay:     1 * time.Second,
-		Host:           "localhost",
-		APIPort:        9997,
-		RTSPPort:       8554,
-		WebRTCPort:     8889,
-		HLSPort:        8888,
-	}
+	// Test valid configuration - use free ports instead of hardcoded ones
+	validConfig := utils.CreateTestMediaMTXConfig()
 
 	// Test that valid config is created successfully
 	assert.NotNil(t, validConfig)
-	assert.Equal(t, "http://localhost:9997", validConfig.BaseURL)
+	assert.Contains(t, validConfig.BaseURL, "http://localhost:")
 	assert.Equal(t, "localhost", validConfig.Host)
-	assert.Equal(t, 9997, validConfig.APIPort)
+	assert.Greater(t, validConfig.APIPort, 0)
 	assert.Equal(t, 30*time.Second, validConfig.Timeout)
 	assert.Equal(t, 3, validConfig.RetryAttempts)
 }
@@ -106,23 +96,8 @@ func TestStream_Serialization(t *testing.T) {
 
 // TestPath_Configuration tests Path configuration
 func TestPath_Configuration(t *testing.T) {
-	// Test path creation and field access
-	path := &mediamtx.Path{
-		ID:                         "test-path-123",
-		Name:                       "Test Path",
-		Source:                     "/dev/video0",
-		SourceOnDemand:             true,
-		SourceOnDemandStartTimeout: 5 * time.Second,
-		SourceOnDemandCloseAfter:   30 * time.Second,
-		PublishUser:                "publisher",
-		PublishPass:                "publishpass",
-		ReadUser:                   "reader",
-		ReadPass:                   "readpass",
-		RunOnDemand:                "ffmpeg -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:8554/test",
-		RunOnDemandRestart:         true,
-		RunOnDemandCloseAfter:      60 * time.Second,
-		RunOnDemandStartTimeout:    10 * time.Second,
-	}
+	// Test path creation and field access - use free ports instead of hardcoded ones
+	path := utils.CreateTestPathWithFreePorts()
 
 	assert.NotNil(t, path)
 	assert.Equal(t, "test-path-123", path.ID)
@@ -135,6 +110,7 @@ func TestPath_Configuration(t *testing.T) {
 	assert.Equal(t, "publishpass", path.PublishPass)
 	assert.Equal(t, "reader", path.ReadUser)
 	assert.Equal(t, "readpass", path.ReadPass)
+	assert.Contains(t, path.RunOnDemand, "rtsp://localhost:")
 	assert.True(t, path.RunOnDemandRestart)
 	assert.Equal(t, 60*time.Second, path.RunOnDemandCloseAfter)
 	assert.Equal(t, 10*time.Second, path.RunOnDemandStartTimeout)

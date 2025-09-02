@@ -26,10 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestSnapshotManager_RealSystem tests the real snapshot manager functionality
+// TestSnapshotManager_RealSystem tests snapshot manager with real system integration
 func TestSnapshotManager_RealSystem(t *testing.T) {
-	// REQ-SYS-001: System health monitoring and status reporting
-	// REQ-SYS-002: Component health state tracking
+	t.Parallel()
+	// REQ-MTX-001: MediaMTX service integration
+	// REQ-SNAP-001: Snapshot capture and management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)

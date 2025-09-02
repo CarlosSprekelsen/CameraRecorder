@@ -29,6 +29,7 @@ import (
 
 // TestJWTHandler_TokenGeneration tests JWT token generation functionality
 func TestJWTHandler_TokenGeneration(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
@@ -91,6 +92,7 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 
 // TestJWTHandler_TokenValidation tests JWT token validation functionality
 func TestJWTHandler_TokenValidation(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
@@ -125,6 +127,7 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 
 // TestJWTHandler_ExpiryHandling tests JWT token expiry functionality
 func TestJWTHandler_ExpiryHandling(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
@@ -163,6 +166,7 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 
 // Edge case tests for missing coverage
 func TestJWTHandler_EdgeCases(t *testing.T) {
+	t.Parallel()
 	// Use shared security test environment
 	env := utils.SetupSecurityTestEnvironment(t)
 	defer utils.TeardownSecurityTestEnvironment(t, env)
@@ -197,6 +201,9 @@ func TestJWTHandler_EdgeCases(t *testing.T) {
 
 // Additional edge cases for higher coverage
 func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
+	t.Parallel()
+	// REQ-SEC-001: JWT token-based authentication for all API access
+
 	t.Run("token_with_max_expiry", func(t *testing.T) {
 		handler, err := security.NewJWTHandler("test_secret")
 		require.NoError(t, err)
@@ -237,6 +244,7 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 
 // TestJWTHandler_RateLimiting tests rate limiting functionality
 func TestJWTHandler_RateLimiting(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
@@ -285,6 +293,7 @@ func TestJWTHandler_RateLimiting(t *testing.T) {
 
 // TestJWTHandler_RecordRequest tests the RecordRequest function
 func TestJWTHandler_RecordRequest(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
@@ -336,6 +345,7 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 
 // TestJWTHandler_GetClientRateInfo tests the GetClientRateInfo function
 func TestJWTHandler_GetClientRateInfo(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	handler, err := security.NewJWTHandler("test_secret")
@@ -378,6 +388,7 @@ func TestJWTHandler_GetClientRateInfo(t *testing.T) {
 
 // TestJWTHandler_SetRateLimit tests the SetRateLimit function
 func TestJWTHandler_SetRateLimit(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	handler, err := security.NewJWTHandler("test_secret")
@@ -427,6 +438,7 @@ func TestJWTHandler_SetRateLimit(t *testing.T) {
 
 // TestJWTHandler_CleanupExpiredClients tests the CleanupExpiredClients function
 func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	handler, err := security.NewJWTHandler("test_secret")
@@ -474,6 +486,7 @@ func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
 
 // TestJWTHandler_ValidateToken_EdgeCases tests edge cases for ValidateToken
 func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	handler, err := security.NewJWTHandler("test_secret")
@@ -582,6 +595,7 @@ func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
 
 // TestJWTHandler_IsTokenExpired_EdgeCases tests edge cases for IsTokenExpired
 func TestJWTHandler_IsTokenExpired_EdgeCases(t *testing.T) {
+	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	handler, err := security.NewJWTHandler("test_secret")

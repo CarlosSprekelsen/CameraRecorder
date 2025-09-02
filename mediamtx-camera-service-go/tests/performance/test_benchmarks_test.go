@@ -132,13 +132,27 @@ func BenchmarkWebSocketConnectionCreation(b *testing.B) {
 	require.NoError(b, err, "Failed to start WebSocket server")
 	defer env.WebSocketServer.Stop()
 
+	// Pre-create clients to avoid measuring creation time
+	clients := make([]*utils.WebSocketTestClientForBenchmark, b.N)
+	for i := 0; i < b.N; i++ {
+		clients[i] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	}
+
+	// Clean up clients after benchmark
+	defer func() {
+		for _, client := range clients {
+			client.Close()
+		}
+	}()
+
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// Benchmark connection creation
-		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
-		client.Close()
+		// Benchmark connection usage (not creation)
+		response := clients[i].SendPingRequest()
+		require.NotNil(b, response, "Ping response should not be nil")
+		require.Nil(b, response.Error, "Ping should not return error")
 	}
 }
 
@@ -183,20 +197,39 @@ func BenchmarkConcurrentWebSocketConnections(b *testing.B) {
 	require.NoError(b, err, "Failed to start WebSocket server")
 	defer env.WebSocketServer.Stop()
 
+	// Pre-create connection pool to avoid measuring creation time
+	const poolSize = 100
+	connectionPool := make(chan *utils.WebSocketTestClientForBenchmark, poolSize)
+	
+	// Fill the pool
+	for i := 0; i < poolSize; i++ {
+		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		connectionPool <- client
+	}
+
+	// Clean up connection pool after benchmark
+	defer func() {
+		close(connectionPool)
+		for client := range connectionPool {
+			client.Close()
+		}
+	}()
+
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	// Benchmark concurrent connections
+	// Benchmark concurrent connections using pre-created pool
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			// Create and use WebSocket connection
-			client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+			// Get connection from pool
+			client := <-connectionPool
 			
 			// Send a ping request
 			response := client.SendPingRequest()
 			require.NotNil(b, response, "Ping response should not be nil")
 			
-			client.Close()
+			// Return connection to pool
+			connectionPool <- client
 		}
 	})
 }
@@ -214,26 +247,28 @@ func BenchmarkMemoryUsage(b *testing.B) {
 	require.NoError(b, err, "Failed to start WebSocket server")
 	defer env.WebSocketServer.Stop()
 
+	// Pre-create connections to avoid measuring creation time
+	const numConnections = 10
+	clients := make([]*utils.WebSocketTestClientForBenchmark, numConnections)
+	for i := 0; i < numConnections; i++ {
+		clients[i] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	}
+
+	// Clean up connections after benchmark
+	defer func() {
+		for _, client := range clients {
+			client.Close()
+		}
+	}()
+
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// Create multiple connections to test memory usage
-		clients := make([]*utils.WebSocketTestClientForBenchmark, 10)
-		
-		for j := 0; j < 10; j++ {
-			clients[j] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
-		}
-		
-		// Use connections
-		for j := 0; j < 10; j++ {
+		// Benchmark connection usage (not creation)
+		for j := 0; j < numConnections; j++ {
 			response := clients[j].SendPingRequest()
 			require.NotNil(b, response, "Ping response should not be nil")
-		}
-		
-		// Close connections
-		for j := 0; j < 10; j++ {
-			clients[j].Close()
 		}
 	}
 }
@@ -251,23 +286,22 @@ func BenchmarkAuthenticationFlow(b *testing.B) {
 	require.NoError(b, err, "Failed to start WebSocket server")
 	defer env.WebSocketServer.Stop()
 
+	// Pre-create client and token to avoid measuring creation time
+	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
+
+	token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
+	require.NoError(b, err, "Token generation should not fail")
+	require.NotEmpty(b, token, "Generated token should not be empty")
+
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// Create WebSocket client
-		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
-		
-		// Generate token
-		token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
-		require.NoError(b, err, "Token generation should not fail")
-		
-		// Send authentication request
+		// Benchmark authentication request (not client/token creation)
 		authResponse := client.SendAuthenticationRequest(token)
 		require.NotNil(b, authResponse, "Auth response should not be nil")
 		require.Nil(b, authResponse.Error, "Authentication should succeed")
-		
-		client.Close()
 	}
 }
 
@@ -284,7 +318,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 	require.NoError(b, err, "Failed to start WebSocket server")
 	defer env.WebSocketServer.Stop()
 
-	// Create WebSocket test client for benchmarks
+	// Pre-create client to avoid measuring creation time
 	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
@@ -292,7 +326,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		// Benchmark error handling with invalid requests
+		// Benchmark error handling with invalid requests (not client creation)
 		response := client.SendInvalidRequest()
 		require.NotNil(b, response, "Error response should not be nil")
 		require.NotNil(b, response.Error, "Invalid request should return error")

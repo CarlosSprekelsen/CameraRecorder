@@ -220,12 +220,11 @@ func TestWebSocketServerInstantiation(t *testing.T) {
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	// Create real MediaMTX controller (not mock - following testing guide)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	// The env.Controller is already available from SetupMediaMTXTestEnvironment
 
 	// Test successful instantiation
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 	require.NoError(t, err, "Failed to create WebSocket server")
 
@@ -611,10 +610,9 @@ func TestClientConnectionManagement(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test initial state
@@ -668,10 +666,9 @@ func TestServerLifecycle(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test initial state
@@ -704,10 +701,9 @@ func TestApiCompliance(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -774,10 +770,9 @@ func TestPerformanceMetrics(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -867,10 +862,9 @@ func TestServerErrorHandling(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -927,10 +921,9 @@ func TestServerMetricsComprehensive(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -981,10 +974,9 @@ func TestServerLifecycleComprehensive(t *testing.T) {
 	cameraMonitor := &camera.HybridCameraMonitor{}
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
 
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Test that server is properly created
@@ -1132,10 +1124,8 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(env.ConfigManager, env.Logger.Logger)
-	require.NoError(t, err)
-
-	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
+	server, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 	require.NoError(t, err)
 
 	t.Run("test_permission_checker_initialization", func(t *testing.T) {

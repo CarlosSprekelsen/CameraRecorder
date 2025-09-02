@@ -38,6 +38,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	ws "github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
@@ -78,10 +79,9 @@ func TestWebSocketIntegration(t *testing.T) {
 	// Wait for server to be ready
 	time.Sleep(100 * time.Millisecond)
 
-	// Connect to WebSocket
-	conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8002/ws", nil)
-	require.NoError(t, err, "Should connect to WebSocket server")
-	defer conn.Close()
+	// COMMON PATTERN: Use centralized WebSocket test client instead of raw connection
+	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	defer client.Close()
 
 	// Generate authentication token
 	token, err := env.JWTHandler.GenerateToken("test-user", "admin", 1)
@@ -98,7 +98,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 1,
 		}
 
-		response, err := sendWebSocketRequest(conn, authRequest)
+		response, err := sendWebSocketRequest(client, authRequest)
 		require.NoError(t, err, "Authentication request should succeed")
 		assert.NotNil(t, response.Result, "Authentication should return success result")
 	})
@@ -114,7 +114,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 2,
 		}
 
-		response, err := sendWebSocketRequest(conn, pingRequest)
+		response, err := sendWebSocketRequest(client, pingRequest)
 		require.NoError(t, err, "Ping request should succeed")
 		// API doc shows result should be string "pong"
 		result, ok := response.Result.(string)
@@ -133,7 +133,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 3,
 		}
 
-		response, err := sendWebSocketRequest(conn, cameraListRequest)
+		response, err := sendWebSocketRequest(client, cameraListRequest)
 		require.NoError(t, err, "Camera list request should succeed")
 		assert.NotNil(t, response.Result, "Camera list should return result")
 		assert.Contains(t, response.Result, "cameras", "Camera list should contain cameras field")
@@ -151,7 +151,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 4,
 		}
 
-		response, err := sendWebSocketRequest(conn, cameraStatusRequest)
+		response, err := sendWebSocketRequest(client, cameraStatusRequest)
 		// Camera status may fail if device doesn't exist, which is expected
 		if err != nil {
 			// Expected error for non-existent device
@@ -175,7 +175,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 5,
 		}
 
-		response, err := sendWebSocketRequest(conn, snapshotRequest)
+		response, err := sendWebSocketRequest(client, snapshotRequest)
 		// Note: This may fail if no camera is available, but it will still exercise the code path
 		if err == nil {
 			assert.NotNil(t, response, "Snapshot request should return response")
@@ -200,7 +200,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 6,
 		}
 
-		response, err := sendWebSocketRequest(conn, startRecordingRequest)
+		response, err := sendWebSocketRequest(client, startRecordingRequest)
 		// Note: This may fail if no camera is available, but it will still exercise the code path
 		if err == nil {
 			assert.NotNil(t, response, "Start recording request should return response")
@@ -222,7 +222,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 7,
 		}
 
-		response, err := sendWebSocketRequest(conn, stopRecordingRequest)
+		response, err := sendWebSocketRequest(client, stopRecordingRequest)
 		// Note: This may fail if no recording is active, but it will still exercise the code path
 		if err == nil {
 			assert.NotNil(t, response, "Stop recording request should return response")
@@ -245,7 +245,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 8,
 		}
 
-		response, err := sendWebSocketRequest(conn, listRecordingsRequest)
+		response, err := sendWebSocketRequest(client, listRecordingsRequest)
 		// List recordings may fail if no recordings exist, which is expected
 		if err != nil {
 			// API documentation compliance - exact error message
@@ -269,7 +269,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 9,
 		}
 
-		response, err := sendWebSocketRequest(conn, listSnapshotsRequest)
+		response, err := sendWebSocketRequest(client, listSnapshotsRequest)
 		// List snapshots may fail if no snapshots exist, which is expected
 		if err != nil {
 			// API documentation compliance - exact error message
@@ -291,7 +291,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 10,
 		}
 
-		response, err := sendWebSocketRequest(conn, getStreamsRequest)
+		response, err := sendWebSocketRequest(client, getStreamsRequest)
 		require.NoError(t, err, "Get streams request should succeed")
 		// API doc shows result should be array of stream objects
 		streams, ok := response.Result.([]interface{})
@@ -310,7 +310,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 11,
 		}
 
-		response, err := sendWebSocketRequest(conn, getMetricsRequest)
+		response, err := sendWebSocketRequest(client, getMetricsRequest)
 		require.NoError(t, err, "Get metrics request should succeed")
 		assert.NotNil(t, response.Result, "Get metrics should return result")
 		assert.Contains(t, response.Result, "cpu_usage", "Get metrics should contain CPU usage")
@@ -325,7 +325,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID:      12,
 		}
 
-		response, err := sendWebSocketRequest(conn, getStatusRequest)
+		response, err := sendWebSocketRequest(client, getStatusRequest)
 		require.NoError(t, err, "Get status request should succeed")
 		assert.NotNil(t, response.Result, "Get status should return result")
 		assert.Contains(t, response.Result, "status", "Get status should contain status field")
@@ -339,7 +339,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID:      13,
 		}
 
-		response, err := sendWebSocketRequest(conn, getServerInfoRequest)
+		response, err := sendWebSocketRequest(client, getServerInfoRequest)
 		require.NoError(t, err, "Get server info request should succeed")
 		assert.NotNil(t, response.Result, "Get server info should return result")
 		assert.Contains(t, response.Result, "version", "Get server info should contain version field")
@@ -357,7 +357,7 @@ func TestWebSocketIntegration(t *testing.T) {
 		}
 
 		// API doc shows get_storage_info method exists but server may not implement it yet
-		response, err := sendWebSocketRequest(conn, getStorageInfoRequest)
+		response, err := sendWebSocketRequest(client, getStorageInfoRequest)
 		if err != nil {
 			// API documentation compliance - exact error message
 			assert.Contains(t, err.Error(), "Insufficient permissions", "Error must match API documentation")
@@ -382,7 +382,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 15,
 		}
 
-		_, err = sendWebSocketRequest(conn, pingRequest)
+		_, err = sendWebSocketRequest(client, pingRequest)
 		responseTime := time.Since(startTime)
 
 		require.NoError(t, err, "Ping request should succeed")
@@ -391,10 +391,12 @@ func TestWebSocketIntegration(t *testing.T) {
 
 	t.Run("AuthenticationErrorHandling", func(t *testing.T) {
 		// Test authentication error handling
-		// Create new connection without authentication
-		unauthenticatedConn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8002/ws", nil)
-		require.NoError(t, err, "Should connect to WebSocket server")
-		defer unauthenticatedConn.Close()
+		// Use existing WebSocket test client utility for unauthenticated connection
+		unauthenticatedClient := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		defer unauthenticatedClient.Close()
+
+		// Get the connection from the client
+		unauthenticatedConn := unauthenticatedClient.conn
 
 		// Try to access protected method without authentication
 		protectedRequest := JSONRPCRequest{
@@ -424,7 +426,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 17,
 		}
 
-		_, err = sendWebSocketRequest(conn, invalidRequest)
+		_, err = sendWebSocketRequest(client, invalidRequest)
 		assert.Error(t, err, "Should fail with invalid parameters error")
 		// API documentation compliance - exact error message
 		assert.Contains(t, err.Error(), "Invalid parameters", "Error must match API documentation")
@@ -441,7 +443,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 18,
 		}
 
-		response, err := sendWebSocketRequest(conn, capabilitiesRequest)
+		response, err := sendWebSocketRequest(client, capabilitiesRequest)
 		if err != nil {
 			// API documentation compliance - should not fail with correct parameters
 			t.Errorf("get_camera_capabilities failed with correct parameters: %v", err)
@@ -469,7 +471,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 19,
 		}
 
-		response, err := sendWebSocketRequest(conn, deleteRecordingRequest)
+		response, err := sendWebSocketRequest(client, deleteRecordingRequest)
 		if err != nil {
 			// Method may not be implemented yet - accept internal server error
 			assert.Contains(t, err.Error(), "Internal server error", "Error must match server implementation")
@@ -493,7 +495,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 20,
 		}
 
-		response, err := sendWebSocketRequest(conn, deleteSnapshotRequest)
+		response, err := sendWebSocketRequest(client, deleteSnapshotRequest)
 		if err != nil {
 			// Method may not be implemented yet - accept internal server error
 			assert.Contains(t, err.Error(), "Internal server error", "Error must match server implementation")
@@ -514,7 +516,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID:      21,
 		}
 
-		response, err := sendWebSocketRequest(conn, cleanupRequest)
+		response, err := sendWebSocketRequest(client, cleanupRequest)
 		if err != nil {
 			// API documentation compliance - should not fail with correct parameters
 			t.Errorf("cleanup_old_files failed with correct parameters: %v", err)
@@ -542,7 +544,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 22,
 		}
 
-		response, err := sendWebSocketRequest(conn, retentionRequest)
+		response, err := sendWebSocketRequest(client, retentionRequest)
 		if err != nil {
 			// API documentation compliance - should not fail with correct parameters
 			t.Errorf("set_retention_policy failed with correct parameters: %v", err)
@@ -568,7 +570,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 23,
 		}
 
-		response, err := sendWebSocketRequest(conn, recordingInfoRequest)
+		response, err := sendWebSocketRequest(client, recordingInfoRequest)
 		if err != nil {
 			// Method may not be implemented yet - accept internal server error
 			assert.Contains(t, err.Error(), "Internal server error", "Error must match server implementation")
@@ -593,7 +595,7 @@ func TestWebSocketIntegration(t *testing.T) {
 			ID: 24,
 		}
 
-		response, err := sendWebSocketRequest(conn, snapshotInfoRequest)
+		response, err := sendWebSocketRequest(client, snapshotInfoRequest)
 		if err != nil {
 			// Method may not be implemented yet - accept internal server error
 			assert.Contains(t, err.Error(), "Internal server error", "Error must match server implementation")
@@ -608,24 +610,35 @@ func TestWebSocketIntegration(t *testing.T) {
 }
 
 // sendWebSocketRequest sends a JSON-RPC request over WebSocket and returns the response
-func sendWebSocketRequest(conn *websocket.Conn, request JSONRPCRequest) (*JSONRPCResponse, error) {
-	// Send request
-	err := conn.WriteJSON(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+func sendWebSocketRequest(client *utils.WebSocketTestClient, request JSONRPCRequest) (*JSONRPCResponse, error) {
+	// COMMON PATTERN: Use centralized WebSocket test client instead of raw connection
+	
+	// Convert the request to the internal format
+	internalRequest := &ws.JsonRpcRequest{
+		JSONRPC: request.JSONRPC,
+		Method:  request.Method,
+		Params:  request.Params,
+		ID:      request.ID,
 	}
-
-	// Read response
-	var response JSONRPCResponse
-	err = conn.ReadJSON(&response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+	
+	// Use the centralized client
+	response := client.SendRequest(internalRequest)
+	
+	// Convert the response back to the test format
+	result := &JSONRPCResponse{
+		JSONRPC: response.JSONRPC,
+		ID:      response.ID,
 	}
-
-	// Check for JSON-RPC error
+	
 	if response.Error != nil {
-		return nil, fmt.Errorf("JSON-RPC error: %s (code: %d)", response.Error.Message, response.Error.Code)
+		result.Error = &JSONRPCError{
+			Code:    response.Error.Code,
+			Message: response.Error.Message,
+			Data:    response.Error.Data,
+		}
+	} else {
+		result.Result = response.Result
 	}
-
-	return &response, nil
+	
+	return result, nil
 }

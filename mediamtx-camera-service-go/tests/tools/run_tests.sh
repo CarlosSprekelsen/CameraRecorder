@@ -55,17 +55,20 @@ run_integration_tests() {
 
 run_security_tests() {
     log_info "Running security tests..."
-    go test -tags="security" -v ./tests/unit/...
+    # ENABLE PARALLEL EXECUTION: Use -parallel 4 for security tests
+    go test -tags="security" -parallel 4 -v ./tests/unit/...
 }
 
 run_performance_tests() {
     log_info "Running performance tests..."
-    go test -tags="performance" -v ./tests/unit/...
+    # ENABLE PARALLEL EXECUTION: Use -parallel 4 for performance tests
+    go test -tags="performance" -parallel 4 -v ./tests/unit/...
 }
 
 run_health_tests() {
     log_info "Running health tests..."
-    go test -tags="health" -v ./tests/unit/...
+    # ENABLE PARALLEL EXECUTION: Use -parallel 4 for health tests
+    go test -tags="health" -parallel 4 -v ./tests/unit/...
 }
 
 run_all_tests() {

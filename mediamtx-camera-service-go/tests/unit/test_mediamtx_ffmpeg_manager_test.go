@@ -29,13 +29,14 @@ import (
 
 // TestFFmpegManager_Creation tests FFmpeg manager creation
 func TestFFmpegManager_Creation(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - use free port instead of hardcoded one
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   "http://localhost:9997",
+		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -47,6 +48,7 @@ func TestFFmpegManager_Creation(t *testing.T) {
 
 // TestFFmpegManager_StartProcess tests process start functionality
 func TestFFmpegManager_StartProcess(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -55,9 +57,9 @@ func TestFFmpegManager_StartProcess(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - use free port instead of hardcoded one
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   "http://localhost:9997",
+		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -83,13 +85,14 @@ func TestFFmpegManager_StartProcess(t *testing.T) {
 
 // TestFFmpegManager_StopProcess tests process stop functionality
 func TestFFmpegManager_StopProcess(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - use free port instead of hardcoded one
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   "http://localhost:9997",
+		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -109,13 +112,14 @@ func TestFFmpegManager_StopProcess(t *testing.T) {
 
 // TestFFmpegManager_IsProcessRunning tests process running check
 func TestFFmpegManager_IsProcessRunning(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 
-	// Create test configuration
+	// Create test configuration - use free port instead of hardcoded one
 	testConfig := &mediamtx.MediaMTXConfig{
-		BaseURL:                   "http://localhost:9997",
+		BaseURL:                   utils.CreateTestHTTPURLWithFreePort(""),
 		ProcessTerminationTimeout: 5.0,
 		ProcessKillTimeout:        2.0,
 	}
@@ -132,6 +136,7 @@ func TestFFmpegManager_IsProcessRunning(t *testing.T) {
 
 // TestFFmpegManager_StartRecording tests recording start functionality
 func TestFFmpegManager_StartRecording(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -173,6 +178,7 @@ func TestFFmpegManager_StartRecording(t *testing.T) {
 
 // TestFFmpegManager_StopRecording tests recording stop functionality
 func TestFFmpegManager_StopRecording(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
@@ -199,6 +205,7 @@ func TestFFmpegManager_StopRecording(t *testing.T) {
 
 // TestFFmpegManager_TakeSnapshot tests snapshot functionality
 func TestFFmpegManager_TakeSnapshot(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -232,6 +239,7 @@ func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 
 // TestFFmpegManager_RotateFile tests file rotation functionality
 func TestFFmpegManager_RotateFile(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -265,6 +273,7 @@ func TestFFmpegManager_RotateFile(t *testing.T) {
 
 // TestFFmpegManager_GetFileInfo tests file info retrieval
 func TestFFmpegManager_GetFileInfo(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -300,6 +309,7 @@ func TestFFmpegManager_GetFileInfo(t *testing.T) {
 
 // TestFFmpegManager_BuildCommand tests command building functionality
 func TestFFmpegManager_BuildCommand(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
@@ -325,6 +335,7 @@ func TestFFmpegManager_BuildCommand(t *testing.T) {
 
 // TestFFmpegManager_ErrorHandling tests error handling scenarios
 func TestFFmpegManager_ErrorHandling(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -364,6 +375,7 @@ func TestFFmpegManager_ErrorHandling(t *testing.T) {
 
 // TestFFmpegManager_ConcurrentAccess tests concurrent access scenarios
 func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
@@ -400,6 +412,7 @@ func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
 
 // TestFFmpegManager_ContextCancellation tests context cancellation
 func TestFFmpegManager_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -434,6 +447,7 @@ func TestFFmpegManager_ContextCancellation(t *testing.T) {
 
 // TestFFmpegManager_ConfigurationValidation tests configuration validation
 func TestFFmpegManager_ConfigurationValidation(t *testing.T) {
+	t.Parallel()
 	// Create test logger
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
@@ -456,6 +470,7 @@ func TestFFmpegManager_ConfigurationValidation(t *testing.T) {
 
 // TestFFmpegManager_ProcessManagement tests process management functionality
 func TestFFmpegManager_ProcessManagement(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -491,6 +506,7 @@ func TestFFmpegManager_ProcessManagement(t *testing.T) {
 
 // TestFFmpegManager_Integration tests integration scenarios
 func TestFFmpegManager_Integration(t *testing.T) {
+	t.Parallel()
 	// Setup test environment with proper cleanup
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -521,6 +537,7 @@ func TestFFmpegManager_Integration(t *testing.T) {
 
 // TestFFmpegManager_SegmentedRecording tests segmented recording functionality
 func TestFFmpegManager_SegmentedRecording(t *testing.T) {
+	t.Parallel()
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
@@ -572,6 +589,7 @@ func TestFFmpegManager_SegmentedRecording(t *testing.T) {
 
 // TestFFmpegManager_SegmentedRecordingCommandBuilding tests segmented recording command building
 func TestFFmpegManager_SegmentedRecordingCommandBuilding(t *testing.T) {
+	t.Parallel()
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 

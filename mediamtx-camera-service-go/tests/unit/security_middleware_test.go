@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package security_test
 
 import (
@@ -5,6 +8,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,10 +63,13 @@ func (m *MockSecurityConfig) GetJWTSecretKey() string         { return m.jwtSecr
 func (m *MockSecurityConfig) GetJWTExpiryHours() int          { return m.jwtExpiryHours }
 
 func TestNewAuthMiddleware(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
 
-	middleware := security.NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(env.Logger, config)
 
 	assert.NotNil(t, middleware)
 	// Note: Fields are unexported, so we can't test them directly
@@ -70,9 +77,12 @@ func TestNewAuthMiddleware(t *testing.T) {
 }
 
 func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
-	middleware := security.NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(env.Logger, config)
 
 	// Mock authenticated client
 	client := &MockClientConnection{
@@ -102,9 +112,12 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 }
 
 func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
-	middleware := security.NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(env.Logger, config)
 
 	// Mock unauthenticated client
 	client := &MockClientConnection{
@@ -135,11 +148,14 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 }
 
 func TestNewRBACMiddleware(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
 	permissionChecker := security.NewPermissionChecker()
 
-	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
+	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	assert.NotNil(t, middleware)
 	// Note: Fields are unexported, so we can't test them directly
@@ -147,10 +163,13 @@ func TestNewRBACMiddleware(t *testing.T) {
 }
 
 func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
 	permissionChecker := security.NewPermissionChecker()
-	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
+	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	// Mock client with operator role
 	client := &MockClientConnection{
@@ -180,10 +199,13 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 }
 
 func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
-	logger := logging.NewLogger("security_test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	config := &MockSecurityConfig{}
 	permissionChecker := security.NewPermissionChecker()
-	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
+	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	// Mock client with viewer role
 	client := &MockClientConnection{

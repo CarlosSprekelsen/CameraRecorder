@@ -40,6 +40,7 @@ import (
 
 // TestRecordingManager_NewRecordingManager tests recording manager creation
 func TestRecordingManager_NewRecordingManager(t *testing.T) {
+	t.Parallel()
 	// REQ-MTX-001: MediaMTX service integration
 	// REQ-REC-001: Recording state management
 
@@ -82,6 +83,7 @@ func TestRecordingManager_NewRecordingManager(t *testing.T) {
 
 // TestRecordingManager_StartRecording tests basic recording start functionality
 func TestRecordingManager_StartRecording(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management
 	// REQ-REC-002: Storage monitoring and protection
 
@@ -135,6 +137,7 @@ func TestRecordingManager_StartRecording(t *testing.T) {
 
 // TestRecordingManager_StartRecording_SessionExists tests recording start with existing session
 func TestRecordingManager_StartRecording_SessionExists(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management - conflict prevention
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -190,6 +193,7 @@ func TestRecordingManager_StartRecording_SessionExists(t *testing.T) {
 
 // TestRecordingManager_StartRecording_FFmpegError tests recording start with FFmpeg error
 func TestRecordingManager_StartRecording_FFmpegError(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -224,6 +228,7 @@ func TestRecordingManager_StartRecording_FFmpegError(t *testing.T) {
 
 // TestRecordingManager_StopRecording tests recording stop functionality
 func TestRecordingManager_StopRecording(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -265,6 +270,7 @@ func TestRecordingManager_StopRecording(t *testing.T) {
 
 // TestRecordingManager_StopRecording_SessionNotFound tests stopping non-existent session
 func TestRecordingManager_StopRecording_SessionNotFound(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -291,6 +297,7 @@ func TestRecordingManager_StopRecording_SessionNotFound(t *testing.T) {
 
 // TestRecordingManager_GetRecordingSession tests session retrieval
 func TestRecordingManager_GetRecordingSession(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -335,6 +342,7 @@ func TestRecordingManager_GetRecordingSession(t *testing.T) {
 
 // TestRecordingManager_ListRecordingSessions tests session listing
 func TestRecordingManager_ListRecordingSessions(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -405,6 +413,7 @@ func TestRecordingManager_ListRecordingSessions(t *testing.T) {
 
 // TestRecordingManager_RotateRecordingFile tests file rotation functionality
 func TestRecordingManager_RotateRecordingFile(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -448,6 +457,7 @@ func TestRecordingManager_RotateRecordingFile(t *testing.T) {
 
 // TestRecordingManager_RotateRecordingFile_SessionNotFound tests rotation with non-existent session
 func TestRecordingManager_RotateRecordingFile_SessionNotFound(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -474,6 +484,7 @@ func TestRecordingManager_RotateRecordingFile_SessionNotFound(t *testing.T) {
 
 // TestRecordingManager_StartRecordingWithSegments tests segmented recording
 func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -517,6 +528,7 @@ func TestRecordingManager_StartRecordingWithSegments(t *testing.T) {
 
 // TestRecordingManager_StopRecordingWithContinuity tests stopping recording with continuity
 func TestRecordingManager_StopRecordingWithContinuity(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -540,6 +552,7 @@ func TestRecordingManager_StopRecordingWithContinuity(t *testing.T) {
 
 // TestRecordingManager_GetRecordingContinuity tests continuity information retrieval
 func TestRecordingManager_GetRecordingContinuity(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -582,6 +595,7 @@ func TestRecordingManager_GetRecordingContinuity(t *testing.T) {
 
 // TestRecordingManager_GetRecordingContinuity_SessionNotFound tests continuity with non-existent session
 func TestRecordingManager_GetRecordingContinuity_SessionNotFound(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -608,6 +622,7 @@ func TestRecordingManager_GetRecordingContinuity_SessionNotFound(t *testing.T) {
 
 // TestRecordingManager_GetRecordingsList tests recordings list functionality
 func TestRecordingManager_GetRecordingsList(t *testing.T) {
+	t.Parallel()
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -669,6 +684,7 @@ func TestRecordingManager_GetRecordingsList(t *testing.T) {
 
 // TestRecordingManager_GetRecordingsList_NoDirectory tests list with non-existent directory
 func TestRecordingManager_GetRecordingsList_NoDirectory(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -696,6 +712,7 @@ func TestRecordingManager_GetRecordingsList_NoDirectory(t *testing.T) {
 
 // TestRecordingManager_GetRecordingInfo tests recording info retrieval
 func TestRecordingManager_GetRecordingInfo(t *testing.T) {
+	t.Parallel()
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -744,6 +761,7 @@ func TestRecordingManager_GetRecordingInfo(t *testing.T) {
 
 // TestRecordingManager_GetRecordingInfo_FileNotFound tests info retrieval for non-existent file
 func TestRecordingManager_GetRecordingInfo_FileNotFound(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -771,6 +789,7 @@ func TestRecordingManager_GetRecordingInfo_FileNotFound(t *testing.T) {
 
 // TestRecordingManager_DeleteRecording tests recording deletion
 func TestRecordingManager_DeleteRecording(t *testing.T) {
+	t.Parallel()
 	// REQ-MTX-002: Stream management capabilities
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -824,6 +843,7 @@ func TestRecordingManager_DeleteRecording(t *testing.T) {
 
 // TestRecordingManager_DeleteRecording_FileNotFound tests deletion of non-existent file
 func TestRecordingManager_DeleteRecording_FileNotFound(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -850,6 +870,7 @@ func TestRecordingManager_DeleteRecording_FileNotFound(t *testing.T) {
 
 // TestRecordingManager_UseCaseConfiguration tests different use case configurations
 func TestRecordingManager_UseCaseConfiguration(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management - use case specific behavior
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -907,6 +928,7 @@ func TestRecordingManager_UseCaseConfiguration(t *testing.T) {
 
 // TestRecordingManager_StorageValidation tests storage validation
 func TestRecordingManager_StorageValidation(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -945,6 +967,7 @@ func TestRecordingManager_StorageValidation(t *testing.T) {
 
 // TestRecordingManager_UpdateStorageThresholds tests storage threshold updates
 func TestRecordingManager_UpdateStorageThresholds(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -989,6 +1012,7 @@ func TestRecordingManager_UpdateStorageThresholds(t *testing.T) {
 
 // TestRecordingManager_ConcurrentOperations tests concurrent recording operations
 func TestRecordingManager_ConcurrentOperations(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management - concurrent access
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1052,6 +1076,7 @@ func TestRecordingManager_ConcurrentOperations(t *testing.T) {
 
 // TestRecordingManager_ErrorHandling tests comprehensive error handling
 func TestRecordingManager_ErrorHandling(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1122,6 +1147,7 @@ func TestRecordingManager_ErrorHandling(t *testing.T) {
 
 // TestRecordingManager_Performance tests recording manager performance
 func TestRecordingManager_Performance(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-001: Recording state management - performance under load
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1176,6 +1202,7 @@ func TestRecordingManager_Performance(t *testing.T) {
 
 // TestRecordingManager_FileRotation tests file rotation functionality
 func TestRecordingManager_FileRotation(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1217,6 +1244,7 @@ func TestRecordingManager_FileRotation(t *testing.T) {
 
 // TestRecordingManager_SegmentManagement tests segment management functionality
 func TestRecordingManager_SegmentManagement(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-003: File rotation and segment management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1260,6 +1288,7 @@ func TestRecordingManager_SegmentManagement(t *testing.T) {
 
 // TestRecordingManager_StorageCheck tests storage checking functionality
 func TestRecordingManager_StorageCheck(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1304,6 +1333,7 @@ func TestRecordingManager_StorageCheck(t *testing.T) {
 
 // TestRecordingManager_MonitoringStart tests monitoring start functionality
 func TestRecordingManager_MonitoringStart(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-002: Storage monitoring and protection
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1348,6 +1378,7 @@ func TestRecordingManager_MonitoringStart(t *testing.T) {
 
 // TestRecordingManager_UseCaseCleanupScheduling tests use case cleanup scheduling
 func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
+	t.Parallel()
 	// REQ-REC-004: Error handling and recovery
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
@@ -1392,6 +1423,7 @@ func TestRecordingManager_UseCaseCleanupScheduling(t *testing.T) {
 
 // TestRecordingManager_AdvancedRecordingCommands tests advanced recording command building
 func TestRecordingManager_AdvancedRecordingCommand(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1428,6 +1460,7 @@ func TestRecordingManager_AdvancedRecordingCommand(t *testing.T) {
 
 // TestRecordingManager_MonitoringAndRotation tests monitoring and rotation functions
 func TestRecordingManager_MonitoringAndRotation(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1462,6 +1495,7 @@ func TestRecordingManager_MonitoringAndRotation(t *testing.T) {
 
 // TestRecordingManager_StorageAndCleanup tests storage and cleanup functions
 func TestRecordingManager_StorageAndCleanup(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1494,6 +1528,7 @@ func TestRecordingManager_StorageAndCleanup(t *testing.T) {
 
 // TestRecordingManager_GetStorageMetrics tests storage metrics retrieval
 func TestRecordingManager_GetStorageMetrics(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1510,6 +1545,7 @@ func TestRecordingManager_GetStorageMetrics(t *testing.T) {
 
 // TestRecordingManager_UpdateStorageConfig tests storage configuration updates
 func TestRecordingManager_UpdateStorageConfig(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1526,6 +1562,7 @@ func TestRecordingManager_UpdateStorageConfig(t *testing.T) {
 
 // TestRecordingManager_DeviceSessionMapping tests device session mapping functions
 func TestRecordingManager_DeviceSessionMapping(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1548,6 +1585,7 @@ func TestRecordingManager_DeviceSessionMapping(t *testing.T) {
 
 // TestRecordingManager_UseCaseCleanup tests use case cleanup functions
 func TestRecordingManager_UseCaseCleanup(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1578,6 +1616,7 @@ func TestRecordingManager_UseCaseCleanup(t *testing.T) {
 
 // TestRecordingManager_ScheduledCleanup tests scheduled cleanup functions
 func TestRecordingManager_ScheduledCleanup(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
@@ -1618,6 +1657,7 @@ func TestRecordingManager_ScheduledCleanup(t *testing.T) {
 
 // TestRecordingManager_AutoStop tests auto stop functionality
 func TestRecordingManager_AutoStop(t *testing.T) {
+	t.Parallel()
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)

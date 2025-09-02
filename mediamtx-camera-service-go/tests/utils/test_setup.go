@@ -88,15 +88,15 @@ type SecurityTestEnvironment struct {
 	SessionManager *security.SessionManager
 }
 
-// SetupTestEnvironment creates a proper test environment with configuration
+// SetupTestEnvironment creates a basic test environment with configuration and logging
 //
-// COMMON PATTERN: Use this function instead of creating individual components
+// COMMON PATTERN: Use this when testing basic functionality that needs configuration
 //
 // Example usage:
 //
-//	func TestMyFeature(t *testing.T) {
-//	    env := utils.SetupMediaMTXTestEnvironment(t)
-//	    defer utils.TeardownMediaMTXTestEnvironment(t, env)
+//	func TestBasicFeature(t *testing.T) {
+//	    env := utils.SetupTestEnvironment(t)
+//	    defer utils.TeardownTestEnvironment(t, env)
 //
 //	    // Use env.ConfigManager and env.Logger
 //	    result := myFunction(env.ConfigManager, env.Logger)
@@ -116,6 +116,30 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	configManager := config.CreateConfigManager()
 	err = configManager.LoadConfig(configPath)
 	require.NoError(t, err, "Failed to load test configuration")
+
+	// OVERRIDE HARDCODED PORTS WITH FREE PORTS TO PREVENT CONFLICTS
+	// Use GetFreePort() from websocket_test_utils.go to get free ports
+	wsPort := utils.GetFreePort()
+	mediaMTXAPIPort := utils.GetFreePort()
+	mediaMTXRTSPPort := utils.GetFreePort()
+	mediaMTXHLSPort := utils.GetFreePort()
+	mediaMTXWebRTCPort := utils.GetFreePort()
+
+	t.Logf("Using free ports - WebSocket: %d, MediaMTX API: %d, RTSP: %d, HLS: %d, WebRTC: %d", 
+		wsPort, mediaMTXAPIPort, mediaMTXRTSPPort, mediaMTXHLSPort, mediaMTXWebRTCPort)
+
+	// Update server port
+	configManager.Config.Server.Port = wsPort
+
+	// Update MediaMTX ports
+	configManager.Config.MediaMTX.APIPort = mediaMTXAPIPort
+	configManager.Config.MediaMTX.RTSPPort = mediaMTXRTSPPort
+	configManager.Config.MediaMTX.HLSPort = mediaMTXHLSPort
+	configManager.Config.MediaMTX.WebRTCPort = mediaMTXWebRTCPort
+
+	// Update MediaMTX host URLs to use free ports
+	configManager.Config.MediaMTX.BaseURL = fmt.Sprintf("http://localhost:%d", mediaMTXAPIPort)
+	configManager.Config.MediaMTX.HealthCheckURL = fmt.Sprintf("http://localhost:%d/v3/paths/list", mediaMTXAPIPort)
 
 	// Initialize logger
 	logger := logging.NewLogger("test-environment")

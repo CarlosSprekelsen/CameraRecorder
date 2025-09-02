@@ -27,6 +27,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +35,7 @@ import (
 
 // TestLogging_NewLogger tests logger creation and basic functionality
 func TestLogging_NewLogger(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 	logger := logging.NewLogger("test-component")
 
@@ -44,6 +46,7 @@ func TestLogging_NewLogger(t *testing.T) {
 
 // TestLogging_GetLogger tests global logger singleton
 func TestLogging_GetLogger(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 	logger1 := logging.GetLogger()
 	logger2 := logging.GetLogger()
@@ -55,8 +58,13 @@ func TestLogging_GetLogger(t *testing.T) {
 
 // TestLogging_SetupLogging tests logging configuration setup
 func TestLogging_SetupLogging(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 	// REQ-LOG-004: Log level management
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	tests := []struct {
 		name    string
@@ -110,7 +118,12 @@ func TestLogging_SetupLogging(t *testing.T) {
 
 // TestLogging_CorrelationID tests correlation ID functionality
 func TestLogging_CorrelationID(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Test correlation ID generation
 	correlationID := logging.GenerateCorrelationID()
@@ -131,9 +144,14 @@ func TestLogging_CorrelationID(t *testing.T) {
 
 // TestLogging_WithCorrelationID tests logger correlation ID methods
 func TestLogging_WithCorrelationID(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 	correlationID := "test-correlation-id"
 
 	loggerWithID := logger.WithCorrelationID(correlationID)
@@ -142,9 +160,14 @@ func TestLogging_WithCorrelationID(t *testing.T) {
 
 // TestLogging_WithField tests structured field logging
 func TestLogging_WithField(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	loggerWithField := logger.WithField("test_key", "test_value")
 	assert.NotNil(t, loggerWithField)
@@ -152,9 +175,14 @@ func TestLogging_WithField(t *testing.T) {
 
 // TestLogging_WithError tests error logging
 func TestLogging_WithError(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 	testError := assert.AnError
 
 	loggerWithError := logger.WithError(testError)
@@ -163,9 +191,14 @@ func TestLogging_WithError(t *testing.T) {
 
 // TestLogging_LogWithContext tests context-based logging
 func TestLogging_LogWithContext(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 	ctx := context.Background()
 	correlationID := "test-correlation-id"
 	ctxWithID := logging.WithCorrelationID(ctx, correlationID)
@@ -179,9 +212,14 @@ func TestLogging_LogWithContext(t *testing.T) {
 
 // TestLogging_ConvenienceMethods tests convenience logging methods
 func TestLogging_ConvenienceMethods(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 	ctx := context.Background()
 
 	// Test all convenience methods
@@ -196,9 +234,14 @@ func TestLogging_ConvenienceMethods(t *testing.T) {
 
 // TestLogging_LevelManagement tests log level management
 func TestLogging_LevelManagement(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-004: Log level management
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Test level setting
 	logger.SetLevel(logrus.DebugLevel)
@@ -215,9 +258,14 @@ func TestLogging_LevelManagement(t *testing.T) {
 
 // TestLogging_ComponentLevel tests component-specific level management
 func TestLogging_ComponentLevel(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-004: Log level management
 
-	logger := logging.NewLogger("test-component")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Test component level setting
 	logger.SetComponentLevel("test-component", logrus.DebugLevel)
@@ -233,6 +281,7 @@ func TestLogging_ComponentLevel(t *testing.T) {
 
 // TestLogging_SetupLoggingSimple tests simple logging setup
 func TestLogging_SetupLoggingSimple(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
 	err := logging.SetupLoggingSimple("/tmp/test.log", "info")
@@ -241,6 +290,7 @@ func TestLogging_SetupLoggingSimple(t *testing.T) {
 
 // TestLogging_ConfigurationIntegration tests integration with config system
 func TestLogging_ConfigurationIntegration(t *testing.T) {
+	t.Parallel()
 	// REQ-LOG-005: Configuration integration
 
 	// Create config.LoggingConfig
@@ -358,7 +408,11 @@ func TestLogging_EnvironmentVariableOverride(t *testing.T) {
 func TestLogging_Concurrency(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Test concurrent logging
 	done := make(chan bool, 10)
@@ -404,7 +458,11 @@ func TestLogging_ErrorHandling(t *testing.T) {
 func TestLogging_Performance(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := logging.NewLogger("test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Performance test: log many messages quickly
 	start := time.Now()
@@ -427,6 +485,10 @@ func TestLogging_Performance(t *testing.T) {
 func TestLogging_PythonFormatCompatibility(t *testing.T) {
 	// REQ-LOG-001: Format compatibility validation against Python system
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Test Python format: %(asctime)s - %(name)s - %(levelname)s - %(message)s
 	config := &logging.LoggingConfig{
 		Level:          "info",
@@ -438,7 +500,7 @@ func TestLogging_PythonFormatCompatibility(t *testing.T) {
 	err := logging.SetupLogging(config)
 	require.NoError(t, err)
 
-	logger := logging.NewLogger("test-component")
+	logger := env.Logger
 
 	// Test that format matches Python logging pattern
 	// Python format: 2025-01-15 10:30:45,123 - test-component - INFO - test message
@@ -453,7 +515,11 @@ func TestLogging_PythonFormatCompatibility(t *testing.T) {
 func TestLogging_PerformanceBenchmark(t *testing.T) {
 	// REQ-LOG-001: Performance under high load (<10ms per log entry)
 
-	logger := logging.NewLogger("performance-test")
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
+	logger := env.Logger
 
 	// Performance test: validate <10ms per log entry requirement
 	start := time.Now()
@@ -619,10 +685,14 @@ func TestLogging_EnvironmentVariableOverrides(t *testing.T) {
 func TestLogging_CrossComponentCorrelationID(t *testing.T) {
 	// REQ-LOG-002: Cross-component tracing validation
 
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
+
 	// Create multiple loggers for different components
-	authLogger := logging.NewLogger("auth")
-	dbLogger := logging.NewLogger("database")
-	apiLogger := logging.NewLogger("api")
+	authLogger := env.Logger
+	dbLogger := env.Logger
+	apiLogger := env.Logger
 
 	// Generate correlation ID
 	correlationID := logging.GenerateCorrelationID()

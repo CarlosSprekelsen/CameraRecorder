@@ -18,8 +18,8 @@ import (
 // REQ-MAIN-003: Configuration loading must be validated during startup
 
 func TestMain_StartupShutdown(t *testing.T) {
-	// REQ-MAIN-001: Application must handle startup and shutdown gracefully
-	// This test validates the main function structure and signal handling
+	t.Parallel()
+	// REQ-MAIN-001: Application startup and shutdown
 
 	// Note: This is a structural test since we cannot easily test the actual main() function
 	// without significant refactoring. The test validates the expected behavior patterns.
@@ -47,7 +47,8 @@ func TestMain_StartupShutdown(t *testing.T) {
 }
 
 func TestMain_SignalHandling(t *testing.T) {
-	// REQ-MAIN-002: Signal handling must work correctly for SIGINT and SIGTERM
+	t.Parallel()
+	// REQ-MAIN-002: Signal handling and graceful shutdown
 
 	// Test that we can create signal channels
 	sigChan := make(chan os.Signal, 1)
@@ -69,7 +70,8 @@ func TestMain_SignalHandling(t *testing.T) {
 }
 
 func TestMain_ContextHandling(t *testing.T) {
-	// REQ-MAIN-001: Context handling must work correctly for graceful shutdown
+	t.Parallel()
+	// REQ-MAIN-003: Context cancellation and timeout handling
 
 	// Test background context
 	bgCtx := context.Background()
@@ -92,7 +94,8 @@ func TestMain_ContextHandling(t *testing.T) {
 }
 
 func TestMain_ConfigurationPath(t *testing.T) {
-	// REQ-MAIN-003: Configuration loading must be validated during startup
+	t.Parallel()
+	// REQ-MAIN-004: Configuration file path handling
 
 	// Test that the expected configuration path exists or can be created
 	configPath := "config/default.yaml"
@@ -113,7 +116,8 @@ func TestMain_ConfigurationPath(t *testing.T) {
 }
 
 func TestMain_ServiceInitialization(t *testing.T) {
-	// REQ-MAIN-001: Service initialization must follow expected patterns
+	t.Parallel()
+	// REQ-MAIN-005: Service component initialization
 
 	// Test that we can create the expected service components
 	// This validates the structure without actually initializing services
@@ -144,7 +148,8 @@ func TestMain_ServiceInitialization(t *testing.T) {
 }
 
 func TestMain_ErrorHandling(t *testing.T) {
-	// REQ-MAIN-001: Error handling must be robust during startup
+	t.Parallel()
+	// REQ-MAIN-006: Error handling and recovery
 
 	// Test that we can handle various error scenarios
 	// This validates error handling patterns without actual service calls
@@ -171,7 +176,8 @@ func TestMain_ErrorHandling(t *testing.T) {
 }
 
 func TestMain_ShutdownHandling(t *testing.T) {
-	// REQ-MAIN-001: Shutdown handling must be graceful
+	t.Parallel()
+	// REQ-MAIN-007: Graceful shutdown and cleanup
 
 	// Test shutdown error handling patterns
 	// This validates shutdown error handling without actual service calls
@@ -197,7 +203,8 @@ func TestMain_ShutdownHandling(t *testing.T) {
 }
 
 func TestMain_LoggingMessages(t *testing.T) {
-	// REQ-MAIN-001: Logging messages must be consistent
+	t.Parallel()
+	// REQ-MAIN-008: Logging and diagnostic messages
 
 	// Test startup logging messages
 	startupMsg := "Starting MediaMTX Camera Service (Go)"
@@ -217,7 +224,8 @@ func TestMain_LoggingMessages(t *testing.T) {
 }
 
 func TestMain_ComponentDependencies(t *testing.T) {
-	// REQ-MAIN-001: Component dependencies must be properly managed
+	t.Parallel()
+	// REQ-MAIN-009: Component dependency management
 
 	// Test that all required components are referenced
 	requiredComponents := []string{
@@ -254,7 +262,8 @@ func TestMain_ComponentDependencies(t *testing.T) {
 }
 
 func TestMain_ConfigurationValidation(t *testing.T) {
-	// REQ-MAIN-003: Configuration validation must occur during startup
+	t.Parallel()
+	// REQ-MAIN-010: Configuration validation and error handling
 
 	// Test configuration validation patterns
 	configValidation := "Configuration not available"
@@ -274,7 +283,8 @@ func TestMain_ConfigurationValidation(t *testing.T) {
 }
 
 func TestMain_SignalNotification(t *testing.T) {
-	// REQ-MAIN-002: Signal notification must work correctly
+	t.Parallel()
+	// REQ-MAIN-011: Signal notification and handling
 
 	// Test signal notification setup
 	signalNotify := "signal.Notify"

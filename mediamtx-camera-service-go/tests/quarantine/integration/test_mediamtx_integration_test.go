@@ -1030,6 +1030,10 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 	ctx := context.Background()
 
 	b.Run("HealthCheck", func(b *testing.B) {
+		// Setup complete before timing starts
+		b.ResetTimer()
+		b.ReportAllocs()
+		
 		for i := 0; i < b.N; i++ {
 			health, err := env.Controller.GetHealth(ctx)
 			if err != nil {
@@ -1040,6 +1044,10 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 	})
 
 	b.Run("SystemMetrics", func(b *testing.B) {
+		// Setup complete before timing starts
+		b.ResetTimer()
+		b.ReportAllocs()
+		
 		for i := 0; i < b.N; i++ {
 			metrics, err := env.Controller.GetSystemMetrics(ctx)
 			if err != nil {
@@ -1050,6 +1058,10 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 	})
 
 	b.Run("ListRecordings", func(b *testing.B) {
+		// Setup complete before timing starts
+		b.ResetTimer()
+		b.ReportAllocs()
+		
 		for i := 0; i < b.N; i++ {
 			recordings, err := env.Controller.ListRecordings(ctx, 10, 0)
 			if err != nil {
@@ -1060,6 +1072,10 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 	})
 
 	b.Run("ListSnapshots", func(b *testing.B) {
+		// Setup complete before timing starts
+		b.ResetTimer()
+		b.ReportAllocs()
+		
 		for i := 0; i < b.N; i++ {
 			snapshots, err := env.Controller.ListSnapshots(ctx, 10, 0)
 			if err != nil {

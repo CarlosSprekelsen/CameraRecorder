@@ -205,11 +205,11 @@ func TestConfigManager_SaveConfig_Success(t *testing.T) {
 	require.FileExists(t, savedConfigPath)
 
 	// Load the saved config to verify it was saved correctly
-	CreateConfigManager := config.CreateConfigManager()
-	err = CreateConfigManager.LoadConfig(savedConfigPath)
+	savedConfigManager := config.CreateConfigManager()
+	err = savedConfigManager.LoadConfig(savedConfigPath)
 	require.NoError(t, err)
 
-	savedCfg := CreateConfigManager.GetConfig()
+	savedCfg := savedConfigManager.GetConfig()
 	require.NotNil(t, savedCfg)
 	assert.Equal(t, "192.168.1.100", savedCfg.Server.Host)
 	assert.Equal(t, 9000, savedCfg.Server.Port)
@@ -217,6 +217,10 @@ func TestConfigManager_SaveConfig_Success(t *testing.T) {
 
 func TestConfigManager_SaveConfig_NoConfig(t *testing.T) {
 	// Test SaveConfig with no configuration (0% coverage issue)
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create a new config manager without loading any config
 	configManager := config.CreateConfigManager()
@@ -229,6 +233,10 @@ func TestConfigManager_SaveConfig_NoConfig(t *testing.T) {
 
 func TestConfigManager_SaveConfig_NoPath(t *testing.T) {
 	// Test SaveConfig with no path set (0% coverage issue)
+
+	// COMMON PATTERN: Use shared test environment instead of individual components
+	env := utils.SetupTestEnvironment(t)
+	defer utils.TeardownTestEnvironment(t, env)
 
 	// Create a new config manager without loading any config
 	configManager := config.CreateConfigManager()

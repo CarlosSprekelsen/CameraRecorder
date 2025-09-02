@@ -77,10 +77,11 @@ run_package_tests() {
     # Create a temporary coverage file in our controlled directory
     local temp_coverage_file="/tmp/${package_name}_coverage_$$.out"
     
-    # Run tests with timeout and coverage
+    # Run tests with timeout, coverage, and parallel execution
     # CRITICAL: Use -coverpkg for cross-package coverage (external testing)
     # Use -covermode=set to avoid temp directory issues
-    if timeout $TIMEOUT_SECONDS go test -tags="unit" -coverpkg="./internal/$package_name" ./tests/unit/$test_pattern -coverprofile="$temp_coverage_file" -covermode=set -v; then
+    # ENABLE PARALLEL EXECUTION: Use -parallel flag for concurrent test execution
+    if timeout $TIMEOUT_SECONDS go test -tags="unit" -coverpkg="./internal/$package_name" ./tests/unit/$test_pattern -coverprofile="$temp_coverage_file" -covermode=set -parallel 4 -v; then
         log "✅ $package_name tests passed"
         
         # Move coverage file to final location if it was generated

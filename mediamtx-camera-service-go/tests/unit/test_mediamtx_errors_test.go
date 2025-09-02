@@ -23,6 +23,7 @@ import (
 
 // TestMediaMTXError_ErrorMethod tests MediaMTXError Error method
 func TestMediaMTXError_ErrorMethod(t *testing.T) {
+	t.Parallel()
 	// Test error with details
 	originalErr := errors.New("original error")
 	mediaMTXErr := &mediamtx.MediaMTXError{
@@ -54,6 +55,7 @@ func TestMediaMTXError_ErrorMethod(t *testing.T) {
 
 // TestMediaMTXError_Unwrap tests MediaMTXError Unwrap method
 func TestMediaMTXError_Unwrap(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("original error")
 	mediaMTXErr := &mediamtx.MediaMTXError{
 		Code:    500,
@@ -67,6 +69,7 @@ func TestMediaMTXError_Unwrap(t *testing.T) {
 
 // TestCircuitBreakerError_ErrorMethod tests CircuitBreakerError Error method
 func TestCircuitBreakerError_ErrorMethod(t *testing.T) {
+	t.Parallel()
 	circuitBreakerErr := &mediamtx.CircuitBreakerError{
 		State:   "OPEN",
 		Message: "Circuit breaker is open",
@@ -80,6 +83,7 @@ func TestCircuitBreakerError_ErrorMethod(t *testing.T) {
 
 // TestStreamError_ErrorMethod tests StreamError Error method
 func TestStreamError_ErrorMethod(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("stream not found")
 	streamErr := &mediamtx.StreamError{
 		StreamID: "test-stream-123",
@@ -96,6 +100,7 @@ func TestStreamError_ErrorMethod(t *testing.T) {
 
 // TestStreamError_Unwrap tests StreamError Unwrap method
 func TestStreamError_Unwrap(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("stream not found")
 	streamErr := &mediamtx.StreamError{
 		StreamID: "test-stream-123",

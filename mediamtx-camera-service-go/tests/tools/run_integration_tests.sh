@@ -128,7 +128,8 @@ run_integration_tests() {
     
     local coverage_file="$COVERAGE_DIR/integration_coverage.out"
     
-    if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/integration/... -coverprofile="$coverage_file" -v; then
+            # ENABLE PARALLEL EXECUTION: Use -parallel 2 for integration tests (conservative due to real services)
+        if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/integration/... -coverprofile="$coverage_file" -parallel 2 -v; then
         log_success "Integration tests completed successfully"
         
         # Analyze coverage if file was created
@@ -154,7 +155,8 @@ run_quarantined_tests() {
         
         local quarantine_coverage="$COVERAGE_DIR/quarantine_coverage.out"
         
-        if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/quarantine/integration/... -coverprofile="$quarantine_coverage" -v; then
+        # ENABLE PARALLEL EXECUTION: Use -parallel 2 for quarantined tests (conservative due to real services)
+        if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/quarantine/integration/... -coverprofile="$quarantine_coverage" -parallel 2 -v; then
             log_success "Quarantined integration tests completed"
             
             if [ -f "$quarantine_coverage" ]; then
@@ -181,7 +183,8 @@ run_e2e_tests() {
         
         local e2e_coverage="$COVERAGE_DIR/e2e_coverage.out"
         
-        if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/integration/... -run ".*[Ee]2[Ee].*" -coverprofile="$e2e_coverage" -v; then
+        # ENABLE PARALLEL EXECUTION: Use -parallel 2 for E2E tests (conservative due to real services)
+        if go test -tags="integration,real_system" -coverpkg=./internal/... ./tests/integration/... -run ".*[Ee]2[Ee].*" -coverprofile="$e2e_coverage" -parallel 2 -v; then
             log_success "E2E tests completed successfully"
             
             if [ -f "$e2e_coverage" ]; then

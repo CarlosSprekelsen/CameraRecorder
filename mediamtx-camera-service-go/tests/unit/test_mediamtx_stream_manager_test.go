@@ -61,8 +61,8 @@ func TestStreamManager_CreateStream(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Test stream creation
-	stream, err := streamManager.CreateStream(ctx, "test-stream", "rtsp://localhost:8554/test")
+	// Test stream creation - use free port instead of hardcoded one
+	stream, err := streamManager.CreateStream(ctx, "test-stream", utils.CreateTestRTSPURLWithFreePort("test"))
 	// Note: This may fail if MediaMTX service is not running or source is not available
 	// For unit tests, we validate the method exists and handles errors
 	if err != nil {
@@ -178,7 +178,7 @@ func TestStreamManager_ErrorHandling(t *testing.T) {
 	ctx := context.Background()
 
 	// Test that operations fail with invalid configuration
-	_, err := streamManager.CreateStream(ctx, "test-stream", "rtsp://localhost:8554/test")
+	_, err := streamManager.CreateStream(ctx, "test-stream", utils.CreateTestRTSPURLWithFreePort("test"))
 	assert.Error(t, err, "Should error due to connection failure")
 
 	err = streamManager.DeleteStream(ctx, "test-stream")
