@@ -203,7 +203,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 			JSONRPC: "2.0",
 			Error: &JsonRpcError{
 				Code:    AUTHENTICATION_REQUIRED,
-				Message: "Authentication failed",
+				Message: ErrorMessages[AUTHENTICATION_REQUIRED],
 				Data: map[string]interface{}{
 					"reason": "Invalid or expired token",
 				},
@@ -2003,7 +2003,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 
 	// Convert camera identifier to device path
 	actualDevicePath := s.getDevicePathFromCameraIdentifier(devicePath)
-	
+
 	// Validate camera device exists
 	_, exists := s.cameraMonitor.GetDevice(actualDevicePath)
 	if !exists {
@@ -2840,191 +2840,36 @@ func (s *WebSocketServer) validateCameraIdentifier(cameraID string) bool {
 
 // MethodCameraStatusUpdate handles camera status update notifications
 // Following Python implementation patterns and API documentation specification
+// SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
 func (s *WebSocketServer) MethodCameraStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REQ-API-020: WebSocket server shall support camera_status_update notifications
 	// REQ-API-021: Notifications shall include device, status, name, resolution, fps, and streams
 
-	s.logger.WithFields(logrus.Fields{
-		"action": "camera_status_update",
-		"client": client.ClientID,
-		"role":   client.Role,
-	}).Debug("Processing camera status update notification")
-
-	// Validate required parameters per API documentation
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
-	}
-
-	status, ok := params["status"].(string)
-	if !ok || status == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "status parameter is required and must be a string",
-			},
-		}, nil
-	}
-
-	// Validate status values per API documentation
-	validStatuses := []string{"CONNECTED", "DISCONNECTED", "ERROR", "RECORDING", "IDLE"}
-	statusValid := false
-	for _, validStatus := range validStatuses {
-		if status == validStatus {
-			statusValid = true
-			break
-		}
-	}
-
-	if !statusValid {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    fmt.Sprintf("status must be one of: %v", validStatuses),
-			},
-		}, nil
-	}
-
-	// Extract optional parameters
-	name, _ := params["name"].(string)
-	resolution, _ := params["resolution"].(string)
-	fps, _ := params["fps"].(float64)
-	streams, _ := params["streams"].(map[string]interface{})
-
-	// Create notification structure per API documentation
-	notification := map[string]interface{}{
-		"device":     device,
-		"status":     status,
-		"name":       name,
-		"resolution": resolution,
-		"fps":        int(fps),
-		"streams":    streams,
-	}
-
-	// Broadcast notification to all connected clients
-	s.broadcastEvent("camera_status_update", notification)
-
-	s.logger.WithFields(logrus.Fields{
-		"action":    "camera_status_update",
-		"device":    device,
-		"status":    status,
-		"client":    client.ClientID,
-		"broadcast": true,
-	}).Info("Camera status update notification broadcasted")
-
+	// SECURITY: Prevent direct client calls to notification methods
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"success":      true,
-			"notification": "camera_status_update",
-			"device":       device,
-			"status":       status,
-			"broadcast":    true,
+		Error: &JsonRpcError{
+			Code:    METHOD_NOT_FOUND,
+			Message: ErrorMessages[METHOD_NOT_FOUND],
+			Data:    "camera_status_update is a server-generated notification, not a callable method",
 		},
 	}, nil
 }
 
 // MethodRecordingStatusUpdate handles recording status update notifications
 // Following Python implementation patterns and API documentation specification
+// SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
 func (s *WebSocketServer) MethodRecordingStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REQ-API-022: WebSocket server shall support recording_status_update notifications
 	// REQ-API-023: Notifications shall include device, status, filename, and duration
 
-	s.logger.WithFields(logrus.Fields{
-		"action": "recording_status_update",
-		"client": client.ClientID,
-		"role":   client.Role,
-	}).Debug("Processing recording status update notification")
-
-	// Validate required parameters per API documentation
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
-	}
-
-	status, ok := params["status"].(string)
-	if !ok || status == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "status parameter is required and must be a string",
-			},
-		}, nil
-	}
-
-	// Validate status values per API documentation
-	validStatuses := []string{"STARTED", "STOPPED", "ERROR", "PAUSED", "RESUMED"}
-	statusValid := false
-	for _, validStatus := range validStatuses {
-		if status == validStatus {
-			statusValid = true
-			break
-		}
-	}
-
-	if !statusValid {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    fmt.Sprintf("status must be one of: %v", validStatuses),
-			},
-		}, nil
-	}
-
-	// Extract optional parameters
-	filename, _ := params["filename"].(string)
-	duration, _ := params["duration"].(float64)
-
-	// Create notification structure per API documentation
-	notification := map[string]interface{}{
-		"device":   device,
-		"status":   status,
-		"filename": filename,
-		"duration": int64(duration),
-	}
-
-	// Broadcast notification to all connected clients
-	s.broadcastEvent("recording_status_update", notification)
-
-	s.logger.WithFields(logrus.Fields{
-		"action":    "recording_status_update",
-		"device":    device,
-		"status":    status,
-		"filename":  filename,
-		"client":    client.ClientID,
-		"broadcast": true,
-	}).Info("Recording status update notification broadcasted")
-
+	// SECURITY: Prevent direct client calls to notification methods
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Result: map[string]interface{}{
-			"success":      true,
-			"notification": "recording_status_update",
-			"device":       device,
-			"status":       status,
-			"broadcast":    true,
+		Error: &JsonRpcError{
+			Code:    METHOD_NOT_FOUND,
+			Message: ErrorMessages[METHOD_NOT_FOUND],
+			Data:    "recording_status_update is a server-generated notification, not a callable method",
 		},
 	}, nil
 }
