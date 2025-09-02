@@ -2,122 +2,150 @@
 
 **Location**: `tests/tools/`  
 **Purpose**: Test orchestration and automation tools  
-**Status**: Test execution utilities  
+**Status**: Test execution utilities following testing guidelines  
 
 ## Available Tools
 
 ### Core Test Runners
 
-#### `run_all_tests.sh`
-**Purpose**: Comprehensive test automation with quality gates  
+#### `run_tests.sh` (Main Runner)
+**Purpose**: Main test runner that delegates to specialized runners  
 **Usage**: 
-```bash
-./tests/tools/run_all_tests.sh
-```
-**Features**:
-- Runs all test categories (unit, integration, security, performance, health)
-- Enforces quality gates and performance targets
-- Generates coverage reports
-- Validates API compliance
-
-#### `run_tests.sh`
-**Purpose**: Basic test runner with Go test integration  
-**Usage**:
 ```bash
 ./tests/tools/run_tests.sh [category]
 ```
 **Examples**:
 ```bash
-./tests/tools/run_tests.sh unit
-./tests/tools/run_tests.sh integration
-./tests/tools/run_tests.sh security
+./tests/tools/run_tests.sh unit        # Uses run_unit_tests.sh
+./tests/tools/run_tests.sh integration # Uses run_integration_tests.sh
+./tests/tools/run_tests.sh all         # Runs all categories in sequence
 ```
 
-#### `run_individual_tests.sh`
-**Purpose**: Individual test execution with failure categorization  
-**Usage**:
-```bash
-./tests/tools/run_individual_tests.sh [test_file]
-```
 **Features**:
-- Runs specific test files
-- Categorizes failures by type
-- Provides detailed error reporting
+- Delegates to specialized runners for unit and integration tests
+- Runs security, performance, and health tests directly
+- Coordinates test execution sequence
+- Provides unified interface for all test categories
 
-### Specialized Test Runners
-
-#### `run_critical_error_tests.sh`
-**Purpose**: Critical error handling test runner  
-**Usage**:
+#### `run_unit_tests.sh` (Specialized Unit Runner)
+**Purpose**: Run unit tests with proper coverage measurement following testing guidelines  
+**Usage**: 
 ```bash
-./tests/tools/run_critical_error_tests.sh
+./tests/tools/run_unit_tests.sh
 ```
-**Features**:
-- Tests error handling scenarios
-- Validates error codes and messages
-- Ensures graceful failure handling
 
-#### `run_integration_tests.sh`
-**Purpose**: Real system integration test runner  
-**Usage**:
+**Following Testing Guidelines**:
+- ✅ Uses `-coverpkg` flag for cross-package coverage measurement
+- ✅ Tests each package individually to avoid package conflicts
+- ✅ Generates coverage profiles per package
+- ✅ Enforces 90% coverage threshold per guidelines
+- ✅ Follows external testing pattern (`package *_test`)
+
+**Coverage Measurement**:
+```bash
+# Tests each package individually with proper flags
+go test -tags="unit" -coverpkg="./internal/websocket" ./tests/unit/test_websocket_*.go
+go test -tags="unit" -coverpkg="./internal/mediamtx" ./tests/unit/test_mediamtx_*.go
+go test -tags="unit" -coverpkg="./internal/config" ./tests/unit/test_config_*.go
+# ... and more packages
+```
+
+**Output**:
+- Individual coverage files per package
+- Combined coverage report
+- HTML coverage visualization
+- Coverage threshold validation (90% required)
+
+#### `run_integration_tests.sh` (Specialized Integration Runner)
+**Purpose**: Run integration tests with real system testing following testing guidelines  
+**Usage**: 
 ```bash
 ./tests/tools/run_integration_tests.sh
 ```
-**Features**:
-- Tests with real MediaMTX service
-- Validates system integration
-- Ensures real component compatibility
 
-### Environment Management
+**Following Testing Guidelines**:
+- ✅ Uses real system testing over mocking
+- ✅ Tests end-to-end workflows
+- ✅ Validates API compliance against documentation
+- ✅ Tests real MediaMTX service, filesystem, WebSocket connections
+- ✅ No "invented fixes" like timeouts
 
-#### `setup_test_environment.sh`
-**Purpose**: Test environment setup  
-**Usage**:
-```bash
-./tests/tools/setup_test_environment.sh
-```
-**Features**:
-- Creates test environment configuration
-- Sets up test API keys and JWT secrets
-- Configures test directories
+**Real System Testing**:
+- **MediaMTX**: Uses systemd-managed service, never mock
+- **File System**: Uses real filesystem, never mock
+- **WebSocket**: Uses real connections within system
+- **Authentication**: Uses real JWT tokens with test secrets
 
-#### `validate_test_environment.sh`
-**Purpose**: Environment validation  
-**Usage**:
-```bash
-./tests/tools/validate_test_environment.sh
-```
-**Features**:
-- Validates test environment configuration
-- Checks required services and permissions
-- Ensures test readiness
+**Test Categories**:
+- Standard integration tests
+- Quarantined tests (if any)
+- End-to-end workflow tests
+- API compliance validation
+
+**Service Validation**:
+- Checks MediaMTX service status
+- Validates WebSocket port availability
+- Confirms camera device presence
+- Ensures test environment readiness
+
+### Legacy Test Runners
+
+#### `run_all_tests.sh`
+**Purpose**: Comprehensive test automation with quality gates  
+**Status**: Legacy - use `run_tests.sh all` instead
+
+#### `run_individual_tests.sh`
+**Purpose**: Individual test execution with failure categorization  
+**Status**: Legacy - use specialized runners instead
+
+#### `run_critical_error_tests.sh`
+**Purpose**: Critical error handling test runner  
+**Status**: Legacy - use specialized runners instead
+
+#### `run_integration_tests.sh` (Old)
+**Purpose**: Real system integration test runner  
+**Status**: Replaced by new `run_integration_tests.sh`
 
 ## Usage Guidelines
 
 ### Standard Testing Workflow
 1. **Setup Environment**: `./tests/tools/setup_test_environment.sh`
-2. **Validate Environment**: `./tests/tools/validate_test_environment.sh`
-3. **Run Tests**: Use appropriate test runner based on needs
-4. **Review Results**: Check coverage and quality gate results
+2. **Run Unit Tests**: `./tests/tools/run_tests.sh unit`
+3. **Run Integration Tests**: `./tests/tools/run_tests.sh integration`
+4. **Run All Tests**: `./tests/tools/run_tests.sh all`
 
 ### For Development
 ```bash
-# Quick unit tests during development
-go test -tags=unit ./...
+# Quick unit tests with coverage measurement
+./tests/tools/run_tests.sh unit
 
 # Integration tests with real system
-./tests/tools/run_integration_tests.sh
+./tests/tools/run_tests.sh integration
 
 # Full test suite before commit
-./tests/tools/run_all_tests.sh
+./tests/tools/run_tests.sh all
 ```
 
 ### For CI/CD
 ```bash
 # Automated testing in CI
 ./tests/tools/setup_test_environment.sh
-./tests/tools/run_all_tests.sh
+./tests/tools/run_tests.sh all
 ```
+
+## Coverage Measurement
+
+### Unit Test Coverage
+- **Per Package**: Individual coverage files for each internal package
+- **Combined Report**: Overall coverage across all packages
+- **Threshold**: 90% coverage required per guidelines
+- **Output**: Coverage files in `coverage/unit/` directory
+
+### Integration Test Coverage
+- **Real System**: Coverage of real component interactions
+- **API Compliance**: Validation against API documentation
+- **End-to-End**: Complete workflow coverage
+- **Output**: Coverage files in `coverage/integration/` directory
 
 ## Tool Conventions
 
@@ -137,7 +165,23 @@ go test -tags=unit ./...
 - **Failure**: Non-zero exit code with detailed error information
 - **Reports**: Generate coverage and quality reports in standard formats
 
+## Testing Guidelines Compliance
+
+### ✅ What These Tools Follow
+- **External Testing**: Uses `package *_test` pattern
+- **Coverage Measurement**: Proper `-coverpkg` flag usage
+- **Real System Testing**: No mocking of core components
+- **API Documentation**: Validates against ground truth
+- **Coverage Thresholds**: Enforces 90% requirement
+
+### ❌ What These Tools Avoid
+- **Package Conflicts**: Tests packages individually
+- **Mocking**: Uses real components where guidelines specify
+- **Coverage Hiding**: No artificial test passing
+- **Guideline Violations**: Follows testing guide exactly
+
 ## Notes
 - **Not Test Files**: These tools orchestrate test execution, they don't validate requirements directly
 - **No Requirements Coverage**: Tools focus on test execution, not requirements validation
 - **Documentation**: Each tool is documented with purpose and usage examples
+- **Guidelines Compliance**: All tools follow testing guidelines exactly as specified

@@ -229,7 +229,7 @@ snapshots:
     require.NoError(t, err)
 
     // Load configuration
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
     cfg := manager.GetConfig()
@@ -354,7 +354,7 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
     tempDir := t.TempDir()
     configPath := filepath.Join(tempDir, "nonexistent.yaml")
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err := manager.LoadConfig(configPath)
     require.NoError(t, err) // Should not error, should use defaults
     cfg := manager.GetConfig()
@@ -397,7 +397,7 @@ server:
     err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
     require.NoError(t, err)
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err) // Should not error, should use defaults
     cfg := manager.GetConfig()
@@ -417,7 +417,7 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
     err := os.WriteFile(configPath, []byte(""), 0644)
     require.NoError(t, err)
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err) // Should not error, should use defaults
     cfg := manager.GetConfig()
@@ -455,7 +455,7 @@ server:
         os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
     }()
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
     cfg := manager.GetConfig()
@@ -482,7 +482,7 @@ server:
     err := os.WriteFile(configPath, []byte(yamlContent), 0644)
     require.NoError(t, err)
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
 
     // Load configuration in goroutine
     done := make(chan bool)
@@ -744,7 +744,7 @@ func TestConfigValidation_InvalidConfig(t *testing.T) {
 
 func TestConfigManager_GetConfig_ThreadSafe(t *testing.T) {
     // Test thread-safe access to configuration
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
 
     // Access configuration from multiple goroutines
     done := make(chan bool, 10)
@@ -764,7 +764,7 @@ func TestConfigManager_GetConfig_ThreadSafe(t *testing.T) {
 
 func TestConfigManager_AddUpdateCallback(t *testing.T) {
     // Test configuration update callback functionality
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
 
     callback := func(cfg *config.Config) {
         assert.NotNil(t, cfg)
@@ -813,7 +813,7 @@ server:
     os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
     defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
     cfg := manager.GetConfig()
@@ -873,7 +873,7 @@ server:
     os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
     defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
 
@@ -1093,7 +1093,7 @@ performance:
             os.Setenv(tc.envKey, tc.envValue)
             defer os.Unsetenv(tc.envKey)
 
-            manager := config.NewConfigManager()
+            manager := config.CreateConfigManager()
             err := manager.LoadConfig(configPath)
             require.NoError(t, err)
             cfg := manager.GetConfig()
@@ -1249,7 +1249,7 @@ snapshots:
             os.Setenv(tc.envKey, tc.envValue)
             defer os.Unsetenv(tc.envKey)
 
-            manager := config.NewConfigManager()
+            manager := config.CreateConfigManager()
             err := manager.LoadConfig(configPath)
             require.NoError(t, err)
             cfg := manager.GetConfig()
@@ -1320,7 +1320,7 @@ mediamtx:
         os.Unsetenv("CAMERA_SERVICE_MEDIAMTX_API_PORT")
     }()
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
     cfg := manager.GetConfig()
@@ -1361,7 +1361,7 @@ server:
         os.Setenv("CAMERA_SERVICE_SERVER_HOST", unicodeHost)
         defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig(configPath)
         require.NoError(t, err)
         cfg := manager.GetConfig()
@@ -1376,7 +1376,7 @@ server:
         os.Setenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH", specialPath)
         defer os.Unsetenv("CAMERA_SERVICE_SERVER_WEBSOCKET_PATH")
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig(configPath)
         require.NoError(t, err)
         cfg := manager.GetConfig()
@@ -1390,7 +1390,7 @@ server:
         os.Setenv("CAMERA_SERVICE_SERVER_HOST", "")
         defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig(configPath)
         require.NoError(t, err)
         cfg := manager.GetConfig()
@@ -1406,7 +1406,7 @@ server:
         os.Setenv("CAMERA_SERVICE_SERVER_HOST", largeValue)
         defer os.Unsetenv("CAMERA_SERVICE_SERVER_HOST")
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig(configPath)
         require.NoError(t, err)
         cfg := manager.GetConfig()
@@ -1442,7 +1442,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1467,7 +1467,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         // Viper catches type conversion errors before validation
@@ -1495,7 +1495,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1526,7 +1526,7 @@ snapshots:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1561,7 +1561,7 @@ camera:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1603,7 +1603,7 @@ snapshots:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1662,7 +1662,7 @@ snapshots:
         err := os.WriteFile(configPath, []byte(largeYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should be valid
         cfg := manager.GetConfig()
@@ -1725,7 +1725,7 @@ snapshots:
         err := os.WriteFile(configPath, []byte(boundaryYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should be valid
         cfg := manager.GetConfig()
@@ -1780,7 +1780,7 @@ logging:
         err := os.WriteFile(configPath, []byte(specialYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should be valid
         cfg := manager.GetConfig()
@@ -1813,7 +1813,7 @@ server:
         err := os.WriteFile(configPath, []byte(yamlContent), 0444) // Read-only
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should still be able to read
         cfg := manager.GetConfig()
@@ -1839,7 +1839,7 @@ server:
         err = os.Symlink(originalPath, symlinkPath)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(symlinkPath)
         require.NoError(t, err) // Should handle symlinks correctly
         cfg := manager.GetConfig()
@@ -1864,7 +1864,7 @@ server:
         err = os.WriteFile(configPath, []byte(yamlContent), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should handle deep paths correctly
         cfg := manager.GetConfig()
@@ -1955,7 +1955,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -1984,7 +1984,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(incompleteYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -2016,7 +2016,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(outOfRangeYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -2070,7 +2070,7 @@ snapshots:
         err := os.WriteFile(configPath, []byte(invalidEnumYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.Error(t, err)
         assert.Contains(t, err.Error(), "validation error")
@@ -2108,7 +2108,7 @@ mediamtx:
     os.Setenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
     defer os.Unsetenv("CAMERA_SERVICE_ENABLE_HOT_RELOAD")
 
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     err = manager.LoadConfig(configPath)
     require.NoError(t, err)
 
@@ -2325,7 +2325,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(codecYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2369,7 +2369,7 @@ mediamtx:
         err := os.WriteFile(configPath, []byte(streamYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2421,7 +2421,7 @@ ffmpeg:
         err := os.WriteFile(configPath, []byte(ffmpegYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2468,7 +2468,7 @@ notifications:
         err := os.WriteFile(configPath, []byte(notificationsYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2528,7 +2528,7 @@ performance:
         err := os.WriteFile(configPath, []byte(performanceYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2558,7 +2558,7 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
     t.Run("non_existent_directory", func(t *testing.T) {
         nonExistentPath := filepath.Join(tempDir, "nonexistent", "config.yaml")
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig(nonExistentPath)
         require.NoError(t, err) // Should use defaults
 
@@ -2573,7 +2573,7 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
         err := os.WriteFile(configPath, []byte(""), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should use defaults
 
@@ -2593,7 +2593,7 @@ func TestConfigManager_EdgeCases_Comprehensive(t *testing.T) {
         err := os.WriteFile(configPath, []byte(commentsYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should use defaults
 
@@ -2616,7 +2616,7 @@ server:
         err := os.WriteFile(configPath, []byte(malformedYAML), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err) // Should use defaults due to YAML parsing error
 
@@ -2655,7 +2655,7 @@ server:
         err := os.WriteFile(configPath, []byte(largeYAML.String()), 0644)
         require.NoError(t, err)
 
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err = manager.LoadConfig(configPath)
         require.NoError(t, err)
 
@@ -2682,7 +2682,7 @@ func TestConfigManager_ApplyEnvironmentOverrides(t *testing.T) {
     
     defer cleanupCameraServiceEnvVars()
     
-    manager := config.NewConfigManager()
+    manager := config.CreateConfigManager()
     
     // Load config with environment overrides
     err := manager.LoadConfig("")
@@ -2707,7 +2707,7 @@ func TestConfigManager_ValidateConfig(t *testing.T) {
     cleanupCameraServiceEnvVars()
     
     t.Run("valid_configuration", func(t *testing.T) {
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         
         // Load a valid configuration
         tempDir := t.TempDir()
@@ -2761,7 +2761,7 @@ snapshots:
     })
     
     t.Run("invalid_port_configuration", func(t *testing.T) {
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         
         // Set invalid port via environment variable
         os.Setenv("CAMERA_SERVICE_SERVER_PORT", "99999") // Invalid port
@@ -2778,7 +2778,7 @@ snapshots:
     })
     
     t.Run("invalid_host_configuration", func(t *testing.T) {
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         
         // Set invalid host via environment variable
         os.Setenv("CAMERA_SERVICE_SERVER_HOST", "invalid-host-name-with-spaces")
@@ -2806,7 +2806,7 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
         os.Setenv("CAMERA_SERVICE_SERVER_PORT", "")
         defer cleanupCameraServiceEnvVars()
         
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig("")
         require.NoError(t, err)
         
@@ -2823,7 +2823,7 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
         os.Setenv("CAMERA_SERVICE_SERVER_PORT", "   ")
         defer cleanupCameraServiceEnvVars()
         
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig("")
         require.NoError(t, err)
         
@@ -2840,7 +2840,7 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
         os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", "DEBUG")
         defer cleanupCameraServiceEnvVars()
         
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig("")
         require.NoError(t, err)
         
@@ -2860,7 +2860,7 @@ func TestConfigManager_EnvironmentOverrideEdgeCases(t *testing.T) {
         os.Setenv("CAMERA_SERVICE_LOGGING_LEVEL", longLevel)
         defer cleanupCameraServiceEnvVars()
         
-        manager := config.NewConfigManager()
+        manager := config.CreateConfigManager()
         err := manager.LoadConfig("")
         require.NoError(t, err)
         

@@ -1,10 +1,11 @@
-package security
+package security_test
 
 import (
 	"testing"
-	"github.com/sirupsen/logrus"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // MockClientConnection implements ClientConnection interface for testing
@@ -15,23 +16,23 @@ type MockClientConnection struct {
 	authenticated bool
 }
 
-func (m *MockClientConnection) GetClientID() string { return m.clientID }
-func (m *MockClientConnection) GetUserID() string { return m.userID }
-func (m *MockClientConnection) GetRole() string { return m.role }
+func (m *MockClientConnection) GetClientID() string   { return m.clientID }
+func (m *MockClientConnection) GetUserID() string     { return m.userID }
+func (m *MockClientConnection) GetRole() string       { return m.role }
 func (m *MockClientConnection) IsAuthenticated() bool { return m.authenticated }
 
 // MockJsonRpcResponse implements JsonRpcResponse interface for testing
 type MockJsonRpcResponse struct {
 	jsonrpc string
 	result  interface{}
-	error   JsonRpcError
+	error   security.JsonRpcError
 	id      interface{}
 }
 
-func (m *MockJsonRpcResponse) GetJSONRPC() string { return m.jsonrpc }
-func (m *MockJsonRpcResponse) GetResult() interface{} { return m.result }
-func (m *MockJsonRpcResponse) GetError() JsonRpcError { return m.error }
-func (m *MockJsonRpcResponse) GetID() interface{} { return m.id }
+func (m *MockJsonRpcResponse) GetJSONRPC() string              { return m.jsonrpc }
+func (m *MockJsonRpcResponse) GetResult() interface{}          { return m.result }
+func (m *MockJsonRpcResponse) GetError() security.JsonRpcError { return m.error }
+func (m *MockJsonRpcResponse) GetID() interface{}              { return m.id }
 
 // MockJsonRpcError implements JsonRpcError interface for testing
 type MockJsonRpcError struct {
@@ -40,8 +41,8 @@ type MockJsonRpcError struct {
 	data    interface{}
 }
 
-func (m *MockJsonRpcError) GetCode() int { return m.code }
-func (m *MockJsonRpcError) GetMessage() string { return m.message }
+func (m *MockJsonRpcError) GetCode() int         { return m.code }
+func (m *MockJsonRpcError) GetMessage() string   { return m.message }
 func (m *MockJsonRpcError) GetData() interface{} { return m.data }
 
 // MockSecurityConfig implements SecurityConfig interface for testing
@@ -52,26 +53,26 @@ type MockSecurityConfig struct {
 	jwtExpiryHours    int
 }
 
-func (m *MockSecurityConfig) GetRateLimitRequests() int { return m.rateLimitRequests }
+func (m *MockSecurityConfig) GetRateLimitRequests() int       { return m.rateLimitRequests }
 func (m *MockSecurityConfig) GetRateLimitWindow() interface{} { return m.rateLimitWindow }
-func (m *MockSecurityConfig) GetJWTSecretKey() string { return m.jwtSecretKey }
-func (m *MockSecurityConfig) GetJWTExpiryHours() int { return m.jwtExpiryHours }
+func (m *MockSecurityConfig) GetJWTSecretKey() string         { return m.jwtSecretKey }
+func (m *MockSecurityConfig) GetJWTExpiryHours() int          { return m.jwtExpiryHours }
 
 func TestNewAuthMiddleware(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
 
-	middleware := NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(logger, config)
 
 	assert.NotNil(t, middleware)
-	assert.Equal(t, logger, middleware.logger)
-	assert.Equal(t, config, middleware.config)
+	// Note: Fields are unexported, so we can't test them directly
+	// This is intentional for encapsulation
 }
 
 func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	middleware := NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(logger, config)
 
 	// Mock authenticated client
 	client := &MockClientConnection{
@@ -83,7 +84,7 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 
 	// Mock handler that should be called
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
@@ -101,9 +102,9 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 }
 
 func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	middleware := NewAuthMiddleware(logger, config)
+	middleware := security.NewAuthMiddleware(logger, config)
 
 	// Mock unauthenticated client
 	client := &MockClientConnection{
@@ -115,7 +116,7 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 
 	// Mock handler that should NOT be called
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
@@ -134,23 +135,22 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 }
 
 func TestNewRBACMiddleware(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
+	permissionChecker := security.NewPermissionChecker()
 
-	middleware := NewRBACMiddleware(permissionChecker, logger, config)
+	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
 	assert.NotNil(t, middleware)
-	assert.Equal(t, logger, middleware.logger)
-	assert.Equal(t, config, middleware.config)
-	assert.Equal(t, permissionChecker, middleware.permissionChecker)
+	// Note: Fields are unexported, so we can't test them directly
+	// This is intentional for encapsulation
 }
 
 func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	middleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
 	// Mock client with operator role
 	client := &MockClientConnection{
@@ -162,13 +162,13 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 
 	// Mock handler that should be called
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Apply RBAC middleware requiring operator role
-	securedHandler := middleware.RequireRole(RoleOperator, handler)
+	securedHandler := middleware.RequireRole(security.RoleOperator, handler)
 
 	// Call the secured handler
 	response, err := securedHandler(map[string]interface{}{}, client)
@@ -180,10 +180,10 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 }
 
 func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	middleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
 	// Mock client with viewer role
 	client := &MockClientConnection{
@@ -195,13 +195,13 @@ func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 
 	// Mock handler that should NOT be called
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Apply RBAC middleware requiring admin role
-	securedHandler := middleware.RequireRole(RoleAdmin, handler)
+	securedHandler := middleware.RequireRole(security.RoleAdmin, handler)
 
 	// Call the secured handler
 	response, err := securedHandler(map[string]interface{}{}, client)
@@ -214,10 +214,10 @@ func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 }
 
 func TestRBACMiddleware_RequireRole_InvalidRole(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	middleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	middleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
 	// Mock client with invalid role
 	client := &MockClientConnection{
@@ -229,13 +229,13 @@ func TestRBACMiddleware_RequireRole_InvalidRole(t *testing.T) {
 
 	// Mock handler that should NOT be called
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Apply RBAC middleware requiring viewer role
-	securedHandler := middleware.RequireRole(RoleViewer, handler)
+	securedHandler := middleware.RequireRole(security.RoleViewer, handler)
 
 	// Call the secured handler
 	response, err := securedHandler(map[string]interface{}{}, client)
@@ -248,40 +248,37 @@ func TestRBACMiddleware_RequireRole_InvalidRole(t *testing.T) {
 }
 
 func TestNewSecureMethodRegistry(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	assert.NotNil(t, registry)
-	assert.Equal(t, logger, registry.logger)
-	assert.Equal(t, config, registry.config)
-	assert.Equal(t, authMiddleware, registry.auth)
-	assert.Equal(t, rbacMiddleware, registry.rbac)
-	assert.NotNil(t, registry.methods)
+	// Note: Fields are unexported, so we can't test them directly
+	// This is intentional for encapsulation
 }
 
 func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	// Mock handler
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Register method with viewer role
-	registry.RegisterMethod("test_method", handler, RoleViewer)
+	registry.RegisterMethod("test_method", handler, security.RoleViewer)
 
 	// Verify method was registered
 	registeredHandler, exists := registry.GetMethod("test_method")
@@ -303,23 +300,23 @@ func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 }
 
 func TestSecureMethodRegistry_RegisterMethod_AdminRole(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	// Mock handler
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Register method with admin role
-	registry.RegisterMethod("admin_method", handler, RoleAdmin)
+	registry.RegisterMethod("admin_method", handler, security.RoleAdmin)
 
 	// Verify method was registered
 	registeredHandler, exists := registry.GetMethod("admin_method")
@@ -354,22 +351,22 @@ func TestSecureMethodRegistry_RegisterMethod_AdminRole(t *testing.T) {
 }
 
 func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	// Register multiple methods
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
-	registry.RegisterMethod("method1", handler, RoleViewer)
-	registry.RegisterMethod("method2", handler, RoleOperator)
-	registry.RegisterMethod("method3", handler, RoleAdmin)
+	registry.RegisterMethod("method1", handler, security.RoleViewer)
+	registry.RegisterMethod("method2", handler, security.RoleOperator)
+	registry.RegisterMethod("method3", handler, security.RoleAdmin)
 
 	// Get all methods
 	methods := registry.GetAllMethods()
@@ -382,13 +379,13 @@ func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 }
 
 func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
 
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	// Get security info for non-existent method
 	info := registry.GetMethodSecurityInfo("non_existent")
@@ -399,22 +396,22 @@ func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 }
 
 func TestSecurityMiddleware_Integration(t *testing.T) {
-	logger := logrus.New()
+	logger := logging.NewLogger("security_test")
 	config := &MockSecurityConfig{}
-	permissionChecker := NewPermissionChecker(logger)
-	authMiddleware := NewAuthMiddleware(logger, config)
-	rbacMiddleware := NewRBACMiddleware(permissionChecker, logger, config)
-	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
+	permissionChecker := security.NewPermissionChecker()
+	authMiddleware := security.NewAuthMiddleware(logger, config)
+	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, logger, config)
+	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, config)
 
 	// Mock handler
 	handlerCalled := false
-	handler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
 		handlerCalled = true
 		return &MockJsonRpcResponse{result: "success"}, nil
 	}
 
 	// Register method with operator role
-	registry.RegisterMethod("test_integration", handler, RoleOperator)
+	registry.RegisterMethod("test_integration", handler, security.RoleOperator)
 
 	// Test unauthenticated access (should fail at auth layer)
 	unauthenticatedClient := &MockClientConnection{

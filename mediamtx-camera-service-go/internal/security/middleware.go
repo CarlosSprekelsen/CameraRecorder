@@ -3,6 +3,7 @@ package security
 import (
 	"fmt"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,12 +43,12 @@ type MethodHandler func(params map[string]interface{}, client ClientConnection) 
 
 // AuthMiddleware provides centralized authentication enforcement
 type AuthMiddleware struct {
-	logger *logrus.Logger
+	logger *logging.Logger
 	config SecurityConfig
 }
 
 // NewAuthMiddleware creates a new authentication middleware
-func NewAuthMiddleware(logger *logrus.Logger, securityConfig SecurityConfig) *AuthMiddleware {
+func NewAuthMiddleware(logger *logging.Logger, securityConfig SecurityConfig) *AuthMiddleware {
 	return &AuthMiddleware{
 		logger: logger,
 		config: securityConfig,
@@ -62,6 +63,7 @@ func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 				"client_id": client.GetClientID(),
 				"method":    "authentication_required",
 				"action":    "auth_bypass_attempt",
+				"component": "security_auth",
 			}).Warn("Authentication bypass attempt blocked")
 
 			// Return error response (implementation will need to create concrete type)
@@ -74,6 +76,7 @@ func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 			"role":      client.GetRole(),
 			"method":    "authentication_success",
 			"action":    "auth_check_passed",
+			"component": "security_auth",
 		}).Debug("Authentication check passed")
 
 		return handler(params, client)
@@ -83,12 +86,12 @@ func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 // RBACMiddleware provides centralized role-based access control
 type RBACMiddleware struct {
 	permissionChecker *PermissionChecker
-	logger            *logrus.Logger
+	logger            *logging.Logger
 	config            SecurityConfig
 }
 
 // NewRBACMiddleware creates a new RBAC middleware
-func NewRBACMiddleware(permissionChecker *PermissionChecker, logger *logrus.Logger, securityConfig SecurityConfig) *RBACMiddleware {
+func NewRBACMiddleware(permissionChecker *PermissionChecker, logger *logging.Logger, securityConfig SecurityConfig) *RBACMiddleware {
 	return &RBACMiddleware{
 		permissionChecker: permissionChecker,
 		logger:            logger,
@@ -106,6 +109,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 				"role":      client.GetRole(),
 				"error":     err.Error(),
 				"action":    "role_validation_failed",
+				"component": "security_rbac",
 			}).Error("Role validation failed")
 
 			return nil, fmt.Errorf("insufficient permissions: invalid role %s", client.GetRole())
@@ -117,6 +121,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 				"user_role":     userRole.String(),
 				"required_role": requiredRole.String(),
 				"action":        "permission_denied",
+				"component":     "security_rbac",
 			}).Warn("Permission denied - insufficient role")
 
 			return nil, fmt.Errorf("insufficient permissions: required role %s, user role %s", requiredRole.String(), userRole.String())
@@ -127,6 +132,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 			"user_role":     userRole.String(),
 			"required_role": requiredRole.String(),
 			"action":        "permission_granted",
+			"component":     "security_rbac",
 		}).Debug("Permission check passed")
 
 		return handler(params, client)
@@ -138,12 +144,12 @@ type SecureMethodRegistry struct {
 	methods map[string]MethodHandler
 	auth    *AuthMiddleware
 	rbac    *RBACMiddleware
-	logger  *logrus.Logger
+	logger  *logging.Logger
 	config  SecurityConfig
 }
 
 // NewSecureMethodRegistry creates a new secure method registry
-func NewSecureMethodRegistry(auth *AuthMiddleware, rbac *RBACMiddleware, logger *logrus.Logger, securityConfig SecurityConfig) *SecureMethodRegistry {
+func NewSecureMethodRegistry(auth *AuthMiddleware, rbac *RBACMiddleware, logger *logging.Logger, securityConfig SecurityConfig) *SecureMethodRegistry {
 	return &SecureMethodRegistry{
 		methods: make(map[string]MethodHandler),
 		auth:    auth,
@@ -169,6 +175,7 @@ func (smr *SecureMethodRegistry) RegisterMethod(methodName string, handler Metho
 		"method":        methodName,
 		"required_role": requiredRole.String(),
 		"action":        "method_registered",
+		"component":     "security_registry",
 	}).Info("Method registered with security enforcement")
 }
 

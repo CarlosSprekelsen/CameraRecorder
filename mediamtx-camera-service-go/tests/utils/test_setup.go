@@ -257,7 +257,7 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 	// Start camera monitor to discover cameras
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	err = cameraMonitor.Start(ctx)
 	require.NoError(t, err, "Failed to start camera monitor")
 
@@ -322,7 +322,7 @@ func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment)
 		t.Log("Starting MediaMTX controller teardown")
 
 		// Clean up test artifacts before stopping controller
-		CleanupTestArtifacts(t, env.Controller)
+		NuclearTestCleanup(t, env.TempDir)
 
 		// Stop controller with timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -348,7 +348,7 @@ func TeardownMediaMTXTestEnvironment(t *testing.T, env *MediaMTXTestEnvironment)
 func TeardownTestEnvironment(t *testing.T, env *TestEnvironment) {
 	if env != nil && env.TempDir != "" {
 		// Clean up any remaining test files
-		CleanupTestFiles(t, env.TempDir)
+		NuclearTestCleanup(t, env.TempDir)
 
 		// Remove temp directory
 		err := os.RemoveAll(env.TempDir)
@@ -358,124 +358,6 @@ func TeardownTestEnvironment(t *testing.T, env *TestEnvironment) {
 			t.Logf("Temp directory cleaned up: %s", env.TempDir)
 		}
 	}
-}
-
-// CleanupTestArtifacts cleans up all test artifacts created during testing
-// This prevents disk space issues and ensures clean test runs
-func CleanupTestArtifacts(t *testing.T, controller mediamtx.MediaMTXController) {
-	if controller == nil {
-		return
-	}
-
-	t.Log("Starting test artifacts cleanup")
-
-	// Create context with timeout for cleanup operations
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Clean up old snapshots (keep only last 5, max age 1 minute for tests)
-	if err := controller.GetSnapshotManager().CleanupOldSnapshots(ctx, 1*time.Minute, 5); err != nil {
-		t.Logf("Warning: Failed to cleanup old snapshots: %v", err)
-	} else {
-		t.Log("Old snapshots cleaned up successfully")
-	}
-
-	// Clean up old recordings (keep only last 3, max age 1 minute for tests)
-	if err := controller.GetRecordingManager().CleanupOldRecordings(ctx, 1*time.Minute, 3); err != nil {
-		t.Logf("Warning: Failed to cleanup old recordings: %v", err)
-	} else {
-		t.Log("Old recordings cleaned up successfully")
-	}
-
-	// Stop any active recording sessions
-	CleanupActiveSessions(t, controller)
-
-	// Clean up MediaMTX paths created during testing
-	CleanupTestMediaMTXPaths(t, controller)
-
-	t.Log("Test artifacts cleanup completed")
-}
-
-// CleanupTestFiles removes test files from the filesystem
-// This ensures no test artifacts remain on disk
-func CleanupTestFiles(t *testing.T, tempDir string) {
-	if tempDir == "" {
-		return
-	}
-
-	t.Logf("Cleaning up test files in: %s", tempDir)
-
-	// Define test file patterns to clean up
-	testPatterns := []string{
-		"*.mp4",    // Test recordings
-		"*.avi",    // Test recordings
-		"*.mkv",    // Test recordings
-		"*.jpg",    // Test snapshots
-		"*.jpeg",   // Test snapshots
-		"*.png",    // Test snapshots
-		"*.h264",   // Test video streams
-		"*.h265",   // Test video streams
-		"test_*",   // Test-specific files
-		"*_test.*", // Test-specific files
-	}
-
-	for _, pattern := range testPatterns {
-		matches, err := filepath.Glob(filepath.Join(tempDir, pattern))
-		if err != nil {
-			t.Logf("Warning: Failed to glob pattern %s: %v", pattern, err)
-			continue
-		}
-
-		for _, match := range matches {
-			if err := os.Remove(match); err != nil {
-				t.Logf("Warning: Failed to remove test file %s: %v", match, err)
-			} else {
-				t.Logf("Removed test file: %s", match)
-			}
-		}
-	}
-
-	// Clean up common test directories
-	testDirs := []string{
-		"recordings",
-		"snapshots",
-		"streams",
-		"temp",
-		"cache",
-	}
-
-	for _, dir := range testDirs {
-		dirPath := filepath.Join(tempDir, dir)
-		if _, err := os.Stat(dirPath); err == nil {
-			if err := os.RemoveAll(dirPath); err != nil {
-				t.Logf("Warning: Failed to remove test directory %s: %v", dirPath, err)
-			} else {
-				t.Logf("Removed test directory: %s", dirPath)
-			}
-		}
-	}
-}
-
-// CleanupActiveSessions stops any active recording sessions created during testing
-func CleanupActiveSessions(t *testing.T, controller mediamtx.MediaMTXController) {
-	// This would require additional methods in the MediaMTX controller
-	// For now, we rely on the controller's own cleanup mechanisms
-	t.Log("Active sessions cleanup relies on controller mechanisms")
-}
-
-// CleanupTestMediaMTXPaths removes MediaMTX paths created during testing
-func CleanupTestMediaMTXPaths(t *testing.T, controller mediamtx.MediaMTXController) {
-	// This would require additional methods in the MediaMTX controller
-	// For now, we rely on the controller's own cleanup mechanisms
-	t.Log("MediaMTX paths cleanup relies on controller mechanisms")
-}
-
-// CleanupOldRecordings cleans up old recordings (helper function)
-func CleanupOldRecordings(ctx context.Context, controller mediamtx.MediaMTXController, maxAge time.Duration, maxCount int) error {
-	// This is a placeholder - the actual implementation would depend on
-	// the MediaMTX controller having a CleanupOldRecordings method
-	// For now, we'll skip this to avoid compilation errors
-	return nil
 }
 
 // CheckDiskSpace checks available disk space and warns if it's low
@@ -520,7 +402,7 @@ func ForceCleanupTestArtifacts(t *testing.T) {
 		}
 
 		// Clean up test files in common locations
-		CleanupTestFiles(t, dir)
+		NuclearTestCleanup(t, dir)
 
 		// Check disk space after cleanup
 		CheckDiskSpace(t, dir)

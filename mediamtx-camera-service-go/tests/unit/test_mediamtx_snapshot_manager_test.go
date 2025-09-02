@@ -99,7 +99,7 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 	t.Run("CleanupOldSnapshots_Integration", func(t *testing.T) {
 		// Test cleanup functionality - this calls the real snapshot manager
 		// For unit tests, we validate the method exists and handles errors
-		err := env.Controller.CleanupOldSnapshots(ctx, 24*time.Hour, 100)
+		err := env.Controller.GetSnapshotManager().CleanupOldSnapshots(ctx, 24*time.Hour, 100)
 		if err != nil {
 			t.Logf("Snapshot cleanup failed: %v", err)
 		}

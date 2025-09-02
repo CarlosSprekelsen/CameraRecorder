@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -45,7 +46,7 @@ type EnhancedRateLimiter struct {
 	clientLimits  map[string]*ClientRateLimit
 	globalLimiter *rate.Limiter
 	mutex         sync.RWMutex
-	logger        *logrus.Logger
+	logger        *logging.Logger
 	config        interface{} // Will be typed based on existing config structure
 
 	// DDoS protection
@@ -55,7 +56,7 @@ type EnhancedRateLimiter struct {
 }
 
 // NewEnhancedRateLimiter creates a new enhanced rate limiter
-func NewEnhancedRateLimiter(logger *logrus.Logger, config interface{}) *EnhancedRateLimiter {
+func NewEnhancedRateLimiter(logger *logging.Logger, config interface{}) *EnhancedRateLimiter {
 	limiter := &EnhancedRateLimiter{
 		limits:               make(map[string]*RateLimitConfig),
 		clientLimits:         make(map[string]*ClientRateLimit),
@@ -67,10 +68,39 @@ func NewEnhancedRateLimiter(logger *logrus.Logger, config interface{}) *Enhanced
 		blockDuration:        5 * time.Minute, // Block for 5 minutes
 	}
 
-	// Set default rate limits for common methods
-	limiter.setDefaultLimits()
+	// Set default rate limits from configuration if available
+	if config != nil {
+		// Try to use config adapter if available
+		if adapter, ok := config.(*ConfigAdapter); ok {
+			limiter.setConfigBasedLimits(adapter)
+		} else {
+			// Fall back to default limits
+			limiter.setDefaultLimits()
+		}
+	} else {
+		// No config provided, use defaults
+		limiter.setDefaultLimits()
+	}
 
 	return limiter
+}
+
+// setConfigBasedLimits sets rate limits from configuration adapter
+func (erl *EnhancedRateLimiter) setConfigBasedLimits(adapter *ConfigAdapter) {
+	// Get rate limits from existing configuration
+	configLimits := adapter.CreateRateLimiterConfig()
+
+	// Apply configured limits
+	for method, config := range configLimits {
+		erl.limits[method] = config
+		erl.logger.WithFields(logrus.Fields{
+			"method":              method,
+			"requests_per_second": config.RequestsPerSecond,
+			"burst_size":          config.BurstSize,
+			"action":              "config_rate_limit_applied",
+			"component":           "security_rate_limiter",
+		}).Info("Configuration-based rate limit applied")
+	}
 }
 
 // setDefaultLimits sets default rate limits for common methods

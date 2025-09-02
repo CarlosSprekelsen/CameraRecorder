@@ -205,11 +205,11 @@ func TestConfigManager_SaveConfig_Success(t *testing.T) {
 	require.FileExists(t, savedConfigPath)
 
 	// Load the saved config to verify it was saved correctly
-	newConfigManager := config.CreateConfigManager()
-	err = newConfigManager.LoadConfig(savedConfigPath)
+	CreateConfigManager := config.CreateConfigManager()
+	err = CreateConfigManager.LoadConfig(savedConfigPath)
 	require.NoError(t, err)
 
-	savedCfg := newConfigManager.GetConfig()
+	savedCfg := CreateConfigManager.GetConfig()
 	require.NotNil(t, savedCfg)
 	assert.Equal(t, "192.168.1.100", savedCfg.Server.Host)
 	assert.Equal(t, 9000, savedCfg.Server.Port)

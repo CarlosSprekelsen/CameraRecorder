@@ -45,6 +45,64 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 
 ---
 
+## Security Architecture
+
+### Security Middleware Design
+The security layer is designed to integrate seamlessly with existing systems rather than creating parallel infrastructure:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Security Layer                          │
+├─────────────────────────────────────────────────────────────┤
+│            Authentication Middleware                       │
+│     • JWT token validation                                │
+│     • Session management                                  │
+│     • Uses existing SecurityConfig                        │
+├─────────────────────────────────────────────────────────────┤
+│            RBAC Middleware                                │
+│     • Role-based access control                           │
+│     • Permission matrix enforcement                       │
+│     • Integrates with existing PermissionChecker          │
+├─────────────────────────────────────────────────────────────┤
+│            Rate Limiting                                  │
+│     • Per-method rate limits                              │
+│     • DDoS protection                                     │
+│     • Uses existing SecurityConfig values                 │
+├─────────────────────────────────────────────────────────────┤
+│            Input Validation                               │
+│     • Parameter sanitization                              │
+│     • Type safety enforcement                             │
+│     • Centralized validation logic                        │
+├─────────────────────────────────────────────────────────────┤
+│            Audit Logging                                  │
+│     • Security event tracking                             │
+│     • Uses existing LoggingConfig                         │
+│     • File rotation and retention                         │
+└─────────────────────┬──────────────────────────────────────┘
+                      │ Configuration Integration
+┌─────────────────────▼──────────────────────────────────────┐
+│            Existing Configuration System                   │
+│     • SecurityConfig for rate limits and JWT settings     │
+│     • LoggingConfig for audit log configuration           │
+│     • No hard-coded values or parallel infrastructure    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Security Integration Principles
+1. **Leverage Existing Systems**: Use `SecurityConfig`, `LoggingConfig`, and existing logger
+2. **No Hard-coded Values**: All security parameters come from configuration
+3. **Transparent Integration**: Security middleware works seamlessly with existing code
+4. **Configuration Adapter Pattern**: Bridge between security middleware and existing config
+5. **Audit Trail**: Comprehensive logging of all security events
+
+### Security Middleware Components
+- **AuthMiddleware**: Centralized authentication enforcement
+- **RBACMiddleware**: Role-based access control with existing permission matrix
+- **EnhancedRateLimiter**: Rate limiting using existing configuration values
+- **InputValidator**: Centralized input validation and sanitization
+- **SecurityAuditLogger**: Comprehensive security event logging
+- **ConfigAdapter**: Bridge between security middleware and existing configuration
+
 ## Component Architecture
 
 ```
@@ -63,6 +121,8 @@ The MediaMTX Camera Service Go implementation is a high-performance wrapper arou
 │     • JSON-RPC 2.0 protocol handling                      │
 │     • Real-time notifications (<20ms latency)             │
 │     • Authentication and authorization (golang-jwt/jwt/v4) │
+│     • Security middleware with RBAC enforcement            │
+│     • Rate limiting and DDoS protection                   │
 │     • API abstraction layer (camera0 ↔ /dev/video0)       │
 ├─────────────────────────────────────────────────────────────┤
 │             Camera Discovery Monitor (goroutines)         │

@@ -119,16 +119,17 @@ func (ca *ConfigAdapter) IsConsoleLoggingEnabled() bool {
 }
 
 // CreateAuditLoggerConfig creates audit logger config from existing config
-func (ca *ConfigAdapter) CreateAuditLoggerConfig() *AuditLoggerConfig {
-	return &AuditLoggerConfig{
-		LogDirectory:         ca.GetLogFilePath() + "/security",
-		MaxFileSize:          ca.GetMaxLogFileSize(),
-		MaxFileAge:           30 * 24 * time.Hour, // 30 days
-		RotationInterval:     1 * time.Hour,
-		BufferSize:           1000,
-		EnableFileLogging:    ca.IsFileLoggingEnabled(),
-		EnableConsoleLogging: ca.IsConsoleLoggingEnabled(),
-		LogLevel:             ca.GetLogLevel(),
+// Note: This now returns a map since we're using the existing logging module
+func (ca *ConfigAdapter) CreateAuditLoggerConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"log_directory":          ca.GetLogFilePath() + "/security",
+		"max_file_size":          ca.GetMaxLogFileSize(),
+		"max_file_age":           30 * 24 * time.Hour, // 30 days
+		"rotation_interval":      1 * time.Hour,
+		"buffer_size":            1000,
+		"enable_file_logging":    ca.IsFileLoggingEnabled(),
+		"enable_console_logging": ca.IsConsoleLoggingEnabled(),
+		"log_level":              ca.GetLogLevel(),
 	}
 }
 

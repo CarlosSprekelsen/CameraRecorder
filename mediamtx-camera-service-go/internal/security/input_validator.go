@@ -7,17 +7,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 )
 
 // InputValidator provides centralized input validation and sanitization
 type InputValidator struct {
-	logger *logrus.Logger
+	logger *logging.Logger
 	config interface{} // Will be typed based on existing config structure
 }
 
 // NewInputValidator creates a new input validator
-func NewInputValidator(logger *logrus.Logger, config interface{}) *InputValidator {
+func NewInputValidator(logger *logging.Logger, config interface{}) *InputValidator {
 	return &InputValidator{
 		logger: logger,
 		config: config,
@@ -37,8 +38,8 @@ func (ve *ValidationError) Error() string {
 
 // ValidationResult contains validation results
 type ValidationResult struct {
-	Valid   bool
-	Errors  []*ValidationError
+	Valid    bool
+	Errors   []*ValidationError
 	Warnings []string
 }
 
@@ -83,12 +84,12 @@ func (vr *ValidationResult) GetErrorMessages() []string {
 // Camera ID validation patterns
 var (
 	cameraIDPatterns = []*regexp.Regexp{
-		regexp.MustCompile(`^camera[0-9]+$`),                                    // USB cameras
-		regexp.MustCompile(`^ip_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`),         // IP cameras
-		regexp.MustCompile(`^http_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`),       // HTTP cameras
+		regexp.MustCompile(`^camera[0-9]+$`),                                      // USB cameras
+		regexp.MustCompile(`^ip_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`),             // IP cameras
+		regexp.MustCompile(`^http_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`),           // HTTP cameras
 		regexp.MustCompile(`^network_camera_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`), // Network cameras
-		regexp.MustCompile(`^file_camera_[a-zA-Z0-9_]+$`),                       // File sources
-		regexp.MustCompile(`^camera_[0-9]+$`),                                   // Hash-based fallback
+		regexp.MustCompile(`^file_camera_[a-zA-Z0-9_]+$`),                         // File sources
+		regexp.MustCompile(`^camera_[0-9]+$`),                                     // Hash-based fallback
 	}
 )
 
@@ -439,7 +440,7 @@ func (iv *InputValidator) SanitizeString(input string) string {
 // SanitizeMap sanitizes all string values in a map
 func (iv *InputValidator) SanitizeMap(input map[string]interface{}) map[string]interface{} {
 	sanitized := make(map[string]interface{})
-	
+
 	for key, value := range input {
 		switch v := value.(type) {
 		case string:
@@ -450,6 +451,6 @@ func (iv *InputValidator) SanitizeMap(input map[string]interface{}) map[string]i
 			sanitized[key] = value
 		}
 	}
-	
+
 	return sanitized
 }
