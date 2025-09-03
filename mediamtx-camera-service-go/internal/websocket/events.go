@@ -27,33 +27,33 @@ import (
 type EventTopic string
 
 const (
-		// Camera events
-	TopicCameraConnected    EventTopic = "camera.connected"
-	TopicCameraDisconnected EventTopic = "camera.disconnected"
-	TopicCameraStatusChange EventTopic = "camera.status_change"
+	// Camera events
+	TopicCameraConnected          EventTopic = "camera.connected"
+	TopicCameraDisconnected       EventTopic = "camera.disconnected"
+	TopicCameraStatusChange       EventTopic = "camera.status_change"
 	TopicCameraCapabilityDetected EventTopic = "camera.capability_detected"
 	TopicCameraCapabilityError    EventTopic = "camera.capability_error"
-	
+
 	// Recording events
 	TopicRecordingStart    EventTopic = "recording.start"
 	TopicRecordingStop     EventTopic = "recording.stop"
 	TopicRecordingProgress EventTopic = "recording.progress"
 	TopicRecordingError    EventTopic = "recording.error"
-	
+
 	// Snapshot events
 	TopicSnapshotTaken EventTopic = "snapshot.taken"
 	TopicSnapshotError EventTopic = "snapshot.error"
-	
+
 	// System events
-	TopicSystemHealth EventTopic = "system.health"
-	TopicSystemError  EventTopic = "system.error"
-	TopicSystemStartup EventTopic = "system.startup"
+	TopicSystemHealth   EventTopic = "system.health"
+	TopicSystemError    EventTopic = "system.error"
+	TopicSystemStartup  EventTopic = "system.startup"
 	TopicSystemShutdown EventTopic = "system.shutdown"
-	
+
 	// MediaMTX events
-	TopicMediaMTXStream EventTopic = "mediamtx.stream"
-	TopicMediaMTXPath   EventTopic = "mediamtx.path"
-	TopicMediaMTXError  EventTopic = "mediamtx.error"
+	TopicMediaMTXStream           EventTopic = "mediamtx.stream"
+	TopicMediaMTXPath             EventTopic = "mediamtx.path"
+	TopicMediaMTXError            EventTopic = "mediamtx.error"
 	TopicMediaMTXRecordingStarted EventTopic = "mediamtx.recording_started"
 	TopicMediaMTXRecordingStopped EventTopic = "mediamtx.recording_stopped"
 	TopicMediaMTXStreamStarted    EventTopic = "mediamtx.stream_started"
@@ -322,7 +322,7 @@ func (em *EventManager) isValidTopic(topic EventTopic) bool {
 		TopicMediaMTXRecordingStarted, TopicMediaMTXRecordingStopped,
 		TopicMediaMTXStreamStarted, TopicMediaMTXStreamStopped,
 	}
-	
+
 	for _, valid := range validTopics {
 		if topic == valid {
 			return true
@@ -425,7 +425,7 @@ func (em *EventManager) processEventHandlers(event *EventMessage) error {
 	for _, handler := range handlers {
 		if err := handler(event); err != nil {
 			em.logger.WithError(err).WithField("event_id", event.EventID).Error("Event handler failed")
-			return err
+			return fmt.Errorf("event handler failed for event %s: %w", event.EventID, err)
 		}
 	}
 

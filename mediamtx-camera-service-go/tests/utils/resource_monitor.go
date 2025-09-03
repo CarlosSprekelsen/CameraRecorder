@@ -21,23 +21,23 @@ type ResourceMonitor struct {
 
 // ResourceMeasurement represents a single resource measurement
 type ResourceMeasurement struct {
-	Timestamp     time.Time
-	CPUPercent    float64
-	MemoryMB      float64
+	Timestamp      time.Time
+	CPUPercent     float64
+	MemoryMB       float64
 	GoroutineCount int
-	HeapAllocMB   float64
-	HeapSysMB     float64
-	HeapIdleMB    float64
-	HeapInuseMB   float64
+	HeapAllocMB    float64
+	HeapSysMB      float64
+	HeapIdleMB     float64
+	HeapInuseMB    float64
 	HeapReleasedMB float64
-	HeapObjects   uint64
+	HeapObjects    uint64
 }
 
 // NewResourceMonitor creates a new resource monitor
 func NewResourceMonitor() *ResourceMonitor {
 	return &ResourceMonitor{
-		startTime:     time.Now(),
-		measurements:  make([]ResourceMeasurement, 0),
+		startTime:    time.Now(),
+		measurements: make([]ResourceMeasurement, 0),
 	}
 }
 
@@ -58,23 +58,23 @@ func (rm *ResourceMonitor) Measure() ResourceMeasurement {
 
 	// Calculate CPU usage based on goroutine activity
 	goroutineCount := runtime.NumGoroutine()
-	
+
 	// Estimate CPU usage (in production, use proper CPU monitoring)
 	// This is a simplified approach - for accurate CPU monitoring,
 	// consider using gopsutil or similar libraries
 	cpuPercent := float64(goroutineCount) * 0.3 // Conservative estimate
 
 	measurement := ResourceMeasurement{
-		Timestamp:       time.Now(),
-		CPUPercent:      cpuPercent,
-		MemoryMB:        float64(m.Alloc) / 1024 / 1024,
-		GoroutineCount:  goroutineCount,
-		HeapAllocMB:     float64(m.HeapAlloc) / 1024 / 1024,
-		HeapSysMB:       float64(m.HeapSys) / 1024 / 1024,
-		HeapIdleMB:      float64(m.HeapIdle) / 1024 / 1024,
-		HeapInuseMB:     float64(m.HeapInuse) / 1024 / 1024,
-		HeapReleasedMB:  float64(m.HeapReleased) / 1024 / 1024,
-		HeapObjects:     m.HeapObjects,
+		Timestamp:      time.Now(),
+		CPUPercent:     cpuPercent,
+		MemoryMB:       float64(m.Alloc) / 1024 / 1024,
+		GoroutineCount: goroutineCount,
+		HeapAllocMB:    float64(m.HeapAlloc) / 1024 / 1024,
+		HeapSysMB:      float64(m.HeapSys) / 1024 / 1024,
+		HeapIdleMB:     float64(m.HeapIdle) / 1024 / 1024,
+		HeapInuseMB:    float64(m.HeapInuse) / 1024 / 1024,
+		HeapReleasedMB: float64(m.HeapReleased) / 1024 / 1024,
+		HeapObjects:    m.HeapObjects,
 	}
 
 	rm.measurements = append(rm.measurements, measurement)
@@ -118,16 +118,16 @@ func (rm *ResourceMonitor) GetAverageMetrics() ResourceMeasurement {
 
 	count := float64(len(rm.measurements))
 	return ResourceMeasurement{
-		Timestamp:       time.Now(),
-		CPUPercent:      avgCPU / count,
-		MemoryMB:        avgMemory / count,
-		GoroutineCount:  avgGoroutines / len(rm.measurements),
-		HeapAllocMB:     avgHeapAlloc / count,
-		HeapSysMB:       avgHeapSys / count,
-		HeapIdleMB:      avgHeapIdle / count,
-		HeapInuseMB:     avgHeapInuse / count,
-		HeapReleasedMB:  avgHeapReleased / count,
-		HeapObjects:     avgHeapObjects / uint64(len(rm.measurements)),
+		Timestamp:      time.Now(),
+		CPUPercent:     avgCPU / count,
+		MemoryMB:       avgMemory / count,
+		GoroutineCount: avgGoroutines / len(rm.measurements),
+		HeapAllocMB:    avgHeapAlloc / count,
+		HeapSysMB:      avgHeapSys / count,
+		HeapIdleMB:     avgHeapIdle / count,
+		HeapInuseMB:    avgHeapInuse / count,
+		HeapReleasedMB: avgHeapReleased / count,
+		HeapObjects:    avgHeapObjects / uint64(len(rm.measurements)),
 	}
 }
 
@@ -176,13 +176,13 @@ func (rm *ResourceMonitor) PrintSummary(label string) {
 	fmt.Printf("- Heap Allocated: %.2f MB\n", avg.HeapAllocMB)
 	fmt.Printf("- Heap System: %.2f MB\n", avg.HeapSysMB)
 	fmt.Printf("- Heap Objects: %d\n", avg.HeapObjects)
-	
+
 	fmt.Printf("\nPEAK USAGE:\n")
 	fmt.Printf("- CPU: %.2f%%\n", peak.CPUPercent)
 	fmt.Printf("- Memory: %.2f MB\n", peak.MemoryMB)
 	fmt.Printf("- Goroutines: %d\n", peak.GoroutineCount)
 	fmt.Printf("- Heap Allocated: %.2f MB\n", peak.HeapAllocMB)
-	
+
 	fmt.Printf("\nMEMORY BREAKDOWN:\n")
 	fmt.Printf("- Heap In Use: %.2f MB\n", avg.HeapInuseMB)
 	fmt.Printf("- Heap Idle: %.2f MB\n", avg.HeapIdleMB)
@@ -194,7 +194,7 @@ func (rm *ResourceMonitor) PrintSummary(label string) {
 func (rm *ResourceMonitor) SaveProfile(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create profile file %s: %w", filename, err)
 	}
 	defer file.Close()
 
@@ -205,12 +205,12 @@ func (rm *ResourceMonitor) SaveProfile(filename string) error {
 // Lower score = more efficient
 func (rm *ResourceMonitor) CalculateEfficiencyScore() float64 {
 	avg := rm.GetAverageMetrics()
-	
+
 	// Weighted score considering CPU and memory usage
 	// CPU is weighted more heavily as it directly impacts power consumption
 	cpuWeight := 0.7
 	memoryWeight := 0.3
-	
+
 	efficiencyScore := (avg.CPUPercent * cpuWeight) + (avg.MemoryMB * memoryWeight)
 	return efficiencyScore
 }
@@ -219,9 +219,9 @@ func (rm *ResourceMonitor) CalculateEfficiencyScore() float64 {
 func (rm *ResourceMonitor) GetRecommendations() []string {
 	avg := rm.GetAverageMetrics()
 	efficiencyScore := rm.CalculateEfficiencyScore()
-	
+
 	var recommendations []string
-	
+
 	// CPU-based recommendations
 	if avg.CPUPercent > 50.0 {
 		recommendations = append(recommendations, "HIGH CPU USAGE: Consider reducing polling frequency or optimizing algorithms")
@@ -230,7 +230,7 @@ func (rm *ResourceMonitor) GetRecommendations() []string {
 	} else {
 		recommendations = append(recommendations, "LOW CPU USAGE: Good power efficiency")
 	}
-	
+
 	// Memory-based recommendations
 	if avg.MemoryMB > 500.0 {
 		recommendations = append(recommendations, "HIGH MEMORY USAGE: Check for memory leaks or optimize data structures")
@@ -239,7 +239,7 @@ func (rm *ResourceMonitor) GetRecommendations() []string {
 	} else {
 		recommendations = append(recommendations, "LOW MEMORY USAGE: Good memory efficiency")
 	}
-	
+
 	// Goroutine-based recommendations
 	if avg.GoroutineCount > 100 {
 		recommendations = append(recommendations, "HIGH GOROUTINE COUNT: Check for goroutine leaks or excessive concurrency")
@@ -248,7 +248,7 @@ func (rm *ResourceMonitor) GetRecommendations() []string {
 	} else {
 		recommendations = append(recommendations, "LOW GOROUTINE COUNT: Good concurrency management")
 	}
-	
+
 	// Overall efficiency recommendations
 	if efficiencyScore > 100.0 {
 		recommendations = append(recommendations, "POOR EFFICIENCY: Significant optimization needed")
@@ -257,6 +257,6 @@ func (rm *ResourceMonitor) GetRecommendations() []string {
 	} else {
 		recommendations = append(recommendations, "GOOD EFFICIENCY: Well optimized")
 	}
-	
+
 	return recommendations
 }

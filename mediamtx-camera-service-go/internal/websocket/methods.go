@@ -906,41 +906,17 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Parse parameters with defaults
-	limit := 100
-	offset := 0
-
-	if params != nil {
-		if limitVal, ok := params["limit"]; ok {
-			if limitInt, ok := limitVal.(int); ok && limitInt >= 1 && limitInt <= 1000 {
-				limit = limitInt
-			} else {
-				return &JsonRpcResponse{
-					JSONRPC: "2.0",
-					Error: &JsonRpcError{
-						Code:    INVALID_PARAMS,
-						Message: ErrorMessages[INVALID_PARAMS],
-						Data:    "Invalid limit parameter: must be integer between 1 and 1000",
-					},
-				}, nil
-			}
-		}
-
-		if offsetVal, ok := params["offset"]; ok {
-			if offsetInt, ok := offsetVal.(int); ok && offsetInt >= 0 {
-				offset = offsetInt
-			} else {
-				return &JsonRpcResponse{
-					JSONRPC: "2.0",
-					Error: &JsonRpcError{
-						Code:    INVALID_PARAMS,
-						Message: ErrorMessages[INVALID_PARAMS],
-						Data:    "Invalid offset parameter: must be non-negative integer",
-					},
-				}, nil
-			}
-		}
+	// Validate pagination parameters using centralized validation
+	validationResult := s.validationHelper.ValidatePaginationParams(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "list_recordings", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated parameters
+	limit := validationResult.Data["limit"].(int)
+	offset := validationResult.Data["offset"].(int)
 
 	// Use MediaMTX controller to get recordings list
 	fileList, err := s.mediaMTXController.ListRecordings(context.Background(), limit, offset)
@@ -1111,29 +1087,16 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename parameter is required",
-			},
-		}, nil
+	// Validate filename parameter using centralized validation
+	validationResult := s.validationHelper.ValidateFilenameParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "delete_recording", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	filename, ok := params["filename"].(string)
-	if !ok || filename == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename must be a non-empty string",
-			},
-		}, nil
-	}
+	// Extract validated filename
+	filename := validationResult.Data["filename"].(string)
 
 	// Use MediaMTX controller to delete snapshot
 	err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
@@ -1457,56 +1420,17 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "Parameters are required",
-			},
-		}, nil
+	// Validate retention policy parameters using centralized validation
+	validationResult := s.validationHelper.ValidateRetentionPolicyParameters(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "set_retention_policy", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	// Extract and validate policy_type
-	policyType, ok := params["policy_type"].(string)
-	if !ok || policyType == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "policy_type must be one of: age, size, manual",
-			},
-		}, nil
-	}
-
-	// Validate policy_type values
-	validPolicyTypes := map[string]bool{"age": true, "size": true, "manual": true}
-	if !validPolicyTypes[policyType] {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "policy_type must be one of: age, size, manual",
-			},
-		}, nil
-	}
-
-	// Extract and validate enabled
-	enabled, ok := params["enabled"].(bool)
-	if !ok {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "enabled must be a boolean value",
-			},
-		}, nil
-	}
+	// Extract validated parameters
+	policyType := validationResult.Data["policy_type"].(string)
+	enabled := validationResult.Data["enabled"].(bool)
 
 	// Validate age-based policy parameters
 	if policyType == "age" {
@@ -1687,41 +1611,17 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 		}, nil
 	}
 
-	// Parse parameters with defaults
-	limit := 100
-	offset := 0
-
-	if params != nil {
-		if limitVal, ok := params["limit"]; ok {
-			if limitInt, ok := limitVal.(int); ok && limitInt >= 1 && limitInt <= 1000 {
-				limit = limitInt
-			} else {
-				return &JsonRpcResponse{
-					JSONRPC: "2.0",
-					Error: &JsonRpcError{
-						Code:    INVALID_PARAMS,
-						Message: ErrorMessages[INVALID_PARAMS],
-						Data:    "Invalid limit parameter: must be integer between 1 and 1000",
-					},
-				}, nil
-			}
-		}
-
-		if offsetVal, ok := params["offset"]; ok {
-			if offsetInt, ok := offsetVal.(int); ok && offsetInt >= 0 {
-				offset = offsetInt
-			} else {
-				return &JsonRpcResponse{
-					JSONRPC: "2.0",
-					Error: &JsonRpcError{
-						Code:    INVALID_PARAMS,
-						Message: ErrorMessages[INVALID_PARAMS],
-						Data:    "Invalid offset parameter: must be non-negative integer",
-					},
-				}, nil
-			}
-		}
+	// Validate pagination parameters using centralized validation
+	validationResult := s.validationHelper.ValidatePaginationParams(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "list_snapshots", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated parameters
+	limit := validationResult.Data["limit"].(int)
+	offset := validationResult.Data["offset"].(int)
 
 	// Use MediaMTX controller to get snapshots list
 	fileList, err := s.mediaMTXController.ListSnapshots(context.Background(), limit, offset)
@@ -1806,41 +1706,17 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required",
-			},
-		}, nil
+	// Validate snapshot parameters using centralized validation
+	validationResult := s.validationHelper.ValidateSnapshotParameters(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "take_snapshot", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	devicePath, ok := params["device"].(string)
-	if !ok || devicePath == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required",
-			},
-		}, nil
-	}
-
-	// Extract optional parameters
-	options := make(map[string]interface{})
-	if filename, ok := params["filename"].(string); ok && filename != "" {
-		options["filename"] = filename
-	}
-	if format, ok := params["format"].(string); ok && format != "" {
-		options["format"] = format
-	}
-	if quality, ok := params["quality"].(int); ok && quality > 0 {
-		options["quality"] = quality
-	}
+	// Extract validated parameters
+	devicePath := validationResult.Data["device"].(string)
+	options := validationResult.Data["options"].(map[string]interface{})
 
 	// Validate camera device exists
 	_, exists := s.cameraMonitor.GetDevice(devicePath)
@@ -1917,58 +1793,26 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required",
-			},
-		}, nil
+	// Validate recording parameters using centralized validation
+	validationResult := s.validationHelper.ValidateRecordingParameters(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "start_recording", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	devicePath, ok := params["device"].(string)
-	if !ok || devicePath == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required",
-			},
-		}, nil
+	// Extract validated parameters
+	devicePath := validationResult.Data["device"].(string)
+	options := validationResult.Data["options"].(map[string]interface{})
+
+	// Convert duration to time.Duration if present
+	if duration, exists := options["max_duration"]; exists {
+		if durationInt, ok := duration.(int); ok {
+			options["max_duration"] = time.Duration(durationInt) * time.Second
+		}
 	}
 
-	// Extract optional parameters with enhanced use case support (Phase 2 enhancement)
-	options := make(map[string]interface{})
-	if duration, ok := params["duration_seconds"].(int); ok && duration > 0 {
-		options["max_duration"] = time.Duration(duration) * time.Second
-	}
-	if format, ok := params["format"].(string); ok && format != "" {
-		options["output_format"] = format
-	}
-	if codec, ok := params["codec"].(string); ok && codec != "" {
-		options["codec"] = codec
-	}
-	if quality, ok := params["quality"].(int); ok && quality > 0 {
-		options["crf"] = quality
-	}
-
-	// Enhanced use case management parameters (Phase 2 enhancement)
-	if useCase, ok := params["use_case"].(string); ok && useCase != "" {
-		options["use_case"] = useCase
-	}
-	if priority, ok := params["priority"].(int); ok && priority > 0 {
-		options["priority"] = priority
-	}
-	if autoCleanup, ok := params["auto_cleanup"].(bool); ok {
-		options["auto_cleanup"] = autoCleanup
-	}
-	if retentionDays, ok := params["retention_days"].(int); ok && retentionDays > 0 {
-		options["retention_days"] = retentionDays
-	}
+	// Add additional parameters that are not covered by the validation helper
 	if qualityStr, ok := params["quality_level"].(string); ok && qualityStr != "" {
 		options["quality"] = qualityStr
 	}

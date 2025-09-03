@@ -454,3 +454,365 @@ func (iv *InputValidator) SanitizeMap(input map[string]interface{}) map[string]i
 
 	return sanitized
 }
+
+// ValidateLimit validates limit parameter for pagination
+func (iv *InputValidator) ValidateLimit(limit interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if limit == nil {
+		return result // Limit is optional
+	}
+
+	switch v := limit.(type) {
+	case int:
+		if v < 1 || v > 1000 {
+			result.AddError("limit", "must be integer between 1 and 1000", v)
+		}
+	case float64:
+		if v < 1 || v > 1000 || v != float64(int(v)) {
+			result.AddError("limit", "must be integer between 1 and 1000", v)
+		}
+	case string:
+		if limitInt, err := strconv.Atoi(v); err != nil || limitInt < 1 || limitInt > 1000 {
+			result.AddError("limit", "must be integer between 1 and 1000", v)
+		}
+	default:
+		result.AddError("limit", "unsupported type, must be integer between 1 and 1000", limit)
+	}
+
+	return result
+}
+
+// ValidateOffset validates offset parameter for pagination
+func (iv *InputValidator) ValidateOffset(offset interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if offset == nil {
+		return result // Offset is optional
+	}
+
+	switch v := offset.(type) {
+	case int:
+		if v < 0 {
+			result.AddError("offset", "must be non-negative integer", v)
+		}
+	case float64:
+		if v < 0 || v != float64(int(v)) {
+			result.AddError("offset", "must be non-negative integer", v)
+		}
+	case string:
+		if offsetInt, err := strconv.Atoi(v); err != nil || offsetInt < 0 {
+			result.AddError("offset", "must be non-negative integer", v)
+		}
+	default:
+		result.AddError("offset", "unsupported type, must be non-negative integer", offset)
+	}
+
+	return result
+}
+
+// ValidateDevicePath validates device path format and security
+func (iv *InputValidator) ValidateDevicePath(devicePath interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if devicePath == nil {
+		result.AddError("device", "device parameter is required", nil)
+		return result
+	}
+
+	deviceStr, ok := devicePath.(string)
+	if !ok {
+		result.AddError("device", "device parameter must be a string", devicePath)
+		return result
+	}
+
+	if deviceStr == "" {
+		result.AddError("device", "device parameter cannot be empty", deviceStr)
+		return result
+	}
+
+	// Sanitize the device path
+	deviceStr = iv.SanitizeString(deviceStr)
+
+	// Check for path traversal attempts
+	if strings.Contains(deviceStr, "..") || strings.Contains(deviceStr, "/") || strings.Contains(deviceStr, "\\") {
+		result.AddError("device", "device parameter contains invalid path characters", deviceStr)
+		return result
+	}
+
+	// Validate camera identifier format if it's a camera ID
+	if strings.HasPrefix(deviceStr, "camera") {
+		if cameraResult := iv.ValidateCameraID(deviceStr); cameraResult.HasErrors() {
+			result.Errors = append(result.Errors, cameraResult.Errors...)
+			result.Valid = false
+		}
+	}
+
+	return result
+}
+
+// ValidateFilename validates filename format and security
+func (iv *InputValidator) ValidateFilename(filename interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if filename == nil {
+		result.AddError("filename", "filename parameter is required", nil)
+		return result
+	}
+
+	filenameStr, ok := filename.(string)
+	if !ok {
+		result.AddError("filename", "filename parameter must be a string", filename)
+		return result
+	}
+
+	if filenameStr == "" {
+		result.AddError("filename", "filename parameter cannot be empty", filenameStr)
+		return result
+	}
+
+	// Sanitize the filename
+	filenameStr = iv.SanitizeString(filenameStr)
+
+	// Check for path traversal attempts
+	if strings.Contains(filenameStr, "..") || strings.Contains(filenameStr, "/") || strings.Contains(filenameStr, "\\") {
+		result.AddError("filename", "filename parameter contains invalid path characters", filenameStr)
+		return result
+	}
+
+	// Check for potentially dangerous extensions (optional security measure)
+	dangerousExtensions := []string{".exe", ".bat", ".sh", ".py", ".js", ".php"}
+	for _, ext := range dangerousExtensions {
+		if strings.HasSuffix(strings.ToLower(filenameStr), ext) {
+			result.AddWarning(fmt.Sprintf("filename has potentially dangerous extension: %s", ext))
+		}
+	}
+
+	return result
+}
+
+// ValidateIntegerRange validates integer parameters within a specified range
+func (iv *InputValidator) ValidateIntegerRange(value interface{}, fieldName string, min, max int) *ValidationResult {
+	result := NewValidationResult()
+
+	if value == nil {
+		return result // Value is optional
+	}
+
+	switch v := value.(type) {
+	case int:
+		if v < min || v > max {
+			result.AddError(fieldName, fmt.Sprintf("must be integer between %d and %d", min, max), v)
+		}
+	case float64:
+		if v < float64(min) || v > float64(max) || v != float64(int(v)) {
+			result.AddError(fieldName, fmt.Sprintf("must be integer between %d and %d", min, max), v)
+		}
+	case string:
+		if intVal, err := strconv.Atoi(v); err != nil || intVal < min || intVal > max {
+			result.AddError(fieldName, fmt.Sprintf("must be integer between %d and %d", min, max), v)
+		}
+	default:
+		result.AddError(fieldName, fmt.Sprintf("unsupported type, must be integer between %d and %d", min, max), value)
+	}
+
+	return result
+}
+
+// ValidatePositiveInteger validates that a parameter is a positive integer
+func (iv *InputValidator) ValidatePositiveInteger(value interface{}, fieldName string) *ValidationResult {
+	return iv.ValidateIntegerRange(value, fieldName, 1, 2147483647) // Max int32
+}
+
+// ValidateNonNegativeInteger validates that a parameter is a non-negative integer
+func (iv *InputValidator) ValidateNonNegativeInteger(value interface{}, fieldName string) *ValidationResult {
+	return iv.ValidateIntegerRange(value, fieldName, 0, 2147483647) // Max int32
+}
+
+// ValidateStringParameter validates a required string parameter
+func (iv *InputValidator) ValidateStringParameter(value interface{}, fieldName string, allowEmpty bool) *ValidationResult {
+	result := NewValidationResult()
+
+	if value == nil {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter is required", fieldName), nil)
+		return result
+	}
+
+	str, ok := value.(string)
+	if !ok {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter must be a string", fieldName), value)
+		return result
+	}
+
+	if !allowEmpty && str == "" {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter cannot be empty", fieldName), str)
+		return result
+	}
+
+	// Sanitize the string
+	sanitized := iv.SanitizeString(str)
+	if sanitized != str {
+		result.AddWarning(fmt.Sprintf("%s parameter was sanitized", fieldName))
+	}
+
+	return result
+}
+
+// ValidateOptionalString validates an optional string parameter
+func (iv *InputValidator) ValidateOptionalString(value interface{}, fieldName string) *ValidationResult {
+	result := NewValidationResult()
+
+	if value == nil {
+		return result // Value is optional
+	}
+
+	str, ok := value.(string)
+	if !ok {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter must be a string", fieldName), value)
+		return result
+	}
+
+	// Sanitize the string if not empty
+	if str != "" {
+		sanitized := iv.SanitizeString(str)
+		if sanitized != str {
+			result.AddWarning(fmt.Sprintf("%s parameter was sanitized", fieldName))
+		}
+	}
+
+	return result
+}
+
+// ValidateBooleanParameter validates a boolean parameter
+func (iv *InputValidator) ValidateBooleanParameter(value interface{}, fieldName string) *ValidationResult {
+	result := NewValidationResult()
+
+	if value == nil {
+		return result // Boolean is optional
+	}
+
+	switch v := value.(type) {
+	case bool:
+		// Boolean is always valid
+	case string:
+		if strings.ToLower(v) != "true" && strings.ToLower(v) != "false" {
+			result.AddError(fieldName, "must be true or false", v)
+		}
+	case int:
+		if v != 0 && v != 1 {
+			result.AddError(fieldName, "must be 0 (false) or 1 (true)", v)
+		}
+	case float64:
+		if v != 0.0 && v != 1.0 {
+			result.AddError(fieldName, "must be 0.0 (false) or 1.0 (true)", v)
+		}
+	default:
+		result.AddError(fieldName, "unsupported type, must be boolean", value)
+	}
+
+	return result
+}
+
+// ValidatePaginationParams validates limit and offset parameters together
+func (iv *InputValidator) ValidatePaginationParams(params map[string]interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if params == nil {
+		return result // No parameters to validate
+	}
+
+	// Validate limit
+	if limit, exists := params["limit"]; exists {
+		if limitResult := iv.ValidateLimit(limit); limitResult.HasErrors() {
+			result.Errors = append(result.Errors, limitResult.Errors...)
+		}
+	}
+
+	// Validate offset
+	if offset, exists := params["offset"]; exists {
+		if offsetResult := iv.ValidateOffset(offset); offsetResult.HasErrors() {
+			result.Errors = append(result.Errors, offsetResult.Errors...)
+		}
+	}
+
+	// Update overall validation result
+	if len(result.Errors) > 0 {
+		result.Valid = false
+	}
+
+	return result
+}
+
+// ValidateCommonRecordingParams validates common recording parameters
+func (iv *InputValidator) ValidateCommonRecordingParams(params map[string]interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	if params == nil {
+		return result // No parameters to validate
+	}
+
+	// Validate device parameter (required)
+	if device, exists := params["device"]; exists {
+		if deviceResult := iv.ValidateDevicePath(device); deviceResult.HasErrors() {
+			result.Errors = append(result.Errors, deviceResult.Errors...)
+		}
+	} else {
+		result.AddError("device", "device parameter is required", nil)
+	}
+
+	// Validate optional parameters
+	if duration, exists := params["duration_seconds"]; exists {
+		if durationResult := iv.ValidatePositiveInteger(duration, "duration_seconds"); durationResult.HasErrors() {
+			result.Errors = append(result.Errors, durationResult.Errors...)
+		}
+	}
+
+	if format, exists := params["format"]; exists {
+		if formatResult := iv.ValidateOptionalString(format, "format"); formatResult.HasErrors() {
+			result.Errors = append(result.Errors, formatResult.Errors...)
+		}
+	}
+
+	if codec, exists := params["codec"]; exists {
+		if codecResult := iv.ValidateOptionalString(codec, "codec"); codecResult.HasErrors() {
+			result.Errors = append(result.Errors, codecResult.Errors...)
+		}
+	}
+
+	if quality, exists := params["quality"]; exists {
+		if qualityResult := iv.ValidatePositiveInteger(quality, "quality"); qualityResult.HasErrors() {
+			result.Errors = append(result.Errors, qualityResult.Errors...)
+		}
+	}
+
+	if useCase, exists := params["use_case"]; exists {
+		if useCaseResult := iv.ValidateOptionalString(useCase, "use_case"); useCaseResult.HasErrors() {
+			result.Errors = append(result.Errors, useCaseResult.Errors...)
+		}
+	}
+
+	if priority, exists := params["priority"]; exists {
+		if priorityResult := iv.ValidatePositiveInteger(priority, "priority"); priorityResult.HasErrors() {
+			result.Errors = append(result.Errors, priorityResult.Errors...)
+		}
+	}
+
+	if autoCleanup, exists := params["auto_cleanup"]; exists {
+		if autoCleanupResult := iv.ValidateBooleanParameter(autoCleanup, "auto_cleanup"); autoCleanupResult.HasErrors() {
+			result.Errors = append(result.Errors, autoCleanupResult.Errors...)
+		}
+	}
+
+	if retentionDays, exists := params["retention_days"]; exists {
+		if retentionResult := iv.ValidatePositiveInteger(retentionDays, "retention_days"); retentionResult.HasErrors() {
+			result.Errors = append(result.Errors, retentionResult.Errors...)
+		}
+	}
+
+	// Update overall validation result
+	if len(result.Errors) > 0 {
+		result.Valid = false
+	}
+
+	return result
+}

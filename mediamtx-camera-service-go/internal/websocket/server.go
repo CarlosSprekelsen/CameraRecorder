@@ -59,6 +59,9 @@ type WebSocketServer struct {
 	// Security extensions (Phase 1 enhancement)
 	permissionChecker *security.PermissionChecker
 
+	// Input validation
+	validationHelper *ValidationHelper
+
 	// WebSocket server
 	upgrader websocket.Upgrader
 	server   *http.Server
@@ -417,6 +420,9 @@ func NewWebSocketServer(
 
 		// Security extensions initialization (Phase 1 enhancement)
 		permissionChecker: security.NewPermissionChecker(),
+
+		// Input validation initialization
+		validationHelper: NewValidationHelper(security.NewInputValidator(logger, nil), logger.Logger),
 
 		// WebSocket upgrader configuration
 		upgrader: websocket.Upgrader{

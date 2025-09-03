@@ -114,7 +114,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	// Get configuration
 	cfg := pi.configManager.GetConfig()
 	if cfg == nil {
-		return fmt.Errorf("failed to get configuration")
+		return fmt.Errorf("failed to get configuration from config manager")
 	}
 
 	// Create path options

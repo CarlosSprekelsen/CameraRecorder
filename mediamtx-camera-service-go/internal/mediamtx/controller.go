@@ -403,28 +403,22 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	componentStatus["recording_manager"] = "running"
 	componentStatus["snapshot_manager"] = "running"
 
-	// Enhanced error counts with sophisticated tracking (Phase 1 enhancement)
+	// Simplified error counts - only track basic failure count
 	errorCounts := make(map[string]int64)
 	if failureCount, ok := healthMetrics["failure_count"].(int); ok {
 		errorCounts["health_check"] = int64(failureCount)
 	}
-	if consecutiveFailures, ok := healthMetrics["consecutive_failures"].(int); ok {
-		errorCounts["consecutive_failures"] = int64(consecutiveFailures)
-	}
-	if circuitBreakerActivations, ok := healthMetrics["circuit_breaker_activations"].(int); ok {
-		errorCounts["circuit_breaker_activations"] = int64(circuitBreakerActivations)
-	}
 
-	// Get circuit breaker state
+	// Get circuit breaker state - simplified version
 	circuitBreakerState := "CLOSED"
-	if state, ok := healthMetrics["circuit_state"].(string); ok {
-		circuitBreakerState = state
+	if isHealthy, ok := healthMetrics["is_healthy"].(bool); ok && !isHealthy {
+		circuitBreakerState = "OPEN"
 	}
 
-	// Calculate response time (average from health metrics)
+	// Calculate response time (average from health metrics) - simplified version
 	responseTime := 0.0
-	if lastCheckTime, ok := healthMetrics["last_check_time"].(time.Time); ok {
-		responseTime = float64(time.Since(lastCheckTime).Milliseconds())
+	if lastCheck, ok := healthMetrics["last_check"].(time.Time); ok {
+		responseTime = float64(time.Since(lastCheck).Milliseconds())
 	}
 
 	systemMetrics := &SystemMetrics{

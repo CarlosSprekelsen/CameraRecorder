@@ -373,11 +373,11 @@ func validateSnapshotConfig(config *SnapshotConfig) error {
 // validateFFmpegConfig validates FFmpeg configuration.
 func validateFFmpegConfig(config *FFmpegConfig) error {
 	if err := validateFFmpegSnapshotConfig(&config.Snapshot); err != nil {
-		return err
+		return fmt.Errorf("failed to validate FFmpeg snapshot config: %w", err)
 	}
 
 	if err := validateFFmpegRecordingConfig(&config.Recording); err != nil {
-		return err
+		return fmt.Errorf("failed to validate FFmpeg recording config: %w", err)
 	}
 
 	return nil
@@ -436,11 +436,11 @@ func validateFFmpegRecordingConfig(config *FFmpegRecordingConfig) error {
 // validateNotificationsConfig validates notifications configuration.
 func validateNotificationsConfig(config *NotificationsConfig) error {
 	if err := validateWebSocketNotificationConfig(&config.WebSocket); err != nil {
-		return err
+		return fmt.Errorf("failed to validate WebSocket notification config: %w", err)
 	}
 
 	if err := validateRealTimeNotificationConfig(&config.RealTime); err != nil {
-		return err
+		return fmt.Errorf("failed to validate real-time notification config: %w", err)
 	}
 
 	return nil
@@ -491,15 +491,15 @@ func validateRealTimeNotificationConfig(config *RealTimeNotificationConfig) erro
 // validatePerformanceConfig validates performance configuration.
 func validatePerformanceConfig(config *PerformanceConfig) error {
 	if err := validateResponseTimeTargetsConfig(&config.ResponseTimeTargets); err != nil {
-		return err
+		return fmt.Errorf("failed to validate response time targets config: %w", err)
 	}
 
 	if err := validateSnapshotTiersConfig(&config.SnapshotTiers); err != nil {
-		return err
+		return fmt.Errorf("failed to validate snapshot tiers config: %w", err)
 	}
 
 	if err := validateOptimizationConfig(&config.Optimization); err != nil {
-		return err
+		return fmt.Errorf("failed to validate optimization config: %w", err)
 	}
 
 	return nil
