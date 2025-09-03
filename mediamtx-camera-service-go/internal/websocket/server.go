@@ -172,6 +172,98 @@ func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename s
 	}
 }
 
+// notifyCameraStatusUpdate sends real-time camera status updates to clients
+func (s *WebSocketServer) notifyCameraStatusUpdate(device, status, name string) {
+	// Determine event topic based on status
+	var topic EventTopic
+	switch status {
+	case "connected":
+		topic = TopicCameraConnected
+	case "disconnected":
+		topic = TopicCameraDisconnected
+	default:
+		topic = TopicCameraStatusChange
+	}
+
+	eventData := map[string]interface{}{
+		"device":    device,
+		"status":    status,
+		"name":      name,
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"device": device,
+		"status": status,
+		"name":   name,
+		"topic":  topic,
+	}).Debug("Sending camera status notification")
+
+	// Use new efficient event system
+	if err := s.sendEventToSubscribers(topic, eventData); err != nil {
+		s.logger.WithError(err).WithField("topic", string(topic)).Error("Failed to send camera status event")
+		// Fallback to broadcast for backward compatibility
+		s.broadcastEvent("camera_status_update", eventData)
+	}
+}
+
+// notifySnapshotTaken sends real-time snapshot notifications to clients
+func (s *WebSocketServer) notifySnapshotTaken(device, filename, resolution string) {
+	eventData := map[string]interface{}{
+		"device":     device,
+		"filename":   filename,
+		"resolution": resolution,
+		"timestamp":  time.Now().Format(time.RFC3339),
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"device":     device,
+		"filename":   filename,
+		"resolution": resolution,
+		"topic":      TopicSnapshotTaken,
+	}).Debug("Sending snapshot notification")
+
+	// Use new efficient event system
+	if err := s.sendEventToSubscribers(TopicSnapshotTaken, eventData); err != nil {
+		s.logger.WithError(err).Error("Failed to send snapshot event")
+		// Fallback to broadcast for backward compatibility
+		s.broadcastEvent("snapshot_taken", eventData)
+	}
+}
+
+// notifySystemEvent sends system-level event notifications to clients
+func (s *WebSocketServer) notifySystemEvent(eventType string, data map[string]interface{}) {
+	var topic EventTopic
+	switch eventType {
+	case "startup":
+		topic = TopicSystemStartup
+	case "shutdown":
+		topic = TopicSystemShutdown
+	case "health":
+		topic = TopicSystemHealth
+	default:
+		topic = TopicSystemError
+	}
+
+	// Add timestamp if not present
+	if _, exists := data["timestamp"]; !exists {
+		data["timestamp"] = time.Now().Format(time.RFC3339)
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"event_type": eventType,
+		"topic":      topic,
+		"data":       data,
+	}).Debug("Sending system event notification")
+
+	// Use new efficient event system
+	if err := s.sendEventToSubscribers(topic, data); err != nil {
+		s.logger.WithError(err).WithField("topic", string(topic)).Error("Failed to send system event")
+		// Fallback to broadcast for backward compatibility
+		s.broadcastEvent("system_event", data)
+	}
+}
+
 // broadcastEvent broadcasts an event to all connected clients
 // DEPRECATED: Use sendEventToSubscribers for efficient topic-based delivery
 func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {

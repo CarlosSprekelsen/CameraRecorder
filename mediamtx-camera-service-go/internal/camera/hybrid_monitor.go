@@ -87,6 +87,9 @@ type HybridCameraMonitor struct {
 
 	// Polling failure count
 	pollingFailureCount int
+
+	// Event system integration
+	eventNotifier EventNotifier
 }
 
 // CameraSource represents a camera source configuration
