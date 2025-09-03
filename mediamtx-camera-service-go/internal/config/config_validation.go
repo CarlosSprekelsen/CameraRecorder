@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -130,6 +132,19 @@ func validateMediaMTXConfig(config *MediaMTXConfig) error {
 		return &ValidationError{Field: "mediamtx.snapshots_path", Message: "snapshots path cannot be empty"}
 	}
 
+	// Validate file paths exist and are accessible
+	if err := validateFilePath("mediamtx.config_path", config.ConfigPath); err != nil {
+		return err
+	}
+
+	if err := validateFilePath("mediamtx.recordings_path", config.RecordingsPath); err != nil {
+		return err
+	}
+
+	if err := validateFilePath("mediamtx.snapshots_path", config.SnapshotsPath); err != nil {
+		return err
+	}
+
 	// Validate codec configuration
 	if err := validateCodecConfig(&config.Codec); err != nil {
 		return fmt.Errorf("failed to validate codec configuration: %w", err)
@@ -179,6 +194,69 @@ func validateMediaMTXConfig(config *MediaMTXConfig) error {
 	// Validate stream readiness configuration
 	if err := validateStreamReadinessConfig(&config.StreamReadiness); err != nil {
 		return fmt.Errorf("failed to validate stream readiness configuration: %w", err)
+	}
+
+	return nil
+}
+
+// validateFilePath validates that a file path exists and is accessible
+func validateFilePath(fieldName, path string) error {
+	if path == "" {
+		return &ValidationError{Field: fieldName, Message: "path cannot be empty"}
+	}
+
+	// Clean the path to prevent path traversal attacks
+	cleanPath := filepath.Clean(path)
+	if cleanPath != path {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("path contains invalid characters or traversal attempts: %s", path)}
+	}
+
+	// Check if path is absolute (recommended for security)
+	if !filepath.IsAbs(cleanPath) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("path should be absolute for security: %s", path)}
+	}
+
+	// Check if path exists on filesystem
+	if _, err := os.Stat(cleanPath); os.IsNotExist(err) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("path does not exist: %s", path)}
+	}
+
+	// Check if path is accessible (readable)
+	if _, err := os.Stat(cleanPath); err != nil {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("path is not accessible: %s - %v", path, err)}
+	}
+
+	return nil
+}
+
+// validateLogFilePath validates that a log file path is valid and its directory is accessible
+func validateLogFilePath(fieldName, path string) error {
+	if path == "" {
+		return &ValidationError{Field: fieldName, Message: "log file path cannot be empty"}
+	}
+
+	// Clean the path to prevent path traversal attacks
+	cleanPath := filepath.Clean(path)
+	if cleanPath != path {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("log file path contains invalid characters or traversal attempts: %s", path)}
+	}
+
+	// Check if path is absolute (recommended for security)
+	if !filepath.IsAbs(cleanPath) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("log file path should be absolute for security: %s", path)}
+	}
+
+	// Get the directory path for the log file
+	logDir := filepath.Dir(cleanPath)
+
+	// Check if the directory exists and is accessible
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("log directory does not exist: %s", logDir)}
+	}
+
+	// Check if the directory is accessible (writable for log files)
+	if _, err := os.Stat(logDir); err != nil {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("log directory is not accessible: %s - %v", logDir, err)}
 	}
 
 	return nil
