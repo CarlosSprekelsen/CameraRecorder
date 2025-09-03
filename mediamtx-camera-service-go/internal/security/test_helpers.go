@@ -159,18 +159,22 @@ func CreateMultipleTestSessions(t *testing.T, sessionManager *SessionManager, co
 // =============================================================================
 
 // TestSecurityEnvironment provides a complete security testing environment
+// Following the established pattern used by other security components
 type TestSecurityEnvironment struct {
 	JWTHandler     *JWTHandler
 	RoleManager    *PermissionChecker
 	SessionManager *SessionManager
+	Logger         *TestLogger // Following established pattern: env.Logger
 }
 
 // SetupTestSecurityEnvironment creates a complete security test environment
+// Following the established pattern used by other security components
 func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 	env := &TestSecurityEnvironment{
 		JWTHandler:     TestJWTHandler(t),
 		RoleManager:    TestPermissionChecker(t),
 		SessionManager: TestSessionManager(t),
+		Logger:         &TestLogger{}, // Following established pattern: env.Logger
 	}
 
 	// Session manager cleanup is started automatically in NewSessionManager
@@ -287,5 +291,53 @@ func LoadTestSecurityOperations(t *testing.T, operation func(), concurrency int,
 	errorRate := float64(errorCount) / float64(totalOperations)
 	if errorRate > 0.01 { // 1% error rate threshold
 		t.Errorf("Load test error rate too high: %.2f%% (%d/%d)", errorRate*100, errorCount, totalOperations)
+	}
+}
+
+// =============================================================================
+// TEST LOGGER (Following established pattern in codebase)
+// =============================================================================
+
+// TestLogger provides a simple logger for testing that follows the established pattern
+// This implements the same interface as *logging.Logger for testing purposes
+type TestLogger struct{}
+
+func (l *TestLogger) Info(args ...interface{})                             {}
+func (l *TestLogger) Warn(args ...interface{})                             {}
+func (l *TestLogger) Error(args ...interface{})                            {}
+func (l *TestLogger) Debug(args ...interface{})                            {}
+func (l *TestLogger) WithFields(fields map[string]interface{}) interface{} { return l }
+
+// Following established pattern: provide a way to get a logger that middleware can use
+// This mimics how other security components get their logger in tests
+func (l *TestLogger) GetLogger() interface{} { return l }
+
+// CreateTestLogger creates a test logger that can be used with middleware
+// Following the established pattern: provide logger creation function
+func CreateTestLogger() *TestLogger {
+	return &TestLogger{}
+}
+
+// TestLoggerConfig provides test logging configuration
+type TestLoggerConfig struct {
+	Level          string
+	Format         string
+	FileEnabled    bool
+	FilePath       string
+	MaxFileSize    int
+	BackupCount    int
+	ConsoleEnabled bool
+}
+
+// GetTestLoggerConfig returns test logging configuration
+func GetTestLoggerConfig() *TestLoggerConfig {
+	return &TestLoggerConfig{
+		Level:          "debug",
+		Format:         "text",
+		FileEnabled:    false,
+		FilePath:       "/tmp/test_security.log",
+		MaxFileSize:    10,
+		BackupCount:    3,
+		ConsoleEnabled: true,
 	}
 }

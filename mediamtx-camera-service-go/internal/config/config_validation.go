@@ -286,6 +286,13 @@ func validateLoggingConfig(config *LoggingConfig) error {
 		return &ValidationError{Field: "logging.file_path", Message: "file path cannot be empty when file logging is enabled"}
 	}
 
+	// Validate log file path when file logging is enabled
+	if config.FileEnabled && config.FilePath != "" {
+		if err := validateLogFilePath("logging.file_path", config.FilePath); err != nil {
+			return err
+		}
+	}
+
 	if config.MaxFileSize <= 0 {
 		return &ValidationError{Field: "logging.max_file_size", Message: fmt.Sprintf("max file size must be positive, got %d", config.MaxFileSize)}
 	}

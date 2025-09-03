@@ -1,10 +1,9 @@
-logger_test.gopackage logging
+package logging
 
 import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -37,8 +36,7 @@ func TestNewLogger(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
 	logger := NewLogger("test-component")
-	assert.NotNil(t, logger)
-	assert.NotNil(t, logger.Logger)
+	AssertLoggerBasicProperties(t, logger, "test-component")
 	assert.Equal(t, logrus.InfoLevel, logger.GetLevel())
 }
 
@@ -69,31 +67,35 @@ func TestGenerateCorrelationID(t *testing.T) {
 	assert.Len(t, correlationID, 36) // UUID length
 }
 
-// TestGetCorrelationIDFromContext tests context correlation ID retrieval
-func TestGetCorrelationIDFromContext(t *testing.T) {
+// TestCorrelationIDContextOperations tests all correlation ID context operations
+func TestCorrelationIDContextOperations(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	ctx := context.Background()
-	correlationID := "test-correlation-id"
-	ctxWithID := WithCorrelationID(ctx, correlationID)
+	testCases := []struct {
+		name           string
+		correlationID  string
+		expectedResult string
+		description    string
+	}{
+		{"valid correlation ID", "test-correlation-id", "test-correlation-id", "Should retrieve valid correlation ID"},
+		{"empty correlation ID", "", "", "Should handle empty correlation ID"},
+		{"nil context", "", "", "Should handle nil context gracefully"},
+	}
 
-	retrievedID := GetCorrelationIDFromContext(ctxWithID)
-	assert.Equal(t, correlationID, retrievedID)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var ctx context.Context
+			if tc.name == "nil context" {
+				ctx = nil
+			} else {
+				ctx = CreateTestContext(tc.correlationID)
+			}
 
-	// Test empty context
-	emptyID := GetCorrelationIDFromContext(ctx)
-	assert.Empty(t, emptyID)
-}
-
-// TestGetCorrelationIDFromContext_NilContext tests nil context handling
-func TestGetCorrelationIDFromContext_NilContext(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-002: Correlation ID support
-
-	// Test nil context
-	result := GetCorrelationIDFromContext(nil)
-	assert.Empty(t, result, "Should return empty string for nil context")
+			result := GetCorrelationIDFromContext(ctx)
+			assert.Equal(t, tc.expectedResult, result, tc.description)
+		})
+	}
 }
 
 // TestLogWithCorrelationID tests global correlation ID logging
@@ -114,90 +116,65 @@ func TestLogWithCorrelationID(t *testing.T) {
 // LOGGER METHOD TESTS
 // =============================================================================
 
-// TestLogger_WithCorrelationID tests correlation ID functionality
-func TestLogger_WithCorrelationID(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-002: Correlation ID support
-
-	logger := NewLogger("test-component")
-	correlationID := "test-correlation-id"
-
-	loggerWithID := logger.WithCorrelationID(correlationID)
-	assert.NotNil(t, loggerWithID)
-}
-
-// TestLogger_WithField tests structured field logging
-func TestLogger_WithField(t *testing.T) {
+// TestLogger_WithMethods tests all logger "With" methods
+func TestLogger_WithMethods(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := NewLogger("test-component")
-	key := "test_key"
-	value := "test_value"
+	logger := CreateTestLogger(t, nil)
 
-	loggerWithField := logger.WithField(key, value)
-	assert.NotNil(t, loggerWithField)
-}
+	testCases := []struct {
+		name string
+		test func() *Logger
+	}{
+		{
+			"WithCorrelationID",
+			func() *Logger { return logger.WithCorrelationID("test-correlation-id") },
+		},
+		{
+			"WithField",
+			func() *Logger { return logger.WithField("test_key", "test_value") },
+		},
+		{
+			"WithError",
+			func() *Logger { return logger.WithError(assert.AnError) },
+		},
+	}
 
-// TestLogger_WithError tests error logging
-func TestLogger_WithError(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	logger := NewLogger("test-component")
-	testErr := assert.AnError
-
-	loggerWithError := logger.WithError(testErr)
-	assert.NotNil(t, loggerWithError)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.test()
+			assert.NotNil(t, result)
+		})
+	}
 }
 
 // =============================================================================
 // CONTEXT LOGGING TESTS
 // =============================================================================
 
-// TestLogger_LogWithContext tests context-based logging
-func TestLogger_LogWithContext(t *testing.T) {
+// TestLogger_ContextLogging tests all context-based logging scenarios
+func TestLogger_ContextLogging(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := NewLogger("test-component")
-	ctx := context.Background()
+	logger := CreateTestLogger(t, nil)
+	fixtures := CreateTestFixtures()
 
-	// Test with info level
-	logger.LogWithContext(ctx, logrus.InfoLevel, "test message")
+	for _, fixture := range fixtures {
+		t.Run(fmt.Sprintf("context_logging_%s", fixture.Component), func(t *testing.T) {
+			ctx := CreateTestContext(fixture.CorrelationID)
 
-	// Test with correlation ID in context
-	correlationID := "test-correlation-id"
-	ctxWithID := WithCorrelationID(ctx, correlationID)
-	logger.LogWithContext(ctxWithID, logrus.DebugLevel, "test message with correlation ID")
-}
+			// Test all context methods (excluding fatal which calls os.Exit)
+			logger.DebugWithContext(ctx, fixture.Message)
+			logger.InfoWithContext(ctx, fixture.Message)
+			logger.WarnWithContext(ctx, fixture.Message)
+			logger.ErrorWithContext(ctx, fixture.Message)
 
-// TestLogWithContext_NilContext tests nil context handling
-func TestLogWithContext_NilContext(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-002: Correlation ID support
-
-	logger := NewLogger("test-component")
-
-	// Test with nil context
-	logger.LogWithContext(nil, logrus.InfoLevel, "test message with nil context")
-	// Should not panic and should handle gracefully
-}
-
-// TestLogger_ContextMethods tests all context-based logging methods
-func TestLogger_ContextMethods(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	logger := NewLogger("test-component")
-	ctx := context.Background()
-
-	// Test all context methods (excluding fatal which calls os.Exit)
-	logger.DebugWithContext(ctx, "debug message")
-	logger.InfoWithContext(ctx, "info message")
-	logger.WarnWithContext(ctx, "warn message")
-	logger.ErrorWithContext(ctx, "error message")
-	// Note: FatalWithContext calls os.Exit(1) so we can't test it in unit tests
+			// Verify correlation ID in context
+			AssertCorrelationIDInContext(t, ctx, fixture.CorrelationID)
+		})
+	}
 }
 
 // TestLogger_ContextLogging_EdgeCases tests edge cases in context logging
@@ -205,7 +182,7 @@ func TestLogger_ContextLogging_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := NewLogger("test-component")
+	logger := CreateTestLogger(t, nil)
 
 	// Test with empty context
 	ctx := context.Background()
@@ -218,41 +195,42 @@ func TestLogger_ContextLogging_EdgeCases(t *testing.T) {
 	// Test with context containing empty correlation ID
 	ctxWithEmpty := context.WithValue(ctx, CorrelationIDKey, "")
 	logger.LogWithContext(ctxWithEmpty, logrus.InfoLevel, "message with empty correlation ID")
+
+	// Test with nil context
+	logger.LogWithContext(nil, logrus.InfoLevel, "message with nil context")
 }
 
 // =============================================================================
 // LEVEL MANAGEMENT TESTS
 // =============================================================================
 
-// TestLogger_LevelManagement tests log level management
+// TestLogger_LevelManagement tests log level management comprehensively
 func TestLogger_LevelManagement(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-004: Log level management
 
-	logger := NewLogger("test-component")
+	logger := CreateTestLogger(t, nil)
+	testLevels := TestLogLevels()
 
-	// Test SetLevel
-	logger.SetLevel(logrus.DebugLevel)
-	assert.Equal(t, logrus.DebugLevel, logger.GetLevel())
+	for _, level := range testLevels {
+		t.Run(fmt.Sprintf("level_%s", level.String()), func(t *testing.T) {
+			// Test SetLevel
+			logger.SetLevel(level)
+			assert.Equal(t, level, logger.GetLevel())
 
-	// Test IsLevelEnabled at Debug level
-	assert.True(t, logger.IsLevelEnabled(logrus.InfoLevel))
-	assert.True(t, logger.IsLevelEnabled(logrus.WarnLevel))
-	assert.True(t, logger.IsLevelEnabled(logrus.DebugLevel))
-	assert.False(t, logger.IsLevelEnabled(logrus.TraceLevel))
+			// Test IsLevelEnabled for all levels
+			for _, testLevel := range testLevels {
+				expected := testLevel >= level
+				assert.Equal(t, expected, logger.IsLevelEnabled(testLevel),
+					"Level %s should be enabled at %s level", testLevel, level)
+			}
 
-	// Test SetComponentLevel
-	logger.SetComponentLevel("test-component", logrus.WarnLevel)
-
-	// Test GetEffectiveLevel
-	effectiveLevel := logger.GetEffectiveLevel("test-component")
-	assert.Equal(t, logrus.WarnLevel, effectiveLevel)
-
-	// Test IsLevelEnabled at Warn level
-	assert.False(t, logger.IsLevelEnabled(logrus.InfoLevel))
-	assert.True(t, logger.IsLevelEnabled(logrus.WarnLevel))
-	assert.False(t, logger.IsLevelEnabled(logrus.DebugLevel))
-	assert.False(t, logger.IsLevelEnabled(logrus.TraceLevel))
+			// Test component level management
+			logger.SetComponentLevel("test-component", level)
+			effectiveLevel := logger.GetEffectiveLevel("test-component")
+			assert.Equal(t, level, effectiveLevel)
+		})
+	}
 }
 
 // TestLogger_ComponentLevels tests component-specific level management
@@ -260,39 +238,30 @@ func TestLogger_ComponentLevels(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-004: Log level management
 
-	logger := NewLogger("test-component")
+	logger := CreateTestLogger(t, nil)
+	components := TestComponents()
 
 	// Test setting different levels for different components
-	logger.SetComponentLevel("component1", logrus.DebugLevel)
-	logger.SetComponentLevel("component2", logrus.WarnLevel)
-	logger.SetComponentLevel("component3", logrus.ErrorLevel)
+	for i, component := range components {
+		level := TestLogLevels()[i%len(TestLogLevels())]
+		logger.SetComponentLevel(component, level)
 
-	// Verify effective levels
-	assert.Equal(t, logrus.ErrorLevel, logger.GetEffectiveLevel("component3"))
-	assert.Equal(t, logrus.ErrorLevel, logger.GetEffectiveLevel("component2"))
-	assert.Equal(t, logrus.ErrorLevel, logger.GetEffectiveLevel("component1"))
-
-	// Test level enablement
-	assert.False(t, logger.IsLevelEnabled(logrus.DebugLevel))
-	assert.False(t, logger.IsLevelEnabled(logrus.InfoLevel))
-	assert.True(t, logger.IsLevelEnabled(logrus.ErrorLevel))
+		effectiveLevel := logger.GetEffectiveLevel(component)
+		assert.Equal(t, level, effectiveLevel,
+			"Component %s should have effective level %s", component, level)
+	}
 }
 
 // =============================================================================
 // CONFIGURATION TESTS
 // =============================================================================
 
-// TestLoggingConfig tests logging configuration
+// TestLoggingConfig tests logging configuration structure
 func TestLoggingConfig(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-005: Configuration integration
 
-	config := &LoggingConfig{
-		Level:          "debug",
-		Format:         "json",
-		ConsoleEnabled: true,
-		FileEnabled:    false,
-	}
+	config := CreateTestLoggingConfig("debug", "json", true, false, "")
 
 	assert.Equal(t, "debug", config.Level)
 	assert.Equal(t, "json", config.Format)
@@ -300,134 +269,56 @@ func TestLoggingConfig(t *testing.T) {
 	assert.False(t, config.FileEnabled)
 }
 
-// TestSetupLogging tests logging setup
-func TestSetupLogging(t *testing.T) {
+// TestSetupLogging_AllConfigurations tests all logging setup configurations
+func TestSetupLogging_AllConfigurations(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
-
-	config := &LoggingConfig{
-		Level:          "info",
-		Format:         "text",
-		ConsoleEnabled: true,
-		FileEnabled:    false,
-	}
-
-	err := SetupLogging(config)
-	assert.NoError(t, err)
-}
-
-// TestSetupLogging_FileLogging tests file logging configuration
-func TestSetupLogging_FileLogging(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-003: Log rotation configuration
-
-	// Test file logging with valid configuration
-	config := &LoggingConfig{
-		Level:          "debug",
-		Format:         "json",
-		ConsoleEnabled: false,
-		FileEnabled:    true,
-		FilePath:       "/tmp/test_file.log",
-		MaxFileSize:    10,
-		BackupCount:    3,
-	}
-
-	err := SetupLogging(config)
-	assert.NoError(t, err, "File logging setup should succeed")
-}
-
-// TestSetupLogging_InvalidLevel tests invalid log level handling
-func TestSetupLogging_InvalidLevel(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-004: Log level management
-
-	// Test with invalid log level (should fallback to info)
-	config := &LoggingConfig{
-		Level:          "invalid_level",
-		Format:         "text",
-		ConsoleEnabled: true,
-		FileEnabled:    false,
-	}
-
-	err := SetupLogging(config)
-	assert.NoError(t, err, "Invalid level should fallback to info level")
-}
-
-// TestSetupLogging_FileAndConsole tests both file and console logging
-func TestSetupLogging_FileAndConsole(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	// Test both file and console logging enabled
-	config := &LoggingConfig{
-		Level:          "info",
-		Format:         "text",
-		ConsoleEnabled: true,
-		FileEnabled:    true,
-		FilePath:       "/tmp/test_both.log",
-		MaxFileSize:    5,
-		BackupCount:    2,
-	}
-
-	err := SetupLogging(config)
-	assert.NoError(t, err, "Both file and console logging should work")
-}
-
-// TestSetupLogging_EdgeCases tests edge case configurations
-func TestSetupLogging_EdgeCases(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-005: Configuration integration
 
 	testCases := []struct {
-		name    string
-		config  *LoggingConfig
-		wantErr bool
+		name          string
+		config        *LoggingConfig
+		expectedError bool
+		description   string
 	}{
 		{
-			name: "empty format",
-			config: &LoggingConfig{
-				Level:          "info",
-				Format:         "",
-				ConsoleEnabled: true,
-				FileEnabled:    false,
-			},
-			wantErr: false,
+			name:          "console only",
+			config:        CreateTestLoggingConfig("info", "text", true, false, ""),
+			expectedError: false,
+			description:   "Console-only logging should work",
 		},
 		{
-			name: "zero file size",
-			config: &LoggingConfig{
-				Level:          "info",
-				Format:         "text",
-				ConsoleEnabled: false,
-				FileEnabled:    true,
-				FilePath:       "/tmp/test_zero.log",
-				MaxFileSize:    0,
-				BackupCount:    0,
-			},
-			wantErr: false,
+			name:          "file only",
+			config:        CreateTestLoggingConfig("debug", "json", false, true, "/tmp/test_file.log"),
+			expectedError: false,
+			description:   "File-only logging should work",
 		},
 		{
-			name: "very large file size",
-			config: &LoggingConfig{
-				Level:          "info",
-				Format:         "text",
-				ConsoleEnabled: false,
-				FileEnabled:    true,
-				FilePath:       "/tmp/test_large.log",
-				MaxFileSize:    999999,
-				BackupCount:    999,
-			},
-			wantErr: false,
+			name:          "both console and file",
+			config:        CreateTestLoggingConfig("info", "text", true, true, "/tmp/test_both.log"),
+			expectedError: false,
+			description:   "Both console and file logging should work",
+		},
+		{
+			name:          "invalid level fallback",
+			config:        CreateTestLoggingConfig("invalid_level", "text", true, false, ""),
+			expectedError: false,
+			description:   "Invalid level should fallback to info level",
+		},
+		{
+			name:          "empty format",
+			config:        CreateTestLoggingConfig("info", "", true, false, ""),
+			expectedError: false,
+			description:   "Empty format should use default formatter",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			err := SetupLogging(tc.config)
-			if tc.wantErr {
-				assert.Error(t, err)
+			if tc.expectedError {
+				assert.Error(t, err, tc.description)
 			} else {
-				assert.NoError(t, err)
+				assert.NoError(t, err, tc.description)
 			}
 		})
 	}
@@ -446,48 +337,34 @@ func TestSetupLoggingSimple(t *testing.T) {
 // FORMATTER TESTS
 // =============================================================================
 
-// TestCreateFileFormatter_AllFormats tests all file formatter options
-func TestCreateFileFormatter_AllFormats(t *testing.T) {
+// TestFormatters_AllFormats tests all formatter options comprehensively
+func TestFormatters_AllFormats(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	// Test JSON formatter
-	jsonFormatter := createFileFormatter("json")
-	assert.NotNil(t, jsonFormatter, "JSON formatter should not be nil")
+	testCases := []struct {
+		name          string
+		format        string
+		formatterType string
+		description   string
+	}{
+		{"JSON format", "json", "JSON", "JSON formatter should not be nil"},
+		{"Text format", "text", "Text", "Text formatter should not be nil"},
+		{"Default format", "", "Text", "Default formatter should not be nil"},
+		{"Unknown format", "unknown", "Text", "Unknown format should fallback to text formatter"},
+	}
 
-	// Test text formatter
-	textFormatter := createFileFormatter("text")
-	assert.NotNil(t, textFormatter, "Text formatter should not be nil")
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("file_formatter_%s", tc.name), func(t *testing.T) {
+			formatter := createFileFormatter(tc.format)
+			assert.NotNil(t, formatter, tc.description)
+		})
 
-	// Test default formatter (empty string)
-	defaultFormatter := createFileFormatter("")
-	assert.NotNil(t, defaultFormatter, "Default formatter should not be nil")
-
-	// Test unknown format (should fallback to text)
-	unknownFormatter := createFileFormatter("unknown")
-	assert.NotNil(t, unknownFormatter, "Unknown format should fallback to text formatter")
-}
-
-// TestCreateConsoleFormatter_AllFormats tests all console formatter options
-func TestCreateConsoleFormatter_AllFormats(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	// Test JSON formatter
-	jsonFormatter := createConsoleFormatter("json")
-	assert.NotNil(t, jsonFormatter, "JSON formatter should not be nil")
-
-	// Test text formatter
-	textFormatter := createConsoleFormatter("text")
-	assert.NotNil(t, textFormatter, "Text formatter should not be nil")
-
-	// Test default formatter (empty string)
-	defaultFormatter := createConsoleFormatter("")
-	assert.NotNil(t, defaultFormatter, "Default formatter should not be nil")
-
-	// Test unknown format (should fallback to text)
-	unknownFormatter := createConsoleFormatter("unknown")
-	assert.NotNil(t, unknownFormatter, "Unknown format should fallback to text formatter")
+		t.Run(fmt.Sprintf("console_formatter_%s", tc.name), func(t *testing.T) {
+			formatter := createConsoleFormatter(tc.format)
+			assert.NotNil(t, formatter, tc.description)
+		})
+	}
 }
 
 // =============================================================================
@@ -498,25 +375,14 @@ func TestCreateConsoleFormatter_AllFormats(t *testing.T) {
 func TestLogging_FileRotation(t *testing.T) {
 	// REQ-LOG-003: Log rotation configuration
 
-	// Create temporary directory for test
-	tempDir, err := os.MkdirTemp("", "logging_test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	logFilePath := CreateTempLogFile(t)
 
-	logFilePath := filepath.Join(tempDir, "test.log")
-
-	config := &LoggingConfig{
-		Level:          "info",
-		Format:         "text",
-		ConsoleEnabled: false,
-		FileEnabled:    true,
-		FilePath:       logFilePath,
-		MaxFileSize:    1, // 1 byte to trigger rotation quickly
-		BackupCount:    3,
-	}
+	config := CreateTestLoggingConfig("info", "text", false, true, logFilePath)
+	config.MaxFileSize = 1 // 1 byte to trigger rotation quickly
+	config.BackupCount = 3
 
 	// Setup logging
-	err = SetupLogging(config)
+	err := SetupLogging(config)
 	require.NoError(t, err)
 
 	logger := GetLogger()
@@ -538,12 +404,11 @@ func TestLogging_FileRotation(t *testing.T) {
 func TestLogging_Concurrency(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := NewLogger("test-component")
+	logger := CreateTestLogger(t, nil)
+	concurrency := 10
+	done := make(chan bool, concurrency)
 
-	// Test concurrent logging
-	done := make(chan bool, 10)
-
-	for i := 0; i < 10; i++ {
+	for i := 0; i < concurrency; i++ {
 		go func(id int) {
 			logger.Info("concurrent log message")
 			logger.WithField("goroutine_id", fmt.Sprintf("%d", id)).Info("structured log message")
@@ -552,7 +417,7 @@ func TestLogging_Concurrency(t *testing.T) {
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for i := 0; i < concurrency; i++ {
 		<-done
 	}
 
@@ -563,22 +428,23 @@ func TestLogging_Concurrency(t *testing.T) {
 func TestLogging_Performance(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := NewLogger("test-component")
+	logger := CreateTestLogger(t, nil)
+	messageCount := 1000
 
 	// Performance test: log many messages quickly
 	start := time.Now()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < messageCount; i++ {
 		logger.Info("performance test message")
 	}
 
 	duration := time.Since(start)
 
 	// Should complete within reasonable time (< 1 second for 1000 messages)
-	assert.Less(t, duration, time.Second, "Logging 1000 messages should complete within 1 second")
+	assert.Less(t, duration, time.Second, "Logging %d messages should complete within 1 second", messageCount)
 
 	// Average time per message should be < 1ms
-	avgTimePerMessage := duration / 1000
+	avgTimePerMessage := duration / time.Duration(messageCount)
 	assert.Less(t, avgTimePerMessage, time.Millisecond, "Average time per log message should be < 1ms")
 }
 
@@ -586,163 +452,55 @@ func TestLogging_Performance(t *testing.T) {
 func TestLogging_CrossComponentCorrelationID(t *testing.T) {
 	// REQ-LOG-002: Cross-component tracing validation
 
-	// Create multiple loggers for different components
-	authLogger := NewLogger("auth")
-	dbLogger := NewLogger("database")
-	apiLogger := NewLogger("api")
+	components := TestComponents()
+	loggers := make(map[string]*Logger)
+
+	// Create loggers for different components
+	for _, component := range components {
+		loggers[component] = CreateTestLogger(t, &TestLoggerConfig{Component: component})
+	}
 
 	// Generate correlation ID
 	correlationID := GenerateCorrelationID()
 	assert.NotEmpty(t, correlationID)
 
 	// Create context with correlation ID
-	ctx := WithCorrelationID(context.Background(), correlationID)
+	ctx := CreateTestContext(correlationID)
 
 	// Test correlation ID propagation across components
-	authLogger.LogWithContext(ctx, logrus.InfoLevel, "user authentication started")
-	dbLogger.LogWithContext(ctx, logrus.InfoLevel, "database query executed")
-	apiLogger.LogWithContext(ctx, logrus.InfoLevel, "API response sent")
+	for component, logger := range loggers {
+		logger.LogWithContext(ctx, logrus.InfoLevel, fmt.Sprintf("%s operation", component))
+	}
 
 	// Verify correlation ID is consistent across all components
 	retrievedID := GetCorrelationIDFromContext(ctx)
 	assert.Equal(t, correlationID, retrievedID)
 
 	// Test that each logger can access the correlation ID
-	authLoggerWithID := authLogger.WithCorrelationID(correlationID)
-	dbLoggerWithID := dbLogger.WithCorrelationID(correlationID)
-	apiLoggerWithID := apiLogger.WithCorrelationID(correlationID)
-
-	assert.NotNil(t, authLoggerWithID)
-	assert.NotNil(t, dbLoggerWithID)
-	assert.NotNil(t, apiLoggerWithID)
+	for component, logger := range loggers {
+		loggerWithID := logger.WithCorrelationID(correlationID)
+		assert.NotNil(t, loggerWithID, "Logger for component %s should support correlation ID", component)
+	}
 }
 
 // =============================================================================
-// MISSING COVERAGE TESTS
+// TABLE-DRIVEN TESTS
 // =============================================================================
-
-// TestNewLoggingConfigFromConfig tests config integration
-func TestNewLoggingConfigFromConfig(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-005: Configuration integration
-
-	// Create a mock config.LoggingConfig
-	// Since we can't import the actual config package in tests, we'll test the structure
-	config := &LoggingConfig{
-		Level:          "debug",
-		Format:         "json",
-		FileEnabled:    true,
-		FilePath:       "/tmp/test.log",
-		MaxFileSize:    10,
-		BackupCount:    3,
-		ConsoleEnabled: true,
-	}
-
-	// Test that the config structure works correctly
-	assert.Equal(t, "debug", config.Level)
-	assert.Equal(t, "json", config.Format)
-	assert.True(t, config.FileEnabled)
-	assert.Equal(t, "/tmp/test.log", config.FilePath)
-	assert.Equal(t, 10, config.MaxFileSize)
-	assert.Equal(t, 3, config.BackupCount)
-	assert.True(t, config.ConsoleEnabled)
-}
-
-// TestLogger_LogWithContext_EdgeCases tests edge cases in context logging
-func TestLogger_LogWithContext_EdgeCases(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-002: Correlation ID support
-
-	logger := NewLogger("test-component")
-
-	// Test with logger that has correlation ID set
-	loggerWithID := logger.WithCorrelationID("logger-correlation-id")
-
-	// Test context with correlation ID takes precedence
-	ctx := WithCorrelationID(context.Background(), "context-correlation-id")
-	loggerWithID.LogWithContext(ctx, logrus.InfoLevel, "message with both correlation IDs")
-
-	// Test with empty context
-	emptyCtx := context.Background()
-	loggerWithID.LogWithContext(emptyCtx, logrus.InfoLevel, "message with logger correlation ID only")
-
-	// Test with nil context
-	loggerWithID.LogWithContext(nil, logrus.InfoLevel, "message with nil context")
-}
-
-// TestSetupLogging_EdgeCases_FileHandler tests file handler edge cases
-func TestSetupLogging_EdgeCases_FileHandler(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-003: Log rotation configuration
-
-	// Test with empty file path
-	config := &LoggingConfig{
-		Level:          "info",
-		Format:         "text",
-		ConsoleEnabled: false,
-		FileEnabled:    true,
-		FilePath:       "", // Empty path
-		MaxFileSize:    10,
-		BackupCount:    3,
-	}
-
-	err := SetupLogging(config)
-	assert.NoError(t, err, "Empty file path should be handled gracefully")
-
-	// Test with very large file size
-	config.MaxFileSize = 999999999
-	err = SetupLogging(config)
-	assert.NoError(t, err, "Very large file size should be handled")
-
-	// Test with zero backup count
-	config.MaxFileSize = 10
-	config.BackupCount = 0
-	err = SetupLogging(config)
-	assert.NoError(t, err, "Zero backup count should be handled")
-}
-
-// TestLogger_AllContextMethods tests all context-based logging methods
-func TestLogger_AllContextMethods(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	logger := NewLogger("test-component")
-	ctx := context.Background()
-
-	// Test all context methods (excluding fatal which calls os.Exit)
-	logger.DebugWithContext(ctx, "debug message")
-	logger.InfoWithContext(ctx, "info message")
-	logger.WarnWithContext(ctx, "warn message")
-	logger.ErrorWithContext(ctx, "error message")
-
-	// Note: FatalWithContext calls os.Exit(1) so we can't test it in unit tests
-	// This is a limitation of unit testing, not a code issue
-}
 
 // TestLogger_TableDriven tests multiple scenarios in a table-driven approach
 func TestLogger_TableDriven(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	testCases := []struct {
-		name      string
-		component string
-		level     logrus.Level
-		message   string
-	}{
-		{"auth component", "auth", logrus.InfoLevel, "auth message"},
-		{"database component", "database", logrus.WarnLevel, "db message"},
-		{"api component", "api", logrus.ErrorLevel, "api message"},
-		{"camera component", "camera", logrus.DebugLevel, "camera message"},
-	}
+	fixtures := CreateTestFixtures()
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			logger := NewLogger(tc.component)
-			assert.Equal(t, tc.component, logger.component)
+	for _, fixture := range fixtures {
+		t.Run(fmt.Sprintf("table_driven_%s", fixture.Component), func(t *testing.T) {
+			logger := CreateTestLogger(t, &TestLoggerConfig{Component: fixture.Component})
+			assert.Equal(t, fixture.Component, logger.component)
 
 			// Test logging at the specified level
-			logger.LogWithContext(context.Background(), tc.level, tc.message)
+			logger.LogWithContext(context.Background(), fixture.Level, fixture.Message)
 		})
 	}
 }
