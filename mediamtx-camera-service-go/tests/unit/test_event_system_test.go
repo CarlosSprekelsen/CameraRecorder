@@ -35,7 +35,8 @@ func TestEventManager(t *testing.T) {
 		em := websocket.NewEventManager(logger)
 
 		assert.NotNil(t, em, "Event manager should be created successfully")
-		assert.Equal(t, 0, len(em.GetSubscriptionStats()["total_clients"].(int)), "Should start with no clients")
+		stats := em.GetSubscriptionStats()
+		assert.Equal(t, 0, stats["total_clients"].(int), "Should start with no clients")
 	})
 
 	t.Run("event_topic_validation", func(t *testing.T) {

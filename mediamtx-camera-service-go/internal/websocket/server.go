@@ -1012,3 +1012,8 @@ func (s *WebSocketServer) GetConfig() *ServerConfig {
 func (s *WebSocketServer) SetConfig(config *ServerConfig) {
 	s.config = config
 }
+
+// GetEventManager returns the event manager for external integration
+func (s *WebSocketServer) GetEventManager() *EventManager {
+	return s.eventManager
+}

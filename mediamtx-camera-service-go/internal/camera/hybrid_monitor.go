@@ -420,6 +420,13 @@ func (m *HybridCameraMonitor) AddEventCallback(callback func(CameraEventData)) {
 	}).Debug("Added camera event callback")
 }
 
+// SetEventNotifier sets the event notifier for external event system integration
+func (m *HybridCameraMonitor) SetEventNotifier(notifier EventNotifier) {
+	m.stateLock.Lock()
+	defer m.stateLock.Unlock()
+	m.eventNotifier = notifier
+}
+
 // monitoringLoop continuously monitors for device changes
 func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 	defer func() {

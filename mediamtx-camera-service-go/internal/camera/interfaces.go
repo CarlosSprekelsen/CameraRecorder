@@ -45,6 +45,15 @@ type DeviceInfoParser interface {
 	ParseDeviceFrameRates(output string) ([]string, error)
 }
 
+// EventNotifier interface for sending camera events to external systems
+type EventNotifier interface {
+	NotifyCameraConnected(device *CameraDevice)
+	NotifyCameraDisconnected(devicePath string)
+	NotifyCameraStatusChange(device *CameraDevice, oldStatus, newStatus DeviceStatus)
+	NotifyCapabilityDetected(device *CameraDevice, capabilities V4L2Capabilities)
+	NotifyCapabilityError(devicePath string, error string)
+}
+
 // CameraMonitor interface for camera discovery and monitoring
 type CameraMonitor interface {
 	Start(ctx context.Context) error
@@ -55,6 +64,7 @@ type CameraMonitor interface {
 	GetMonitorStats() *MonitorStats
 	AddEventHandler(handler CameraEventHandler)
 	AddEventCallback(callback func(CameraEventData))
+	SetEventNotifier(notifier EventNotifier)
 }
 
 // MonitorStats tracks monitoring statistics

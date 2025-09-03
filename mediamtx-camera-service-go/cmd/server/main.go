@@ -79,6 +79,17 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create WebSocket server")
 	}
 
+	// Connect camera monitor to event system
+	cameraEventNotifier := websocket.NewCameraEventNotifier(wsServer.GetEventManager(), logger.Logger)
+	cameraMonitor.SetEventNotifier(cameraEventNotifier)
+
+	// Connect MediaMTX controller to event system
+	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), logger.Logger)
+
+	// Connect system events to event system
+	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger.Logger)
+	systemEventNotifier.NotifySystemStartup("1.0.0", "Go implementation")
+
 	// Start camera monitor
 	ctx := context.Background()
 	if err := cameraMonitor.Start(ctx); err != nil {
