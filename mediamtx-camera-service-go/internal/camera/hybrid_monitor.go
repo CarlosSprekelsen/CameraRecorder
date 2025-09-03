@@ -465,6 +465,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 	currentDevices := make(map[string]*CameraDevice)
 	var wg sync.WaitGroup
 	deviceChan := make(chan *CameraDevice, len(m.cameraSources))
+	errorChan := make(chan error, len(m.cameraSources))
 
 	// Start parallel device checking for all camera sources
 	for _, source := range m.cameraSources {
@@ -475,13 +476,22 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 		wg.Add(1)
 		go func(src CameraSource) {
 			defer func() {
-				// Recover from panics in goroutine
+				// Recover from panics in goroutine and propagate as errors
 				if r := recover(); r != nil {
+					panicErr := fmt.Errorf("panic in device check goroutine for source %s: %v", src.Identifier, r)
 					m.logger.WithFields(map[string]interface{}{
 						"source": src.Identifier,
 						"panic":  r,
 						"action": "panic_recovered",
 					}).Error("Recovered from panic in device check goroutine")
+
+					// Propagate panic as error instead of swallowing it
+					select {
+					case errorChan <- panicErr:
+					default:
+						// If error channel is full, log the overflow
+						m.logger.WithError(panicErr).Warn("Error channel overflow, panic error dropped")
+					}
 				}
 				wg.Done()
 			}()
@@ -493,6 +503,13 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 					"error":  err.Error(),
 					"action": "device_check_error",
 				}).Debug("Error checking device")
+
+				// Propagate device check errors
+				select {
+				case errorChan <- fmt.Errorf("device check failed for source %s: %w", src.Identifier, err):
+				default:
+					m.logger.WithError(err).Warn("Error channel overflow, device check error dropped")
+				}
 				return
 			}
 
@@ -505,21 +522,37 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 	// Wait for all goroutines to complete
 	go func() {
 		defer func() {
-			// Recover from panics in goroutine
+			// Recover from panics in goroutine and propagate as errors
 			if r := recover(); r != nil {
+				panicErr := fmt.Errorf("panic in device collection goroutine: %v", r)
 				m.logger.WithFields(map[string]interface{}{
 					"panic":  r,
 					"action": "panic_recovered",
 				}).Error("Recovered from panic in device collection goroutine")
+				
+				// Propagate panic as error
+				select {
+				case errorChan <- panicErr:
+				default:
+					m.logger.WithError(panicErr).Warn("Error channel overflow, panic error dropped")
+				}
 			}
 		}()
 		wg.Wait()
 		close(deviceChan)
+		close(errorChan)
 	}()
 
-	// Collect results
+	// Collect results and errors
 	for device := range deviceChan {
 		currentDevices[device.Path] = device
+	}
+
+	// Process any errors that occurred during device checking
+	for err := range errorChan {
+		m.logger.WithError(err).Warn("Device check error occurred")
+		// Optionally increment error counters or trigger recovery mechanisms
+		m.pollingFailureCount++
 	}
 
 	m.processDeviceStateChanges(ctx, currentDevices)

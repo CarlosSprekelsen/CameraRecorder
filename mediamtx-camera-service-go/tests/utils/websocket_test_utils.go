@@ -46,7 +46,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	gorilla "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 // GetFreePort returns a free port by letting the OS assign one
@@ -509,7 +508,7 @@ func DialWebSocket(url string) (*gorilla.Conn, *http.Response, error) {
 // This replaces hardcoded port usage in tests for TEST SERVERS ONLY
 func CreateTestServerConfig() *websocket.ServerConfig {
 	port := GetFreePort()
-	
+
 	config := websocket.DefaultServerConfig()
 	config.Port = port
 	return config
@@ -532,10 +531,10 @@ func CreateTestHTTPURLWithFreePort(path string) string {
 // ============================================================================
 // IMPORTANT: MediaMTX Service Ports Must Stay Hardcoded
 // ============================================================================
-// 
+//
 // DO NOT use GetFreePort() for these ports as they connect to real services:
 // - Port 9997: MediaMTX API server (EXTERNAL SERVICE)
-// - Port 8554: MediaMTX RTSP server (EXTERNAL SERVICE) 
+// - Port 8554: MediaMTX RTSP server (EXTERNAL SERVICE)
 // - Port 8889: MediaMTX WebRTC server (EXTERNAL SERVICE)
 // - Port 8888: MediaMTX HLS server (EXTERNAL SERVICE)
 //

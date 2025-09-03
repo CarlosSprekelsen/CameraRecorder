@@ -52,7 +52,7 @@ type WebSocketServer struct {
 	// Dependencies (proper dependency injection)
 	configManager      *config.ConfigManager
 	logger             *logging.Logger
-	cameraMonitor      *camera.HybridCameraMonitor
+	cameraMonitor      camera.CameraMonitor
 	jwtHandler         *security.JWTHandler
 	mediaMTXController mediamtx.MediaMTXController
 
@@ -79,6 +79,7 @@ type WebSocketServer struct {
 	metricsMutex sync.RWMutex
 
 	// Event handling
+	eventManager       *EventManager
 	eventHandlers      []func(string, interface{})
 	eventHandlersMutex sync.RWMutex
 
@@ -134,8 +135,20 @@ func (s *WebSocketServer) checkRateLimit(client *ClientConnection) error {
 
 // notifyRecordingStatusUpdate sends real-time recording status updates to clients
 func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename string, duration time.Duration) {
-	notification := map[string]interface{}{
-		"type":      "recording_status_update",
+	// Determine event topic based on status
+	var topic EventTopic
+	switch status {
+	case "started":
+		topic = TopicRecordingStart
+	case "stopped":
+		topic = TopicRecordingStop
+	case "error":
+		topic = TopicRecordingError
+	default:
+		topic = TopicRecordingProgress
+	}
+
+	eventData := map[string]interface{}{
 		"device":    device,
 		"status":    status,
 		"filename":  filename,
@@ -148,13 +161,19 @@ func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename s
 		"status":   status,
 		"filename": filename,
 		"duration": duration,
+		"topic":    topic,
 	}).Debug("Sending recording status notification")
 
-	// Use existing event handling infrastructure
-	s.broadcastEvent("recording_update", notification)
+	// Use new efficient event system
+	if err := s.sendEventToSubscribers(topic, eventData); err != nil {
+		s.logger.WithError(err).WithField("topic", string(topic)).Error("Failed to send recording status event")
+		// Fallback to broadcast for backward compatibility
+		s.broadcastEvent("recording_update", eventData)
+	}
 }
 
 // broadcastEvent broadcasts an event to all connected clients
+// DEPRECATED: Use sendEventToSubscribers for efficient topic-based delivery
 func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 	s.eventHandlersMutex.RLock()
 	defer s.eventHandlersMutex.RUnlock()
@@ -188,6 +207,59 @@ func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 	s.clientsMutex.RUnlock()
 }
 
+// sendEventToSubscribers sends an event only to clients subscribed to the specific topic
+func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[string]interface{}) error {
+	// Publish event through event manager
+	if err := s.eventManager.PublishEvent(topic, data); err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	// Get subscribers for this topic
+	subscribers := s.eventManager.GetSubscribersForTopic(topic)
+	if len(subscribers) == 0 {
+		s.logger.WithField("topic", string(topic)).Debug("No subscribers for event topic")
+		return nil
+	}
+
+	// Send event only to subscribed clients
+	s.clientsMutex.RLock()
+	defer s.clientsMutex.RUnlock()
+
+	notification := &JsonRpcNotification{
+		JSONRPC: "2.0",
+		Method:  string(topic),
+		Params:  data,
+	}
+
+	sentCount := 0
+	for _, clientID := range subscribers {
+		if client, exists := s.clients[clientID]; exists && client.Authenticated && client.Conn != nil {
+			// Send message to client
+			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+			if err := client.Conn.WriteJSON(notification); err != nil {
+				s.logger.WithError(err).WithFields(logrus.Fields{
+					"client_id": clientID,
+					"topic":     topic,
+				}).Error("Failed to send event to subscribed client")
+			} else {
+				sentCount++
+				s.logger.WithFields(logrus.Fields{
+					"client_id": clientID,
+					"topic":     topic,
+				}).Debug("Event sent to subscribed client")
+			}
+		}
+	}
+
+	s.logger.WithFields(logrus.Fields{
+		"topic":       topic,
+		"subscribers": len(subscribers),
+		"sent_count":  sentCount,
+	}).Debug("Event delivered to subscribed clients")
+
+	return nil
+}
+
 // addEventHandler adds a new event handler
 func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 	s.eventHandlersMutex.Lock()
@@ -200,7 +272,7 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 func NewWebSocketServer(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
-	cameraMonitor *camera.HybridCameraMonitor,
+	cameraMonitor camera.CameraMonitor,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXController,
 ) (*WebSocketServer, error) {
@@ -213,7 +285,7 @@ func NewWebSocketServer(
 	}
 
 	if cameraMonitor == nil {
-		return nil, fmt.Errorf("cameraMonitor cannot be nil - use existing internal/camera/HybridCameraMonitor")
+		return nil, fmt.Errorf("cameraMonitor cannot be nil - use existing internal/camera/CameraMonitor interface")
 	}
 
 	if jwtHandler == nil {
@@ -282,6 +354,7 @@ func NewWebSocketServer(
 		},
 
 		// Event handling
+		eventManager:  NewEventManager(logger.Logger),
 		eventHandlers: make([]func(string, interface{}), 0),
 
 		// Graceful shutdown
@@ -430,6 +503,9 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			delete(s.clients, client.ClientID)
 			s.clientsMutex.Unlock()
 
+			// Remove event subscriptions
+			s.eventManager.RemoveClient(client.ClientID)
+
 			// Use atomic operation for metrics update
 			atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
@@ -526,20 +602,34 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 
 // handleClientConnection handles individual client connections
 func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *ClientConnection) {
+	// Create error channel for panic recovery
+	panicChan := make(chan error, 1)
+
 	defer func() {
-		// Recover from panics in goroutine
+		// Recover from panics in goroutine and propagate as errors
 		if r := recover(); r != nil {
+			panicErr := fmt.Errorf("panic in client connection handler for client %s: %v", client.ClientID, r)
 			s.logger.WithFields(logrus.Fields{
 				"client_id": client.ClientID,
 				"panic":     r,
 				"action":    "panic_recovered",
 			}).Error("Recovered from panic in client connection handler")
+
+			// Propagate panic as error instead of swallowing it
+			select {
+			case panicChan <- panicErr:
+			default:
+				s.logger.WithError(panicErr).Warn("Panic channel overflow, panic error dropped")
+			}
 		}
 
 		// Remove client from connections and update metrics atomically
 		s.clientsMutex.Lock()
 		delete(s.clients, client.ClientID)
 		s.clientsMutex.Unlock()
+
+		// Remove event subscriptions
+		s.eventManager.RemoveClient(client.ClientID)
 
 		// Update metrics with atomic operation
 		atomic.AddInt64(&s.metrics.ActiveConnections, -1)

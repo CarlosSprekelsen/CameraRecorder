@@ -140,9 +140,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	currentConfig.MediaMTX.HLSPort = mediaMTXHLSPort
 	currentConfig.MediaMTX.WebRTCPort = mediaMTXWebRTCPort
 
-	// Update MediaMTX host URLs to use free ports
-	currentConfig.MediaMTX.BaseURL = fmt.Sprintf("http://localhost:%d", mediaMTXAPIPort)
-	currentConfig.MediaMTX.HealthCheckURL = fmt.Sprintf("http://localhost:%d/v3/paths/list", mediaMTXAPIPort)
+	// Note: MediaMTX host URLs are constructed dynamically in the controller
 
 	// Initialize logger
 	logger := logging.NewLogger("test-environment")

@@ -41,7 +41,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
@@ -216,8 +215,8 @@ func TestWebSocketServerInstantiation(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	// Create test dependencies
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	// Create test dependencies using mock camera monitor for better test control
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -608,7 +607,7 @@ func TestClientConnectionManagement(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -664,7 +663,7 @@ func TestServerLifecycle(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -699,7 +698,7 @@ func TestApiCompliance(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -768,7 +767,7 @@ func TestPerformanceMetrics(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -803,7 +802,7 @@ func TestJwtTokenValidation(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -859,7 +858,7 @@ func TestServerErrorHandling(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -943,20 +942,20 @@ func TestServerErrorHandling(t *testing.T) {
 	assert.True(t, server.IsRunning())
 
 	// Test concurrent metrics access to ensure thread safety
-	var wg sync.WaitGroup
+	var metricsWg sync.WaitGroup
 	metricsResults := make(chan *websocket.PerformanceMetrics, 10)
 
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
+		metricsWg.Add(1)
 		go func(id int) {
-			defer wg.Done()
+			defer metricsWg.Done()
 			metrics := server.GetMetrics()
 			metricsResults <- metrics
 		}(i)
 	}
 
 	// Wait for all goroutines to complete
-	wg.Wait()
+	metricsWg.Wait()
 	close(metricsResults)
 
 	// Verify all metrics calls succeeded
@@ -1014,7 +1013,7 @@ func TestServerMetricsComprehensive(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -1067,7 +1066,7 @@ func TestServerLifecycleComprehensive(t *testing.T) {
 	env := utils.SetupMediaMTXTestEnvironment(t)
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -1216,7 +1215,7 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 	defer utils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test dependencies using existing patterns
-	cameraMonitor := &camera.HybridCameraMonitor{}
+	cameraMonitor := utils.NewMockCameraMonitor()
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
@@ -1511,7 +1510,7 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 		// Test handlers through public interface to increase coverage
 
 		// Create a new server instance for this test to avoid channel close issues
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Start server to exercise Start() method (covers handleWebSocket registration)
@@ -1571,7 +1570,7 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 		// NOTE: Temporarily disabled due to authentication issues - will be re-enabled when server bug is fixed
 
 		// Create a new server instance for this test to avoid channel close issues
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Test that server can be started and stopped (exercises handleWebSocket registration)
@@ -1597,7 +1596,7 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 		// NOTE: Temporarily disabled due to authentication issues - will be re-enabled when server bug is fixed
 
 		// Create a new server instance for this test to avoid channel close issues
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Test that server can be started and stopped
@@ -1623,7 +1622,7 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 		// NOTE: Temporarily disabled due to authentication issues - will be re-enabled when server bug is fixed
 
 		// Create a new server instance for this test to avoid channel close issues
-		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, mediaMTXController)
+		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, cameraMonitor, jwtHandler, env.Controller)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Test that server can be started and stopped

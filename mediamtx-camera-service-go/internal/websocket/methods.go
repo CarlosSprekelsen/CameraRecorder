@@ -72,6 +72,11 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 	s.registerMethod("camera_status_update", s.MethodCameraStatusUpdate, "1.0")
 	s.registerMethod("recording_status_update", s.MethodRecordingStatusUpdate, "1.0")
 
+	// Event subscription methods
+	s.registerMethod("subscribe_events", s.MethodSubscribeEvents, "1.0")
+	s.registerMethod("unsubscribe_events", s.MethodUnsubscribeEvents, "1.0")
+	s.registerMethod("get_subscription_stats", s.MethodGetSubscriptionStats, "1.0")
+
 	s.logger.WithField("action", "register_methods").Info("Built-in methods registered")
 }
 
@@ -2866,6 +2871,163 @@ func (s *WebSocketServer) MethodRecordingStatusUpdate(params map[string]interfac
 			Code:    METHOD_NOT_FOUND,
 			Message: ErrorMessages[METHOD_NOT_FOUND],
 			Data:    "recording_status_update is a server-generated notification, not a callable method",
+		},
+	}, nil
+}
+
+// MethodSubscribeEvents handles client subscription to event topics
+func (s *WebSocketServer) MethodSubscribeEvents(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	// Validate required parameters
+	topicsParam, exists := params["topics"]
+	if !exists {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    "topics parameter is required",
+			},
+		}, nil
+	}
+
+	// Parse topics parameter
+	var topics []EventTopic
+	switch v := topicsParam.(type) {
+	case []interface{}:
+		for _, topic := range v {
+			if topicStr, ok := topic.(string); ok {
+				topics = append(topics, EventTopic(topicStr))
+			}
+		}
+	case []string:
+		for _, topic := range v {
+			topics = append(topics, EventTopic(topic))
+		}
+	default:
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    "topics must be an array of strings",
+			},
+		}, nil
+	}
+
+	if len(topics) == 0 {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INVALID_PARAMS,
+				Message: ErrorMessages[INVALID_PARAMS],
+				Data:    "at least one topic must be specified",
+			},
+		}, nil
+	}
+
+	// Parse optional filters
+	var filters map[string]interface{}
+	if filtersParam, exists := params["filters"]; exists {
+		if filtersMap, ok := filtersParam.(map[string]interface{}); ok {
+			filters = filtersMap
+		}
+	}
+
+	// Subscribe client to events
+	err := s.eventManager.Subscribe(client.ClientID, topics, filters)
+	if err != nil {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    fmt.Sprintf("failed to subscribe: %v", err),
+			},
+		}, nil
+	}
+
+	// Update client last seen
+	s.eventManager.UpdateClientLastSeen(client.ClientID)
+
+	s.logger.WithFields(logrus.Fields{
+		"client_id": client.ClientID,
+		"topics":    topics,
+		"filters":   filters,
+	}).Info("Client subscribed to event topics")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"subscribed": true,
+			"topics":     topics,
+			"filters":    filters,
+		},
+	}, nil
+}
+
+// MethodUnsubscribeEvents handles client unsubscription from event topics
+func (s *WebSocketServer) MethodUnsubscribeEvents(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	// Parse optional topics parameter (if not provided, unsubscribe from all)
+	var topics []EventTopic
+	if topicsParam, exists := params["topics"]; exists {
+		switch v := topicsParam.(type) {
+		case []interface{}:
+			for _, topic := range v {
+				if topicStr, ok := topic.(string); ok {
+					topics = append(topics, EventTopic(topicStr))
+				}
+			}
+		case []string:
+			for _, topic := range v {
+				topics = append(topics, EventTopic(topic))
+			}
+		}
+	}
+
+	// Unsubscribe client from events
+	err := s.eventManager.Unsubscribe(client.ClientID, topics)
+	if err != nil {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    fmt.Sprintf("failed to unsubscribe: %v", err),
+			},
+		}, nil
+	}
+
+	// Update client last seen
+	s.eventManager.UpdateClientLastSeen(client.ClientID)
+
+	s.logger.WithFields(logrus.Fields{
+		"client_id": client.ClientID,
+		"topics":    topics,
+	}).Info("Client unsubscribed from event topics")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"unsubscribed": true,
+			"topics":       topics,
+		},
+	}, nil
+}
+
+// MethodGetSubscriptionStats returns statistics about event subscriptions
+func (s *WebSocketServer) MethodGetSubscriptionStats(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	// Get subscription statistics
+	stats := s.eventManager.GetSubscriptionStats()
+
+	// Get client's own subscriptions
+	clientTopics := s.eventManager.GetClientSubscriptions(client.ClientID)
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"global_stats":  stats,
+			"client_topics": clientTopics,
+			"client_id":     client.ClientID,
 		},
 	}, nil
 }

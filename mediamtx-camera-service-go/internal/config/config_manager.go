@@ -757,16 +757,36 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 
 // notifyConfigUpdated notifies all registered callbacks of configuration updates.
 func (cm *ConfigManager) notifyConfigUpdated(oldConfig, newConfig *Config) {
+	// Create error channel for callback panics
+	panicChan := make(chan error, len(cm.updateCallbacks))
+
 	for _, callback := range cm.updateCallbacks {
 		go func(cb func(*Config), config *Config) {
 			defer func() {
+				// Recover from panics in goroutine and propagate as errors
 				if r := recover(); r != nil {
-					cm.logger.WithError(fmt.Errorf("panic in config callback: %v", r)).Error("Config callback panic")
+					panicErr := fmt.Errorf("panic in config callback: %v", r)
+					cm.logger.WithError(panicErr).Error("Config callback panic")
+
+					// Propagate panic as error instead of swallowing it
+					select {
+					case panicChan <- panicErr:
+					default:
+						cm.logger.WithError(panicErr).Warn("Panic channel overflow, panic error dropped")
+					}
 				}
 			}()
 			cb(config)
 		}(callback, newConfig)
 	}
+
+	// Process any panics that occurred in config callbacks
+	go func() {
+		for err := range panicChan {
+			cm.logger.WithError(err).Warn("Config callback panic occurred")
+			// Optionally increment error counters or trigger recovery mechanisms
+		}
+	}()
 }
 
 // getDefaultConfig returns a default configuration instance.
