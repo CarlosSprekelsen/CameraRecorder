@@ -174,7 +174,7 @@ func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 		JWTHandler:     TestJWTHandler(t),
 		RoleManager:    TestPermissionChecker(t),
 		SessionManager: TestSessionManager(t),
-		Logger:         &TestLogger{}, // Following established pattern: env.Logger
+		Logger:         NewMinimalLogger(), // Following established pattern: env.Logger
 	}
 
 	// Session manager cleanup is started automatically in NewSessionManager
@@ -298,104 +298,6 @@ func LoadTestSecurityOperations(t *testing.T, operation func(), concurrency int,
 // TEST LOGGER (Following established pattern in codebase)
 // =============================================================================
 
-// TestLogger provides a simple logger for testing that follows the established pattern
-// This implements the same interface as *logging.Logger for testing purposes
-type TestLogger struct{}
-
-func (l *TestLogger) Info(args ...interface{})                             {}
-func (l *TestLogger) Warn(args ...interface{})                             {}
-func (l *TestLogger) Error(args ...interface{})                            {}
-func (l *TestLogger) Debug(args ...interface{})                            {}
-func (l *TestLogger) WithFields(fields map[string]interface{}) interface{} { return l }
-
-// Following established pattern: provide a way to get a logger that middleware can use
-// This mimics how other security components get their logger in tests
-func (l *TestLogger) GetLogger() interface{} { return l }
-
-// CreateTestLogger creates a test logger that can be used with middleware
-// Following the established pattern: provide logger creation function
-func CreateTestLogger() *TestLogger {
-	return &TestLogger{}
-}
-
-// TestLoggerConfig provides test logging configuration
-type TestLoggerConfig struct {
-	Level          string
-	Format         string
-	FileEnabled    bool
-	FilePath       string
-	MaxFileSize    int
-	BackupCount    int
-	ConsoleEnabled bool
-}
-
-// GetTestLoggerConfig returns test logging configuration
-func GetTestLoggerConfig() *TestLoggerConfig {
-	return &TestLoggerConfig{
-		Level:          "debug",
-		Format:         "text",
-		FileEnabled:    false,
-		FilePath:       "/tmp/test_security.log",
-		MaxFileSize:    10,
-		BackupCount:    3,
-		ConsoleEnabled: true,
-	}
-}
-
-// =============================================================================
-// TYPE COMPATIBILITY FOR MIDDLEWARE
-// =============================================================================
-
-// TestLoggerInterface provides the exact interface needed by middleware
-// This allows type compatibility without external dependencies
-type TestLoggerInterface interface {
-	Info(args ...interface{})
-	Warn(args ...interface{})
-	Error(args ...interface{})
-	Debug(args ...interface{})
-	WithFields(fields map[string]interface{}) TestLoggerInterface
-}
-
-// Ensure TestLogger implements TestLoggerInterface
-var _ TestLoggerInterface = (*TestLogger)(nil)
-
-// =============================================================================
-// MIDDLEWARE COMPATIBILITY SOLUTION
-// =============================================================================
-
-// TestLoggerWrapper provides middleware compatibility
-// This allows the TestLogger to be used with middleware functions
-// Following best practice: wrapper pattern for interface compatibility
-type TestLoggerWrapper struct {
-	*TestLogger
-}
-
-// NewTestLoggerWrapper creates a wrapped logger for middleware compatibility
-func NewTestLoggerWrapper() *TestLoggerWrapper {
-	return &TestLoggerWrapper{
-		TestLogger: NewTestLogger(),
-	}
-}
-
-// WithFields - implements the exact signature expected by middleware
-// Returns the wrapper for method chaining compatibility
-func (tw *TestLoggerWrapper) WithFields(fields map[string]interface{}) *TestLoggerWrapper {
-	tw.TestLogger.WithFields(fields)
-	return tw
-}
-
-// CreateMiddlewareCompatibleLogger creates a logger that can be used with middleware
-// This uses Go's type system to provide compatibility
-func CreateMiddlewareCompatibleLogger() interface{} {
-	// Return as interface{} to allow middleware to accept it
-	// The middleware will use the methods it needs
-	return NewTestLoggerWrapper()
-}
-
-// =============================================================================
-// MINIMAL LOGGING.LOGGER COMPATIBILITY
-// =============================================================================
-
 // MinimalLogger provides a minimal implementation compatible with *logging.Logger
 // This allows middleware to work without external dependencies
 // Following best practice: minimal interface implementation
@@ -500,8 +402,8 @@ func (l *MinimalLogger) ClearLogs() {
 func (l *MinimalLogger) HasLogs() bool {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	return len(l.infoLogs) > 0 || len(l.warnLogs) > 0 || 
-		   len(l.errorLogs) > 0 || len(l.debugLogs) > 0
+	return len(l.infoLogs) > 0 || len(l.warnLogs) > 0 ||
+		len(l.errorLogs) > 0 || len(l.debugLogs) > 0
 }
 
 // LogCount returns total number of log entries
@@ -509,4 +411,95 @@ func (l *MinimalLogger) LogCount() int {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return len(l.infoLogs) + len(l.warnLogs) + len(l.errorLogs) + len(l.debugLogs)
+}
+
+// TestLoggerConfig provides test logging configuration
+type TestLoggerConfig struct {
+	Level          string
+	Format         string
+	FileEnabled    bool
+	FilePath       string
+	MaxFileSize    int
+	BackupCount    int
+	ConsoleEnabled bool
+}
+
+// GetTestLoggerConfig returns test logging configuration
+func GetTestLoggerConfig() *TestLoggerConfig {
+	return &TestLoggerConfig{
+		Level:          "debug",
+		Format:         "text",
+		FileEnabled:    false,
+		FilePath:       "/tmp/test_security.log",
+		MaxFileSize:    10,
+		BackupCount:    3,
+		ConsoleEnabled: true,
+	}
+}
+
+// =============================================================================
+// TYPE COMPATIBILITY FOR MIDDLEWARE
+// =============================================================================
+
+// TestLoggerInterface provides the exact interface needed by middleware
+// This allows type compatibility without external dependencies
+type TestLoggerInterface interface {
+	Info(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+	Debug(args ...interface{})
+	WithFields(fields map[string]interface{}) TestLoggerInterface
+}
+
+// Ensure TestLogger implements TestLoggerInterface
+var _ TestLoggerInterface = (*TestLogger)(nil)
+
+// =============================================================================
+// MIDDLEWARE COMPATIBILITY SOLUTION
+// =============================================================================
+
+// TestLoggerWrapper provides middleware compatibility
+// This allows the TestLogger to be used with middleware functions
+// Following best practice: wrapper pattern for interface compatibility
+type TestLoggerWrapper struct {
+	*TestLogger
+}
+
+// NewTestLoggerWrapper creates a wrapped logger for middleware compatibility
+func NewTestLoggerWrapper() *TestLoggerWrapper {
+	return &TestLoggerWrapper{
+		TestLogger: NewTestLogger(),
+	}
+}
+
+// WithFields - implements the exact signature expected by middleware
+// Returns the wrapper for method chaining compatibility
+func (tw *TestLoggerWrapper) WithFields(fields map[string]interface{}) *TestLoggerWrapper {
+	tw.TestLogger.WithFields(fields)
+	return tw
+}
+
+// CreateMiddlewareCompatibleLogger creates a logger that can be used with middleware
+// This uses Go's type system to provide compatibility
+func CreateMiddlewareCompatibleLogger() interface{} {
+	// Return as interface{} to allow middleware to accept it
+	// The middleware will use the methods it needs
+	return NewTestLoggerWrapper()
+}
+
+
+
+// =============================================================================
+// TYPE ALIAS FOR MIDDLEWARE COMPATIBILITY
+// =============================================================================
+
+// LoggerTypeAlias creates a type alias for middleware compatibility
+// This allows MinimalLogger to be used where *logging.Logger is expected
+// Following best practice: type aliasing for interface compatibility
+type LoggerTypeAlias = *MinimalLogger
+
+// CreateLoggerForMiddleware creates a logger that can be used with middleware
+// This uses Go's type system to provide compatibility
+func CreateLoggerForMiddleware() LoggerTypeAlias {
+	return NewMinimalLogger()
 }

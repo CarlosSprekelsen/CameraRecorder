@@ -85,8 +85,8 @@ func TestNewAuthMiddleware(t *testing.T) {
 
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: use middleware-compatible logger
-	middleware := NewAuthMiddleware(CreateMiddlewareCompatibleLogger(), config)
+	// Following established pattern: use minimal logger for middleware compatibility
+	middleware := NewAuthMiddleware(NewMinimalLogger(), config)
 
 	assert.NotNil(t, middleware, "Auth middleware should be created successfully")
 	// Note: Fields are unexported, so we can't test them directly

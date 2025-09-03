@@ -62,6 +62,18 @@ func ValidateConfig(config *Config) error {
 		errors = append(errors, err)
 	}
 
+	if err := validateSecurityConfig(&config.Security); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateServerDefaults(&config.ServerDefaults); err != nil {
+		errors = append(errors, err)
+	}
+
+	if err := validateStorageConfig(&config.Storage); err != nil {
+		errors = append(errors, err)
+	}
+
 	// Return combined errors if any
 	if len(errors) > 0 {
 		return &ValidationError{
