@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,8 +32,8 @@ func TestSnapshotManager_RealSystem(t *testing.T) {
 	// REQ-SNAP-001: Snapshot capture and management
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")

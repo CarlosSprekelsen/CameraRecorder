@@ -12,7 +12,7 @@ Instead of creating individual components in each test:
    logger := logging.NewLogger("test")
 
 Use the shared utilities:
-   env := utils.SetupMediaMTXTestEnvironment(t)
+   env := testtestutils.SetupMediaMTXTestEnvironment(t)
    // env.ConfigManager and env.Logger are ready to use
 
 ANTI-PATTERNS TO AVOID:
@@ -34,7 +34,7 @@ Test Categories: Unit/Integration/Test Infrastructure
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package utils
+package testutils
 
 import (
 	"context"
@@ -48,7 +48,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
@@ -74,7 +73,7 @@ type MediaMTXTestEnvironment struct {
 // Use this when testing WebSocket server functionality
 type WebSocketTestEnvironment struct {
 	*MediaMTXTestEnvironment
-	JWTHandler      *security.JWTHandler
+	JWTHandler      *.JWTHandler
 	CameraMonitor   *camera.HybridCameraMonitor
 	WebSocketServer *websocket.WebSocketServer
 }
@@ -83,7 +82,7 @@ type WebSocketTestEnvironment struct {
 // Use this when testing security-related functionality
 type SecurityTestEnvironment struct {
 	*TestEnvironment
-	JWTHandler     *security.JWTHandler
+	JWTHandler     *.JWTHandler
 	RoleManager    *security.PermissionChecker
 	SessionManager *security.SessionManager
 }
@@ -95,8 +94,8 @@ type SecurityTestEnvironment struct {
 // Example usage:
 //
 //	func TestBasicFeature(t *testing.T) {
-//	    env := utils.SetupTestEnvironment(t)
-//	    defer utils.TeardownTestEnvironment(t, env)
+//	    env := testtestutils.SetupTestEnvironment(t)
+//	    defer testtestutils.TeardownTestEnvironment(t, env)
 //
 //	    // Use env.ConfigManager and env.Logger
 //	    result := myFunction(env.ConfigManager, env.Logger)
@@ -118,7 +117,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// OVERRIDE HARDCODED PORTS WITH FREE PORTS TO PREVENT CONFLICTS
-	// Use GetFreePort() from websocket_test_utils.go to get free ports
+	// Use GetFreePort() from websocket_test_testtestutils.go to get free ports
 	wsPort := GetFreePort()
 	mediaMTXAPIPort := GetFreePort()
 	mediaMTXRTSPPort := GetFreePort()
@@ -164,8 +163,8 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 // Example usage:
 //
 //	func TestMediaMTXFeature(t *testing.T) {
-//	    env := utils.SetupMediaMTXTestEnvironment(t)
-//	    defer utils.TeardownMediaMTXTestEnvironment(t, env)
+//	    env := testtestutils.SetupMediaMTXTestEnvironment(t)
+//	    defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 //
 //	    // Use env.Controller for MediaMTX operations
 //	    result, err := env.Controller.CreatePath("test", "/dev/video0")
@@ -200,11 +199,11 @@ func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 // Example usage:
 //
 //	func TestSecurityFeature(t *testing.T) {
-//	    env := utils.SetupSecurityTestEnvironment(t)
-//	    defer utils.TeardownSecurityTestEnvironment(t, env)
+//	    env := testtestutils.SetupSecurityTestEnvironment(t)
+//	    defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 //
 //	    // Use env.JWTHandler, env.RoleManager, env.SessionManager
-//	    token := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
+//	    token := testtestutils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
 //	    require.NotEmpty(t, token)
 //	}
 func SetupSecurityTestEnvironment(t *testing.T) *SecurityTestEnvironment {
@@ -251,8 +250,8 @@ func TeardownSecurityTestEnvironment(t *testing.T, env *SecurityTestEnvironment)
 // Example usage:
 //
 //	func TestWebSocketFeature(t *testing.T) {
-//	    env := utils.SetupWebSocketTestEnvironment(t)
-//	    defer utils.TeardownWebSocketTestEnvironment(t, env)
+//	    env := testtestutils.SetupWebSocketTestEnvironment(t)
+//	    defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 //
 //	    // Use env.WebSocketServer for WebSocket operations
 //	    err := env.WebSocketServer.Start()
@@ -538,22 +537,22 @@ func CreateTestMediaMTXConfig(tempDir string) *config.MediaMTXConfig {
 
 // SetupTestJWTHandler creates a JWT handler for testing
 // Use this when you need JWT authentication in tests
-func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *security.JWTHandler {
+func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *.JWTHandler {
 	cfg := configManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration should be available")
 
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(t, err, "Failed to create JWT handler")
 
 	return jwtHandler
 }
 
 // SetupTestJWTHandlerForBenchmark creates a test JWT handler for benchmarks
-func SetupTestJWTHandlerForBenchmark(b *testing.B, configManager *config.ConfigManager) *security.JWTHandler {
+func SetupTestJWTHandlerForBenchmark(b *testing.B, configManager *config.ConfigManager) *.JWTHandler {
 	cfg := configManager.GetConfig()
 	require.NotNil(b, cfg, "Configuration should be available")
 
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(b, err, "Failed to create JWT handler")
 
 	return jwtHandler
@@ -561,7 +560,7 @@ func SetupTestJWTHandlerForBenchmark(b *testing.B, configManager *config.ConfigM
 
 // GenerateTestToken creates a test JWT token for authentication
 // Use this when you need authenticated requests in tests
-func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
+func GenerateTestToken(t *testing.T, jwtHandler *.JWTHandler, userID string, role string) string {
 	token, err := jwtHandler.GenerateToken(userID, role, 24) // 24 hours expiry
 	require.NoError(t, err, "Failed to generate test token")
 	return token
@@ -569,7 +568,7 @@ func GenerateTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID str
 
 // GenerateTestTokenWithExpiry creates a test JWT token with custom expiry
 // Use this when you need specific token expiry times for testing
-func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string, expiryHours int) string {
+func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *.JWTHandler, userID string, role string, expiryHours int) string {
 	token, err := jwtHandler.GenerateToken(userID, role, expiryHours)
 	require.NoError(t, err, "Failed to generate test token with custom expiry")
 	return token
@@ -577,7 +576,7 @@ func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *security.JWTHandler, 
 
 // GenerateExpiredTestToken creates an expired JWT token for testing expiry scenarios
 // Use this when testing token expiry functionality
-func GenerateExpiredTestToken(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) string {
+func GenerateExpiredTestToken(t *testing.T, jwtHandler *.JWTHandler, userID string, role string) string {
 	// Generate token with 0 hours = immediate expiry
 	token, err := jwtHandler.GenerateToken(userID, role, 0)
 	require.NoError(t, err, "Failed to generate expired test token")
@@ -587,13 +586,13 @@ func GenerateExpiredTestToken(t *testing.T, jwtHandler *security.JWTHandler, use
 // SetupTestRoleManager creates a role manager for testing
 // Use this when testing role-based access control
 func SetupTestRoleManager(t *testing.T) *security.PermissionChecker {
-	return security.NewPermissionChecker()
+	return NewPermissionChecker()
 }
 
 // SetupTestSessionManager creates a session manager for testing
 // Use this when testing session management
 func SetupTestSessionManager(t *testing.T) *security.SessionManager {
-	return security.NewSessionManager(30*time.Minute, 1*time.Minute)
+	return NewSessionManager(30*time.Minute, 1*time.Minute)
 }
 
 // CreateTestSession creates a test session for session management testing
@@ -607,7 +606,7 @@ func CreateTestSession(t *testing.T, sessionManager *security.SessionManager, us
 
 // ValidateTestToken validates a test token and returns claims
 // Use this when you need to verify token contents
-func ValidateTestToken(t *testing.T, jwtHandler *security.JWTHandler, token string) *security.JWTClaims {
+func ValidateTestToken(t *testing.T, jwtHandler *.JWTHandler, token string) *security.JWTClaims {
 	claims, err := jwtHandler.ValidateToken(token)
 	require.NoError(t, err, "Failed to validate test token")
 	require.NotNil(t, claims, "Token claims should not be nil")
@@ -616,7 +615,7 @@ func ValidateTestToken(t *testing.T, jwtHandler *security.JWTHandler, token stri
 
 // CreateAuthenticatedClient creates an authenticated client connection for testing
 // Use this when testing WebSocket client connections
-func CreateAuthenticatedClient(t *testing.T, jwtHandler *security.JWTHandler, userID string, role string) *websocket.ClientConnection {
+func CreateAuthenticatedClient(t *testing.T, jwtHandler *.JWTHandler, userID string, role string) *websocket.ClientConnection {
 	_ = GenerateTestToken(t, jwtHandler, userID, role) // Generate token for authentication
 
 	return &websocket.ClientConnection{

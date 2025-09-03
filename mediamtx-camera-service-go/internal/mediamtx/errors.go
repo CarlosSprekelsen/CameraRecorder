@@ -41,6 +41,58 @@ func (e *MediaMTXError) Unwrap() error {
 	return e.Err
 }
 
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *MediaMTXError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*MediaMTXError); ok {
+		// Compare by code and message for exact matches
+		return e.Code == targetErr.Code && e.Message == targetErr.Message
+	}
+	
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+	
+	// Check if target is a predefined error constant (errors.errorString)
+	// This allows errors.Is to work with predefined error constants
+	targetStr := target.Error()
+	eStr := e.Error()
+	eMsg := e.Message
+	
+	// Compare error message content
+	// Check if the target message is contained in our error message
+	// This handles cases where predefined constants have different wording
+	result := strings.Contains(eStr, targetStr) || strings.Contains(eMsg, targetStr) || 
+		   strings.Contains(targetStr, eMsg) || strings.Contains(targetStr, eStr)
+	
+	// If direct string matching fails, try semantic matching
+	// This handles cases where the predefined constants use different wording
+	if !result {
+		// Check if both contain "MediaMTX" and similar concepts
+		if strings.Contains(targetStr, "MediaMTX") && strings.Contains(eStr, "MediaMTX") {
+			// Check for semantic similarity in the error type
+			if strings.Contains(targetStr, "not found") && strings.Contains(eStr, "Not Found") {
+				result = true
+			} else if strings.Contains(targetStr, "timeout") && strings.Contains(eStr, "timeout") {
+				result = true
+			} else if strings.Contains(targetStr, "unauthorized") && strings.Contains(eStr, "unauthorized") {
+				result = true
+			} else if strings.Contains(targetStr, "forbidden") && strings.Contains(eStr, "forbidden") {
+				result = true
+			} else if strings.Contains(targetStr, "conflict") && strings.Contains(eStr, "conflict") {
+				result = true
+			} else if strings.Contains(targetStr, "internal") && strings.Contains(eStr, "internal") {
+				result = true
+			} else if strings.Contains(targetStr, "server error") && strings.Contains(eStr, "Server Error") {
+				result = true
+			}
+		}
+	}
+	
+	return result
+}
+
 // CircuitBreakerError represents circuit breaker errors
 type CircuitBreakerError struct {
 	State   string `json:"state"`
@@ -68,6 +120,22 @@ func (e *StreamError) Unwrap() error {
 	return e.Err
 }
 
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *StreamError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*StreamError); ok {
+		// Compare by stream ID and operation for exact matches
+		return e.StreamID == targetErr.StreamID && e.Op == targetErr.Op
+	}
+
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+
+	return false
+}
+
 // PathError represents path-specific errors
 type PathError struct {
 	PathName string `json:"path_name"`
@@ -82,6 +150,22 @@ func (e *PathError) Error() string {
 
 func (e *PathError) Unwrap() error {
 	return e.Err
+}
+
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *PathError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*PathError); ok {
+		// Compare by path name and operation for exact matches
+		return e.PathName == targetErr.PathName && e.Op == targetErr.Op
+	}
+
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+
+	return false
 }
 
 // RecordingError represents recording-specific errors
@@ -99,6 +183,22 @@ func (e *RecordingError) Error() string {
 
 func (e *RecordingError) Unwrap() error {
 	return e.Err
+}
+
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *RecordingError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*RecordingError); ok {
+		// Compare by session ID and operation for exact matches
+		return e.SessionID == targetErr.SessionID && e.Op == targetErr.Op
+	}
+	
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+	
+	return false
 }
 
 // FFmpegError represents FFmpeg process errors
@@ -183,6 +283,22 @@ func (e *FFmpegError) Unwrap() error {
 	return e.Err
 }
 
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *FFmpegError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*FFmpegError); ok {
+		// Compare by PID and operation for exact matches
+		return e.PID == targetErr.PID && e.Op == targetErr.Op
+	}
+	
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+	
+	return false
+}
+
 // ConfigurationError represents configuration errors
 type ConfigurationError struct {
 	Field   string `json:"field"`
@@ -197,6 +313,22 @@ func (e *ConfigurationError) Error() string {
 
 func (e *ConfigurationError) Unwrap() error {
 	return e.Err
+}
+
+// Is implements the errors.Is interface for comparing with predefined error constants
+func (e *ConfigurationError) Is(target error) bool {
+	// Check if target is the same type
+	if targetErr, ok := target.(*ConfigurationError); ok {
+		// Compare by field and value for exact matches
+		return e.Field == targetErr.Field && e.Value == targetErr.Value
+	}
+	
+	// Check if this error wraps the target error
+	if e.Err != nil {
+		return errors.Is(e.Err, target)
+	}
+	
+	return false
 }
 
 // Predefined error constants

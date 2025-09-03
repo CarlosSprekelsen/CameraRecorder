@@ -1,7 +1,7 @@
 //go:build performance
 // +build performance
 
-package utils
+package testutils
 
 import (
 	"fmt"

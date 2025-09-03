@@ -13,7 +13,7 @@ Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package utils
+package testutils
 
 import (
 	"context"
@@ -33,6 +33,7 @@ type MockCameraMonitor struct {
 	monitorStats     *camera.MonitorStats
 	eventHandlers    []camera.CameraEventHandler
 	eventCallbacks   []func(camera.CameraEventData)
+	eventNotifier    camera.EventNotifier
 
 	// Mock behavior control
 	startError error
@@ -242,6 +243,13 @@ func (m *MockCameraMonitor) AddEventCallback(callback func(camera.CameraEventDat
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.eventCallbacks = append(m.eventCallbacks, callback)
+}
+
+// SetEventNotifier sets the event notifier for external event system integration
+func (m *MockCameraMonitor) SetEventNotifier(notifier camera.EventNotifier) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.eventNotifier = notifier
 }
 
 // Verify interface compliance

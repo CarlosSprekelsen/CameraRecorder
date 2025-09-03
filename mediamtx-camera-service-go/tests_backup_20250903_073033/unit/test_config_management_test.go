@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 /*
@@ -95,8 +94,8 @@ func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 	// REQ-E1-S1.1-001: Configuration loading from YAML files
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Clean up any existing environment variables that might interfere
 	cleanupCameraServiceEnvVars()
@@ -129,8 +128,8 @@ func TestConfigManager_LoadConfig_MissingFile(t *testing.T) {
 	// REQ-CONFIG-002: The system SHALL fail fast on configuration errors
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Test loading non-existent file
 	nonExistentPath := filepath.Join(env.TempDir, "non_existent_config.yaml")
@@ -144,8 +143,8 @@ func TestConfigManager_LoadConfig_InvalidYAML(t *testing.T) {
 	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create invalid YAML file
 	invalidYAMLPath := filepath.Join(env.TempDir, "invalid.yaml")
@@ -165,8 +164,8 @@ func TestConfigManager_LoadConfig_EmptyFile(t *testing.T) {
 	// REQ-CONFIG-003: Edge case handling SHALL mean early detection and clear error reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create empty file
 	emptyFilePath := filepath.Join(env.TempDir, "empty.yaml")
@@ -186,8 +185,8 @@ func TestConfigManager_SaveConfig_Success(t *testing.T) {
 	// Test SaveConfig functionality (0% coverage issue)
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Get current config
 	cfg := env.ConfigManager.GetConfig()
@@ -220,8 +219,8 @@ func TestConfigManager_SaveConfig_NoConfig(t *testing.T) {
 	// Test SaveConfig with no configuration (0% coverage issue)
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create a new config manager without loading any config
 	configManager := config.CreateConfigManager()
@@ -236,8 +235,8 @@ func TestConfigManager_SaveConfig_NoPath(t *testing.T) {
 	// Test SaveConfig with no path set (0% coverage issue)
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create a new config manager without loading any config
 	configManager := config.CreateConfigManager()
@@ -252,8 +251,8 @@ func TestConfigManager_SaveConfig_DirectoryCreation(t *testing.T) {
 	// Test SaveConfig with directory creation (0% coverage issue)
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create a new config manager and load config
 	configManager := config.CreateConfigManager()
@@ -280,7 +279,7 @@ func TestValidationError_ErrorMethod(t *testing.T) {
 	// Test ValidationError.Error() method (0% coverage issue)
 
 	// Create validation error
-	validationErr := &config.ValidationError{
+	validationErr := &ValidationError{
 		Field:   "server.port",
 		Message: "port must be between 1 and 65535",
 	}
@@ -299,8 +298,8 @@ func TestConfigManager_EnvironmentVariableOverrides(t *testing.T) {
 	// REQ-E1-S1.1-002: Environment variable overrides
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Set environment variables to override fixture values
 	os.Setenv("CAMERA_SERVICE_SERVER_HOST", "192.168.1.100")
@@ -331,8 +330,8 @@ func TestConfigManager_EnvironmentVariableComprehensive(t *testing.T) {
 	// REQ-E1-S1.1-002: Comprehensive environment variable testing
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Set key environment variables for testing
 	envVars := map[string]string{
@@ -373,8 +372,8 @@ func TestConfigValidation_ValidConfig(t *testing.T) {
 	// REQ-E1-S1.1-003: Configuration validation
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()
@@ -389,8 +388,8 @@ func TestConfigValidation_InvalidConfig(t *testing.T) {
 	// Test validation with invalid configuration
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Create invalid config file with invalid port number
 	invalidConfigPath := filepath.Join(env.TempDir, "invalid_config.yaml")
@@ -418,8 +417,8 @@ func TestConfigValidation_Comprehensive(t *testing.T) {
 	// Test required field validation
 	t.Run("required_field_validation", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// Create config with invalid storage configuration
 		invalidConfigPath := filepath.Join(env.TempDir, "invalid_storage.yaml")
@@ -432,7 +431,7 @@ mediamtx:
 storage:
   warn_percent: 95  # Should be less than block_percent
   block_percent: 80  # Should be greater than warn_percent
-`, utils.GetFreePort())
+`, testtestutils.GetFreePort())
 		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
 		require.NoError(t, err)
 
@@ -444,8 +443,8 @@ storage:
 	// Test data type validation
 	t.Run("data_type_validation", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// Create config with invalid data types
 		invalidConfigPath := filepath.Join(env.TempDir, "invalid_types.yaml")
@@ -464,8 +463,8 @@ storage:
 	// Test cross-field validation
 	t.Run("cross_field_validation", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// Create config with cross-field validation issues
 		invalidConfigPath := filepath.Join(env.TempDir, "cross_field.yaml")
@@ -475,7 +474,7 @@ storage:
 storage:
   warn_percent: 95  # Should be less than block_percent
   block_percent: 80  # Should be greater than warn_percent
-`, utils.GetFreePort())
+`, testtestutils.GetFreePort())
 		err := os.WriteFile(invalidConfigPath, []byte(invalidConfig), 0644)
 		require.NoError(t, err)
 
@@ -493,8 +492,8 @@ func TestConfigManager_ThreadSafety(t *testing.T) {
 	// REQ-E1-S1.1-005: Thread-safe configuration access
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Load configuration in goroutine
 	done := make(chan bool)
@@ -517,8 +516,8 @@ func TestConfigManager_GetConfig_ThreadSafe(t *testing.T) {
 	// Test thread-safe access to configuration
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Access configuration from multiple goroutines
 	done := make(chan bool, 10)
@@ -544,8 +543,8 @@ func TestConfigManager_AddUpdateCallback(t *testing.T) {
 	// Test configuration update callback functionality
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	callback := func(cfg *config.Config) {
 		assert.NotNil(t, cfg)
@@ -568,8 +567,8 @@ func TestConfigManager_HotReload(t *testing.T) {
 	// REQ-E1-S1.1-006: Hot reload capability
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	configPath := filepath.Join(env.TempDir, "test_config.yaml")
 
@@ -580,7 +579,7 @@ func TestConfigManager_HotReload(t *testing.T) {
 mediamtx:
   host: "localhost"
   api_port: 9997
-`, utils.GetFreePort())
+`, testtestutils.GetFreePort())
 	err := os.WriteFile(configPath, []byte(initialYAML), 0644)
 	require.NoError(t, err)
 
@@ -636,8 +635,8 @@ func TestConfigManager_Stop(t *testing.T) {
 	// Test proper cleanup of configuration manager
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()
@@ -657,8 +656,8 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 	// Test extremely large values
 	t.Run("extremely_large_values", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// The test environment already has a valid config loaded
 		cfg := env.ConfigManager.GetConfig()
@@ -674,8 +673,8 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 	// Test boundary values
 	t.Run("boundary_values", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// The test environment already has a valid config loaded
 		cfg := env.ConfigManager.GetConfig()
@@ -690,8 +689,8 @@ func TestConfigValidation_EdgeCases(t *testing.T) {
 	// Test special characters in string fields
 	t.Run("special_characters", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupTestEnvironment(t)
-		defer utils.TeardownTestEnvironment(t, env)
+		env := testtestutils.SetupTestEnvironment(t)
+		defer testtestutils.TeardownTestEnvironment(t, env)
 
 		// Clean up any existing environment variables that might interfere
 		cleanupCameraServiceEnvVars()
@@ -712,8 +711,8 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 	// Test file system edge cases
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// Test file permission errors
 	t.Run("file_permission_errors", func(t *testing.T) {
@@ -723,7 +722,7 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 		yamlContent := fmt.Sprintf(`server:
   host: "0.0.0.0"
   port: %d
-`, utils.GetFreePort())
+`, testtestutils.GetFreePort())
 		err := os.WriteFile(configPath, []byte(yamlContent), 0444) // Read-only
 		require.NoError(t, err)
 
@@ -772,7 +771,7 @@ func TestConfigValidation_FileSystemEdgeCases(t *testing.T) {
 		yamlContent := fmt.Sprintf(`server:
   host: "0.0.0.0"
   port: %d
-`, utils.GetFreePort())
+`, testtestutils.GetFreePort())
 		err = os.WriteFile(configPath, []byte(yamlContent), 0644)
 		require.NoError(t, err)
 
@@ -793,8 +792,8 @@ func TestGlobalConfigFunctions(t *testing.T) {
 	// Test global configuration manager functions
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	// The test environment already has a valid config loaded
 	cfg := env.ConfigManager.GetConfig()

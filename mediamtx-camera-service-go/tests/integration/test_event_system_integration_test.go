@@ -27,7 +27,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	gorilla "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +70,7 @@ func TestEventSystemIntegration(t *testing.T) {
 
 		// Create JWT handler
 		cfg := configManager.GetConfig()
-		jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+		jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 		require.NoError(t, err, "Failed to create JWT handler")
 
 		// Create WebSocket server

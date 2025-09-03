@@ -20,8 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,8 +31,8 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	tests := []struct {
 		name        string
@@ -96,14 +94,14 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Generate a valid token using shared utility
-	token := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
+	token := testtestutils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
 
 	// Test valid token validation using shared utility
-	claims := utils.ValidateTestToken(t, env.JWTHandler, token)
+	claims := testtestutils.ValidateTestToken(t, env.JWTHandler, token)
 	assert.Equal(t, "test_user", claims.UserID)
 	assert.Equal(t, "admin", claims.Role)
 	assert.Greater(t, claims.EXP, claims.IAT)
@@ -118,7 +116,7 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test token with wrong secret
-	wrongHandler, err := security.NewJWTHandler("wrong_secret_key")
+	wrongHandler, err := NewJWTHandler("wrong_secret_key")
 	require.NoError(t, err)
 
 	_, err = wrongHandler.ValidateToken(token)
@@ -131,8 +129,8 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Generate a token with very short expiry (1 second)
 	// We need to create a token that expires in 1 second
@@ -168,8 +166,8 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 func TestJWTHandler_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("get_secret_key", func(t *testing.T) {
 		secret := env.JWTHandler.GetSecretKey()
@@ -182,19 +180,19 @@ func TestJWTHandler_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("token_with_special_characters", func(t *testing.T) {
-		token := utils.GenerateTestTokenWithExpiry(t, env.JWTHandler, "user@domain.com", "admin", 1)
+		token := testtestutils.GenerateTestTokenWithExpiry(t, env.JWTHandler, "user@domain.com", "admin", 1)
 
 		// Validate the token using shared utility
-		claims := utils.ValidateTestToken(t, env.JWTHandler, token)
+		claims := testtestutils.ValidateTestToken(t, env.JWTHandler, token)
 		assert.Equal(t, "user@domain.com", claims.UserID)
 		assert.Equal(t, "admin", claims.Role)
 	})
 
 	t.Run("very_long_user_id", func(t *testing.T) {
 		longUserID := strings.Repeat("a", 1000)
-		token := utils.GenerateTestTokenWithExpiry(t, env.JWTHandler, longUserID, "viewer", 1)
+		token := testtestutils.GenerateTestTokenWithExpiry(t, env.JWTHandler, longUserID, "viewer", 1)
 
-		claims := utils.ValidateTestToken(t, env.JWTHandler, token)
+		claims := testtestutils.ValidateTestToken(t, env.JWTHandler, token)
 		assert.Equal(t, longUserID, claims.UserID)
 	})
 }
@@ -205,7 +203,7 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	t.Run("token_with_max_expiry", func(t *testing.T) {
-		handler, err := security.NewJWTHandler("test_secret")
+		handler, err := NewJWTHandler("test_secret")
 		require.NoError(t, err)
 
 		// Test with maximum reasonable expiry (365 days)
@@ -219,7 +217,7 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("token_with_unicode_characters", func(t *testing.T) {
-		handler, err := security.NewJWTHandler("test_secret")
+		handler, err := NewJWTHandler("test_secret")
 		require.NoError(t, err)
 
 		unicodeUserID := "user_测试_🎉_🚀"
@@ -232,7 +230,7 @@ func TestJWTHandler_AdditionalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("validate_token_with_whitespace", func(t *testing.T) {
-		handler, err := security.NewJWTHandler("test_secret")
+		handler, err := NewJWTHandler("test_secret")
 		require.NoError(t, err)
 
 		// Test with whitespace in token
@@ -248,8 +246,8 @@ func TestJWTHandler_RateLimiting(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Set rate limit to 3 requests per 1 second window
 	env.JWTHandler.SetRateLimit(3, time.Second)
@@ -297,8 +295,8 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("record_request_new_client", func(t *testing.T) {
 		// Record request for new client
@@ -348,7 +346,7 @@ func TestJWTHandler_GetClientRateInfo(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	require.NoError(t, err)
 
 	t.Run("get_client_rate_info_nonexistent", func(t *testing.T) {
@@ -391,7 +389,7 @@ func TestJWTHandler_SetRateLimit(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	require.NoError(t, err)
 
 	t.Run("set_rate_limit_default", func(t *testing.T) {
@@ -441,7 +439,7 @@ func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	require.NoError(t, err)
 
 	t.Run("cleanup_expired_clients", func(t *testing.T) {
@@ -489,7 +487,7 @@ func TestJWTHandler_ValidateToken_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	require.NoError(t, err)
 
 	t.Run("validate_token_missing_required_fields", func(t *testing.T) {
@@ -598,7 +596,7 @@ func TestJWTHandler_IsTokenExpired_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	require.NoError(t, err)
 
 	t.Run("is_token_expired_empty_token", func(t *testing.T) {
@@ -652,7 +650,7 @@ func TestJWTHandler_IsTokenExpired_EdgeCases(t *testing.T) {
 
 // Performance benchmarks for JWT handler
 func BenchmarkJWTHandler_TokenGeneration(b *testing.B) {
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -667,7 +665,7 @@ func BenchmarkJWTHandler_TokenGeneration(b *testing.B) {
 }
 
 func BenchmarkJWTHandler_TokenValidation(b *testing.B) {
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -687,7 +685,7 @@ func BenchmarkJWTHandler_TokenValidation(b *testing.B) {
 }
 
 func BenchmarkJWTHandler_RateLimitCheck(b *testing.B) {
-	handler, err := security.NewJWTHandler("test_secret")
+	handler, err := NewJWTHandler("test_secret")
 	if err != nil {
 		b.Fatal(err)
 	}

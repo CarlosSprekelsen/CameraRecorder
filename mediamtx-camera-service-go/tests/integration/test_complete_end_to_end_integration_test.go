@@ -41,14 +41,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	ws "github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // TestCompleteEndToEndIntegration tests the complete system through external API calls only
 func TestCompleteEndToEndIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -59,7 +58,7 @@ func TestCompleteEndToEndIntegration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// COMMON PATTERN: Use centralized WebSocket test client instead of hardcoded connection
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Generate authentication token
@@ -100,7 +99,7 @@ func TestCompleteEndToEndIntegration(t *testing.T) {
 }
 
 // testAuthenticationAndAuthorization tests authentication and role-based access control
-func testAuthenticationAndAuthorization(t *testing.T, client *utils.WebSocketTestClient, env *utils.WebSocketTestEnvironment) {
+func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebSocketTestClient, env *testtestutils.WebSocketTestEnvironment) {
 	// Test authentication with valid token
 	t.Run("ValidAuthentication", func(t *testing.T) {
 		token, err := env.JWTHandler.GenerateToken("auth-test-user", "admin", 1)
@@ -213,7 +212,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *utils.WebSocketTes
 }
 
 // testCameraDiscoveryAndStatus tests camera discovery and status methods
-func testCameraDiscoveryAndStatus(t *testing.T, client *utils.WebSocketTestClient, token string, env *utils.WebSocketTestEnvironment) {
+func testCameraDiscoveryAndStatus(t *testing.T, client *testtestutils.WebSocketTestClient, token string, env *testtestutils.WebSocketTestEnvironment) {
 	// Test get_camera_list method
 	t.Run("GetCameraList", func(t *testing.T) {
 		request := &ws.JsonRpcRequest{
@@ -366,7 +365,7 @@ func testCameraDiscoveryAndStatus(t *testing.T, client *utils.WebSocketTestClien
 }
 
 // testSnapshotOperations tests snapshot capture and management
-func testSnapshotOperations(t *testing.T, client *utils.WebSocketTestClient, token string, env *utils.WebSocketTestEnvironment) {
+func testSnapshotOperations(t *testing.T, client *testtestutils.WebSocketTestClient, token string, env *testtestutils.WebSocketTestEnvironment) {
 	// Test take_snapshot method
 	t.Run("TakeSnapshot", func(t *testing.T) {
 		cameras := env.CameraMonitor.GetConnectedCameras()
@@ -505,7 +504,7 @@ func testSnapshotOperations(t *testing.T, client *utils.WebSocketTestClient, tok
 }
 
 // testRecordingOperations tests recording start, stop, and management
-func testRecordingOperations(t *testing.T, client *utils.WebSocketTestClient, token string, env *utils.WebSocketTestEnvironment) {
+func testRecordingOperations(t *testing.T, client *testtestutils.WebSocketTestClient, token string, env *testtestutils.WebSocketTestEnvironment) {
 	// Test start_recording method
 	t.Run("StartRecording", func(t *testing.T) {
 		cameras := env.CameraMonitor.GetConnectedCameras()
@@ -730,7 +729,7 @@ func testRecordingOperations(t *testing.T, client *utils.WebSocketTestClient, to
 }
 
 // testFileManagement tests file management, cleanup, and retention policies
-func testFileManagement(t *testing.T, client *utils.WebSocketTestClient, token string, env *utils.WebSocketTestEnvironment) {
+func testFileManagement(t *testing.T, client *testtestutils.WebSocketTestClient, token string, env *testtestutils.WebSocketTestEnvironment) {
 	// Test get_storage_info method
 	t.Run("GetStorageInfo", func(t *testing.T) {
 		request := &ws.JsonRpcRequest{
@@ -806,7 +805,7 @@ func testFileManagement(t *testing.T, client *utils.WebSocketTestClient, token s
 }
 
 // testSystemHealthAndMetrics tests system health, metrics, and status endpoints
-func testSystemHealthAndMetrics(t *testing.T, client *utils.WebSocketTestClient, token string) {
+func testSystemHealthAndMetrics(t *testing.T, client *testtestutils.WebSocketTestClient, token string) {
 	// Test ping method
 	t.Run("PingMethod", func(t *testing.T) {
 		request := &ws.JsonRpcRequest{
@@ -884,7 +883,7 @@ func testSystemHealthAndMetrics(t *testing.T, client *utils.WebSocketTestClient,
 }
 
 // testStreamManagement tests stream enumeration and management
-func testStreamManagement(t *testing.T, client *utils.WebSocketTestClient, token string, env *utils.WebSocketTestEnvironment) {
+func testStreamManagement(t *testing.T, client *testtestutils.WebSocketTestClient, token string, env *testtestutils.WebSocketTestEnvironment) {
 	// Test get_streams method
 	t.Run("GetStreams", func(t *testing.T) {
 		request := &ws.JsonRpcRequest{
@@ -907,7 +906,7 @@ func testStreamManagement(t *testing.T, client *utils.WebSocketTestClient, token
 }
 
 // testErrorHandlingAndEdgeCases tests error handling and edge cases
-func testErrorHandlingAndEdgeCases(t *testing.T, client *utils.WebSocketTestClient, token string) {
+func testErrorHandlingAndEdgeCases(t *testing.T, client *testtestutils.WebSocketTestClient, token string) {
 	// Test invalid parameters
 	t.Run("InvalidParameters", func(t *testing.T) {
 		request := &ws.JsonRpcRequest{
@@ -971,7 +970,7 @@ func testErrorHandlingAndEdgeCases(t *testing.T, client *utils.WebSocketTestClie
 }
 
 // sendWebSocketRequest sends a JSON-RPC request over WebSocket and returns the response
-func sendWebSocketRequest(client *utils.WebSocketTestClient, request *ws.JsonRpcRequest) (*ws.JsonRpcResponse, error) {
+func sendWebSocketRequest(client *testtestutils.WebSocketTestClient, request *ws.JsonRpcRequest) (*ws.JsonRpcResponse, error) {
 	// COMMON PATTERN: Use centralized WebSocket test client instead of raw connection
 	response := client.SendRequest(request)
 	return response, nil

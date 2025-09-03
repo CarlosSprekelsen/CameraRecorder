@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 /*
 Camera Real Implementations Unit Tests
 
@@ -28,12 +25,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
+	
 )
 
 // TestRealDeviceChecker tests the RealDeviceChecker implementation
 func TestRealDeviceChecker(t *testing.T) {
-	checker := &camera.RealDeviceChecker{}
+	checker := &RealDeviceChecker{}
 
 	t.Run("exists_real_file", func(t *testing.T) {
 		// Test with a file that should exist
@@ -81,7 +78,7 @@ func TestRealDeviceChecker(t *testing.T) {
 
 // TestRealV4L2CommandExecutor tests the RealV4L2CommandExecutor implementation
 func TestRealV4L2CommandExecutor(t *testing.T) {
-	executor := &camera.RealV4L2CommandExecutor{}
+	executor := &RealV4L2CommandExecutor{}
 
 	t.Run("execute_command_with_timeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -148,7 +145,7 @@ func TestRealV4L2CommandExecutor(t *testing.T) {
 
 // TestRealDeviceInfoParser tests the RealDeviceInfoParser implementation
 func TestRealDeviceInfoParser(t *testing.T) {
-	parser := &camera.RealDeviceInfoParser{}
+	parser := &RealDeviceInfoParser{}
 
 	t.Run("parse_device_info_valid_output", func(t *testing.T) {
 		validOutput := `
@@ -331,7 +328,7 @@ ioctl: VIDIOC_ENUM_FMT
 
 // TestRealDeviceInfoParserIntegration tests integration of parsing methods
 func TestRealDeviceInfoParserIntegration(t *testing.T) {
-	parser := &camera.RealDeviceInfoParser{}
+	parser := &RealDeviceInfoParser{}
 
 	t.Run("parse_complete_device_info", func(t *testing.T) {
 		completeOutput := `

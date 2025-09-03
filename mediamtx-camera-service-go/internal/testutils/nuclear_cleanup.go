@@ -11,7 +11,7 @@ USE THIS INSTEAD:
 NuclearTestCleanup(t, tempDir) - Nukes everything, everywhere
 */
 
-package utils
+package testutils
 
 import (
 	"os"

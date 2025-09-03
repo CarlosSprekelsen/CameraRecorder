@@ -30,16 +30,13 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package integration_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	ws "github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // JSONRPCRequest represents a JSON-RPC 2.0 request
@@ -68,8 +65,8 @@ type JSONRPCError struct {
 // TestWebSocketIntegration tests real WebSocket connection and all API methods
 func TestWebSocketIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -80,7 +77,7 @@ func TestWebSocketIntegration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// COMMON PATTERN: Use centralized WebSocket test client instead of raw connection
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Generate authentication token
@@ -392,7 +389,7 @@ func TestWebSocketIntegration(t *testing.T) {
 	t.Run("AuthenticationErrorHandling", func(t *testing.T) {
 		// Test authentication error handling
 		// Use existing WebSocket test client utility for unauthenticated connection
-		unauthenticatedClient := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		unauthenticatedClient := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer unauthenticatedClient.Close()
 
 		// Get the connection from the client
@@ -610,9 +607,9 @@ func TestWebSocketIntegration(t *testing.T) {
 }
 
 // sendWebSocketRequest sends a JSON-RPC request over WebSocket and returns the response
-func sendWebSocketRequest(client *utils.WebSocketTestClient, request JSONRPCRequest) (*JSONRPCResponse, error) {
+func sendWebSocketRequest(client *testtestutils.WebSocketTestClient, request JSONRPCRequest) (*JSONRPCResponse, error) {
 	// COMMON PATTERN: Use centralized WebSocket test client instead of raw connection
-	
+
 	// Convert the request to the internal format
 	internalRequest := &ws.JsonRpcRequest{
 		JSONRPC: request.JSONRPC,
@@ -620,16 +617,16 @@ func sendWebSocketRequest(client *utils.WebSocketTestClient, request JSONRPCRequ
 		Params:  request.Params,
 		ID:      request.ID,
 	}
-	
+
 	// Use the centralized client
 	response := client.SendRequest(internalRequest)
-	
+
 	// Convert the response back to the test format
 	result := &JSONRPCResponse{
 		JSONRPC: response.JSONRPC,
 		ID:      response.ID,
 	}
-	
+
 	if response.Error != nil {
 		result.Error = &JSONRPCError{
 			Code:    response.Error.Code,
@@ -639,6 +636,6 @@ func sendWebSocketRequest(client *utils.WebSocketTestClient, request JSONRPCRequ
 	} else {
 		result.Result = response.Result
 	}
-	
+
 	return result, nil
 }

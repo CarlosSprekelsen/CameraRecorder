@@ -22,7 +22,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +29,7 @@ import (
 // TestCameraMonitorInterfaceCompliance_Mock tests that MockCameraMonitor implements CameraMonitor interface
 func TestCameraMonitorInterfaceCompliance_Mock(t *testing.T) {
 	// Create mock camera monitor
-	mockMonitor := utils.NewMockCameraMonitor()
+	mockMonitor := testtestutils.NewMockCameraMonitor()
 	require.NotNil(t, mockMonitor, "Mock monitor should be created successfully")
 
 	// Verify interface compliance at compile time
@@ -73,8 +72,8 @@ func TestCameraMonitorInterfaceCompliance_Mock(t *testing.T) {
 // TestCameraMonitorInterfaceCompliance_Real tests that HybridCameraMonitor implements CameraMonitor interface
 func TestCameraMonitorInterfaceCompliance_Real(t *testing.T) {
 	// Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -139,7 +138,7 @@ func TestCameraMonitorInterfaceCompliance_Real(t *testing.T) {
 func TestCameraMonitorInterface_BehavioralCompliance(t *testing.T) {
 	// Test mock implementation behavioral compliance
 	t.Run("Mock_BehavioralCompliance", func(t *testing.T) {
-		mockMonitor := utils.NewMockCameraMonitor()
+		mockMonitor := testtestutils.NewMockCameraMonitor()
 
 		// Test error handling
 		mockMonitor.SetStartError(assert.AnError)
@@ -160,8 +159,8 @@ func TestCameraMonitorInterface_BehavioralCompliance(t *testing.T) {
 
 	// Test real implementation behavioral compliance
 	t.Run("Real_BehavioralCompliance", func(t *testing.T) {
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
@@ -199,7 +198,7 @@ func TestCameraMonitorInterface_BehavioralCompliance(t *testing.T) {
 
 // TestCameraMonitorInterface_DataConsistency tests data consistency across interface methods
 func TestCameraMonitorInterface_DataConsistency(t *testing.T) {
-	mockMonitor := utils.NewMockCameraMonitor()
+	mockMonitor := testtestutils.NewMockCameraMonitor()
 
 	// Create mock camera devices
 	mockDevices := map[string]*camera.CameraDevice{
@@ -254,7 +253,7 @@ func (h *mockEventHandler) HandleCameraEvent(ctx context.Context, eventData came
 
 // TestCameraMonitorInterface_EventHandling tests event handling compliance
 func TestCameraMonitorInterface_EventHandling(t *testing.T) {
-	mockMonitor := utils.NewMockCameraMonitor()
+	mockMonitor := testtestutils.NewMockCameraMonitor()
 
 	// Test event handler registration
 	eventHandler := &mockEventHandler{}
@@ -283,7 +282,7 @@ func TestCameraMonitorInterface_EventHandling(t *testing.T) {
 
 // TestCameraMonitorInterface_ThreadSafety tests thread safety of interface implementations
 func TestCameraMonitorInterface_ThreadSafety(t *testing.T) {
-	mockMonitor := utils.NewMockCameraMonitor()
+	mockMonitor := testtestutils.NewMockCameraMonitor()
 
 	// Test concurrent access to interface methods
 	const numGoroutines = 10

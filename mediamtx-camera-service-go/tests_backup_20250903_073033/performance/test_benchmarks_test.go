@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,8 +34,8 @@ func BenchmarkAPIResponseTime(b *testing.B) {
 	// REQ-PERF-001: API response time performance (<50ms for status methods)
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -44,7 +43,7 @@ func BenchmarkAPIResponseTime(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client for benchmarks
-	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	b.ResetTimer()
@@ -63,8 +62,8 @@ func BenchmarkCameraDiscovery(b *testing.B) {
 	// REQ-PERF-002: Camera discovery performance
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start camera monitor
 	err := env.CameraMonitor.Start(context.Background())
@@ -86,8 +85,8 @@ func BenchmarkHealthCheck(b *testing.B) {
 	// REQ-PERF-003: Health check performance
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -105,8 +104,8 @@ func BenchmarkJWTTokenGeneration(b *testing.B) {
 	// REQ-PERF-004: JWT token performance
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -124,8 +123,8 @@ func BenchmarkWebSocketConnectionCreation(b *testing.B) {
 	// REQ-PERF-007: Concurrent operation performance (1000+ connections)
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -133,9 +132,9 @@ func BenchmarkWebSocketConnectionCreation(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Pre-create clients to avoid measuring creation time
-	clients := make([]*utils.WebSocketTestClientForBenchmark, b.N)
+	clients := make([]*testtestutils.WebSocketTestClientForBenchmark, b.N)
 	for i := 0; i < b.N; i++ {
-		clients[i] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		clients[i] = testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	}
 
 	// Clean up clients after benchmark
@@ -161,8 +160,8 @@ func BenchmarkWebSocketPingThroughput(b *testing.B) {
 	// REQ-PERF-001: API response time performance (<50ms for status methods)
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -170,7 +169,7 @@ func BenchmarkWebSocketPingThroughput(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client for benchmarks
-	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	b.ResetTimer()
@@ -189,8 +188,8 @@ func BenchmarkConcurrentWebSocketConnections(b *testing.B) {
 	// REQ-PERF-007: Concurrent operation performance (1000+ connections)
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -199,11 +198,11 @@ func BenchmarkConcurrentWebSocketConnections(b *testing.B) {
 
 	// Pre-create connection pool to avoid measuring creation time
 	const poolSize = 100
-	connectionPool := make(chan *utils.WebSocketTestClientForBenchmark, poolSize)
-	
+	connectionPool := make(chan *testtestutils.WebSocketTestClientForBenchmark, poolSize)
+
 	// Fill the pool
 	for i := 0; i < poolSize; i++ {
-		client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 		connectionPool <- client
 	}
 
@@ -223,11 +222,11 @@ func BenchmarkConcurrentWebSocketConnections(b *testing.B) {
 		for pb.Next() {
 			// Get connection from pool
 			client := <-connectionPool
-			
+
 			// Send a ping request
 			response := client.SendPingRequest()
 			require.NotNil(b, response, "Ping response should not be nil")
-			
+
 			// Return connection to pool
 			connectionPool <- client
 		}
@@ -239,8 +238,8 @@ func BenchmarkMemoryUsage(b *testing.B) {
 	// REQ-PERF-008: Memory usage performance
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -249,9 +248,9 @@ func BenchmarkMemoryUsage(b *testing.B) {
 
 	// Pre-create connections to avoid measuring creation time
 	const numConnections = 10
-	clients := make([]*utils.WebSocketTestClientForBenchmark, numConnections)
+	clients := make([]*testtestutils.WebSocketTestClientForBenchmark, numConnections)
 	for i := 0; i < numConnections; i++ {
-		clients[i] = utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+		clients[i] = testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	}
 
 	// Clean up connections after benchmark
@@ -278,8 +277,8 @@ func BenchmarkAuthenticationFlow(b *testing.B) {
 	// REQ-PERF-004: JWT token performance
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -287,7 +286,7 @@ func BenchmarkAuthenticationFlow(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Pre-create client and token to avoid measuring creation time
-	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	token, err := env.JWTHandler.GenerateToken("test_user", "viewer", 24)
@@ -310,8 +309,8 @@ func BenchmarkErrorHandling(b *testing.B) {
 	// REQ-ERROR-003: WebSocket server shall handle invalid JSON-RPC requests gracefully
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -319,7 +318,7 @@ func BenchmarkErrorHandling(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Pre-create client to avoid measuring creation time
-	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	b.ResetTimer()
@@ -338,8 +337,8 @@ func BenchmarkLongRunningOperations(b *testing.B) {
 	// REQ-RELIABILITY-001: Long-running stability (24/7 operation)
 
 	// COMMON PATTERN: Use shared WebSocket test environment for benchmarks
-	env := utils.SetupWebSocketTestEnvironmentForBenchmark(b)
-	defer utils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
+	env := testtestutils.SetupWebSocketTestEnvironmentForBenchmark(b)
+	defer testtestutils.TeardownWebSocketTestEnvironmentForBenchmark(b, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -347,7 +346,7 @@ func BenchmarkLongRunningOperations(b *testing.B) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client for benchmarks
-	client := utils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClientForBenchmark(b, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	b.ResetTimer()
@@ -361,7 +360,7 @@ func BenchmarkLongRunningOperations(b *testing.B) {
 			require.NotNil(b, response, "Ping response should not be nil")
 			require.Nil(b, response.Error, "Ping should not return error")
 		}
-		
+
 		// Small delay to simulate real-world usage
 		time.Sleep(1 * time.Millisecond)
 	}

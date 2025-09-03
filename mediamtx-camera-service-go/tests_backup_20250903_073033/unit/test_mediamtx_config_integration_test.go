@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,8 +30,8 @@ func TestConfigIntegration_Creation(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create config integration using shared components
 	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
@@ -49,8 +48,8 @@ func TestConfigIntegration_GetMediaMTXConfig_WithRealServer(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -85,8 +84,8 @@ func TestConfigIntegration_GetMediaMTXConfig_NilConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create config integration using shared components
 	configIntegration := mediamtx.NewConfigIntegration(env.ConfigManager, env.Logger.Logger)
@@ -110,8 +109,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_ValidConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -135,8 +134,8 @@ func TestConfigIntegration_ValidateMediaMTXConfig_InvalidConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create config integration with nil config manager (testing error case)
 	configIntegration := mediamtx.NewConfigIntegration(nil, env.Logger.Logger)
@@ -213,8 +212,8 @@ func TestConfigIntegration_GetRecordingConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -238,8 +237,8 @@ func TestConfigIntegration_GetSnapshotConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -263,8 +262,8 @@ func TestConfigIntegration_GetFFmpegConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -297,8 +296,8 @@ func TestConfigIntegration_GetCameraConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -322,8 +321,8 @@ func TestConfigIntegration_GetPerformanceConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -347,8 +346,8 @@ func TestConfigIntegration_UpdateMediaMTXConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -412,8 +411,8 @@ func TestConfigIntegration_UpdateMediaMTXConfig_InvalidConfig(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -443,8 +442,8 @@ func TestConfigIntegration_RealMediaMTXServerConnection(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")
@@ -487,8 +486,8 @@ func TestConfigIntegration_WatchConfigChanges(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../tests/fixtures/test_config.yaml")

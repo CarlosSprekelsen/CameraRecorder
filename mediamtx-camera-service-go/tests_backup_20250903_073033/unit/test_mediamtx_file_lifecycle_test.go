@@ -22,15 +22,14 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "recording_2025-01-15_14-30-00.mp4"
@@ -99,8 +98,8 @@ func TestMediaMTXController_GetRecordingInfoLifecycle(t *testing.T) {
 
 func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
@@ -169,8 +168,8 @@ func TestMediaMTXController_GetSnapshotInfoLifecycle(t *testing.T) {
 
 func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
@@ -233,8 +232,8 @@ func TestMediaMTXController_DeleteRecordingLifecycle(t *testing.T) {
 
 func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
@@ -297,8 +296,8 @@ func TestMediaMTXController_DeleteSnapshotLifecycle(t *testing.T) {
 
 func TestRecordingManager_GetRecordingInfoLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
@@ -369,8 +368,8 @@ func TestRecordingManager_GetRecordingInfoLifecycle(t *testing.T) {
 
 func TestSnapshotManager_GetSnapshotInfo(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
@@ -441,8 +440,8 @@ func TestSnapshotManager_GetSnapshotInfo(t *testing.T) {
 
 func TestRecordingManager_DeleteRecordingLifecycle(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
@@ -507,8 +506,8 @@ func TestRecordingManager_DeleteRecordingLifecycle(t *testing.T) {
 
 func TestSnapshotManager_DeleteSnapshotFile(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
@@ -573,14 +572,14 @@ func TestSnapshotManager_DeleteSnapshotFile(t *testing.T) {
 
 func TestFileLifecycle_CompleteWorkflow(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test files in the test environment's directories
 	recordingFileName := "camera0_2025-01-15_14-30-00.mp4"
 	recordingsDir := filepath.Join(env.TempDir, "recordings")
 	recordingFilePath := filepath.Join(recordingsDir, recordingFileName)
-	
+
 	snapshotFileName := "snapshot_2025-01-15_14-30-00.jpg"
 	snapshotsDir := filepath.Join(env.TempDir, "snapshots")
 	snapshotFilePath := filepath.Join(snapshotsDir, snapshotFileName)

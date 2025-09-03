@@ -23,15 +23,14 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMediaMTXController_ListRecordings(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording files in the test environment's recordings directory
 	testFiles := []struct {
@@ -150,8 +149,8 @@ func TestMediaMTXController_ListRecordings(t *testing.T) {
 
 func TestMediaMTXController_ListSnapshots(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot files in the test environment's snapshots directory
 	testFiles := []struct {
@@ -270,8 +269,8 @@ func TestMediaMTXController_ListSnapshots(t *testing.T) {
 
 func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
@@ -324,26 +323,26 @@ func TestMediaMTXController_GetRecordingInfo(t *testing.T) {
 			if tt.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)
-					} else {
-			assert.NoError(t, err)
-			assert.NotNil(t, fileInfo)
-			if fileInfo != nil {
-				assert.Equal(t, tt.filename, fileInfo.FileName)
-				assert.True(t, fileInfo.FileSize > 0)
-				assert.NotZero(t, fileInfo.CreatedAt)
-				assert.NotZero(t, fileInfo.ModifiedAt)
-				assert.Contains(t, fileInfo.DownloadURL, "/files/recordings/")
-				assert.Contains(t, fileInfo.DownloadURL, tt.filename)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, fileInfo)
+				if fileInfo != nil {
+					assert.Equal(t, tt.filename, fileInfo.FileName)
+					assert.True(t, fileInfo.FileSize > 0)
+					assert.NotZero(t, fileInfo.CreatedAt)
+					assert.NotZero(t, fileInfo.ModifiedAt)
+					assert.Contains(t, fileInfo.DownloadURL, "/files/recordings/")
+					assert.Contains(t, fileInfo.DownloadURL, tt.filename)
+				}
 			}
-		}
 		})
 	}
 }
 
 func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"
@@ -396,26 +395,26 @@ func TestMediaMTXController_GetSnapshotInfo(t *testing.T) {
 			if tt.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, fileInfo)
-					} else {
-			assert.NoError(t, err)
-			assert.NotNil(t, fileInfo)
-			if fileInfo != nil {
-				assert.Equal(t, tt.filename, fileInfo.FileName)
-				assert.True(t, fileInfo.FileSize > 0)
-				assert.NotZero(t, fileInfo.CreatedAt)
-				assert.NotZero(t, fileInfo.ModifiedAt)
-				assert.Contains(t, fileInfo.DownloadURL, "/files/snapshots/")
-				assert.Contains(t, fileInfo.DownloadURL, tt.filename)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, fileInfo)
+				if fileInfo != nil {
+					assert.Equal(t, tt.filename, fileInfo.FileName)
+					assert.True(t, fileInfo.FileSize > 0)
+					assert.NotZero(t, fileInfo.CreatedAt)
+					assert.NotZero(t, fileInfo.ModifiedAt)
+					assert.Contains(t, fileInfo.DownloadURL, "/files/snapshots/")
+					assert.Contains(t, fileInfo.DownloadURL, tt.filename)
+				}
 			}
-		}
 		})
 	}
 }
 
 func TestMediaMTXController_DeleteRecording(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test recording file in the test environment's recordings directory
 	fileName := "camera0_2025-01-15_14-30-00.mp4"
@@ -478,8 +477,8 @@ func TestMediaMTXController_DeleteRecording(t *testing.T) {
 
 func TestMediaMTXController_DeleteSnapshot(t *testing.T) {
 	// Setup test environment using proper utilities
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test snapshot file in the test environment's snapshots directory
 	fileName := "snapshot_2025-01-15_14-30-00.jpg"

@@ -505,7 +505,7 @@ server:
 
 func TestConfigValidation_ValidConfig(t *testing.T) {
     // REQ-E1-S1.1-003: Configuration validation
-    cfg := &config.Config{
+    cfg := &Config{
         Server: config.ServerConfig{
             Host:           "127.0.0.1",
             Port:           8002,
@@ -649,7 +649,7 @@ func TestConfigValidation_ValidConfig(t *testing.T) {
 
 func TestConfigValidation_InvalidConfig(t *testing.T) {
     // Test validation with invalid configuration
-    cfg := &config.Config{
+    cfg := &Config{
         Server: config.ServerConfig{
             Host:           "",        // Invalid: empty host
             Port:           70000,     // Invalid: port out of range

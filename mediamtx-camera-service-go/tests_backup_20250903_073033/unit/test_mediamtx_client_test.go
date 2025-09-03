@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,12 +27,12 @@ import (
 // TestClient_Creation tests client creation
 func TestClient_Creation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	require.NotNil(t, client.Client, "Client should not be nil")
 }
@@ -41,15 +40,15 @@ func TestClient_Creation(t *testing.T) {
 // TestClient_Get tests GET request functionality
 func TestClient_Get(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -70,15 +69,15 @@ func TestClient_Get(t *testing.T) {
 // TestClient_Post tests POST request functionality
 func TestClient_Post(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -100,15 +99,15 @@ func TestClient_Post(t *testing.T) {
 // TestClient_Put tests PUT request functionality
 func TestClient_Put(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -130,15 +129,15 @@ func TestClient_Put(t *testing.T) {
 // TestClient_Delete tests DELETE request functionality
 func TestClient_Delete(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -157,15 +156,15 @@ func TestClient_Delete(t *testing.T) {
 // TestClient_HealthCheck tests health check functionality
 func TestClient_HealthCheck(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -184,12 +183,12 @@ func TestClient_HealthCheck(t *testing.T) {
 // TestClient_Close tests client close functionality
 func TestClient_Close(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test close
 	err := client.Client.Close()
@@ -199,8 +198,8 @@ func TestClient_Close(t *testing.T) {
 // TestClient_ErrorHandling tests error handling scenarios
 func TestClient_ErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test configuration with invalid URL for error testing
 	testConfig := &mediamtx.MediaMTXConfig{
@@ -239,15 +238,15 @@ func TestClient_ErrorHandling(t *testing.T) {
 // TestClient_ConcurrentAccess tests concurrent access scenarios
 func TestClient_ConcurrentAccess(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -281,12 +280,12 @@ func TestClient_ConcurrentAccess(t *testing.T) {
 // TestClient_ContextCancellation tests context cancellation
 func TestClient_ContextCancellation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -305,8 +304,8 @@ func TestClient_ContextCancellation(t *testing.T) {
 // TestClient_ConfigurationValidation tests configuration validation
 func TestClient_ConfigurationValidation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Test with invalid configuration
 	invalidConfig := &mediamtx.MediaMTXConfig{
@@ -328,15 +327,15 @@ func TestClient_ConfigurationValidation(t *testing.T) {
 // TestClient_HealthResponseParsing tests health response parsing (stimulates parseHealthResponse)
 func TestClient_HealthResponseParsing(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -355,15 +354,15 @@ func TestClient_HealthResponseParsing(t *testing.T) {
 // TestClient_PathResponseParsing tests path response parsing (stimulates parsePathResponse, extractSourceString, determineStatus)
 func TestClient_PathResponseParsing(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -394,15 +393,15 @@ func TestClient_PathResponseParsing(t *testing.T) {
 // TestClient_MetricsResponseParsing tests metrics response parsing (stimulates parseMetricsResponse)
 func TestClient_MetricsResponseParsing(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -422,15 +421,15 @@ func TestClient_MetricsResponseParsing(t *testing.T) {
 // TestClient_UpdatePathRequest tests update path request marshaling (stimulates marshalUpdatePathRequest)
 func TestClient_UpdatePathRequest(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}

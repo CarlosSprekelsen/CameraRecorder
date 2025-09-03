@@ -31,7 +31,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,8 +39,8 @@ import (
 func TestHybridCameraMonitor_RealSystemIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -121,8 +120,8 @@ func TestHybridCameraMonitor_CapabilityProbing(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -201,8 +200,8 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -267,8 +266,8 @@ func TestHybridCameraMonitor_Statistics(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -332,8 +331,8 @@ func TestHybridCameraMonitor_DeviceEnumeration(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -397,8 +396,8 @@ func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -459,8 +458,8 @@ func TestHybridCameraMonitor_PerformanceBenchmark(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Load test configuration using the shared config manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -541,8 +540,8 @@ func TestHybridCameraMonitor_PerformanceBenchmark(t *testing.T) {
 func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -636,8 +635,8 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 func TestHybridCameraMonitor_ConfigurationValidation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -748,8 +747,8 @@ logging:
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err = env.ConfigManager.LoadConfig(configPath)
 	require.NoError(t, err, "Failed to load test configuration")
@@ -854,8 +853,8 @@ logging:
 func TestHybridCameraMonitor_MonitoringIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -932,8 +931,8 @@ func TestHybridCameraMonitor_MonitoringIntegration(t *testing.T) {
 func TestHybridCameraMonitor_EventHandler(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1010,8 +1009,8 @@ func (h *TestEventHandler) HandleCameraEvent(ctx context.Context, eventData came
 func TestHybridCameraMonitor_DefaultFormats(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1164,8 +1163,8 @@ Device Caps       : 0x04a00001 Video Capture Metadata Capture Streaming Extended
 func TestHybridCameraMonitor_DefaultFormatsTrigger(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1229,8 +1228,8 @@ func TestHybridCameraMonitor_DefaultFormatsTrigger(t *testing.T) {
 func TestHybridCameraMonitor_MaxFunction(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1502,8 +1501,8 @@ func TestRealDeviceInfoParser_ParseSize(t *testing.T) {
 func TestHybridCameraMonitor_GetDefaultFormats(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1687,8 +1686,8 @@ func TestHybridCameraMonitor_UtilityFunctions(t *testing.T) {
 // TestHybridCameraMonitor_ProcessDeviceStateChanges tests the processDeviceStateChanges function
 func TestHybridCameraMonitor_ProcessDeviceStateChanges(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1758,8 +1757,8 @@ func TestHybridCameraMonitor_ProcessDeviceStateChanges(t *testing.T) {
 // TestHybridCameraMonitor_ProbeDeviceCapabilities tests the probeDeviceCapabilities function
 func TestHybridCameraMonitor_ProbeDeviceCapabilities(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")

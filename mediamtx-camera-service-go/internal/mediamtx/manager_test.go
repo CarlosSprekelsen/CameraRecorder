@@ -111,15 +111,12 @@ func TestManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	}
 
 	// Test with invalid source - this should fail validation in the manager
-	// NOTE: Current implementation has a bug - it doesn't validate empty source
-	// This test documents the current behavior and should be updated when the bug is fixed
 	_, err = streamManager.CreateStream(ctx, "test_stream", "")
 	t.Logf("CreateStream with empty source returned: %v", err)
-	// TODO: Fix REQ-MTX-007: Add source validation to CreateStream method
-	// assert.Error(t, err, "Should error with empty source")
-	// if err != nil {
-	// 	assert.Contains(t, err.Error(), "failed to validate device path", "Should get specific error message")
-	// }
+	assert.Error(t, err, "Should error with empty source")
+	if err != nil {
+		assert.Contains(t, err.Error(), "source cannot be empty", "Should get specific error message")
+	}
 }
 
 // TestManager_ConcurrentAccess_ReqMTX001 tests concurrent access to managers

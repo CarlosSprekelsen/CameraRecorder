@@ -41,7 +41,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	gorilla "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,8 +64,8 @@ func TestWebSocketConcurrencyControlPoint(t *testing.T) {
 	// REQ-STRESS-001: Concurrent WebSocket connections
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -104,8 +103,8 @@ func TestConcurrentWebSocketConnections(t *testing.T) {
 	// REQ-STRESS-002: Concurrent request handling
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -124,7 +123,7 @@ func TestConcurrentWebSocketConnections(t *testing.T) {
 			defer wg.Done()
 
 			// Create WebSocket test client using shared utilities
-			client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+			client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 			defer client.Close()
 
 			// Send ping request through proper WebSocket flow
@@ -167,8 +166,8 @@ func TestWebSocketStressOverTime(t *testing.T) {
 	// REQ-RELIABILITY-001: Long-running stability (24/7 operation)
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -176,7 +175,7 @@ func TestWebSocketStressOverTime(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client using shared utilities
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Test duration (reduced for testing, production should test 24/7)
@@ -229,8 +228,8 @@ func TestErrorRecovery(t *testing.T) {
 	// REQ-RELIABILITY-002: Error recovery and resilience
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -238,7 +237,7 @@ func TestErrorRecovery(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client using shared utilities
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Test recovery from invalid requests
@@ -285,8 +284,8 @@ func TestNetworkFailureRecovery(t *testing.T) {
 	// REQ-RELIABILITY-004: Network failure recovery
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -294,7 +293,7 @@ func TestNetworkFailureRecovery(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Create initial WebSocket test client
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 
 	// Test initial connection
 	response := client.SendPingRequest()
@@ -308,7 +307,7 @@ func TestNetworkFailureRecovery(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create new connection to test recovery
-	newClient := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	newClient := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer newClient.Close()
 
 	// Test that new connection works
@@ -331,8 +330,8 @@ func TestMemoryStressTesting(t *testing.T) {
 	// REQ-RELIABILITY-003: Resource management (memory leaks, CPU usage)
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -351,7 +350,7 @@ func TestMemoryStressTesting(t *testing.T) {
 			defer wg.Done()
 
 			// Create WebSocket test client
-			client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+			client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 			defer client.Close()
 
 			// Send multiple requests to stress memory
@@ -389,8 +388,8 @@ func TestRateLimitingStressTesting(t *testing.T) {
 	// REQ-STRESS-005: Rate limiting stress testing
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -398,7 +397,7 @@ func TestRateLimitingStressTesting(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Test rapid requests to trigger rate limiting
@@ -435,8 +434,8 @@ func TestPerformanceDegradationTesting(t *testing.T) {
 	// REQ-STRESS-007: Performance degradation testing
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -444,7 +443,7 @@ func TestPerformanceDegradationTesting(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Create WebSocket test client
-	client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+	client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 	defer client.Close()
 
 	// Measure baseline performance
@@ -464,7 +463,7 @@ func TestPerformanceDegradationTesting(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			loadClient := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+			loadClient := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 			defer loadClient.Close()
 
 			// Send some requests to create load
@@ -507,8 +506,8 @@ func TestSystemStabilityValidation(t *testing.T) {
 	// REQ-RELIABILITY-001: Long-running stability (24/7 operation)
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start WebSocket server
 	err := env.WebSocketServer.Start()
@@ -524,7 +523,7 @@ func TestSystemStabilityValidation(t *testing.T) {
 		t.Logf("Starting stability cycle %d/%d", cycle+1, cycleCount)
 
 		// Create WebSocket test client for this cycle
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 
 		// Perform operations in this cycle
 		operations := 10
@@ -587,8 +586,8 @@ func TestProductionReadiness(t *testing.T) {
 	*/
 
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start all services
 	err := env.WebSocketServer.Start()
@@ -602,7 +601,7 @@ func TestProductionReadiness(t *testing.T) {
 	// 1. Performance Validation
 	t.Run("PerformanceValidation", func(t *testing.T) {
 		// Create WebSocket test client for proper testing
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Test response times using proper WebSocket flow
@@ -634,7 +633,7 @@ func TestProductionReadiness(t *testing.T) {
 	// 3. Error Handling Validation
 	t.Run("ErrorHandlingValidation", func(t *testing.T) {
 		// Create WebSocket test client for proper testing
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Test graceful error handling with invalid request

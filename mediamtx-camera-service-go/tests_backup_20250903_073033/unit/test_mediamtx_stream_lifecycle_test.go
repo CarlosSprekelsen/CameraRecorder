@@ -21,12 +21,11 @@ import (
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// Test configuration is now handled by utils.SetupMediaMTXTestClient
+// Test configuration is now handled by testtestutils.SetupMediaMTXTestClient
 
 func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 	tests := []struct {
@@ -54,21 +53,21 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// COMMON PATTERN: Use shared test environment instead of individual components
-			env := utils.SetupMediaMTXTestEnvironment(t)
-			defer utils.TeardownMediaMTXTestEnvironment(t, env)
+			env := testtestutils.SetupMediaMTXTestEnvironment(t)
+			defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 			// NEW PATTERN: Use centralized MediaMTX client setup
-			client := utils.SetupMediaMTXTestClient(t, env)
-			defer utils.TeardownMediaMTXTestClient(t, client)
+			client := testtestutils.SetupMediaMTXTestClient(t, env)
+			defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 			// Test MediaMTX connection
-			isAccessible := utils.TestMediaMTXConnection(t, client)
+			isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 			if !isAccessible {
 				t.Skip("MediaMTX service not accessible, skipping test")
 			}
 
 			// NEW PATTERN: Use centralized stream manager setup
-			sm := utils.SetupMediaMTXStreamManager(t, client)
+			sm := testtestutils.SetupMediaMTXStreamManager(t, client)
 
 			// Test use case-specific methods (matches Python implementation)
 			var stream *mediamtx.Stream
@@ -95,21 +94,21 @@ func TestStreamManager_CreateStreamWithUseCase(t *testing.T) {
 
 func TestStreamManager_UseCaseConfigurations(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
 	// NEW PATTERN: Use centralized stream manager setup
-	sm := utils.SetupMediaMTXStreamManager(t, client)
+	sm := testtestutils.SetupMediaMTXStreamManager(t, client)
 
 	// Test that the stream manager can be created and used
 	assert.NotNil(t, sm, "Stream manager should not be nil")
@@ -134,21 +133,21 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 	t.Run("stream manager interface compliance", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		// NEW PATTERN: Use centralized MediaMTX client setup
-		client := utils.SetupMediaMTXTestClient(t, env)
-		defer utils.TeardownMediaMTXTestClient(t, client)
+		client := testtestutils.SetupMediaMTXTestClient(t, env)
+		defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 		// Test MediaMTX connection
-		isAccessible := utils.TestMediaMTXConnection(t, client)
+		isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 		if !isAccessible {
 			t.Skip("MediaMTX service not accessible, skipping test")
 		}
 
 		// NEW PATTERN: Use centralized stream manager setup
-		sm := utils.SetupMediaMTXStreamManager(t, client)
+		sm := testtestutils.SetupMediaMTXStreamManager(t, client)
 
 		// Test that the interface methods work
 		assert.NotNil(t, sm, "Stream manager should not be nil")
@@ -162,15 +161,15 @@ func TestController_CreateStreamForUseCases(t *testing.T) {
 
 func TestStreamManager_InvalidUseCase(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// NEW PATTERN: Use centralized stream manager setup
-	sm := utils.SetupMediaMTXStreamManager(t, client)
+	sm := testtestutils.SetupMediaMTXStreamManager(t, client)
 
 	// Test with invalid stream name
 	stream, err := sm.CreateStream(context.Background(), "", "/dev/video0")
@@ -181,4 +180,4 @@ func TestStreamManager_InvalidUseCase(t *testing.T) {
 	assert.Contains(t, err.Error(), "stream name cannot be empty")
 }
 
-// Helper function is no longer needed - using utils.SetupTestEnvironment
+// Helper function is no longer needed - using testtestutils.SetupTestEnvironment

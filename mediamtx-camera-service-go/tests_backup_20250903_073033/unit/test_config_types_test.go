@@ -21,7 +21,7 @@ import (
 func TestServerConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-001: Server configuration must support all WebSocket server settings
-	cfg := &config.ServerConfig{
+	cfg := &ServerConfig{
 		Host:           "localhost",
 		Port:           8080,
 		WebSocketPath:  "/ws",
@@ -48,7 +48,7 @@ func TestServerConfig_Structure(t *testing.T) {
 func TestCodecConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-002: Codec configuration must support STANAG 4406 settings
-	cfg := &config.CodecConfig{
+	cfg := &CodecConfig{
 		VideoProfile: "baseline",
 		VideoLevel:   "3.1",
 		PixelFormat:  "yuv420p",
@@ -67,7 +67,7 @@ func TestCodecConfig_Structure(t *testing.T) {
 func TestStreamReadinessConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-003: Stream readiness configuration must support timeout and retry settings
-	cfg := &config.StreamReadinessConfig{
+	cfg := &StreamReadinessConfig{
 		Timeout:                     30.0,
 		RetryAttempts:               3,
 		RetryDelay:                  5.0,
@@ -88,7 +88,7 @@ func TestStreamReadinessConfig_Structure(t *testing.T) {
 func TestSecurityConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-001: Security configuration must support JWT and rate limiting
-	cfg := &config.SecurityConfig{
+	cfg := &SecurityConfig{
 		RateLimitRequests: 100,
 		RateLimitWindow:   1 * time.Minute,
 		JWTSecretKey:      "test-secret-key",
@@ -105,7 +105,7 @@ func TestSecurityConfig_Structure(t *testing.T) {
 func TestStorageConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-002: Storage configuration must support path and threshold settings
-	cfg := &config.StorageConfig{
+	cfg := &StorageConfig{
 		WarnPercent:  80,
 		BlockPercent: 90,
 		DefaultPath:  "/opt/camera-service/recordings",
@@ -122,7 +122,7 @@ func TestStorageConfig_Structure(t *testing.T) {
 func TestMediaMTXConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-003: MediaMTX configuration must support all integration settings
-	cfg := &config.MediaMTXConfig{
+	cfg := &MediaMTXConfig{
 		Host:                                "localhost",
 		APIPort:                             9997,
 		RTSPPort:                            8554,
@@ -167,7 +167,7 @@ func TestMediaMTXConfig_Structure(t *testing.T) {
 func TestFFmpegConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-001: FFmpeg configuration must support snapshot and recording settings
-	cfg := &config.FFmpegConfig{
+	cfg := &FFmpegConfig{
 		Snapshot: config.FFmpegSnapshotConfig{
 			ProcessCreationTimeout: 10.0,
 			ExecutionTimeout:       30.0,
@@ -200,7 +200,7 @@ func TestFFmpegConfig_Structure(t *testing.T) {
 func TestNotificationsConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-002: Notifications configuration must support WebSocket and real-time settings
-	cfg := &config.NotificationsConfig{
+	cfg := &NotificationsConfig{
 		WebSocket: config.WebSocketNotificationConfig{
 			DeliveryTimeout: 5.0,
 			RetryAttempts:   3,
@@ -229,7 +229,7 @@ func TestNotificationsConfig_Structure(t *testing.T) {
 func TestPerformanceConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-003: Performance configuration must support response time targets and optimization
-	cfg := &config.PerformanceConfig{
+	cfg := &PerformanceConfig{
 		ResponseTimeTargets: config.ResponseTimeTargetsConfig{
 			SnapshotCapture: 2.0,
 			RecordingStart:  5.0,
@@ -276,7 +276,7 @@ func TestPerformanceConfig_Structure(t *testing.T) {
 func TestCameraConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-001: Camera configuration must support discovery and capability settings
-	cfg := &config.CameraConfig{
+	cfg := &CameraConfig{
 		PollInterval:              5.0,
 		DetectionTimeout:          30.0,
 		DeviceRange:               []int{0, 1, 2, 3},
@@ -301,7 +301,7 @@ func TestCameraConfig_Structure(t *testing.T) {
 func TestLoggingConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-002: Logging configuration must support file and console output
-	cfg := &config.LoggingConfig{
+	cfg := &LoggingConfig{
 		Level:          "info",
 		Format:         "json",
 		FileEnabled:    true,
@@ -324,7 +324,7 @@ func TestLoggingConfig_Structure(t *testing.T) {
 func TestRecordingConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-003: Recording configuration must support format, quality, and cleanup settings
-	cfg := &config.RecordingConfig{
+	cfg := &RecordingConfig{
 		Enabled:              true,
 		Format:               "mp4",
 		Quality:              "high",
@@ -357,7 +357,7 @@ func TestRecordingConfig_Structure(t *testing.T) {
 func TestSnapshotConfig_Structure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-001: Snapshot configuration must support format, quality, and cleanup settings
-	cfg := &config.SnapshotConfig{
+	cfg := &SnapshotConfig{
 		Enabled:         true,
 		Format:          "jpeg",
 		Quality:         85,
@@ -384,7 +384,7 @@ func TestSnapshotConfig_Structure(t *testing.T) {
 func TestConfig_CompleteStructure(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-002: Complete configuration must support all sections
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           8080,
@@ -470,11 +470,11 @@ func TestConfig_CompleteStructure(t *testing.T) {
 func TestConfig_HealthPortOptional(t *testing.T) {
 	t.Parallel()
 	// REQ-CONFIG-003: Health port must be optional for testing scenarios
-	cfg1 := &config.Config{}
+	cfg1 := &Config{}
 	assert.Nil(t, cfg1.HealthPort)
 
 	healthPort := 8081
-	cfg2 := &config.Config{
+	cfg2 := &Config{
 		HealthPort: &healthPort,
 	}
 	assert.NotNil(t, cfg2.HealthPort)

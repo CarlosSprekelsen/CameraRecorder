@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +31,8 @@ func TestResourceUsageBaseline(t *testing.T) {
 	*/
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start services
 	err := env.WebSocketServer.Start()
@@ -41,7 +40,7 @@ func TestResourceUsageBaseline(t *testing.T) {
 	defer env.WebSocketServer.Stop()
 
 	// Use ResourceMonitor for accurate measurements
-	monitor := utils.NewResourceMonitor()
+	monitor := testtestutils.NewResourceMonitor()
 	monitor.Start()
 
 	// Allow system to stabilize
@@ -94,13 +93,13 @@ func TestPollingIntervalResourceImpact(t *testing.T) {
 		2 * time.Second,        // Minimal polling (lowest power)
 	}
 
-	results := make(map[time.Duration]utils.ResourceMeasurement)
+	results := make(map[time.Duration]testtestutils.ResourceMeasurement)
 
 	for _, interval := range pollingIntervals {
 		t.Run(fmt.Sprintf("PollingInterval_%v", interval), func(t *testing.T) {
 			// COMMON PATTERN: Use shared test environment
-			env := utils.SetupWebSocketTestEnvironment(t)
-			defer utils.TeardownWebSocketTestEnvironment(t, env)
+			env := testtestutils.SetupWebSocketTestEnvironment(t)
+			defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 			// Start services
 			err := env.WebSocketServer.Start()
@@ -116,7 +115,7 @@ func TestPollingIntervalResourceImpact(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			// Use ResourceMonitor for accurate measurements
-			monitor := utils.NewResourceMonitor()
+			monitor := testtestutils.NewResourceMonitor()
 			monitor.Start()
 
 			// Measure resource usage during active polling
@@ -155,8 +154,8 @@ func TestConcurrentConnectionsResourceImpact(t *testing.T) {
 	for _, count := range connectionCounts {
 		t.Run(fmt.Sprintf("ConcurrentConnections_%d", count), func(t *testing.T) {
 			// COMMON PATTERN: Use shared test environment
-			env := utils.SetupWebSocketTestEnvironment(t)
-			defer utils.TeardownWebSocketTestEnvironment(t, env)
+			env := testtestutils.SetupWebSocketTestEnvironment(t)
+			defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 			// Start services
 			err := env.WebSocketServer.Start()
@@ -164,7 +163,7 @@ func TestConcurrentConnectionsResourceImpact(t *testing.T) {
 			defer env.WebSocketServer.Stop()
 
 			// Create concurrent connections
-			clients := make([]*utils.WebSocketTestClient, count)
+			clients := make([]*testtestutils.WebSocketTestClient, count)
 			var wg sync.WaitGroup
 
 			// Establish connections
@@ -172,7 +171,7 @@ func TestConcurrentConnectionsResourceImpact(t *testing.T) {
 				wg.Add(1)
 				go func(index int) {
 					defer wg.Done()
-					client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+					client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 					clients[index] = client
 					defer client.Close()
 
@@ -187,7 +186,7 @@ func TestConcurrentConnectionsResourceImpact(t *testing.T) {
 			wg.Wait()
 
 			// Use ResourceMonitor for accurate measurements
-			monitor := utils.NewResourceMonitor()
+			monitor := testtestutils.NewResourceMonitor()
 			monitor.Start()
 
 			// Take measurements under load
@@ -226,8 +225,8 @@ func TestMemoryLeakDetection(t *testing.T) {
 	*/
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Start services
 	err := env.WebSocketServer.Start()
@@ -239,7 +238,7 @@ func TestMemoryLeakDetection(t *testing.T) {
 	defer env.CameraMonitor.Stop()
 
 	// Use ResourceMonitor for accurate measurements
-	monitor := utils.NewResourceMonitor()
+	monitor := testtestutils.NewResourceMonitor()
 	monitor.Start()
 
 	// Measure memory usage over time
@@ -309,13 +308,13 @@ func TestPowerEfficiencyOptimization(t *testing.T) {
 		},
 	}
 
-	results := make(map[string]utils.ResourceMeasurement)
+	results := make(map[string]testtestutils.ResourceMeasurement)
 
 	for _, config := range configurations {
 		t.Run(config.name, func(t *testing.T) {
 			// COMMON PATTERN: Use shared test environment
-			env := utils.SetupWebSocketTestEnvironment(t)
-			defer utils.TeardownWebSocketTestEnvironment(t, env)
+			env := testtestutils.SetupWebSocketTestEnvironment(t)
+			defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 			// Start services
 			err := env.WebSocketServer.Start()
@@ -327,9 +326,9 @@ func TestPowerEfficiencyOptimization(t *testing.T) {
 			defer env.CameraMonitor.Stop()
 
 			// Create test load
-			clients := make([]*utils.WebSocketTestClient, config.maxConnections)
+			clients := make([]*testtestutils.WebSocketTestClient, config.maxConnections)
 			for i := 0; i < config.maxConnections; i++ {
-				client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+				client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 				clients[i] = client
 				defer client.Close()
 			}
@@ -338,7 +337,7 @@ func TestPowerEfficiencyOptimization(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			// Use ResourceMonitor for accurate measurements
-			monitor := utils.NewResourceMonitor()
+			monitor := testtestutils.NewResourceMonitor()
 			monitor.Start()
 
 			// Take measurements
@@ -367,7 +366,7 @@ func TestPowerEfficiencyOptimization(t *testing.T) {
 // ============================================================================
 
 // recommendOptimalPollingInterval analyzes results and recommends optimal interval
-func recommendOptimalPollingInterval(t *testing.T, results map[time.Duration]utils.ResourceMeasurement) {
+func recommendOptimalPollingInterval(t *testing.T, results map[time.Duration]testtestutils.ResourceMeasurement) {
 	t.Logf("=== POLLING INTERVAL OPTIMIZATION ANALYSIS ===")
 
 	var bestInterval time.Duration
@@ -409,7 +408,7 @@ func recommendOptimalPollingInterval(t *testing.T, results map[time.Duration]uti
 }
 
 // recommendOptimalConfiguration analyzes configuration results
-func recommendOptimalConfiguration(t *testing.T, results map[string]utils.ResourceMeasurement) {
+func recommendOptimalConfiguration(t *testing.T, results map[string]testtestutils.ResourceMeasurement) {
 	t.Logf("=== CONFIGURATION OPTIMIZATION ANALYSIS ===")
 
 	var bestConfig string

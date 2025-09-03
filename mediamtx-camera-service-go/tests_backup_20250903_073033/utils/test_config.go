@@ -13,7 +13,7 @@ Test Categories: Test Infrastructure
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package utils
+package testutils
 
 import (
 	"path/filepath"

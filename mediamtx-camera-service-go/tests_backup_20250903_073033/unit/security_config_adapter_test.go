@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +34,7 @@ func TestNewConfigAdapter(t *testing.T) {
 	securityConfig := createTestSecurityConfig()
 	loggingConfig := createTestLoggingConfig()
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	assert.NotNil(t, adapter)
 	assert.Equal(t, securityConfig, adapter.GetSecurityConfig())
@@ -43,195 +42,195 @@ func TestNewConfigAdapter(t *testing.T) {
 }
 
 func TestConfigAdapter_GetRateLimitRequests(t *testing.T) {
-	securityConfig := &config.SecurityConfig{RateLimitRequests: 150}
-	loggingConfig := &config.LoggingConfig{}
+	securityConfig := &SecurityConfig{RateLimitRequests: 150}
+	loggingConfig := &LoggingConfig{}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetRateLimitRequests()
 	assert.Equal(t, 150, result)
 }
 
 func TestConfigAdapter_GetRateLimitRequests_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetRateLimitRequests()
 	assert.Equal(t, 100, result) // Default fallback
 }
 
 func TestConfigAdapter_GetRateLimitWindow(t *testing.T) {
-	securityConfig := &config.SecurityConfig{RateLimitWindow: 2 * time.Minute}
-	loggingConfig := &config.LoggingConfig{}
+	securityConfig := &SecurityConfig{RateLimitWindow: 2 * time.Minute}
+	loggingConfig := &LoggingConfig{}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetRateLimitWindow()
 	assert.Equal(t, 2*time.Minute, result)
 }
 
 func TestConfigAdapter_GetRateLimitWindow_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetRateLimitWindow()
 	assert.Equal(t, time.Minute, result) // Default fallback
 }
 
 func TestConfigAdapter_GetJWTSecretKey(t *testing.T) {
-	securityConfig := &config.SecurityConfig{JWTSecretKey: "custom_secret"}
-	loggingConfig := &config.LoggingConfig{}
+	securityConfig := &SecurityConfig{JWTSecretKey: "custom_secret"}
+	loggingConfig := &LoggingConfig{}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetJWTSecretKey()
 	assert.Equal(t, "custom_secret", result)
 }
 
 func TestConfigAdapter_GetJWTSecretKey_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetJWTSecretKey()
 	assert.Equal(t, "", result) // Default fallback
 }
 
 func TestConfigAdapter_GetJWTExpiryHours(t *testing.T) {
-	securityConfig := &config.SecurityConfig{JWTExpiryHours: 48}
-	loggingConfig := &config.LoggingConfig{}
+	securityConfig := &SecurityConfig{JWTExpiryHours: 48}
+	loggingConfig := &LoggingConfig{}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetJWTExpiryHours()
 	assert.Equal(t, 48, result)
 }
 
 func TestConfigAdapter_GetJWTExpiryHours_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetJWTExpiryHours()
 	assert.Equal(t, 24, result) // Default fallback
 }
 
 func TestConfigAdapter_GetLogLevel(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{Level: "debug"}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{Level: "debug"}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetLogLevel()
 	assert.Equal(t, "debug", result)
 }
 
 func TestConfigAdapter_GetLogLevel_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetLogLevel()
 	assert.Equal(t, "info", result) // Default fallback
 }
 
 func TestConfigAdapter_GetLogFormat(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{Format: "text"}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{Format: "text"}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetLogFormat()
 	assert.Equal(t, "text", result)
 }
 
 func TestConfigAdapter_GetLogFormat_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetLogFormat()
 	assert.Equal(t, "json", result) // Default fallback
 }
 
 func TestConfigAdapter_IsFileLoggingEnabled(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{FileEnabled: true}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{FileEnabled: true}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.IsFileLoggingEnabled()
 	assert.True(t, result)
 }
 
 func TestConfigAdapter_IsFileLoggingEnabled_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.IsFileLoggingEnabled()
 	assert.False(t, result) // Default fallback
 }
 
 func TestConfigAdapter_GetLogFilePath(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{FilePath: "/custom/log/path"}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{FilePath: "/custom/log/path"}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetLogFilePath()
 	assert.Equal(t, "/custom/log/path", result)
 }
 
 func TestConfigAdapter_GetLogFilePath_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetLogFilePath()
 	assert.Equal(t, "/var/log/camera-service", result) // Default fallback
 }
 
 func TestConfigAdapter_GetMaxLogFileSize(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{MaxFileSize: 200 * 1024 * 1024}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{MaxFileSize: 200 * 1024 * 1024}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetMaxLogFileSize()
 	assert.Equal(t, int64(200*1024*1024), result)
 }
 
 func TestConfigAdapter_GetMaxLogFileSize_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetMaxLogFileSize()
 	assert.Equal(t, int64(100*1024*1024), result) // Default fallback
 }
 
 func TestConfigAdapter_GetLogBackupCount(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{BackupCount: 10}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{BackupCount: 10}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.GetLogBackupCount()
 	assert.Equal(t, 10, result)
 }
 
 func TestConfigAdapter_GetLogBackupCount_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.GetLogBackupCount()
 	assert.Equal(t, 5, result) // Default fallback
 }
 
 func TestConfigAdapter_IsConsoleLoggingEnabled(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{ConsoleEnabled: false}
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{ConsoleEnabled: false}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	result := adapter.IsConsoleLoggingEnabled()
 	assert.False(t, result)
 }
 
 func TestConfigAdapter_IsConsoleLoggingEnabled_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	result := adapter.IsConsoleLoggingEnabled()
 	assert.True(t, result) // Default fallback
 }
 
 func TestConfigAdapter_CreateAuditLoggerConfig(t *testing.T) {
-	securityConfig := &config.SecurityConfig{}
-	loggingConfig := &config.LoggingConfig{
+	securityConfig := &SecurityConfig{}
+	loggingConfig := &LoggingConfig{
 		FilePath:       "/var/log/test",
 		MaxFileSize:    50 * 1024 * 1024,
 		FileEnabled:    true,
@@ -239,7 +238,7 @@ func TestConfigAdapter_CreateAuditLoggerConfig(t *testing.T) {
 		Level:          "warn",
 	}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	config := adapter.CreateAuditLoggerConfig()
 
@@ -255,13 +254,13 @@ func TestConfigAdapter_CreateAuditLoggerConfig(t *testing.T) {
 }
 
 func TestConfigAdapter_CreateRateLimiterConfig(t *testing.T) {
-	securityConfig := &config.SecurityConfig{
+	securityConfig := &SecurityConfig{
 		RateLimitRequests: 200,
 		RateLimitWindow:   30 * time.Second,
 	}
-	loggingConfig := &config.LoggingConfig{}
+	loggingConfig := &LoggingConfig{}
 
-	adapter := security.NewConfigAdapter(securityConfig, loggingConfig)
+	adapter := NewConfigAdapter(securityConfig, loggingConfig)
 
 	config := adapter.CreateRateLimiterConfig()
 
@@ -277,7 +276,7 @@ func TestConfigAdapter_CreateRateLimiterConfig(t *testing.T) {
 }
 
 func TestConfigAdapter_CreateRateLimiterConfig_NilConfig(t *testing.T) {
-	adapter := security.NewConfigAdapter(nil, nil)
+	adapter := NewConfigAdapter(nil, nil)
 
 	config := adapter.CreateRateLimiterConfig()
 

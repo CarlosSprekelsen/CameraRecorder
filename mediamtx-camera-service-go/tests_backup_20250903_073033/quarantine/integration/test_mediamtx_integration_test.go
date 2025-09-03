@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,8 +39,8 @@ func TestMediaMTXHealthIntegration(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -89,8 +88,8 @@ func TestMediaMTXPathIntegration(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	t.Run("PathConfiguration", func(t *testing.T) {
 		// Test path configuration retrieval
@@ -130,8 +129,8 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -235,8 +234,8 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -325,8 +324,8 @@ func TestMediaMTXSnapshotIntegration(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -374,8 +373,8 @@ func TestMediaMTXActiveRecordingTracking(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -445,8 +444,8 @@ func TestMediaMTXHealthRecovery(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -553,8 +552,8 @@ func TestMediaMTXDurationControl(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -748,8 +747,8 @@ func TestMediaMTXFileManagement(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -1024,8 +1023,8 @@ func TestMediaMTXFileManagement(t *testing.T) {
 // BenchmarkMediaMTXIntegration benchmarks MediaMTX integration performance
 func BenchmarkMediaMTXIntegration(b *testing.B) {
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(&testing.T{})
-	defer utils.TeardownMediaMTXTestEnvironment(&testing.T{}, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(&testing.T{})
+	defer testtestutils.TeardownMediaMTXTestEnvironment(&testing.T{}, env)
 
 	ctx := context.Background()
 
@@ -1033,7 +1032,7 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 		// Setup complete before timing starts
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			health, err := env.Controller.GetHealth(ctx)
 			if err != nil {
@@ -1047,7 +1046,7 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 		// Setup complete before timing starts
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			metrics, err := env.Controller.GetSystemMetrics(ctx)
 			if err != nil {
@@ -1061,7 +1060,7 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 		// Setup complete before timing starts
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			recordings, err := env.Controller.ListRecordings(ctx, 10, 0)
 			if err != nil {
@@ -1075,7 +1074,7 @@ func BenchmarkMediaMTXIntegration(b *testing.B) {
 		// Setup complete before timing starts
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			snapshots, err := env.Controller.ListSnapshots(ctx, 10, 0)
 			if err != nil {

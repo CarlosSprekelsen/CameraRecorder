@@ -217,6 +217,30 @@ func TestError_Is_ReqMTX007(t *testing.T) {
 	assert.NotEqual(t, "*mediamtx.StreamError", reflect.TypeOf(mediaMTXErr).String(), "Should not be StreamError type")
 }
 
+// TestError_Is_WithErrorsIs_ReqMTX007 verifies that errors.Is works correctly with MediaMTXError types
+func TestError_Is_WithErrorsIs_ReqMTX007(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	// This test verifies that errors.Is works correctly after implementing the Is method
+
+	// Create a MediaMTXError
+	mediaMTXErr := NewMediaMTXError(404, "Not Found", "Resource missing")
+
+	// Test that errors.Is works with predefined error constants
+	assert.True(t, errors.Is(mediaMTXErr, ErrMediaMTXNotFound),
+		"errors.Is should work with MediaMTXError types after implementing the Is method")
+
+	// Test that errors.Is works when comparing error with itself
+	assert.True(t, errors.Is(mediaMTXErr, mediaMTXErr),
+		"errors.Is should work when comparing error with itself")
+
+	// Verify the types for documentation
+	t.Logf("MediaMTXError type: %T", mediaMTXErr)
+	t.Logf("ErrMediaMTXNotFound type: %T", ErrMediaMTXNotFound)
+	t.Logf("errors.Is result: %v", errors.Is(mediaMTXErr, ErrMediaMTXNotFound))
+}
+
+
+
 // TestError_As_ReqMTX007 tests error type assertion
 func TestError_As_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery

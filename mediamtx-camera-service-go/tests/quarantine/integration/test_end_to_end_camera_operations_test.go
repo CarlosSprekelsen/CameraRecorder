@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +47,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 	}
 
 	// COMMON PATTERN: Use shared WebSocket test environment with all dependencies
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 	defer func() {
 		// Ensure proper cleanup
 		if env.CameraMonitor.IsRunning() {
@@ -57,7 +56,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		if env.WebSocketServer.IsRunning() {
 			env.WebSocketServer.Stop()
 		}
-		utils.TeardownWebSocketTestEnvironment(t, env)
+		testtestutils.TeardownWebSocketTestEnvironment(t, env)
 	}()
 
 	// Setup test environment with proper timeout
@@ -116,7 +115,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Create WebSocket client using proven pattern
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate as operator (required for camera operations)
@@ -188,7 +187,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Create WebSocket client
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate as operator
@@ -374,7 +373,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 		}
 
 		// Create WebSocket client
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate as operator
@@ -458,7 +457,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test file operations
 	t.Run("FileOperations", func(t *testing.T) {
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate as operator
@@ -564,7 +563,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test health monitoring
 	t.Run("HealthMonitoring", func(t *testing.T) {
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate as admin (required for health monitoring)
@@ -643,7 +642,7 @@ func TestEndToEndCameraOperations(t *testing.T) {
 
 	// Test authentication and authorization
 	t.Run("AuthenticationAndAuthorization", func(t *testing.T) {
-		client := utils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, env.WebSocketServer, env.JWTHandler)
 		defer client.Close()
 
 		// Test viewer role permissions

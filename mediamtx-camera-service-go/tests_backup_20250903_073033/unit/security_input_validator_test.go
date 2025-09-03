@@ -7,23 +7,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewInputValidator(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	assert.NotNil(t, validator)
 }
 
 func TestValidationResult_NewValidationResult(t *testing.T) {
-	result := security.NewValidationResult()
+	result := NewValidationResult()
 
 	assert.NotNil(t, result)
 	assert.False(t, result.HasErrors())
@@ -32,7 +30,7 @@ func TestValidationResult_NewValidationResult(t *testing.T) {
 }
 
 func TestValidationResult_AddError(t *testing.T) {
-	result := security.NewValidationResult()
+	result := NewValidationResult()
 
 	result.AddError("field1", "Invalid value", "test_value")
 	result.AddError("field2", "Missing required field", nil)
@@ -44,7 +42,7 @@ func TestValidationResult_AddError(t *testing.T) {
 }
 
 func TestValidationResult_AddWarning(t *testing.T) {
-	result := security.NewValidationResult()
+	result := NewValidationResult()
 
 	result.AddWarning("field1: Deprecated value")
 	result.AddWarning("field2: Consider using newer format")
@@ -56,7 +54,7 @@ func TestValidationResult_AddWarning(t *testing.T) {
 }
 
 func TestValidationResult_HasErrors(t *testing.T) {
-	result := security.NewValidationResult()
+	result := NewValidationResult()
 
 	assert.False(t, result.HasErrors())
 
@@ -65,7 +63,7 @@ func TestValidationResult_HasErrors(t *testing.T) {
 }
 
 func TestValidationResult_GetErrorMessages(t *testing.T) {
-	result := security.NewValidationResult()
+	result := NewValidationResult()
 
 	result.AddError("field1", "Error 1", "value1")
 	result.AddError("field2", "Error 2", "value2")
@@ -78,10 +76,10 @@ func TestValidationResult_GetErrorMessages(t *testing.T) {
 
 func TestInputValidator_ValidateCameraID(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid camera IDs
 	validIDs := []string{"camera001", "camera123", "ip_camera_192_168_1_100"}
@@ -100,10 +98,10 @@ func TestInputValidator_ValidateCameraID(t *testing.T) {
 
 func TestInputValidator_ValidateDuration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid durations
 	validDurations := []string{"1s", "30s", "1m", "5m", "1h", "24h"}
@@ -137,10 +135,10 @@ func TestInputValidator_ValidateDuration(t *testing.T) {
 
 func TestInputValidator_ValidateResolution(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid resolutions
 	validResolutions := []string{"640x480", "1280x720", "1920x1080", "3840x2160"}
@@ -163,10 +161,10 @@ func TestInputValidator_ValidateResolution(t *testing.T) {
 
 func TestInputValidator_ValidateFPS(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid FPS values
 	validFPS := []interface{}{1.0, 15.0, 24.0, 25.0, 30.0, 60.0, 120.0}
@@ -189,10 +187,10 @@ func TestInputValidator_ValidateFPS(t *testing.T) {
 
 func TestInputValidator_ValidateQuality(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid quality values
 	validQualities := []string{"low", "medium", "high", "ultra", "LOW", "MEDIUM", "HIGH", "ULTRA"}
@@ -215,10 +213,10 @@ func TestInputValidator_ValidateQuality(t *testing.T) {
 
 func TestInputValidator_ValidatePriority(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid priority values (1-10)
 	validPriorities := []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "1", "5", "10"}
@@ -241,10 +239,10 @@ func TestInputValidator_ValidatePriority(t *testing.T) {
 
 func TestInputValidator_ValidateRetentionDays(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid retention days
 	validDays := []string{"1", "7", "30", "90", "365"}
@@ -263,10 +261,10 @@ func TestInputValidator_ValidateRetentionDays(t *testing.T) {
 
 func TestInputValidator_ValidateUseCase(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid use cases
 	validUseCases := []string{"recording", "snapshot", "streaming", "monitoring", "RECORDING", "SNAPSHOT", "STREAMING", "MONITORING"}
@@ -289,10 +287,10 @@ func TestInputValidator_ValidateUseCase(t *testing.T) {
 
 func TestInputValidator_ValidateAutoCleanup(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Valid auto-cleanup values
 	validCleanup := []bool{true, false}
@@ -304,10 +302,10 @@ func TestInputValidator_ValidateAutoCleanup(t *testing.T) {
 
 func TestInputValidator_SanitizeString(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Test string sanitization
 	testCases := []struct {
@@ -330,10 +328,10 @@ func TestInputValidator_SanitizeString(t *testing.T) {
 
 func TestInputValidator_SanitizeMap(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
-	validator := security.NewInputValidator(env.Logger, nil)
+	validator := NewInputValidator(env.Logger, nil)
 
 	// Test map sanitization
 	input := map[string]interface{}{

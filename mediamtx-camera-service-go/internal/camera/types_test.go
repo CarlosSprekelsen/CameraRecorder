@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 /*
 Camera Types Unit Tests
 
@@ -27,20 +24,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
+	
 )
 
 // TestCameraDevice tests the CameraDevice struct
 func TestCameraDevice(t *testing.T) {
 	t.Run("camera_device_creation", func(t *testing.T) {
-		device := &camera.CameraDevice{
+		device := &CameraDevice{
 			Path: "/dev/video0",
 			Name: "USB Camera",
-			Capabilities: camera.V4L2Capabilities{
+			Capabilities: V4L2Capabilities{
 				DriverName: "uvcvideo",
 				CardName:   "USB Camera",
 			},
-			Status:    camera.DeviceStatusConnected,
+			Status:    DeviceStatusConnected,
 			LastSeen:  time.Now(),
 			DeviceNum: 0,
 		}
@@ -48,15 +45,15 @@ func TestCameraDevice(t *testing.T) {
 		assert.Equal(t, "/dev/video0", device.Path, "Device path should be set correctly")
 		assert.Equal(t, "USB Camera", device.Name, "Device name should be set correctly")
 		assert.Equal(t, "uvcvideo", device.Capabilities.DriverName, "Driver name should be set correctly")
-		assert.Equal(t, camera.DeviceStatusConnected, device.Status, "Device status should be set correctly")
+		assert.Equal(t, DeviceStatusConnected, device.Status, "Device status should be set correctly")
 		assert.Equal(t, 0, device.DeviceNum, "Device number should be set correctly")
 	})
 
 	t.Run("camera_device_json_marshaling", func(t *testing.T) {
-		device := &camera.CameraDevice{
+		device := &CameraDevice{
 			Path: "/dev/video0",
 			Name: "USB Camera",
-			Capabilities: camera.V4L2Capabilities{
+			Capabilities: V4L2Capabilities{
 				DriverName:   "uvcvideo",
 				CardName:     "USB Camera",
 				BusInfo:      "usb-0000:00:14.0-1",
@@ -64,7 +61,7 @@ func TestCameraDevice(t *testing.T) {
 				Capabilities: []string{"0x85200001"},
 				DeviceCaps:   []string{"0x04200001"},
 			},
-			Formats: []camera.V4L2Format{
+			Formats: []V4L2Format{
 				{
 					PixelFormat: "YUYV",
 					Width:       1920,
@@ -72,7 +69,7 @@ func TestCameraDevice(t *testing.T) {
 					FrameRates:  []string{"30.000"},
 				},
 			},
-			Status:    camera.DeviceStatusConnected,
+			Status:    DeviceStatusConnected,
 			LastSeen:  time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
 			DeviceNum: 0,
 		}
@@ -80,7 +77,7 @@ func TestCameraDevice(t *testing.T) {
 		jsonData, err := json.Marshal(device)
 		require.NoError(t, err, "Should marshal device to JSON without error")
 
-		var unmarshaledDevice camera.CameraDevice
+		var unmarshaledDevice CameraDevice
 		err = json.Unmarshal(jsonData, &unmarshaledDevice)
 		require.NoError(t, err, "Should unmarshal device from JSON without error")
 
@@ -95,21 +92,21 @@ func TestCameraDevice(t *testing.T) {
 	})
 
 	t.Run("camera_device_with_error", func(t *testing.T) {
-		device := &camera.CameraDevice{
+		device := &CameraDevice{
 			Path:   "/dev/video0",
 			Name:   "USB Camera",
-			Status: camera.DeviceStatusError,
+			Status: DeviceStatusError,
 			Error:  "Device not accessible",
 		}
 
 		jsonData, err := json.Marshal(device)
 		require.NoError(t, err, "Should marshal device with error to JSON without error")
 
-		var unmarshaledDevice camera.CameraDevice
+		var unmarshaledDevice CameraDevice
 		err = json.Unmarshal(jsonData, &unmarshaledDevice)
 		require.NoError(t, err, "Should unmarshal device with error from JSON without error")
 
-		assert.Equal(t, camera.DeviceStatusError, unmarshaledDevice.Status, "Error status should be preserved in JSON")
+		assert.Equal(t, DeviceStatusError, unmarshaledDevice.Status, "Error status should be preserved in JSON")
 		assert.Equal(t, "Device not accessible", unmarshaledDevice.Error, "Error message should be preserved in JSON")
 	})
 }
@@ -117,25 +114,25 @@ func TestCameraDevice(t *testing.T) {
 // TestDeviceStatus tests the DeviceStatus constants
 func TestDeviceStatus(t *testing.T) {
 	t.Run("device_status_constants", func(t *testing.T) {
-		assert.Equal(t, "CONNECTED", string(camera.DeviceStatusConnected), "Connected status should be correct")
-		assert.Equal(t, "DISCONNECTED", string(camera.DeviceStatusDisconnected), "Disconnected status should be correct")
-		assert.Equal(t, "ERROR", string(camera.DeviceStatusError), "Error status should be correct")
-		assert.Equal(t, "PROBING", string(camera.DeviceStatusProbing), "Probing status should be correct")
+		assert.Equal(t, "CONNECTED", string(DeviceStatusConnected), "Connected status should be correct")
+		assert.Equal(t, "DISCONNECTED", string(DeviceStatusDisconnected), "Disconnected status should be correct")
+		assert.Equal(t, "ERROR", string(DeviceStatusError), "Error status should be correct")
+		assert.Equal(t, "PROBING", string(DeviceStatusProbing), "Probing status should be correct")
 	})
 
 	t.Run("device_status_json_marshaling", func(t *testing.T) {
-		statuses := []camera.DeviceStatus{
-			camera.DeviceStatusConnected,
-			camera.DeviceStatusDisconnected,
-			camera.DeviceStatusError,
-			camera.DeviceStatusProbing,
+		statuses := []DeviceStatus{
+			DeviceStatusConnected,
+			DeviceStatusDisconnected,
+			DeviceStatusError,
+			DeviceStatusProbing,
 		}
 
 		for _, status := range statuses {
 			jsonData, err := json.Marshal(status)
 			require.NoError(t, err, "Should marshal device status to JSON without error")
 
-			var unmarshaledStatus camera.DeviceStatus
+			var unmarshaledStatus DeviceStatus
 			err = json.Unmarshal(jsonData, &unmarshaledStatus)
 			require.NoError(t, err, "Should unmarshal device status from JSON without error")
 
@@ -147,7 +144,7 @@ func TestDeviceStatus(t *testing.T) {
 // TestV4L2Capabilities tests the V4L2Capabilities struct
 func TestV4L2Capabilities(t *testing.T) {
 	t.Run("v4l2_capabilities_creation", func(t *testing.T) {
-		capabilities := camera.V4L2Capabilities{
+		capabilities := V4L2Capabilities{
 			DriverName:   "uvcvideo",
 			CardName:     "USB Camera",
 			BusInfo:      "usb-0000:00:14.0-1",
@@ -165,7 +162,7 @@ func TestV4L2Capabilities(t *testing.T) {
 	})
 
 	t.Run("v4l2_capabilities_json_marshaling", func(t *testing.T) {
-		capabilities := camera.V4L2Capabilities{
+		capabilities := V4L2Capabilities{
 			DriverName:   "uvcvideo",
 			CardName:     "USB Camera",
 			BusInfo:      "usb-0000:00:14.0-1",
@@ -177,7 +174,7 @@ func TestV4L2Capabilities(t *testing.T) {
 		jsonData, err := json.Marshal(capabilities)
 		require.NoError(t, err, "Should marshal capabilities to JSON without error")
 
-		var unmarshaledCapabilities camera.V4L2Capabilities
+		var unmarshaledCapabilities V4L2Capabilities
 		err = json.Unmarshal(jsonData, &unmarshaledCapabilities)
 		require.NoError(t, err, "Should unmarshal capabilities from JSON without error")
 
@@ -190,7 +187,7 @@ func TestV4L2Capabilities(t *testing.T) {
 	})
 
 	t.Run("v4l2_capabilities_empty_fields", func(t *testing.T) {
-		capabilities := camera.V4L2Capabilities{
+		capabilities := V4L2Capabilities{
 			DriverName: "uvcvideo",
 			CardName:   "USB Camera",
 		}
@@ -198,7 +195,7 @@ func TestV4L2Capabilities(t *testing.T) {
 		jsonData, err := json.Marshal(capabilities)
 		require.NoError(t, err, "Should marshal capabilities with empty fields to JSON without error")
 
-		var unmarshaledCapabilities camera.V4L2Capabilities
+		var unmarshaledCapabilities V4L2Capabilities
 		err = json.Unmarshal(jsonData, &unmarshaledCapabilities)
 		require.NoError(t, err, "Should unmarshal capabilities with empty fields from JSON without error")
 
@@ -214,7 +211,7 @@ func TestV4L2Capabilities(t *testing.T) {
 // TestV4L2Format tests the V4L2Format struct
 func TestV4L2Format(t *testing.T) {
 	t.Run("v4l2_format_creation", func(t *testing.T) {
-		format := camera.V4L2Format{
+		format := V4L2Format{
 			PixelFormat: "YUYV",
 			Width:       1920,
 			Height:      1080,
@@ -230,7 +227,7 @@ func TestV4L2Format(t *testing.T) {
 	})
 
 	t.Run("v4l2_format_json_marshaling", func(t *testing.T) {
-		format := camera.V4L2Format{
+		format := V4L2Format{
 			PixelFormat: "YUYV",
 			Width:       1920,
 			Height:      1080,
@@ -240,7 +237,7 @@ func TestV4L2Format(t *testing.T) {
 		jsonData, err := json.Marshal(format)
 		require.NoError(t, err, "Should marshal format to JSON without error")
 
-		var unmarshaledFormat camera.V4L2Format
+		var unmarshaledFormat V4L2Format
 		err = json.Unmarshal(jsonData, &unmarshaledFormat)
 		require.NoError(t, err, "Should unmarshal format from JSON without error")
 
@@ -251,7 +248,7 @@ func TestV4L2Format(t *testing.T) {
 	})
 
 	t.Run("v4l2_format_empty_frame_rates", func(t *testing.T) {
-		format := camera.V4L2Format{
+		format := V4L2Format{
 			PixelFormat: "YUYV",
 			Width:       1920,
 			Height:      1080,
@@ -261,7 +258,7 @@ func TestV4L2Format(t *testing.T) {
 		jsonData, err := json.Marshal(format)
 		require.NoError(t, err, "Should marshal format with empty frame rates to JSON without error")
 
-		var unmarshaledFormat camera.V4L2Format
+		var unmarshaledFormat V4L2Format
 		err = json.Unmarshal(jsonData, &unmarshaledFormat)
 		require.NoError(t, err, "Should unmarshal format with empty frame rates from JSON without error")
 
@@ -276,13 +273,13 @@ func TestV4L2Format(t *testing.T) {
 func TestDeviceCapabilityState(t *testing.T) {
 	t.Run("device_capability_state_creation", func(t *testing.T) {
 		probeTime := time.Now()
-		state := camera.DeviceCapabilityState{
+		state := DeviceCapabilityState{
 			LastProbeTime: probeTime,
 			ProbeCount:    5,
 			SuccessCount:  4,
 			FailureCount:  1,
 			LastError:     "Device timeout",
-			CapabilityResult: &camera.CapabilityDetectionResult{
+			CapabilityResult: &CapabilityDetectionResult{
 				Detected:   true,
 				Accessible: true,
 				DeviceName: "USB Camera",
@@ -301,13 +298,13 @@ func TestDeviceCapabilityState(t *testing.T) {
 
 	t.Run("device_capability_state_json_marshaling", func(t *testing.T) {
 		probeTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
-		state := camera.DeviceCapabilityState{
+		state := DeviceCapabilityState{
 			LastProbeTime: probeTime,
 			ProbeCount:    5,
 			SuccessCount:  4,
 			FailureCount:  1,
 			LastError:     "Device timeout",
-			CapabilityResult: &camera.CapabilityDetectionResult{
+			CapabilityResult: &CapabilityDetectionResult{
 				Detected:    true,
 				Accessible:  true,
 				DeviceName:  "USB Camera",
@@ -321,7 +318,7 @@ func TestDeviceCapabilityState(t *testing.T) {
 		jsonData, err := json.Marshal(state)
 		require.NoError(t, err, "Should marshal capability state to JSON without error")
 
-		var unmarshaledState camera.DeviceCapabilityState
+		var unmarshaledState DeviceCapabilityState
 		err = json.Unmarshal(jsonData, &unmarshaledState)
 		require.NoError(t, err, "Should unmarshal capability state from JSON without error")
 
@@ -336,7 +333,7 @@ func TestDeviceCapabilityState(t *testing.T) {
 	})
 
 	t.Run("device_capability_state_without_result", func(t *testing.T) {
-		state := camera.DeviceCapabilityState{
+		state := DeviceCapabilityState{
 			LastProbeTime: time.Now(),
 			ProbeCount:    3,
 			SuccessCount:  0,
@@ -347,7 +344,7 @@ func TestDeviceCapabilityState(t *testing.T) {
 		jsonData, err := json.Marshal(state)
 		require.NoError(t, err, "Should marshal capability state without result to JSON without error")
 
-		var unmarshaledState camera.DeviceCapabilityState
+		var unmarshaledState DeviceCapabilityState
 		err = json.Unmarshal(jsonData, &unmarshaledState)
 		require.NoError(t, err, "Should unmarshal capability state without result from JSON without error")
 

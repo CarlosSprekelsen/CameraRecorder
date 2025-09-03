@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // Real MediaMTX controller is used instead of mocks per testing guide requirements
@@ -102,8 +101,8 @@ func TestHealthMonitorBasicOperations(t *testing.T) {
 	// REQ-SYS-001: System health monitoring and status reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -163,8 +162,8 @@ func TestHealthMonitorCircuitBreaker(t *testing.T) {
 	// REQ-SYS-003: Circuit breaker pattern implementation
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -209,8 +208,8 @@ func TestHealthMonitorStateTracking(t *testing.T) {
 	// REQ-SYS-004: Health state persistence across restarts
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -258,8 +257,8 @@ func TestHealthMonitorMetrics(t *testing.T) {
 	// REQ-SYS-001: System health monitoring and status reporting
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -291,8 +290,8 @@ func TestHealthMonitorContextHandling(t *testing.T) {
 	// Test context handling for health monitor operations
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -321,8 +320,8 @@ func TestHealthMonitorEdgeCases(t *testing.T) {
 
 	t.Run("Controller_MultipleStartStop", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
@@ -355,8 +354,8 @@ func TestHealthMonitorEdgeCases(t *testing.T) {
 
 	t.Run("Controller_StatusConsistency", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
@@ -388,8 +387,8 @@ func TestHealthMonitorEdgeCases(t *testing.T) {
 
 	t.Run("Controller_MetricsConsistency", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 		require.NoError(t, err, "Failed to load test configuration")
@@ -427,8 +426,8 @@ func TestMediaMTXIntegrationMethods(t *testing.T) {
 	// REQ-SYS-002: Component health state tracking
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")

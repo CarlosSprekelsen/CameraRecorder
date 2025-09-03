@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,8 +35,8 @@ import (
 func TestMediaMTXController_Creation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -54,8 +53,8 @@ func TestMediaMTXController_Creation(t *testing.T) {
 func TestMediaMTXController_StartStop(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -74,8 +73,8 @@ func TestMediaMTXController_StartStop(t *testing.T) {
 func TestMediaMTXController_TakeAdvancedSnapshot(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -109,8 +108,8 @@ func TestMediaMTXController_TakeAdvancedSnapshot(t *testing.T) {
 func TestMediaMTXController_GetAdvancedSnapshot(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -127,8 +126,8 @@ func TestMediaMTXController_GetAdvancedSnapshot(t *testing.T) {
 func TestMediaMTXController_ListAdvancedSnapshots(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -145,8 +144,8 @@ func TestMediaMTXController_ListAdvancedSnapshots(t *testing.T) {
 func TestMediaMTXController_DeleteAdvancedSnapshot(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -162,8 +161,8 @@ func TestMediaMTXController_DeleteAdvancedSnapshot(t *testing.T) {
 func TestMediaMTXController_CleanupOldSnapshots(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -182,8 +181,8 @@ func TestMediaMTXController_CleanupOldSnapshots(t *testing.T) {
 func TestMediaMTXController_CleanupOldRecordings(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -201,8 +200,8 @@ func TestMediaMTXController_CleanupOldRecordings(t *testing.T) {
 // TestMediaMTXController_CleanupOldSnapshotsEndToEnd tests snapshot cleanup end-to-end
 func TestMediaMTXController_CleanupOldSnapshotsEndToEnd(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -226,8 +225,8 @@ func TestMediaMTXController_CleanupOldSnapshotsEndToEnd(t *testing.T) {
 // TestMediaMTXController_CleanupOldRecordingsEndToEnd tests recording cleanup end-to-end
 func TestMediaMTXController_CleanupOldRecordingsEndToEnd(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -252,8 +251,8 @@ func TestMediaMTXController_CleanupOldRecordingsEndToEnd(t *testing.T) {
 func TestMediaMTXController_GetSnapshotSettings(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -271,8 +270,8 @@ func TestMediaMTXController_GetSnapshotSettings(t *testing.T) {
 func TestMediaMTXController_UpdateSnapshotSettings(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -306,8 +305,8 @@ func TestMediaMTXController_UpdateSnapshotSettings(t *testing.T) {
 func TestMediaMTXController_HealthMonitoring(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -333,8 +332,8 @@ func TestMediaMTXController_HealthMonitoring(t *testing.T) {
 func TestMediaMTXController_Metrics(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -359,8 +358,8 @@ func TestMediaMTXController_Metrics(t *testing.T) {
 func TestMediaMTXController_ConfigurationIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -382,8 +381,8 @@ func TestMediaMTXController_ConfigurationIntegration(t *testing.T) {
 func TestMediaMTXController_ErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -414,8 +413,8 @@ func TestMediaMTXController_ErrorHandling(t *testing.T) {
 func TestMediaMTXController_ConcurrentAccess(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -449,8 +448,8 @@ func TestMediaMTXController_ConcurrentAccess(t *testing.T) {
 func TestMediaMTXController_StreamManagement(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -485,8 +484,8 @@ func TestMediaMTXController_StreamManagement(t *testing.T) {
 func TestMediaMTXController_RecordingManagement(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -516,8 +515,8 @@ func TestMediaMTXController_RecordingManagement(t *testing.T) {
 // TestMediaMTXController_StartStopRecording tests the critical StartRecording and StopRecording functions
 func TestMediaMTXController_StartStopRecording(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -558,8 +557,8 @@ func TestMediaMTXController_StartStopRecording(t *testing.T) {
 // TestMediaMTXController_AdvancedRecording tests the advanced recording functionality
 func TestMediaMTXController_AdvancedRecording(t *testing.T) {
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Use timeout context to prevent hanging
 
@@ -599,8 +598,8 @@ func TestMediaMTXController_AdvancedRecording(t *testing.T) {
 // TestMediaMTXController_RecordingStatusAndLookup tests recording status and device lookup functions
 func TestMediaMTXController_RecordingStatusAndLookup(t *testing.T) {
 	// COMMON PATTERN: Use shared MediaMTX test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Use timeout context to prevent hanging
 
@@ -622,8 +621,8 @@ func TestMediaMTXController_RecordingStatusAndLookup(t *testing.T) {
 // TestMediaMTXController_RecordingErrorHandling tests recording error scenarios
 func TestMediaMTXController_RecordingErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -656,8 +655,8 @@ func TestMediaMTXController_RecordingErrorHandling(t *testing.T) {
 func TestMediaMTXController_SystemMetrics(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -685,8 +684,8 @@ func TestMediaMTXController_FileOperations(t *testing.T) {
 	t.Skip("Skipping due to ffprobe hanging issues - needs external tool mocking")
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -722,8 +721,8 @@ func TestMediaMTXController_FileOperations(t *testing.T) {
 func TestMediaMTXController_ActiveRecordingManagement(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -781,8 +780,8 @@ func TestMediaMTXController_ActiveRecordingManagement(t *testing.T) {
 func TestMediaMTXController_HealthResponseParsing(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -820,8 +819,8 @@ func TestMediaMTXController_HealthResponseParsing(t *testing.T) {
 func TestMediaMTXController_StreamPathResponseParsing(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -876,8 +875,8 @@ func TestMediaMTXController_StreamPathResponseParsing(t *testing.T) {
 func TestMediaMTXController_ConfigIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -931,8 +930,8 @@ func TestMediaMTXController_ConfigIntegration(t *testing.T) {
 func TestMediaMTXController_ConfigValidation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -993,8 +992,8 @@ func TestMediaMTXController_ConfigValidation(t *testing.T) {
 func TestMediaMTXController_ConfigComponents(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1030,8 +1029,8 @@ func TestMediaMTXController_ConfigComponents(t *testing.T) {
 // TestMediaMTXController_AdvancedRecordingErrorHandling tests advanced recording error scenarios
 func TestMediaMTXController_AdvancedRecordingErrorHandling(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1083,8 +1082,8 @@ func TestMediaMTXController_RecordingErrorTypes(t *testing.T) {
 // TestMediaMTXController_AdvancedRecordingSessionManagement tests advanced recording session management
 func TestMediaMTXController_AdvancedRecordingSessionManagement(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1110,8 +1109,8 @@ func TestMediaMTXController_AdvancedRecordingSessionManagement(t *testing.T) {
 // TestMediaMTXController_RecordingFileRotation tests recording file rotation functionality
 func TestMediaMTXController_RecordingFileRotation(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1135,8 +1134,8 @@ func TestMediaMTXController_RecordingFileRotation(t *testing.T) {
 // TestMediaMTXController_DeleteStream tests stream deletion (stimulates DeleteStream)
 func TestMediaMTXController_DeleteStream(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1155,8 +1154,8 @@ func TestMediaMTXController_DeleteStream(t *testing.T) {
 // TestMediaMTXController_GetPath tests path retrieval (stimulates GetPath)
 func TestMediaMTXController_GetPath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1176,8 +1175,8 @@ func TestMediaMTXController_GetPath(t *testing.T) {
 // TestMediaMTXController_DeletePath tests path deletion (stimulates DeletePath)
 func TestMediaMTXController_DeletePath(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1196,8 +1195,8 @@ func TestMediaMTXController_DeletePath(t *testing.T) {
 // TestMediaMTXController_TakeSnapshot tests snapshot functionality (stimulates TakeSnapshot, generateSnapshotPath)
 func TestMediaMTXController_TakeSnapshot(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")
@@ -1217,8 +1216,8 @@ func TestMediaMTXController_TakeSnapshot(t *testing.T) {
 // TestMediaMTXController_UpdateConfig tests config update (stimulates UpdateConfig, persistSessionState)
 func TestMediaMTXController_UpdateConfig(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
 	require.NoError(t, err, "Failed to load test configuration")

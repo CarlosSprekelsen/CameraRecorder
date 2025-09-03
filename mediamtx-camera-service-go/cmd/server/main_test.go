@@ -1,11 +1,9 @@
-//go:build unit
-// +build unit
-
-package main_test
+package main
 
 import (
 	"context"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -139,7 +137,7 @@ func TestMain_ServiceInitialization(t *testing.T) {
 	assert.NotEmpty(t, mediaMTXControllerType)
 
 	// Test JWT handler creation
-	jwtHandlerType := "security.JWTHandler"
+	jwtHandlerType := ".JWTHandler"
 	assert.NotEmpty(t, jwtHandlerType)
 
 	// Test WebSocket server creation
@@ -233,7 +231,7 @@ func TestMain_ComponentDependencies(t *testing.T) {
 		"logging.NewLogger",
 		"camera.NewHybridCameraMonitor",
 		"mediamtx.ControllerWithConfigManager",
-		"security.NewJWTHandler",
+		"NewJWTHandler",
 		"websocket.NewWebSocketServer",
 	}
 

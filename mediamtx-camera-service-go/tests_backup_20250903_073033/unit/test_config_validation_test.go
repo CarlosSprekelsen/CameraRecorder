@@ -17,7 +17,7 @@ import (
 
 func TestValidationError_Error(t *testing.T) {
 	// REQ-CONFIG-VALID-002: Validation errors must provide clear field-specific messages
-	err := &config.ValidationError{
+	err := &ValidationError{
 		Field:   "server.port",
 		Message: "port must be between 1 and 65535",
 	}
@@ -28,7 +28,7 @@ func TestValidationError_Error(t *testing.T) {
 
 func TestValidateConfig_ValidConfiguration(t *testing.T) {
 	// REQ-CONFIG-VALID-001: Valid configuration must pass validation
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           8080,
@@ -191,7 +191,7 @@ func TestValidateConfig_ValidConfiguration(t *testing.T) {
 
 func TestValidateConfig_InvalidServerConfig(t *testing.T) {
 	// REQ-CONFIG-VALID-001: Invalid server configuration must fail validation
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "", // Invalid: empty host
 			Port:           0,  // Invalid: port 0
@@ -266,7 +266,7 @@ func TestValidateConfig_InvalidServerConfig(t *testing.T) {
 
 func TestValidateConfig_InvalidMediaMTXConfig(t *testing.T) {
 	// REQ-CONFIG-VALID-001: Invalid MediaMTX configuration must fail validation
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           8080,
@@ -340,7 +340,7 @@ func TestValidateConfig_InvalidMediaMTXConfig(t *testing.T) {
 
 func TestValidateConfig_InvalidWebSocketPath(t *testing.T) {
 	// REQ-CONFIG-VALID-003: WebSocket path must start with '/'
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           8080,
@@ -412,7 +412,7 @@ func TestValidateConfig_InvalidWebSocketPath(t *testing.T) {
 
 func TestValidateConfig_InvalidPortRange(t *testing.T) {
 	// REQ-CONFIG-VALID-001: Port must be in valid range 1-65535
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           70000, // Invalid: port > 65535
@@ -484,7 +484,7 @@ func TestValidateConfig_InvalidPortRange(t *testing.T) {
 
 func TestValidateConfig_MultipleValidationErrors(t *testing.T) {
 	// REQ-CONFIG-VALID-002: Multiple validation errors must be reported
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "", // Invalid: empty host
 			Port:           0,  // Invalid: port 0
@@ -568,7 +568,7 @@ func TestValidateConfig_MultipleValidationErrors(t *testing.T) {
 
 func TestValidateConfig_BoundaryValues(t *testing.T) {
 	// REQ-CONFIG-VALID-001: Boundary values must be handled correctly
-	cfg := &config.Config{
+	cfg := &Config{
 		Server: config.ServerConfig{
 			Host:           "localhost",
 			Port:           1, // Valid: minimum port

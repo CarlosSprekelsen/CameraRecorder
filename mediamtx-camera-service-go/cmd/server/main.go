@@ -12,7 +12,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
@@ -57,7 +56,7 @@ func main() {
 	}
 
 	// Initialize JWT handler with configuration
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
 	}

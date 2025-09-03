@@ -91,9 +91,6 @@ m.logger.WithFields(map[string]interface{}{
 
 **Test Implementation:**
 ```go
-//go:build unit && real_system
-// +build unit,real_system
-
 // Tests use actual V4L2 devices, not mocks
 deviceChecker := &camera.RealDeviceChecker{}
 commandExecutor := &camera.RealV4L2CommandExecutor{}

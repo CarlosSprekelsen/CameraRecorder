@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // REQ-CONFIG-001: Configuration types must support all required fields for API compliance
@@ -101,14 +102,14 @@ func TestStorageConfig_Structure(t *testing.T) {
 	cfg := &StorageConfig{
 		WarnPercent:  80,
 		BlockPercent: 90,
-		DefaultPath:  "/opt/recordings",
+		DefaultPath:  "/opt/camera-service/recordings",
 		FallbackPath: "/tmp/recordings",
 	}
 
 	assert.NotNil(t, cfg)
 	assert.Equal(t, 80, cfg.WarnPercent)
 	assert.Equal(t, 90, cfg.BlockPercent)
-	assert.Equal(t, "/opt/recordings", cfg.DefaultPath)
+	assert.Equal(t, "/opt/camera-service/recordings", cfg.DefaultPath)
 	assert.Equal(t, "/tmp/recordings", cfg.FallbackPath)
 }
 
@@ -122,33 +123,18 @@ func TestMediaMTXConfig_Structure(t *testing.T) {
 		WebRTCPort:                          8889,
 		HLSPort:                             8888,
 		ConfigPath:                          "/etc/mediamtx/mediamtx.yml",
-		RecordingsPath:                      "/opt/recordings",
-		SnapshotsPath:                       "/opt/snapshots",
+		RecordingsPath:                      "/opt/mediamtx/recordings",
+		SnapshotsPath:                       "/opt/mediamtx/snapshots",
 		HealthCheckInterval:                 30,
 		HealthFailureThreshold:              3,
 		HealthCircuitBreakerTimeout:         60,
 		HealthMaxBackoffInterval:            300,
 		HealthRecoveryConfirmationThreshold: 2,
 		BackoffBaseMultiplier:               2.0,
-		BackoffJitterRange:                  []float64{0.1, 0.5},
-		ProcessTerminationTimeout:           30.0,
-		ProcessKillTimeout:                  10.0,
+		BackoffJitterRange:                  []float64{0.1, 0.3},
+		ProcessTerminationTimeout:           10.0,
+		ProcessKillTimeout:                  5.0,
 		HealthCheckTimeout:                  5 * time.Second,
-		StreamReadiness: StreamReadinessConfig{
-			Timeout:                     10.0,
-			RetryAttempts:               3,
-			RetryDelay:                  2.0,
-			CheckInterval:               5.0,
-			EnableProgressNotifications: true,
-			GracefulFallback:            true,
-		},
-		Codec: CodecConfig{
-			VideoProfile: "main",
-			VideoLevel:   "4.0",
-			PixelFormat:  "yuv420p",
-			Bitrate:      "1000000",
-			Preset:       "medium",
-		},
 	}
 
 	assert.NotNil(t, cfg)
@@ -158,29 +144,18 @@ func TestMediaMTXConfig_Structure(t *testing.T) {
 	assert.Equal(t, 8889, cfg.WebRTCPort)
 	assert.Equal(t, 8888, cfg.HLSPort)
 	assert.Equal(t, "/etc/mediamtx/mediamtx.yml", cfg.ConfigPath)
-	assert.Equal(t, "/opt/recordings", cfg.RecordingsPath)
-	assert.Equal(t, "/opt/snapshots", cfg.SnapshotsPath)
+	assert.Equal(t, "/opt/mediamtx/recordings", cfg.RecordingsPath)
+	assert.Equal(t, "/opt/mediamtx/snapshots", cfg.SnapshotsPath)
 	assert.Equal(t, 30, cfg.HealthCheckInterval)
 	assert.Equal(t, 3, cfg.HealthFailureThreshold)
 	assert.Equal(t, 60, cfg.HealthCircuitBreakerTimeout)
 	assert.Equal(t, 300, cfg.HealthMaxBackoffInterval)
 	assert.Equal(t, 2, cfg.HealthRecoveryConfirmationThreshold)
 	assert.Equal(t, 2.0, cfg.BackoffBaseMultiplier)
-	assert.Equal(t, []float64{0.1, 0.5}, cfg.BackoffJitterRange)
-	assert.Equal(t, 30.0, cfg.ProcessTerminationTimeout)
-	assert.Equal(t, 10.0, cfg.ProcessKillTimeout)
+	assert.Equal(t, []float64{0.1, 0.3}, cfg.BackoffJitterRange)
+	assert.Equal(t, 10.0, cfg.ProcessTerminationTimeout)
+	assert.Equal(t, 5.0, cfg.ProcessKillTimeout)
 	assert.Equal(t, 5*time.Second, cfg.HealthCheckTimeout)
-	assert.Equal(t, 10.0, cfg.StreamReadiness.Timeout)
-	assert.Equal(t, 3, cfg.StreamReadiness.RetryAttempts)
-	assert.Equal(t, 2.0, cfg.StreamReadiness.RetryDelay)
-	assert.Equal(t, 5.0, cfg.StreamReadiness.CheckInterval)
-	assert.True(t, cfg.StreamReadiness.EnableProgressNotifications)
-	assert.True(t, cfg.StreamReadiness.GracefulFallback)
-	assert.Equal(t, "main", cfg.Codec.VideoProfile)
-	assert.Equal(t, "4.0", cfg.Codec.VideoLevel)
-	assert.Equal(t, "yuv420p", cfg.Codec.PixelFormat)
-	assert.Equal(t, "1000000", cfg.Codec.Bitrate)
-	assert.Equal(t, "medium", cfg.Codec.Preset)
 }
 
 func TestFFmpegConfig_Structure(t *testing.T) {
@@ -298,23 +273,23 @@ func TestCameraConfig_Structure(t *testing.T) {
 	cfg := &CameraConfig{
 		PollInterval:              5.0,
 		DetectionTimeout:          30.0,
-		CapabilityTimeout:         10.0,
-		CapabilityRetryInterval:   5.0,
-		CapabilityMaxRetries:      3,
+		DeviceRange:               []int{0, 1, 2, 3},
 		EnableCapabilityDetection: true,
-		AutoStartStreams:          true,
-		DeviceRange:               []int{0, 1, 2},
+		AutoStartStreams:          false,
+		CapabilityTimeout:         10.0,
+		CapabilityRetryInterval:   2.0,
+		CapabilityMaxRetries:      3,
 	}
 
 	assert.NotNil(t, cfg)
 	assert.Equal(t, 5.0, cfg.PollInterval)
 	assert.Equal(t, 30.0, cfg.DetectionTimeout)
-	assert.Equal(t, 10.0, cfg.CapabilityTimeout)
-	assert.Equal(t, 5.0, cfg.CapabilityRetryInterval)
-	assert.Equal(t, 3, cfg.CapabilityMaxRetries)
+	assert.Equal(t, []int{0, 1, 2, 3}, cfg.DeviceRange)
 	assert.True(t, cfg.EnableCapabilityDetection)
-	assert.True(t, cfg.AutoStartStreams)
-	assert.Equal(t, []int{0, 1, 2}, cfg.DeviceRange)
+	assert.False(t, cfg.AutoStartStreams)
+	assert.Equal(t, 10.0, cfg.CapabilityTimeout)
+	assert.Equal(t, 2.0, cfg.CapabilityRetryInterval)
+	assert.Equal(t, 3, cfg.CapabilityMaxRetries)
 }
 
 func TestLoggingConfig_Structure(t *testing.T) {
@@ -323,21 +298,21 @@ func TestLoggingConfig_Structure(t *testing.T) {
 	cfg := &LoggingConfig{
 		Level:          "info",
 		Format:         "json",
-		ConsoleEnabled: true,
-		MaxFileSize:    10485760,
 		FileEnabled:    true,
 		FilePath:       "/var/log/camera-service.log",
+		MaxFileSize:    100 * 1024 * 1024,
 		BackupCount:    5,
+		ConsoleEnabled: true,
 	}
 
 	assert.NotNil(t, cfg)
 	assert.Equal(t, "info", cfg.Level)
 	assert.Equal(t, "json", cfg.Format)
-	assert.True(t, cfg.ConsoleEnabled)
-	assert.Equal(t, int64(10485760), cfg.MaxFileSize)
 	assert.True(t, cfg.FileEnabled)
 	assert.Equal(t, "/var/log/camera-service.log", cfg.FilePath)
+	assert.Equal(t, int64(100*1024*1024), cfg.MaxFileSize)
 	assert.Equal(t, 5, cfg.BackupCount)
+	assert.True(t, cfg.ConsoleEnabled)
 }
 
 func TestRecordingConfig_Structure(t *testing.T) {
@@ -347,13 +322,13 @@ func TestRecordingConfig_Structure(t *testing.T) {
 		Enabled:              true,
 		Format:               "mp4",
 		Quality:              "high",
-		SegmentDuration:      60,
-		MaxSegmentSize:       104857600,
+		SegmentDuration:      300,
+		MaxSegmentSize:       100 * 1024 * 1024,
 		AutoCleanup:          true,
 		CleanupInterval:      3600,
-		MaxAge:               86400,
-		MaxSize:              1073741824,
-		DefaultRotationSize:  104857600, // 100MB
+		MaxAge:               7 * 24 * 3600,
+		MaxSize:              10 * 1024 * 1024 * 1024,
+		DefaultRotationSize:  100 * 1024 * 1024,
 		DefaultMaxDuration:   24 * time.Hour,
 		DefaultRetentionDays: 7,
 	}
@@ -362,13 +337,13 @@ func TestRecordingConfig_Structure(t *testing.T) {
 	assert.True(t, cfg.Enabled)
 	assert.Equal(t, "mp4", cfg.Format)
 	assert.Equal(t, "high", cfg.Quality)
-	assert.Equal(t, 60, cfg.SegmentDuration)
-	assert.Equal(t, int64(104857600), cfg.MaxSegmentSize)
+	assert.Equal(t, 300, cfg.SegmentDuration)
+	assert.Equal(t, int64(100*1024*1024), cfg.MaxSegmentSize)
 	assert.True(t, cfg.AutoCleanup)
 	assert.Equal(t, 3600, cfg.CleanupInterval)
-	assert.Equal(t, 86400, cfg.MaxAge)
-	assert.Equal(t, int64(1073741824), cfg.MaxSize)
-	assert.Equal(t, int64(104857600), cfg.DefaultRotationSize)
+	assert.Equal(t, 7*24*3600, cfg.MaxAge)
+	assert.Equal(t, int64(10*1024*1024*1024), cfg.MaxSize)
+	assert.Equal(t, int64(100*1024*1024), cfg.DefaultRotationSize)
 	assert.Equal(t, 24*time.Hour, cfg.DefaultMaxDuration)
 	assert.Equal(t, 7, cfg.DefaultRetentionDays)
 }
@@ -379,25 +354,25 @@ func TestSnapshotConfig_Structure(t *testing.T) {
 	cfg := &SnapshotConfig{
 		Enabled:         true,
 		Format:          "jpeg",
-		Quality:         90,
-		MaxAge:          24 * 3600,
-		MaxCount:        1000,
+		Quality:         85,
 		MaxWidth:        1920,
 		MaxHeight:       1080,
 		AutoCleanup:     true,
 		CleanupInterval: 3600,
+		MaxAge:          24 * 3600,
+		MaxCount:        1000,
 	}
 
 	assert.NotNil(t, cfg)
 	assert.True(t, cfg.Enabled)
 	assert.Equal(t, "jpeg", cfg.Format)
-	assert.Equal(t, 90, cfg.Quality)
-	assert.Equal(t, 24*3600, cfg.MaxAge)
-	assert.Equal(t, 1000, cfg.MaxCount)
+	assert.Equal(t, 85, cfg.Quality)
 	assert.Equal(t, 1920, cfg.MaxWidth)
 	assert.Equal(t, 1080, cfg.MaxHeight)
 	assert.True(t, cfg.AutoCleanup)
 	assert.Equal(t, 3600, cfg.CleanupInterval)
+	assert.Equal(t, 24*3600, cfg.MaxAge)
+	assert.Equal(t, 1000, cfg.MaxCount)
 }
 
 func TestConfig_CompleteStructure(t *testing.T) {
@@ -498,4 +473,76 @@ func TestConfig_HealthPortOptional(t *testing.T) {
 	}
 	assert.NotNil(t, cfg2.HealthPort)
 	assert.Equal(t, 8081, *cfg2.HealthPort)
+}
+
+// TestFFmpegConfig_DefaultValues tests that FFmpeg manager sets proper defaults
+func TestFFmpegConfig_DefaultValues(t *testing.T) {
+	t.Parallel()
+	// REQ-CONFIG-001: FFmpeg configuration must support snapshot and recording settings with defaults
+	// Create a minimal MediaMTX config without FFmpeg settings to test defaults
+	minimalConfig := &mediamtx.MediaMTXConfig{
+		Host:     "localhost",
+		APIPort:  9997,
+		RTSPPort: 8554,
+	}
+
+	// Create FFmpeg manager - should set defaults
+	manager := mediamtx.NewFFmpegManager(minimalConfig, logrus.New())
+
+	// Verify default values are set
+	assert.Equal(t, 10*time.Second, minimalConfig.FFmpeg.Snapshot.ProcessCreationTimeout, "Snapshot process creation timeout should be 10s")
+	assert.Equal(t, 30*time.Second, minimalConfig.FFmpeg.Snapshot.ExecutionTimeout, "Snapshot execution timeout should be 30s")
+	assert.Equal(t, 2, minimalConfig.FFmpeg.Snapshot.RetryAttempts, "Snapshot retry attempts should be 2")
+	assert.Equal(t, 1*time.Second, minimalConfig.FFmpeg.Snapshot.RetryDelay, "Snapshot retry delay should be 1s")
+
+	assert.Equal(t, 15*time.Second, minimalConfig.FFmpeg.Recording.ProcessCreationTimeout, "Recording process creation timeout should be 15s")
+	assert.Equal(t, 60*time.Second, minimalConfig.FFmpeg.Recording.ExecutionTimeout, "Recording execution timeout should be 60s")
+	assert.Equal(t, 3, minimalConfig.FFmpeg.Recording.RetryAttempts, "Recording retry attempts should be 3")
+	assert.Equal(t, 2*time.Second, minimalConfig.FFmpeg.Recording.RetryDelay, "Recording retry delay should be 2s")
+
+	// Verify manager was created successfully
+	require.NotNil(t, manager, "FFmpeg manager should be created successfully")
+}
+
+// TestFFmpegConfig_CustomValues tests that custom values override defaults
+func TestFFmpegConfig_CustomValues(t *testing.T) {
+	t.Parallel()
+	// REQ-CONFIG-001: FFmpeg configuration must support custom timeout values
+	// Create config with custom FFmpeg settings
+	customConfig := &mediamtx.MediaMTXConfig{
+		Host:     "localhost",
+		APIPort:  9997,
+		RTSPPort: 8554,
+		FFmpeg: mediamtx.FFmpegConfig{
+			Snapshot: mediamtx.SnapshotConfig{
+				ProcessCreationTimeout: 5 * time.Second,
+				ExecutionTimeout:       20 * time.Second,
+				RetryAttempts:          1,
+				RetryDelay:             500 * time.Millisecond,
+			},
+			Recording: mediamtx.RecordingConfig{
+				ProcessCreationTimeout: 8 * time.Second,
+				ExecutionTimeout:       45 * time.Second,
+				RetryAttempts:          2,
+				RetryDelay:             1 * time.Second,
+			},
+		},
+	}
+
+	// Create FFmpeg manager
+	manager := mediamtx.NewFFmpegManager(customConfig, logrus.New())
+
+	// Verify custom values are preserved
+	assert.Equal(t, 5*time.Second, customConfig.FFmpeg.Snapshot.ProcessCreationTimeout, "Custom snapshot process creation timeout should be preserved")
+	assert.Equal(t, 20*time.Second, customConfig.FFmpeg.Snapshot.ExecutionTimeout, "Custom snapshot execution timeout should be preserved")
+	assert.Equal(t, 1, customConfig.FFmpeg.Snapshot.RetryAttempts, "Custom snapshot retry attempts should be preserved")
+	assert.Equal(t, 500*time.Millisecond, customConfig.FFmpeg.Snapshot.RetryDelay, "Custom snapshot retry delay should be preserved")
+
+	assert.Equal(t, 8*time.Second, customConfig.FFmpeg.Recording.ProcessCreationTimeout, "Custom recording process creation timeout should be preserved")
+	assert.Equal(t, 45*time.Second, customConfig.FFmpeg.Recording.ExecutionTimeout, "Custom recording execution timeout should be preserved")
+	assert.Equal(t, 2, customConfig.FFmpeg.Recording.RetryAttempts, "Custom recording retry attempts should be preserved")
+	assert.Equal(t, 1*time.Second, customConfig.FFmpeg.Recording.RetryDelay, "Custom recording retry delay should be preserved")
+
+	// Verify manager was created successfully
+	require.NotNil(t, manager, "FFmpeg manager should be created successfully")
 }

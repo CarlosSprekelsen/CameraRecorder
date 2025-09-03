@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -299,7 +298,7 @@ func TestHealthMonitor_FailureScenarios(t *testing.T) {
 	defer mockServer.Close()
 
 	// Create config with mock server URLs but use helper for other settings
-	config := utils.CreateTestMediaMTXConfig()
+	config := testtestutils.CreateTestMediaMTXConfig()
 	config.BaseURL = mockServer.URL
 	config.HealthCheckURL = mockServer.URL + "/health"
 	logger := logrus.New()
@@ -337,7 +336,7 @@ func TestHealthMonitor_TimeoutScenarios(t *testing.T) {
 	defer mockServer.Close()
 
 	// Create config with mock server URLs but use helper for other settings
-	config := utils.CreateTestMediaMTXConfig()
+	config := testtestutils.CreateTestMediaMTXConfig()
 	config.BaseURL = mockServer.URL
 	config.HealthCheckURL = mockServer.URL + "/health"
 	config.Timeout = 1 * time.Second // Short timeout for testing

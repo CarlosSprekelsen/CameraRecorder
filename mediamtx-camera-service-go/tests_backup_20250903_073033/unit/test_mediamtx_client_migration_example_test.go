@@ -9,11 +9,11 @@ MediaMTX clients in each test to using the new centralized utilities.
 
 OLD PATTERN (to be migrated):
    testConfig := &mediamtx.MediaMTXConfig{...}
-   	client := mediamtx.NewClient(utils.CreateTestHTTPURLWithFreePort(""), testConfig, logger)
+   	client := mediamtx.NewClient(testtestutils.CreateTestHTTPURLWithFreePort(""), testConfig, logger)
 
 NEW PATTERN (using utilities):
-   client := utils.SetupMediaMTXTestClient(t, env)
-   defer utils.TeardownMediaMTXTestClient(t, client)
+   client := testtestutils.SetupMediaMTXTestClient(t, env)
+   defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 Requirements Coverage:
 - REQ-MTX-001: MediaMTX service integration
@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,15 +41,15 @@ func TestMediaMTXClientMigrationExample(t *testing.T) {
 	// REQ-MTX-002: MediaMTX client configuration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// OLD PATTERN (to be migrated):
 	// testConfig := &mediamtx.MediaMTXConfig{...}
 	client := mediamtx.NewClient("http://localhost:9997", testConfig, logger)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
@@ -71,15 +70,15 @@ func TestMediaMTXClientWithCustomConfig(t *testing.T) {
 	// REQ-MTX-002: MediaMTX client configuration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create custom configuration with shorter timeout for testing
-	customConfig := utils.CreateMediaMTXTestConfigWithTimeout(env.TempDir, 5*time.Second)
+	customConfig := testtestutils.CreateMediaMTXTestConfigWithTimeout(env.TempDir, 5*time.Second)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup with custom config
-	client := utils.SetupMediaMTXTestClientWithConfig(t, env, customConfig)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClientWithConfig(t, env, customConfig)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Verify custom configuration was applied
 	assert.Equal(t, 5*time.Second, client.Config.Timeout, "Custom timeout should be applied")
@@ -91,21 +90,21 @@ func TestMediaMTXHealthMonitorSetup(t *testing.T) {
 	// REQ-MTX-003: MediaMTX health monitoring
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
 	// NEW PATTERN: Use centralized health monitor setup
-	healthMonitor := utils.SetupMediaMTXHealthMonitor(t, client)
+	healthMonitor := testtestutils.SetupMediaMTXHealthMonitor(t, client)
 	require.NotNil(t, healthMonitor, "Health monitor should be created successfully")
 
 	// Test health monitor functionality
@@ -128,21 +127,21 @@ func TestMediaMTXStreamManagerSetup(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
 	// NEW PATTERN: Use centralized stream manager setup
-	streamManager := utils.SetupMediaMTXStreamManager(t, client)
+	streamManager := testtestutils.SetupMediaMTXStreamManager(t, client)
 	require.NotNil(t, streamManager, "Stream manager should be created successfully")
 
 	// Test stream manager functionality
@@ -162,12 +161,12 @@ func TestMediaMTXTestDataCreation(t *testing.T) {
 	// REQ-MTX-005: MediaMTX test data management
 
 	// Test path creation
-	testPath := utils.CreateMediaMTXTestPath("test-path")
+	testPath := testtestutils.CreateMediaMTXTestPath("test-path")
 	assert.Equal(t, "test-path", testPath.Name, "Path name should be set correctly")
 	assert.Equal(t, "rtsp://localhost:8554/test", testPath.Source, "Source should be set correctly")
 
 	// Test stream creation
-	testStream := utils.CreateMediaMTXTestStream("test-stream")
+	testStream := testtestutils.CreateMediaMTXTestStream("test-stream")
 	assert.Equal(t, "test-stream", testStream.Name, "Stream name should be set correctly")
 	assert.Equal(t, "test-stream", testStream.ConfName, "Stream conf name should be set correctly")
 }

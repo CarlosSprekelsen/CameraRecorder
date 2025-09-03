@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,8 +49,8 @@ func TestFFmpegManager_Creation(t *testing.T) {
 func TestFFmpegManager_StartProcess(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -138,8 +137,8 @@ func TestFFmpegManager_IsProcessRunning(t *testing.T) {
 func TestFFmpegManager_StartRecording(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -207,8 +206,8 @@ func TestFFmpegManager_StopRecording(t *testing.T) {
 func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -241,8 +240,8 @@ func TestFFmpegManager_TakeSnapshot(t *testing.T) {
 func TestFFmpegManager_RotateFile(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -275,8 +274,8 @@ func TestFFmpegManager_RotateFile(t *testing.T) {
 func TestFFmpegManager_GetFileInfo(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -337,8 +336,8 @@ func TestFFmpegManager_BuildCommand(t *testing.T) {
 func TestFFmpegManager_ErrorHandling(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -414,8 +413,8 @@ func TestFFmpegManager_ConcurrentAccess(t *testing.T) {
 func TestFFmpegManager_ContextCancellation(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -472,8 +471,8 @@ func TestFFmpegManager_ConfigurationValidation(t *testing.T) {
 func TestFFmpegManager_ProcessManagement(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -508,8 +507,8 @@ func TestFFmpegManager_ProcessManagement(t *testing.T) {
 func TestFFmpegManager_Integration(t *testing.T) {
 	t.Parallel()
 	// Setup test environment with proper cleanup
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -538,8 +537,8 @@ func TestFFmpegManager_Integration(t *testing.T) {
 // TestFFmpegManager_SegmentedRecording tests segmented recording functionality
 func TestFFmpegManager_SegmentedRecording(t *testing.T) {
 	t.Parallel()
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()
@@ -590,8 +589,8 @@ func TestFFmpegManager_SegmentedRecording(t *testing.T) {
 // TestFFmpegManager_SegmentedRecordingCommandBuilding tests segmented recording command building
 func TestFFmpegManager_SegmentedRecordingCommandBuilding(t *testing.T) {
 	t.Parallel()
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test logger
 	logger := logrus.New()

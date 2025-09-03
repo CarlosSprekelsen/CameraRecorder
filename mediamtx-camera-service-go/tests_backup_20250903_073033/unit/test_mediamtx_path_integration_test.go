@@ -23,7 +23,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,8 +34,8 @@ import (
 func setupRealComponents(t *testing.T) (*mediamtx.PathIntegration, *camera.HybridCameraMonitor, *config.ConfigManager) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Setup test configuration manager
 	err := env.ConfigManager.LoadConfig("../../config/development.yaml")
@@ -51,17 +50,17 @@ func setupRealComponents(t *testing.T) (*mediamtx.PathIntegration, *camera.Hybri
 	}
 
 	// NEW PATTERN: Use centralized MediaMTX client setup
-	client := utils.SetupMediaMTXTestClient(t, env)
-	defer utils.TeardownMediaMTXTestClient(t, client)
+	client := testtestutils.SetupMediaMTXTestClient(t, env)
+	defer testtestutils.TeardownMediaMTXTestClient(t, client)
 
 	// Test MediaMTX connection
-	isAccessible := utils.TestMediaMTXConnection(t, client)
+	isAccessible := testtestutils.TestMediaMTXConnection(t, client)
 	if !isAccessible {
 		t.Skip("MediaMTX service not accessible, skipping test")
 	}
 
 	// NEW PATTERN: Use centralized path manager setup
-	realPathManager := utils.SetupMediaMTXPathManager(t, client)
+	realPathManager := testtestutils.SetupMediaMTXPathManager(t, client)
 
 	// Create real camera monitor
 	realDeviceChecker := &camera.RealDeviceChecker{}

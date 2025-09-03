@@ -29,7 +29,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,8 +36,8 @@ import (
 // TestComponentIntegration tests component integration validation
 func TestComponentIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -119,8 +118,8 @@ func TestComponentIntegration(t *testing.T) {
 // TestDataFlowIntegration tests data flow integration validation
 func TestDataFlowIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -217,8 +216,8 @@ func TestDataFlowIntegration(t *testing.T) {
 // TestErrorHandlingIntegration tests error handling integration
 func TestErrorHandlingIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -268,8 +267,8 @@ func TestErrorHandlingIntegration(t *testing.T) {
 // TestSecurityIntegration tests security integration validation
 func TestSecurityIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	t.Run("AuthenticationIntegration", func(t *testing.T) {
 		// Test authentication integration
@@ -328,8 +327,8 @@ func TestSecurityIntegration(t *testing.T) {
 // TestPerformanceIntegration tests performance integration validation
 func TestPerformanceIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	ctx := context.Background()
 
@@ -438,8 +437,8 @@ func TestPerformanceIntegration(t *testing.T) {
 // TestReliabilityIntegration tests reliability integration validation
 func TestReliabilityIntegration(t *testing.T) {
 	// COMMON PATTERN: Use shared WebSocket test environment
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	ctx := context.Background()
 

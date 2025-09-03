@@ -36,7 +36,7 @@ Successfully implemented interface abstractions for the CameraMonitor component,
 
 ### 4. **Test Updates** ✅
 - **File:** `tests/unit/test_websocket_server_test.go`
-- **Changes:** Updated all WebSocket server tests to use `utils.NewMockCameraMonitor()` instead of `&camera.HybridCameraMonitor{}`
+- **Changes:** Updated all WebSocket server tests to use `testtestutils.NewMockCameraMonitor()` instead of `&camera.HybridCameraMonitor{}`
 - **Impact:** Tests now use proper mock implementations for better control and isolation
 
 ## Technical Implementation Details

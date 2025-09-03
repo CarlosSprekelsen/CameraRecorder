@@ -11,7 +11,7 @@ Instead of duplicating WebSocket connection code in every test:
    	conn, _, err := websocket.DefaultDialer.Dial(GetTestWebSocketURL(), nil)
 
 Use the shared utilities:
-   client := utils.NewWebSocketTestClient(t, server, jwtHandler)
+   client := testtestutils.NewWebSocketTestClient(t, server, jwtHandler)
    response := client.SendRequest(request)
 
 ANTI-PATTERNS TO AVOID:
@@ -33,7 +33,7 @@ Test Categories: Unit/Integration/Performance/Security
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package utils
+package testutils
 
 import (
 	"fmt"
@@ -71,14 +71,14 @@ type WebSocketTestClient struct {
 	t          *testing.T
 	conn       *gorilla.Conn
 	server     *websocket.WebSocketServer
-	jwtHandler *security.JWTHandler
+	jwtHandler *.JWTHandler
 	url        string
 	port       int
 }
 
 // NewWebSocketTestClient creates a new WebSocket test client with free port
 // This is the PRIMARY utility for WebSocket integration testing
-func NewWebSocketTestClient(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) *WebSocketTestClient {
+func NewWebSocketTestClient(t *testing.T, server *websocket.WebSocketServer, jwtHandler *.JWTHandler) *WebSocketTestClient {
 	// Get a free port (same approach as Python test suite)
 	port := GetFreePort()
 	t.Logf("Using free port: %d", port)
@@ -171,7 +171,7 @@ func NewWebSocketTestClient(t *testing.T, server *websocket.WebSocketServer, jwt
 
 // NewWebSocketTestClientForExistingServer creates a WebSocket test client that connects to an already-running server
 // Use this when you want to create multiple clients for the same server
-func NewWebSocketTestClientForExistingServer(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler, port int) *WebSocketTestClient {
+func NewWebSocketTestClientForExistingServer(t *testing.T, server *websocket.WebSocketServer, jwtHandler *.JWTHandler, port int) *WebSocketTestClient {
 	// Connect to the already-running WebSocket server
 	url := fmt.Sprintf("ws://localhost:%d/ws", port)
 	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
@@ -320,7 +320,7 @@ func (c *WebSocketTestClient) ReadMessage() (messageType int, p []byte, err erro
 
 // TestWebSocketConnectionFlow tests the complete WebSocket connection flow
 // This is a reusable test function that can be used across different test categories
-func TestWebSocketConnectionFlow(t *testing.T, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) {
+func TestWebSocketConnectionFlow(t *testing.T, server *websocket.WebSocketServer, jwtHandler *.JWTHandler) {
 	// Create WebSocket test client
 	client := NewWebSocketTestClient(t, server, jwtHandler)
 	defer client.Close()
@@ -350,13 +350,13 @@ type WebSocketTestClientForBenchmark struct {
 	b          *testing.B
 	conn       *gorilla.Conn
 	server     *websocket.WebSocketServer
-	jwtHandler *security.JWTHandler
+	jwtHandler *.JWTHandler
 	url        string
 }
 
 // NewWebSocketTestClientForBenchmark creates a new WebSocket test client for benchmarks
 // This is the benchmark version of NewWebSocketTestClient
-func NewWebSocketTestClientForBenchmark(b *testing.B, server *websocket.WebSocketServer, jwtHandler *security.JWTHandler) *WebSocketTestClientForBenchmark {
+func NewWebSocketTestClientForBenchmark(b *testing.B, server *websocket.WebSocketServer, jwtHandler *.JWTHandler) *WebSocketTestClientForBenchmark {
 	// Start server if not running
 	if !server.IsRunning() {
 		err := server.Start()

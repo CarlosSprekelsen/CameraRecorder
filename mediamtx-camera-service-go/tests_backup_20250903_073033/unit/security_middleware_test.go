@@ -6,8 +6,6 @@ package security
 import (
 	"testing"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,12 +61,12 @@ func (m *MockSecurityConfig) GetJWTExpiryHours() int          { return m.jwtExpi
 
 func TestNewAuthMiddleware(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
 
-	middleware := security.NewAuthMiddleware(env.Logger, config)
+	middleware := NewAuthMiddleware(env.Logger, config)
 
 	assert.NotNil(t, middleware)
 	// Note: Fields are unexported, so we can't test them directly
@@ -77,11 +75,11 @@ func TestNewAuthMiddleware(t *testing.T) {
 
 func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	middleware := security.NewAuthMiddleware(env.Logger, config)
+	middleware := NewAuthMiddleware(env.Logger, config)
 
 	// Mock authenticated client
 	client := &MockClientConnection{
@@ -112,11 +110,11 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 
 func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	middleware := security.NewAuthMiddleware(env.Logger, config)
+	middleware := NewAuthMiddleware(env.Logger, config)
 
 	// Mock unauthenticated client
 	client := &MockClientConnection{
@@ -148,13 +146,13 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 
 func TestNewRBACMiddleware(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
+	permissionChecker := NewPermissionChecker()
 
-	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	assert.NotNil(t, middleware)
 	// Note: Fields are unexported, so we can't test them directly
@@ -163,12 +161,12 @@ func TestNewRBACMiddleware(t *testing.T) {
 
 func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	// Mock client with operator role
 	client := &MockClientConnection{
@@ -199,12 +197,12 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 
 func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	// Mock client with viewer role
 	client := &MockClientConnection{
@@ -236,12 +234,12 @@ func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 
 func TestRBACMiddleware_RequireRole_InvalidRole(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	middleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
 	// Mock client with invalid role
 	client := &MockClientConnection{
@@ -273,15 +271,15 @@ func TestRBACMiddleware_RequireRole_InvalidRole(t *testing.T) {
 
 func TestNewSecureMethodRegistry(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	assert.NotNil(t, registry)
 	// Note: Fields are unexported, so we can't test them directly
@@ -290,15 +288,15 @@ func TestNewSecureMethodRegistry(t *testing.T) {
 
 func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	// Mock handler
 	handlerCalled := false
@@ -331,15 +329,15 @@ func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 
 func TestSecureMethodRegistry_RegisterMethod_AdminRole(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	// Mock handler
 	handlerCalled := false
@@ -385,15 +383,15 @@ func TestSecureMethodRegistry_RegisterMethod_AdminRole(t *testing.T) {
 
 func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	// Register multiple methods
 	handler := func(params map[string]interface{}, client security.ClientConnection) (security.JsonRpcResponse, error) {
@@ -416,15 +414,15 @@ func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 
 func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
 
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	// Get security info for non-existent method
 	info := registry.GetMethodSecurityInfo("non_existent")
@@ -436,14 +434,14 @@ func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 
 func TestSecurityMiddleware_Integration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := utils.SetupTestEnvironment(t)
-	defer utils.TeardownTestEnvironment(t, env)
+	env := testtestutils.SetupTestEnvironment(t)
+	defer testtestutils.TeardownTestEnvironment(t, env)
 
 	config := &MockSecurityConfig{}
-	permissionChecker := security.NewPermissionChecker()
-	authMiddleware := security.NewAuthMiddleware(env.Logger, config)
-	rbacMiddleware := security.NewRBACMiddleware(permissionChecker, env.Logger, config)
-	registry := security.NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
+	permissionChecker := NewPermissionChecker()
+	authMiddleware := NewAuthMiddleware(env.Logger, config)
+	rbacMiddleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, env.Logger, config)
 
 	// Mock handler
 	handlerCalled := false

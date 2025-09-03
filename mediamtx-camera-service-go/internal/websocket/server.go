@@ -53,7 +53,7 @@ type WebSocketServer struct {
 	configManager      *config.ConfigManager
 	logger             *logging.Logger
 	cameraMonitor      camera.CameraMonitor
-	jwtHandler         *security.JWTHandler
+	jwtHandler         *.JWTHandler
 	mediaMTXController mediamtx.MediaMTXController
 
 	// Security extensions (Phase 1 enhancement)
@@ -368,7 +368,7 @@ func NewWebSocketServer(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
 	cameraMonitor camera.CameraMonitor,
-	jwtHandler *security.JWTHandler,
+	jwtHandler *.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXController,
 ) (*WebSocketServer, error) {
 	if configManager == nil {
@@ -419,10 +419,10 @@ func NewWebSocketServer(
 		mediaMTXController: mediaMTXController,
 
 		// Security extensions initialization (Phase 1 enhancement)
-		permissionChecker: security.NewPermissionChecker(),
+		permissionChecker: NewPermissionChecker(),
 
 		// Input validation initialization
-		validationHelper: NewValidationHelper(security.NewInputValidator(logger, nil), logger.Logger),
+		validationHelper: NewValidationHelper(NewInputValidator(logger, nil), logger.Logger),
 
 		// WebSocket upgrader configuration
 		upgrader: websocket.Upgrader{

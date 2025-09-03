@@ -21,7 +21,6 @@ package websocket
 import (
 	"testing"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +28,7 @@ import (
 
 func TestValidationHelper_ValidatePaginationParams(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -118,7 +117,7 @@ func TestValidationHelper_ValidatePaginationParams(t *testing.T) {
 
 func TestValidationHelper_ValidateDeviceParameter(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -179,7 +178,7 @@ func TestValidationHelper_ValidateDeviceParameter(t *testing.T) {
 
 func TestValidationHelper_ValidateFilenameParameter(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -240,7 +239,7 @@ func TestValidationHelper_ValidateFilenameParameter(t *testing.T) {
 
 func TestValidationHelper_ValidateRecordingParameters(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -323,7 +322,7 @@ func TestValidationHelper_ValidateRecordingParameters(t *testing.T) {
 
 func TestValidationHelper_ValidateSnapshotParameters(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -385,7 +384,7 @@ func TestValidationHelper_ValidateSnapshotParameters(t *testing.T) {
 
 func TestValidationHelper_ValidateRetentionPolicyParameters(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -502,7 +501,7 @@ func TestValidationHelper_ValidateRetentionPolicyParameters(t *testing.T) {
 
 func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 
@@ -522,7 +521,7 @@ func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
 
 func TestValidationHelper_LogValidationWarnings(t *testing.T) {
 	// Create validation helper
-	inputValidator := security.NewInputValidator(nil, nil)
+	inputValidator := NewInputValidator(nil, nil)
 	logger := logrus.New()
 	validationHelper := NewValidationHelper(inputValidator, logger)
 

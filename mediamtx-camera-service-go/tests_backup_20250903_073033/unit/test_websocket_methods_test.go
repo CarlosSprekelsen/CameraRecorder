@@ -33,16 +33,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // setupWebSocketTestEnvironment creates a complete WebSocket test environment
-func setupWebSocketTestEnvironment(t *testing.T) (*utils.WebSocketTestEnvironment, func()) {
-	env := utils.SetupWebSocketTestEnvironment(t)
+func setupWebSocketTestEnvironment(t *testing.T) (*testtestutils.WebSocketTestEnvironment, func()) {
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 
 	// Return cleanup function
 	cleanup := func() {
-		utils.TeardownWebSocketTestEnvironment(t, env)
+		testtestutils.TeardownWebSocketTestEnvironment(t, env)
 	}
 
 	return env, cleanup
@@ -60,7 +59,7 @@ func TestWebSocketServer_JSONRPCCompliance(t *testing.T) {
 	assert.NotNil(t, env.CameraMonitor, "Camera monitor should be created")
 
 	// Test JSON-RPC 2.0 protocol compliance
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test ping method (basic JSON-RPC compliance)
 	response, err := env.WebSocketServer.MethodPing(map[string]interface{}{}, client)
@@ -112,7 +111,7 @@ func TestWebSocketServer_FileListingMethods(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client with viewer role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
 
 	// Test recordings listing with valid parameters
 	response, err := env.WebSocketServer.MethodListRecordings(map[string]interface{}{
@@ -173,10 +172,10 @@ func TestWebSocketServer_FileListingMethods(t *testing.T) {
 
 // TestWebSocketServer_RecordingMethods tests recording operations API compliance
 func TestWebSocketServer_RecordingMethods(t *testing.T) {
-	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
+	env := testtestutils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with operator role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
 
 	// Test start recording with required parameters
 	response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
@@ -274,10 +273,10 @@ func TestWebSocketServer_RecordingMethods(t *testing.T) {
 
 // TestWebSocketServer_SnapshotMethods tests snapshot operations API compliance
 func TestWebSocketServer_SnapshotMethods(t *testing.T) {
-	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
+	env := testtestutils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with operator role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
 
 	// Test take snapshot with required parameters
 	response, err := env.WebSocketServer.MethodTakeSnapshot(map[string]interface{}{
@@ -345,7 +344,7 @@ func TestWebSocketServer_StatusMethods(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client with admin role (API requires admin for get_status)
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 	// Test get status
 	response, err := env.WebSocketServer.MethodGetStatus(map[string]interface{}{}, client)
@@ -408,7 +407,7 @@ func TestWebSocketServer_FileLifecycleMethods(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client with operator role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
 
 	// Test delete recording
 	response, err := env.WebSocketServer.MethodDeleteRecording(map[string]interface{}{
@@ -469,7 +468,7 @@ func TestWebSocketServer_ErrorHandling(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test with invalid parameters
 	response, err := env.WebSocketServer.MethodListRecordings(map[string]interface{}{
@@ -521,7 +520,7 @@ func TestWebSocketServer_RoleBasedAccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			client := utils.CreateAuthenticatedClient(t, env.JWTHandler, tc.userID, tc.role)
+			client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, tc.userID, tc.role)
 
 			// Test basic method access
 			response, err := env.WebSocketServer.MethodListRecordings(map[string]interface{}{}, client)
@@ -540,7 +539,7 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test get camera list
 	response, err := env.WebSocketServer.MethodGetCameraList(map[string]interface{}{}, client)
@@ -615,10 +614,10 @@ func TestWebSocketServer_CameraMethods(t *testing.T) {
 
 // TestWebSocketServer_AdminMethods tests admin-only methods API compliance
 func TestWebSocketServer_AdminMethods(t *testing.T) {
-	env := utils.SetupWebSocketTestEnvironmentWithCleanup(t)
+	env := testtestutils.SetupWebSocketTestEnvironmentWithCleanup(t)
 
 	// Create authenticated client with admin role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 	// Test get server info
 	response, err := env.WebSocketServer.MethodGetServerInfo(map[string]interface{}{}, client)
@@ -771,7 +770,7 @@ func TestWebSocketServer_FileInfoMethods(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client with viewer role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
 
 	// Test get recording info
 	response, err := env.WebSocketServer.MethodGetRecordingInfo(map[string]interface{}{
@@ -835,7 +834,7 @@ func TestWebSocketServer_AuthenticationScenarios(t *testing.T) {
 	defer cleanup()
 
 	// Test authentication with valid token
-	validToken := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "viewer")
+	validToken := testtestutils.GenerateTestToken(t, env.JWTHandler, "test_user", "viewer")
 	authParams := map[string]interface{}{
 		"auth_token": validToken,
 	}
@@ -896,7 +895,7 @@ func TestWebSocketServer_ErrorScenarios(t *testing.T) {
 	defer cleanup()
 
 	// Create authenticated client
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test invalid method name
 	response, err := env.WebSocketServer.MethodPing(map[string]interface{}{
@@ -956,14 +955,14 @@ func TestWebSocketServer_EventNotifications(t *testing.T) {
 	// REQ-API-010: Event handling and notifications
 	// API Documentation: camera_status_update, recording_status_update
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test camera status update event handling
 	// Note: These are server-initiated events, not client-requested methods
 	// We test that the server can handle these events properly
 
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test that server can process camera status updates
 	// This would normally be triggered by camera monitor events
@@ -996,10 +995,10 @@ func TestWebSocketServer_PerformanceCompliance(t *testing.T) {
 	// - Status Methods (get_camera_list, get_camera_status, ping): <50ms response time
 	// - Control Methods (take_snapshot, start_recording, stop_recording): <100ms response time
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test status methods performance (<50ms)
 	statusMethods := []struct {
@@ -1097,10 +1096,10 @@ func TestWebSocketServer_ParameterValidation(t *testing.T) {
 	// - Numeric Parameters: Range validation, type checking
 	// - Boolean Parameters: Type validation
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 	// Test string parameter validation
 	t.Run("string_parameter_validation", func(t *testing.T) {
@@ -1161,10 +1160,10 @@ func TestWebSocketServer_CoverageGaps(t *testing.T) {
 	// REQ-API-009: Performance metrics tracking
 	// REQ-API-010: Event handling and notifications
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
-	adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+	adminClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 	t.Run("test_low_coverage_methods", func(t *testing.T) {
 		// Test methods with coverage below 50% to increase overall coverage
@@ -1340,8 +1339,8 @@ func TestWebSocketServer_ErrorHandlingComprehensive(t *testing.T) {
 	// REQ-ERROR-002: WebSocket server shall handle authentication failures gracefully
 	// REQ-ERROR-003: WebSocket server shall handle invalid JSON-RPC requests gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test with unauthenticated client
 	unauthenticatedClient := &websocket.ClientConnection{
@@ -1381,7 +1380,7 @@ func TestWebSocketServer_ErrorHandlingComprehensive(t *testing.T) {
 
 	t.Run("test_invalid_parameters", func(t *testing.T) {
 		// Test methods with invalid parameters
-		adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+		adminClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 		// Test with invalid device paths
 		invalidDevices := []string{"", "invalid_device", "/dev/nonexistent"}
@@ -1410,12 +1409,12 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 	// REQ-FUNC-001: WebSocket server functionality
 	// REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test MethodGetCameraStatus (30.8% coverage)
 	t.Run("test_get_camera_status_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test with valid device
 		response, err := env.WebSocketServer.MethodGetCameraStatus(map[string]interface{}{
@@ -1446,7 +1445,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 
 	// Test MethodGetStreams (33.3% coverage)
 	t.Run("test_get_streams_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test with various parameters
 		response, err := env.WebSocketServer.MethodGetStreams(map[string]interface{}{
@@ -1470,7 +1469,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 
 	// Test MethodGetCameraCapabilities (38.5% coverage)
 	t.Run("test_get_camera_capabilities_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test with valid device
 		response, err := env.WebSocketServer.MethodGetCameraCapabilities(map[string]interface{}{
@@ -1501,7 +1500,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 
 	// Test MethodStopRecording (40.9% coverage)
 	t.Run("test_stop_recording_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test with valid device
 		response, err := env.WebSocketServer.MethodStopRecording(map[string]interface{}{
@@ -1536,7 +1535,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 		roles := []string{"viewer", "operator", "admin"}
 
 		for _, role := range roles {
-			client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", role)
+			client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", role)
 
 			// Test methods that use GetPermissionsForRole
 			response, err := env.WebSocketServer.MethodGetCameraList(map[string]interface{}{}, client)
@@ -1551,7 +1550,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 
 	// Test handleRequest (44.4% coverage) through various scenarios
 	t.Run("test_handle_request_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test various method calls to exercise handleRequest paths
 		methods := []string{"ping", "get_camera_list", "get_server_info", "get_status", "get_metrics"}
@@ -1580,7 +1579,7 @@ func TestWebSocketServer_LowCoverageFunctions(t *testing.T) {
 
 	// Test checkRateLimit (50.0% coverage)
 	t.Run("test_check_rate_limit_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test multiple rapid requests to exercise rate limiting
 		for i := 0; i < 15; i++ {
@@ -1615,12 +1614,12 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 	// REQ-FUNC-001: WebSocket server functionality
 	// REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test getStreamNameFromDevicePath function coverage through recording methods
 	t.Run("test_get_stream_name_from_device_path", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording methods that use getStreamNameFromDevicePath
 		devices := []string{"camera0", "camera1", "invalid_device"}
@@ -1644,7 +1643,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test performSizeBasedCleanup function coverage through cleanup methods
 	t.Run("test_perform_size_based_cleanup", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test cleanup methods that use performSizeBasedCleanup
 		cleanupParams := []map[string]interface{}{
@@ -1664,7 +1663,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test cleanupDirectoryBySize function coverage through storage operations
 	t.Run("test_cleanup_directory_by_size", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test storage info to exercise cleanup functions
 		response, err := env.WebSocketServer.MethodGetStorageInfo(map[string]interface{}{
@@ -1689,7 +1688,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test checkRateLimit function coverage through rapid requests
 	t.Run("test_check_rate_limit", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test multiple rapid requests to exercise rate limiting
 		methods := []string{"ping", "get_camera_list", "get_server_info", "get_status", "get_metrics"}
@@ -1719,7 +1718,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test notifyRecordingStatusUpdate function coverage through recording operations
 	t.Run("test_notify_recording_status_update", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording operations that might trigger notifications
 		devices := []string{"camera0", "camera1"}
@@ -1743,7 +1742,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test broadcastEvent function coverage through status and metrics
 	t.Run("test_broadcast_event", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test methods that might trigger event broadcasting
 		response, err := env.WebSocketServer.MethodGetStatus(map[string]interface{}{
@@ -1762,7 +1761,7 @@ func TestWebSocketServer_ZeroCoverageFunctions(t *testing.T) {
 
 	// Test addEventHandler function coverage through server operations
 	t.Run("test_add_event_handler", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test camera operations that might add event handlers
 		response, err := env.WebSocketServer.MethodGetCameraList(map[string]interface{}{
@@ -1786,12 +1785,12 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 	// REQ-FUNC-001: WebSocket server functionality
 	// REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test getStreamNameFromDevicePath through comprehensive recording scenarios
 	t.Run("test_get_stream_name_from_device_path_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test various device path formats that might exercise getStreamNameFromDevicePath
 		devicePaths := []string{
@@ -1833,7 +1832,7 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 	// Test performSizeBasedCleanup through various cleanup scenarios
 	t.Run("test_perform_size_based_cleanup_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test various size-based cleanup scenarios
 		sizeScenarios := []map[string]interface{}{
@@ -1871,7 +1870,7 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 	// Test cleanupDirectoryBySize through storage operations
 	t.Run("test_cleanup_directory_by_size_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test storage info with various parameters to exercise cleanup functions
 		storageParams := []map[string]interface{}{
@@ -1912,7 +1911,7 @@ func TestWebSocketServer_AdvancedZeroCoverageFunctions(t *testing.T) {
 
 	// Test notifyRecordingStatusUpdate through comprehensive recording operations
 	t.Run("test_notify_recording_status_update_comprehensive", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test comprehensive recording scenarios that might trigger notifications
 		recordingScenarios := []map[string]interface{}{
@@ -1956,12 +1955,12 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 	// REQ-FUNC-001: WebSocket server functionality
 	// REQ-ERROR-001: WebSocket server shall handle MediaMTX connection failures gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test getStreamNameFromDevicePath function coverage
 	t.Run("test_get_stream_name_from_device_path", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording methods that use getStreamNameFromDevicePath
 		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
@@ -1980,7 +1979,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test performSizeBasedCleanup function coverage
 	t.Run("test_perform_size_based_cleanup", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test cleanup methods that use performSizeBasedCleanup
 		response, err := env.WebSocketServer.MethodCleanupOldFiles(map[string]interface{}{
@@ -1999,7 +1998,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test cleanupDirectoryBySize function coverage
 	t.Run("test_cleanup_directory_by_size", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "admin")
 
 		// Test storage info to exercise cleanup functions
 		response, err := env.WebSocketServer.MethodGetStorageInfo(map[string]interface{}{
@@ -2019,7 +2018,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test notifyRecordingStatusUpdate function coverage
 	t.Run("test_notify_recording_status_update", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "operator")
 
 		// Test recording operations that might trigger notifications
 		response, err := env.WebSocketServer.MethodStartRecording(map[string]interface{}{
@@ -2038,7 +2037,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test broadcastEvent function coverage
 	t.Run("test_broadcast_event", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test methods that might trigger event broadcasting
 		response, err := env.WebSocketServer.MethodGetStatus(map[string]interface{}{
@@ -2057,7 +2056,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test addEventHandler function coverage
 	t.Run("test_add_event_handler", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test camera operations that might add event handlers
 		response, err := env.WebSocketServer.MethodGetCameraList(map[string]interface{}{
@@ -2077,7 +2076,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test sendErrorResponse function coverage through error scenarios
 	t.Run("test_send_error_response_coverage", func(t *testing.T) {
-		client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+		client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 		// Test rate limiting error paths
 		// Create multiple rapid requests to potentially trigger rate limiting
@@ -2088,7 +2087,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 		}
 
 		// Test permission denied scenarios
-		viewerClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
+		viewerClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
 
 		// Test admin-only methods with viewer role
 		response, err := env.WebSocketServer.MethodSetRetentionPolicy(map[string]interface{}{
@@ -2100,7 +2099,7 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 
 	// Test real stream workflow with get_streams
 	t.Run("test_real_stream_workflow", func(t *testing.T) {
-		adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+		adminClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 		// Step 1: Verify no streams initially
 		response, err := env.WebSocketServer.MethodGetStreams(map[string]interface{}{}, adminClient)
@@ -2165,11 +2164,11 @@ func TestWebSocketServer_CriticalZeroCoverageFunctions(t *testing.T) {
 // REQ-API-022: WebSocket server shall support recording_status_update notifications
 // REQ-API-023: Notifications shall include device, status, filename, and duration
 func TestWebSocketServer_NotificationMethods(t *testing.T) {
-	env := utils.SetupWebSocketTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Create authenticated client with operator role
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
 
 	t.Run("test_camera_status_update_valid_params", func(t *testing.T) {
 		// Test with valid parameters per API documentation
@@ -2180,7 +2179,7 @@ func TestWebSocketServer_NotificationMethods(t *testing.T) {
 			"resolution": "1920x1080",
 			"fps":        30,
 			"streams": map[string]interface{}{
-				"rtsp":   utils.CreateTestRTSPURLWithFreePort("camera0"),
+				"rtsp":   testtestutils.CreateTestRTSPURLWithFreePort("camera0"),
 				"webrtc": "http://localhost:8889/camera0/webrtc",
 				"hls":    "http://localhost:8888/camera0",
 			},
@@ -2433,9 +2432,9 @@ func TestWebSocketServer_NotificationMethods(t *testing.T) {
 
 	t.Run("test_notification_methods_role_permissions", func(t *testing.T) {
 		// Test that different roles can access notification methods
-		viewerClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
-		operatorClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
-		adminClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
+		viewerClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_viewer", "viewer")
+		operatorClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_operator", "operator")
+		adminClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_admin", "admin")
 
 		testClients := []struct {
 			name   string

@@ -42,9 +42,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -212,12 +210,12 @@ func TestWebSocketServerInstantiation(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test dependencies using mock camera monitor for better test control
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -315,14 +313,14 @@ func TestServerCoreFunctionality(t *testing.T) {
 	// REQ-API-004: Error handling and response codes
 	// REQ-API-005: Authentication and authorization
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 	server := env.WebSocketServer
 
 	// Test that server is properly created
 	assert.NotNil(t, server)
 
 	// Test 1: Exercise checkMethodPermissions through permission violations
-	viewerClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	viewerClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test that viewer can access viewer-appropriate methods
 	response, err := server.MethodPing(map[string]interface{}{}, viewerClient)
@@ -341,7 +339,7 @@ func TestServerCoreFunctionality(t *testing.T) {
 	}
 
 	// Test 2: Exercise checkRateLimit through rapid requests
-	validClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	validClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Make multiple rapid requests to trigger rate limiting
 	for i := 0; i < 150; i++ { // Exceed rate limit
@@ -431,11 +429,11 @@ func TestServerErrorScenarios(t *testing.T) {
 	// REQ-ERROR-002: WebSocket server shall handle authentication failures gracefully
 	// REQ-ERROR-003: WebSocket server shall handle invalid JSON-RPC requests gracefully
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 	server := env.WebSocketServer
 
 	// Test 1: Exercise error handling through invalid authentication
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	// Test authentication with invalid token
 	response, err := server.MethodAuthenticate(map[string]interface{}{
@@ -470,7 +468,7 @@ func TestServerErrorScenarios(t *testing.T) {
 		t.Run(fmt.Sprintf("error_code_%d", code), func(t *testing.T) {
 			// Create scenarios that trigger different error codes through public API
 			var response *websocket.JsonRpcResponse
-			client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+			client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 			switch code {
 			case websocket.INVALID_PARAMS:
@@ -515,7 +513,7 @@ func TestServerErrorScenarios(t *testing.T) {
 func TestServerPerformanceTracking(t *testing.T) {
 	// REQ-API-009: Performance metrics tracking
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 	server := env.WebSocketServer
 
 	// Test initial metrics state
@@ -528,7 +526,7 @@ func TestServerPerformanceTracking(t *testing.T) {
 	assert.NotNil(t, initialMetrics.StartTime)
 
 	// Make multiple requests to exercise recordRequest
-	client := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	client := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 
 	for i := 0; i < 10; i++ {
 		response, err := server.MethodPing(map[string]interface{}{}, client)
@@ -545,7 +543,7 @@ func TestServerPerformanceTracking(t *testing.T) {
 	assert.Len(t, finalMetrics.ResponseTimes["ping"], 10)
 
 	// Test error metrics through permission violation
-	viewerClient := utils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
+	viewerClient := testtestutils.CreateAuthenticatedClient(t, env.JWTHandler, "test_user", "viewer")
 	response, err := server.MethodGetServerInfo(map[string]interface{}{}, viewerClient)
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
@@ -560,7 +558,7 @@ func TestServerPerformanceTracking(t *testing.T) {
 func TestServerEventHandling(t *testing.T) {
 	// REQ-API-007: Connection management and client tracking
 
-	env := utils.SetupWebSocketTestEnvironment(t)
+	env := testtestutils.SetupWebSocketTestEnvironment(t)
 	server := env.WebSocketServer
 
 	// Verify server has event handling capability
@@ -604,11 +602,11 @@ func TestClientConnectionManagement(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -660,11 +658,11 @@ func TestServerLifecycle(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -695,11 +693,11 @@ func TestApiCompliance(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -764,11 +762,11 @@ func TestPerformanceMetrics(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -799,11 +797,11 @@ func TestJwtTokenValidation(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -855,11 +853,11 @@ func TestServerErrorHandling(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -1010,11 +1008,11 @@ func TestServerMetricsComprehensive(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -1063,11 +1061,11 @@ func TestServerLifecycleComprehensive(t *testing.T) {
 
 	// COMMON PATTERN: Use shared test environment instead of individual components
 	// This eliminates the need to create ConfigManager and Logger in every test
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -1211,12 +1209,12 @@ func TestWebSocketSecurityAndPermissions(t *testing.T) {
 	// REQ-SEC-002: WebSocket server shall enforce role-based access control
 
 	// COMMON PATTERN: Use shared test environment
-	env := utils.SetupMediaMTXTestEnvironment(t)
-	defer utils.TeardownMediaMTXTestEnvironment(t, env)
+	env := testtestutils.SetupMediaMTXTestEnvironment(t)
+	defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 	// Create test dependencies using existing patterns
-	cameraMonitor := utils.NewMockCameraMonitor()
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-testing-only")
+	cameraMonitor := testtestutils.NewMockCameraMonitor()
+	jwtHandler, err := NewJWTHandler("test-secret-key-for-testing-only")
 	require.NoError(t, err)
 
 	// COMMON PATTERN: Use MediaMTX controller from test environment instead of creating new one
@@ -1652,8 +1650,8 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 	// Ensure tests run sequentially to avoid port conflicts
 	// Note: Tests are already sequential by default, no t.Parallel() needed
 
-	env := utils.SetupWebSocketUnitTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketUnitTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test handleWebSocket, handleClientConnection, handleMessage through real WebSocket connections
 	t.Run("test_websocket_connection_handlers", func(t *testing.T) {
@@ -1665,7 +1663,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Use WebSocket utility to create real connection - exercises handleWebSocket, handleClientConnection
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Send ping request - exercises handleMessage, handleRequest, sendResponse
@@ -1692,7 +1690,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate using utility method
@@ -1721,7 +1719,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate using utility method
@@ -1764,7 +1762,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 			}
 		}()
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate with operator role for recording operations
@@ -1811,7 +1809,7 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Start the server once with a free port
-		port := utils.GetFreePort()
+		port := testtestutils.GetFreePort()
 		serverConfig := testServer.GetConfig()
 		if serverConfig != nil {
 			newConfig := *serverConfig
@@ -1831,10 +1829,10 @@ func TestWebSocketServer_PrivateFunctions(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// Create multiple WebSocket connections to the same server
-		clients := make([]*utils.WebSocketTestClient, 3)
+		clients := make([]*testtestutils.WebSocketTestClient, 3)
 		for i := 0; i < 3; i++ {
 			// Create client that connects to the already-running server
-			clients[i] = utils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
+			clients[i] = testtestutils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
 			defer clients[i].Close()
 
 			// Send ping from each connection
@@ -1854,8 +1852,8 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 	// Test advanced scenarios for remaining private functions
 
-	env := utils.SetupWebSocketUnitTestEnvironment(t)
-	defer utils.TeardownWebSocketTestEnvironment(t, env)
+	env := testtestutils.SetupWebSocketUnitTestEnvironment(t)
+	defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 
 	// Test broadcastEvent and addEventHandler through comprehensive WebSocket operations
 	t.Run("test_event_broadcasting_comprehensive", func(t *testing.T) {
@@ -1865,7 +1863,7 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate using utility method
@@ -1918,7 +1916,7 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Authenticate with operator role for recording operations
@@ -1984,7 +1982,7 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		testServer, err := websocket.NewWebSocketServer(env.ConfigManager, env.Logger, env.CameraMonitor, env.JWTHandler, stubController)
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
-		client := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		client := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer client.Close()
 
 		// Test various error scenarios
@@ -2011,14 +2009,14 @@ func TestWebSocketServer_AdvancedPrivateFunctions(t *testing.T) {
 		require.NoError(t, err, "Failed to create test WebSocket server")
 
 		// Start the server once and get the port
-		firstClient := utils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
+		firstClient := testtestutils.NewWebSocketTestClient(t, testServer, env.JWTHandler)
 		defer firstClient.Close()
 		port := firstClient.GetPort()
 
 		// Create multiple clients with different operations using the same server
-		clients := make([]*utils.WebSocketTestClient, 5)
+		clients := make([]*testtestutils.WebSocketTestClient, 5)
 		for i := 0; i < 5; i++ {
-			client := utils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
+			client := testtestutils.NewWebSocketTestClientForExistingServer(t, testServer, env.JWTHandler, port)
 			clients[i] = client
 			defer client.Close()
 

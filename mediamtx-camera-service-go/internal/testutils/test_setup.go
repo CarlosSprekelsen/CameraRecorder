@@ -12,7 +12,7 @@ Instead of creating individual components in each test:
    logger := logging.NewLogger("test")
 
 Use the shared utilities:
-   env := utils.SetupMediaMTXTestEnvironment(t)
+   env := testtestutils.SetupMediaMTXTestEnvironment(t)
    // env.ConfigManager and env.Logger are ready to use
 
 ANTI-PATTERNS TO AVOID:
@@ -34,7 +34,7 @@ Test Categories: Unit/Integration/Test Infrastructure
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package utils
+package testutils
 
 import (
 	"context"
@@ -74,7 +74,7 @@ type MediaMTXTestEnvironment struct {
 // Use this when testing WebSocket server functionality
 type WebSocketTestEnvironment struct {
 	*MediaMTXTestEnvironment
-	JWTHandler      *security.JWTHandler
+	JWTHandler      *JWTHandler
 	CameraMonitor   *camera.HybridCameraMonitor
 	WebSocketServer *websocket.WebSocketServer
 }
@@ -83,7 +83,7 @@ type WebSocketTestEnvironment struct {
 // Use this when testing security-related functionality
 type SecurityTestEnvironment struct {
 	*TestEnvironment
-	JWTHandler     *security.JWTHandler
+	JWTHandler     *JWTHandler
 	RoleManager    *security.PermissionChecker
 	SessionManager *security.SessionManager
 }
@@ -95,8 +95,8 @@ type SecurityTestEnvironment struct {
 // Example usage:
 //
 //	func TestBasicFeature(t *testing.T) {
-//	    env := utils.SetupTestEnvironment(t)
-//	    defer utils.TeardownTestEnvironment(t, env)
+//	    env := testtestutils.SetupTestEnvironment(t)
+//	    defer testtestutils.TeardownTestEnvironment(t, env)
 //
 //	    // Use env.ConfigManager and env.Logger
 //	    result := myFunction(env.ConfigManager, env.Logger)
@@ -118,7 +118,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	require.NoError(t, err, "Failed to load test configuration")
 
 	// OVERRIDE HARDCODED PORTS WITH FREE PORTS TO PREVENT CONFLICTS
-	// Use GetFreePort() from websocket_test_utils.go to get free ports
+	// Use GetFreePort() from websocket_test_testtestutils.go to get free ports
 	wsPort := GetFreePort()
 	mediaMTXAPIPort := GetFreePort()
 	mediaMTXRTSPPort := GetFreePort()
@@ -164,8 +164,8 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 // Example usage:
 //
 //	func TestMediaMTXFeature(t *testing.T) {
-//	    env := utils.SetupMediaMTXTestEnvironment(t)
-//	    defer utils.TeardownMediaMTXTestEnvironment(t, env)
+//	    env := testtestutils.SetupMediaMTXTestEnvironment(t)
+//	    defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 //
 //	    // Use env.Controller for MediaMTX operations
 //	    result, err := env.Controller.CreatePath("test", "/dev/video0")
@@ -200,11 +200,11 @@ func SetupMediaMTXTestEnvironment(t *testing.T) *MediaMTXTestEnvironment {
 // Example usage:
 //
 //	func TestSecurityFeature(t *testing.T) {
-//	    env := utils.SetupSecurityTestEnvironment(t)
-//	    defer utils.TeardownSecurityTestEnvironment(t, env)
+//	    env := testtestutils.SetupSecurityTestEnvironment(t)
+//	    defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 //
 //	    // Use env.JWTHandler, env.RoleManager, env.SessionManager
-//	    token := utils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
+//	    token := testtestutils.GenerateTestToken(t, env.JWTHandler, "test_user", "admin")
 //	    require.NotEmpty(t, token)
 //	}
 func SetupSecurityTestEnvironment(t *testing.T) *SecurityTestEnvironment {
@@ -251,8 +251,8 @@ func TeardownSecurityTestEnvironment(t *testing.T, env *SecurityTestEnvironment)
 // Example usage:
 //
 //	func TestWebSocketFeature(t *testing.T) {
-//	    env := utils.SetupWebSocketTestEnvironment(t)
-//	    defer utils.TeardownWebSocketTestEnvironment(t, env)
+//	    env := testtestutils.SetupWebSocketTestEnvironment(t)
+//	    defer testtestutils.TeardownWebSocketTestEnvironment(t, env)
 //
 //	    // Use env.WebSocketServer for WebSocket operations
 //	    err := env.WebSocketServer.Start()
@@ -542,7 +542,7 @@ func SetupTestJWTHandler(t *testing.T, configManager *config.ConfigManager) *sec
 	cfg := configManager.GetConfig()
 	require.NotNil(t, cfg, "Configuration should be available")
 
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(t, err, "Failed to create JWT handler")
 
 	return jwtHandler
@@ -553,7 +553,7 @@ func SetupTestJWTHandlerForBenchmark(b *testing.B, configManager *config.ConfigM
 	cfg := configManager.GetConfig()
 	require.NotNil(b, cfg, "Configuration should be available")
 
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 	require.NoError(b, err, "Failed to create JWT handler")
 
 	return jwtHandler

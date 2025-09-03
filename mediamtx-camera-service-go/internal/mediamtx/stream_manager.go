@@ -219,6 +219,11 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		return nil, fmt.Errorf("stream name cannot be empty")
 	}
 
+	// Validate source
+	if source == "" {
+		return nil, fmt.Errorf("source cannot be empty")
+	}
+
 	// Check if source is a USB device path (starts with /dev/video)
 	if strings.HasPrefix(source, "/dev/video") {
 		// Create FFmpeg command for USB device publishing (like Python implementation)

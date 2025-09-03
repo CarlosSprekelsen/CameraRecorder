@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,8 +26,8 @@ func TestPermissionChecker_RoleHierarchy(t *testing.T) {
 	// REQ-SEC-003: Role-based access control for different user types
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Test role hierarchy
 	assert.True(t, security.RoleAdmin >= security.RoleOperator)
@@ -55,8 +54,8 @@ func TestPermissionChecker_MethodPermissions(t *testing.T) {
 	// REQ-SEC-003: Role-based access control for different user types
 
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	tests := []struct {
 		name      string
@@ -112,8 +111,8 @@ func TestPermissionChecker_MethodPermissions(t *testing.T) {
 
 func TestPermissionChecker_EdgeCases(t *testing.T) {
 	// Use shared security test environment
-	env := utils.SetupSecurityTestEnvironment(t)
-	defer utils.TeardownSecurityTestEnvironment(t, env)
+	env := testtestutils.SetupSecurityTestEnvironment(t)
+	defer testtestutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("get_required_role", func(t *testing.T) {
 		role := env.RoleManager.GetRequiredRole("ping")
@@ -198,14 +197,14 @@ func TestPermissionChecker_EdgeCases(t *testing.T) {
 
 func TestPermissionChecker_AdditionalEdgeCases(t *testing.T) {
 	t.Run("get_required_role_with_whitespace", func(t *testing.T) {
-		checker := security.NewPermissionChecker()
+		checker := NewPermissionChecker()
 
 		role := checker.GetRequiredRole("   ")
 		assert.Equal(t, security.RoleAdmin, role) // Should default to admin
 	})
 
 	t.Run("add_method_permission_with_whitespace", func(t *testing.T) {
-		checker := security.NewPermissionChecker()
+		checker := NewPermissionChecker()
 
 		err := checker.AddMethodPermission("   ", security.RoleViewer)
 		assert.Error(t, err)
@@ -213,7 +212,7 @@ func TestPermissionChecker_AdditionalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("remove_method_permission_with_whitespace", func(t *testing.T) {
-		checker := security.NewPermissionChecker()
+		checker := NewPermissionChecker()
 
 		err := checker.RemoveMethodPermission("   ")
 		assert.Error(t, err)
@@ -221,7 +220,7 @@ func TestPermissionChecker_AdditionalEdgeCases(t *testing.T) {
 	})
 
 	t.Run("add_method_permission_with_invalid_role", func(t *testing.T) {
-		checker := security.NewPermissionChecker()
+		checker := NewPermissionChecker()
 
 		err := checker.AddMethodPermission("test_method", security.Role(999))
 		assert.Error(t, err)
@@ -231,7 +230,7 @@ func TestPermissionChecker_AdditionalEdgeCases(t *testing.T) {
 
 // Performance benchmarks for permission checker
 func BenchmarkPermissionChecker_HasPermission(b *testing.B) {
-	checker := security.NewPermissionChecker()
+	checker := NewPermissionChecker()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -31,7 +31,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 )
 
 // TestCameraEvent tests the CameraEvent constants
@@ -317,8 +316,8 @@ func TestCameraMonitor(t *testing.T) {
 	t.Run("camera_monitor_interface_compliance", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
 		// This eliminates the need to create ConfigManager and Logger in every test
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		// Use real camera monitor instead of mock per testing guide
 		// Load config using shared config manager
@@ -382,8 +381,8 @@ func TestCameraMonitor(t *testing.T) {
 	t.Run("camera_monitor_event_handling", func(t *testing.T) {
 		// COMMON PATTERN: Use shared test environment instead of individual components
 		// This eliminates the need to create ConfigManager and Logger in every test
-		env := utils.SetupMediaMTXTestEnvironment(t)
-		defer utils.TeardownMediaMTXTestEnvironment(t, env)
+		env := testtestutils.SetupMediaMTXTestEnvironment(t)
+		defer testtestutils.TeardownMediaMTXTestEnvironment(t, env)
 
 		// Use real camera monitor for event handling test
 		err := env.ConfigManager.LoadConfig("../../config/development.yaml")
