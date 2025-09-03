@@ -696,6 +696,108 @@ func validateRetentionPolicyConfig(config *RetentionPolicyConfig) error {
 	return nil
 }
 
+// validateSecurityConfig validates security configuration.
+func validateSecurityConfig(config *SecurityConfig) error {
+	// Validate JWT secret key
+	if strings.TrimSpace(config.JWTSecretKey) == "" {
+		return &ValidationError{Field: "security.jwt_secret_key", Message: "JWT secret key cannot be empty"}
+	}
+
+	// Validate JWT expiry hours
+	if config.JWTExpiryHours <= 0 {
+		return &ValidationError{Field: "security.jwt_expiry_hours", Message: fmt.Sprintf("JWT expiry hours must be positive, got %d", config.JWTExpiryHours)}
+	}
+
+	// Validate rate limit requests
+	if config.RateLimitRequests <= 0 {
+		return &ValidationError{Field: "security.rate_limit_requests", Message: fmt.Sprintf("rate limit requests must be positive, got %d", config.RateLimitRequests)}
+	}
+
+	// Validate rate limit window
+	if config.RateLimitWindow <= 0 {
+		return &ValidationError{Field: "security.rate_limit_window", Message: fmt.Sprintf("rate limit window must be positive, got %v", config.RateLimitWindow)}
+	}
+
+	return nil
+}
+
+// validateServerDefaults validates server defaults configuration.
+func validateServerDefaults(config *ServerDefaults) error {
+	// Validate shutdown timeout
+	if config.ShutdownTimeout < 0 {
+		return &ValidationError{Field: "server_defaults.shutdown_timeout", Message: fmt.Sprintf("shutdown timeout cannot be negative, got %f", config.ShutdownTimeout)}
+	}
+
+	// Validate camera monitor ticker
+	if config.CameraMonitorTicker < 0 {
+		return &ValidationError{Field: "server_defaults.camera_monitor_ticker", Message: fmt.Sprintf("camera monitor ticker cannot be negative, got %f", config.CameraMonitorTicker)}
+	}
+
+	return nil
+}
+
+// validateStorageConfig validates storage configuration.
+func validateStorageConfig(config *StorageConfig) error {
+	// Validate warn and block percentages
+	if config.WarnPercent < 0 || config.WarnPercent > 100 {
+		return &ValidationError{Field: "storage.warn_percent", Message: fmt.Sprintf("warn percent must be between 0 and 100, got %d", config.WarnPercent)}
+	}
+
+	if config.BlockPercent < 0 || config.BlockPercent > 100 {
+		return &ValidationError{Field: "storage.block_percent", Message: fmt.Sprintf("block percent must be between 0 and 100, got %d", config.BlockPercent)}
+	}
+
+	// Ensure warn percent is less than block percent
+	if config.WarnPercent >= config.BlockPercent {
+		return &ValidationError{Field: "storage.warn_percent", Message: fmt.Sprintf("warn percent (%d) must be less than block percent (%d)", config.WarnPercent, config.BlockPercent)}
+	}
+
+	// Validate storage paths
+	if config.DefaultPath != "" {
+		if err := validateStoragePath("storage.default_path", config.DefaultPath); err != nil {
+			return err
+		}
+	}
+
+	if config.FallbackPath != "" {
+		if err := validateStoragePath("storage.fallback_path", config.FallbackPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateStoragePath validates that a storage path is valid, secure, and accessible
+func validateStoragePath(fieldName, path string) error {
+	if strings.TrimSpace(path) == "" {
+		return &ValidationError{Field: fieldName, Message: "storage path cannot be empty"}
+	}
+
+	// Clean the path to prevent path traversal attacks
+	cleanPath := filepath.Clean(path)
+	if cleanPath != path {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("storage path contains invalid characters or traversal attempts: %s", path)}
+	}
+
+	// Check if path is absolute (recommended for security)
+	if !filepath.IsAbs(cleanPath) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("storage path should be absolute for security: %s", path)}
+	}
+
+	// Check if path exists on filesystem
+	if _, err := os.Stat(cleanPath); os.IsNotExist(err) {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("storage path does not exist: %s", path)}
+	}
+
+	// Check if path is accessible (readable and writable for storage)
+	if _, err := os.Stat(cleanPath); err != nil {
+		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("storage path is not accessible: %s - %v", path, err)}
+	}
+
+	return nil
+}
+
 // contains checks if a slice contains a specific value.
 func contains(slice []string, value string) bool {
 	for _, item := range slice {

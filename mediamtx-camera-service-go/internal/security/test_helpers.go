@@ -341,3 +341,172 @@ func GetTestLoggerConfig() *TestLoggerConfig {
 		ConsoleEnabled: true,
 	}
 }
+
+// =============================================================================
+// TYPE COMPATIBILITY FOR MIDDLEWARE
+// =============================================================================
+
+// TestLoggerInterface provides the exact interface needed by middleware
+// This allows type compatibility without external dependencies
+type TestLoggerInterface interface {
+	Info(args ...interface{})
+	Warn(args ...interface{})
+	Error(args ...interface{})
+	Debug(args ...interface{})
+	WithFields(fields map[string]interface{}) TestLoggerInterface
+}
+
+// Ensure TestLogger implements TestLoggerInterface
+var _ TestLoggerInterface = (*TestLogger)(nil)
+
+// =============================================================================
+// MIDDLEWARE COMPATIBILITY SOLUTION
+// =============================================================================
+
+// TestLoggerWrapper provides middleware compatibility
+// This allows the TestLogger to be used with middleware functions
+// Following best practice: wrapper pattern for interface compatibility
+type TestLoggerWrapper struct {
+	*TestLogger
+}
+
+// NewTestLoggerWrapper creates a wrapped logger for middleware compatibility
+func NewTestLoggerWrapper() *TestLoggerWrapper {
+	return &TestLoggerWrapper{
+		TestLogger: NewTestLogger(),
+	}
+}
+
+// WithFields - implements the exact signature expected by middleware
+// Returns the wrapper for method chaining compatibility
+func (tw *TestLoggerWrapper) WithFields(fields map[string]interface{}) *TestLoggerWrapper {
+	tw.TestLogger.WithFields(fields)
+	return tw
+}
+
+// CreateMiddlewareCompatibleLogger creates a logger that can be used with middleware
+// This uses Go's type system to provide compatibility
+func CreateMiddlewareCompatibleLogger() interface{} {
+	// Return as interface{} to allow middleware to accept it
+	// The middleware will use the methods it needs
+	return NewTestLoggerWrapper()
+}
+
+// =============================================================================
+// MINIMAL LOGGING.LOGGER COMPATIBILITY
+// =============================================================================
+
+// MinimalLogger provides a minimal implementation compatible with *logging.Logger
+// This allows middleware to work without external dependencies
+// Following best practice: minimal interface implementation
+type MinimalLogger struct {
+	// Internal state for test validation
+	infoLogs   []string
+	warnLogs   []string
+	errorLogs  []string
+	debugLogs  []string
+	fieldsLogs []map[string]interface{}
+	mu         sync.RWMutex
+}
+
+// NewMinimalLogger creates a new minimal logger for middleware compatibility
+func NewMinimalLogger() *MinimalLogger {
+	return &MinimalLogger{
+		infoLogs:   make([]string, 0),
+		warnLogs:   make([]string, 0),
+		errorLogs:  make([]string, 0),
+		debugLogs:  make([]string, 0),
+		fieldsLogs: make([]map[string]interface{}, 0),
+	}
+}
+
+// Core logging methods - minimal implementation
+func (l *MinimalLogger) Info(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.infoLogs = append(l.infoLogs, fmt.Sprint(args...))
+}
+
+func (l *MinimalLogger) Warn(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.warnLogs = append(l.warnLogs, fmt.Sprint(args...))
+}
+
+func (l *MinimalLogger) Error(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.errorLogs = append(l.errorLogs, fmt.Sprint(args...))
+}
+
+func (l *MinimalLogger) Debug(args ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.debugLogs = append(l.debugLogs, fmt.Sprint(args...))
+}
+
+// WithFields - implements the exact signature expected by middleware
+// Returns self for method chaining compatibility
+func (l *MinimalLogger) WithFields(fields map[string]interface{}) *MinimalLogger {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.fieldsLogs = append(l.fieldsLogs, fields)
+	return l
+}
+
+// Test utility methods for validation
+func (l *MinimalLogger) GetInfoLogs() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return append([]string{}, l.infoLogs...)
+}
+
+func (l *MinimalLogger) GetWarnLogs() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return append([]string{}, l.warnLogs...)
+}
+
+func (l *MinimalLogger) GetErrorLogs() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return append([]string{}, l.errorLogs...)
+}
+
+func (l *MinimalLogger) GetDebugLogs() []string {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return append([]string{}, l.debugLogs...)
+}
+
+func (l *MinimalLogger) GetFieldsLogs() []map[string]interface{} {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return append([]map[string]interface{}{}, l.fieldsLogs...)
+}
+
+// ClearLogs clears all logged messages (useful for test isolation)
+func (l *MinimalLogger) ClearLogs() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.infoLogs = l.infoLogs[:0]
+	l.warnLogs = l.warnLogs[:0]
+	l.errorLogs = l.errorLogs[:0]
+	l.debugLogs = l.debugLogs[:0]
+	l.fieldsLogs = l.fieldsLogs[:0]
+}
+
+// HasLogs checks if any logs were recorded
+func (l *MinimalLogger) HasLogs() bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return len(l.infoLogs) > 0 || len(l.warnLogs) > 0 || 
+		   len(l.errorLogs) > 0 || len(l.debugLogs) > 0
+}
+
+// LogCount returns total number of log entries
+func (l *MinimalLogger) LogCount() int {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return len(l.infoLogs) + len(l.warnLogs) + len(l.errorLogs) + len(l.debugLogs)
+}

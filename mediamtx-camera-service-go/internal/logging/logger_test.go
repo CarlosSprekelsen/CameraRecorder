@@ -206,21 +206,26 @@ func TestLogger_ContextLogging_EdgeCases(t *testing.T) {
 
 // TestLogger_LevelManagement tests log level management comprehensively
 func TestLogger_LevelManagement(t *testing.T) {
-	t.Parallel()
 	// REQ-LOG-004: Log level management
+	// Note: Not using t.Parallel() to avoid logger instance sharing issues
 
-	logger := CreateTestLogger(t, nil)
 	testLevels := TestLogLevels()
 
 	for _, level := range testLevels {
 		t.Run(fmt.Sprintf("level_%s", level.String()), func(t *testing.T) {
+			// Create a fresh logger for each subtest to avoid interference
+			logger := CreateTestLogger(t, nil)
+
 			// Test SetLevel
 			logger.SetLevel(level)
 			assert.Equal(t, level, logger.GetLevel())
 
 			// Test IsLevelEnabled for all levels
 			for _, testLevel := range testLevels {
-				expected := testLevel >= level
+				// In logrus, when a level is set, that level and all LOWER levels are enabled
+				// So if we set level to X, then X and all levels < X should be enabled
+				// Note: logrus levels are inverted (TraceLevel=6, FatalLevel=1)
+				expected := testLevel <= level
 				assert.Equal(t, expected, logger.IsLevelEnabled(testLevel),
 					"Level %s should be enabled at %s level", testLevel, level)
 			}
@@ -235,20 +240,24 @@ func TestLogger_LevelManagement(t *testing.T) {
 
 // TestLogger_ComponentLevels tests component-specific level management
 func TestLogger_ComponentLevels(t *testing.T) {
-	t.Parallel()
 	// REQ-LOG-004: Log level management
+	// Note: Not using t.Parallel() to avoid logger instance sharing issues
 
-	logger := CreateTestLogger(t, nil)
 	components := TestComponents()
 
 	// Test setting different levels for different components
 	for i, component := range components {
 		level := TestLogLevels()[i%len(TestLogLevels())]
-		logger.SetComponentLevel(component, level)
 
-		effectiveLevel := logger.GetEffectiveLevel(component)
-		assert.Equal(t, level, effectiveLevel,
-			"Component %s should have effective level %s", component, level)
+		t.Run(fmt.Sprintf("component_%s", component), func(t *testing.T) {
+			// Create a fresh logger for each subtest to avoid interference
+			logger := CreateTestLogger(t, nil)
+
+			logger.SetComponentLevel(component, level)
+			effectiveLevel := logger.GetEffectiveLevel(component)
+			assert.Equal(t, level, effectiveLevel,
+				"Component %s should have effective level %s", component, level)
+		})
 	}
 }
 

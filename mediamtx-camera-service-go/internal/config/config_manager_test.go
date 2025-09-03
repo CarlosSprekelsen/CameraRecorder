@@ -35,8 +35,9 @@ func TestConfigManager_LoadConfig_ValidYAML(t *testing.T) {
 	helper.CleanupEnvironment()
 	defer helper.CleanupEnvironment()
 
-	// Create config from valid fixture
-	configPath := helper.CreateTempConfigFromFixture("config_valid_minimal.yaml")
+	// Create test directories and config from valid fixture
+	helper.CreateTestDirectories()
+	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
 	
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,6 +46,34 @@ func (h *TestConfigHelper) CreateTempConfigFile(content string) string {
 	err := os.WriteFile(tempFile, []byte(content), 0644)
 	require.NoError(h.t, err, "Failed to create temporary config file")
 	return tempFile
+}
+
+// CreateTestDirectories creates the directories needed for test configuration validation
+func (h *TestConfigHelper) CreateTestDirectories() {
+	// Create directories that the config validation expects to exist
+	dirs := []string{
+		"/tmp/mediamtx.yml",
+		"/tmp/recordings",
+		"/tmp/snapshots",
+		"/tmp/camera-service.log",
+	}
+	
+	for _, dir := range dirs {
+		// For files, create the parent directory
+		if strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".log") {
+			parentDir := filepath.Dir(dir)
+			err := os.MkdirAll(parentDir, 0755)
+			require.NoError(h.t, err, "Failed to create directory: %s", parentDir)
+			
+			// Create empty file
+			_, err = os.Create(dir)
+			require.NoError(h.t, err, "Failed to create file: %s", dir)
+		} else {
+			// For directories, create them
+			err := os.MkdirAll(dir, 0755)
+			require.NoError(h.t, err, "Failed to create directory: %s", dir)
+		}
+	}
 }
 
 // CreateTempConfigFromFixture creates a temporary config file from a fixture

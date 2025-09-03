@@ -249,7 +249,6 @@ type Config struct {
 	Security        SecurityConfig        `mapstructure:"security"`
 	Storage         StorageConfig         `mapstructure:"storage"`
 	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
-	HealthPort      *int                  `mapstructure:"health_port"` // Optional health server port for testing
 	// Server operation defaults
 	ServerDefaults  ServerDefaults        `mapstructure:"server_defaults"`
 }

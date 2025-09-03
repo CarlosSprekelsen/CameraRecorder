@@ -306,44 +306,6 @@ func (cm *ConfigManager) validateFinalConfiguration(config *Config) error {
 		return fmt.Errorf("storage fallback path cannot be empty or whitespace-only")
 	}
 
-	// Enhanced storage path validation for security
-	if err := validateStoragePath("storage.default_path", config.Storage.DefaultPath); err != nil {
-		return err
-	}
-	if err := validateStoragePath("storage.fallback_path", config.Storage.FallbackPath); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateStoragePath validates that a storage path is valid, secure, and accessible
-func validateStoragePath(fieldName, path string) error {
-	if strings.TrimSpace(path) == "" {
-		return fmt.Errorf("%s cannot be empty or whitespace-only", fieldName)
-	}
-
-	// Clean the path to prevent path traversal attacks
-	cleanPath := filepath.Clean(path)
-	if cleanPath != path {
-		return fmt.Errorf("%s contains invalid characters or traversal attempts: %s", fieldName, path)
-	}
-
-	// Check if path is absolute (recommended for security)
-	if !filepath.IsAbs(cleanPath) {
-		return fmt.Errorf("%s should be absolute for security: %s", fieldName, path)
-	}
-
-	// Check if path exists on filesystem
-	if _, err := os.Stat(cleanPath); os.IsNotExist(err) {
-		return fmt.Errorf("%s does not exist: %s", fieldName, path)
-	}
-
-	// Check if path is accessible (readable and writable for storage)
-	if _, err := os.Stat(cleanPath); err != nil {
-		return fmt.Errorf("%s is not accessible: %s - %v", fieldName, path, err)
-	}
-
 	return nil
 }
 

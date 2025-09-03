@@ -463,10 +463,11 @@ func TestConfig_CompleteStructure(t *testing.T) {
 			JWTExpiryHours: 24,
 		},
 		Storage: StorageConfig{
+			WarnPercent:  80,
+			BlockPercent: 90,
 			DefaultPath:  "/opt/recordings",
 			FallbackPath: "/tmp/recordings",
 		},
-		HealthPort: nil,
 	}
 
 	assert.NotNil(t, cfg)
@@ -483,19 +484,4 @@ func TestConfig_CompleteStructure(t *testing.T) {
 	assert.Equal(t, 2.0, cfg.Performance.ResponseTimeTargets.SnapshotCapture)
 	assert.Equal(t, "test-secret", cfg.Security.JWTSecretKey)
 	assert.Equal(t, "/opt/recordings", cfg.Storage.DefaultPath)
-	assert.Nil(t, cfg.HealthPort)
-}
-
-func TestConfig_HealthPortOptional(t *testing.T) {
-	t.Parallel()
-	// REQ-CONFIG-003: Health port must be optional for testing scenarios
-	cfg1 := &Config{}
-	assert.Nil(t, cfg1.HealthPort)
-
-	healthPort := 8081
-	cfg2 := &Config{
-		HealthPort: &healthPort,
-	}
-	assert.NotNil(t, cfg2.HealthPort)
-	assert.Equal(t, 8081, *cfg2.HealthPort)
 }
