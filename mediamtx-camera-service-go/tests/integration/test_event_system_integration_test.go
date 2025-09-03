@@ -20,8 +20,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -31,8 +29,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
+	gorilla "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -110,7 +107,7 @@ func TestEventSystemIntegration(t *testing.T) {
 		time.Sleep(2 * time.Second)
 
 		// Test WebSocket connection and event subscription
-		conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:8002/ws", nil)
+		conn, _, err := gorilla.DefaultDialer.Dial("ws://localhost:8002/ws", nil)
 		require.NoError(t, err, "Failed to connect to WebSocket server")
 		defer conn.Close()
 
@@ -187,15 +184,15 @@ func TestEventSystemIntegration(t *testing.T) {
 		// This would normally happen through the camera monitor
 		// For testing, we'll use the event manager directly
 		eventManager := wsServer.GetEventManager()
-		
+
 		// Simulate camera connected event
 		cameraEventData := map[string]interface{}{
-			"device":     "/dev/video0",
-			"name":       "Test Camera",
-			"status":     "connected",
-			"driver":     "uvcvideo",
-			"card_name":  "USB Camera",
-			"timestamp":  time.Now().Format(time.RFC3339),
+			"device":    "/dev/video0",
+			"name":      "Test Camera",
+			"status":    "connected",
+			"driver":    "uvcvideo",
+			"card_name": "USB Camera",
+			"timestamp": time.Now().Format(time.RFC3339),
 		}
 
 		err = eventManager.PublishEvent(websocket.TopicCameraConnected, cameraEventData)
@@ -258,7 +255,7 @@ func TestEventSystemIntegration(t *testing.T) {
 		}
 
 		logger := logging.NewLogger("event-filtering-integration-test")
-		
+
 		// Create event manager directly for testing
 		eventManager := websocket.NewEventManager(logger.Logger)
 

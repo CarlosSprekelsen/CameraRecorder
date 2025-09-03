@@ -38,7 +38,6 @@ func TestEventSystemPerformance(t *testing.T) {
 		// Subscribe 1000 clients to different topics
 		clientCount := 1000
 		topicCount := 10
-		clientsPerTopic := clientCount / topicCount
 
 		// Create topics
 		topics := []websocket.EventTopic{
@@ -69,8 +68,8 @@ func TestEventSystemPerformance(t *testing.T) {
 		for i := 0; i < eventCount; i++ {
 			topicIndex := i % topicCount
 			eventData := map[string]interface{}{
-				"event_id": i,
-				"data":     fmt.Sprintf("test_data_%d", i),
+				"event_id":  i,
+				"data":      fmt.Sprintf("test_data_%d", i),
 				"timestamp": time.Now().Format(time.RFC3339),
 			}
 
@@ -81,7 +80,7 @@ func TestEventSystemPerformance(t *testing.T) {
 		duration := time.Since(startTime)
 		eventsPerSecond := float64(eventCount) / duration.Seconds()
 
-		t.Logf("Event delivery performance: %d events in %v (%.2f events/sec)", 
+		t.Logf("Event delivery performance: %d events in %v (%.2f events/sec)",
 			eventCount, duration, eventsPerSecond)
 
 		// Performance assertion: should handle at least 100 events per second
@@ -133,7 +132,7 @@ func TestEventSystemPerformance(t *testing.T) {
 		duration := time.Since(startTime)
 		operationsPerSecond := float64(clientCount) / duration.Seconds()
 
-		t.Logf("Concurrent subscription performance: %d operations in %v (%.2f ops/sec)", 
+		t.Logf("Concurrent subscription performance: %d operations in %v (%.2f ops/sec)",
 			clientCount, duration, operationsPerSecond)
 
 		// Performance assertion: should handle at least 500 operations per second
@@ -159,11 +158,11 @@ func TestEventSystemPerformance(t *testing.T) {
 		// Subscribe clients to multiple topics
 		for i := 0; i < clientCount; i++ {
 			clientID := fmt.Sprintf("memory_test_client_%d", i)
-			
+
 			// Subscribe to 1-3 topics randomly
 			topicCount := (i % 3) + 1
 			clientTopics := topics[:topicCount]
-			
+
 			err := em.Subscribe(clientID, clientTopics, nil)
 			require.NoError(t, err, "Client subscription should succeed")
 		}
@@ -175,9 +174,9 @@ func TestEventSystemPerformance(t *testing.T) {
 		for i := 0; i < eventCount; i++ {
 			for _, topic := range topics {
 				eventData := map[string]interface{}{
-					"event_id": i,
-					"topic":    string(topic),
-					"data":     fmt.Sprintf("memory_test_data_%d", i),
+					"event_id":  i,
+					"topic":     string(topic),
+					"data":      fmt.Sprintf("memory_test_data_%d", i),
 					"timestamp": time.Now().Format(time.RFC3339),
 				}
 
@@ -189,7 +188,7 @@ func TestEventSystemPerformance(t *testing.T) {
 		duration := time.Since(startTime)
 		eventsPerSecond := float64(eventCount*len(topics)) / duration.Seconds()
 
-		t.Logf("Memory test performance: %d events in %v (%.2f events/sec)", 
+		t.Logf("Memory test performance: %d events in %v (%.2f events/sec)",
 			eventCount*len(topics), duration, eventsPerSecond)
 
 		// Verify subscription statistics
@@ -222,7 +221,7 @@ func TestEventSystemPerformance(t *testing.T) {
 			clientID := fmt.Sprintf("filtered_client_%d", i)
 			deviceIndex := i % deviceCount
 			devicePath := fmt.Sprintf("/dev/video%d", deviceIndex)
-			
+
 			filters := map[string]interface{}{
 				"device": devicePath,
 			}
@@ -238,7 +237,7 @@ func TestEventSystemPerformance(t *testing.T) {
 		for i := 0; i < eventCount; i++ {
 			deviceIndex := i % deviceCount
 			devicePath := fmt.Sprintf("/dev/video%d", deviceIndex)
-			
+
 			eventData := map[string]interface{}{
 				"device":    devicePath,
 				"event_id":  i,
@@ -252,7 +251,7 @@ func TestEventSystemPerformance(t *testing.T) {
 		duration := time.Since(startTime)
 		eventsPerSecond := float64(eventCount) / duration.Seconds()
 
-		t.Logf("Filtered event performance: %d events in %v (%.2f events/sec)", 
+		t.Logf("Filtered event performance: %d events in %v (%.2f events/sec)",
 			eventCount, duration, eventsPerSecond)
 
 		// Performance assertion: filtered events should be at least as fast as unfiltered
