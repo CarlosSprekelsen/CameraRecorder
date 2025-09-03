@@ -1,0 +1,351 @@
+//go:build integration
+// +build integration
+
+/*
+MediaMTX Integration Tests
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX service integration
+- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-004: Health monitoring
+- REQ-MTX-007: Error handling and recovery
+
+Test Categories: Integration
+API Documentation Reference: docs/api/json_rpc_methods.md
+*/
+
+package integration_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+)
+
+// TestMediaMTX_RealSystemIntegration_ReqMTX001 tests real MediaMTX service integration
+func TestMediaMTX_RealSystemIntegration_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	// This test requires a real MediaMTX service running
+	// Skip if not available
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping real system integration test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        5 * time.Second,
+		RetryAttempts:  3,
+		RetryDelay:     1 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	// Test client creation
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	require.NotNil(t, client, "Client should be created successfully")
+
+	ctx := context.Background()
+
+	// Test health check
+	err := client.HealthCheck(ctx)
+	require.NoError(t, err, "Health check should succeed with real MediaMTX service")
+
+	// Test basic API endpoints
+	response, err := client.Get(ctx, "/v3/paths/list")
+	if err != nil {
+		t.Logf("GET /v3/paths/list failed (expected if no paths): %v", err)
+	} else {
+		assert.NotNil(t, response, "Response should not be nil")
+	}
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// TestMediaMTX_PathManagement_ReqMTX003 tests real path management
+func TestMediaMTX_PathManagement_ReqMTX003(t *testing.T) {
+	// REQ-MTX-003: Path creation and deletion
+	// This test requires a real MediaMTX service running
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping path management test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        5 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	pathManager := mediamtx.NewPathManager(client, config, logger)
+	require.NotNil(t, pathManager)
+
+	ctx := context.Background()
+	testPathName := "test_integration_path"
+	testSource := "/dev/video0"
+
+	// Test path creation
+	err := pathManager.CreatePath(ctx, testPathName, testSource, nil)
+	if err != nil {
+		t.Logf("Path creation failed (expected if device not available): %v", err)
+		// This is expected in test environment without real camera
+	} else {
+		// Test path existence
+		exists := pathManager.PathExists(ctx, testPathName)
+		assert.True(t, exists, "Created path should exist")
+
+		// Test path retrieval
+		path, err := pathManager.GetPath(ctx, testPathName)
+		if err == nil {
+			assert.NotNil(t, path, "Retrieved path should not be nil")
+			assert.Equal(t, testPathName, path.Name, "Path name should match")
+		}
+
+		// Test path deletion
+		err = pathManager.DeletePath(ctx, testPathName)
+		if err == nil {
+			exists = pathManager.PathExists(ctx, testPathName)
+			assert.False(t, exists, "Deleted path should not exist")
+		}
+	}
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// TestMediaMTX_StreamManagement_ReqMTX002 tests real stream management
+func TestMediaMTX_StreamManagement_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	// This test requires a real MediaMTX service running
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping stream management test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        5 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	streamManager := mediamtx.NewStreamManager(client, config, logger)
+	require.NotNil(t, streamManager)
+
+	ctx := context.Background()
+	testStreamName := "test_integration_stream"
+	testSource := "/dev/video0"
+
+	// Test stream creation
+	stream, err := streamManager.CreateStream(ctx, testStreamName, testSource)
+	if err != nil {
+		t.Logf("Stream creation failed (expected if device not available): %v", err)
+		// This is expected in test environment without real camera
+	} else {
+		assert.NotNil(t, stream, "Created stream should not be nil")
+		assert.Equal(t, testStreamName, stream.Name, "Stream name should match")
+
+		// Test stream retrieval
+		retrievedStream, err := streamManager.GetStream(ctx, stream.ConfName)
+		if err == nil {
+			assert.NotNil(t, retrievedStream, "Retrieved stream should not be nil")
+		}
+
+		// Test stream deletion
+		err = streamManager.DeleteStream(ctx, stream.ConfName)
+		if err == nil {
+			// Verify stream is deleted
+			_, err = streamManager.GetStream(ctx, stream.ConfName)
+			assert.Error(t, err, "Deleted stream should not be retrievable")
+		}
+	}
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// TestMediaMTX_HealthMonitoring_ReqMTX004 tests real health monitoring
+func TestMediaMTX_HealthMonitoring_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	// This test requires a real MediaMTX service running
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping health monitoring test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:                "http://localhost:9997",
+		HealthCheckURL:         "http://localhost:9997/v3/paths/list",
+		Timeout:                5 * time.Second,
+		HealthCheckInterval:    5,
+		HealthFailureThreshold: 3,
+		HealthCheckTimeout:     5 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	healthMonitor := mediamtx.NewHealthMonitor(client, config, logger)
+	require.NotNil(t, healthMonitor)
+
+	ctx := context.Background()
+
+	// Test health monitor start
+	err := healthMonitor.Start(ctx)
+	require.NoError(t, err, "Health monitor should start successfully")
+
+	// Wait for health check to run
+	time.Sleep(2 * time.Second)
+
+	// Test health status
+	status := healthMonitor.GetStatus()
+	assert.NotNil(t, status, "Health status should not be nil")
+	assert.NotEmpty(t, status.Status, "Health status should not be empty")
+
+	// Test health metrics
+	metrics := healthMonitor.GetMetrics()
+	assert.NotNil(t, metrics, "Health metrics should not be nil")
+	assert.Contains(t, metrics, "is_healthy", "Metrics should contain health status")
+	assert.Contains(t, metrics, "status", "Metrics should contain status")
+
+	// Test health monitor stop
+	err = healthMonitor.Stop(ctx)
+	require.NoError(t, err, "Health monitor should stop successfully")
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// TestMediaMTX_ErrorHandling_ReqMTX007 tests real error handling scenarios
+func TestMediaMTX_ErrorHandling_ReqMTX007(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	// This test requires a real MediaMTX service running
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping error handling test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        5 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	require.NotNil(t, client)
+
+	ctx := context.Background()
+
+	// Test invalid endpoint (should return error)
+	_, err := client.Get(ctx, "/v3/invalid/endpoint")
+	assert.Error(t, err, "Invalid endpoint should return error")
+
+	// Test invalid path creation
+	pathManager := mediamtx.NewPathManager(client, config, logger)
+	err = pathManager.CreatePath(ctx, "", "/dev/video0", nil)
+	assert.Error(t, err, "Empty path name should return error")
+	assert.Contains(t, err.Error(), "path name cannot be empty", "Should get specific error message")
+
+	err = pathManager.CreatePath(ctx, "test_path", "", nil)
+	assert.Error(t, err, "Empty source should return error")
+	assert.Contains(t, err.Error(), "source cannot be empty", "Should get specific error message")
+
+	// Test invalid stream creation
+	streamManager := mediamtx.NewStreamManager(client, config, logger)
+	_, err = streamManager.CreateStream(ctx, "", "/dev/video0")
+	assert.Error(t, err, "Empty stream name should return error")
+	assert.Contains(t, err.Error(), "stream name cannot be empty", "Should get specific error message")
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// TestMediaMTX_Performance_ReqMTX001 tests performance characteristics
+func TestMediaMTX_Performance_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	// This test requires a real MediaMTX service running
+	if !isMediaMTXAvailable() {
+		t.Skip("MediaMTX service not available, skipping performance test")
+	}
+
+	config := &mediamtx.MediaMTXConfig{
+		BaseURL:        "http://localhost:9997",
+		HealthCheckURL: "http://localhost:9997/v3/paths/list",
+		Timeout:        5 * time.Second,
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.InfoLevel)
+
+	client := mediamtx.NewClient("http://localhost:9997", config, logger)
+	require.NotNil(t, client)
+
+	ctx := context.Background()
+
+	// Test response time for health check
+	start := time.Now()
+	err := client.HealthCheck(ctx)
+	duration := time.Since(start)
+
+	require.NoError(t, err, "Health check should succeed")
+	assert.Less(t, duration, 2*time.Second, "Health check should complete within 2 seconds")
+
+	// Test concurrent requests
+	concurrency := 5
+	done := make(chan bool, concurrency)
+	start = time.Now()
+
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			_, err := client.Get(ctx, "/v3/paths/list")
+			if err != nil {
+				t.Logf("Concurrent request failed: %v", err)
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all requests to complete
+	for i := 0; i < concurrency; i++ {
+		<-done
+	}
+
+	totalDuration := time.Since(start)
+	t.Logf("Concurrent requests completed in %v", totalDuration)
+	assert.Less(t, totalDuration, 5*time.Second, "Concurrent requests should complete within 5 seconds")
+
+	// Clean up
+	err = client.Close()
+	require.NoError(t, err, "Client should close successfully")
+}
+
+// Helper function to check if MediaMTX service is available
+func isMediaMTXAvailable() bool {
+	// Try to connect to MediaMTX service
+	client := mediamtx.NewClient("http://localhost:9997", &mediamtx.MediaMTXConfig{
+		Timeout: 2 * time.Second,
+	}, logrus.New())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	err := client.HealthCheck(ctx)
+	client.Close()
+
+	return err == nil
+}

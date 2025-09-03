@@ -1,0 +1,159 @@
+# UltraEfficient Configuration for Edge/IoT Devices
+# Optimized for minimal power consumption and resource usage
+# Based on resource optimization test results: CPU=6.00%, Memory=0.45MB, PowerScore=6.09
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 10  # Reduced from 1000 for edge devices
+  read_timeout: 10s    # Increased for stability
+  write_timeout: 5s    # Increased for reliability
+  ping_interval: 60s   # Increased from 30s for power efficiency
+  pong_wait: 120s      # Increased from 60s for power efficiency
+  max_message_size: 524288  # Reduced to 512KB for edge devices
+
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/etc/mediamtx/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  health_check_interval: 60  # Increased from 30 for power efficiency
+  health_failure_threshold: 5  # Increased tolerance
+  health_circuit_breaker_timeout: 120  # Increased from 60
+  health_max_backoff_interval: 600  # Increased from 300
+  health_recovery_confirmation_threshold: 3  # Increased from 2
+  backoff_base_multiplier: 1.5  # Reduced from 2.0 for gentler backoff
+  backoff_jitter_range: [0.1, 0.2]  # Reduced jitter
+  process_termination_timeout: 15.0  # Increased from 10.0
+  process_kill_timeout: 10.0  # Increased from 5.0
+  health_check_timeout: 10s  # Increased from 5s
+  codec:
+    video_profile: "baseline"
+    video_level: "3.0"  # Reduced from 3.1 for efficiency
+    pixel_format: "yuv420p"
+    bitrate: "1M"  # Reduced from 2M for power efficiency
+    preset: "ultrafast"  # Changed from "fast" for efficiency
+  stream_readiness:
+    timeout: 60.0  # Increased from 30.0 for stability
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+    check_interval: 2.0  # Increased from 1.0
+    enable_progress_notifications: false  # Disabled for efficiency
+    graceful_fallback: true
+
+camera:
+  poll_interval: 2.0  # Increased from 5.0 to 2.0 seconds for power efficiency
+  detection_timeout: 15.0  # Increased from 10.0
+  device_range: [0, 9]
+  enable_capability_detection: false  # Disabled for power efficiency
+  auto_start_streams: false
+  capability_timeout: 10.0  # Increased from 5.0
+  capability_retry_interval: 2.0  # Increased from 1.0
+  capability_max_retries: 2  # Reduced from 3
+
+logging:
+  level: "warn"  # Changed from "info" to reduce log overhead
+  format: "json"
+  file_enabled: true
+  file_path: "/var/log/camera-service.log"
+  max_file_size: 5242880  # Reduced to 5MB from 10MB
+  backup_count: 3  # Reduced from 5
+  console_enabled: false  # Disabled for edge devices
+
+recording:
+  enabled: false  # Disabled by default for power efficiency
+  format: "mp4"
+  quality: "low"  # Changed from "medium" for efficiency
+  segment_duration: 600  # Reduced to 10 minutes from 5 minutes
+  max_segment_size: 52428800  # Reduced to 50MB from 100MB
+  auto_cleanup: true
+  cleanup_interval: 7200  # Increased to 2 hours from 1 hour
+  max_age: 2592000  # Increased to 30 days from 7 days
+  max_size: 536870912  # Reduced to 500MB from 1GB
+  default_rotation_size: 52428800  # Reduced to 50MB from 100MB
+  default_max_duration: 12h  # Reduced from 24h
+  default_retention_days: 30  # Increased from 7 days
+
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 70  # Reduced from 85 for efficiency
+  max_width: 1280  # Reduced from 1920
+  max_height: 720  # Reduced from 1080
+  auto_cleanup: true
+  cleanup_interval: 7200  # Increased to 2 hours from 1 hour
+  max_age: 2592000  # Increased to 30 days from 7 days
+  max_count: 500  # Reduced from 1000
+
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 15.0  # Increased from 10.0
+    execution_timeout: 60.0  # Increased from 30.0
+    internal_timeout: 10  # Increased from 5
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+  recording:
+    process_creation_timeout: 15.0  # Increased from 10.0
+    execution_timeout: 60.0  # Increased from 30.0
+    internal_timeout: 10  # Increased from 5
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+
+notifications:
+  websocket:
+    delivery_timeout: 10.0  # Increased from 5.0
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+    max_queue_size: 100  # Reduced from 1000
+    cleanup_interval: 600  # Increased to 10 minutes from 5 minutes
+  real_time:
+    camera_status_interval: 60.0  # Increased from 30.0
+    recording_progress_interval: 30.0  # Increased from 10.0
+    connection_health_check: 120.0  # Increased from 60.0
+
+performance:
+  response_time_targets:
+    snapshot_capture: 5.0  # Increased from 2.0
+    recording_start: 10.0  # Increased from 5.0
+    recording_stop: 5.0  # Increased from 3.0
+    file_listing: 2.0  # Increased from 1.0
+  snapshot_tiers:
+    tier1_usb_direct_timeout: 2.0  # Increased from 1.0
+    tier2_rtsp_ready_check_timeout: 5.0  # Increased from 2.0
+    tier3_activation_timeout: 10.0  # Increased from 5.0
+    tier3_activation_trigger_timeout: 20.0  # Increased from 10.0
+    total_operation_timeout: 30.0  # Increased from 15.0
+    immediate_response_threshold: 1.0  # Increased from 0.5
+    acceptable_response_threshold: 5.0  # Increased from 2.0
+    slow_response_threshold: 10.0  # Increased from 5.0
+  optimization:
+    enable_caching: false  # Disabled for memory efficiency
+    cache_ttl: 60  # Reduced to 1 minute from 5 minutes
+    max_concurrent_operations: 3  # Reduced from 10
+    connection_pool_size: 2  # Reduced from 5
+
+security:
+  rate_limit_requests: 50  # Reduced from 100 for edge devices
+  rate_limit_window: 2m    # Increased from 1m
+  jwt_secret_key: "edge-device-secret-key-change-in-production"
+  jwt_expiry_hours: 48     # Increased from 24 for stability
+
+storage:
+  warn_percent: 70    # Reduced from 80 for early warning
+  block_percent: 85   # Reduced from 90 for safety
+  default_path: "/opt/camera-service/recordings"
+  fallback_path: "/tmp/recordings"
+
+retention_policy:
+  enabled: true
+  type: "age"
+  max_age_days: 30     # Increased from 7 days
+  max_size_gb: 0.5     # Reduced from 1 GB
+  auto_cleanup: true
+
+health_port: 8080

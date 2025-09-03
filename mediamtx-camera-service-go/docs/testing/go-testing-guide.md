@@ -27,43 +27,49 @@
 4. **Test failures indicate API/implementation mismatch** - Not test bugs
 5. **No "accommodation" of broken implementations** - Tests do not fix the implementation - it is ok if a test fails, that's their purpose, to find real bugs not accommodate them
 
-### **Package Declaration Rules**
-1. **Test files must use `package *_test` for external testing** - `package config_test` for config tests, `package logging_test` for logging tests
-2. **This follows Go's official external testing pattern** - Tests run in separate package context
-3. **Use `-coverpkg` flag for cross-package coverage** - `go test -coverpkg=./internal/config ./tests/unit/test_config_management_test.go`
-4. **Coverage measurement is mandatory** - All tests must produce accurate coverage reports
-5. **External testing provides better separation** - Keeps test infrastructure separate from source code
+### **Package Declaration Rules - HYBRID PATTERN**
+1. **Unit Tests**: Use `package <module>` in internal packages (e.g., `package mediamtx` in `internal/mediamtx/health_monitor_test.go`)
+2. **Integration Tests**: Use `package <module>_test` in external test directories (e.g., `package mediamtx_test` in `tests/integration/`)
+3. **Unit tests follow Go standard**: `go test ./internal/mediamtx/` works directly
+4. **Integration tests require build tags**: `go test -tags="integration" ./tests/integration/`
+5. **Coverage measurement**: Unit tests use standard Go coverage, integration tests use `-coverpkg` flag
 
-### **Go Testing Approach Explanation**
-**Why We Use External Testing (`package *_test`)**:
-- **Separation of Concerns**: Keeps test infrastructure separate from source code
-- **Centralized Test Management**: Easier to maintain and govern test standards
-- **Better Organization**: Logical grouping by test type (unit, integration, etc.)
+### **Go Testing Approach Explanation - HYBRID PATTERN**
+**Why We Use Hybrid Testing**:
+- **Unit Tests (Internal)**: Follow Go standard, easier to maintain, better IDE integration
+- **Integration Tests (External)**: Keep test infrastructure separate, better organization by test type
+- **Best of Both Worlds**: Standard Go practices for unit tests, organized structure for integration tests
 - **Scalability**: Works better for complex projects with multiple components
 - **Team Coordination**: Clear boundaries between Developer, IV&V, and PM responsibilities
 
-**Trade-offs**:
-- Requires `-coverpkg` flag for cross-package coverage measurement
-- Slightly more complex test execution commands
-- Non-standard Go approach (but justified for project needs)
+**Benefits**:
+- Unit tests follow Go standard: `go test ./internal/mediamtx/` works directly
+- Integration tests organized by type: unit, integration, performance
+- Better maintainability and developer experience
+- Standard Go tooling support for unit tests
 
-**Correct Usage Examples**:
+**Correct Usage Examples - HYBRID PATTERN**:
 ```bash
-# Test config package with coverage
-go test -tags="unit,real_system" -coverpkg=./internal/config ./tests/unit/test_config_management_test.go
+# Unit Tests (Internal) - Standard Go
+go test ./internal/mediamtx/                    # All MediaMTX unit tests
+go test ./internal/mediamtx/ -run TestHealth   # Specific test pattern
+go test ./internal/mediamtx/ -v                 # Verbose output
 
-# Test logging package with coverage  
-go test -coverpkg=./internal/logging ./tests/unit/test_logging_infrastructure_test.go
+# Integration Tests (External) - With build tags
+go test -tags="integration" ./tests/integration/    # All integration tests
+go test -tags="integration" ./tests/integration/ -run TestMediaMTX  # Specific tests
 
-# Test security package with coverage
-go test -coverpkg=./internal/security ./tests/unit/test_security_framework_test.go
+# Coverage (Unit tests use standard Go coverage)
+go test -cover ./internal/mediamtx/                # Unit test coverage
+go test -tags="integration" -coverpkg=./internal/mediamtx ./tests/integration/  # Integration coverage
 ```
 
-**⚠️ CRITICAL: Never Change Package Declarations**
-- **DO NOT** change `package *_test` to `package *` 
-- **DO NOT** try to "fix" package declarations - they are correct as `package *_test`
-- **ALWAYS** use `-coverpkg` flag for cross-package coverage measurement
-- **REMEMBER**: External testing is intentional and provides better separation
+**⚠️ CRITICAL: Package Declaration Rules - HYBRID PATTERN**
+- **Unit Tests**: MUST use `package <module>` in internal packages (e.g., `package mediamtx`)
+- **Integration Tests**: MUST use `package <module>_test` in external test directories
+- **NEVER mix**: Don't put unit tests in external packages or integration tests in internal packages
+- **Unit test execution**: Use standard Go: `go test ./internal/mediamtx/`
+- **Integration test execution**: Use build tags: `go test -tags="integration" ./tests/integration/`
 
 ### Real System Testing Over Mocking
 - **MediaMTX:** Use systemd-managed service, never mock
@@ -85,21 +91,53 @@ go test -coverpkg=./internal/security ./tests/unit/test_security_framework_test.
 6. **Implement Approved Solution**: Follow approved approach exactly
 7. **Document Changes**: Update documentation and create issues as needed
 
-## 2. Test Organization - STRICT STRUCTURE GUIDELINES
+## 2. Test Organization - HYBRID PATTERN GUIDELINES
 
-### Mandatory Directory Structure
+### **🚨 CRITICAL: New Hybrid Testing Pattern**
+**IMPLEMENTED: January 2025 - All developers must follow this pattern**
+
+**Unit Tests (Internal)**:
+- **Location**: `internal/<module>/<module>_test.go`
+- **Package**: `package <module>` (same as source)
+- **Execution**: `go test ./internal/mediamtx/` (standard Go)
+- **Coverage**: `go test -cover ./internal/mediamtx/` (standard Go)
+- **Purpose**: Test individual components in isolation
+
+**Integration Tests (External)**:
+- **Location**: `tests/integration/test_<module>_integration.go`
+- **Package**: `package <module>_test` (external testing)
+- **Execution**: `go test -tags="integration" ./tests/integration/`
+- **Coverage**: `go test -tags="integration" -coverpkg=./internal/mediamtx ./tests/integration/`
+- **Purpose**: Test component interactions and real system integration
+
+**Why This Pattern**:
+- ✅ **Unit tests follow Go standard** - Better IDE support, easier debugging
+- ✅ **Integration tests organized** - Clear separation by test type
+- ✅ **Maintainability** - Unit tests co-located with source code
+- ✅ **Developer Experience** - Standard Go tooling for unit tests
+- ✅ **Team Coordination** - Clear boundaries between test types
+
+## 3. Test Organization - STRICT STRUCTURE GUIDELINES
+
+### Mandatory Directory Structure - HYBRID PATTERN
 ```
-tests/
-├── unit/           # One test file per Go module
-|   └──`test_<feature>_<aspect>_test.go`  # unit tests (using existing utils)
-├── integration/    # End-to-end API tests
-|   ├── test_websocket_integration.go      # All WebSocket tests (using existing utils)
-|   ├── test_mediamtx_integration.go       # All MediaMTX tests (using existing utils)  
-|   └── test_e2e_integration.go            # True end-to-end workflows (using existing utils)
-├── performance/    # Load/stress tests for reliability
-├── fixtures/       # Test data files (.yaml, .json, mock data)
-├── utils/          # Helper functions (setupTest, generateToken, etc.)
-└── tools/          # Scripts that run tests
+internal/                           # Source code with unit tests
+├── mediamtx/
+│   ├── health_monitor.go          # Source code
+│   ├── health_monitor_test.go     # Unit tests (package mediamtx)
+│   ├── client.go                  # Source code
+│   ├── client_test.go             # Unit tests (package mediamtx)
+│   └── ...                        # Other source + unit test files
+
+tests/                              # External integration and performance tests
+├── integration/                    # End-to-end API tests
+|   ├── test_mediamtx_integration.go    # MediaMTX integration (package mediamtx_test)
+|   ├── test_websocket_integration.go   # WebSocket integration (package websocket_test)
+|   └── test_e2e_integration.go        # End-to-end workflows (package e2e_test)
+├── performance/                    # Load/stress tests for reliability
+├── fixtures/                       # Test data files (.yaml, .json, mock data)
+├── utils/                          # Helper functions (setupTest, generateToken, etc.)
+└── tools/                          # Scripts that run tests
 ```
 
 ### STRICT DIRECTORY RULES
@@ -133,22 +171,26 @@ tests/
 
 ## 3. Test Markers - COMPREHENSIVE CLASSIFICATION
 
-### Primary Classification (Test Level)
+### Primary Classification (Test Level) - HYBRID PATTERN
 ```go
-//go:build unit
-// +build unit
+// Unit Tests (Internal) - NO build tags needed
+// internal/mediamtx/health_monitor_test.go
+package mediamtx
 
+func TestHealthMonitor(t *testing.T) {
+    // Standard Go unit test
+}
+
+// Integration Tests (External) - Build tags required
+// tests/integration/test_mediamtx_integration.go
 //go:build integration
 // +build integration
 
-//go:build security
-// +build security
+package mediamtx_test
 
-//go:build performance
-// +build performance
-
-//go:build health
-// +build health
+func TestMediaMTXIntegration(t *testing.T) {
+    // Integration test
+}
 ```
 
 ### Secondary Classification (Test Characteristics)
@@ -355,18 +397,28 @@ All test runners and utilities are located in `tests/tools/`:
 - `setup_test_environment.sh`: Test environment setup
 - `validate_test_environment.sh`: Environment validation
 
-### **🚨 MANDATORY: External Testing Requires Build Tags**
+### **🚨 MANDATORY: Build Tags by Test Type - HYBRID PATTERN**
 
-**ALL test execution MUST include build tags:**
-
+**Unit Tests (Internal) - NO build tags needed:**
 ```bash
-# REQUIRED - External testing (package *_test) needs build tags
-go test -tags="unit" ./tests/unit/
-go test -tags="integration,real_system" ./tests/integration/
-go test -tags="performance" ./tests/performance/
+# CORRECT - Standard Go unit tests
+go test ./internal/mediamtx/                    # All MediaMTX unit tests
+go test ./internal/mediamtx/ -run TestHealth   # Specific test pattern
+go test -cover ./internal/mediamtx/             # With coverage
 
-# WRONG - This will exclude all test files
-go test ./tests/unit/
+# WRONG - Don't use build tags for unit tests
+go test -tags="unit" ./internal/mediamtx/      # ❌ Unnecessary
+```
+
+**Integration Tests (External) - Build tags REQUIRED:**
+```bash
+# REQUIRED - External testing needs build tags
+go test -tags="integration" ./tests/integration/                    # All integration tests
+go test -tags="integration" ./tests/integration/ -run TestMediaMTX  # Specific tests
+go test -tags="integration" -coverpkg=./internal/mediamtx ./tests/integration/  # With coverage
+
+# WRONG - This will exclude all integration test files
+go test ./tests/integration/                    # ❌ No tests will run
 ```
 
 **Why:** External testing uses build constraints that exclude files without matching tags.
@@ -498,7 +550,59 @@ Every test that calls server APIs MUST be audited against API documentation.
 - **Marker Compliance**: All markers defined and properly used
 - **API Compliance**: All tests must validate against API documentation
 
-## 12. Mandatory IV&V Validation Checklist
+## 12. Migration to Hybrid Pattern - COMPLETED
+
+### **✅ IMPLEMENTED: January 2025 - Hybrid Testing Pattern**
+**All developers must now follow this pattern - old patterns are deprecated**
+
+#### **What Was Changed:**
+1. **Unit Tests Moved**: From `tests/unit/` to `internal/<module>/<module>_test.go`
+2. **Package Declarations**: Unit tests now use `package <module>` (standard Go)
+3. **Build Tags Removed**: Unit tests no longer need build tags
+4. **Test Execution**: Unit tests use standard Go: `go test ./internal/mediamtx/`
+5. **Old Test Files**: All old scattered test files have been removed and consolidated
+
+#### **Current Structure:**
+```
+internal/mediamtx/                    # Source code + unit tests
+├── health_monitor.go                # Source
+├── health_monitor_test.go           # Unit tests (package mediamtx)
+├── client.go                        # Source  
+├── client_test.go                   # Unit tests (package mediamtx)
+├── errors.go                        # Source
+├── errors_test.go                   # Unit tests (package mediamtx)
+├── manager_test.go                  # Unit tests (package mediamtx)
+└── ...                              # Other source files
+
+tests/                                # External integration tests only
+├── integration/                     # Integration tests (package *_test)
+│   ├── test_mediamtx_integration.go # MediaMTX integration
+│   └── ...                          # Other integration tests
+├── performance/                     # Performance tests
+└── ...                              # Other test types
+```
+
+#### **Test Execution Commands:**
+```bash
+# Unit Tests (Internal) - Standard Go
+go test ./internal/mediamtx/                    # All MediaMTX unit tests
+go test ./internal/mediamtx/ -run TestHealth   # Specific test pattern
+go test -cover ./internal/mediamtx/             # With coverage
+
+# Integration Tests (External) - With build tags
+go test -tags="integration" ./tests/integration/    # All integration tests
+go test -tags="integration" ./tests/integration/ -run TestMediaMTX  # Specific tests
+```
+
+#### **Benefits Achieved:**
+- ✅ **Standard Go Compliance**: Unit tests follow Go conventions
+- ✅ **Better IDE Support**: Standard Go tooling works directly
+- ✅ **Easier Debugging**: Unit tests co-located with source
+- ✅ **Cleaner Structure**: No more scattered test files
+- ✅ **Maintainability**: Single test file per component
+- ✅ **Developer Experience**: Standard `go test` commands work
+
+## 13. Mandatory IV&V Validation Checklist
 
 ### **🚨 ARCHITECTURE COMPLIANCE VALIDATION**
 **Before any IV&V approval, MUST validate:**
