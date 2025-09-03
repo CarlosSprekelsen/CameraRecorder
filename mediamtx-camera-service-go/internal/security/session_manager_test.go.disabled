@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,12 +25,12 @@ import (
 func TestSessionManager_SessionLifecycle(t *testing.T) {
 	// REQ-SEC-004: Session management and timeout
 
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
-	// Test session creation using test helper
-	session := CreateTestSession(t, env.SessionManager, "test_user", RoleAdmin)
+	// Test session creation using shared utility
+	session := testutils.CreateTestSession(t, env.SessionManager, "test_user", RoleAdmin)
 	assert.Equal(t, "test_user", session.UserID)
 	assert.Equal(t, RoleAdmin, session.Role)
 	assert.NotEmpty(t, session.SessionID)
@@ -54,16 +55,16 @@ func TestSessionManager_SessionLifecycle(t *testing.T) {
 func TestSessionManager_Concurrency(t *testing.T) {
 	// REQ-SEC-004: Session management and timeout
 
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Create multiple sessions concurrently
 	done := make(chan bool, 10)
 	for i := 0; i < 10; i++ {
 		go func(id int) {
 			userID := fmt.Sprintf("user_%d", id)
-			session := CreateTestSession(t, env.SessionManager, userID, RoleViewer)
+			session := testutils.CreateTestSession(t, env.SessionManager, userID, RoleViewer)
 
 			// Validate session
 			validSession, err := env.SessionManager.ValidateSession(session.SessionID)
@@ -90,9 +91,9 @@ func TestSessionManager_Concurrency(t *testing.T) {
 func TestSessionManager_ExpiryHandling(t *testing.T) {
 	// REQ-SEC-004: Session management and timeout
 
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment with custom session timeout
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Create a custom session manager with short timeout for this test
 	shortTimeoutManager := NewSessionManager(1*time.Second, 1*time.Second)
@@ -121,14 +122,14 @@ func TestSessionManager_ExpiryHandling(t *testing.T) {
 }
 
 func TestSessionManager_EdgeCases(t *testing.T) {
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("get_session_by_user_id", func(t *testing.T) {
 
-		// Create a session using test helper
-		session := CreateTestSession(t, env.SessionManager, "test_user", RoleAdmin)
+		// Create a session using shared utility
+		session := testutils.CreateTestSession(t, env.SessionManager, "test_user", RoleAdmin)
 
 		// Get session by user ID
 		foundSessions := env.SessionManager.GetSessionByUserID("test_user")
@@ -146,11 +147,11 @@ func TestSessionManager_EdgeCases(t *testing.T) {
 
 	t.Run("invalidate_user_sessions", func(t *testing.T) {
 		// Create multiple sessions for the same user
-		CreateTestSession(t, env.SessionManager, "multi_user", RoleViewer)
-		CreateTestSession(t, env.SessionManager, "multi_user", RoleOperator)
+		testutils.CreateTestSession(t, env.SessionManager, "multi_user", RoleViewer)
+		testutils.CreateTestSession(t, env.SessionManager, "multi_user", RoleOperator)
 
 		// Create session for different user
-		CreateTestSession(t, env.SessionManager, "other_user", RoleAdmin)
+		testutils.CreateTestSession(t, env.SessionManager, "other_user", RoleAdmin)
 
 		// Verify sessions exist
 		assert.NotNil(t, env.SessionManager.GetSessionByUserID("multi_user"))
@@ -169,7 +170,7 @@ func TestSessionManager_EdgeCases(t *testing.T) {
 
 	t.Run("session_with_special_characters", func(t *testing.T) {
 		specialUserID := "user@domain.com!@#$%^&*()"
-		CreateTestSession(t, env.SessionManager, specialUserID, RoleAdmin)
+		testutils.CreateTestSession(t, env.SessionManager, specialUserID, RoleAdmin)
 
 		foundSessions := env.SessionManager.GetSessionByUserID(specialUserID)
 		assert.NotNil(t, foundSessions)
@@ -209,7 +210,7 @@ func TestSessionManager_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("session_activity_tracking", func(t *testing.T) {
-		session := CreateTestSession(t, env.SessionManager, "activity_user", RoleOperator)
+		session := testutils.CreateTestSession(t, env.SessionManager, "activity_user", RoleOperator)
 
 		initialActivity := session.LastActivity
 
@@ -229,9 +230,9 @@ func TestSessionManager_EdgeCases(t *testing.T) {
 }
 
 func TestSessionManager_AdditionalEdgeCases(t *testing.T) {
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("create_session_with_empty_user_id", func(t *testing.T) {
 		_, err := env.SessionManager.CreateSession("", RoleViewer)

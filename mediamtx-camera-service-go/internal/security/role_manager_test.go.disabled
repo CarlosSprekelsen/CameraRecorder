@@ -13,6 +13,7 @@ package security
 import (
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,9 +22,9 @@ import (
 func TestPermissionChecker_RoleHierarchy(t *testing.T) {
 	// REQ-SEC-003: Role-based access control for different user types
 
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	// Test role hierarchy
 	assert.True(t, RoleAdmin >= RoleOperator)
@@ -49,9 +50,9 @@ func TestPermissionChecker_RoleHierarchy(t *testing.T) {
 func TestPermissionChecker_MethodPermissions(t *testing.T) {
 	// REQ-SEC-003: Role-based access control for different user types
 
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	tests := []struct {
 		name      string
@@ -106,9 +107,9 @@ func TestPermissionChecker_MethodPermissions(t *testing.T) {
 }
 
 func TestPermissionChecker_EdgeCases(t *testing.T) {
-	// Use security test environment from test helpers
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
+	// Use shared security test environment
+	env := testutils.SetupSecurityTestEnvironment(t)
+	defer testutils.TeardownSecurityTestEnvironment(t, env)
 
 	t.Run("get_required_role", func(t *testing.T) {
 		role := env.RoleManager.GetRequiredRole("ping")

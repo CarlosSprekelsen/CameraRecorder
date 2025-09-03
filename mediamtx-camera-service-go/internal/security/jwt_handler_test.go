@@ -23,9 +23,8 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	// Create JWT handler directly for unit testing
-	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only")
-	require.NoError(t, err)
+	// Use test helper for consistent JWT handler creation
+	jwtHandler := TestJWTHandler(t)
 
 	tests := []struct {
 		name        string
@@ -66,7 +65,6 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use JWT handler directly for unit testing
 			token, err := jwtHandler.GenerateToken(tt.userID, tt.role, tt.expiryHours)
 
 			if tt.wantErr {
@@ -86,13 +84,11 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 	t.Parallel()
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
-	// Create JWT handler directly for unit testing
-	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only")
-	require.NoError(t, err)
+	// Use test helper for consistent JWT handler creation
+	jwtHandler := TestJWTHandler(t)
 
-	// Generate a valid token
-	token, err := jwtHandler.GenerateToken("test_user", "admin", 24)
-	require.NoError(t, err)
+	// Generate a valid token using test helper
+	token := GenerateTestToken(t, jwtHandler, "test_user", "admin")
 
 	// Test valid token validation
 	claims, err := jwtHandler.ValidateToken(token)
