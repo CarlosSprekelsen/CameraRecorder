@@ -376,7 +376,7 @@ func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, sour
 func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 	sm.logger.WithField("stream_id", id).Debug("Deleting MediaMTX stream")
 
-	err := sm.client.Delete(ctx, fmt.Sprintf("/v3/paths/delete/%s", id))
+	err := sm.client.Delete(ctx, fmt.Sprintf("/v3/config/paths/delete/%s", id))
 	if err != nil {
 		return NewStreamErrorWithErr(id, "delete_stream", "failed to delete stream", err)
 	}

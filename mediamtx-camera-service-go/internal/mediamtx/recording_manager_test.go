@@ -1,0 +1,371 @@
+/*
+MediaMTX Recording Manager Tests
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX service integration
+- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-004: Health monitoring
+
+Test Categories: Unit/Integration
+API Documentation Reference: docs/api/swagger.json
+*/
+
+package mediamtx
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestNewRecordingManager_ReqMTX001 tests recording manager creation
+func TestNewRecordingManager_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+	assert.Equal(t, config, recordingManager.config)
+	assert.Equal(t, logger, recordingManager.logger)
+	assert.Equal(t, ffmpegManager, recordingManager.ffmpegManager)
+}
+
+// TestRecordingManager_StartRecording_ReqMTX002 tests recording session creation
+func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+	devicePath := "/dev/video0"
+	outputPath := "/tmp/test_recording.mp4"
+
+	// Start recording
+	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath)
+	require.NoError(t, err, "Recording should start successfully")
+	require.NotNil(t, session, "Recording session should not be nil")
+	assert.Equal(t, devicePath, session.DevicePath)
+	assert.Equal(t, outputPath, session.OutputPath)
+	assert.Equal(t, RecordingStateActive, session.State)
+
+	// Verify session is tracked
+	sessions := recordingManager.GetActiveSessions()
+	assert.Len(t, sessions, 1)
+	assert.Contains(t, sessions, session.ID)
+
+	// Clean up
+	err = recordingManager.StopRecording(ctx, session.ID)
+	require.NoError(t, err, "Recording should stop successfully")
+}
+
+// TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination
+func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+	devicePath := "/dev/video0"
+	outputPath := "/tmp/test_recording_stop.mp4"
+
+	// Start recording
+	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath)
+	require.NoError(t, err, "Recording should start successfully")
+
+	// Verify session is active
+	sessions := recordingManager.GetActiveSessions()
+	assert.Len(t, sessions, 1)
+
+	// Stop recording
+	err = recordingManager.StopRecording(ctx, session.ID)
+	require.NoError(t, err, "Recording should stop successfully")
+
+	// Verify session is no longer active
+	sessions = recordingManager.GetActiveSessions()
+	assert.Len(t, sessions, 0)
+}
+
+// TestRecordingManager_GetActiveSessions_ReqMTX002 tests session listing
+func TestRecordingManager_GetActiveSessions_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+
+	// Initially no sessions
+	sessions := recordingManager.GetActiveSessions()
+	assert.Len(t, sessions, 0)
+
+	// Start multiple recordings
+	session1, err := recordingManager.StartRecording(ctx, "/dev/video0", "/tmp/test1.mp4")
+	require.NoError(t, err)
+
+	session2, err := recordingManager.StartRecording(ctx, "/dev/video1", "/tmp/test2.mp4")
+	require.NoError(t, err)
+
+	// Verify both sessions are tracked
+	sessions = recordingManager.GetActiveSessions()
+	assert.Len(t, sessions, 2)
+	assert.Contains(t, sessions, session1.ID)
+	assert.Contains(t, sessions, session2.ID)
+
+	// Clean up
+	recordingManager.StopRecording(ctx, session1.ID)
+	recordingManager.StopRecording(ctx, session2.ID)
+}
+
+// TestRecordingManager_GetSession_ReqMTX002 tests session retrieval
+func TestRecordingManager_GetSession_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+	devicePath := "/dev/video0"
+	outputPath := "/tmp/test_recording_get.mp4"
+
+	// Start recording
+	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath)
+	require.NoError(t, err, "Recording should start successfully")
+
+	// Get session by ID
+	retrievedSession := recordingManager.GetSession(session.ID)
+	require.NotNil(t, retrievedSession, "Session should be retrievable")
+	assert.Equal(t, session.ID, retrievedSession.ID)
+	assert.Equal(t, devicePath, retrievedSession.DevicePath)
+	assert.Equal(t, outputPath, retrievedSession.OutputPath)
+
+	// Get non-existent session
+	nonExistentSession := recordingManager.GetSession("non-existent-id")
+	assert.Nil(t, nonExistentSession, "Non-existent session should return nil")
+
+	// Clean up
+	recordingManager.StopRecording(ctx, session.ID)
+}
+
+// TestRecordingManager_ErrorHandling_ReqMTX007 tests error scenarios
+func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager that fails
+	ffmpegManager := &mockFFmpegManager{failStart: true}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+
+	// Test invalid device path
+	_, err := recordingManager.StartRecording(ctx, "", "/tmp/test.mp4")
+	assert.Error(t, err, "Empty device path should fail")
+
+	// Test invalid output path
+	_, err = recordingManager.StartRecording(ctx, "/dev/video0", "")
+	assert.Error(t, err, "Empty output path should fail")
+
+	// Test FFmpeg failure
+	_, err = recordingManager.StartRecording(ctx, "/dev/video0", "/tmp/test.mp4")
+	assert.Error(t, err, "FFmpeg failure should be handled")
+
+	// Test stopping non-existent session
+	err = recordingManager.StopRecording(ctx, "non-existent-id")
+	assert.Error(t, err, "Stopping non-existent session should fail")
+}
+
+// TestRecordingManager_ConcurrentAccess_ReqMTX001 tests concurrent operations
+func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	ctx := context.Background()
+
+	// Start multiple recordings concurrently
+	const numRecordings = 5
+	sessions := make([]*RecordingSession, numRecordings)
+	errors := make([]error, numRecordings)
+
+	for i := 0; i < numRecordings; i++ {
+		go func(index int) {
+			devicePath := fmt.Sprintf("/dev/video%d", index)
+			outputPath := fmt.Sprintf("/tmp/concurrent_test_%d.mp4", index)
+			session, err := recordingManager.StartRecording(ctx, devicePath, outputPath)
+			sessions[index] = session
+			errors[index] = err
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify all recordings started successfully
+	activeSessions := recordingManager.GetActiveSessions()
+	assert.Len(t, activeSessions, numRecordings, "All concurrent recordings should be active")
+
+	// Clean up all sessions
+	for _, session := range sessions {
+		if session != nil {
+			recordingManager.StopRecording(ctx, session.ID)
+		}
+	}
+}
+
+// TestRecordingManager_FileRotation_ReqMTX002 tests file rotation functionality
+func TestRecordingManager_FileRotation_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+	}
+	logger := logrus.New()
+	logger.SetLevel(logrus.ErrorLevel)
+
+	// Create mock FFmpeg manager
+	ffmpegManager := &mockFFmpegManager{}
+
+	recordingManager := NewRecordingManager(ffmpegManager, config, logger)
+	require.NotNil(t, recordingManager)
+
+	// Set up rotation settings
+	rotationSettings := &RotationSettings{
+		MaxFileSize:  1024 * 1024, // 1MB
+		MaxDuration:  10 * time.Second,
+		MaxFiles:     3,
+		RotationPath: "/tmp/rotations",
+	}
+
+	recordingManager.SetRotationSettings(rotationSettings)
+
+	ctx := context.Background()
+	devicePath := "/dev/video0"
+	outputPath := "/tmp/rotation_test.mp4"
+
+	// Start recording with rotation
+	session, err := recordingManager.StartRecordingWithRotation(ctx, devicePath, outputPath)
+	require.NoError(t, err, "Recording with rotation should start successfully")
+	require.NotNil(t, session, "Recording session should not be nil")
+
+	// Verify rotation settings are applied
+	assert.Equal(t, rotationSettings, session.RotationSettings)
+
+	// Clean up
+	recordingManager.StopRecording(ctx, session.ID)
+}
+
+// mockFFmpegManager is a mock implementation for testing
+type mockFFmpegManager struct {
+	failStart bool
+}
+
+func (m *mockFFmpegManager) StartProcess(ctx context.Context, command []string, outputPath string) (int, error) {
+	if m.failStart {
+		return 0, fmt.Errorf("mock FFmpeg start failure")
+	}
+	return 12345, nil
+}
+
+func (m *mockFFmpegManager) StopProcess(ctx context.Context, pid int) error {
+	return nil
+}
+
+func (m *mockFFmpegManager) IsProcessRunning(ctx context.Context, pid int) bool {
+	return true
+}
+
+func (m *mockFFmpegManager) BuildCommand(args ...string) []string {
+	return args
+}
+
+func (m *mockFFmpegManager) StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error) {
+	if m.failStart {
+		return 0, fmt.Errorf("mock FFmpeg start failure")
+	}
+	return 12345, nil
+}

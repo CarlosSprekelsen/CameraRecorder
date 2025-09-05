@@ -1,0 +1,48 @@
+# Combined fixture testing multiple SnapshotTiers validation edge cases
+# This tests: negative timeouts, zero timeouts, boundary cases
+server:
+  host: "0.0.0.0"
+  port: 8002
+
+camera:
+  poll_interval: 5
+  detection_timeout: 30
+  device_range: [0, 10]
+  capability_timeout: 10
+  capability_retry: 3
+
+storage:
+  default_path: "/tmp/recordings"
+  fallback_path: "/tmp/recordings"
+  warn_percent: 80
+  block_percent: 90
+
+logging:
+  level: "info"
+  format: "json"
+
+performance:
+  snapshot_tiers:
+    # Negative timeout - should fail
+    tier1_usb_direct_timeout: -1.0
+    
+    # Zero timeout - should fail
+    tier2_rtsp_ready_check_timeout: 0.0
+    
+    # Very small positive timeout - should pass
+    tier3_activation_timeout: 0.001
+    
+    # Negative timeout - should fail
+    tier3_activation_trigger_timeout: -0.5
+    
+    # Zero timeout - should fail
+    total_operation_timeout: 0
+    
+    # Negative threshold - should fail
+    immediate_response_threshold: -2.0
+    
+    # Zero threshold - should fail
+    acceptable_response_threshold: 0.0
+    
+    # Very small positive threshold - should pass
+    slow_response_threshold: 0.0001

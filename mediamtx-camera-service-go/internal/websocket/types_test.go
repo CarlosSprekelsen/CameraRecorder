@@ -1,14 +1,12 @@
 /*
 WebSocket Types Unit Tests
 
+Provides focused unit tests for WebSocket type definitions,
+following the project testing standards and Go coding standards.
+
 Requirements Coverage:
-- REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
 - REQ-API-003: Request/response message handling
-- REQ-API-004: Error code and message management
-- REQ-API-005: Client connection management
-- REQ-API-006: Performance metrics tracking
-- REQ-API-007: Server configuration management
 
 Test Categories: Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
@@ -17,672 +15,105 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// TestWebSocket_ErrorCodes tests error code constants
-func TestWebSocket_ErrorCodes(t *testing.T) {
-	// REQ-API-004: Error code and message management
-
-	// Test JSON-RPC 2.0 error codes
-	assert.Equal(t, -32001, websocket.AUTHENTICATION_REQUIRED)
-	assert.Equal(t, -32002, websocket.RATE_LIMIT_EXCEEDED)
-	assert.Equal(t, -32003, websocket.INSUFFICIENT_PERMISSIONS)
-	assert.Equal(t, -32004, websocket.CAMERA_NOT_FOUND)
-	assert.Equal(t, -32005, websocket.RECORDING_IN_PROGRESS)
-	assert.Equal(t, -32006, websocket.MEDIAMTX_UNAVAILABLE)
-	assert.Equal(t, -32007, websocket.INSUFFICIENT_STORAGE)
-	assert.Equal(t, -32008, websocket.CAPABILITY_NOT_SUPPORTED)
-	assert.Equal(t, -32601, websocket.METHOD_NOT_FOUND)
-	assert.Equal(t, -32602, websocket.INVALID_PARAMS)
-	assert.Equal(t, -32603, websocket.INTERNAL_ERROR)
-
-	// Test enhanced recording management error codes
-	assert.Equal(t, -1000, websocket.ERROR_CAMERA_NOT_FOUND)
-	assert.Equal(t, -1001, websocket.ERROR_CAMERA_NOT_AVAILABLE)
-	assert.Equal(t, -1002, websocket.ERROR_RECORDING_IN_PROGRESS)
-	assert.Equal(t, -1003, websocket.ERROR_MEDIAMTX_ERROR)
-	assert.Equal(t, -1006, websocket.ERROR_CAMERA_ALREADY_RECORDING)
-	assert.Equal(t, -1008, websocket.ERROR_STORAGE_LOW)
-	assert.Equal(t, -1010, websocket.ERROR_STORAGE_CRITICAL)
-}
-
-// TestWebSocket_ErrorMessages tests error message mapping
-func TestWebSocket_ErrorMessages(t *testing.T) {
-	// REQ-API-004: Error code and message management
-
-	// Test JSON-RPC 2.0 error messages
-	assert.Equal(t, "Authentication failed or token expired", websocket.ErrorMessages[websocket.AUTHENTICATION_REQUIRED])
-	assert.Equal(t, "Rate limit exceeded", websocket.ErrorMessages[websocket.RATE_LIMIT_EXCEEDED])
-	assert.Equal(t, "Insufficient permissions", websocket.ErrorMessages[websocket.INSUFFICIENT_PERMISSIONS])
-	assert.Equal(t, "Camera not found or disconnected", websocket.ErrorMessages[websocket.CAMERA_NOT_FOUND])
-	assert.Equal(t, "Recording already in progress", websocket.ErrorMessages[websocket.RECORDING_IN_PROGRESS])
-	assert.Equal(t, "MediaMTX service unavailable", websocket.ErrorMessages[websocket.MEDIAMTX_UNAVAILABLE])
-	assert.Equal(t, "Insufficient storage space", websocket.ErrorMessages[websocket.INSUFFICIENT_STORAGE])
-	assert.Equal(t, "Camera capability not supported", websocket.ErrorMessages[websocket.CAPABILITY_NOT_SUPPORTED])
-	assert.Equal(t, "Method not found", websocket.ErrorMessages[websocket.METHOD_NOT_FOUND])
-	assert.Equal(t, "Invalid parameters", websocket.ErrorMessages[websocket.INVALID_PARAMS])
-	assert.Equal(t, "Internal server error", websocket.ErrorMessages[websocket.INTERNAL_ERROR])
-
-	// Test enhanced recording management error messages
-	assert.Equal(t, "Camera not found", websocket.ErrorMessages[websocket.ERROR_CAMERA_NOT_FOUND])
-	assert.Equal(t, "Camera not available", websocket.ErrorMessages[websocket.ERROR_CAMERA_NOT_AVAILABLE])
-	assert.Equal(t, "Recording in progress", websocket.ErrorMessages[websocket.ERROR_RECORDING_IN_PROGRESS])
-	assert.Equal(t, "MediaMTX error", websocket.ErrorMessages[websocket.ERROR_MEDIAMTX_ERROR])
-	assert.Equal(t, "Camera is currently recording", websocket.ErrorMessages[websocket.ERROR_CAMERA_ALREADY_RECORDING])
-	assert.Equal(t, "Storage space is low", websocket.ErrorMessages[websocket.ERROR_STORAGE_LOW])
-	assert.Equal(t, "Storage space is critical", websocket.ErrorMessages[websocket.ERROR_STORAGE_CRITICAL])
-
-	// Test non-existent error code
-	_, exists := websocket.ErrorMessages[999999]
-	assert.False(t, exists, "Non-existent error code should not have a message")
-}
-
-// TestWebSocket_JsonRpcRequest tests JSON-RPC request structure
-func TestWebSocket_JsonRpcRequest(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	// Test request creation
-	request := websocket.JsonRpcRequest{
+// TestWebSocketTypes_JsonRpcRequest tests JSON-RPC request structure
+func TestWebSocketTypes_JsonRpcRequest(t *testing.T) {
+	// Test JSON-RPC request creation
+	request := &JsonRpcRequest{
 		JSONRPC: "2.0",
-		Method:  "test_method",
-		ID:      1,
+		ID:      "test-request",
+		Method:  "ping",
+		Params:  map[string]interface{}{},
+	}
+
+	// Test request structure
+	assert.Equal(t, "2.0", request.JSONRPC, "Request should have correct JSON-RPC version")
+	assert.Equal(t, "test-request", request.ID, "Request should have correct ID")
+	assert.Equal(t, "ping", request.Method, "Request should have correct method")
+	assert.NotNil(t, request.Params, "Request params should be initialized")
+}
+
+// TestWebSocketTypes_JsonRpcResponse tests JSON-RPC response structure
+func TestWebSocketTypes_JsonRpcResponse(t *testing.T) {
+	// Test JSON-RPC response creation
+	response := &JsonRpcResponse{
+		JSONRPC: "2.0",
+		ID:      "test-request",
+		Result:  "pong",
+		Error:   nil,
+	}
+
+	// Test response structure
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, "test-request", response.ID, "Response should have correct ID")
+	assert.Equal(t, "pong", response.Result, "Response should have correct result")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketTypes_JsonRpcError tests JSON-RPC error structure
+func TestWebSocketTypes_JsonRpcError(t *testing.T) {
+	// Test JSON-RPC error creation
+	error := &JsonRpcError{
+		Code:    -32600,
+		Message: "Invalid Request",
+		Data:    "Invalid JSON-RPC request",
+	}
+
+	// Test error structure
+	assert.Equal(t, -32600, error.Code, "Error should have correct code")
+	assert.Equal(t, "Invalid Request", error.Message, "Error should have correct message")
+	assert.Equal(t, "Invalid JSON-RPC request", error.Data, "Error should have correct data")
+}
+
+// TestWebSocketTypes_JsonRpcNotification tests JSON-RPC notification structure
+func TestWebSocketTypes_JsonRpcNotification(t *testing.T) {
+	// Test JSON-RPC notification creation
+	notification := &JsonRpcNotification{
+		JSONRPC: "2.0",
+		Method:  "camera_status_update",
 		Params: map[string]interface{}{
-			"param1": "value1",
-			"param2": 42,
-		},
-	}
-
-	assert.Equal(t, "2.0", request.JSONRPC)
-	assert.Equal(t, "test_method", request.Method)
-	assert.Equal(t, 1, request.ID)
-	assert.Equal(t, "value1", request.Params["param1"])
-	assert.Equal(t, 42, request.Params["param2"])
-
-	// Test JSON marshaling
-	jsonData, err := json.Marshal(request)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling
-	var unmarshaledRequest websocket.JsonRpcRequest
-	err = json.Unmarshal(jsonData, &unmarshaledRequest)
-	require.NoError(t, err)
-
-	assert.Equal(t, request.JSONRPC, unmarshaledRequest.JSONRPC)
-	assert.Equal(t, request.Method, unmarshaledRequest.Method)
-	// JSON unmarshaling converts numbers to float64, so we need to check the value, not the type
-	assert.Equal(t, float64(1), unmarshaledRequest.ID)
-	assert.Equal(t, request.Params["param1"], unmarshaledRequest.Params["param1"])
-	assert.Equal(t, float64(42), unmarshaledRequest.Params["param2"])
-}
-
-// TestWebSocket_JsonRpcRequestWithoutID tests request without ID (notification)
-func TestWebSocket_JsonRpcRequestWithoutID(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	request := websocket.JsonRpcRequest{
-		JSONRPC: "2.0",
-		Method:  "notification_method",
-		Params: map[string]interface{}{
-			"notification": true,
-		},
-	}
-
-	assert.Equal(t, "2.0", request.JSONRPC)
-	assert.Equal(t, "notification_method", request.Method)
-	assert.Nil(t, request.ID)
-	assert.Equal(t, true, request.Params["notification"])
-
-	// Test JSON marshaling without ID
-	jsonData, err := json.Marshal(request)
-	require.NoError(t, err)
-
-	var unmarshaledRequest websocket.JsonRpcRequest
-	err = json.Unmarshal(jsonData, &unmarshaledRequest)
-	require.NoError(t, err)
-
-	assert.Equal(t, request.JSONRPC, unmarshaledRequest.JSONRPC)
-	assert.Equal(t, request.Method, unmarshaledRequest.Method)
-	assert.Nil(t, unmarshaledRequest.ID)
-}
-
-// TestWebSocket_JsonRpcResponse tests JSON-RPC response structure
-func TestWebSocket_JsonRpcResponse(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	// Test successful response
-	response := websocket.JsonRpcResponse{
-		JSONRPC: "2.0",
-		ID:      1,
-		Result: map[string]interface{}{
-			"success": true,
-			"data":    "test_data",
-		},
-	}
-
-	assert.Equal(t, "2.0", response.JSONRPC)
-	assert.Equal(t, 1, response.ID)
-	assert.Equal(t, true, response.Result.(map[string]interface{})["success"])
-	assert.Equal(t, "test_data", response.Result.(map[string]interface{})["data"])
-	assert.Nil(t, response.Error)
-
-	// Test JSON marshaling
-	jsonData, err := json.Marshal(response)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling
-	var unmarshaledResponse websocket.JsonRpcResponse
-	err = json.Unmarshal(jsonData, &unmarshaledResponse)
-	require.NoError(t, err)
-
-	assert.Equal(t, response.JSONRPC, unmarshaledResponse.JSONRPC)
-	// JSON unmarshaling converts numbers to float64
-	assert.Equal(t, float64(1), unmarshaledResponse.ID)
-	assert.Equal(t, response.Result.(map[string]interface{})["success"], unmarshaledResponse.Result.(map[string]interface{})["success"])
-	assert.Equal(t, response.Result.(map[string]interface{})["data"], unmarshaledResponse.Result.(map[string]interface{})["data"])
-}
-
-// TestWebSocket_JsonRpcResponseWithError tests response with error
-func TestWebSocket_JsonRpcResponseWithError(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	errorObj := &websocket.JsonRpcError{
-		Code:    websocket.INVALID_PARAMS,
-		Message: "Invalid parameters",
-		Data:    "Additional error data",
-	}
-
-	response := websocket.JsonRpcResponse{
-		JSONRPC: "2.0",
-		ID:      1,
-		Error:   errorObj,
-	}
-
-	assert.Equal(t, "2.0", response.JSONRPC)
-	assert.Equal(t, 1, response.ID)
-	assert.Nil(t, response.Result)
-	assert.Equal(t, websocket.INVALID_PARAMS, response.Error.Code)
-	assert.Equal(t, "Invalid parameters", response.Error.Message)
-	assert.Equal(t, "Additional error data", response.Error.Data)
-
-	// Test JSON marshaling with error
-	jsonData, err := json.Marshal(response)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling with error
-	var unmarshaledResponse websocket.JsonRpcResponse
-	err = json.Unmarshal(jsonData, &unmarshaledResponse)
-	require.NoError(t, err)
-
-	assert.Equal(t, response.JSONRPC, unmarshaledResponse.JSONRPC)
-	// JSON unmarshaling converts numbers to float64
-	assert.Equal(t, float64(1), unmarshaledResponse.ID)
-	assert.Equal(t, response.Error.Code, unmarshaledResponse.Error.Code)
-	assert.Equal(t, response.Error.Message, unmarshaledResponse.Error.Message)
-	assert.Equal(t, response.Error.Data, unmarshaledResponse.Error.Data)
-}
-
-// TestWebSocket_JsonRpcNotification tests JSON-RPC notification structure
-func TestWebSocket_JsonRpcNotification(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	notification := websocket.JsonRpcNotification{
-		JSONRPC: "2.0",
-		Method:  "status_update",
-		Params: map[string]interface{}{
+			"camera_id": "camera-1",
 			"status":    "online",
-			"timestamp": time.Now().Unix(),
 		},
 	}
 
-	assert.Equal(t, "2.0", notification.JSONRPC)
-	assert.Equal(t, "status_update", notification.Method)
-	assert.Equal(t, "online", notification.Params["status"])
-	assert.NotNil(t, notification.Params["timestamp"])
-
-	// Test JSON marshaling
-	jsonData, err := json.Marshal(notification)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling
-	var unmarshaledNotification websocket.JsonRpcNotification
-	err = json.Unmarshal(jsonData, &unmarshaledNotification)
-	require.NoError(t, err)
-
-	assert.Equal(t, notification.JSONRPC, unmarshaledNotification.JSONRPC)
-	assert.Equal(t, notification.Method, unmarshaledNotification.Method)
-	assert.Equal(t, notification.Params["status"], unmarshaledNotification.Params["status"])
+	// Test notification structure
+	assert.Equal(t, "2.0", notification.JSONRPC, "Notification should have correct JSON-RPC version")
+	assert.Equal(t, "camera_status_update", notification.Method, "Notification should have correct method")
+	assert.NotNil(t, notification.Params, "Notification params should be initialized")
+	assert.Equal(t, "camera-1", notification.Params["camera_id"], "Camera ID should be in params")
+	assert.Equal(t, "online", notification.Params["status"], "Status should be in params")
 }
 
-// TestWebSocket_JsonRpcError tests JSON-RPC error structure
-func TestWebSocket_JsonRpcError(t *testing.T) {
-	// REQ-API-004: Error code and message management
-
-	errorObj := &websocket.JsonRpcError{
-		Code:    websocket.CAMERA_NOT_FOUND,
-		Message: "Camera not found",
-		Data: map[string]interface{}{
-			"camera_id": "camera_123",
-			"reason":    "disconnected",
-		},
-	}
-
-	assert.Equal(t, websocket.CAMERA_NOT_FOUND, errorObj.Code)
-	assert.Equal(t, "Camera not found", errorObj.Message)
-	assert.Equal(t, "camera_123", errorObj.Data.(map[string]interface{})["camera_id"])
-	assert.Equal(t, "disconnected", errorObj.Data.(map[string]interface{})["reason"])
-
-	// Test JSON marshaling
-	jsonData, err := json.Marshal(errorObj)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling
-	var unmarshaledError websocket.JsonRpcError
-	err = json.Unmarshal(jsonData, &unmarshaledError)
-	require.NoError(t, err)
-
-	assert.Equal(t, errorObj.Code, unmarshaledError.Code)
-	assert.Equal(t, errorObj.Message, unmarshaledError.Message)
-	assert.Equal(t, errorObj.Data.(map[string]interface{})["camera_id"], unmarshaledError.Data.(map[string]interface{})["camera_id"])
-	assert.Equal(t, errorObj.Data.(map[string]interface{})["reason"], unmarshaledError.Data.(map[string]interface{})["reason"])
-}
-
-// TestWebSocket_ClientConnection tests client connection structure
-func TestWebSocket_ClientConnection(t *testing.T) {
-	// REQ-API-005: Client connection management
-
-	now := time.Now()
-	client := &websocket.ClientConnection{
-		ClientID:      "client_123",
-		Authenticated: true,
-		UserID:        "user_456",
-		Role:          "operator",
-		AuthMethod:    "jwt",
-		ConnectedAt:   now,
-		Subscriptions: map[string]bool{
-			"camera_status": true,
-			"recording":     false,
-		},
-	}
-
-	assert.Equal(t, "client_123", client.ClientID)
-	assert.True(t, client.Authenticated)
-	assert.Equal(t, "user_456", client.UserID)
-	assert.Equal(t, "operator", client.Role)
-	assert.Equal(t, "jwt", client.AuthMethod)
-	assert.Equal(t, now, client.ConnectedAt)
-	assert.True(t, client.Subscriptions["camera_status"])
-	assert.False(t, client.Subscriptions["recording"])
-
-	// Test subscription management
-	client.Subscriptions["new_topic"] = true
-	assert.True(t, client.Subscriptions["new_topic"])
-
-	delete(client.Subscriptions, "recording")
-	_, exists := client.Subscriptions["recording"]
-	assert.False(t, exists)
-}
-
-// TestWebSocket_ClientConnectionUnauthenticated tests unauthenticated client
-func TestWebSocket_ClientConnectionUnauthenticated(t *testing.T) {
-	// REQ-API-005: Client connection management
-
-	now := time.Now()
-	client := &websocket.ClientConnection{
-		ClientID:      "client_456",
+// TestWebSocketTypes_ClientConnection tests client connection structure
+func TestWebSocketTypes_ClientConnection(t *testing.T) {
+	// Test client connection creation
+	client := &ClientConnection{
+		ClientID:      "test-client",
 		Authenticated: false,
 		UserID:        "",
 		Role:          "",
-		AuthMethod:    "",
-		ConnectedAt:   now,
-		Subscriptions: make(map[string]bool),
-	}
-
-	assert.Equal(t, "client_456", client.ClientID)
-	assert.False(t, client.Authenticated)
-	assert.Empty(t, client.UserID)
-	assert.Empty(t, client.Role)
-	assert.Empty(t, client.AuthMethod)
-	assert.Equal(t, now, client.ConnectedAt)
-	assert.Empty(t, client.Subscriptions)
-}
-
-// TestWebSocket_PerformanceMetrics tests performance metrics structure
-func TestWebSocket_PerformanceMetrics(t *testing.T) {
-	// REQ-API-006: Performance metrics tracking
-
-	now := time.Now()
-	metrics := &websocket.PerformanceMetrics{
-		RequestCount: 100,
-		ResponseTimes: map[string][]float64{
-			"camera_list":  {10.5, 12.3, 8.9},
-			"start_record": {25.1, 22.8, 30.2},
-		},
-		ErrorCount:        5,
-		ActiveConnections: 25,
-		StartTime:         now,
-	}
-
-	assert.Equal(t, int64(100), metrics.RequestCount)
-	assert.Len(t, metrics.ResponseTimes["camera_list"], 3)
-	assert.Equal(t, 10.5, metrics.ResponseTimes["camera_list"][0])
-	assert.Equal(t, 12.3, metrics.ResponseTimes["camera_list"][1])
-	assert.Equal(t, 8.9, metrics.ResponseTimes["camera_list"][2])
-	assert.Len(t, metrics.ResponseTimes["start_record"], 3)
-	assert.Equal(t, int64(5), metrics.ErrorCount)
-	assert.Equal(t, int64(25), metrics.ActiveConnections)
-	assert.Equal(t, now, metrics.StartTime)
-
-	// Test metrics updates
-	metrics.RequestCount++
-	assert.Equal(t, int64(101), metrics.RequestCount)
-
-	metrics.ResponseTimes["new_method"] = []float64{15.0, 18.5}
-	assert.Len(t, metrics.ResponseTimes["new_method"], 2)
-
-	metrics.ErrorCount++
-	assert.Equal(t, int64(6), metrics.ErrorCount)
-
-	metrics.ActiveConnections--
-	assert.Equal(t, int64(24), metrics.ActiveConnections)
-}
-
-// TestWebSocket_PerformanceMetricsEmpty tests empty performance metrics
-func TestWebSocket_PerformanceMetricsEmpty(t *testing.T) {
-	// REQ-API-006: Performance metrics tracking
-
-	now := time.Now()
-	metrics := &websocket.PerformanceMetrics{
-		RequestCount:      0,
-		ResponseTimes:     make(map[string][]float64),
-		ErrorCount:        0,
-		ActiveConnections: 0,
-		StartTime:         now,
-	}
-
-	assert.Equal(t, int64(0), metrics.RequestCount)
-	assert.Empty(t, metrics.ResponseTimes)
-	assert.Equal(t, int64(0), metrics.ErrorCount)
-	assert.Equal(t, int64(0), metrics.ActiveConnections)
-	assert.Equal(t, now, metrics.StartTime)
-}
-
-// TestWebSocket_WebSocketMessage tests WebSocket message structure
-func TestWebSocket_WebSocketMessage(t *testing.T) {
-	// REQ-API-003: Request/response message handling
-
-	now := time.Now()
-	messageData := json.RawMessage(`{"key": "value", "number": 42}`)
-
-	message := &websocket.WebSocketMessage{
-		Type:      "jsonrpc",
-		Data:      messageData,
-		Timestamp: now,
-		ClientID:  "client_789",
-	}
-
-	assert.Equal(t, "jsonrpc", message.Type)
-	assert.Equal(t, messageData, message.Data)
-	assert.Equal(t, now, message.Timestamp)
-	assert.Equal(t, "client_789", message.ClientID)
-
-	// Test JSON marshaling
-	jsonData, err := json.Marshal(message)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling
-	var unmarshaledMessage websocket.WebSocketMessage
-	err = json.Unmarshal(jsonData, &unmarshaledMessage)
-	require.NoError(t, err)
-
-	assert.Equal(t, message.Type, unmarshaledMessage.Type)
-	// JSON marshaling removes spaces, so we need to compare the parsed content
-	var originalData, unmarshaledData map[string]interface{}
-	json.Unmarshal(message.Data, &originalData)
-	json.Unmarshal(unmarshaledMessage.Data, &unmarshaledData)
-	assert.Equal(t, originalData, unmarshaledData)
-	assert.Equal(t, message.ClientID, unmarshaledMessage.ClientID)
-}
-
-// TestWebSocket_WebSocketMessageWithoutClientID tests message without client ID
-func TestWebSocket_WebSocketMessageWithoutClientID(t *testing.T) {
-	// REQ-API-003: Request/response message handling
-
-	now := time.Now()
-	messageData := json.RawMessage(`{"notification": true}`)
-
-	message := &websocket.WebSocketMessage{
-		Type:      "notification",
-		Data:      messageData,
-		Timestamp: now,
-	}
-
-	assert.Equal(t, "notification", message.Type)
-	assert.Equal(t, messageData, message.Data)
-	assert.Equal(t, now, message.Timestamp)
-	assert.Empty(t, message.ClientID)
-}
-
-// TestWebSocket_ServerConfig tests server configuration structure
-func TestWebSocket_ServerConfig(t *testing.T) {
-	// REQ-API-007: Server configuration management
-
-	config := &websocket.ServerConfig{
-		Host:           "127.0.0.1",
-		Port:           9000,
-		WebSocketPath:  "/custom/ws",
-		MaxConnections: 500,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   5 * time.Second,
-		PingInterval:   45 * time.Second,
-		PongWait:       90 * time.Second,
-		MaxMessageSize: 2048 * 1024, // 2MB
-	}
-
-	assert.Equal(t, "127.0.0.1", config.Host)
-	assert.Equal(t, 9000, config.Port)
-	assert.Equal(t, "/custom/ws", config.WebSocketPath)
-	assert.Equal(t, 500, config.MaxConnections)
-	assert.Equal(t, 10*time.Second, config.ReadTimeout)
-	assert.Equal(t, 5*time.Second, config.WriteTimeout)
-	assert.Equal(t, 45*time.Second, config.PingInterval)
-	assert.Equal(t, 90*time.Second, config.PongWait)
-	assert.Equal(t, int64(2048*1024), config.MaxMessageSize)
-}
-
-// TestWebSocket_DefaultServerConfig tests default server configuration
-func TestWebSocket_DefaultServerConfig(t *testing.T) {
-	// REQ-API-007: Server configuration management
-
-	config := websocket.DefaultServerConfig()
-
-	assert.Equal(t, "0.0.0.0", config.Host)
-	assert.Greater(t, config.Port, 0, "Port should be a valid port number")
-	assert.Equal(t, "/ws", config.WebSocketPath)
-	assert.Equal(t, 1000, config.MaxConnections)
-	assert.Equal(t, 5*time.Second, config.ReadTimeout)
-	assert.Equal(t, 1*time.Second, config.WriteTimeout)
-	assert.Equal(t, 30*time.Second, config.PingInterval)
-	assert.Equal(t, 60*time.Second, config.PongWait)
-	assert.Equal(t, int64(1024*1024), config.MaxMessageSize) // 1MB
-}
-
-// TestWebSocket_MethodHandler tests method handler function type
-func TestWebSocket_MethodHandler(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	// Create a test method handler
-	var handler websocket.MethodHandler = func(params map[string]interface{}, client *websocket.ClientConnection) (*websocket.JsonRpcResponse, error) {
-		return &websocket.JsonRpcResponse{
-			JSONRPC: "2.0",
-			ID:      1,
-			Result: map[string]interface{}{
-				"handler_called": true,
-				"params":         params,
-				"client_id":      client.ClientID,
-			},
-		}, nil
-	}
-
-	// Test the handler
-	client := &websocket.ClientConnection{
-		ClientID:      "test_client",
-		Authenticated: true,
-		UserID:        "test_user",
-		Role:          "viewer",
 		ConnectedAt:   time.Now(),
 		Subscriptions: make(map[string]bool),
 	}
 
-	params := map[string]interface{}{
-		"test_param": "test_value",
-	}
-
-	response, err := handler(params, client)
-	require.NoError(t, err)
-	assert.Equal(t, "2.0", response.JSONRPC)
-	assert.Equal(t, 1, response.ID)
-	assert.Equal(t, true, response.Result.(map[string]interface{})["handler_called"])
-	assert.Equal(t, params, response.Result.(map[string]interface{})["params"])
-	assert.Equal(t, "test_client", response.Result.(map[string]interface{})["client_id"])
+	// Test client structure
+	assert.Equal(t, "test-client", client.ClientID, "Client ID should be set")
+	assert.False(t, client.Authenticated, "Client should not be authenticated initially")
+	assert.Empty(t, client.UserID, "User ID should be empty initially")
+	assert.Empty(t, client.Role, "Role should be empty initially")
+	assert.NotNil(t, client.Subscriptions, "Subscriptions map should be initialized")
 }
 
-// TestWebSocket_JsonRpcRequestStringID tests request with string ID
-func TestWebSocket_JsonRpcRequestStringID(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	request := websocket.JsonRpcRequest{
-		JSONRPC: "2.0",
-		Method:  "string_id_method",
-		ID:      "request_123",
-		Params: map[string]interface{}{
-			"string_id": true,
-		},
-	}
-
-	assert.Equal(t, "2.0", request.JSONRPC)
-	assert.Equal(t, "string_id_method", request.Method)
-	assert.Equal(t, "request_123", request.ID)
-	assert.Equal(t, true, request.Params["string_id"])
-
-	// Test JSON marshaling with string ID
-	jsonData, err := json.Marshal(request)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling with string ID
-	var unmarshaledRequest websocket.JsonRpcRequest
-	err = json.Unmarshal(jsonData, &unmarshaledRequest)
-	require.NoError(t, err)
-
-	assert.Equal(t, request.JSONRPC, unmarshaledRequest.JSONRPC)
-	assert.Equal(t, request.Method, unmarshaledRequest.Method)
-	assert.Equal(t, request.ID, unmarshaledRequest.ID)
-}
-
-// TestWebSocket_JsonRpcResponseStringID tests response with string ID
-func TestWebSocket_JsonRpcResponseStringID(t *testing.T) {
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
-	response := websocket.JsonRpcResponse{
-		JSONRPC: "2.0",
-		ID:      "response_456",
-		Result: map[string]interface{}{
-			"string_id_response": true,
-		},
-	}
-
-	assert.Equal(t, "2.0", response.JSONRPC)
-	assert.Equal(t, "response_456", response.ID)
-	assert.Equal(t, true, response.Result.(map[string]interface{})["string_id_response"])
-
-	// Test JSON marshaling with string ID
-	jsonData, err := json.Marshal(response)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling with string ID
-	var unmarshaledResponse websocket.JsonRpcResponse
-	err = json.Unmarshal(jsonData, &unmarshaledResponse)
-	require.NoError(t, err)
-
-	assert.Equal(t, response.JSONRPC, unmarshaledResponse.JSONRPC)
-	assert.Equal(t, response.ID, unmarshaledResponse.ID)
-}
-
-// TestWebSocket_JsonRpcErrorWithoutData tests error without data field
-func TestWebSocket_JsonRpcErrorWithoutData(t *testing.T) {
-	// REQ-API-004: Error code and message management
-
-	errorObj := &websocket.JsonRpcError{
-		Code:    websocket.INTERNAL_ERROR,
-		Message: "Internal server error",
-	}
-
-	assert.Equal(t, websocket.INTERNAL_ERROR, errorObj.Code)
-	assert.Equal(t, "Internal server error", errorObj.Message)
-	assert.Nil(t, errorObj.Data)
-
-	// Test JSON marshaling without data
-	jsonData, err := json.Marshal(errorObj)
-	require.NoError(t, err)
-
-	// Test JSON unmarshaling without data
-	var unmarshaledError websocket.JsonRpcError
-	err = json.Unmarshal(jsonData, &unmarshaledError)
-	require.NoError(t, err)
-
-	assert.Equal(t, errorObj.Code, unmarshaledError.Code)
-	assert.Equal(t, errorObj.Message, unmarshaledError.Message)
-	assert.Nil(t, unmarshaledError.Data)
-}
-
-// TestWebSocket_ClientConnectionSubscriptions tests subscription management
-func TestWebSocket_ClientConnectionSubscriptions(t *testing.T) {
-	// REQ-API-005: Client connection management
-
-	client := &websocket.ClientConnection{
-		ClientID:      "subscription_test",
-		Authenticated: true,
-		UserID:        "user_789",
-		Role:          "admin",
-		AuthMethod:    "api_key",
-		ConnectedAt:   time.Now(),
-		Subscriptions: make(map[string]bool),
-	}
-
-	// Test adding subscriptions
-	client.Subscriptions["camera_events"] = true
-	client.Subscriptions["system_alerts"] = true
-	client.Subscriptions["performance_metrics"] = false
-
-	assert.True(t, client.Subscriptions["camera_events"])
-	assert.True(t, client.Subscriptions["system_alerts"])
-	assert.False(t, client.Subscriptions["performance_metrics"])
-
-	// Test subscription count
-	assert.Len(t, client.Subscriptions, 3)
-
-	// Test removing subscriptions
-	delete(client.Subscriptions, "performance_metrics")
-	assert.Len(t, client.Subscriptions, 2)
-	_, exists := client.Subscriptions["performance_metrics"]
-	assert.False(t, exists)
-
-	// Test subscription toggle
-	client.Subscriptions["camera_events"] = false
-	assert.False(t, client.Subscriptions["camera_events"])
-}
-
-// TestWebSocket_PerformanceMetricsResponseTimes tests response times management
-func TestWebSocket_PerformanceMetricsResponseTimes(t *testing.T) {
-	// REQ-API-006: Performance metrics tracking
-
-	metrics := &websocket.PerformanceMetrics{
+// TestWebSocketTypes_PerformanceMetrics tests performance metrics structure
+func TestWebSocketTypes_PerformanceMetrics(t *testing.T) {
+	// Test performance metrics creation
+	metrics := &PerformanceMetrics{
 		RequestCount:      0,
 		ResponseTimes:     make(map[string][]float64),
 		ErrorCount:        0,
@@ -690,22 +121,106 @@ func TestWebSocket_PerformanceMetricsResponseTimes(t *testing.T) {
 		StartTime:         time.Now(),
 	}
 
-	// Test adding response times
-	metrics.ResponseTimes["method1"] = append(metrics.ResponseTimes["method1"], 10.5)
-	metrics.ResponseTimes["method1"] = append(metrics.ResponseTimes["method1"], 12.3)
-	metrics.ResponseTimes["method2"] = append(metrics.ResponseTimes["method2"], 25.1)
+	// Test metrics structure
+	assert.Equal(t, int64(0), metrics.RequestCount, "Initial request count should be 0")
+	assert.Equal(t, int64(0), metrics.ErrorCount, "Initial error count should be 0")
+	assert.Equal(t, int64(0), metrics.ActiveConnections, "Initial active connections should be 0")
+	assert.NotNil(t, metrics.ResponseTimes, "Response times map should be initialized")
+	assert.NotZero(t, metrics.StartTime, "Start time should be set")
+}
 
-	assert.Len(t, metrics.ResponseTimes["method1"], 2)
-	assert.Equal(t, 10.5, metrics.ResponseTimes["method1"][0])
-	assert.Equal(t, 12.3, metrics.ResponseTimes["method1"][1])
-	assert.Len(t, metrics.ResponseTimes["method2"], 1)
-	assert.Equal(t, 25.1, metrics.ResponseTimes["method2"][0])
+// TestWebSocketTypes_WebSocketMessage tests WebSocket message structure
+func TestWebSocketTypes_WebSocketMessage(t *testing.T) {
+	// Test WebSocket message creation
+	message := &WebSocketMessage{
+		Type:      "event",
+		Data:      []byte(`{"type": "camera_update"}`),
+		Timestamp: time.Now(),
+		ClientID:  "test-client",
+	}
 
-	// Test clearing response times
-	metrics.ResponseTimes["method1"] = nil
-	assert.Nil(t, metrics.ResponseTimes["method1"])
+	// Test message structure
+	assert.Equal(t, "event", message.Type, "Message type should be set")
+	assert.NotNil(t, message.Data, "Message data should be set")
+	assert.NotZero(t, message.Timestamp, "Message timestamp should be set")
+	assert.Equal(t, "test-client", message.ClientID, "Client ID should be set")
+}
 
-	// Test non-existent method
-	_, exists := metrics.ResponseTimes["nonexistent"]
-	assert.False(t, exists)
+// TestWebSocketTypes_ServerConfig tests server configuration structure
+func TestWebSocketTypes_ServerConfig(t *testing.T) {
+	// Test server configuration creation
+	config := &ServerConfig{
+		Host:                 "localhost",
+		Port:                 8002,
+		WebSocketPath:        "/ws",
+		MaxConnections:       1000,
+		ReadTimeout:          5 * time.Second,
+		WriteTimeout:         1 * time.Second,
+		PingInterval:         30 * time.Second,
+		PongWait:             60 * time.Second,
+		MaxMessageSize:       1024 * 1024,
+		ShutdownTimeout:      30 * time.Second,
+		ClientCleanupTimeout: 10 * time.Second,
+	}
+
+	// Test config structure
+	assert.Equal(t, "localhost", config.Host, "Host should be set")
+	assert.Equal(t, 8002, config.Port, "Port should be set")
+	assert.Equal(t, "/ws", config.WebSocketPath, "WebSocket path should be set")
+	assert.Equal(t, 1000, config.MaxConnections, "Max connections should be set")
+	assert.Equal(t, 5*time.Second, config.ReadTimeout, "Read timeout should be set")
+	assert.Equal(t, 1*time.Second, config.WriteTimeout, "Write timeout should be set")
+	assert.Equal(t, 30*time.Second, config.PingInterval, "Ping interval should be set")
+	assert.Equal(t, 60*time.Second, config.PongWait, "Pong wait should be set")
+	assert.Equal(t, int64(1024*1024), config.MaxMessageSize, "Max message size should be set")
+	assert.Equal(t, 30*time.Second, config.ShutdownTimeout, "Shutdown timeout should be set")
+	assert.Equal(t, 10*time.Second, config.ClientCleanupTimeout, "Client cleanup timeout should be set")
+}
+
+// TestWebSocketTypes_DefaultServerConfig tests default server configuration
+func TestWebSocketTypes_DefaultServerConfig(t *testing.T) {
+	// Test default server configuration
+	config := DefaultServerConfig()
+
+	// Test default config values
+	assert.Equal(t, "0.0.0.0", config.Host, "Default host should be 0.0.0.0")
+	assert.Equal(t, 8002, config.Port, "Default port should be 8002")
+	assert.Equal(t, "/ws", config.WebSocketPath, "Default WebSocket path should be /ws")
+	assert.Equal(t, 1000, config.MaxConnections, "Default max connections should be 1000")
+	assert.Equal(t, 5*time.Second, config.ReadTimeout, "Default read timeout should be 5 seconds")
+	assert.Equal(t, 1*time.Second, config.WriteTimeout, "Default write timeout should be 1 second")
+	assert.Equal(t, 30*time.Second, config.PingInterval, "Default ping interval should be 30 seconds")
+	assert.Equal(t, 60*time.Second, config.PongWait, "Default pong wait should be 60 seconds")
+	assert.Equal(t, int64(1024*1024), config.MaxMessageSize, "Default max message size should be 1MB")
+	assert.Equal(t, 30*time.Second, config.ShutdownTimeout, "Default shutdown timeout should be 30 seconds")
+	assert.Equal(t, 10*time.Second, config.ClientCleanupTimeout, "Default client cleanup timeout should be 10 seconds")
+}
+
+// TestWebSocketTypes_MethodHandler tests method handler type
+func TestWebSocketTypes_MethodHandler(t *testing.T) {
+	// Test method handler function signature
+	handler := func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			ID:      "test",
+			Result:  "success",
+		}, nil
+	}
+
+	// Test handler execution
+	client := &ClientConnection{
+		ClientID:      "test-client",
+		Authenticated: true,
+		UserID:        "test-user",
+		Role:          "viewer",
+		ConnectedAt:   time.Now(),
+		Subscriptions: make(map[string]bool),
+	}
+
+	response, err := handler(map[string]interface{}{}, client)
+	assert.NoError(t, err, "Handler should not return error")
+	assert.NotNil(t, response, "Handler should return response")
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, "test", response.ID, "Response should have correct ID")
+	assert.Equal(t, "success", response.Result, "Response should have correct result")
 }

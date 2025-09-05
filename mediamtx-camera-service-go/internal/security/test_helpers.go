@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/require"
 )
 
@@ -164,7 +165,7 @@ type TestSecurityEnvironment struct {
 	JWTHandler     *JWTHandler
 	RoleManager    *PermissionChecker
 	SessionManager *SessionManager
-	Logger         *TestLogger // Following established pattern: env.Logger
+	Logger         *logging.Logger // Following established pattern: env.Logger
 }
 
 // SetupTestSecurityEnvironment creates a complete security test environment
@@ -174,7 +175,7 @@ func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 		JWTHandler:     TestJWTHandler(t),
 		RoleManager:    TestPermissionChecker(t),
 		SessionManager: TestSessionManager(t),
-		Logger:         NewMinimalLogger(), // Following established pattern: env.Logger
+		Logger:         logging.NewLogger("test"), // Following established pattern: env.Logger
 	}
 
 	// Session manager cleanup is started automatically in NewSessionManager
@@ -349,7 +350,7 @@ func (l *MinimalLogger) Debug(args ...interface{}) {
 
 // WithFields - implements the exact signature expected by middleware
 // Returns self for method chaining compatibility
-func (l *MinimalLogger) WithFields(fields map[string]interface{}) *MinimalLogger {
+func (l *MinimalLogger) WithFields(fields map[string]interface{}) TestLoggerInterface {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.fieldsLogs = append(l.fieldsLogs, fields)
@@ -451,31 +452,37 @@ type TestLoggerInterface interface {
 	WithFields(fields map[string]interface{}) TestLoggerInterface
 }
 
-// Ensure TestLogger implements TestLoggerInterface
-var _ TestLoggerInterface = (*TestLogger)(nil)
+// Ensure MinimalLogger implements TestLoggerInterface
+var _ TestLoggerInterface = (*MinimalLogger)(nil)
 
 // =============================================================================
 // MIDDLEWARE COMPATIBILITY SOLUTION
 // =============================================================================
 
 // TestLoggerWrapper provides middleware compatibility
-// This allows the TestLogger to be used with middleware functions
+// This allows the MinimalLogger to be used with middleware functions
 // Following best practice: wrapper pattern for interface compatibility
 type TestLoggerWrapper struct {
-	*TestLogger
+	*MinimalLogger
+}
+
+// Type assertion to make TestLoggerWrapper compatible with *logging.Logger
+// This is a workaround for the middleware type requirements
+func (tw *TestLoggerWrapper) AsLoggingLogger() interface{} {
+	return tw
 }
 
 // NewTestLoggerWrapper creates a wrapped logger for middleware compatibility
 func NewTestLoggerWrapper() *TestLoggerWrapper {
 	return &TestLoggerWrapper{
-		TestLogger: NewTestLogger(),
+		MinimalLogger: NewMinimalLogger(),
 	}
 }
 
 // WithFields - implements the exact signature expected by middleware
 // Returns the wrapper for method chaining compatibility
 func (tw *TestLoggerWrapper) WithFields(fields map[string]interface{}) *TestLoggerWrapper {
-	tw.TestLogger.WithFields(fields)
+	tw.MinimalLogger.WithFields(fields)
 	return tw
 }
 
@@ -486,8 +493,6 @@ func CreateMiddlewareCompatibleLogger() interface{} {
 	// The middleware will use the methods it needs
 	return NewTestLoggerWrapper()
 }
-
-
 
 // =============================================================================
 // TYPE ALIAS FOR MIDDLEWARE COMPATIBILITY

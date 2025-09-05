@@ -1,0 +1,48 @@
+# Combined fixture testing multiple MediaMTX validation edge cases
+# This tests: empty host, invalid ports (0, negative, >65535), empty paths
+server:
+  host: "0.0.0.0"
+  port: 8002
+
+mediamtx:
+  # Empty host - should fail
+  host: ""
+  
+  # Invalid API port - 0 (should fail)
+  api_port: 0
+  
+  # Invalid RTSP port - negative (should fail)  
+  rtsp_port: -1
+  
+  # Invalid WebRTC port - too high (should fail)
+  webrtc_port: 70000
+  
+  # Invalid HLS port - boundary case (should fail)
+  hls_port: 65536
+  
+  # Empty config path - should fail
+  config_path: ""
+  
+  # Empty recordings path - should fail
+  recordings_path: ""
+  
+  # Empty snapshots path - should fail
+  snapshots_path: ""
+
+# Minimal valid sections to avoid other validation errors
+camera:
+  poll_interval: 5
+  detection_timeout: 30
+  device_range: [0, 10]
+  capability_timeout: 10
+  capability_retry: 3
+
+storage:
+  default_path: "/tmp/recordings"
+  fallback_path: "/tmp/recordings"
+  warn_percent: 80
+  block_percent: 90
+
+logging:
+  level: "info"
+  format: "json"

@@ -305,47 +305,10 @@ func marshalCreateStreamRequest(name, source string) ([]byte, error) {
 
 // marshalCreatePathRequest marshals a path creation request
 func marshalCreatePathRequest(path *Path) ([]byte, error) {
-	config := make(map[string]interface{})
-
-	// Convert path fields to config map
-	if path.SourceOnDemand {
-		config["sourceOnDemand"] = path.SourceOnDemand
-	}
-	if path.SourceOnDemandStartTimeout > 0 {
-		config["sourceOnDemandStartTimeout"] = path.SourceOnDemandStartTimeout.String()
-	}
-	if path.SourceOnDemandCloseAfter > 0 {
-		config["sourceOnDemandCloseAfter"] = path.SourceOnDemandCloseAfter.String()
-	}
-	if path.PublishUser != "" {
-		config["publishUser"] = path.PublishUser
-	}
-	if path.PublishPass != "" {
-		config["publishPass"] = path.PublishPass
-	}
-	if path.ReadUser != "" {
-		config["readUser"] = path.ReadUser
-	}
-	if path.ReadPass != "" {
-		config["readPass"] = path.ReadPass
-	}
-	if path.RunOnDemand != "" {
-		config["runOnDemand"] = path.RunOnDemand
-	}
-	if path.RunOnDemandRestart {
-		config["runOnDemandRestart"] = path.RunOnDemandRestart
-	}
-	if path.RunOnDemandCloseAfter > 0 {
-		config["runOnDemandCloseAfter"] = path.RunOnDemandCloseAfter.String()
-	}
-	if path.RunOnDemandStartTimeout > 0 {
-		config["runOnDemandStartTimeout"] = path.RunOnDemandStartTimeout.String()
-	}
-
-	request := createPathRequest{
-		Name:   path.Name,
-		Source: path.Source,
-		Config: config,
+	// MediaMTX API expects a simple format with just name and source
+	request := map[string]interface{}{
+		"name":   path.Name,
+		"source": path.Source,
 	}
 	return json.Marshal(request)
 }

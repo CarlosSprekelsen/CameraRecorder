@@ -1,0 +1,55 @@
+# Combined fixture testing edge cases across multiple validation functions
+# This tests: boundary values, edge cases, and multiple validation errors
+server:
+  host: "0.0.0.0"
+  # Boundary port values
+  port: 1  # Minimum valid port
+
+mediamtx:
+  host: "localhost"
+  # Boundary port values
+  api_port: 65535      # Maximum valid port
+  rtsp_port: 1         # Minimum valid port
+  webrtc_port: 32767   # Mid-range port
+  hls_port: 8080       # Common port
+  config_path: "/tmp/mediamtx.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+
+camera:
+  # Boundary poll interval
+  poll_interval: 1     # Minimum valid
+  detection_timeout: 1 # Minimum valid
+  device_range: [0, 0] # Edge case: min == max
+  capability_timeout: 1
+  capability_retry: 1
+
+storage:
+  default_path: "/tmp/recordings"
+  fallback_path: "/tmp/recordings"
+  # Boundary percentage values
+  warn_percent: 1      # Minimum valid
+  block_percent: 100   # Maximum valid
+
+logging:
+  level: "debug"       # Edge case: debug level
+  format: "text"       # Edge case: text format
+
+performance:
+  snapshot_tiers:
+    # Boundary timeout values
+    tier1_usb_direct_timeout: 0.001        # Very small positive
+    tier2_rtsp_ready_check_timeout: 0.001  # Very small positive
+    tier3_activation_timeout: 0.001        # Very small positive
+    tier3_activation_trigger_timeout: 0.001 # Very small positive
+    total_operation_timeout: 0.001         # Very small positive
+    immediate_response_threshold: 0.001    # Very small positive
+    acceptable_response_threshold: 0.001   # Very small positive
+    slow_response_threshold: 0.001         # Very small positive
+
+# Edge case: minimal retention policy
+retention:
+  policy:
+    type: "age"
+    max_age_days: 1    # Minimum valid
+    max_size_gb: 0.001 # Very small size

@@ -12,8 +12,8 @@ import (
 
 func TestNewInputValidator(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -76,8 +76,8 @@ func TestValidationResult_GetErrorMessages(t *testing.T) {
 
 func TestInputValidator_ValidateCameraID(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -98,8 +98,8 @@ func TestInputValidator_ValidateCameraID(t *testing.T) {
 
 func TestInputValidator_ValidateDuration(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -135,8 +135,8 @@ func TestInputValidator_ValidateDuration(t *testing.T) {
 
 func TestInputValidator_ValidateResolution(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -161,8 +161,8 @@ func TestInputValidator_ValidateResolution(t *testing.T) {
 
 func TestInputValidator_ValidateFPS(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -187,8 +187,8 @@ func TestInputValidator_ValidateFPS(t *testing.T) {
 
 func TestInputValidator_ValidateQuality(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -213,8 +213,8 @@ func TestInputValidator_ValidateQuality(t *testing.T) {
 
 func TestInputValidator_ValidatePriority(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -239,8 +239,8 @@ func TestInputValidator_ValidatePriority(t *testing.T) {
 
 func TestInputValidator_ValidateRetentionDays(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -261,8 +261,8 @@ func TestInputValidator_ValidateRetentionDays(t *testing.T) {
 
 func TestInputValidator_ValidateUseCase(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -287,8 +287,8 @@ func TestInputValidator_ValidateUseCase(t *testing.T) {
 
 func TestInputValidator_ValidateAutoCleanup(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -302,8 +302,8 @@ func TestInputValidator_ValidateAutoCleanup(t *testing.T) {
 
 func TestInputValidator_SanitizeString(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -328,8 +328,8 @@ func TestInputValidator_SanitizeString(t *testing.T) {
 
 func TestInputValidator_SanitizeMap(t *testing.T) {
 	// COMMON PATTERN: Use shared test environment instead of individual components
-	env := testutils.SetupTestEnvironment(t)
-	defer testutils.TeardownTestEnvironment(t, env)
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
 
 	validator := NewInputValidator(env.Logger, nil)
 
@@ -364,4 +364,395 @@ func TestInputValidator_SanitizeMap(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "value", nested["key"])
 	assert.Equal(t, "<script>alert('nested')</script>", nested["script"])
+}
+
+func TestInputValidator_ValidateRecordingOptions(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		options  map[string]interface{}
+		hasError bool
+	}{
+		{"Valid options", map[string]interface{}{"quality": 75, "fps": 30}, false},
+		{"Empty options", map[string]interface{}{}, false},
+		{"Invalid quality in options", map[string]interface{}{"quality": 150}, true},
+		{"Invalid fps in options", map[string]interface{}{"fps": 0}, true},
+		{"Nil options", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateRecordingOptions(tt.options)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateLimit(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		limit    int
+		hasError bool
+	}{
+		{"Valid limit 10", 10, false},
+		{"Valid limit 1", 1, false},
+		{"Valid limit 100", 100, false},
+		{"Invalid limit 0", 0, true},
+		{"Invalid negative limit", -5, true},
+		{"Invalid high limit", 10000, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateLimit(tt.limit)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateOffset(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		offset   int
+		hasError bool
+	}{
+		{"Valid offset 0", 0, false},
+		{"Valid offset 10", 10, false},
+		{"Valid offset 100", 100, false},
+		{"Invalid negative offset", -5, true},
+		{"Invalid high offset", 100000, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateOffset(tt.offset)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateDevicePath(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		path     string
+		hasError bool
+	}{
+		{"Valid device path", "/dev/video0", false},
+		{"Valid device path 2", "/dev/video1", false},
+		{"Valid device path 3", "/dev/camera0", false},
+		{"Empty path", "", true},
+		{"Invalid path", "not_a_device", true},
+		{"Path injection attempt", "/dev/video0; rm -rf /", true},
+		{"Relative path", "../dev/video0", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateDevicePath(tt.path)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateFilename(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		filename string
+		hasError bool
+	}{
+		{"Valid filename", "recording.mp4", false},
+		{"Valid filename with path", "/tmp/recording.mp4", false},
+		{"Valid filename with numbers", "recording_2023_01_01.mp4", false},
+		{"Empty filename", "", true},
+		{"Invalid characters", "recording<>.mp4", true},
+		{"Path traversal attempt", "../../../etc/passwd", true},
+		{"Too long filename", "a" + string(make([]byte, 300)), true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateFilename(tt.filename)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateIntegerRange(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    int
+		min      int
+		max      int
+		hasError bool
+	}{
+		{"Valid in range", 50, 0, 100, false},
+		{"Valid at min", 0, 0, 100, false},
+		{"Valid at max", 100, 0, 100, false},
+		{"Below min", -10, 0, 100, true},
+		{"Above max", 150, 0, 100, true},
+		{"Same min max", 5, 5, 5, false},
+		{"Invalid range", 5, 10, 5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateIntegerRange(tt.value, "test_field", tt.min, tt.max)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidatePositiveInteger(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    int
+		hasError bool
+	}{
+		{"Positive integer", 10, false},
+		{"Positive integer 1", 1, false},
+		{"Zero", 0, true},
+		{"Negative integer", -5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidatePositiveInteger(tt.value, "test_field")
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateNonNegativeInteger(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    int
+		hasError bool
+	}{
+		{"Positive integer", 10, false},
+		{"Zero", 0, false},
+		{"Negative integer", -5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateNonNegativeInteger(tt.value, "test_field")
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateStringParameter(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    string
+		hasError bool
+	}{
+		{"Valid string", "hello", false},
+		{"Valid string with spaces", "hello world", false},
+		{"Empty string", "", true},
+		{"Only whitespace", "   ", true},
+		{"String with newlines", "hello\nworld", true},
+		{"String with tabs", "hello\tworld", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateStringParameter(tt.value, "test_field", false)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateOptionalString(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    string
+		hasError bool
+	}{
+		{"Valid string", "hello", false},
+		{"Valid string with spaces", "hello world", false},
+		{"Empty string", "", false},
+		{"Only whitespace", "   ", true},
+		{"String with newlines", "hello\nworld", true},
+		{"String with tabs", "hello\tworld", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateOptionalString(tt.value, "test_field")
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateBooleanParameter(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		value    interface{}
+		hasError bool
+	}{
+		{"Valid true", true, false},
+		{"Valid false", false, false},
+		{"Valid string true", "true", false},
+		{"Valid string false", "false", false},
+		{"Valid string 1", "1", false},
+		{"Valid string 0", "0", false},
+		{"Invalid string", "maybe", true},
+		{"Invalid number", 123, true},
+		{"Invalid nil", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateBooleanParameter(tt.value, "test_field")
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidatePaginationParams(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		limit    int
+		offset   int
+		hasError bool
+	}{
+		{"Valid pagination", 10, 0, false},
+		{"Valid pagination with offset", 20, 50, false},
+		{"Invalid limit", 0, 0, true},
+		{"Invalid offset", 10, -5, true},
+		{"Invalid both", 0, -5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidatePaginationParams(map[string]interface{}{"limit": tt.limit, "offset": tt.offset})
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+func TestInputValidator_ValidateCommonRecordingParams(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+	validator := NewInputValidator(env.Logger, nil)
+
+	tests := []struct {
+		name     string
+		params   map[string]interface{}
+		hasError bool
+	}{
+		{"Valid params", map[string]interface{}{"camera_id": "cam1", "duration": 30, "quality": 75}, false},
+		{"Missing camera_id", map[string]interface{}{"duration": 30, "quality": 75}, true},
+		{"Invalid duration", map[string]interface{}{"camera_id": "cam1", "duration": 0, "quality": 75}, true},
+		{"Invalid quality", map[string]interface{}{"camera_id": "cam1", "duration": 30, "quality": 150}, true},
+		{"Empty params", map[string]interface{}{}, true},
+		{"Nil params", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validator.ValidateCommonRecordingParams(tt.params)
+			if tt.hasError {
+				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+			} else {
+				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
 }

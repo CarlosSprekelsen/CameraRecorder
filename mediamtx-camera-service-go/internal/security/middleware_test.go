@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // =============================================================================
@@ -86,7 +87,7 @@ func TestNewAuthMiddleware(t *testing.T) {
 	config := &MockSecurityConfig{}
 
 	// Following established pattern: use minimal logger for middleware compatibility
-	middleware := NewAuthMiddleware(NewMinimalLogger(), config)
+	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
 
 	assert.NotNil(t, middleware, "Auth middleware should be created successfully")
 	// Note: Fields are unexported, so we can't test them directly
@@ -101,8 +102,8 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: env.Logger (like other security components)
-	middleware := NewAuthMiddleware(env.Logger, config)
+	// Following established pattern: use minimal logger for middleware compatibility
+	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
 
 	// Mock authenticated client
 	client := &MockClientConnection{
@@ -136,8 +137,8 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: env.Logger (like other security components)
-	middleware := NewAuthMiddleware(env.Logger, config)
+	// Following established pattern: use minimal logger for middleware compatibility
+	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
 
 	// Mock unauthenticated client
 	client := &MockClientConnection{
@@ -177,8 +178,8 @@ func TestNewRBACMiddleware(t *testing.T) {
 	permissionChecker := NewPermissionChecker()
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: env.Logger (like other security components)
-	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
+	// Following established pattern: use minimal logger for middleware compatibility
+	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
 
 	assert.NotNil(t, middleware, "RBAC middleware should be created successfully")
 	// Note: Fields are unexported, so we can't test them directly
@@ -194,8 +195,8 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 	permissionChecker := NewPermissionChecker()
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: env.Logger (like other security components)
-	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
+	// Following established pattern: logging.NewLogger("test") (like other security components)
+	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
 
 	// Mock authenticated client with sufficient role
 	client := &MockClientConnection{
@@ -230,8 +231,8 @@ func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 	permissionChecker := NewPermissionChecker()
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: env.Logger (like other security components)
-	middleware := NewRBACMiddleware(permissionChecker, env.Logger, config)
+	// Following established pattern: logging.NewLogger("test") (like other security components)
+	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
 
 	// Mock authenticated client with insufficient role
 	client := &MockClientConnection{
@@ -268,8 +269,8 @@ func TestSecurityMiddleware_Integration(t *testing.T) {
 	defer TeardownTestSecurityEnvironment(t, env)
 
 	// Test complete security flow: Auth + RBAC
-	authMiddleware := NewAuthMiddleware(env.Logger, &MockSecurityConfig{})
-	rbacMiddleware := NewRBACMiddleware(env.RoleManager, env.Logger, &MockSecurityConfig{})
+	authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
+	rbacMiddleware := NewRBACMiddleware(env.RoleManager, logging.NewLogger("test"), &MockSecurityConfig{})
 
 	// Mock authenticated admin client
 	client := &MockClientConnection{
@@ -309,7 +310,7 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 	defer TeardownTestSecurityEnvironment(t, env)
 
 	t.Run("nil_handler", func(t *testing.T) {
-		authMiddleware := NewAuthMiddleware(env.Logger, &MockSecurityConfig{})
+		authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
 
 		// This should not panic
 		securedHandler := authMiddleware.RequireAuth(nil)
@@ -317,7 +318,7 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty_client_data", func(t *testing.T) {
-		authMiddleware := NewAuthMiddleware(env.Logger, &MockSecurityConfig{})
+		authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
 
 		client := &MockClientConnection{
 			clientID:      "",
@@ -336,4 +337,204 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 		assert.Error(t, err, "Should reject client with empty data")
 		assert.Contains(t, err.Error(), "authentication required", "Should indicate authentication required")
 	})
+}
+
+// =============================================================================
+// COMPREHENSIVE MIDDLEWARE TESTS FOR 90%+ COVERAGE
+// =============================================================================
+
+func TestNewSecureMethodRegistry(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	assert.NotNil(t, registry)
+	assert.NotNil(t, registry.methods)
+	assert.Empty(t, registry.methods)
+}
+
+func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	tests := []struct {
+		name         string
+		method       string
+		requiredRole string
+		description  string
+		wantErr      bool
+	}{
+		{"Valid method", "test_method", "viewer", "Test method", false},
+		{"Admin method", "admin_method", "admin", "Admin method", false},
+		{"Empty method", "", "viewer", "Empty method", true},
+		{"Empty role", "test_method", "", "Empty role", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := registry.RegisterMethod(tt.method, tt.requiredRole, tt.description)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				// Verify method was registered
+				method, exists := registry.methods[tt.method]
+				assert.True(t, exists)
+				assert.Equal(t, tt.requiredRole, method.RequiredRole)
+				assert.Equal(t, tt.description, method.Description)
+			}
+		})
+	}
+}
+
+func TestSecureMethodRegistry_GetMethod(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	// Register a method
+	err := registry.RegisterMethod("test_method", "viewer", "Test method")
+	require.NoError(t, err)
+	
+	tests := []struct {
+		name     string
+		method   string
+		want     *MethodSecurityInfo
+		wantErr  bool
+	}{
+		{"Existing method", "test_method", &MethodSecurityInfo{
+			Method: "test_method",
+			RequiredRole: "viewer",
+			Description: "Test method",
+		}, false},
+		{"Non-existing method", "nonexistent", nil, true},
+		{"Empty method", "", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			method, err := registry.GetMethod(tt.method)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, method)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, method)
+			}
+		})
+	}
+}
+
+func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	// Initially empty
+	methods := registry.GetAllMethods()
+	assert.Empty(t, methods)
+	
+	// Register some methods
+	err := registry.RegisterMethod("method1", "viewer", "Method 1")
+	require.NoError(t, err)
+	
+	err = registry.RegisterMethod("method2", "admin", "Method 2")
+	require.NoError(t, err)
+	
+	// Get all methods
+	methods = registry.GetAllMethods()
+	assert.Len(t, methods, 2)
+	
+	// Verify methods are present
+	methodNames := make(map[string]bool)
+	for _, method := range methods {
+		methodNames[method.Method] = true
+	}
+	assert.True(t, methodNames["method1"])
+	assert.True(t, methodNames["method2"])
+}
+
+func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	// Register a method
+	err := registry.RegisterMethod("test_method", "viewer", "Test method")
+	require.NoError(t, err)
+	
+	tests := []struct {
+		name     string
+		method   string
+		want     *MethodSecurityInfo
+		wantErr  bool
+	}{
+		{"Existing method", "test_method", &MethodSecurityInfo{
+			Method: "test_method",
+			RequiredRole: "viewer",
+			Description: "Test method",
+		}, false},
+		{"Non-existing method", "nonexistent", nil, true},
+		{"Empty method", "", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			info, err := registry.GetMethodSecurityInfo(tt.method)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, info)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, info)
+			}
+		})
+	}
+}
+
+func TestSecureMethodRegistry_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	// Test concurrent registration
+	done := make(chan bool, 10)
+	
+	for i := 0; i < 10; i++ {
+		go func(methodID int) {
+			method := "method" + string(rune(methodID))
+			err := registry.RegisterMethod(method, "viewer", "Concurrent method")
+			assert.NoError(t, err)
+			done <- true
+		}(i)
+	}
+	
+	// Wait for all goroutines to complete
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+	
+	// Verify all methods were registered
+	methods := registry.GetAllMethods()
+	assert.Len(t, methods, 10)
+}
+
+func TestSecureMethodRegistry_DuplicateRegistration(t *testing.T) {
+	t.Parallel()
+
+	registry := NewSecureMethodRegistry()
+	
+	// Register method first time
+	err := registry.RegisterMethod("test_method", "viewer", "First description")
+	require.NoError(t, err)
+	
+	// Try to register same method again
+	err = registry.RegisterMethod("test_method", "admin", "Second description")
+	assert.Error(t, err, "Should error on duplicate registration")
+	
+	// Verify original method is unchanged
+	method, err := registry.GetMethod("test_method")
+	require.NoError(t, err)
+	assert.Equal(t, "viewer", method.RequiredRole)
+	assert.Equal(t, "First description", method.Description)
 }

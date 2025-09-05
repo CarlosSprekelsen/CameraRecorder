@@ -15,6 +15,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -110,7 +111,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		return NewPathErrorWithErr(name, "create_path", "failed to marshal request", err)
 	}
 
-	// Send request
+	// Send request - name must be in URL path per Swagger spec
 	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
 		return NewPathErrorWithErr(name, "create_path", "failed to create path", err)
@@ -124,7 +125,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 	pm.logger.WithField("name", name).Debug("Deleting MediaMTX path")
 
-	err := pm.client.Delete(ctx, fmt.Sprintf("/v3/paths/delete/%s", name))
+	err := pm.client.Delete(ctx, fmt.Sprintf("/v3/config/paths/delete/%s", name))
 	if err != nil {
 		return NewPathErrorWithErr(name, "delete_path", "failed to delete path", err)
 	}
@@ -188,12 +189,26 @@ func (pm *pathManager) ValidatePath(ctx context.Context, name string) error {
 	return nil
 }
 
-// PathExists checks if a path exists
+// PathExists checks if a path exists in configuration
 func (pm *pathManager) PathExists(ctx context.Context, name string) bool {
 	pm.logger.WithField("name", name).Debug("Checking if MediaMTX path exists")
 
-	_, err := pm.GetPath(ctx, name)
+	// Check configuration paths, not runtime paths
+	data, err := pm.client.Get(ctx, fmt.Sprintf("/v3/config/paths/get/%s", name))
+	if err != nil {
+		return false
+	}
+
+	// Try to parse the response to verify it's valid
+	_, err = parsePathConfResponse(data)
 	return err == nil
+}
+
+// parsePathConfResponse parses a path configuration response
+func parsePathConfResponse(data []byte) (map[string]interface{}, error) {
+	var config map[string]interface{}
+	err := json.Unmarshal(data, &config)
+	return config, err
 }
 
 // parseDuration parses a duration string

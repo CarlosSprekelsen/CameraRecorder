@@ -1,0 +1,138 @@
+# Invalid Configuration - Excessive Age Days (> 365)
+# This should trigger validation error for max_age_days > 365
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 10
+
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/tmp/mediamtx.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+  health_check_interval: 30
+  health_failure_threshold: 3
+  health_circuit_breaker_timeout: 60
+  health_max_backoff_interval: 300
+  health_recovery_confirmation_threshold: 2
+  backoff_base_multiplier: 2.0
+  backoff_jitter_range: [0.1, 0.3]
+  process_termination_timeout: 10.0
+  process_kill_timeout: 5.0
+  health_check_timeout: 5s
+
+camera:
+  poll_interval: 5.0
+  detection_timeout: 10.0
+  device_range: [0, 9]
+  enable_capability_detection: true
+  auto_start_streams: false
+  capability_timeout: 5.0
+  capability_retry_interval: 1.0
+  capability_max_retries: 3
+
+logging:
+  level: "info"
+  format: "json"
+  file_enabled: true
+  file_path: "/tmp/camera-service.log"
+  max_file_size: 10485760
+  backup_count: 5
+  console_enabled: true
+
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "medium"
+  segment_duration: 300
+  max_segment_size: 104857600
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 604800
+  max_size: 1073741824
+  default_rotation_size: 104857600
+  default_max_duration: 24h
+  default_retention_days: 7
+
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 85
+  max_width: 1920
+  max_height: 1080
+  auto_cleanup: true
+  cleanup_interval: 3600
+  max_age: 604800
+  max_count: 1000
+
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 10.0
+    execution_timeout: 30.0
+    internal_timeout: 5
+    retry_attempts: 3
+    retry_delay: 1.0
+  recording:
+    process_creation_timeout: 10.0
+    execution_timeout: 30.0
+    internal_timeout: 5
+    retry_attempts: 3
+    retry_delay: 1.0
+
+notifications:
+  websocket:
+    delivery_timeout: 5.0
+    retry_attempts: 3
+    retry_delay: 1.0
+    max_queue_size: 1000
+    cleanup_interval: 300
+  real_time:
+    camera_status_interval: 30.0
+    recording_progress_interval: 10.0
+    connection_health_check: 60.0
+
+performance:
+  response_time_targets:
+    snapshot_capture: 2.0
+    recording_start: 5.0
+    recording_stop: 3.0
+    file_listing: 1.0
+  snapshot_tiers:
+    tier1_usb_direct_timeout: 1.0
+    tier2_rtsp_ready_check_timeout: 2.0
+    tier3_activation_timeout: 5.0
+    tier3_activation_trigger_timeout: 10.0
+    total_operation_timeout: 15.0
+    immediate_response_threshold: 0.5
+    acceptable_response_threshold: 2.0
+    slow_response_threshold: 5.0
+  optimization:
+    enable_caching: true
+    cache_ttl: 300
+    max_concurrent_operations: 10
+    connection_pool_size: 5
+
+security:
+  rate_limit_requests: 100
+  rate_limit_window: 1m
+  jwt_secret_key: "test-secret-key"
+  jwt_expiry_hours: 24
+
+storage:
+  warn_percent: 80
+  block_percent: 90
+  default_path: "/tmp/recordings"
+  fallback_path: "/tmp/recordings"
+
+retention_policy:
+  enabled: true
+  type: "age"
+  max_age_days: 500  # Invalid: exceeds 365 days
+  max_size_gb: 1
+  auto_cleanup: true

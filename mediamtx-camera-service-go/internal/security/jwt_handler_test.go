@@ -79,6 +79,160 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 	}
 }
 
+// =============================================================================
+// COMPREHENSIVE JWT HANDLER TESTS FOR 90%+ COVERAGE
+// =============================================================================
+
+func TestJWTHandler_CheckRateLimit(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	tests := []struct {
+		name        string
+		clientID    string
+		requests    int
+		expectLimit bool
+	}{
+		{"Within limit", "client1", 50, false},
+		{"At limit", "client2", 100, false},
+		{"Over limit", "client3", 101, true},
+		{"Multiple clients", "client4", 50, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Make multiple requests to test rate limiting
+			for i := 0; i < tt.requests; i++ {
+				limited := jwtHandler.CheckRateLimit(tt.clientID)
+				if i >= 100 && tt.expectLimit {
+					assert.True(t, limited, "Should be rate limited after 100 requests")
+				} else {
+					assert.False(t, limited, "Should not be rate limited")
+				}
+			}
+		})
+	}
+}
+
+func TestJWTHandler_RecordRequest(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	clientID := "test_client"
+	
+	// Record some requests
+	jwtHandler.RecordRequest(clientID)
+	jwtHandler.RecordRequest(clientID)
+	jwtHandler.RecordRequest(clientID)
+
+	// Check rate limit info
+	info := jwtHandler.GetClientRateInfo(clientID)
+	assert.NotNil(t, info)
+	assert.Equal(t, clientID, info.ClientID)
+	assert.Equal(t, 3, info.RequestCount)
+}
+
+func TestJWTHandler_GetClientRateInfo(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	clientID := "test_client"
+	
+	// Record some requests
+	jwtHandler.RecordRequest(clientID)
+	jwtHandler.RecordRequest(clientID)
+
+	// Get rate info
+	info := jwtHandler.GetClientRateInfo(clientID)
+	assert.NotNil(t, info)
+	assert.Equal(t, clientID, info.ClientID)
+	assert.Equal(t, 2, info.RequestCount)
+	assert.False(t, info.IsLimited)
+}
+
+func TestJWTHandler_SetRateLimit(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	// Set custom rate limit
+	jwtHandler.SetRateLimit(50, time.Minute)
+
+	// Test with new limit
+	clientID := "test_client"
+	for i := 0; i < 51; i++ {
+		limited := jwtHandler.CheckRateLimit(clientID)
+		if i >= 50 {
+			assert.True(t, limited, "Should be rate limited after 50 requests")
+		} else {
+			assert.False(t, limited, "Should not be rate limited")
+		}
+	}
+}
+
+func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	clientID := "test_client"
+	
+	// Record some requests
+	jwtHandler.RecordRequest(clientID)
+	
+	// Cleanup expired clients (should not affect recent requests)
+	jwtHandler.CleanupExpiredClients()
+	
+	// Client should still exist
+	info := jwtHandler.GetClientRateInfo(clientID)
+	assert.NotNil(t, info)
+	assert.Equal(t, clientID, info.ClientID)
+}
+
+func TestJWTHandler_IsTokenExpired(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	tests := []struct {
+		name        string
+		token       string
+		expectError bool
+	}{
+		{"Valid token", GenerateTestToken(t, "user1", "admin"), false},
+		{"Expired token", GenerateExpiredTestToken(t), true},
+		{"Invalid token", "invalid.token.here", true},
+		{"Empty token", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expired, err := jwtHandler.IsTokenExpired(tt.token)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.False(t, expired, "Token should not be expired")
+			}
+		})
+	}
+}
+
+func TestJWTHandler_GetSecretKey(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	secretKey := jwtHandler.GetSecretKey()
+	assert.NotEmpty(t, secretKey)
+	assert.Equal(t, "test_secret_key", secretKey)
+}
+
+func TestJWTHandler_GetAlgorithm(t *testing.T) {
+	t.Parallel()
+	jwtHandler := TestJWTHandler(t)
+
+	algorithm := jwtHandler.GetAlgorithm()
+	assert.NotEmpty(t, algorithm)
+	assert.Equal(t, "HS256", algorithm)
+}
+
 // TestJWTHandler_TokenValidation tests JWT token validation functionality
 func TestJWTHandler_TokenValidation(t *testing.T) {
 	t.Parallel()
