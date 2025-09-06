@@ -130,9 +130,9 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 		return nil, fmt.Errorf("failed to get tier configuration - config manager not properly initialized")
 	}
 
-	// Generate snapshot path
+	// Use the path provided by the controller
 	snapshotID := generateSnapshotID(device)
-	snapshotPath := sm.generateSnapshotPath(device, snapshotID)
+	snapshotPath := path
 
 	// Execute multi-tier snapshot capture
 	snapshot, err := sm.takeSnapshotMultiTier(ctx, device, snapshotPath, options, tierConfig)
@@ -181,6 +181,12 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 			"capture_time": captureTime,
 		}).Info("Tier 1: USB direct capture successful")
 		return result, nil
+	} else {
+		sm.logger.WithFields(logging.Fields{
+			"device": device,
+			"tier":   1,
+			"error":  err.Error(),
+		}).Warn("Tier 1: USB direct capture failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "usb_direct")
 
@@ -202,6 +208,12 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 			"capture_time": captureTime,
 		}).Info("Tier 2: RTSP immediate capture successful")
 		return result, nil
+	} else {
+		sm.logger.WithFields(logging.Fields{
+			"device": device,
+			"tier":   2,
+			"error":  err.Error(),
+		}).Warn("Tier 2: RTSP immediate capture failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_immediate")
 
@@ -223,6 +235,12 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 			"capture_time": captureTime,
 		}).Info("Tier 3: RTSP stream activation successful")
 		return result, nil
+	} else {
+		sm.logger.WithFields(logging.Fields{
+			"device": device,
+			"tier":   3,
+			"error":  err.Error(),
+		}).Warn("Tier 3: RTSP stream activation failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_activation")
 

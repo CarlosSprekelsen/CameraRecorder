@@ -15,7 +15,6 @@ package mediamtx
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,36 +29,17 @@ import (
 func createConfigManagerWithEnvVars(t *testing.T, helper *MediaMTXTestHelper) *config.ConfigManager {
 	configManager := config.CreateConfigManager()
 
-	// Create required directories
-	configDir := filepath.Join(helper.GetConfig().TestDataDir, "config")
-	logDir := filepath.Join(helper.GetConfig().TestDataDir, "logs")
-	err := os.MkdirAll(configDir, 0755)
-	require.NoError(t, err, "Should create config directory")
-	err = os.MkdirAll(logDir, 0755)
-	require.NoError(t, err, "Should create log directory")
-	
-	// Create required files
-	mediamtxConfigFile := filepath.Join(configDir, "mediamtx.yml")
-	err = os.WriteFile(mediamtxConfigFile, []byte("paths: {}\n"), 0644)
-	require.NoError(t, err, "Should create MediaMTX config file")
-	
-	// Create a minimal config file to trigger LoadConfig which loads environment variables
-	tempConfigFile := filepath.Join(helper.GetConfig().TestDataDir, "test_config.yml")
-	configContent := fmt.Sprintf(`server:
-  host: 0.0.0.0
-  port: 8002
-mediamtx:
-  config_path: %s
-logging:
-  file_path: %s
-security:
-  jwt_secret_key: test-secret-key-for-testing-only
-`, mediamtxConfigFile, filepath.Join(logDir, "test.log"))
-	err = os.WriteFile(tempConfigFile, []byte(configContent), 0644)
-	require.NoError(t, err, "Should create temp config file")
+	// Use existing test fixture instead of creating config manually
+	fixturePath := filepath.Join("tests", "fixtures", "config_test_minimal.yaml")
 
-	err = configManager.LoadConfig(tempConfigFile)
-	require.NoError(t, err, "Should load config from environment variables")
+	// Check if fixture exists, if not use a fallback path
+	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
+		// Try alternative path
+		fixturePath = filepath.Join("..", "..", "tests", "fixtures", "config_test_minimal.yaml")
+	}
+
+	err := configManager.LoadConfig(fixturePath)
+	require.NoError(t, err, "Should load config from test fixture")
 
 	return configManager
 }
@@ -559,7 +539,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Create real config manager with proper configuration loading
 	configManager := createConfigManagerWithEnvVars(t, helper)
-	
+
 	logger := helper.GetLogger()
 
 	controller, err := ControllerWithConfigManager(configManager, logger)
@@ -586,6 +566,9 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Test snapshot with camera identifier (abstraction layer)
 	options := map[string]interface{}{}
 	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", outputPath, options)
+	if err != nil {
+		t.Logf("Snapshot error details: %v", err)
+	}
 	require.NoError(t, err, "Snapshot should be taken successfully")
 	require.NotNil(t, snapshot, "Snapshot should not be nil")
 

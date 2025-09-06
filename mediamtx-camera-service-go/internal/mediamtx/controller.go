@@ -732,7 +732,6 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 	return nil
 }
 
-
 // GetConfig returns the current configuration
 func (c *controller) GetConfig(ctx context.Context) (*MediaMTXConfig, error) {
 	if !c.isRunning {
