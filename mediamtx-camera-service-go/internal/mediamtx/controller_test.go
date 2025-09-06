@@ -1,0 +1,316 @@
+/*
+MediaMTX Controller Tests - Real Server Integration
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX service integration
+- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-004: Health monitoring
+
+Test Categories: Unit (using real MediaMTX server)
+API Documentation Reference: docs/api/swagger.json
+*/
+
+package mediamtx
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
+func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+}
+
+// TestController_GetHealth_ReqMTX004 tests controller health with real server
+func TestController_GetHealth_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get health
+	health, err := controller.GetHealth(ctx)
+	require.NoError(t, err, "GetHealth should succeed")
+	require.NotNil(t, health, "Health should not be nil")
+	assert.Equal(t, "healthy", health.Status, "Health should be healthy")
+}
+
+// TestController_GetMetrics_ReqMTX004 tests controller metrics with real server
+func TestController_GetMetrics_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get metrics
+	metrics, err := controller.GetMetrics(ctx)
+	require.NoError(t, err, "GetMetrics should succeed")
+	require.NotNil(t, metrics, "Metrics should not be nil")
+}
+
+// TestController_GetSystemMetrics_ReqMTX004 tests controller system metrics with real server
+func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get system metrics
+	systemMetrics, err := controller.GetSystemMetrics(ctx)
+	require.NoError(t, err, "GetSystemMetrics should succeed")
+	require.NotNil(t, systemMetrics, "System metrics should not be nil")
+}
+
+// TestController_GetPaths_ReqMTX003 tests path listing with real server
+func TestController_GetPaths_ReqMTX003(t *testing.T) {
+	// REQ-MTX-003: Path creation and deletion
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get paths
+	paths, err := controller.GetPaths(ctx)
+	require.NoError(t, err, "GetPaths should succeed")
+	require.NotNil(t, paths, "Paths should not be nil")
+	assert.IsType(t, []*Path{}, paths, "Paths should be a slice of Path pointers")
+}
+
+// TestController_GetStreams_ReqMTX002 tests stream listing with real server
+func TestController_GetStreams_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get streams
+	streams, err := controller.GetStreams(ctx)
+	require.NoError(t, err, "GetStreams should succeed")
+	require.NotNil(t, streams, "Streams should not be nil")
+	assert.IsType(t, []*Stream{}, streams, "Streams should be a slice of Stream pointers")
+}
+
+// TestController_GetConfig_ReqMTX001 tests configuration retrieval with real server
+func TestController_GetConfig_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Get config
+	config, err := controller.GetConfig(ctx)
+	require.NoError(t, err, "GetConfig should succeed")
+	require.NotNil(t, config, "Config should not be nil")
+	assert.NotEmpty(t, config.BaseURL, "BaseURL should not be empty")
+}
+
+// TestController_ListRecordings_ReqMTX002 tests recording listing with real server
+func TestController_ListRecordings_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// List recordings
+	recordings, err := controller.ListRecordings(ctx, 10, 0)
+	require.NoError(t, err, "ListRecordings should succeed")
+	require.NotNil(t, recordings, "Recordings should not be nil")
+}
+
+// TestController_ListSnapshots_ReqMTX002 tests snapshot listing with real server
+func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// List snapshots
+	snapshots, err := controller.ListSnapshots(ctx, 10, 0)
+	require.NoError(t, err, "ListSnapshots should succeed")
+	require.NotNil(t, snapshots, "Snapshots should not be nil")
+}
+
+// TestController_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
+func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Test concurrent access to different methods
+	done := make(chan bool, 4)
+
+	go func() {
+		health, err := controller.GetHealth(ctx)
+		assert.NoError(t, err, "GetHealth should succeed")
+		assert.NotNil(t, health, "Health should not be nil")
+		done <- true
+	}()
+
+	go func() {
+		metrics, err := controller.GetMetrics(ctx)
+		assert.NoError(t, err, "GetMetrics should succeed")
+		assert.NotNil(t, metrics, "Metrics should not be nil")
+		done <- true
+	}()
+
+	go func() {
+		paths, err := controller.GetPaths(ctx)
+		assert.NoError(t, err, "GetPaths should succeed")
+		assert.NotNil(t, paths, "Paths should not be nil")
+		done <- true
+	}()
+
+	go func() {
+		streams, err := controller.GetStreams(ctx)
+		assert.NoError(t, err, "GetStreams should succeed")
+		assert.NotNil(t, streams, "Streams should not be nil")
+		done <- true
+	}()
+
+	// Wait for all goroutines to complete
+	for i := 0; i < 4; i++ {
+		<-done
+	}
+
+	// Should not panic and should handle concurrent access gracefully
+	assert.True(t, true, "Concurrent access should not cause panics")
+}

@@ -26,14 +26,14 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // SnapshotManager manages advanced snapshot operations
 type SnapshotManager struct {
 	ffmpegManager FFmpegManager
 	config        *MediaMTXConfig
-	logger        *logrus.Logger
+	logger        *logging.Logger
 
 	// Configuration integration for multi-tier support
 	configManager *config.ConfigManager
@@ -57,7 +57,7 @@ type SnapshotSettings struct {
 }
 
 // NewSnapshotManager creates a new snapshot manager
-func NewSnapshotManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, logger *logrus.Logger) *SnapshotManager {
+func NewSnapshotManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		config:        config,
@@ -75,7 +75,7 @@ func NewSnapshotManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, log
 }
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
-func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logrus.Logger) *SnapshotManager {
+func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		config:        config,
@@ -95,7 +95,7 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, config *MediaMTXC
 
 // TakeSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
 func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error) {
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":  device,
 		"path":    path,
 		"options": options,
@@ -123,6 +123,9 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 
 	// Get tier configuration from existing config system
 	tierConfig := sm.getTierConfiguration()
+	if tierConfig == nil {
+		return nil, fmt.Errorf("failed to get tier configuration - config manager not properly initialized")
+	}
 
 	// Generate snapshot path
 	snapshotID := generateSnapshotID(device)
@@ -139,7 +142,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 	sm.snapshots[snapshotID] = snapshot
 	sm.snapshotsMu.Unlock()
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"snapshot_id": snapshotID,
 		"device":      device,
 		"path":        path,
@@ -157,7 +160,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	startTime := time.Now()
 	captureMethodsTried := []string{}
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device": device,
 		"tier":   1,
 	}).Info("Tier 1: Attempting USB direct capture")
@@ -169,7 +172,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotDirect(tier1Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 1, captureTime, captureMethodsTried)
-		sm.logger.WithFields(logrus.Fields{
+		sm.logger.WithFields(map[string]interface{}{
 			"device":       device,
 			"tier":         1,
 			"capture_time": captureTime,
@@ -178,7 +181,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	}
 	captureMethodsTried = append(captureMethodsTried, "usb_direct")
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device": device,
 		"tier":   2,
 	}).Info("Tier 2: Attempting RTSP immediate capture")
@@ -190,7 +193,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotFromRTSP(tier2Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 2, captureTime, captureMethodsTried)
-		sm.logger.WithFields(logrus.Fields{
+		sm.logger.WithFields(map[string]interface{}{
 			"device":       device,
 			"tier":         2,
 			"capture_time": captureTime,
@@ -199,7 +202,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_immediate")
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device": device,
 		"tier":   3,
 	}).Info("Tier 3: Attempting RTSP stream activation")
@@ -211,7 +214,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotFromRTSP(tier3Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 3, captureTime, captureMethodsTried)
-		sm.logger.WithFields(logrus.Fields{
+		sm.logger.WithFields(map[string]interface{}{
 			"device":       device,
 			"tier":         3,
 			"capture_time": captureTime,
@@ -222,7 +225,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 
 	// Tier 4: Error Handling - All methods failed
 	totalTime := time.Since(startTime)
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":        device,
 		"total_time":    totalTime,
 		"methods_tried": captureMethodsTried,
@@ -234,33 +237,17 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 // getTierConfiguration retrieves multi-tier configuration from existing config system
 func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 	if sm.configManager == nil {
-		// Return default configuration if config manager not available
-		return &config.SnapshotTiersConfig{
-			Tier1USBDirectTimeout:         0.5,
-			Tier2RTSPReadyCheckTimeout:    1.0,
-			Tier3ActivationTimeout:        3.0,
-			Tier3ActivationTriggerTimeout: 1.0,
-			TotalOperationTimeout:         5.0,
-			ImmediateResponseThreshold:    0.5,
-			AcceptableResponseThreshold:   2.0,
-			SlowResponseThreshold:         3.0,
-		}
+		sm.logger.Error("Config manager is nil - this should not happen in production")
+		// This is a critical error - return nil to force proper error handling
+		return nil
 	}
 
-	// Get performance configuration from existing config system
+	// Get performance configuration from centralized config system
 	cfg := sm.configManager.GetConfig()
 	if cfg == nil {
-		sm.logger.Warn("Failed to get config, using defaults")
-		return &config.SnapshotTiersConfig{
-			Tier1USBDirectTimeout:         0.5,
-			Tier2RTSPReadyCheckTimeout:    1.0,
-			Tier3ActivationTimeout:        3.0,
-			Tier3ActivationTriggerTimeout: 1.0,
-			TotalOperationTimeout:         5.0,
-			ImmediateResponseThreshold:    0.5,
-			AcceptableResponseThreshold:   2.0,
-			SlowResponseThreshold:         3.0,
-		}
+		sm.logger.Error("Failed to get config from config manager - this should not happen in production")
+		// This is a critical error - return nil to force proper error handling
+		return nil
 	}
 
 	return &cfg.Performance.SnapshotTiers
@@ -268,7 +255,7 @@ func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 
 // captureSnapshotDirect implements Tier 1: USB Direct Capture (Fastest Path)
 func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath, snapshotPath string) (*Snapshot, error) {
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"tier":        1,
@@ -307,7 +294,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		Created:  time.Now(),
 	}
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"file_size":   fileSize,
@@ -319,7 +306,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 
 // captureSnapshotFromRTSP implements Tier 2/3: RTSP Capture
 func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePath, snapshotPath string) (*Snapshot, error) {
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"tier":        2,
@@ -367,7 +354,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		Created:  time.Now(),
 	}
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"file_size":   fileSize,
@@ -404,6 +391,18 @@ func (sm *SnapshotManager) createSnapshotResult(snapshot *Snapshot, tier int, ca
 // determineUserExperience determines user experience based on response time
 func (sm *SnapshotManager) determineUserExperience(captureTime time.Duration) string {
 	tierConfig := sm.getTierConfiguration()
+	if tierConfig == nil {
+		// Fallback to reasonable defaults if config is not available
+		sm.logger.Warn("Tier configuration not available, using fallback thresholds")
+		if captureTime < 500*time.Millisecond {
+			return "excellent"
+		} else if captureTime < 2*time.Second {
+			return "good"
+		} else if captureTime < 5*time.Second {
+			return "acceptable"
+		}
+		return "slow"
+	}
 
 	if captureTime < time.Duration(tierConfig.ImmediateResponseThreshold*float64(time.Second)) {
 		return "excellent"
@@ -464,7 +463,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 		return NewFFmpegErrorWithErr(0, "delete_snapshot", "remove_file", "failed to delete snapshot file", err)
 	}
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"snapshot_id": snapshotID,
 		"file_path":   snapshot.FilePath,
 	}).Info("Snapshot deleted successfully")
@@ -474,7 +473,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 
 // CleanupOldSnapshots cleans up old snapshots based on age and count
 func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"max_age":   maxAge,
 		"max_count": maxCount,
 	}).Info("Cleaning up old snapshots")
@@ -521,7 +520,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		}
 	}
 
-	sm.logger.WithField("deleted_count", deletedCount).Info("Snapshot cleanup completed")
+	sm.logger.WithField("deleted_count", strconv.Itoa(deletedCount)).Info("Snapshot cleanup completed")
 	return nil
 }
 
@@ -564,10 +563,11 @@ func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath strin
 
 // generateSnapshotPath generates a snapshot file path
 func (sm *SnapshotManager) generateSnapshotPath(device, snapshotID string) string {
-	// Use configuration paths if available
-	basePath := "/tmp/snapshots"
-	if sm.config.SnapshotsPath != "" {
-		basePath = sm.config.SnapshotsPath
+	// Use configuration paths from centralized config
+	basePath := sm.config.SnapshotsPath
+	if basePath == "" {
+		// Fallback to centralized default
+		basePath = "/opt/camera-service/snapshots"
 	}
 
 	// Generate filename
@@ -592,7 +592,7 @@ func (sm *SnapshotManager) GetSnapshotSettings() *SnapshotSettings {
 // UpdateSnapshotSettings updates snapshot settings
 func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 	sm.snapshotSettings = settings
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"format":      settings.Format,
 		"quality":     settings.Quality,
 		"max_width":   settings.MaxWidth,
@@ -603,7 +603,7 @@ func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 
 // GetSnapshotsList scans the snapshots directory and returns a list of snapshot files with metadata
 func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"limit":  limit,
 		"offset": offset,
 	}).Debug("Getting snapshots list")
@@ -663,7 +663,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		// Add comprehensive metadata for Python equivalence
 		if metadata != nil {
 			// Store additional metadata in a way that's compatible with Python system
-			sm.logger.WithFields(logrus.Fields{
+			sm.logger.WithFields(map[string]interface{}{
 				"filename": filename,
 				"metadata": metadata,
 			}).Debug("Extracted comprehensive snapshot metadata")
@@ -690,7 +690,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 
 	paginatedFiles := files[startIdx:endIdx]
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"total_files": totalCount,
 		"returned":    len(paginatedFiles),
 	}).Debug("Snapshots list retrieved successfully")
@@ -729,7 +729,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 
 	// Parse JSON output for comprehensive metadata
 	// For now, we'll log the raw output and extract basic information
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"file_path": filePath,
 		"metadata":  string(output),
 	}).Debug("Extracted raw image metadata")
@@ -739,7 +739,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	metadata["extraction_method"] = "ffprobe"
 	metadata["extraction_time"] = time.Now().Unix()
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(map[string]interface{}{
 		"file_path": filePath,
 		"metadata":  metadata,
 	}).Debug("Comprehensive snapshot metadata extracted successfully")

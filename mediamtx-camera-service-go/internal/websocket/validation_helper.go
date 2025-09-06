@@ -3,18 +3,18 @@ package websocket
 import (
 	"strconv"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/sirupsen/logrus"
 )
 
 // ValidationHelper provides centralized validation for JSON-RPC method parameters
 type ValidationHelper struct {
 	inputValidator *security.InputValidator
-	logger         *logrus.Logger
+	logger         *logging.Logger
 }
 
 // NewValidationHelper creates a new validation helper
-func NewValidationHelper(inputValidator *security.InputValidator, logger *logrus.Logger) *ValidationHelper {
+func NewValidationHelper(inputValidator *security.InputValidator, logger *logging.Logger) *ValidationHelper {
 	return &ValidationHelper{
 		inputValidator: inputValidator,
 		logger:         logger,
@@ -489,7 +489,7 @@ func (vh *ValidationHelper) CreateValidationErrorResponse(validationResult *Vali
 // LogValidationWarnings logs validation warnings for debugging
 func (vh *ValidationHelper) LogValidationWarnings(validationResult *ValidationResult, method string, clientID string) {
 	if len(validationResult.Warnings) > 0 {
-		vh.logger.WithFields(logrus.Fields{
+		vh.logger.WithFields(logging.Fields{
 			"client_id": clientID,
 			"method":    method,
 			"warnings":  validationResult.Warnings,

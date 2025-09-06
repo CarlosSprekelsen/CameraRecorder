@@ -18,14 +18,22 @@ package mediamtx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
+
+// Global mutex to prevent parallel test execution
+// MediaMTX tests must run sequentially because they share the same server resources
+var testMutex sync.Mutex
 
 // MediaMTXTestConfig provides configuration for MediaMTX server testing
 type MediaMTXTestConfig struct {
@@ -48,8 +56,17 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 // MediaMTXTestHelper provides utilities for MediaMTX server testing
 type MediaMTXTestHelper struct {
 	config *MediaMTXTestConfig
-	logger *logrus.Logger
+	logger *logging.Logger
 	client MediaMTXClient
+}
+
+// EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
+// Call this at the beginning of each test that uses MediaMTX server
+func EnsureSequentialExecution(t *testing.T) {
+	testMutex.Lock()
+	t.Cleanup(func() {
+		testMutex.Unlock()
+	})
 }
 
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
@@ -59,7 +76,7 @@ func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTe
 	}
 
 	// Create logger for testing
-	logger := logrus.New()
+	logger := logging.NewLogger("test-helper")
 	logger.SetLevel(logrus.ErrorLevel) // Reduce noise during tests
 
 	// Create MediaMTX client configuration
@@ -95,21 +112,26 @@ func (h *MediaMTXTestHelper) ensureTestDataDir() error {
 	return os.MkdirAll(h.config.TestDataDir, 0755)
 }
 
-// Cleanup performs cleanup operations after tests
+// Cleanup performs comprehensive cleanup of test resources
 func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
-	if !h.config.CleanupAfter {
+	if h.config == nil || !h.config.CleanupAfter {
 		return
 	}
+
+	t.Log("Starting MediaMTX test cleanup...")
+
+	// Clean up MediaMTX paths created during tests
+	h.cleanupMediaMTXPaths(t)
+
+	// Clean up local test data
+	h.cleanupLocalTestData(t)
 
 	// Close client connection
 	if h.client != nil {
 		h.client.Close()
 	}
 
-	// Clean up test data directory
-	if err := os.RemoveAll(h.config.TestDataDir); err != nil {
-		t.Logf("Failed to clean up test data directory: %v", err)
-	}
+	t.Log("MediaMTX test cleanup completed")
 }
 
 // WaitForServerReady waits for the MediaMTX server to be ready using health check
@@ -231,7 +253,7 @@ func (h *MediaMTXTestHelper) GetConfig() *MediaMTXTestConfig {
 }
 
 // GetLogger returns the test logger
-func (h *MediaMTXTestHelper) GetLogger() *logrus.Logger {
+func (h *MediaMTXTestHelper) GetLogger() *logging.Logger {
 	return h.logger
 }
 
@@ -271,4 +293,75 @@ func (h *MediaMTXTestHelper) GetPathInfo(t *testing.T, name string) ([]byte, err
 		return nil, fmt.Errorf("failed to get path info for %s: %w", name, err)
 	}
 	return data, nil
+}
+
+// cleanupMediaMTXPaths cleans up all MediaMTX paths created during tests
+func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
+	if h.client == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get all paths from MediaMTX
+	data, err := h.client.Get(ctx, "/v3/paths/list")
+	if err != nil {
+		t.Logf("Warning: Failed to get paths for cleanup: %v", err)
+		return
+	}
+
+	// Parse paths response to find test paths
+	// Note: This is a simplified cleanup - in production you'd want more sophisticated path tracking
+	var pathsResponse struct {
+		Items []struct {
+			Name string `json:"name"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(data, &pathsResponse); err != nil {
+		t.Logf("Warning: Failed to parse paths response: %v", err)
+		return
+	}
+
+	// Delete test paths (paths that start with "test_" or "camera_")
+	// Only try to delete paths that actually exist in the current response
+	for _, path := range pathsResponse.Items {
+		if h.isTestPath(path.Name) {
+			err := h.client.Delete(ctx, "/v3/config/paths/delete/"+path.Name)
+			if err != nil {
+				// Only log as warning if it's not a 404 (path not found) error
+				if !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
+					t.Logf("Warning: Failed to delete test path %s: %v", path.Name, err)
+				}
+			} else {
+				t.Logf("Cleaned up test path: %s", path.Name)
+			}
+		}
+	}
+}
+
+// isTestPath determines if a path was created during testing
+func (h *MediaMTXTestHelper) isTestPath(pathName string) bool {
+	// Check for common test path patterns
+	testPrefixes := []string{"test_", "camera_", "rec_"}
+	for _, prefix := range testPrefixes {
+		if len(pathName) > len(prefix) && pathName[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
+}
+
+// cleanupLocalTestData cleans up local test files and directories
+func (h *MediaMTXTestHelper) cleanupLocalTestData(t *testing.T) {
+	if h.config == nil || h.config.TestDataDir == "" {
+		return
+	}
+
+	// Remove test data directory
+	if err := os.RemoveAll(h.config.TestDataDir); err != nil {
+		t.Logf("Warning: Failed to remove test data directory %s: %v", h.config.TestDataDir, err)
+	} else {
+		t.Logf("Cleaned up test data directory: %s", h.config.TestDataDir)
+	}
 }

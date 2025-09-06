@@ -160,6 +160,26 @@ func (ca *ConfigAdapter) CreateRateLimiterConfig() map[string]*RateLimitConfig {
 			BurstSize:         int(baseRate * 0.06),
 			WindowSize:        window,
 		},
+		"start_streaming": {
+			RequestsPerSecond: baseRate * 0.02, // 2% of base rate
+			BurstSize:         int(baseRate * 0.05),
+			WindowSize:        window,
+		},
+		"stop_streaming": {
+			RequestsPerSecond: baseRate * 0.02, // 2% of base rate
+			BurstSize:         int(baseRate * 0.05),
+			WindowSize:        window,
+		},
+		"get_stream_url": {
+			RequestsPerSecond: baseRate * 0.1, // 10% of base rate
+			BurstSize:         int(baseRate * 0.2),
+			WindowSize:        window,
+		},
+		"get_stream_status": {
+			RequestsPerSecond: baseRate * 0.1, // 10% of base rate
+			BurstSize:         int(baseRate * 0.2),
+			WindowSize:        window,
+		},
 		"authenticate": {
 			RequestsPerSecond: baseRate * 0.01, // 1% of base rate (prevent brute force)
 			BurstSize:         int(baseRate * 0.03),

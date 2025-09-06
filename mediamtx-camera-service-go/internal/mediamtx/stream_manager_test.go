@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,7 @@ func TestNewStreamManager_ReqMTX001(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -57,7 +58,7 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -92,7 +93,7 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -124,7 +125,7 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -162,7 +163,7 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -191,7 +192,7 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -225,7 +226,7 @@ func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -259,7 +260,7 @@ func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
@@ -293,7 +294,7 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("stream-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)

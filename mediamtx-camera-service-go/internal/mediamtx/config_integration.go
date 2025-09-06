@@ -18,17 +18,17 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // ConfigIntegration provides integration between MediaMTX package and existing config system
 type ConfigIntegration struct {
 	configManager *config.ConfigManager
-	logger        *logrus.Logger
+	logger        *logging.Logger
 }
 
 // NewConfigIntegration creates a new configuration integration
-func NewConfigIntegration(configManager *config.ConfigManager, logger *logrus.Logger) *ConfigIntegration {
+func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.Logger) *ConfigIntegration {
 	return &ConfigIntegration{
 		configManager: configManager,
 		logger:        logger,
@@ -85,7 +85,7 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
 		ProcessKillTimeout:                  cfg.MediaMTX.ProcessKillTimeout,
 	}
 
-	ci.logger.WithFields(logrus.Fields{
+	ci.logger.WithFields(map[string]interface{}{
 		"host":     mediaMTXConfig.Host,
 		"api_port": mediaMTXConfig.APIPort,
 		"base_url": mediaMTXConfig.BaseURL,

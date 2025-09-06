@@ -1,0 +1,312 @@
+/*
+MediaMTX RTSP Connection Manager Implementation
+
+Requirements Coverage:
+- REQ-MTX-001: MediaMTX service integration
+- REQ-MTX-002: Stream management capabilities
+- REQ-MTX-003: Path creation and deletion
+- REQ-MTX-004: Health monitoring
+
+Test Categories: Unit/Integration
+API Documentation Reference: docs/api/swagger.json
+
+RTSP Connection Management for STANAG4606 streaming monitoring
+*/
+
+package mediamtx
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+)
+
+// rtspConnectionManager implements RTSPConnectionManager interface
+type rtspConnectionManager struct {
+	client MediaMTXClient
+	config *MediaMTXConfig
+	logger *logging.Logger
+
+	// State management
+	mu        sync.RWMutex
+	isHealthy bool
+	lastCheck time.Time
+
+	// Metrics cache
+	lastConnections *RTSPConnectionList
+	lastSessions    *RTSPConnectionSessionList
+	metricsCache    map[string]interface{}
+}
+
+// NewRTSPConnectionManager creates a new RTSP connection manager
+func NewRTSPConnectionManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) RTSPConnectionManager {
+	return &rtspConnectionManager{
+		client:       client,
+		config:       config,
+		logger:       logger,
+		isHealthy:    true,
+		metricsCache: make(map[string]interface{}),
+	}
+}
+
+// ListConnections lists all RTSP connections
+func (rcm *rtspConnectionManager) ListConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error) {
+	rcm.logger.WithFields(map[string]interface{}{
+		"page":         strconv.Itoa(page),
+		"itemsPerPage": strconv.Itoa(itemsPerPage),
+	}).Debug("Listing RTSP connections")
+
+	// Build query parameters
+	params := fmt.Sprintf("?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	url := "/v3/rtspconns/list" + params
+
+	// Make API call
+	data, err := rcm.client.Get(ctx, url)
+	if err != nil {
+		rcm.logger.WithError(err).Error("Failed to list RTSP connections")
+		return nil, fmt.Errorf("failed to list RTSP connections: %w", err)
+	}
+
+	// Parse response
+	var connectionList RTSPConnectionList
+	if err := json.Unmarshal(data, &connectionList); err != nil {
+		rcm.logger.WithError(err).Error("Failed to parse RTSP connections response")
+		return nil, fmt.Errorf("failed to parse RTSP connections response: %w", err)
+	}
+
+	// Cache for metrics
+	rcm.mu.Lock()
+	rcm.lastConnections = &connectionList
+	rcm.mu.Unlock()
+
+	rcm.logger.WithField("count", strconv.Itoa(len(connectionList.Items))).Info("RTSP connections listed successfully")
+	return &connectionList, nil
+}
+
+// GetConnection gets a specific RTSP connection by ID
+func (rcm *rtspConnectionManager) GetConnection(ctx context.Context, id string) (*RTSPConnection, error) {
+	rcm.logger.WithField("id", id).Debug("Getting RTSP connection")
+
+	url := fmt.Sprintf("/v3/rtspconns/get/%s", id)
+
+	// Make API call
+	data, err := rcm.client.Get(ctx, url)
+	if err != nil {
+		rcm.logger.WithError(err).WithField("id", id).Error("Failed to get RTSP connection")
+		return nil, fmt.Errorf("failed to get RTSP connection %s: %w", id, err)
+	}
+
+	// Parse response
+	var connection RTSPConnection
+	if err := json.Unmarshal(data, &connection); err != nil {
+		rcm.logger.WithError(err).WithField("id", id).Error("Failed to parse RTSP connection response")
+		return nil, fmt.Errorf("failed to parse RTSP connection response: %w", err)
+	}
+
+	rcm.logger.WithField("id", id).Info("RTSP connection retrieved successfully")
+	return &connection, nil
+}
+
+// ListSessions lists all RTSP sessions
+func (rcm *rtspConnectionManager) ListSessions(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionSessionList, error) {
+	rcm.logger.WithFields(map[string]interface{}{
+		"page":         strconv.Itoa(page),
+		"itemsPerPage": strconv.Itoa(itemsPerPage),
+	}).Debug("Listing RTSP sessions")
+
+	// Build query parameters
+	params := fmt.Sprintf("?page=%d&itemsPerPage=%d", page, itemsPerPage)
+	url := "/v3/rtspsessions/list" + params
+
+	// Make API call
+	data, err := rcm.client.Get(ctx, url)
+	if err != nil {
+		rcm.logger.WithError(err).Error("Failed to list RTSP sessions")
+		return nil, fmt.Errorf("failed to list RTSP sessions: %w", err)
+	}
+
+	// Parse response
+	var sessionList RTSPConnectionSessionList
+	if err := json.Unmarshal(data, &sessionList); err != nil {
+		rcm.logger.WithError(err).Error("Failed to parse RTSP sessions response")
+		return nil, fmt.Errorf("failed to parse RTSP sessions response: %w", err)
+	}
+
+	// Cache for metrics
+	rcm.mu.Lock()
+	rcm.lastSessions = &sessionList
+	rcm.mu.Unlock()
+
+	rcm.logger.WithField("count", strconv.Itoa(len(sessionList.Items))).Info("RTSP sessions listed successfully")
+	return &sessionList, nil
+}
+
+// GetSession gets a specific RTSP session by ID
+func (rcm *rtspConnectionManager) GetSession(ctx context.Context, id string) (*RTSPConnectionSession, error) {
+	rcm.logger.WithField("id", id).Debug("Getting RTSP session")
+
+	url := fmt.Sprintf("/v3/rtspsessions/get/%s", id)
+
+	// Make API call
+	data, err := rcm.client.Get(ctx, url)
+	if err != nil {
+		rcm.logger.WithError(err).WithField("id", id).Error("Failed to get RTSP session")
+		return nil, fmt.Errorf("failed to get RTSP session %s: %w", id, err)
+	}
+
+	// Parse response
+	var session RTSPConnectionSession
+	if err := json.Unmarshal(data, &session); err != nil {
+		rcm.logger.WithError(err).WithField("id", id).Error("Failed to parse RTSP session response")
+		return nil, fmt.Errorf("failed to parse RTSP session response: %w", err)
+	}
+
+	rcm.logger.WithField("id", id).Info("RTSP session retrieved successfully")
+	return &session, nil
+}
+
+// KickSession kicks out an RTSP session from the server
+func (rcm *rtspConnectionManager) KickSession(ctx context.Context, id string) error {
+	rcm.logger.WithField("id", id).Info("Kicking RTSP session")
+
+	url := fmt.Sprintf("/v3/rtspsessions/kick/%s", id)
+
+	// Make API call
+	_, err := rcm.client.Post(ctx, url, nil)
+	if err != nil {
+		rcm.logger.WithError(err).WithField("id", id).Error("Failed to kick RTSP session")
+		return fmt.Errorf("failed to kick RTSP session %s: %w", id, err)
+	}
+
+	rcm.logger.WithField("id", id).Info("RTSP session kicked successfully")
+	return nil
+}
+
+// GetConnectionHealth returns the health status of RTSP connections
+func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*HealthStatus, error) {
+	rcm.mu.Lock()
+	defer rcm.mu.Unlock()
+
+	// Check if monitoring is enabled
+	if !rcm.config.RTSPMonitoring.Enabled {
+		return &HealthStatus{
+			Status:    "disabled",
+			Details:   "RTSP monitoring is disabled",
+			Timestamp: time.Now(),
+		}, nil
+	}
+
+	// Try to get current connections to check health
+	_, err := rcm.ListConnections(ctx, 0, 10)
+	if err != nil {
+		rcm.isHealthy = false
+		rcm.lastCheck = time.Now()
+		return &HealthStatus{
+			Status:    "unhealthy",
+			Details:   fmt.Sprintf("Failed to list RTSP connections: %v", err),
+			Timestamp: time.Now(),
+		}, nil
+	}
+
+	// Check connection limits
+	rcm.mu.RLock()
+	connectionCount := 0
+	if rcm.lastConnections != nil {
+		connectionCount = len(rcm.lastConnections.Items)
+	}
+	rcm.mu.RUnlock()
+
+	if connectionCount > rcm.config.RTSPMonitoring.MaxConnections {
+		rcm.isHealthy = false
+		rcm.lastCheck = time.Now()
+		return &HealthStatus{
+			Status:    "overloaded",
+			Details:   fmt.Sprintf("Too many RTSP connections: %d > %d", connectionCount, rcm.config.RTSPMonitoring.MaxConnections),
+			Timestamp: time.Now(),
+		}, nil
+	}
+
+	rcm.isHealthy = true
+	rcm.lastCheck = time.Now()
+	return &HealthStatus{
+		Status:    "healthy",
+		Details:   fmt.Sprintf("RTSP connections healthy: %d connections", connectionCount),
+		Timestamp: time.Now(),
+	}, nil
+}
+
+// GetConnectionMetrics returns metrics about RTSP connections
+func (rcm *rtspConnectionManager) GetConnectionMetrics(ctx context.Context) map[string]interface{} {
+	rcm.mu.RLock()
+	defer rcm.mu.RUnlock()
+
+	metrics := make(map[string]interface{})
+	metrics["is_healthy"] = rcm.isHealthy
+	metrics["last_check"] = rcm.lastCheck
+	metrics["monitoring_enabled"] = rcm.config.RTSPMonitoring.Enabled
+
+	// Connection metrics
+	if rcm.lastConnections != nil {
+		metrics["total_connections"] = len(rcm.lastConnections.Items)
+		metrics["connection_page_count"] = rcm.lastConnections.PageCount
+		metrics["connection_item_count"] = rcm.lastConnections.ItemCount
+
+		// Calculate bandwidth metrics
+		totalBytesReceived := int64(0)
+		totalBytesSent := int64(0)
+		for _, conn := range rcm.lastConnections.Items {
+			totalBytesReceived += conn.BytesReceived
+			totalBytesSent += conn.BytesSent
+		}
+		metrics["total_bytes_received"] = totalBytesReceived
+		metrics["total_bytes_sent"] = totalBytesSent
+		metrics["total_bandwidth"] = totalBytesReceived + totalBytesSent
+	}
+
+	// Session metrics
+	if rcm.lastSessions != nil {
+		metrics["total_sessions"] = len(rcm.lastSessions.Items)
+		metrics["session_page_count"] = rcm.lastSessions.PageCount
+		metrics["session_item_count"] = rcm.lastSessions.ItemCount
+
+		// Calculate session state distribution
+		stateCounts := make(map[string]int)
+		totalRTPPacketsReceived := int64(0)
+		totalRTPPacketsSent := int64(0)
+		totalRTPPacketsLost := int64(0)
+		totalJitter := float64(0)
+		sessionCount := 0
+
+		for _, session := range rcm.lastSessions.Items {
+			stateCounts[string(session.State)]++
+			totalRTPPacketsReceived += session.RTPPacketsReceived
+			totalRTPPacketsSent += session.RTPPacketsSent
+			totalRTPPacketsLost += session.RTPPacketsLost
+			totalJitter += session.RTPPacketsJitter
+			sessionCount++
+		}
+
+		metrics["session_states"] = stateCounts
+		metrics["total_rtp_packets_received"] = totalRTPPacketsReceived
+		metrics["total_rtp_packets_sent"] = totalRTPPacketsSent
+		metrics["total_rtp_packets_lost"] = totalRTPPacketsLost
+
+		if sessionCount > 0 {
+			metrics["average_jitter"] = totalJitter / float64(sessionCount)
+			metrics["packet_loss_rate"] = float64(totalRTPPacketsLost) / float64(totalRTPPacketsReceived+totalRTPPacketsSent)
+		}
+	}
+
+	// Configuration metrics
+	metrics["max_connections"] = rcm.config.RTSPMonitoring.MaxConnections
+	metrics["bandwidth_threshold"] = rcm.config.RTSPMonitoring.BandwidthThreshold
+	metrics["packet_loss_threshold"] = rcm.config.RTSPMonitoring.PacketLossThreshold
+	metrics["jitter_threshold"] = rcm.config.RTSPMonitoring.JitterThreshold
+
+	return metrics
+}

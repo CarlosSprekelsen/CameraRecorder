@@ -11,8 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
 // Logger represents the main logging interface with correlation ID support.
@@ -38,17 +36,7 @@ type LoggingConfig struct {
 
 // NewLoggingConfigFromConfig creates a LoggingConfig from config.LoggingConfig.
 // This function provides integration between the logging system and the main configuration system.
-func NewLoggingConfigFromConfig(cfg *config.LoggingConfig) *LoggingConfig {
-	return &LoggingConfig{
-		Level:          cfg.Level,
-		Format:         cfg.Format,
-		FileEnabled:    cfg.FileEnabled,
-		FilePath:       cfg.FilePath,
-		MaxFileSize:    int(cfg.MaxFileSize),
-		BackupCount:    cfg.BackupCount,
-		ConsoleEnabled: cfg.ConsoleEnabled,
-	}
-}
+// Note: This function is moved to the config package to avoid import cycles.
 
 // CorrelationIDKey is the context key for correlation IDs.
 // Used for storing and retrieving correlation IDs from context.Context.
@@ -216,10 +204,23 @@ func (l *Logger) WithError(err error) *Logger {
 	}
 }
 
+// Fields is a type alias for logrus.Fields to provide clean API
+type Fields = logrus.Fields
+
+// WithFields adds multiple fields to the logger.
+// Returns a new logger instance with the specified fields added.
+func (l *Logger) WithFields(fields Fields) *Logger {
+	return &Logger{
+		Logger:        l.Logger.WithFields(fields).Logger,
+		correlationID: l.correlationID,
+		component:     l.component,
+	}
+}
+
 // LogWithContext logs a message with context information.
 // Automatically adds correlation ID from context and component information to log entries.
 func (l *Logger) LogWithContext(ctx context.Context, level logrus.Level, msg string) {
-	entry := l.Logger.WithFields(logrus.Fields{
+	entry := l.Logger.WithFields(Fields{
 		"component": l.component,
 	})
 

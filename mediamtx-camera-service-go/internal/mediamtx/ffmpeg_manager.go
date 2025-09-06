@@ -20,18 +20,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // ffmpegManager represents the MediaMTX FFmpeg manager
 type ffmpegManager struct {
 	config *MediaMTXConfig
-	logger *logrus.Logger
+	logger *logging.Logger
 
 	// Process tracking
 	processes map[int]*FFmpegProcess
@@ -79,89 +80,12 @@ type FFmpegProcess struct {
 }
 
 // NewFFmpegManager creates a new MediaMTX FFmpeg manager
-func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManager {
-	// Set default FFmpeg configuration if not provided (Python parity)
-	if config.FFmpeg.Snapshot.ProcessCreationTimeout == 0 {
-		config.FFmpeg.Snapshot.ProcessCreationTimeout = 10 * time.Second
-	}
-	if config.FFmpeg.Snapshot.ExecutionTimeout == 0 {
-		config.FFmpeg.Snapshot.ExecutionTimeout = 30 * time.Second
-	}
-	if config.FFmpeg.Snapshot.InternalTimeout == 0 {
-		config.FFmpeg.Snapshot.InternalTimeout = 5000000
-	}
-	if config.FFmpeg.Snapshot.RetryAttempts == 0 {
-		config.FFmpeg.Snapshot.RetryAttempts = 2
-	}
-	if config.FFmpeg.Snapshot.RetryDelay == 0 {
-		config.FFmpeg.Snapshot.RetryDelay = 1 * time.Second
-	}
+func NewFFmpegManager(config *MediaMTXConfig, logger *logging.Logger) FFmpegManager {
+	// Configuration defaults are handled by the centralized config system
+	// No need to set defaults here - they come from config_manager.go
 
-	if config.FFmpeg.Recording.ProcessCreationTimeout == 0 {
-		config.FFmpeg.Recording.ProcessCreationTimeout = 15 * time.Second
-	}
-	if config.FFmpeg.Recording.ExecutionTimeout == 0 {
-		config.FFmpeg.Recording.ExecutionTimeout = 60 * time.Second
-	}
-	if config.FFmpeg.Recording.InternalTimeout == 0 {
-		config.FFmpeg.Recording.InternalTimeout = 10000000
-	}
-	if config.FFmpeg.Recording.RetryAttempts == 0 {
-		config.FFmpeg.Recording.RetryAttempts = 3
-	}
-	if config.FFmpeg.Recording.RetryDelay == 0 {
-		config.FFmpeg.Recording.RetryDelay = 2 * time.Second
-	}
-
-	// Set default fallback values if not provided
-	if config.FFmpeg.FallbackDefaults.RetryDelay == 0 {
-		config.FFmpeg.FallbackDefaults.RetryDelay = 1 * time.Second
-	}
-	if config.FFmpeg.FallbackDefaults.ProcessCreationTimeout == 0 {
-		config.FFmpeg.FallbackDefaults.ProcessCreationTimeout = 10 * time.Second
-	}
-	if config.FFmpeg.FallbackDefaults.ExecutionTimeout == 0 {
-		config.FFmpeg.FallbackDefaults.ExecutionTimeout = 30 * time.Second
-	}
-	if config.FFmpeg.FallbackDefaults.MaxBackoffDelay == 0 {
-		config.FFmpeg.FallbackDefaults.MaxBackoffDelay = 30 * time.Second
-	}
-
-	// Set default performance targets (Python parity)
-	if config.Performance.ResponseTimeTargets == nil {
-		config.Performance.ResponseTimeTargets = map[string]float64{
-			"snapshot_capture": 2.0,
-			"recording_start":  2.0,
-			"recording_stop":   2.0,
-			"file_listing":     1.0,
-		}
-	}
-
-	if config.Performance.SnapshotTiers == nil {
-		config.Performance.SnapshotTiers = map[string]float64{
-			"tier1_rtsp_ready_check_timeout":   1.0,
-			"tier2_activation_timeout":         3.0,
-			"tier2_activation_trigger_timeout": 1.0,
-			"tier3_direct_capture_timeout":     5.0,
-			"total_operation_timeout":          10.0,
-			"immediate_response_threshold":     0.5,
-			"acceptable_response_threshold":    2.0,
-			"slow_response_threshold":          5.0,
-		}
-	}
-
-	if config.Performance.Optimization.EnableCaching == false {
-		config.Performance.Optimization.EnableCaching = true
-	}
-	if config.Performance.Optimization.CacheTTL == 0 {
-		config.Performance.Optimization.CacheTTL = 300 * time.Second
-	}
-	if config.Performance.Optimization.MaxConcurrentOperations == 0 {
-		config.Performance.Optimization.MaxConcurrentOperations = 5
-	}
-	if config.Performance.Optimization.ConnectionPoolSize == 0 {
-		config.Performance.Optimization.ConnectionPoolSize = 10
-	}
+	// All configuration defaults are handled by the centralized config system
+	// No need to set defaults here - they come from config_manager.go
 
 	return &ffmpegManager{
 		config:             config,
@@ -175,7 +99,7 @@ func NewFFmpegManager(config *MediaMTXConfig, logger *logrus.Logger) FFmpegManag
 
 // StartProcess starts an FFmpeg process
 func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, outputPath string) (int, error) {
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"command":     command,
 		"output_path": outputPath,
 	}).Debug("Starting FFmpeg process")
@@ -224,7 +148,7 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 	// Monitor process in background
 	go fm.monitorProcess(process)
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"pid":         process.PID,
 		"command":     strings.Join(command, " "),
 		"output_path": outputPath,
@@ -235,7 +159,7 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 
 // StopProcess stops an FFmpeg process with sophisticated cleanup (Python parity)
 func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
-	fm.logger.WithField("pid", pid).Debug("Stopping FFmpeg process")
+	fm.logger.WithField("pid", strconv.Itoa(pid)).Debug("Stopping FFmpeg process")
 
 	fm.processMu.Lock()
 	process, exists := fm.processes[pid]
@@ -265,7 +189,7 @@ func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
 	delete(fm.processes, pid)
 	fm.processMu.Unlock()
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"pid":            pid,
 		"cleanup_result": cleanupResult,
 	}).Info("FFmpeg process stopped successfully")
@@ -278,7 +202,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	correlationID := fmt.Sprintf("cleanup_%d_%s", pid, operation)
 	cleanupActions := []string{}
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"operation":      operation,
@@ -294,7 +218,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	cleanupActions = append(cleanupActions, "terminate_attempt")
 	if err := process.cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		cleanupActions = append(cleanupActions, fmt.Sprintf("term_error_%s", err.Error()))
-		fm.logger.WithError(err).WithFields(logrus.Fields{
+		fm.logger.WithError(err).WithFields(map[string]interface{}{
 			"pid":            pid,
 			"correlation_id": correlationID,
 		}).Warn("Failed to send SIGTERM to FFmpeg process")
@@ -311,7 +235,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		select {
 		case err := <-done:
 			if err != nil {
-				fm.logger.WithError(err).WithFields(logrus.Fields{
+				fm.logger.WithError(err).WithFields(map[string]interface{}{
 					"pid":            pid,
 					"correlation_id": correlationID,
 				}).Warn("FFmpeg process exited with error during graceful shutdown")
@@ -319,7 +243,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 			cleanupActions = append(cleanupActions, "graceful_exit")
 		case <-time.After(terminationTimeout):
 			cleanupActions = append(cleanupActions, "term_timeout")
-			fm.logger.WithFields(logrus.Fields{
+			fm.logger.WithFields(map[string]interface{}{
 				"pid":            pid,
 				"correlation_id": correlationID,
 				"timeout":        terminationTimeout,
@@ -332,7 +256,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		cleanupActions = append(cleanupActions, "kill_attempt")
 		if err := process.cmd.Process.Kill(); err != nil {
 			cleanupActions = append(cleanupActions, fmt.Sprintf("kill_error_%s", err.Error()))
-			fm.logger.WithError(err).WithFields(logrus.Fields{
+			fm.logger.WithError(err).WithFields(map[string]interface{}{
 				"pid":            pid,
 				"correlation_id": correlationID,
 			}).Error("Failed to force kill FFmpeg process")
@@ -349,7 +273,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 			select {
 			case err := <-done:
 				if err != nil {
-					fm.logger.WithError(err).WithFields(logrus.Fields{
+					fm.logger.WithError(err).WithFields(map[string]interface{}{
 						"pid":            pid,
 						"correlation_id": correlationID,
 					}).Warn("FFmpeg process exited with error during force kill")
@@ -357,7 +281,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 				cleanupActions = append(cleanupActions, "force_exit")
 			case <-time.After(killTimeout):
 				cleanupActions = append(cleanupActions, "kill_timeout")
-				fm.logger.WithFields(logrus.Fields{
+				fm.logger.WithFields(map[string]interface{}{
 					"pid":            pid,
 					"correlation_id": correlationID,
 					"timeout":        killTimeout,
@@ -372,7 +296,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	fm.cleanupMu.Unlock()
 
 	result := strings.Join(cleanupActions, "_")
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"cleanup_result": result,
@@ -404,54 +328,12 @@ func (fm *ffmpegManager) IsProcessRunning(ctx context.Context, pid int) bool {
 	return process.Status == "RUNNING"
 }
 
-// StartRecording starts an FFmpeg recording
-func (fm *ffmpegManager) StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error) {
-	fm.logger.WithFields(logrus.Fields{
-		"device":      device,
-		"output_path": outputPath,
-		"options":     options,
-	}).Debug("Starting FFmpeg recording")
-
-	// Validate inputs (following Python implementation pattern)
-	if strings.TrimSpace(device) == "" {
-		return 0, NewFFmpegError(0, "start_recording", "start_recording", "device path cannot be empty")
-	}
-
-	if strings.TrimSpace(outputPath) == "" {
-		return 0, NewFFmpegError(0, "start_recording", "start_recording", "output path cannot be empty")
-	}
-
-	// Build FFmpeg command
-	command := fm.buildRecordingCommand(device, outputPath, options)
-
-	// Start process
-	pid, err := fm.StartProcess(ctx, command, outputPath)
-	if err != nil {
-		return 0, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "start_recording", "failed to start recording", err)
-	}
-
-	fm.logger.WithFields(logrus.Fields{
-		"pid":         pid,
-		"device":      device,
-		"output_path": outputPath,
-	}).Info("FFmpeg recording started successfully")
-
-	return pid, nil
-}
-
-// StopRecording stops an FFmpeg recording
-func (fm *ffmpegManager) StopRecording(ctx context.Context, pid int) error {
-	fm.logger.WithField("pid", pid).Debug("Stopping FFmpeg recording")
-
-	return fm.StopProcess(ctx, pid)
-}
-
 // TakeSnapshot takes a snapshot using FFmpeg with retry logic (Python parity)
 func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath string) error {
 	startTime := time.Now()
 	operationType := "snapshot_capture"
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"device":         device,
 		"output_path":    outputPath,
 		"operation_type": operationType,
@@ -496,18 +378,16 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		processCreationTimeout = cfg.ProcessCreationTimeout
 		executionTimeout = cfg.ExecutionTimeout
 	default:
-		// Default values if config is not provided (should not happen with proper config)
-		retryAttempts = 2
-		retryDelay = fm.config.FFmpeg.FallbackDefaults.RetryDelay
-		processCreationTimeout = fm.config.FFmpeg.FallbackDefaults.ProcessCreationTimeout
-		executionTimeout = fm.config.FFmpeg.FallbackDefaults.ExecutionTimeout
+		// This should not happen with proper configuration
+		fm.logger.Error("Unknown configuration type - this indicates a configuration error")
+		return fmt.Errorf("unknown configuration type: %T", config)
 	}
 
 	correlationID := fmt.Sprintf("retry_%s_%d", operation, time.Now().Unix())
 	var lastErr error
 
 	for attempt := 0; attempt <= retryAttempts; attempt++ {
-		fm.logger.WithFields(logrus.Fields{
+		fm.logger.WithFields(map[string]interface{}{
 			"attempt":        attempt,
 			"max_attempts":   retryAttempts + 1,
 			"correlation_id": correlationID,
@@ -524,14 +404,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		if err := cmd.Start(); err != nil {
 			cancel()
 			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
-			fm.logger.WithError(err).WithFields(logrus.Fields{
+			fm.logger.WithError(err).WithFields(map[string]interface{}{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("Failed to start FFmpeg process")
 
 			if attempt < retryAttempts {
 				backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
-				fm.logger.WithFields(logrus.Fields{
+				fm.logger.WithFields(map[string]interface{}{
 					"attempt":        attempt,
 					"backoff_delay":  backoffDelay,
 					"correlation_id": correlationID,
@@ -555,14 +435,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		case err := <-done:
 			cancel()
 			if err == nil {
-				fm.logger.WithFields(logrus.Fields{
+				fm.logger.WithFields(map[string]interface{}{
 					"attempt":        attempt,
 					"correlation_id": correlationID,
 				}).Info("FFmpeg operation completed successfully")
 				return nil
 			}
 			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
-			fm.logger.WithError(err).WithFields(logrus.Fields{
+			fm.logger.WithError(err).WithFields(map[string]interface{}{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("FFmpeg operation failed")
@@ -572,7 +452,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 			// Cleanup the process
 			fm.cleanupFFmpegProcess(&FFmpegProcess{cmd: cmd}, 0, operation)
 			lastErr = NewFFmpegError(0, operation, operation, fmt.Sprintf("execution timeout after %v", executionTimeout))
-			fm.logger.WithFields(logrus.Fields{
+			fm.logger.WithFields(map[string]interface{}{
 				"attempt":        attempt,
 				"timeout":        executionTimeout,
 				"correlation_id": correlationID,
@@ -581,7 +461,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 
 		if attempt < retryAttempts {
 			backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
-			fm.logger.WithFields(logrus.Fields{
+			fm.logger.WithFields(map[string]interface{}{
 				"attempt":        attempt,
 				"backoff_delay":  backoffDelay,
 				"correlation_id": correlationID,
@@ -645,7 +525,7 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 		metrics.AverageDuration = totalDuration / time.Duration(metrics.TotalOperations)
 	}
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"operation_type":   operationType,
 		"duration":         duration,
 		"average_duration": metrics.AverageDuration,
@@ -658,7 +538,7 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 
 // RotateFile rotates a file
 func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string) error {
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"old_path": oldPath,
 		"new_path": newPath,
 	}).Debug("Rotating FFmpeg file")
@@ -674,7 +554,7 @@ func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string
 		return NewFFmpegErrorWithErr(0, "rotate_file", "rename_file", "failed to rename file", err)
 	}
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"old_path": oldPath,
 		"new_path": newPath,
 	}).Info("FFmpeg file rotated successfully")
@@ -695,129 +575,9 @@ func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, t
 	return info.Size(), info.ModTime(), nil
 }
 
-// buildRecordingCommand builds an FFmpeg command for recording
-func (fm *ffmpegManager) buildRecordingCommand(device, outputPath string, options map[string]string) []string {
-	command := []string{"ffmpeg"}
-
-	// Input device
-	command = append(command, "-f", "v4l2")
-	command = append(command, "-i", device)
-
-	// Video codec
-	codec := options["codec"]
-	if codec == "" {
-		codec = "libx264"
-	}
-	command = append(command, "-c:v", codec)
-
-	// Preset
-	preset := options["preset"]
-	if preset == "" {
-		preset = "fast"
-	}
-	command = append(command, "-preset", preset)
-
-	// CRF (quality)
-	crf := options["crf"]
-	if crf == "" {
-		crf = "23"
-	}
-	command = append(command, "-crf", crf)
-
-	// Format
-	format := options["format"]
-	if format == "" {
-		format = "mp4"
-	}
-	command = append(command, "-f", format)
-
-	// Output path
-	command = append(command, outputPath)
-
-	return command
-}
-
-// CreateSegmentedRecording creates a segmented recording with continuity support (Phase 3 enhancement)
-func (fm *ffmpegManager) CreateSegmentedRecording(ctx context.Context, input, output string, settings *RotationSettings) error {
-	fm.logger.WithFields(logrus.Fields{
-		"input":    input,
-		"output":   output,
-		"settings": settings,
-	}).Info("Creating segmented recording with continuity")
-
-	// Build segment-based FFmpeg command
-	args := fm.buildSegmentedRecordingCommand(input, output, settings)
-
-	// Execute FFmpeg command
-	return fm.executeFFmpeg(args)
-}
-
-// buildSegmentedRecordingCommand builds FFmpeg command for segmented recording (Phase 3 enhancement)
-func (fm *ffmpegManager) buildSegmentedRecordingCommand(input, output string, settings *RotationSettings) []string {
-	command := []string{"ffmpeg"}
-
-	// Input
-	command = append(command, "-i", input)
-
-	// Segment-based output with continuity
-	command = append(command, "-f", "segment")
-
-	// Segment duration
-	if settings.SegmentDuration > 0 {
-		command = append(command, "-segment_time", settings.SegmentDuration.String())
-	}
-
-	// Reset timestamps for each segment
-	if settings.ResetTimestamps {
-		command = append(command, "-reset_timestamps", "1")
-	}
-
-	// Segment format with continuity support
-	segmentFormat := fm.buildSegmentFormat(output, settings)
-	command = append(command, segmentFormat)
-
-	fm.logger.WithFields(logrus.Fields{
-		"command":        command,
-		"segment_format": segmentFormat,
-	}).Debug("Built segmented recording command")
-
-	return command
-}
-
-// buildSegmentFormat builds segment filename format with continuity support (Phase 3 enhancement)
-func (fm *ffmpegManager) buildSegmentFormat(baseOutput string, settings *RotationSettings) string {
-	// Base directory and filename
-	baseDir := filepath.Dir(baseOutput)
-	baseName := filepath.Base(baseOutput)
-	nameWithoutExt := strings.TrimSuffix(baseName, filepath.Ext(baseName))
-
-	// Build segment format
-	var format string
-
-	if settings.ContinuityMode {
-		// Continuity mode: include continuity ID and segment index
-		format = filepath.Join(baseDir, fmt.Sprintf("%s_%s_%%03d%s",
-			nameWithoutExt,
-			settings.ContinuityID,
-			filepath.Ext(baseName)))
-	} else {
-		// Standard mode: just segment index
-		format = filepath.Join(baseDir, fmt.Sprintf("%s_%%03d%s",
-			nameWithoutExt,
-			filepath.Ext(baseName)))
-	}
-
-	// Add strftime support if enabled
-	if settings.StrftimeEnabled {
-		format = strings.ReplaceAll(format, "%03d", "%Y%m%d_%H%M%S_%03d")
-	}
-
-	return format
-}
-
 // executeFFmpeg executes FFmpeg command with error handling (Phase 3 enhancement)
 func (fm *ffmpegManager) executeFFmpeg(args []string) error {
-	fm.logger.WithField("args", args).Debug("Executing FFmpeg command")
+	fm.logger.WithField("args", strings.Join(args, " ")).Debug("Executing FFmpeg command")
 
 	// Create command
 	cmd := exec.Command("ffmpeg", args...)
@@ -829,7 +589,7 @@ func (fm *ffmpegManager) executeFFmpeg(args []string) error {
 
 	// Execute command
 	if err := cmd.Run(); err != nil {
-		fm.logger.WithFields(logrus.Fields{
+		fm.logger.WithFields(map[string]interface{}{
 			"error":  err,
 			"stdout": stdout.String(),
 			"stderr": stderr.String(),
@@ -838,7 +598,7 @@ func (fm *ffmpegManager) executeFFmpeg(args []string) error {
 		return NewFFmpegErrorWithErr(0, strings.Join(args, " "), "execute_ffmpeg", "FFmpeg command failed", err)
 	}
 
-	fm.logger.WithFields(logrus.Fields{
+	fm.logger.WithFields(map[string]interface{}{
 		"stdout": stdout.String(),
 		"stderr": stderr.String(),
 	}).Debug("FFmpeg command executed successfully")
@@ -872,9 +632,9 @@ func (fm *ffmpegManager) monitorProcess(process *FFmpegProcess) {
 	process.Status = "COMPLETED"
 	if err != nil {
 		process.Status = "FAILED"
-		fm.logger.WithError(err).WithField("pid", process.PID).Error("FFmpeg process failed")
+		fm.logger.WithError(err).WithField("pid", strconv.Itoa(process.PID)).Error("FFmpeg process failed")
 	} else {
-		fm.logger.WithField("pid", process.PID).Info("FFmpeg process completed successfully")
+		fm.logger.WithField("pid", strconv.Itoa(process.PID)).Info("FFmpeg process completed successfully")
 	}
 
 	// Remove from tracking
@@ -885,7 +645,7 @@ func (fm *ffmpegManager) monitorProcess(process *FFmpegProcess) {
 
 // BuildCommand builds an FFmpeg command with the provided arguments
 func (fm *ffmpegManager) BuildCommand(args ...string) []string {
-	fm.logger.WithField("args", args).Debug("Building FFmpeg command")
+	fm.logger.WithField("args", strings.Join(args, " ")).Debug("Building FFmpeg command")
 
 	// Start with ffmpeg command
 	command := []string{"ffmpeg"}
@@ -893,6 +653,6 @@ func (fm *ffmpegManager) BuildCommand(args ...string) []string {
 	// Add all provided arguments
 	command = append(command, args...)
 
-	fm.logger.WithField("command", command).Debug("FFmpeg command built successfully")
+	fm.logger.WithField("command", strings.Join(command, " ")).Debug("FFmpeg command built successfully")
 	return command
 }

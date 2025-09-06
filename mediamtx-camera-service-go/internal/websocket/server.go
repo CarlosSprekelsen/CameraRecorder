@@ -32,7 +32,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 )
 
 // WebSocketServer implements the WebSocket JSON-RPC 2.0 server
@@ -104,7 +103,7 @@ func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, metho
 	// Convert client role to security.Role
 	userRole, err := s.permissionChecker.ValidateRole(client.Role)
 	if err != nil {
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"role":      client.Role,
 			"method":    methodName,
@@ -114,7 +113,7 @@ func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, metho
 
 	// Check permission using existing PermissionChecker
 	if !s.permissionChecker.HasPermission(userRole, methodName) {
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"role":      client.Role,
 			"method":    methodName,
@@ -159,7 +158,7 @@ func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename s
 		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"device":   device,
 		"status":   status,
 		"filename": filename,
@@ -195,7 +194,7 @@ func (s *WebSocketServer) notifyCameraStatusUpdate(device, status, name string) 
 		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"device": device,
 		"status": status,
 		"name":   name,
@@ -219,7 +218,7 @@ func (s *WebSocketServer) notifySnapshotTaken(device, filename, resolution strin
 		"timestamp":  time.Now().Format(time.RFC3339),
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"device":     device,
 		"filename":   filename,
 		"resolution": resolution,
@@ -253,7 +252,7 @@ func (s *WebSocketServer) notifySystemEvent(eventType string, data map[string]in
 		data["timestamp"] = time.Now().Format(time.RFC3339)
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"event_type": eventType,
 		"topic":      topic,
 		"data":       data,
@@ -287,12 +286,12 @@ func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 			// Send message to client
 			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
 			if err := client.Conn.WriteJSON(notification); err != nil {
-				s.logger.WithError(err).WithFields(logrus.Fields{
+				s.logger.WithError(err).WithFields(logging.Fields{
 					"client_id":  clientID,
 					"event_type": eventType,
 				}).Error("Failed to send notification to client")
 			} else {
-				s.logger.WithFields(logrus.Fields{
+				s.logger.WithFields(logging.Fields{
 					"client_id":  clientID,
 					"event_type": eventType,
 				}).Debug("Notification sent to client")
@@ -332,13 +331,13 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 			// Send message to client
 			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
 			if err := client.Conn.WriteJSON(notification); err != nil {
-				s.logger.WithError(err).WithFields(logrus.Fields{
+				s.logger.WithError(err).WithFields(logging.Fields{
 					"client_id": clientID,
 					"topic":     topic,
 				}).Error("Failed to send event to subscribed client")
 			} else {
 				sentCount++
-				s.logger.WithFields(logrus.Fields{
+				s.logger.WithFields(logging.Fields{
 					"client_id": clientID,
 					"topic":     topic,
 				}).Debug("Event sent to subscribed client")
@@ -346,7 +345,7 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 		}
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"topic":       topic,
 		"subscribers": len(subscribers),
 		"sent_count":  sentCount,
@@ -452,7 +451,7 @@ func NewWebSocketServer(
 		},
 
 		// Event handling
-		eventManager:  NewEventManager(logger.Logger),
+		eventManager:  NewEventManager(logger),
 		eventHandlers: make([]func(string, interface{}), 0),
 
 		// Graceful shutdown
@@ -473,7 +472,7 @@ func (s *WebSocketServer) Start() error {
 		return nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"host":   s.config.Host,
 		"port":   s.config.Port,
 		"path":   s.config.WebSocketPath,
@@ -503,7 +502,7 @@ func (s *WebSocketServer) Start() error {
 
 	s.running = true
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"host":   s.config.Host,
 		"port":   s.config.Port,
 		"path":   s.config.WebSocketPath,
@@ -688,7 +687,7 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 	// Update metrics with atomic operation
 	atomic.AddInt64(&s.metrics.ActiveConnections, 1)
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": clientID,
 		"action":    "client_connected",
 	}).Info("Client connected")
@@ -707,7 +706,7 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 		// Recover from panics in goroutine and propagate as errors
 		if r := recover(); r != nil {
 			panicErr := fmt.Errorf("panic in client connection handler for client %s: %v", client.ClientID, r)
-			s.logger.WithFields(logrus.Fields{
+			s.logger.WithFields(logging.Fields{
 				"client_id": client.ClientID,
 				"panic":     r,
 				"action":    "panic_recovered",
@@ -735,7 +734,7 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 		// Close connection
 		conn.Close()
 
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"action":    "client_disconnected",
 		}).Info("Client disconnected")
@@ -800,7 +799,7 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConnection, message []byte) {
 	startTime := time.Now()
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"action":    "handle_message",
 	}).Debug("Processing WebSocket message")
@@ -821,7 +820,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	// Handle request
 	response, err := s.handleRequest(&request, client)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    request.Method,
 		}).Error("Request handling error")
@@ -839,7 +838,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	duration := time.Since(startTime).Seconds()
 	s.recordRequest(request.Method, duration)
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    request.Method,
 		"duration":  duration,

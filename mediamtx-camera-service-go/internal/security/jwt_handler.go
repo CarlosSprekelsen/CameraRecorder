@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/sirupsen/logrus"
 )
 
 // JWTClaims represents the claims structure for JWT tokens.
@@ -41,7 +41,7 @@ type ClientRateInfo struct {
 type JWTHandler struct {
 	secretKey string
 	algorithm string
-	logger    *logrus.Logger
+	logger    *logging.Logger
 
 	// Rate limiting extensions (Phase 1 enhancement)
 	clientRates map[string]*ClientRateInfo
@@ -60,7 +60,7 @@ func NewJWTHandler(secretKey string) (*JWTHandler, error) {
 	handler := &JWTHandler{
 		secretKey: secretKey,
 		algorithm: "HS256",
-		logger:    logrus.New(),
+		logger:    logging.NewLogger("jwt-handler"),
 
 		// Rate limiting initialization (Phase 1 enhancement)
 		clientRates: make(map[string]*ClientRateInfo),
@@ -68,7 +68,7 @@ func NewJWTHandler(secretKey string) (*JWTHandler, error) {
 		rateWindow:  time.Minute, // Default: 1 minute window
 	}
 
-	handler.logger.WithFields(logrus.Fields{
+	handler.logger.WithFields(logging.Fields{
 		"algorithm":   handler.algorithm,
 		"rate_limit":  handler.rateLimit,
 		"rate_window": handler.rateWindow,
@@ -116,7 +116,7 @@ func (h *JWTHandler) GenerateToken(userID, role string, expiryHours int) (string
 		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	h.logger.WithFields(logrus.Fields{
+	h.logger.WithFields(logging.Fields{
 		"user_id": userID,
 		"role":    role,
 		"expires": time.Unix(claims.EXP, 0).Format(time.RFC3339),
@@ -157,7 +157,7 @@ func (h *JWTHandler) CheckRateLimit(clientID string) bool {
 
 	// Check if within rate limit
 	if clientRate.RequestCount >= h.rateLimit {
-		h.logger.WithFields(logrus.Fields{
+		h.logger.WithFields(logging.Fields{
 			"client_id":     clientID,
 			"request_count": clientRate.RequestCount,
 			"rate_limit":    h.rateLimit,
@@ -229,7 +229,7 @@ func (h *JWTHandler) SetRateLimit(limit int64, window time.Duration) {
 	h.rateLimit = limit
 	h.rateWindow = window
 
-	h.logger.WithFields(logrus.Fields{
+	h.logger.WithFields(logging.Fields{
 		"rate_limit":  limit,
 		"rate_window": window,
 	}).Info("Rate limiting configuration updated")
@@ -254,7 +254,7 @@ func (h *JWTHandler) CleanupExpiredClients(maxInactive time.Duration) {
 	}
 
 	if len(expiredClients) > 0 {
-		h.logger.WithField("expired_clients", len(expiredClients)).Debug("Cleaned up expired client rate limiting data")
+		h.logger.WithField("expired_clients", fmt.Sprintf("%d", len(expiredClients))).Debug("Cleaned up expired client rate limiting data")
 	}
 }
 
@@ -341,7 +341,7 @@ func (h *JWTHandler) ValidateToken(tokenString string) (*JWTClaims, error) {
 		EXP:    int64(exp),
 	}
 
-	h.logger.WithFields(logrus.Fields{
+	h.logger.WithFields(logging.Fields{
 		"user_id": jwtClaims.UserID,
 		"role":    jwtClaims.Role,
 		"expires": time.Unix(jwtClaims.EXP, 0).Format(time.RFC3339),

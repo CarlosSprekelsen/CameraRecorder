@@ -12,6 +12,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	// Initialize MediaMTX controller with existing logger
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, logger.Logger)
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
 	}
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	// Initialize JWT handler with configuration
-	jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
 	}
@@ -79,14 +80,15 @@ func main() {
 	}
 
 	// Connect camera monitor to event system
-	cameraEventNotifier := websocket.NewCameraEventNotifier(wsServer.GetEventManager(), logger.Logger)
+	cameraEventNotifier := websocket.NewCameraEventNotifier(wsServer.GetEventManager(), logger)
 	cameraMonitor.SetEventNotifier(cameraEventNotifier)
 
 	// Connect MediaMTX controller to event system
-	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), logger.Logger)
+	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), logger)
+	_ = mediaMTXEventNotifier // TODO: Connect to MediaMTX controller when available
 
 	// Connect system events to event system
-	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger.Logger)
+	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger)
 	systemEventNotifier.NotifySystemStartup("1.0.0", "Go implementation")
 
 	// Start camera monitor

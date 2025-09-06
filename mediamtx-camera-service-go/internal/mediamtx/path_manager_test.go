@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,7 @@ func TestNewPathManager_ReqMTX001(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -57,7 +58,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -97,7 +98,7 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -137,7 +138,7 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -175,7 +176,7 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -204,7 +205,7 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)
@@ -240,7 +241,7 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 		BaseURL: helper.GetConfig().BaseURL,
 		Timeout: 30 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("path-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	pathManager := NewPathManager(helper.GetClient(), config, logger)

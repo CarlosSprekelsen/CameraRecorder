@@ -743,6 +743,366 @@ func (c *Client) StopRecording(device string) (*StopRecordingResponse, error) {
 
 ---
 
+## Streaming Methods
+
+### start_streaming
+Start a live streaming session for the specified camera device.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
+
+**Returns:** Stream information object with stream URL and session details
+
+**Status:** ✅ Implemented
+
+**Implementation:** Uses StreamManager to create FFmpeg process for device-to-stream conversion with STANAG4609 parameters. Stream is optimized for live viewing with automatic cleanup after inactivity.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "start_streaming",
+  "params": {
+    "device": "camera0"
+  },
+  "id": 20
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "camera0",
+    "stream_name": "camera_video0_viewing",
+    "stream_url": "rtsp://localhost:8554/camera_video0_viewing",
+    "status": "STARTED",
+    "start_time": "2025-01-15T14:30:00Z",
+    "auto_close_after": "300s",
+    "ffmpeg_command": "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/camera_video0_viewing"
+  },
+  "id": 20
+}
+```
+
+**Go Client Example:**
+```go
+type StartStreamingRequest struct {
+    Device string `json:"device"`
+}
+
+type StartStreamingResponse struct {
+    Device        string    `json:"device"`
+    StreamName    string    `json:"stream_name"`
+    StreamURL     string    `json:"stream_url"`
+    Status        string    `json:"status"`
+    StartTime     time.Time `json:"start_time"`
+    AutoCloseAfter string   `json:"auto_close_after"`
+    FFmpegCommand string    `json:"ffmpeg_command"`
+}
+
+func (c *Client) StartStreaming(device string) (*StartStreamingResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "start_streaming",
+        Params:  StartStreamingRequest{Device: device},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result StartStreamingResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### stop_streaming
+Stop the active streaming session for the specified camera device.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
+
+**Returns:** Stream termination information with final session details
+
+**Status:** ✅ Implemented
+
+**Implementation:** Properly terminates FFmpeg process and cleans up MediaMTX path. If other consumers are using the same stream, the stream continues running.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "stop_streaming",
+  "params": {
+    "device": "camera0"
+  },
+  "id": 21
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "camera0",
+    "stream_name": "camera_video0_viewing",
+    "status": "STOPPED",
+    "start_time": "2025-01-15T14:30:00Z",
+    "end_time": "2025-01-15T14:35:00Z",
+    "duration": 300,
+    "stream_continues": false
+  },
+  "id": 21
+}
+```
+
+**Go Client Example:**
+```go
+type StopStreamingResponse struct {
+    Device           string    `json:"device"`
+    StreamName       string    `json:"stream_name"`
+    Status           string    `json:"status"`
+    StartTime        time.Time `json:"start_time"`
+    EndTime          time.Time `json:"end_time"`
+    Duration         int       `json:"duration"`
+    StreamContinues  bool      `json:"stream_continues"`
+}
+
+func (c *Client) StopStreaming(device string) (*StopStreamingResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "stop_streaming",
+        Params:  map[string]string{"device": device},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result StopStreamingResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### get_stream_url
+Get the stream URL for a specific camera device without starting a new stream.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
+
+**Returns:** Stream URL information and availability status
+
+**Status:** ✅ Implemented
+
+**Implementation:** Returns the stream URL for client applications to connect to. If no stream is active, provides the URL that would be used when a stream is started.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_stream_url",
+  "params": {
+    "device": "camera0"
+  },
+  "id": 22
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "camera0",
+    "stream_name": "camera_video0_viewing",
+    "stream_url": "rtsp://localhost:8554/camera_video0_viewing",
+    "available": true,
+    "active_consumers": 2,
+    "stream_status": "ready"
+  },
+  "id": 22
+}
+```
+
+**Go Client Example:**
+```go
+type GetStreamURLResponse struct {
+    Device           string `json:"device"`
+    StreamName       string `json:"stream_name"`
+    StreamURL        string `json:"stream_url"`
+    Available        bool   `json:"available"`
+    ActiveConsumers  int    `json:"active_consumers"`
+    StreamStatus     string `json:"stream_status"`
+}
+
+func (c *Client) GetStreamURL(device string) (*GetStreamURLResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_stream_url",
+        Params:  map[string]string{"device": device},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result GetStreamURLResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### get_stream_status
+Get detailed status information for a specific camera stream.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- device: string - Camera device identifier (required, e.g., "camera0", "camera1")
+
+**Returns:** Detailed stream status with metrics and performance data
+
+**Status:** ✅ Implemented
+
+**Implementation:** Provides comprehensive stream status including FFmpeg process health, MediaMTX path status, and real-time metrics.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_stream_status",
+  "params": {
+    "device": "camera0"
+  },
+  "id": 23
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "device": "camera0",
+    "stream_name": "camera_video0_viewing",
+    "status": "active",
+    "ready": true,
+    "ffmpeg_process": {
+      "running": true,
+      "pid": 12345,
+      "uptime": 300
+    },
+    "mediamtx_path": {
+      "exists": true,
+      "ready": true,
+      "readers": 2
+    },
+    "metrics": {
+      "bytes_sent": 12345678,
+      "frames_sent": 9000,
+      "bitrate": 600000,
+      "fps": 30
+    },
+    "start_time": "2025-01-15T14:30:00Z"
+  },
+  "id": 23
+}
+```
+
+**Go Client Example:**
+```go
+type FFmpegProcessStatus struct {
+    Running bool `json:"running"`
+    PID     int  `json:"pid"`
+    Uptime  int  `json:"uptime"`
+}
+
+type MediaMTXPathStatus struct {
+    Exists  bool `json:"exists"`
+    Ready   bool `json:"ready"`
+    Readers int  `json:"readers"`
+}
+
+type StreamMetrics struct {
+    BytesSent  int64 `json:"bytes_sent"`
+    FramesSent int64 `json:"frames_sent"`
+    Bitrate    int   `json:"bitrate"`
+    FPS        int   `json:"fps"`
+}
+
+type GetStreamStatusResponse struct {
+    Device         string                `json:"device"`
+    StreamName     string                `json:"stream_name"`
+    Status         string                `json:"status"`
+    Ready          bool                  `json:"ready"`
+    FFmpegProcess  FFmpegProcessStatus   `json:"ffmpeg_process"`
+    MediaMTXPath   MediaMTXPathStatus    `json:"mediamtx_path"`
+    Metrics        StreamMetrics         `json:"metrics"`
+    StartTime      time.Time             `json:"start_time"`
+}
+
+func (c *Client) GetStreamStatus(device string) (*GetStreamStatusResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_stream_status",
+        Params:  map[string]string{"device": device},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result GetStreamStatusResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+**Error Response (Stream Not Found):**
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32009,
+    "message": "Stream not found or not active",
+    "data": {
+      "reason": "No active stream found for device 'camera0'",
+      "suggestion": "Start streaming first using start_streaming method"
+    }
+  },
+  "id": 23
+}
+```
+
+---
+
 ## File Management Methods
 
 ### list_recordings
@@ -1195,6 +1555,7 @@ type JsonRpcError struct {
 - **-32006**: MediaMTX service unavailable  
 - **-32007**: Insufficient storage space
 - **-32008**: Camera capability not supported
+- **-32009**: Stream not found or not active
 
 ### Enhanced Recording Management Error Codes
 - **-1000**: Camera not found

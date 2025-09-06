@@ -17,6 +17,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
 // FFmpegConfig represents FFmpeg-specific configuration settings
@@ -83,24 +85,27 @@ type MediaMTXConfig struct {
 	Performance PerformanceConfig `mapstructure:"performance"`
 
 	// Integration with existing config
-	Host                                string        `mapstructure:"host"`
-	APIPort                             int           `mapstructure:"api_port"`
-	RTSPPort                            int           `mapstructure:"rtsp_port"`
-	WebRTCPort                          int           `mapstructure:"webrtc_port"`
-	HLSPort                             int           `mapstructure:"hls_port"`
-	ConfigPath                          string        `mapstructure:"config_path"`
-	RecordingsPath                      string        `mapstructure:"recordings_path"`
-	SnapshotsPath                       string        `mapstructure:"snapshots_path"`
-	HealthCheckInterval                 int           `mapstructure:"health_check_interval"`
-	HealthFailureThreshold              int           `mapstructure:"health_failure_threshold"`
-	HealthCircuitBreakerTimeout         int           `mapstructure:"health_circuit_breaker_timeout"`
-	HealthMaxBackoffInterval            int           `mapstructure:"health_max_backoff_interval"`
-	HealthRecoveryConfirmationThreshold int           `mapstructure:"health_recovery_confirmation_threshold"`
-	BackoffBaseMultiplier               float64       `mapstructure:"backoff_base_multiplier"`
-	BackoffJitterRange                  []float64     `mapstructure:"backoff_jitter_range"`
-	ProcessTerminationTimeout           float64       `mapstructure:"process_termination_timeout"`
-	ProcessKillTimeout                  float64       `mapstructure:"process_kill_timeout"`
-	HealthCheckTimeout                  time.Duration `mapstructure:"health_check_timeout"` // Default: 5 seconds
+	Host                                string  `mapstructure:"host"`
+	APIPort                             int     `mapstructure:"api_port"`
+	RTSPPort                            int     `mapstructure:"rtsp_port"`
+	WebRTCPort                          int     `mapstructure:"webrtc_port"`
+	HLSPort                             int     `mapstructure:"hls_port"`
+	ConfigPath                          string  `mapstructure:"config_path"`
+	RecordingsPath                      string  `mapstructure:"recordings_path"`
+	SnapshotsPath                       string  `mapstructure:"snapshots_path"`
+	HealthCheckInterval                 int     `mapstructure:"health_check_interval"`
+	HealthFailureThreshold              int     `mapstructure:"health_failure_threshold"`
+	HealthCircuitBreakerTimeout         int     `mapstructure:"health_circuit_breaker_timeout"`
+	HealthMaxBackoffInterval            int     `mapstructure:"health_max_backoff_interval"`
+	HealthRecoveryConfirmationThreshold int     `mapstructure:"health_recovery_confirmation_threshold"`
+	BackoffBaseMultiplier               float64 `mapstructure:"backoff_base_multiplier"`
+
+	// RTSP Connection Monitoring Configuration
+	RTSPMonitoring            config.RTSPMonitoringConfig `mapstructure:"rtsp_monitoring"`
+	BackoffJitterRange        []float64                   `mapstructure:"backoff_jitter_range"`
+	ProcessTerminationTimeout float64                     `mapstructure:"process_termination_timeout"`
+	ProcessKillTimeout        float64                     `mapstructure:"process_kill_timeout"`
+	HealthCheckTimeout        time.Duration               `mapstructure:"health_check_timeout"` // Default: 5 seconds
 	// Health monitoring defaults
 	HealthMonitorDefaults HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
 }
@@ -129,6 +134,7 @@ type ConnectionPoolConfig struct {
 // Stream represents a MediaMTX stream (matches actual MediaMTX API response)
 type Stream struct {
 	Name          string       `json:"name"`
+	URL           string       `json:"url"`
 	ConfName      string       `json:"confName"`
 	Source        *PathSource  `json:"source"`
 	Ready         bool         `json:"ready"`
@@ -325,6 +331,12 @@ type MediaMTXController interface {
 	TakeSnapshot(ctx context.Context, device, path string) (*Snapshot, error)
 	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
 
+	// Streaming operations
+	StartStreaming(ctx context.Context, device string) (*Stream, error)
+	StopStreaming(ctx context.Context, device string) error
+	GetStreamURL(ctx context.Context, device string) (string, error)
+	GetStreamStatus(ctx context.Context, device string) (*Stream, error)
+
 	// File listing operations
 	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
 	ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error)
@@ -340,6 +352,15 @@ type MediaMTXController interface {
 	ListAdvancedRecordingSessions() []*RecordingSession
 	RotateRecordingFile(ctx context.Context, sessionID string) error
 	GetSessionIDByDevice(device string) (string, bool)
+
+	// RTSP Connection Management
+	ListRTSPConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error)
+	GetRTSPConnection(ctx context.Context, id string) (*RTSPConnection, error)
+	ListRTSPSessions(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionSessionList, error)
+	GetRTSPSession(ctx context.Context, id string) (*RTSPConnectionSession, error)
+	KickRTSPSession(ctx context.Context, id string) error
+	GetRTSPConnectionHealth(ctx context.Context) (*HealthStatus, error)
+	GetRTSPConnectionMetrics(ctx context.Context) map[string]interface{}
 
 	// Advanced snapshot operations
 	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
@@ -419,6 +440,14 @@ type StreamManager interface {
 	StartViewingStream(ctx context.Context, devicePath string) (*Stream, error)
 	StartSnapshotStream(ctx context.Context, devicePath string) (*Stream, error)
 
+	// Stream lifecycle management
+	StopViewingStream(ctx context.Context, device string) error
+	StopStreaming(ctx context.Context, device string) error
+
+	// Stream utilities
+	GenerateStreamName(devicePath string, useCase StreamUseCase) string
+	GenerateStreamURL(streamName string) string
+
 	// Legacy stream operations (for backward compatibility)
 	CreateStream(ctx context.Context, name, source string) (*Stream, error)
 	DeleteStream(ctx context.Context, id string) error
@@ -457,7 +486,7 @@ const (
 	SessionStateError     SessionState = "ERROR"
 )
 
-// FFmpegManager interface defines FFmpeg process management
+// FFmpegManager interface defines FFmpeg process management for snapshots only
 type FFmpegManager interface {
 	// Process management
 	StartProcess(ctx context.Context, command []string, outputPath string) (int, error)
@@ -467,15 +496,80 @@ type FFmpegManager interface {
 	// Command building
 	BuildCommand(args ...string) []string
 
-	// Recording operations
-	StartRecording(ctx context.Context, device, outputPath string, options map[string]string) (int, error)
-	StopRecording(ctx context.Context, pid int) error
+	// Snapshot operations only
 	TakeSnapshot(ctx context.Context, device, outputPath string) error
-
-	// Enhanced recording operations (Phase 3 enhancement)
-	CreateSegmentedRecording(ctx context.Context, input, output string, settings *RotationSettings) error
 
 	// File management
 	RotateFile(ctx context.Context, oldPath, newPath string) error
 	GetFileInfo(ctx context.Context, path string) (int64, time.Time, error)
+}
+
+// RTSPConnection represents an RTSP connection from swagger.json
+type RTSPConnection struct {
+	ID            string    `json:"id"`
+	Created       time.Time `json:"created"`
+	RemoteAddr    string    `json:"remoteAddr"`
+	BytesReceived int64     `json:"bytesReceived"`
+	BytesSent     int64     `json:"bytesSent"`
+	Session       *string   `json:"session,omitempty"`
+}
+
+// RTSPConnectionList represents a list of RTSP connections from swagger.json
+type RTSPConnectionList struct {
+	PageCount int64             `json:"pageCount"`
+	ItemCount int64             `json:"itemCount"`
+	Items     []*RTSPConnection `json:"items"`
+}
+
+// RTSPConnectionState represents RTSP session state from swagger.json
+type RTSPConnectionState string
+
+const (
+	RTSPStateIdle    RTSPConnectionState = "idle"
+	RTSPStateRead    RTSPConnectionState = "read"
+	RTSPStatePublish RTSPConnectionState = "publish"
+)
+
+// RTSPConnectionSession represents an RTSP session from swagger.json
+type RTSPConnectionSession struct {
+	ID                  string              `json:"id"`
+	Created             time.Time           `json:"created"`
+	RemoteAddr          string              `json:"remoteAddr"`
+	State               RTSPConnectionState `json:"state"`
+	Path                string              `json:"path"`
+	Query               string              `json:"query"`
+	Transport           *string             `json:"transport,omitempty"`
+	BytesReceived       int64               `json:"bytesReceived"`
+	BytesSent           int64               `json:"bytesSent"`
+	RTPPacketsReceived  int64               `json:"rtpPacketsReceived"`
+	RTPPacketsSent      int64               `json:"rtpPacketsSent"`
+	RTPPacketsLost      int64               `json:"rtpPacketsLost"`
+	RTPPacketsInError   int64               `json:"rtpPacketsInError"`
+	RTPPacketsJitter    float64             `json:"rtpPacketsJitter"`
+	RTCPPacketsReceived int64               `json:"rtcpPacketsReceived"`
+	RTCPPacketsSent     int64               `json:"rtcpPacketsSent"`
+	RTCPPacketsInError  int64               `json:"rtcpPacketsInError"`
+}
+
+// RTSPConnectionSessionList represents a list of RTSP sessions from swagger.json
+type RTSPConnectionSessionList struct {
+	PageCount int64                    `json:"pageCount"`
+	ItemCount int64                    `json:"itemCount"`
+	Items     []*RTSPConnectionSession `json:"items"`
+}
+
+// RTSPConnectionManager interface defines RTSP connection management operations
+type RTSPConnectionManager interface {
+	// Connection monitoring
+	ListConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error)
+	GetConnection(ctx context.Context, id string) (*RTSPConnection, error)
+
+	// Session management
+	ListSessions(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionSessionList, error)
+	GetSession(ctx context.Context, id string) (*RTSPConnectionSession, error)
+	KickSession(ctx context.Context, id string) error
+
+	// Health and monitoring
+	GetConnectionHealth(ctx context.Context) (*HealthStatus, error)
+	GetConnectionMetrics(ctx context.Context) map[string]interface{}
 }

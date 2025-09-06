@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 )
 
 // InputValidator provides centralized input validation and sanitization
@@ -113,7 +112,7 @@ func (iv *InputValidator) ValidateCameraID(cameraID string) *ValidationResult {
 
 	if !valid {
 		result.AddError("camera_id", "invalid format", cameraID)
-		iv.logger.WithFields(logrus.Fields{
+		iv.logger.WithFields(logging.Fields{
 			"camera_id": cameraID,
 			"action":    "validation_failed",
 		}).Warn("Invalid camera ID format detected")
@@ -135,7 +134,7 @@ func (iv *InputValidator) ValidateDuration(duration string) (*ValidationResult, 
 	parsedDuration, err := time.ParseDuration(duration)
 	if err != nil {
 		result.AddError("duration", "invalid format", duration)
-		iv.logger.WithFields(logrus.Fields{
+		iv.logger.WithFields(logging.Fields{
 			"duration": duration,
 			"error":    err.Error(),
 			"action":   "validation_failed",

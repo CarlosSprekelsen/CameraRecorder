@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -65,7 +66,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -106,7 +107,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -153,7 +154,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -201,7 +202,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -237,7 +238,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 2, // Lower threshold for testing
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logrus.New()
+	logger := logging.NewLogger("health-monitor-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -297,7 +298,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 
 	for i, config := range configs {
 		t.Run(fmt.Sprintf("config_%d", i), func(t *testing.T) {
-			logger := logrus.New()
+			logger := logging.NewLogger("health-monitor-test")
 			logger.SetLevel(logrus.ErrorLevel)
 
 			healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)

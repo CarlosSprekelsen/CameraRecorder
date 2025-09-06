@@ -17,20 +17,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // pathManager represents the MediaMTX path manager
 type pathManager struct {
 	client MediaMTXClient
 	config *MediaMTXConfig
-	logger *logrus.Logger
+	logger *logging.Logger
 }
 
 // NewPathManager creates a new MediaMTX path manager
-func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *logrus.Logger) PathManager {
+func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) PathManager {
 	return &pathManager{
 		client: client,
 		config: config,
@@ -40,7 +41,7 @@ func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *logru
 
 // CreatePath creates a new path
 func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error {
-	pm.logger.WithFields(logrus.Fields{
+	pm.logger.WithFields(map[string]interface{}{
 		"name":    name,
 		"source":  source,
 		"options": options,
@@ -165,7 +166,7 @@ func (pm *pathManager) ListPaths(ctx context.Context) ([]*Path, error) {
 		return nil, fmt.Errorf("failed to parse paths response: %w", err)
 	}
 
-	pm.logger.WithField("count", len(paths)).Debug("MediaMTX paths listed successfully")
+	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX paths listed successfully")
 	return paths, nil
 }
 

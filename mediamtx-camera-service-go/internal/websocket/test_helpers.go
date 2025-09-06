@@ -27,7 +27,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,10 +69,10 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 
 	// Create test validation helper
 	inputValidator := security.NewInputValidator(logger, nil)
-	validationHelper := NewValidationHelper(inputValidator, logrus.New())
+	validationHelper := NewValidationHelper(inputValidator, logging.NewLogger("test-validation-helper"))
 
 	// Create test event manager
-	eventManager := NewEventManager(logrus.New())
+	eventManager := NewEventManager(logging.NewLogger("test-event-manager"))
 
 	// Create server with test dependencies
 	server := &WebSocketServer{

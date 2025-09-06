@@ -21,14 +21,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // SimpleHealthMonitor represents the simplified MediaMTX health monitor
 type SimpleHealthMonitor struct {
 	client MediaMTXClient
 	config *MediaMTXConfig
-	logger *logrus.Logger
+	logger *logging.Logger
 
 	// Simple state: just healthy or not
 	isHealthy     bool
@@ -42,7 +42,7 @@ type SimpleHealthMonitor struct {
 }
 
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
-func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *logrus.Logger) HealthMonitor {
+func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
 		client:       client,
 		config:       config,
@@ -56,7 +56,7 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 // Start starts the health monitoring
 func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 	h.logger.Info("Starting simplified MediaMTX health monitor")
-	
+
 	h.wg.Add(1)
 	go h.monitorLoop(ctx)
 	return nil
@@ -65,7 +65,7 @@ func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 // Stop stops the health monitoring
 func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 	h.logger.Info("Stopping simplified MediaMTX health monitor")
-	
+
 	close(h.stopChan)
 	h.wg.Wait()
 	return nil
@@ -74,16 +74,17 @@ func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 // monitorLoop runs the health monitoring loop
 func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 	defer h.wg.Done()
-	
-	// Use configured interval or default to 5 seconds
-	checkInterval := 5 * time.Second
-	if h.config.HealthCheckInterval > 0 {
-		checkInterval = time.Duration(h.config.HealthCheckInterval) * time.Second
+
+	// Use configured interval from centralized config
+	checkInterval := time.Duration(h.config.HealthCheckInterval) * time.Second
+	if checkInterval <= 0 {
+		h.logger.Error("Health check interval not configured - this should not happen in production")
+		checkInterval = 5 * time.Second // Emergency fallback only
 	}
-	
+
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -98,32 +99,33 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 
 // checkHealth performs a health check
 func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
-	// Use configured timeout or default to 5 seconds
-	timeout := 5 * time.Second
-	if h.config.HealthCheckTimeout > 0 {
-		timeout = h.config.HealthCheckTimeout
+	// Use configured timeout from centralized config
+	timeout := h.config.HealthCheckTimeout
+	if timeout <= 0 {
+		h.logger.Error("Health check timeout not configured - this should not happen in production")
+		timeout = 5 * time.Second // Emergency fallback only
 	}
-	
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	
+
 	err := h.client.HealthCheck(ctx)
-	
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	h.lastCheckTime = time.Now()
-	
+
 	if err != nil {
 		h.failureCount++
 		h.logger.WithError(err).Debug("Health check failed")
-		
+
 		// Simple threshold: 3 failures = unhealthy (or use configured threshold)
 		threshold := 3
 		if h.config.HealthFailureThreshold > 0 {
 			threshold = h.config.HealthFailureThreshold
 		}
-		
+
 		if h.failureCount >= threshold {
 			if h.isHealthy {
 				h.logger.Warn("MediaMTX service marked as unhealthy")
@@ -156,12 +158,12 @@ func (h *SimpleHealthMonitor) IsCircuitOpen() bool {
 func (h *SimpleHealthMonitor) GetStatus() HealthStatus {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	status := "healthy"
 	if !h.isHealthy {
 		status = "unhealthy"
 	}
-	
+
 	return HealthStatus{
 		Status:              status,
 		Timestamp:           h.lastCheckTime,
@@ -176,12 +178,12 @@ func (h *SimpleHealthMonitor) GetStatus() HealthStatus {
 func (h *SimpleHealthMonitor) GetMetrics() map[string]interface{} {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"is_healthy":     h.isHealthy,
-		"failure_count":  h.failureCount,
-		"last_check":     h.lastCheckTime,
-		"status":         h.GetStatus().Status,
+		"is_healthy":    h.isHealthy,
+		"failure_count": h.failureCount,
+		"last_check":    h.lastCheckTime,
+		"status":        h.GetStatus().Status,
 	}
 }
 
@@ -189,7 +191,7 @@ func (h *SimpleHealthMonitor) GetMetrics() map[string]interface{} {
 func (h *SimpleHealthMonitor) RecordSuccess() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	if !h.isHealthy {
 		h.logger.Info("Service recovered through success recording")
 		h.isHealthy = true
@@ -201,15 +203,15 @@ func (h *SimpleHealthMonitor) RecordSuccess() {
 func (h *SimpleHealthMonitor) RecordFailure() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	h.failureCount++
-	
+
 	// Simple threshold: 3 failures = unhealthy (or use configured threshold)
 	threshold := 3
 	if h.config.HealthFailureThreshold > 0 {
 		threshold = h.config.HealthFailureThreshold
 	}
-	
+
 	if h.failureCount >= threshold {
 		if h.isHealthy {
 			h.logger.Warn("Service marked as unhealthy due to failure threshold")

@@ -19,17 +19,17 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // EventIntegration connects camera monitor and other components to the event system
 type EventIntegration struct {
 	eventManager *EventManager
-	logger       *logrus.Logger
+	logger       *logging.Logger
 }
 
 // NewEventIntegration creates a new event integration layer
-func NewEventIntegration(eventManager *EventManager, logger *logrus.Logger) *EventIntegration {
+func NewEventIntegration(eventManager *EventManager, logger *logging.Logger) *EventIntegration {
 	return &EventIntegration{
 		eventManager: eventManager,
 		logger:       logger,
@@ -39,11 +39,11 @@ func NewEventIntegration(eventManager *EventManager, logger *logrus.Logger) *Eve
 // CameraEventNotifier implements the camera.EventNotifier interface
 type CameraEventNotifier struct {
 	eventManager *EventManager
-	logger       *logrus.Logger
+	logger       *logging.Logger
 }
 
 // NewCameraEventNotifier creates a new camera event notifier
-func NewCameraEventNotifier(eventManager *EventManager, logger *logrus.Logger) *CameraEventNotifier {
+func NewCameraEventNotifier(eventManager *EventManager, logger *logging.Logger) *CameraEventNotifier {
 	return &CameraEventNotifier{
 		eventManager: eventManager,
 		logger:       logger,
@@ -53,18 +53,18 @@ func NewCameraEventNotifier(eventManager *EventManager, logger *logrus.Logger) *
 // NotifyCameraConnected notifies when a camera is connected
 func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice) {
 	eventData := map[string]interface{}{
-		"device":     device.Path,
-		"name":       device.Name,
-		"status":     string(device.Status),
-		"driver":     device.Capabilities.DriverName,
-		"card_name":  device.Capabilities.CardName,
-		"timestamp":  time.Now().Format(time.RFC3339),
+		"device":    device.Path,
+		"name":      device.Name,
+		"status":    string(device.Status),
+		"driver":    device.Capabilities.DriverName,
+		"card_name": device.Capabilities.CardName,
+		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicCameraConnected, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device.Path).Error("Failed to publish camera connected event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device": device.Path,
 			"name":   device.Name,
 			"topic":  TopicCameraConnected,
@@ -83,7 +83,7 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 	if err := n.eventManager.PublishEvent(TopicCameraDisconnected, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", devicePath).Error("Failed to publish camera disconnected event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device": devicePath,
 			"topic":  TopicCameraDisconnected,
 		}).Debug("Published camera disconnected event")
@@ -93,17 +93,17 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 // NotifyCameraStatusChange notifies when camera status changes
 func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevice, oldStatus, newStatus camera.DeviceStatus) {
 	eventData := map[string]interface{}{
-		"device":      device.Path,
-		"name":        device.Name,
-		"old_status":  string(oldStatus),
-		"new_status":  string(newStatus),
-		"timestamp":   time.Now().Format(time.RFC3339),
+		"device":     device.Path,
+		"name":       device.Name,
+		"old_status": string(oldStatus),
+		"new_status": string(newStatus),
+		"timestamp":  time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicCameraStatusChange, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device.Path).Error("Failed to publish camera status change event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device":     device.Path,
 			"old_status": oldStatus,
 			"new_status": newStatus,
@@ -115,19 +115,19 @@ func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevi
 // NotifyCapabilityDetected notifies when camera capabilities are detected
 func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevice, capabilities camera.V4L2Capabilities) {
 	eventData := map[string]interface{}{
-		"device":      device.Path,
-		"name":        device.Name,
-		"driver":      capabilities.DriverName,
-		"card_name":   capabilities.CardName,
-		"bus_info":    capabilities.BusInfo,
+		"device":       device.Path,
+		"name":         device.Name,
+		"driver":       capabilities.DriverName,
+		"card_name":    capabilities.CardName,
+		"bus_info":     capabilities.BusInfo,
 		"capabilities": capabilities.Capabilities,
-		"timestamp":   time.Now().Format(time.RFC3339),
+		"timestamp":    time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicCameraCapabilityDetected, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device.Path).Error("Failed to publish capability detected event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device": device.Path,
 			"driver": capabilities.DriverName,
 			"topic":  TopicCameraCapabilityDetected,
@@ -146,7 +146,7 @@ func (n *CameraEventNotifier) NotifyCapabilityError(devicePath string, errorMsg 
 	if err := n.eventManager.PublishEvent(TopicCameraCapabilityError, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", devicePath).Error("Failed to publish capability error event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device": devicePath,
 			"error":  errorMsg,
 			"topic":  TopicCameraCapabilityError,
@@ -157,11 +157,11 @@ func (n *CameraEventNotifier) NotifyCapabilityError(devicePath string, errorMsg 
 // MediaMTXEventNotifier implements MediaMTX event notifications
 type MediaMTXEventNotifier struct {
 	eventManager *EventManager
-	logger       *logrus.Logger
+	logger       *logging.Logger
 }
 
 // NewMediaMTXEventNotifier creates a new MediaMTX event notifier
-func NewMediaMTXEventNotifier(eventManager *EventManager, logger *logrus.Logger) *MediaMTXEventNotifier {
+func NewMediaMTXEventNotifier(eventManager *EventManager, logger *logging.Logger) *MediaMTXEventNotifier {
 	return &MediaMTXEventNotifier{
 		eventManager: eventManager,
 		logger:       logger,
@@ -180,11 +180,11 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filena
 	if err := n.eventManager.PublishEvent(TopicMediaMTXRecordingStarted, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish recording started event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
-			"device":      device,
-			"session_id":  sessionID,
-			"filename":    filename,
-			"topic":       TopicMediaMTXRecordingStarted,
+		n.logger.WithFields(logging.Fields{
+			"device":     device,
+			"session_id": sessionID,
+			"filename":   filename,
+			"topic":      TopicMediaMTXRecordingStarted,
 		}).Debug("Published recording started event")
 	}
 }
@@ -202,12 +202,12 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, sessionID, filena
 	if err := n.eventManager.PublishEvent(TopicMediaMTXRecordingStopped, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish recording stopped event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
-			"device":      device,
-			"session_id":  sessionID,
-			"filename":    filename,
-			"duration":    duration,
-			"topic":       TopicMediaMTXRecordingStopped,
+		n.logger.WithFields(logging.Fields{
+			"device":     device,
+			"session_id": sessionID,
+			"filename":   filename,
+			"duration":   duration,
+			"topic":      TopicMediaMTXRecordingStopped,
 		}).Debug("Published recording stopped event")
 	}
 }
@@ -224,7 +224,7 @@ func (n *MediaMTXEventNotifier) NotifyStreamStarted(device, streamID, streamType
 	if err := n.eventManager.PublishEvent(TopicMediaMTXStreamStarted, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish stream started event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device":      device,
 			"stream_id":   streamID,
 			"stream_type": streamType,
@@ -245,7 +245,7 @@ func (n *MediaMTXEventNotifier) NotifyStreamStopped(device, streamID, streamType
 	if err := n.eventManager.PublishEvent(TopicMediaMTXStreamStopped, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish stream stopped event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"device":      device,
 			"stream_id":   streamID,
 			"stream_type": streamType,
@@ -257,11 +257,11 @@ func (n *MediaMTXEventNotifier) NotifyStreamStopped(device, streamID, streamType
 // SystemEventNotifier implements system-level event notifications
 type SystemEventNotifier struct {
 	eventManager *EventManager
-	logger       *logrus.Logger
+	logger       *logging.Logger
 }
 
 // NewSystemEventNotifier creates a new system event notifier
-func NewSystemEventNotifier(eventManager *EventManager, logger *logrus.Logger) *SystemEventNotifier {
+func NewSystemEventNotifier(eventManager *EventManager, logger *logging.Logger) *SystemEventNotifier {
 	return &SystemEventNotifier{
 		eventManager: eventManager,
 		logger:       logger,
@@ -279,7 +279,7 @@ func (n *SystemEventNotifier) NotifySystemStartup(version, buildInfo string) {
 	if err := n.eventManager.PublishEvent(TopicSystemStartup, eventData); err != nil {
 		n.logger.WithError(err).Error("Failed to publish system startup event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"version": version,
 			"topic":   TopicSystemStartup,
 		}).Info("Published system startup event")
@@ -296,7 +296,7 @@ func (n *SystemEventNotifier) NotifySystemShutdown(reason string) {
 	if err := n.eventManager.PublishEvent(TopicSystemShutdown, eventData); err != nil {
 		n.logger.WithError(err).Error("Failed to publish system shutdown event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"reason": reason,
 			"topic":  TopicSystemShutdown,
 		}).Info("Published system shutdown event")
@@ -306,15 +306,15 @@ func (n *SystemEventNotifier) NotifySystemShutdown(reason string) {
 // NotifySystemHealth notifies about system health status
 func (n *SystemEventNotifier) NotifySystemHealth(status string, metrics map[string]interface{}) {
 	eventData := map[string]interface{}{
-		"status":   status,
-		"metrics":  metrics,
+		"status":    status,
+		"metrics":   metrics,
 		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicSystemHealth, eventData); err != nil {
 		n.logger.WithError(err).Error("Failed to publish system health event")
 	} else {
-		n.logger.WithFields(logrus.Fields{
+		n.logger.WithFields(logging.Fields{
 			"status": status,
 			"topic":  TopicSystemHealth,
 		}).Debug("Published system health event")

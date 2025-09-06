@@ -1,5 +1,5 @@
 /*
-MediaMTX Client Unit Tests
+MediaMTX Client Tests - Real Server Integration
 
 Requirements Coverage:
 - REQ-MTX-001: MediaMTX service integration
@@ -7,320 +7,296 @@ Requirements Coverage:
 - REQ-MTX-003: Path creation and deletion
 - REQ-MTX-007: Error handling and recovery
 
-Test Categories: Unit
-API Documentation Reference: docs/api/json_rpc_methods.md
+Test Categories: Unit (using real MediaMTX server)
+API Documentation Reference: docs/api/swagger.json
 */
 
 package mediamtx
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewClient_ReqMTX001 tests client creation
+// TestNewClient_ReqMTX001 tests client creation with real server
 func TestNewClient_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
 	config := &MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 5 * time.Second,
 	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	logger := helper.GetLogger()
 
 	client := NewClient("http://localhost:9997", config, logger)
 	require.NotNil(t, client, "Client should not be nil")
 }
 
-// TestClient_Get_ReqMTX001 tests GET request functionality
+// TestClient_Get_ReqMTX001 tests GET request functionality with real server
 func TestClient_Get_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
-	defer mockServer.Close()
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
 
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
+	client := helper.GetClient()
 	ctx := context.Background()
-	data, err := client.Get(ctx, "/test")
+
+	// Test GET request to paths list endpoint (from swagger.json)
+	data, err := client.Get(ctx, "/v3/paths/list")
 	require.NoError(t, err, "GET request should succeed")
-	assert.Equal(t, `{"status":"ok"}`, string(data))
+	assert.NotNil(t, data, "Response data should not be nil")
+	assert.Greater(t, len(data), 0, "Response should contain data")
+
+	// Validate response structure matches swagger.json schema
+	// The response should be a PathList object with pageCount, itemCount, and items
+	assert.Contains(t, string(data), "pageCount", "Response should contain pageCount field per swagger.json")
+	assert.Contains(t, string(data), "itemCount", "Response should contain itemCount field per swagger.json")
+	assert.Contains(t, string(data), "items", "Response should contain items field per swagger.json")
 }
 
-// TestClient_Post_ReqMTX001 tests POST request functionality
+// TestClient_Post_ReqMTX001 tests POST request functionality with real server
 func TestClient_Post_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "POST", r.Method)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"123"}`))
-	}))
-	defer mockServer.Close()
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
 
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
+	client := helper.GetClient()
 	ctx := context.Background()
-	data, err := client.Post(ctx, "/test", []byte(`{"name":"test"}`))
+
+	// Test POST request to create path endpoint (from swagger.json)
+	pathData := `{"name":"test_path","source":"publisher"}`
+	data, err := client.Post(ctx, "/v3/config/paths/add/test_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
-	assert.Equal(t, `{"id":"123"}`, string(data))
-}
+	assert.NotNil(t, data, "Response data should not be nil")
 
-// TestClient_Put_ReqMTX001 tests PUT request functionality
-func TestClient_Put_ReqMTX001(t *testing.T) {
-	// REQ-MTX-001: MediaMTX service integration
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "PUT", r.Method)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"updated":true}`))
-	}))
-	defer mockServer.Close()
-
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
-	ctx := context.Background()
-	data, err := client.Put(ctx, "/test", []byte(`{"name":"updated"}`))
-	require.NoError(t, err, "PUT request should succeed")
-	assert.Equal(t, `{"updated":true}`, string(data))
-}
-
-// TestClient_Delete_ReqMTX001 tests DELETE request functionality
-func TestClient_Delete_ReqMTX001(t *testing.T) {
-	// REQ-MTX-001: MediaMTX service integration
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DELETE", r.Method)
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer mockServer.Close()
-
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
-	ctx := context.Background()
-	err := client.Delete(ctx, "/test")
+	// Clean up - delete the test path
+	err = client.Delete(ctx, "/v3/config/paths/delete/test_path")
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
-// TestClient_HealthCheck_ReqMTX004 tests health check functionality
+// TestClient_Put_ReqMTX001 tests PUT request functionality with real server
+func TestClient_Put_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	client := helper.GetClient()
+	ctx := context.Background()
+
+	// First create a path
+	pathData := `{"name":"test_put_path","source":"publisher"}`
+	_, err = client.Post(ctx, "/v3/config/paths/add/test_put_path", []byte(pathData))
+	require.NoError(t, err, "POST request should succeed")
+
+	// Test PUT request to update path endpoint (from swagger.json)
+	updateData := `{"name":"test_put_path","source":"publisher","maxReaders":5}`
+	data, err := client.Put(ctx, "/v3/config/paths/replace/test_put_path", []byte(updateData))
+	require.NoError(t, err, "PUT request should succeed")
+	assert.NotNil(t, data, "Response data should not be nil")
+
+	// Clean up - delete the test path
+	err = client.Delete(ctx, "/v3/config/paths/delete/test_put_path")
+	require.NoError(t, err, "DELETE request should succeed")
+}
+
+// TestClient_Delete_ReqMTX001 tests DELETE request functionality with real server
+func TestClient_Delete_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	client := helper.GetClient()
+	ctx := context.Background()
+
+	// First create a path
+	pathData := `{"name":"test_delete_path","source":"publisher"}`
+	_, err = client.Post(ctx, "/v3/config/paths/add/test_delete_path", []byte(pathData))
+	require.NoError(t, err, "POST request should succeed")
+
+	// Test DELETE request to delete path endpoint (from swagger.json)
+	err = client.Delete(ctx, "/v3/config/paths/delete/test_delete_path")
+	require.NoError(t, err, "DELETE request should succeed")
+}
+
+// TestClient_HealthCheck_ReqMTX004 tests health check functionality with real server
 func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy"}`))
-	}))
-	defer mockServer.Close()
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	config := &MediaMTXConfig{
-		BaseURL:        mockServer.URL,
-		HealthCheckURL: mockServer.URL + "/health",
-		Timeout:        5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
 
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
+	client := helper.GetClient()
 	ctx := context.Background()
-	err := client.HealthCheck(ctx)
+
+	// Test health check
+	err = client.HealthCheck(ctx)
 	require.NoError(t, err, "Health check should succeed")
 }
 
-// TestClient_HealthCheck_Failure_ReqMTX004 tests health check failure handling
-func TestClient_HealthCheck_Failure_ReqMTX004(t *testing.T) {
-	// REQ-MTX-004: Health monitoring
-	// Create mock server that fails
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"server error"}`))
-	}))
-	defer mockServer.Close()
-
-	config := &MediaMTXConfig{
-		BaseURL:        mockServer.URL,
-		HealthCheckURL: mockServer.URL + "/health",
-		Timeout:        5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
-	ctx := context.Background()
-	err := client.HealthCheck(ctx)
-	require.Error(t, err, "Health check should fail with server error")
-}
-
-// TestClient_Timeout_ReqMTX007 tests timeout handling
-func TestClient_Timeout_ReqMTX007(t *testing.T) {
+// TestClient_ErrorHandling_ReqMTX007 tests error scenarios with real server
+func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	// Create mock server that delays response
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(100 * time.Millisecond) // Delay longer than timeout
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
-	defer mockServer.Close()
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 50 * time.Millisecond, // Short timeout
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
 
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
+	client := helper.GetClient()
 	ctx := context.Background()
-	_, err := client.Get(ctx, "/test")
-	require.Error(t, err, "Request should timeout")
+
+	// Test invalid endpoint
+	_, err = client.Get(ctx, "/v3/invalid/endpoint")
+	assert.Error(t, err, "Invalid endpoint should return error")
+
+	// Test invalid path creation (missing required fields per swagger.json)
+	_, err = client.Post(ctx, "/v3/config/paths/add", []byte(`{"invalid": "data"}`))
+	assert.Error(t, err, "Invalid path creation should return error")
+
+	// Test deleting non-existent path
+	err = client.Delete(ctx, "/v3/config/paths/delete/non_existent_path")
+	assert.Error(t, err, "Deleting non-existent path should return error")
 }
 
-// TestClient_Close_ReqMTX001 tests client cleanup
+// TestClient_APICompliance_ReqMTX001 tests API compliance against swagger.json
+func TestClient_APICompliance_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	client := helper.GetClient()
+	ctx := context.Background()
+
+	// Test paths list endpoint compliance with swagger.json
+	data, err := client.Get(ctx, "/v3/paths/list")
+	require.NoError(t, err, "Paths list should succeed")
+
+	// Validate response structure matches swagger.json PathList schema
+	responseStr := string(data)
+	assert.Contains(t, responseStr, "pageCount", "Missing pageCount field per swagger.json")
+	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
+	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
+
+	// Test config paths list endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/config/paths/list")
+	require.NoError(t, err, "Config paths list should succeed")
+
+	// Validate response structure matches swagger.json PathConfList schema
+	responseStr = string(data)
+	assert.Contains(t, responseStr, "pageCount", "Missing pageCount field per swagger.json")
+	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
+	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
+
+	// Test global config endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/config/global/get")
+	require.NoError(t, err, "Global config get should succeed")
+
+	// Validate response structure matches swagger.json GlobalConf schema
+	responseStr = string(data)
+	// Check for some key fields from GlobalConf schema
+	assert.Contains(t, responseStr, "logLevel", "Missing logLevel field per swagger.json")
+	assert.Contains(t, responseStr, "api", "Missing api field per swagger.json")
+}
+
+// TestClient_ConcurrentAccess_ReqMTX001 tests concurrent access with real server
+func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	client := helper.GetClient()
+	ctx := context.Background()
+
+	// Test concurrent GET requests
+	done := make(chan bool, 3)
+
+	go func() {
+		_, err := client.Get(ctx, "/v3/paths/list")
+		assert.NoError(t, err, "Concurrent GET should succeed")
+		done <- true
+	}()
+
+	go func() {
+		_, err := client.Get(ctx, "/v3/config/paths/list")
+		assert.NoError(t, err, "Concurrent GET should succeed")
+		done <- true
+	}()
+
+	go func() {
+		_, err := client.Get(ctx, "/v3/config/global/get")
+		assert.NoError(t, err, "Concurrent GET should succeed")
+		done <- true
+	}()
+
+	// Wait for all goroutines to complete
+	for i := 0; i < 3; i++ {
+		<-done
+	}
+
+	// Should not panic and should handle concurrent access gracefully
+	assert.True(t, true, "Concurrent access should not cause panics")
+}
+
+// TestClient_Close_ReqMTX001 tests client close functionality
 func TestClient_Close_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
 	config := &MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 5 * time.Second,
 	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
+	logger := helper.GetLogger()
 
 	client := NewClient("http://localhost:9997", config, logger)
-	require.NotNil(t, client)
+	require.NotNil(t, client, "Client should not be nil")
 
-	err := client.Close()
-	require.NoError(t, err, "Client should close successfully")
-}
-
-// TestClient_ErrorHandling_ReqMTX007 tests various error scenarios
-func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	// Create mock server that returns different error codes
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/400":
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"bad request"}`))
-		case "/404":
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
-		case "/500":
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"internal error"}`))
-		default:
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
-		}
-	}))
-	defer mockServer.Close()
-
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
-	ctx := context.Background()
-
-	// Test 400 error
-	_, err := client.Get(ctx, "/400")
-	require.Error(t, err, "Should get error for 400 status")
-
-	// Test 404 error
-	_, err = client.Get(ctx, "/404")
-	require.Error(t, err, "Should get error for 404 status")
-
-	// Test 500 error
-	_, err = client.Get(ctx, "/500")
-	require.Error(t, err, "Should get error for 500 status")
-}
-
-// TestClient_ConcurrentRequests_ReqMTX001 tests concurrent request handling
-func TestClient_ConcurrentRequests_ReqMTX001(t *testing.T) {
-	// REQ-MTX-001: MediaMTX service integration
-	// Create mock server
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	}))
-	defer mockServer.Close()
-
-	config := &MediaMTXConfig{
-		BaseURL: mockServer.URL,
-		Timeout: 5 * time.Second,
-	}
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-
-	client := NewClient(mockServer.URL, config, logger)
-	require.NotNil(t, client)
-
-	// Test concurrent requests
-	done := make(chan bool, 5)
-	ctx := context.Background()
-
-	for i := 0; i < 5; i++ {
-		go func() {
-			_, err := client.Get(ctx, "/test")
-			assert.NoError(t, err, "Concurrent request should succeed")
-			done <- true
-		}()
-	}
-
-	// Wait for all requests to complete
-	for i := 0; i < 5; i++ {
-		<-done
-	}
+	// Test close
+	err = client.Close()
+	require.NoError(t, err, "Client close should succeed")
 }

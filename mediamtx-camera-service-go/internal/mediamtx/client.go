@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // client represents the MediaMTX HTTP client
@@ -30,11 +30,11 @@ type client struct {
 	httpClient *http.Client
 	baseURL    string
 	timeout    time.Duration
-	logger     *logrus.Logger
+	logger     *logging.Logger
 }
 
 // NewClient creates a new MediaMTX HTTP client
-func NewClient(baseURL string, config *MediaMTXConfig, logger *logrus.Logger) MediaMTXClient {
+func NewClient(baseURL string, config *MediaMTXConfig, logger *logging.Logger) MediaMTXClient {
 	// Create HTTP client with connection pooling
 	httpClient := &http.Client{
 		Timeout: config.Timeout,
@@ -112,7 +112,7 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	req.Header.Set("Accept", "application/json")
 
 	// Log request
-	c.logger.WithFields(logrus.Fields{
+	c.logger.WithFields(map[string]interface{}{
 		"method": method,
 		"url":    url,
 		"data":   string(data),
@@ -132,7 +132,7 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	}
 
 	// Log response
-	c.logger.WithFields(logrus.Fields{
+	c.logger.WithFields(map[string]interface{}{
 		"status_code": resp.StatusCode,
 		"body":        string(bodyBytes),
 	}).Debug("Received MediaMTX response")

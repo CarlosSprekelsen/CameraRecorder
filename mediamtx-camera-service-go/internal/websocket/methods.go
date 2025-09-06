@@ -28,9 +28,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 
 	"hash/fnv"
@@ -67,6 +67,12 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 	s.registerMethod("take_snapshot", s.MethodTakeSnapshot, "1.0")
 	s.registerMethod("start_recording", s.MethodStartRecording, "1.0")
 	s.registerMethod("stop_recording", s.MethodStopRecording, "1.0")
+
+	// Streaming methods
+	s.registerMethod("start_streaming", s.MethodStartStreaming, "1.0")
+	s.registerMethod("stop_streaming", s.MethodStopStreaming, "1.0")
+	s.registerMethod("get_stream_url", s.MethodGetStreamURL, "1.0")
+	s.registerMethod("get_stream_status", s.MethodGetStreamStatus, "1.0")
 
 	// Notification methods
 	s.registerMethod("camera_status_update", s.MethodCameraStatusUpdate, "1.0")
@@ -131,7 +137,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 	s.methods[name] = wrappedHandler
 	s.methodVersions[name] = version
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"method":  name,
 		"version": version,
 		"action":  "register_method",
@@ -143,7 +149,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "ping",
 		"action":    "method_call",
@@ -176,7 +182,7 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "authenticate",
 		"action":    "method_call",
@@ -198,7 +204,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 	// Validate JWT token
 	claims, err := s.jwtHandler.ValidateToken(authToken)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "authenticate",
 			"action":    "authentication_failed",
@@ -225,7 +231,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 	// Calculate expiration time
 	expiresAt := time.Unix(claims.EXP, 0)
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"user_id":   claims.UserID,
 		"role":      claims.Role,
@@ -253,7 +259,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 // MethodGetCameraList implements the get_camera_list method
 // Following Python _method_get_camera_list implementation
 func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_camera_list",
 		"action":    "method_call",
@@ -311,7 +317,7 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 		}
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":     client.ClientID,
 		"method":        "get_camera_list",
 		"total_cameras": len(cameras),
@@ -333,7 +339,7 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 // MethodGetCameraStatus implements the get_camera_status method
 // Following Python _method_get_camera_status implementation
 func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_camera_status",
 		"action":    "method_call",
@@ -426,7 +432,7 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 		capabilities["resolutions"] = resolutions
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"device":    cameraID,
 		"method":    "get_camera_status",
@@ -452,7 +458,7 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 // MethodGetMetrics implements the get_metrics method
 // Following Python _method_get_metrics implementation
 func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_metrics",
 		"action":    "method_call",
@@ -476,7 +482,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 	if s.mediaMTXController != nil {
 		systemMetrics, err = s.mediaMTXController.GetSystemMetrics(context.Background())
 		if err != nil {
-			s.logger.WithError(err).WithFields(logrus.Fields{
+			s.logger.WithError(err).WithFields(logging.Fields{
 				"client_id": client.ClientID,
 				"method":    "get_metrics",
 				"action":    "controller_error",
@@ -561,7 +567,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		result["error_rate"] = errorRate
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":             client.ClientID,
 		"method":                "get_metrics",
 		"active_connections":    activeConnections,
@@ -582,7 +588,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 // MethodGetCameraCapabilities implements the get_camera_capabilities method
 // Following Python _method_get_camera_capabilities implementation
 func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_camera_capabilities",
 		"action":    "method_call",
@@ -651,7 +657,7 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 		// Set validation status to confirmed since we have real data
 		cameraCapabilities["validation_status"] = "confirmed"
 
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id":   client.ClientID,
 			"device":      device,
 			"method":      "get_camera_capabilities",
@@ -671,7 +677,7 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 // MethodGetStatus implements the get_status method
 // Following Python _method_get_status implementation
 func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_status",
 		"action":    "method_call",
@@ -720,7 +726,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 	// Note: MediaMTX controller status would be checked here when MediaMTX integration is available
 	// For now, we'll use "unknown" as per Python implementation pattern
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":     client.ClientID,
 		"method":        "get_status",
 		"system_status": systemStatus,
@@ -749,7 +755,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	startTime := time.Now()
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_server_info",
 		"action":    "method_call",
@@ -788,7 +794,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_server_info",
 		"action":    "server_info_success",
@@ -813,7 +819,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 // MethodGetStreams implements the get_streams method
 // Following Python _method_get_streams implementation
 func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_streams",
 		"action":    "method_call",
@@ -833,7 +839,7 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 	// Get streams from MediaMTX controller
 	streams, err := s.mediaMTXController.GetStreams(context.Background())
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "get_streams",
 			"action":    "get_streams_error",
@@ -873,7 +879,7 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 		})
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":    client.ClientID,
 		"method":       "get_streams",
 		"stream_count": len(streamList),
@@ -889,7 +895,7 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 // MethodListRecordings implements the list_recordings method
 // Following Python _method_list_recordings implementation
 func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "list_recordings",
 		"action":    "method_call",
@@ -921,7 +927,7 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 	// Use MediaMTX controller to get recordings list
 	fileList, err := s.mediaMTXController.ListRecordings(context.Background(), limit, offset)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "list_recordings",
 			"action":    "controller_error",
@@ -967,7 +973,7 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 		files[i] = fileData
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":   client.ClientID,
 		"method":      "list_recordings",
 		"total_files": fileList.Total,
@@ -989,7 +995,7 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 // MethodDeleteRecording implements the delete_recording method
 // Following Python _method_delete_recording implementation
 func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "delete_recording",
 		"action":    "method_call",
@@ -1033,7 +1039,7 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 	// Use MediaMTX controller to delete recording
 	err := s.mediaMTXController.DeleteRecording(context.Background(), filename)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "delete_recording",
 			"filename":  filename,
@@ -1050,7 +1056,7 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "delete_recording",
 		"filename":  filename,
@@ -1070,7 +1076,7 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 // MethodDeleteSnapshot implements the delete_snapshot method
 // Following Python _method_delete_snapshot implementation
 func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "delete_snapshot",
 		"action":    "method_call",
@@ -1101,7 +1107,7 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 	// Use MediaMTX controller to delete snapshot
 	err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "delete_snapshot",
 			"filename":  filename,
@@ -1118,7 +1124,7 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "delete_snapshot",
 		"filename":  filename,
@@ -1138,7 +1144,7 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 // MethodGetStorageInfo implements the get_storage_info method
 // Following Python _method_get_storage_info implementation
 func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_storage_info",
 		"action":    "method_call",
@@ -1175,7 +1181,7 @@ func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, cl
 	var stat unix.Statfs_t
 	err := unix.Statfs(recordingsDir, &stat)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "get_storage_info",
 			"directory": recordingsDir,
@@ -1212,7 +1218,7 @@ func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, cl
 	// Determine warning levels (following API documentation)
 	lowSpaceWarning := usedPercent >= 80.0
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":    client.ClientID,
 		"method":       "get_storage_info",
 		"total_gb":     totalBytes / 1024 / 1024 / 1024,
@@ -1250,7 +1256,7 @@ func (s *WebSocketServer) calculateDirectorySize(dirPath string) int64 {
 	})
 
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"directory": dirPath,
 			"action":    "calculate_size_error",
 		}).Warn("Error calculating directory size")
@@ -1262,7 +1268,7 @@ func (s *WebSocketServer) calculateDirectorySize(dirPath string) int64 {
 // MethodCleanupOldFiles implements the cleanup_old_files method
 // Following Python _method_cleanup_old_files implementation
 func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "cleanup_old_files",
 		"action":    "method_call",
@@ -1365,7 +1371,7 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 	}
 
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "cleanup_old_files",
 			"action":    "cleanup_error",
@@ -1381,7 +1387,7 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":     client.ClientID,
 		"method":        "cleanup_old_files",
 		"deleted_count": deletedCount,
@@ -1403,7 +1409,7 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 // MethodSetRetentionPolicy implements the set_retention_policy method
 // Following Python _method_set_retention_policy implementation
 func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "set_retention_policy",
 		"action":    "method_call",
@@ -1555,7 +1561,7 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 	// Note: Configuration changes are applied immediately in memory
 	// For persistent changes, the configuration file should be updated
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":   client.ClientID,
 		"method":      "set_retention_policy",
 		"policy_type": policyType,
@@ -1594,7 +1600,7 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 // MethodListSnapshots implements the list_snapshots method
 // Following Python _method_list_snapshots implementation
 func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "list_snapshots",
 		"action":    "method_call",
@@ -1626,7 +1632,7 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 	// Use MediaMTX controller to get snapshots list
 	fileList, err := s.mediaMTXController.ListSnapshots(context.Background(), limit, offset)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "list_snapshots",
 			"action":    "controller_error",
@@ -1667,7 +1673,7 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 		files[i] = fileData
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":   client.ClientID,
 		"method":      "list_snapshots",
 		"total_files": fileList.Total,
@@ -1689,7 +1695,7 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 // MethodTakeSnapshot implements the take_snapshot method
 // Following Python _method_take_snapshot implementation
 func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "take_snapshot",
 		"action":    "method_call",
@@ -1734,7 +1740,7 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 	// Take snapshot using MediaMTX controller
 	snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), devicePath, "", options)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "take_snapshot",
 			"device":    devicePath,
@@ -1753,7 +1759,7 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":   client.ClientID,
 		"method":      "take_snapshot",
 		"device":      devicePath,
@@ -1776,7 +1782,7 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 // MethodStartRecording implements the start_recording method
 // Following Python _method_start_recording implementation
 func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "start_recording",
 		"action":    "method_call",
@@ -1857,7 +1863,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		errorMetadata := mediamtx.GetErrorMetadata(enhancedErr)
 		recoveryStrategies := mediamtx.GetRecoveryStrategies(enhancedErr.GetCategory())
 
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id":           client.ClientID,
 			"method":              "start_recording",
 			"device":              devicePath,
@@ -1891,7 +1897,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		errorMetadata := mediamtx.GetErrorMetadata(enhancedErr)
 		recoveryStrategies := mediamtx.GetRecoveryStrategies(enhancedErr.GetCategory())
 
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"client_id":           client.ClientID,
 			"method":              "start_recording",
 			"device":              devicePath,
@@ -1915,7 +1921,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":  client.ClientID,
 		"method":     "start_recording",
 		"device":     devicePath,
@@ -1948,7 +1954,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 // MethodStopRecording implements the stop_recording method
 // Following Python _method_stop_recording implementation
 func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "stop_recording",
 		"action":    "method_call",
@@ -2048,7 +2054,7 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 	// Stop recording using MediaMTX controller
 	err := s.mediaMTXController.StopAdvancedRecording(context.Background(), sessionID)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id":  client.ClientID,
 			"method":     "stop_recording",
 			"device":     devicePath,
@@ -2068,7 +2074,7 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id":  client.ClientID,
 		"method":     "stop_recording",
 		"device":     cameraID,
@@ -2099,7 +2105,7 @@ func (s *WebSocketServer) getStreamNameFromDevicePath(devicePath string) string 
 // MethodGetRecordingInfo implements the get_recording_info method
 // Following API documentation exactly
 func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_recording_info",
 		"action":    "method_call",
@@ -2143,7 +2149,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 	// Use MediaMTX controller to get recording info
 	fileMetadata, err := s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "get_recording_info",
 			"filename":  filename,
@@ -2160,7 +2166,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_recording_info",
 		"filename":  filename,
@@ -2192,7 +2198,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 // MethodGetSnapshotInfo implements the get_snapshot_info method
 // Following API documentation exactly
 func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_snapshot_info",
 		"action":    "method_call",
@@ -2236,7 +2242,7 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 	// Use MediaMTX controller to get snapshot info
 	fileMetadata, err := s.mediaMTXController.GetSnapshotInfo(context.Background(), filename)
 	if err != nil {
-		s.logger.WithError(err).WithFields(logrus.Fields{
+		s.logger.WithError(err).WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    "get_snapshot_info",
 			"filename":  filename,
@@ -2253,7 +2259,7 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 		}, nil
 	}
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    "get_snapshot_info",
 		"filename":  filename,
@@ -2444,7 +2450,7 @@ func (s *WebSocketServer) cleanupDirectory(dirPath string, cutoffTime time.Time)
 			deletedCount++
 			totalSize += info.Size()
 
-			s.logger.WithFields(logrus.Fields{
+			s.logger.WithFields(logging.Fields{
 				"file":     filePath,
 				"size":     info.Size(),
 				"modified": info.ModTime(),
@@ -2516,7 +2522,7 @@ func (s *WebSocketServer) cleanupDirectoryBySize(dirPath string, maxSizeBytes in
 		deletedSize += file.size
 		totalSize -= file.size
 
-		s.logger.WithFields(logrus.Fields{
+		s.logger.WithFields(logging.Fields{
 			"file":     file.path,
 			"size":     file.size,
 			"modified": file.modTime,
@@ -2793,7 +2799,7 @@ func (s *WebSocketServer) MethodSubscribeEvents(params map[string]interface{}, c
 	// Update client last seen
 	s.eventManager.UpdateClientLastSeen(client.ClientID)
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"topics":    topics,
 		"filters":   filters,
@@ -2844,7 +2850,7 @@ func (s *WebSocketServer) MethodUnsubscribeEvents(params map[string]interface{},
 	// Update client last seen
 	s.eventManager.UpdateClientLastSeen(client.ClientID)
 
-	s.logger.WithFields(logrus.Fields{
+	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"topics":    topics,
 	}).Info("Client unsubscribed from event topics")
@@ -2872,6 +2878,323 @@ func (s *WebSocketServer) MethodGetSubscriptionStats(params map[string]interface
 			"global_stats":  stats,
 			"client_topics": clientTopics,
 			"client_id":     client.ClientID,
+		},
+	}, nil
+}
+
+// MethodStartStreaming starts a live streaming session for the specified camera device
+func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    "start_streaming",
+		"action":    "method_call",
+	}).Debug("Start streaming method called")
+
+	// Validate parameters
+	device, ok := params["device"].(string)
+	if !ok || device == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32602,
+				Message: "Invalid parameters",
+				Data:    "device parameter is required and must be a string",
+			},
+		}, nil
+	}
+
+	// Convert device identifier to device path
+	devicePath := s.getDevicePathFromCameraIdentifier(device)
+	if devicePath == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32004,
+				Message: "Camera not found or disconnected",
+				Data:    fmt.Sprintf("Camera '%s' not found", device),
+			},
+		}, nil
+	}
+
+	// Start streaming using StreamManager
+	stream, err := s.mediaMTXController.StartStreaming(context.Background(), devicePath)
+	if err != nil {
+		s.logger.WithFields(map[string]interface{}{
+			"client_id": client.ClientID,
+			"method":    "start_streaming",
+			"device":    devicePath,
+			"error":     err.Error(),
+		}).Error("Failed to start streaming")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32009,
+				Message: "Failed to start streaming",
+				Data:    err.Error(),
+			},
+		}, nil
+	}
+
+	// Use stream URL from the Stream object
+	streamURL := stream.URL
+
+	s.logger.WithFields(map[string]interface{}{
+		"client_id":   client.ClientID,
+		"method":      "start_streaming",
+		"device":      devicePath,
+		"stream_name": stream.Name,
+		"stream_url":  streamURL,
+		"action":      "start_streaming_success",
+	}).Info("Streaming started successfully")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"device":           device,
+			"stream_name":      stream.Name,
+			"stream_url":       streamURL,
+			"status":           "STARTED",
+			"start_time":       time.Now().Format(time.RFC3339),
+			"auto_close_after": "300s",
+			"ffmpeg_command":   fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp %s", devicePath, streamURL),
+		},
+	}, nil
+}
+
+// MethodStopStreaming stops the active streaming session for the specified camera device
+func (s *WebSocketServer) MethodStopStreaming(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	s.logger.WithFields(map[string]interface{}{
+		"client_id": client.ClientID,
+		"method":    "stop_streaming",
+		"action":    "method_call",
+	}).Debug("Stop streaming method called")
+
+	// Validate parameters
+	device, ok := params["device"].(string)
+	if !ok || device == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32602,
+				Message: "Invalid parameters",
+				Data:    "device parameter is required and must be a string",
+			},
+		}, nil
+	}
+
+	// Convert device identifier to device path
+	devicePath := s.getDevicePathFromCameraIdentifier(device)
+	if devicePath == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32004,
+				Message: "Camera not found or disconnected",
+				Data:    fmt.Sprintf("Camera '%s' not found", device),
+			},
+		}, nil
+	}
+
+	// Stop streaming using StreamManager
+	err := s.mediaMTXController.StopStreaming(context.Background(), devicePath)
+	if err != nil {
+		s.logger.WithFields(map[string]interface{}{
+			"client_id": client.ClientID,
+			"method":    "stop_streaming",
+			"device":    devicePath,
+			"error":     err.Error(),
+		}).Error("Failed to stop streaming")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32009,
+				Message: "Failed to stop streaming",
+				Data:    err.Error(),
+			},
+		}, nil
+	}
+
+	s.logger.WithFields(map[string]interface{}{
+		"client_id": client.ClientID,
+		"method":    "stop_streaming",
+		"device":    devicePath,
+		"action":    "stop_streaming_success",
+	}).Info("Streaming stopped successfully")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"device":           device,
+			"stream_name":      fmt.Sprintf("camera_%s_viewing", strings.ReplaceAll(devicePath, "/", "_")),
+			"status":           "STOPPED",
+			"start_time":       time.Now().Add(-5 * time.Minute).Format(time.RFC3339), // Mock start time
+			"end_time":         time.Now().Format(time.RFC3339),
+			"duration":         300, // Mock duration
+			"stream_continues": false,
+		},
+	}, nil
+}
+
+// MethodGetStreamURL gets the stream URL for a specific camera device
+func (s *WebSocketServer) MethodGetStreamURL(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	s.logger.WithFields(map[string]interface{}{
+		"client_id": client.ClientID,
+		"method":    "get_stream_url",
+		"action":    "method_call",
+	}).Debug("Get stream URL method called")
+
+	// Validate parameters
+	device, ok := params["device"].(string)
+	if !ok || device == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32602,
+				Message: "Invalid parameters",
+				Data:    "device parameter is required and must be a string",
+			},
+		}, nil
+	}
+
+	// Convert device identifier to device path
+	devicePath := s.getDevicePathFromCameraIdentifier(device)
+	if devicePath == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32004,
+				Message: "Camera not found or disconnected",
+				Data:    fmt.Sprintf("Camera '%s' not found", device),
+			},
+		}, nil
+	}
+
+	// Get stream URL using MediaMTXController
+	streamURL, err := s.mediaMTXController.GetStreamURL(context.Background(), devicePath)
+	if err != nil {
+		s.logger.WithFields(map[string]interface{}{
+			"client_id": client.ClientID,
+			"method":    "get_stream_url",
+			"device":    devicePath,
+			"error":     err.Error(),
+		}).Error("Failed to get stream URL")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32009,
+				Message: "Failed to get stream URL",
+				Data:    err.Error(),
+			},
+		}, nil
+	}
+
+	// Check if stream is active
+	streamStatus, err := s.mediaMTXController.GetStreamStatus(context.Background(), devicePath)
+	available := err == nil && streamStatus != nil
+
+	s.logger.WithFields(map[string]interface{}{
+		"client_id":  client.ClientID,
+		"method":     "get_stream_url",
+		"device":     devicePath,
+		"stream_url": streamURL,
+		"available":  available,
+		"action":     "get_stream_url_success",
+	}).Debug("Stream URL retrieved successfully")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"device":           device,
+			"stream_url":       streamURL,
+			"available":        available,
+			"active_consumers": 0, // Mock value
+			"stream_status":    "ready",
+		},
+	}, nil
+}
+
+// MethodGetStreamStatus gets detailed status information for a specific camera stream
+func (s *WebSocketServer) MethodGetStreamStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	s.logger.WithFields(map[string]interface{}{
+		"client_id": client.ClientID,
+		"method":    "get_stream_status",
+		"action":    "method_call",
+	}).Debug("Get stream status method called")
+
+	// Validate parameters
+	device, ok := params["device"].(string)
+	if !ok || device == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32602,
+				Message: "Invalid parameters",
+				Data:    "device parameter is required and must be a string",
+			},
+		}, nil
+	}
+
+	// Convert device identifier to device path
+	devicePath := s.getDevicePathFromCameraIdentifier(device)
+	if devicePath == "" {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32004,
+				Message: "Camera not found or disconnected",
+				Data:    fmt.Sprintf("Camera '%s' not found", device),
+			},
+		}, nil
+	}
+
+	// Get stream status from MediaMTXController
+	streamStatus, err := s.mediaMTXController.GetStreamStatus(context.Background(), devicePath)
+	if err != nil {
+		s.logger.WithFields(map[string]interface{}{
+			"client_id": client.ClientID,
+			"method":    "get_stream_status",
+			"device":    devicePath,
+			"error":     err.Error(),
+		}).Error("Failed to get stream status")
+
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error: &JsonRpcError{
+				Code:    -32009,
+				Message: "Stream not found or not active",
+				Data: map[string]interface{}{
+					"reason":     fmt.Sprintf("No active stream found for device '%s'", device),
+					"suggestion": "Start streaming first using start_streaming method",
+				},
+			},
+		}, nil
+	}
+
+	s.logger.WithFields(map[string]interface{}{
+		"client_id":   client.ClientID,
+		"method":      "get_stream_status",
+		"device":      devicePath,
+		"stream_name": streamStatus.Name,
+		"status":      streamStatus.Ready,
+		"action":      "get_stream_status_success",
+	}).Debug("Stream status retrieved successfully")
+
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
+			"device":         device,
+			"stream_name":    streamStatus.Name,
+			"stream_url":     streamStatus.URL,
+			"status":         "active",
+			"ready":          streamStatus.Ready,
+			"tracks":         streamStatus.Tracks,
+			"bytes_received": streamStatus.BytesReceived,
+			"bytes_sent":     streamStatus.BytesSent,
+			"readers":        len(streamStatus.Readers),
+			"ready_time":     streamStatus.ReadyTime,
 		},
 	}, nil
 }

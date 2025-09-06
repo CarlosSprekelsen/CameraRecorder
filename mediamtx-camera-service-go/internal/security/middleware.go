@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 )
 
 // ClientConnection represents a client connection interface
@@ -59,7 +58,7 @@ func NewAuthMiddleware(logger *logging.Logger, securityConfig SecurityConfig) *A
 func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 	return func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
 		if !client.IsAuthenticated() {
-			am.logger.WithFields(logrus.Fields{
+			am.logger.WithFields(logging.Fields{
 				"client_id": client.GetClientID(),
 				"method":    "authentication_required",
 				"action":    "auth_bypass_attempt",
@@ -70,7 +69,7 @@ func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 			return nil, fmt.Errorf("authentication required")
 		}
 
-		am.logger.WithFields(logrus.Fields{
+		am.logger.WithFields(logging.Fields{
 			"client_id": client.GetClientID(),
 			"user_id":   client.GetUserID(),
 			"role":      client.GetRole(),
@@ -104,7 +103,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 	return func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
 		userRole, err := rm.permissionChecker.ValidateRole(client.GetRole())
 		if err != nil {
-			rm.logger.WithFields(logrus.Fields{
+			rm.logger.WithFields(logging.Fields{
 				"client_id": client.GetClientID(),
 				"role":      client.GetRole(),
 				"error":     err.Error(),
@@ -116,7 +115,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 		}
 
 		if userRole < requiredRole {
-			rm.logger.WithFields(logrus.Fields{
+			rm.logger.WithFields(logging.Fields{
 				"client_id":     client.GetClientID(),
 				"user_role":     userRole.String(),
 				"required_role": requiredRole.String(),
@@ -127,7 +126,7 @@ func (rm *RBACMiddleware) RequireRole(requiredRole Role, handler MethodHandler) 
 			return nil, fmt.Errorf("insufficient permissions: required role %s, user role %s", requiredRole.String(), userRole.String())
 		}
 
-		rm.logger.WithFields(logrus.Fields{
+		rm.logger.WithFields(logging.Fields{
 			"client_id":     client.GetClientID(),
 			"user_role":     userRole.String(),
 			"required_role": requiredRole.String(),
@@ -171,7 +170,7 @@ func (smr *SecureMethodRegistry) RegisterMethod(methodName string, handler Metho
 
 	smr.methods[methodName] = securedHandler
 
-	smr.logger.WithFields(logrus.Fields{
+	smr.logger.WithFields(logging.Fields{
 		"method":        methodName,
 		"required_role": requiredRole.String(),
 		"action":        "method_registered",

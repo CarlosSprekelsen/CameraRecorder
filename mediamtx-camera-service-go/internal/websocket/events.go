@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // EventTopic represents different types of events that clients can subscribe to
@@ -93,11 +93,11 @@ type EventManager struct {
 	mu sync.RWMutex
 
 	// Logging
-	logger *logrus.Logger
+	logger *logging.Logger
 }
 
 // NewEventManager creates a new event manager
-func NewEventManager(logger *logrus.Logger) *EventManager {
+func NewEventManager(logger *logging.Logger) *EventManager {
 	return &EventManager{
 		subscriptions:      make(map[string]*EventSubscription),
 		topicSubscriptions: make(map[EventTopic]map[string]*EventSubscription),
@@ -139,7 +139,7 @@ func (em *EventManager) Subscribe(clientID string, topics []EventTopic, filters 
 		em.topicSubscriptions[topic][clientID] = subscription
 	}
 
-	em.logger.WithFields(logrus.Fields{
+	em.logger.WithFields(logging.Fields{
 		"client_id": clientID,
 		"topics":    topics,
 		"filters":   filters,
@@ -172,7 +172,7 @@ func (em *EventManager) Unsubscribe(clientID string, topics []EventTopic) error 
 		em.updateSubscriptionTopics(clientID, topics, true)
 	}
 
-	em.logger.WithFields(logrus.Fields{
+	em.logger.WithFields(logging.Fields{
 		"client_id": clientID,
 		"topics":    topics,
 	}).Debug("Client unsubscribed from event topics")
@@ -195,13 +195,13 @@ func (em *EventManager) PublishEvent(topic EventTopic, data map[string]interface
 
 	// Process event through handlers
 	if err := em.processEventHandlers(event); err != nil {
-		em.logger.WithError(err).WithField("topic", topic).Error("Event handler processing failed")
+		em.logger.WithError(err).WithField("topic", string(topic)).Error("Event handler processing failed")
 	}
 
 	// Get subscribers for this topic
 	subscribers, exists := em.topicSubscriptions[topic]
 	if !exists {
-		em.logger.WithField("topic", topic).Debug("No subscribers for event topic")
+		em.logger.WithField("topic", string(topic)).Debug("No subscribers for event topic")
 		return nil
 	}
 
@@ -213,7 +213,7 @@ func (em *EventManager) PublishEvent(topic EventTopic, data map[string]interface
 		}
 	}
 
-	em.logger.WithFields(logrus.Fields{
+	em.logger.WithFields(logging.Fields{
 		"topic":            topic,
 		"subscriber_count": subscriberCount,
 		"event_id":         event.EventID,

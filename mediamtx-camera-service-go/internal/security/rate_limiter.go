@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -93,7 +92,7 @@ func (erl *EnhancedRateLimiter) setConfigBasedLimits(adapter *ConfigAdapter) {
 	// Apply configured limits
 	for method, config := range configLimits {
 		erl.limits[method] = config
-		erl.logger.WithFields(logrus.Fields{
+		erl.logger.WithFields(logging.Fields{
 			"method":              method,
 			"requests_per_second": config.RequestsPerSecond,
 			"burst_size":          config.BurstSize,
@@ -126,6 +125,26 @@ func (erl *EnhancedRateLimiter) setDefaultLimits() {
 			BurstSize:         6,
 			WindowSize:        time.Second,
 		},
+		"start_streaming": {
+			RequestsPerSecond: 2.0, // 2 streaming starts per second
+			BurstSize:         5,
+			WindowSize:        time.Second,
+		},
+		"stop_streaming": {
+			RequestsPerSecond: 2.0, // 2 streaming stops per second
+			BurstSize:         5,
+			WindowSize:        time.Second,
+		},
+		"get_stream_url": {
+			RequestsPerSecond: 10.0, // 10 stream URL requests per second
+			BurstSize:         20,
+			WindowSize:        time.Second,
+		},
+		"get_stream_status": {
+			RequestsPerSecond: 10.0, // 10 stream status requests per second
+			BurstSize:         20,
+			WindowSize:        time.Second,
+		},
 		"authenticate": {
 			RequestsPerSecond: 1.0, // 1 authentication per second (prevent brute force)
 			BurstSize:         3,
@@ -144,7 +163,7 @@ func (erl *EnhancedRateLimiter) SetMethodRateLimit(method string, config *RateLi
 	defer erl.mutex.Unlock()
 
 	erl.limits[method] = config
-	erl.logger.WithFields(logrus.Fields{
+	erl.logger.WithFields(logging.Fields{
 		"method":              method,
 		"requests_per_second": config.RequestsPerSecond,
 		"burst_size":          config.BurstSize,
@@ -160,7 +179,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 	// Check if client is blocked
 	if blockTime, blocked := erl.blockedClients[clientID]; blocked {
 		if time.Since(blockTime) < erl.blockDuration {
-			erl.logger.WithFields(logrus.Fields{
+			erl.logger.WithFields(logging.Fields{
 				"client_id": clientID,
 				"method":    method,
 				"action":    "rate_limit_blocked",
@@ -189,7 +208,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 
 	// Check global rate limit
 	if !erl.globalLimiter.Allow() {
-		erl.logger.WithFields(logrus.Fields{
+		erl.logger.WithFields(logging.Fields{
 			"client_id": clientID,
 			"method":    method,
 			"action":    "global_rate_limit_exceeded",
@@ -205,7 +224,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 		if !methodLimiter.Allow() {
 			clientLimit.BlockedCount++
 
-			erl.logger.WithFields(logrus.Fields{
+			erl.logger.WithFields(logging.Fields{
 				"client_id": clientID,
 				"method":    method,
 				"action":    "method_rate_limit_exceeded",
@@ -215,7 +234,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 			// Check if client should be blocked
 			if clientLimit.BlockedCount >= 10 { // Block after 10 violations
 				erl.blockedClients[clientID] = time.Now()
-				erl.logger.WithFields(logrus.Fields{
+				erl.logger.WithFields(logging.Fields{
 					"client_id": clientID,
 					"method":    method,
 					"action":    "client_blocked",
@@ -231,7 +250,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 	if clientLimit.RequestCount > int64(erl.maxRequestsPerMinute) {
 		clientLimit.BlockedCount++
 
-		erl.logger.WithFields(logrus.Fields{
+		erl.logger.WithFields(logging.Fields{
 			"client_id": clientID,
 			"method":    method,
 			"action":    "client_rate_limit_exceeded",
@@ -242,7 +261,7 @@ func (erl *EnhancedRateLimiter) CheckLimit(method, clientID string) error {
 		// Block client if they exceed limits repeatedly
 		if clientLimit.BlockedCount >= 5 {
 			erl.blockedClients[clientID] = time.Now()
-			erl.logger.WithFields(logrus.Fields{
+			erl.logger.WithFields(logging.Fields{
 				"client_id": clientID,
 				"method":    method,
 				"action":    "client_blocked",
@@ -264,7 +283,7 @@ func (erl *EnhancedRateLimiter) ResetClientLimits(clientID string) {
 	delete(erl.clientLimits, clientID)
 	delete(erl.blockedClients, clientID)
 
-	erl.logger.WithFields(logrus.Fields{
+	erl.logger.WithFields(logging.Fields{
 		"client_id": clientID,
 		"action":    "rate_limit_reset",
 	}).Info("Client rate limits reset")
@@ -355,7 +374,7 @@ func (erl *EnhancedRateLimiter) CleanupOldClients(maxAge time.Duration) {
 	}
 
 	if removed > 0 {
-		erl.logger.WithFields(logrus.Fields{
+		erl.logger.WithFields(logging.Fields{
 			"removed_clients": removed,
 			"action":          "cleanup_completed",
 		}).Info("Old client rate limit entries cleaned up")

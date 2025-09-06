@@ -73,14 +73,29 @@ type MediaMTXConfig struct {
 	StreamReadiness                     StreamReadinessConfig `mapstructure:"stream_readiness"`
 	HealthCheckTimeout                  time.Duration         `mapstructure:"health_check_timeout"` // Default: 5 seconds
 	// Health monitoring defaults
-	HealthMonitorDefaults               HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
+	HealthMonitorDefaults HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
+
+	// RTSP Connection Monitoring Configuration
+	RTSPMonitoring RTSPMonitoringConfig `mapstructure:"rtsp_monitoring"`
 }
 
 // HealthMonitorDefaults represents health monitoring default values
 type HealthMonitorDefaults struct {
-	CheckInterval    float64 `mapstructure:"check_interval"`    // Default: 5.0 seconds
-	MaxBackoffDelay  float64 `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
-	ShutdownTimeout  float64 `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
+	CheckInterval   float64 `mapstructure:"check_interval"`    // Default: 5.0 seconds
+	MaxBackoffDelay float64 `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
+	ShutdownTimeout float64 `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
+}
+
+// RTSPMonitoringConfig represents RTSP connection monitoring configuration
+type RTSPMonitoringConfig struct {
+	Enabled             bool    `mapstructure:"enabled"`               // Default: true
+	CheckInterval       int     `mapstructure:"check_interval"`        // Default: 30 seconds
+	ConnectionTimeout   int     `mapstructure:"connection_timeout"`    // Default: 10 seconds
+	MaxConnections      int     `mapstructure:"max_connections"`       // Default: 50
+	SessionTimeout      int     `mapstructure:"session_timeout"`       // Default: 300 seconds
+	BandwidthThreshold  int64   `mapstructure:"bandwidth_threshold"`   // Default: 1000000 bytes/sec
+	PacketLossThreshold float64 `mapstructure:"packet_loss_threshold"` // Default: 0.05 (5%)
+	JitterThreshold     float64 `mapstructure:"jitter_threshold"`      // Default: 50.0 ms
 }
 
 // FFmpegSnapshotConfig represents FFmpeg snapshot configuration.
@@ -111,10 +126,10 @@ type FFmpegConfig struct {
 
 // FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations
 type FFmpegFallbackDefaults struct {
-	RetryDelay             float64 `mapstructure:"retry_delay"`             // Default: 1.0 second
+	RetryDelay             float64 `mapstructure:"retry_delay"`              // Default: 1.0 second
 	ProcessCreationTimeout float64 `mapstructure:"process_creation_timeout"` // Default: 10.0 seconds
-	ExecutionTimeout       float64 `mapstructure:"execution_timeout"`       // Default: 30.0 seconds
-	MaxBackoffDelay        float64 `mapstructure:"max_backoff_delay"`       // Default: 30.0 seconds
+	ExecutionTimeout       float64 `mapstructure:"execution_timeout"`        // Default: 30.0 seconds
+	MaxBackoffDelay        float64 `mapstructure:"max_backoff_delay"`        // Default: 30.0 seconds
 }
 
 // WebSocketNotificationConfig represents WebSocket notification configuration.
@@ -250,11 +265,11 @@ type Config struct {
 	Storage         StorageConfig         `mapstructure:"storage"`
 	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
 	// Server operation defaults
-	ServerDefaults  ServerDefaults        `mapstructure:"server_defaults"`
+	ServerDefaults ServerDefaults `mapstructure:"server_defaults"`
 }
 
 // ServerDefaults represents server operation default values
 type ServerDefaults struct {
-	ShutdownTimeout     float64 `mapstructure:"shutdown_timeout"`     // Default: 30.0 seconds
+	ShutdownTimeout     float64 `mapstructure:"shutdown_timeout"`      // Default: 30.0 seconds
 	CameraMonitorTicker float64 `mapstructure:"camera_monitor_ticker"` // Default: 5.0 seconds
 }

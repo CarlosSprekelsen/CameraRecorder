@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // Role represents the user role hierarchy in the system.
@@ -46,7 +46,7 @@ func (r Role) String() string {
 // Implements method-level permission checking with role hierarchy enforcement.
 type PermissionChecker struct {
 	methodPermissions map[string]Role
-	logger            *logrus.Logger
+	logger            *logging.Logger
 }
 
 // NewPermissionChecker creates a new permission checker with default method permissions.
@@ -54,7 +54,7 @@ type PermissionChecker struct {
 func NewPermissionChecker() *PermissionChecker {
 	checker := &PermissionChecker{
 		methodPermissions: make(map[string]Role),
-		logger:            logrus.New(),
+		logger:            logging.NewLogger("permission-checker"),
 	}
 
 	// Initialize method permissions based on Python system
@@ -69,6 +69,8 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_recording_info",
 		"get_snapshot_info",
 		"get_streams",
+		"get_stream_url",
+		"get_stream_status",
 	}
 
 	// Operator permissions (camera control operations)
@@ -78,6 +80,8 @@ func NewPermissionChecker() *PermissionChecker {
 		"stop_recording",
 		"delete_recording",
 		"delete_snapshot",
+		"start_streaming",
+		"stop_streaming",
 	}
 
 	// Admin permissions (system management operations)
@@ -103,7 +107,7 @@ func NewPermissionChecker() *PermissionChecker {
 		checker.methodPermissions[method] = RoleAdmin
 	}
 
-	checker.logger.WithField("method_count", len(checker.methodPermissions)).Info("Permission checker initialized")
+	checker.logger.WithField("method_count", fmt.Sprintf("%d", len(checker.methodPermissions))).Info("Permission checker initialized")
 	return checker
 }
 
@@ -123,7 +127,7 @@ func (p *PermissionChecker) HasPermission(userRole Role, method string) bool {
 
 	hasPermission := userRole >= requiredRole
 
-	p.logger.WithFields(logrus.Fields{
+	p.logger.WithFields(logging.Fields{
 		"method":         method,
 		"user_role":      userRole.String(),
 		"required_role":  requiredRole.String(),
@@ -197,7 +201,7 @@ func (p *PermissionChecker) AddMethodPermission(method string, requiredRole Role
 
 	p.methodPermissions[method] = requiredRole
 
-	p.logger.WithFields(logrus.Fields{
+	p.logger.WithFields(logging.Fields{
 		"method":        method,
 		"required_role": requiredRole.String(),
 	}).Info("Method permission added")

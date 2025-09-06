@@ -22,7 +22,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // PathIntegration provides integration between MediaMTX path management and camera discovery
@@ -30,7 +30,7 @@ type PathIntegration struct {
 	pathManager   PathManager
 	cameraMonitor camera.CameraMonitor
 	configManager *config.ConfigManager
-	logger        *logrus.Logger
+	logger        *logging.Logger
 
 	// Path tracking
 	activePaths   map[string]*Path
@@ -42,7 +42,7 @@ type PathIntegration struct {
 }
 
 // NewPathIntegration creates a new path integration
-func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configManager *config.ConfigManager, logger *logrus.Logger) *PathIntegration {
+func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configManager *config.ConfigManager, logger *logging.Logger) *PathIntegration {
 	return &PathIntegration{
 		pathManager:   pathManager,
 		cameraMonitor: cameraMonitor,
@@ -103,7 +103,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	pi.cameraPathsMu.Lock()
 	if existingPath, exists := pi.cameraPaths[device]; exists {
 		pi.cameraPathsMu.Unlock()
-		pi.logger.WithFields(logrus.Fields{
+		pi.logger.WithFields(map[string]interface{}{
 			"device": device,
 			"path":   existingPath,
 		}).Debug("Path already exists for camera")
@@ -150,7 +150,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	pi.cameraPaths[device] = pathName
 	pi.cameraPathsMu.Unlock()
 
-	pi.logger.WithFields(logrus.Fields{
+	pi.logger.WithFields(map[string]interface{}{
 		"device": device,
 		"path":   pathName,
 		"status": cameraDevice.Status,
@@ -187,7 +187,7 @@ func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device strin
 	delete(pi.cameraPaths, device)
 	pi.cameraPathsMu.Unlock()
 
-	pi.logger.WithFields(logrus.Fields{
+	pi.logger.WithFields(map[string]interface{}{
 		"device": device,
 		"path":   pathName,
 	}).Info("MediaMTX path deleted for camera")

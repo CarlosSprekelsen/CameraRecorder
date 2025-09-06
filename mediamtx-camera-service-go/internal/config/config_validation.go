@@ -203,6 +203,11 @@ func validateMediaMTXConfig(config *MediaMTXConfig) error {
 		return &ValidationError{Field: "mediamtx.process_kill_timeout", Message: fmt.Sprintf("process kill timeout must be positive, got %f", config.ProcessKillTimeout)}
 	}
 
+	// Validate RTSP monitoring configuration
+	if err := validateRTSPMonitoringConfig(&config.RTSPMonitoring); err != nil {
+		return err
+	}
+
 	// Validate stream readiness configuration
 	if err := validateStreamReadinessConfig(&config.StreamReadiness); err != nil {
 		return fmt.Errorf("failed to validate stream readiness configuration: %w", err)
@@ -805,6 +810,39 @@ func validateStoragePath(fieldName, path string) error {
 	// Check if path is accessible (readable and writable for storage)
 	if _, err := os.Stat(cleanPath); err != nil {
 		return &ValidationError{Field: fieldName, Message: fmt.Sprintf("storage path is not accessible: %s - %v", path, err)}
+	}
+
+	return nil
+}
+
+// validateRTSPMonitoringConfig validates RTSP monitoring configuration
+func validateRTSPMonitoringConfig(config *RTSPMonitoringConfig) error {
+	if config.CheckInterval <= 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.check_interval", Message: fmt.Sprintf("check interval must be positive, got %d", config.CheckInterval)}
+	}
+
+	if config.ConnectionTimeout <= 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.connection_timeout", Message: fmt.Sprintf("connection timeout must be positive, got %d", config.ConnectionTimeout)}
+	}
+
+	if config.MaxConnections <= 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.max_connections", Message: fmt.Sprintf("max connections must be positive, got %d", config.MaxConnections)}
+	}
+
+	if config.SessionTimeout <= 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.session_timeout", Message: fmt.Sprintf("session timeout must be positive, got %d", config.SessionTimeout)}
+	}
+
+	if config.BandwidthThreshold <= 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.bandwidth_threshold", Message: fmt.Sprintf("bandwidth threshold must be positive, got %d", config.BandwidthThreshold)}
+	}
+
+	if config.PacketLossThreshold < 0 || config.PacketLossThreshold > 1 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.packet_loss_threshold", Message: fmt.Sprintf("packet loss threshold must be between 0 and 1, got %f", config.PacketLossThreshold)}
+	}
+
+	if config.JitterThreshold < 0 {
+		return &ValidationError{Field: "mediamtx.rtsp_monitoring.jitter_threshold", Message: fmt.Sprintf("jitter threshold must be non-negative, got %f", config.JitterThreshold)}
 	}
 
 	return nil

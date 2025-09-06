@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 // Session represents a user session with authentication and activity tracking.
@@ -25,7 +25,7 @@ type Session struct {
 type SessionManager struct {
 	sessions map[string]*Session
 	mu       sync.RWMutex
-	logger   *logrus.Logger
+	logger   *logging.Logger
 	// Configuration
 	defaultSessionTimeout time.Duration
 	cleanupInterval       time.Duration
@@ -39,7 +39,7 @@ type SessionManager struct {
 func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionManager {
 	manager := &SessionManager{
 		sessions:              make(map[string]*Session),
-		logger:                logrus.New(),
+		logger:                logging.NewLogger("session-manager"),
 		defaultSessionTimeout: sessionTimeout,
 		cleanupInterval:       cleanupInterval,
 		stopChan:              make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
@@ -48,7 +48,7 @@ func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionMa
 	// Start automatic cleanup
 	manager.startCleanup()
 
-	manager.logger.WithFields(logrus.Fields{
+	manager.logger.WithFields(logging.Fields{
 		"session_timeout":  sessionTimeout,
 		"cleanup_interval": cleanupInterval,
 	}).Info("Session manager initialized with custom configuration")
@@ -83,7 +83,7 @@ func (sm *SessionManager) CreateSession(userID string, role Role) (*Session, err
 	sm.sessions[sessionID] = session
 	sm.mu.Unlock()
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
 		"user_id":    userID,
 		"role":       role.String(),
@@ -120,7 +120,7 @@ func (sm *SessionManager) ValidateSession(sessionID string) (*Session, error) {
 	// Update last activity
 	sm.UpdateActivity(sessionID)
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
 		"user_id":    session.UserID,
 		"role":       session.Role.String(),
@@ -176,7 +176,7 @@ func (sm *SessionManager) CleanupExpiredSessions() {
 	}
 
 	if len(expiredSessions) > 0 {
-		sm.logger.WithField("expired_count", len(expiredSessions)).Info("Cleaned up expired sessions")
+		sm.logger.WithField("expired_count", fmt.Sprintf("%d", len(expiredSessions))).Info("Cleaned up expired sessions")
 	}
 }
 
@@ -277,7 +277,7 @@ func (sm *SessionManager) InvalidateUserSessions(userID string) error {
 		delete(sm.sessions, sessionID)
 	}
 
-	sm.logger.WithFields(logrus.Fields{
+	sm.logger.WithFields(logging.Fields{
 		"user_id":              userID,
 		"sessions_invalidated": len(sessionsToRemove),
 	}).Info("User sessions invalidated")

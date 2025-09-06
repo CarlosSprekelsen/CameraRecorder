@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/fsnotify/fsnotify"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -22,7 +22,7 @@ type ConfigManager struct {
 	watcherLock     sync.RWMutex
 	lock            sync.RWMutex
 	defaultConfig   *Config
-	logger          *logrus.Logger
+	logger          *logging.Logger
 	stopChan        chan struct{}
 	wg              sync.WaitGroup
 }
@@ -32,7 +32,7 @@ func CreateConfigManager() *ConfigManager {
 	return &ConfigManager{
 		updateCallbacks: make([]func(*Config), 0),
 		defaultConfig:   getDefaultConfig(),
-		logger:          logrus.New(),
+		logger:          logging.NewLogger("config-manager"),
 		stopChan:        make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
 	}
 }
@@ -42,7 +42,7 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
-	cm.logger.WithFields(logrus.Fields{
+	cm.logger.WithFields(logging.Fields{
 		"config_path": configPath,
 		"action":      "load_config",
 	}).Info("Loading configuration")
@@ -106,7 +106,7 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 	// Notify callbacks
 	cm.notifyConfigUpdated(oldConfig, &config)
 
-	cm.logger.WithFields(logrus.Fields{
+	cm.logger.WithFields(logging.Fields{
 		"config_path": configPath,
 		"action":      "load_config",
 		"status":      "success",
@@ -338,7 +338,7 @@ func (cm *ConfigManager) startFileWatching() error {
 	cm.wg.Add(1)
 	go cm.watchFileChanges()
 
-	cm.logger.WithFields(logrus.Fields{
+	cm.logger.WithFields(logging.Fields{
 		"config_path": cm.configPath,
 		"watch_dir":   configDir,
 	}).Info("File watching started for hot reload")
@@ -394,7 +394,7 @@ func (cm *ConfigManager) watchFileChanges() {
 
 				// Check if the changed file is our config file
 				if event.Name == cm.configPath {
-					cm.logger.WithFields(logrus.Fields{
+					cm.logger.WithFields(logging.Fields{
 						"file":  event.Name,
 						"event": event.Op.String(),
 					}).Debug("Configuration file change detected")
@@ -489,7 +489,7 @@ func (cm *ConfigManager) SaveConfig() error {
 		return fmt.Errorf("no configuration file path set")
 	}
 
-	cm.logger.WithFields(logrus.Fields{
+	cm.logger.WithFields(logging.Fields{
 		"config_path": cm.configPath,
 		"action":      "save_config",
 	}).Info("Saving configuration to file")
@@ -513,7 +513,7 @@ func (cm *ConfigManager) SaveConfig() error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	cm.logger.WithFields(logrus.Fields{
+	cm.logger.WithFields(logging.Fields{
 		"config_path": cm.configPath,
 		"action":      "save_config",
 		"status":      "success",
@@ -647,6 +647,16 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.backoff_jitter_range", []float64{0.8, 1.2})
 	v.SetDefault("mediamtx.process_termination_timeout", 3.0)
 	v.SetDefault("mediamtx.process_kill_timeout", 2.0)
+
+	// RTSP Connection Monitoring defaults
+	v.SetDefault("mediamtx.rtsp_monitoring.enabled", true)
+	v.SetDefault("mediamtx.rtsp_monitoring.check_interval", 30)
+	v.SetDefault("mediamtx.rtsp_monitoring.connection_timeout", 10)
+	v.SetDefault("mediamtx.rtsp_monitoring.max_connections", 50)
+	v.SetDefault("mediamtx.rtsp_monitoring.session_timeout", 300)
+	v.SetDefault("mediamtx.rtsp_monitoring.bandwidth_threshold", 1000000)
+	v.SetDefault("mediamtx.rtsp_monitoring.packet_loss_threshold", 0.05)
+	v.SetDefault("mediamtx.rtsp_monitoring.jitter_threshold", 50.0)
 
 	// MediaMTX stream readiness defaults
 	v.SetDefault("mediamtx.stream_readiness.timeout", 15.0)

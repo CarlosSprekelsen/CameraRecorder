@@ -44,14 +44,14 @@ func DefaultTestConfig() *TestLoggerConfig {
 // CreateTestLogger creates a logger for testing with the given configuration
 func CreateTestLogger(t *testing.T, config *TestLoggerConfig) *Logger {
 	t.Helper()
-	
+
 	if config == nil {
 		config = DefaultTestConfig()
 	}
-	
+
 	logger := NewLogger(config.Component)
 	logger.SetLevel(config.Level)
-	
+
 	return logger
 }
 
@@ -82,8 +82,8 @@ func CreateTestFixtures() []TestFixture {
 			Message:       "database query executed",
 			Level:         logrus.DebugLevel,
 			Fields: map[string]interface{}{
-				"query":     "SELECT * FROM users",
-				"duration":  "15ms",
+				"query":    "SELECT * FROM users",
+				"duration": "15ms",
 			},
 		},
 		{
@@ -92,9 +92,9 @@ func CreateTestFixtures() []TestFixture {
 			Message:       "API request processed",
 			Level:         logrus.InfoLevel,
 			Fields: map[string]interface{}{
-				"method":     "POST",
-				"endpoint":   "/api/v1/users",
-				"status":     200,
+				"method":   "POST",
+				"endpoint": "/api/v1/users",
+				"status":   200,
 			},
 		},
 		{
@@ -103,9 +103,9 @@ func CreateTestFixtures() []TestFixture {
 			Message:       "camera stream started",
 			Level:         logrus.InfoLevel,
 			Fields: map[string]interface{}{
-				"camera_id": "cam-001",
+				"camera_id":  "cam-001",
 				"resolution": "1920x1080",
-				"fps":       30,
+				"fps":        30,
 			},
 		},
 	}
@@ -127,14 +127,14 @@ func CreateTestLoggingConfig(level, format string, consoleEnabled, fileEnabled b
 // CreateTempLogFile creates a temporary log file for testing
 func CreateTempLogFile(t *testing.T) string {
 	t.Helper()
-	
+
 	tempDir, err := os.MkdirTemp("", "logging_test")
 	require.NoError(t, err)
-	
+
 	t.Cleanup(func() {
 		os.RemoveAll(tempDir)
 	})
-	
+
 	return filepath.Join(tempDir, "test.log")
 }
 
@@ -163,7 +163,7 @@ func TestComponents() []string {
 // AssertLoggerBasicProperties asserts basic logger properties
 func AssertLoggerBasicProperties(t *testing.T, logger *Logger, expectedComponent string) {
 	t.Helper()
-	
+
 	require.NotNil(t, logger)
 	require.NotNil(t, logger.Logger)
 	require.Equal(t, expectedComponent, logger.component)
@@ -172,7 +172,7 @@ func AssertLoggerBasicProperties(t *testing.T, logger *Logger, expectedComponent
 // AssertCorrelationIDInContext asserts that correlation ID is properly set in context
 func AssertCorrelationIDInContext(t *testing.T, ctx context.Context, expectedID string) {
 	t.Helper()
-	
+
 	if expectedID == "" {
 		require.Empty(t, GetCorrelationIDFromContext(ctx))
 	} else {
