@@ -540,6 +540,86 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 	sm.snapshotsMu.Lock()
 	defer sm.snapshotsMu.Unlock()
 
+	// Get snapshots directory path from configuration
+	snapshotsDir := sm.config.SnapshotsPath
+	if snapshotsDir == "" {
+		return fmt.Errorf("snapshots path not configured")
+	}
+
+	// Check if directory exists
+	if _, err := os.Stat(snapshotsDir); os.IsNotExist(err) {
+		sm.logger.WithField("directory", snapshotsDir).Warn("Snapshots directory does not exist")
+		// Still clean up in-memory snapshots even if directory doesn't exist
+	} else {
+		// Read directory entries
+		entries, err := os.ReadDir(snapshotsDir)
+		if err != nil {
+			sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
+			return fmt.Errorf("failed to read snapshots directory: %w", err)
+		}
+
+		// Process files and collect metadata
+		var files []*FileMetadata
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			filename := entry.Name()
+
+			// Get file stats
+			fileInfo, err := entry.Info()
+			if err != nil {
+				sm.logger.WithError(err).WithField("filename", filename).Warn("Error accessing file")
+				continue
+			}
+
+			// Create file metadata
+			fileMetadata := &FileMetadata{
+				FileName:    filename,
+				FileSize:    fileInfo.Size(),
+				CreatedAt:   fileInfo.ModTime(),
+				ModifiedAt:  fileInfo.ModTime(),
+				DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+			}
+
+			files = append(files, fileMetadata)
+		}
+
+		// Sort by modification time (oldest first)
+		sort.Slice(files, func(i, j int) bool {
+			return files[i].ModifiedAt.Before(files[j].ModifiedAt)
+		})
+
+		// Delete old files based on age
+		cutoffTime := time.Now().Add(-maxAge)
+
+		for _, file := range files {
+			if file.ModifiedAt.Before(cutoffTime) {
+				filePath := filepath.Join(snapshotsDir, file.FileName)
+				if err := sm.deleteSnapshotFile(filePath); err != nil {
+					sm.logger.WithError(err).WithField("filename", file.FileName).Error("Failed to delete old snapshot file")
+					continue
+				}
+			}
+		}
+
+		// Delete excess files if we have too many (keep newest files)
+		if len(files) > maxCount {
+			excessCount := len(files) - maxCount
+			// Delete oldest files first
+			for i := 0; i < excessCount && i < len(files); i++ {
+				file := files[i]
+				filePath := filepath.Join(snapshotsDir, file.FileName)
+				if err := sm.deleteSnapshotFile(filePath); err != nil {
+					sm.logger.WithError(err).WithField("filename", file.FileName).Error("Failed to delete excess snapshot file")
+					continue
+				}
+			}
+		}
+	}
+
+	// Clean up in-memory snapshots
 	// Get all snapshots sorted by creation time
 	snapshots := make([]*Snapshot, 0, len(sm.snapshots))
 	for _, snapshot := range sm.snapshots {
@@ -551,29 +631,22 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		return snapshots[i].Created.Before(snapshots[j].Created)
 	})
 
-	// Delete old snapshots
+	// Delete old snapshots from memory
 	deletedCount := 0
+
 	for _, snapshot := range snapshots {
 		// Check age
 		if time.Since(snapshot.Created) > maxAge {
-			if err := sm.deleteSnapshotFile(snapshot.FilePath); err != nil {
-				sm.logger.WithError(err).WithField("snapshot_id", snapshot.ID).Error("Failed to delete old snapshot file")
-				continue
-			}
 			delete(sm.snapshots, snapshot.ID)
 			deletedCount++
 		}
 	}
 
-	// Delete excess snapshots if we have too many
+	// Delete excess snapshots from memory if we have too many
 	if len(sm.snapshots) > maxCount {
 		excessCount := len(sm.snapshots) - maxCount
 		for i := 0; i < excessCount && i < len(snapshots); i++ {
 			snapshot := snapshots[i]
-			if err := sm.deleteSnapshotFile(snapshot.FilePath); err != nil {
-				sm.logger.WithError(err).WithField("snapshot_id", snapshot.ID).Error("Failed to delete excess snapshot file")
-				continue
-			}
 			delete(sm.snapshots, snapshot.ID)
 			deletedCount++
 		}
@@ -750,7 +823,13 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		startIdx = totalCount
 	}
 
-	paginatedFiles := files[startIdx:endIdx]
+	var paginatedFiles []*FileMetadata
+	if totalCount > 0 && startIdx < totalCount {
+		paginatedFiles = files[startIdx:endIdx]
+	} else {
+		// Ensure we return an empty slice, not nil
+		paginatedFiles = []*FileMetadata{}
+	}
 
 	sm.logger.WithFields(logging.Fields{
 		"total_files": totalCount,

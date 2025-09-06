@@ -33,6 +33,7 @@ import (
 func createTestMediaMTXConfig() *MediaMTXConfig {
 	return &MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
+		Timeout: 10 * time.Second, // Add HTTP client timeout to prevent hanging
 		RTSPMonitoring: config.RTSPMonitoringConfig{
 			Enabled:             true,
 			CheckInterval:       30,
@@ -208,12 +209,23 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create config manager using test fixture (centralized in test helpers)
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+
+	// Create configuration integration to get MediaMTX config
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+
 	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
 	logger := logging.NewLogger("rtsp-connection-manager-test")
 	logger.SetLevel(logrus.ErrorLevel)
 
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
 	ctx := context.Background()

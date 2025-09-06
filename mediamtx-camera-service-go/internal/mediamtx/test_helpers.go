@@ -21,11 +21,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -260,6 +262,27 @@ func (h *MediaMTXTestHelper) GetLogger() *logging.Logger {
 // GetClient returns the MediaMTX client for testing
 func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 	return h.client
+}
+
+// CreateConfigManagerWithFixture creates a config manager that loads from test fixtures
+func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *config.ConfigManager {
+	configManager := config.CreateConfigManager()
+
+	// Use test fixture instead of creating config manually
+	fixturePath := filepath.Join("tests", "fixtures", fixtureName)
+
+	// Check if fixture exists, if not use a fallback path
+	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
+		// Try alternative path
+		fixturePath = filepath.Join("..", "..", "tests", "fixtures", fixtureName)
+	}
+
+	err := configManager.LoadConfig(fixturePath)
+	if err != nil {
+		t.Fatalf("Failed to load config from fixture %s: %v", fixtureName, err)
+	}
+
+	return configManager
 }
 
 // CreateTestPath creates a test path for testing purposes

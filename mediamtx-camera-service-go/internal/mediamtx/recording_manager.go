@@ -104,6 +104,14 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 
 // StartRecording starts a new recording session for a camera device using MediaMTX
 func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*RecordingSession, error) {
+	// Input validation
+	if strings.TrimSpace(devicePath) == "" {
+		return nil, fmt.Errorf("device path cannot be empty")
+	}
+	if strings.TrimSpace(outputPath) == "" {
+		return nil, fmt.Errorf("output path cannot be empty")
+	}
+
 	rm.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
 		"output_path": outputPath,

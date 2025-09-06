@@ -137,10 +137,15 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 10*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL:       "http://localhost:9997",
-		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
-	}
+	// Use centralized configuration loading from test fixtures
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	config, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+
+	// Override snapshots path to use test directory
+	config.SnapshotsPath = filepath.Join(helper.GetConfig().TestDataDir, "snapshots")
+
 	logger := helper.GetLogger()
 
 	// Create FFmpeg manager and snapshot manager
@@ -148,8 +153,8 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	// Create StreamManager using proper test infrastructure
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
 
-	// Create SnapshotManager with real StreamManager
-	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
+	// Create SnapshotManager with configManager for proper multi-tier support
+	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, config, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
 	ctx := context.Background()
@@ -162,7 +167,10 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	response, err := snapshotManager.GetSnapshotsList(ctx, 10, 0)
 	require.NoError(t, err, "GetSnapshotsList should succeed")
 	require.NotNil(t, response, "Response should not be nil")
+
+	// Files field should be present (empty slice, not nil)
 	assert.NotNil(t, response.Files, "Files field should be present")
+	assert.Equal(t, 0, len(response.Files), "Files should be empty for empty directory")
 	assert.Equal(t, 0, response.Total, "Total should be 0 for empty directory")
 	assert.Equal(t, 10, response.Limit, "Limit should match requested value")
 	assert.Equal(t, 0, response.Offset, "Offset should match requested value")
@@ -386,10 +394,15 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 10*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL:       "http://localhost:9997",
-		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
-	}
+	// Use centralized configuration loading from test fixtures
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	config, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+
+	// Override snapshots path to use test directory
+	config.SnapshotsPath = filepath.Join(helper.GetConfig().TestDataDir, "snapshots")
+
 	logger := helper.GetLogger()
 
 	// Create FFmpeg manager and snapshot manager
@@ -397,8 +410,8 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	// Create StreamManager using proper test infrastructure
 	streamManager := NewStreamManager(helper.GetClient(), config, logger)
 
-	// Create SnapshotManager with real StreamManager
-	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
+	// Create SnapshotManager with configManager for proper multi-tier support
+	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, config, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
 	ctx := context.Background()
@@ -408,34 +421,58 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create test snapshot files with different timestamps
-	testFiles := []string{"old1.jpg", "old2.jpg", "new1.jpg", "new2.jpg"}
-	for i, filename := range testFiles {
+	testSnapshots := []string{"old1.jpg", "old2.jpg", "new1.jpg", "new2.jpg"}
+	for i, filename := range testSnapshots {
 		filePath := filepath.Join(config.SnapshotsPath, filename)
+
+		// Create the file on disk
 		file, err := os.Create(filePath)
 		require.NoError(t, err)
 		file.WriteString("test snapshot data")
 		file.Close()
 
-		// Make some files old by modifying their timestamp
-		if i < 2 { // old1.jpg and old2.jpg
+		// Create snapshot object in memory
+		createdTime := time.Now()
+		if i < 2 { // old1.jpg and old2.jpg - make them old
+			createdTime = time.Now().Add(-2 * time.Hour)
+			// Also make the file old
 			oldTime := time.Now().Add(-2 * time.Hour)
 			err = os.Chtimes(filePath, oldTime, oldTime)
 			require.NoError(t, err)
 		}
+
+		snapshot := &Snapshot{
+			ID:       fmt.Sprintf("test_%d", i),
+			Device:   "camera0",
+			FilePath: filePath,
+			Created:  createdTime,
+		}
+
+		// Add to in-memory map
+		snapshotManager.snapshots[snapshot.ID] = snapshot
 	}
 
 	// Test 1: Cleanup old snapshots (older than 1 hour)
 	err = snapshotManager.CleanupOldSnapshots(ctx, 1*time.Hour, 10)
 	require.NoError(t, err, "CleanupOldSnapshots should succeed")
 
-	// Verify old files were deleted
-	for i, filename := range testFiles {
+	// Verify old snapshots were removed from memory and files were deleted
+	for i, filename := range testSnapshots {
+		snapshotID := fmt.Sprintf("test_%d", i)
 		filePath := filepath.Join(config.SnapshotsPath, filename)
-		_, err = os.Stat(filePath)
-		if i < 2 { // old files should be deleted
+
+		if i < 2 { // old snapshots should be removed from memory and files deleted
+			_, exists := snapshotManager.snapshots[snapshotID]
+			assert.False(t, exists, "Old snapshot should be removed from memory")
+
+			_, err = os.Stat(filePath)
 			assert.Error(t, err, "Old file should be deleted")
 			assert.True(t, os.IsNotExist(err), "Old file should not exist")
-		} else { // new files should still exist
+		} else { // new snapshots should still exist in memory and on disk
+			_, exists := snapshotManager.snapshots[snapshotID]
+			assert.True(t, exists, "New snapshot should still exist in memory")
+
+			_, err = os.Stat(filePath)
 			assert.NoError(t, err, "New file should still exist")
 		}
 	}
@@ -631,7 +668,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 		t.Logf("Tier 1 snapshot failed as expected (no camera available): %v", err)
 		// Verify error handling is working correctly
 		assert.Contains(t, err.Error(), "failed", "Error should indicate failure")
-		
+
 		// Verify that Tier 1 was attempted (error should mention USB direct capture)
 		// This is a test design validation - we're testing the tier system works
 		t.Logf("Tier 1 test completed - error handling works correctly")
@@ -646,7 +683,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 		snapshots := snapshotManager.ListSnapshots()
 		assert.Len(t, snapshots, 1)
 		assert.Equal(t, snapshot.ID, snapshots[0].ID)
-		
+
 		t.Logf("Tier 1 test completed - USB direct capture successful")
 	}
 }
@@ -696,7 +733,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	// This simulates the scenario where a stream already exists
 	streamName := "test_tier2_stream"
 	rtspURL := fmt.Sprintf("rtsp://%s:%d/%s", config.Host, config.RTSPPort, streamName)
-	
+
 	t.Logf("Testing Tier 2: RTSP immediate capture from stream: %s", rtspURL)
 
 	// Take snapshot - this should attempt Tier 1 first, then Tier 2
@@ -708,7 +745,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 		t.Logf("Tier 2 snapshot failed as expected (no camera available): %v", err)
 		// Verify error handling is working correctly
 		assert.Contains(t, err.Error(), "failed", "Error should indicate failure")
-		
+
 		// Verify that Tier 2 was attempted (error should mention RTSP capture)
 		// This is a test design validation - we're testing the tier system works
 		t.Logf("Tier 2 test completed - error handling works correctly")
@@ -723,7 +760,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 		snapshots := snapshotManager.ListSnapshots()
 		assert.Len(t, snapshots, 1)
 		assert.Equal(t, snapshot.ID, snapshots[0].ID)
-		
+
 		t.Logf("Tier 2 test completed - RTSP immediate capture successful")
 	}
 }
@@ -780,7 +817,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 		t.Logf("Tier 3 snapshot failed as expected (external source not available): %v", err)
 		// Verify error handling is working correctly
 		assert.Contains(t, err.Error(), "failed", "Error should indicate failure")
-		
+
 		// Verify that Tier 3 was attempted (error should mention stream activation)
 		// This is a test design validation - we're testing the tier system works
 		t.Logf("Tier 3 test completed - error handling works correctly")
@@ -795,7 +832,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 		snapshots := snapshotManager.ListSnapshots()
 		assert.Len(t, snapshots, 1)
 		assert.Equal(t, snapshot.ID, snapshots[0].ID)
-		
+
 		t.Logf("Tier 3 test completed - RTSP stream activation successful")
 	}
 }
@@ -826,18 +863,18 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 
 	// Test different device types to verify multi-tier behavior
 	testCases := []struct {
-		name       string
-		devicePath string
+		name         string
+		devicePath   string
 		expectedTier int
 	}{
 		{
-			name:        "USB Device - Should use Tier 1",
-			devicePath:  "/dev/video0",
+			name:         "USB Device - Should use Tier 1",
+			devicePath:   "/dev/video0",
 			expectedTier: 1,
 		},
 		{
-			name:        "External RTSP - Should use Tier 3",
-			devicePath:  "rtsp://external.example.com:554/stream",
+			name:         "External RTSP - Should use Tier 3",
+			devicePath:   "rtsp://external.example.com:554/stream",
 			expectedTier: 3,
 		},
 	}
@@ -870,7 +907,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 				t.Logf("Multi-tier snapshot failed as expected (source not available): %v", err)
 				// Verify error handling is working correctly
 				assert.Contains(t, err.Error(), "failed", "Error should indicate failure")
-				
+
 				t.Logf("Multi-tier test completed - error handling works correctly for %s", tc.name)
 			} else {
 				// If snapshot succeeds, verify it was created properly
@@ -883,7 +920,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 				snapshots := snapshotManager.ListSnapshots()
 				assert.Len(t, snapshots, 1)
 				assert.Equal(t, snapshot.ID, snapshots[0].ID)
-				
+
 				t.Logf("Multi-tier test completed - snapshot successful for %s", tc.name)
 			}
 		})

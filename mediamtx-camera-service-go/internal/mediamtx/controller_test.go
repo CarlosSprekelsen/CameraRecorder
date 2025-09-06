@@ -27,21 +27,8 @@ import (
 
 // createConfigManagerWithEnvVars creates a config manager that loads environment variables
 func createConfigManagerWithEnvVars(t *testing.T, helper *MediaMTXTestHelper) *config.ConfigManager {
-	configManager := config.CreateConfigManager()
-
-	// Use existing test fixture instead of creating config manually
-	fixturePath := filepath.Join("tests", "fixtures", "config_test_minimal.yaml")
-
-	// Check if fixture exists, if not use a fallback path
-	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
-		// Try alternative path
-		fixturePath = filepath.Join("..", "..", "tests", "fixtures", "config_test_minimal.yaml")
-	}
-
-	err := configManager.LoadConfig(fixturePath)
-	require.NoError(t, err, "Should load config from test fixture")
-
-	return configManager
+	// Use centralized configuration loading from test helpers
+	return CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 }
 
 // TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
@@ -565,7 +552,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Test snapshot with camera identifier (abstraction layer)
 	options := map[string]interface{}{}
-	
+
 	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", outputPath, options)
 	if err != nil {
 		t.Logf("Snapshot error details: %v", err)
