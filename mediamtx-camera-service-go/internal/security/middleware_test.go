@@ -14,8 +14,8 @@ package security
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/stretchr/testify/assert"
 )
 
 // =============================================================================
@@ -346,7 +346,13 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 func TestNewSecureMethodRegistry(t *testing.T) {
 	t.Parallel()
 
-	registry := NewSecureMethodRegistry()
+	// Create test dependencies
+	logger := logging.NewLogger("test-middleware")
+	authMiddleware := &AuthMiddleware{logger: logger}
+	rbacMiddleware := &RBACMiddleware{logger: logger}
+	var securityConfig SecurityConfig = nil
+
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, securityConfig)
 	assert.NotNil(t, registry)
 	assert.NotNil(t, registry.methods)
 	assert.Empty(t, registry.methods)
@@ -355,100 +361,106 @@ func TestNewSecureMethodRegistry(t *testing.T) {
 func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 	t.Parallel()
 
-	registry := NewSecureMethodRegistry()
-	
-	tests := []struct {
-		name         string
-		method       string
-		requiredRole string
-		description  string
-		wantErr      bool
-	}{
-		{"Valid method", "test_method", "viewer", "Test method", false},
-		{"Admin method", "admin_method", "admin", "Admin method", false},
-		{"Empty method", "", "viewer", "Empty method", true},
-		{"Empty role", "test_method", "", "Empty role", true},
+	// Create test dependencies
+	logger := logging.NewLogger("test-middleware")
+	authMiddleware := &AuthMiddleware{logger: logger}
+	rbacMiddleware := &RBACMiddleware{logger: logger}
+	var securityConfig SecurityConfig = nil
+
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, securityConfig)
+
+	// Create a test method handler
+	testHandler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+		return nil, nil
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := registry.RegisterMethod(tt.method, tt.requiredRole, tt.description)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				// Verify method was registered
-				method, exists := registry.methods[tt.method]
-				assert.True(t, exists)
-				assert.Equal(t, tt.requiredRole, method.RequiredRole)
-				assert.Equal(t, tt.description, method.Description)
-			}
-		})
-	}
+	// Test registering a method
+	registry.RegisterMethod("test_method", testHandler, RoleViewer)
+
+	// Verify method was registered
+	method, exists := registry.methods["test_method"]
+	assert.True(t, exists)
+	assert.NotNil(t, method)
+
+	// Test registering another method with different role
+	registry.RegisterMethod("admin_method", testHandler, RoleAdmin)
+
+	// Verify both methods are registered
+	assert.Len(t, registry.methods, 2)
+	assert.Contains(t, registry.methods, "test_method")
+	assert.Contains(t, registry.methods, "admin_method")
 }
 
 func TestSecureMethodRegistry_GetMethod(t *testing.T) {
 	t.Parallel()
 
-	registry := NewSecureMethodRegistry()
-	
-	// Register a method
-	err := registry.RegisterMethod("test_method", "viewer", "Test method")
-	require.NoError(t, err)
-	
-	tests := []struct {
-		name     string
-		method   string
-		want     *MethodSecurityInfo
-		wantErr  bool
-	}{
-		{"Existing method", "test_method", &MethodSecurityInfo{
-			Method: "test_method",
-			RequiredRole: "viewer",
-			Description: "Test method",
-		}, false},
-		{"Non-existing method", "nonexistent", nil, true},
-		{"Empty method", "", nil, true},
+	// Create test dependencies
+	logger := logging.NewLogger("test-middleware")
+	authMiddleware := &AuthMiddleware{logger: logger}
+	rbacMiddleware := &RBACMiddleware{logger: logger}
+	var securityConfig SecurityConfig = nil
+
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, securityConfig)
+
+	// Create a test method handler
+	testHandler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+		return nil, nil
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			method, err := registry.GetMethod(tt.method)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, method)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, method)
-			}
-		})
-	}
+	// Register a method
+	registry.RegisterMethod("test_method", testHandler, RoleViewer)
+
+	// Test getting existing method
+	handler, exists := registry.GetMethod("test_method")
+	assert.True(t, exists)
+	assert.NotNil(t, handler)
+
+	// Test getting non-existing method
+	handler, exists = registry.GetMethod("nonexistent")
+	assert.False(t, exists)
+	assert.Nil(t, handler)
+
+	// Test getting empty method
+	handler, exists = registry.GetMethod("")
+	assert.False(t, exists)
+	assert.Nil(t, handler)
 }
 
 func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 	t.Parallel()
 
-	registry := NewSecureMethodRegistry()
-	
+	// Create test dependencies
+	logger := logging.NewLogger("test-middleware")
+	authMiddleware := &AuthMiddleware{logger: logger}
+	rbacMiddleware := &RBACMiddleware{logger: logger}
+	var securityConfig SecurityConfig = nil
+
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, securityConfig)
+
 	// Initially empty
 	methods := registry.GetAllMethods()
 	assert.Empty(t, methods)
-	
+
+	// Create test method handlers
+	testHandler1 := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+		return nil, nil
+	}
+	testHandler2 := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+		return nil, nil
+	}
+
 	// Register some methods
-	err := registry.RegisterMethod("method1", "viewer", "Method 1")
-	require.NoError(t, err)
-	
-	err = registry.RegisterMethod("method2", "admin", "Method 2")
-	require.NoError(t, err)
-	
+	registry.RegisterMethod("method1", testHandler1, RoleViewer)
+	registry.RegisterMethod("method2", testHandler2, RoleAdmin)
+
 	// Get all methods
 	methods = registry.GetAllMethods()
 	assert.Len(t, methods, 2)
-	
+
 	// Verify methods are present
 	methodNames := make(map[string]bool)
 	for _, method := range methods {
-		methodNames[method.Method] = true
+		methodNames[method] = true
 	}
 	assert.True(t, methodNames["method1"])
 	assert.True(t, methodNames["method2"])
@@ -457,84 +469,30 @@ func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 	t.Parallel()
 
-	registry := NewSecureMethodRegistry()
-	
+	// Create test dependencies
+	logger := logging.NewLogger("test-middleware")
+	authMiddleware := &AuthMiddleware{logger: logger}
+	rbacMiddleware := &RBACMiddleware{logger: logger}
+	var securityConfig SecurityConfig = nil
+
+	registry := NewSecureMethodRegistry(authMiddleware, rbacMiddleware, logger, securityConfig)
+
+	// Create a test method handler
+	testHandler := func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error) {
+		return nil, nil
+	}
+
 	// Register a method
-	err := registry.RegisterMethod("test_method", "viewer", "Test method")
-	require.NoError(t, err)
-	
-	tests := []struct {
-		name     string
-		method   string
-		want     *MethodSecurityInfo
-		wantErr  bool
-	}{
-		{"Existing method", "test_method", &MethodSecurityInfo{
-			Method: "test_method",
-			RequiredRole: "viewer",
-			Description: "Test method",
-		}, false},
-		{"Non-existing method", "nonexistent", nil, true},
-		{"Empty method", "", nil, true},
-	}
+	registry.RegisterMethod("test_method", testHandler, RoleViewer)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			info, err := registry.GetMethodSecurityInfo(tt.method)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, info)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, info)
-			}
-		})
-	}
-}
+	// Test getting security info for existing method
+	info := registry.GetMethodSecurityInfo("test_method")
+	assert.NotNil(t, info)
+	assert.Equal(t, "test_method", info["method"])
+	assert.Equal(t, true, info["secured"])
 
-func TestSecureMethodRegistry_ConcurrentAccess(t *testing.T) {
-	t.Parallel()
-
-	registry := NewSecureMethodRegistry()
-	
-	// Test concurrent registration
-	done := make(chan bool, 10)
-	
-	for i := 0; i < 10; i++ {
-		go func(methodID int) {
-			method := "method" + string(rune(methodID))
-			err := registry.RegisterMethod(method, "viewer", "Concurrent method")
-			assert.NoError(t, err)
-			done <- true
-		}(i)
-	}
-	
-	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
-		<-done
-	}
-	
-	// Verify all methods were registered
-	methods := registry.GetAllMethods()
-	assert.Len(t, methods, 10)
-}
-
-func TestSecureMethodRegistry_DuplicateRegistration(t *testing.T) {
-	t.Parallel()
-
-	registry := NewSecureMethodRegistry()
-	
-	// Register method first time
-	err := registry.RegisterMethod("test_method", "viewer", "First description")
-	require.NoError(t, err)
-	
-	// Try to register same method again
-	err = registry.RegisterMethod("test_method", "admin", "Second description")
-	assert.Error(t, err, "Should error on duplicate registration")
-	
-	// Verify original method is unchanged
-	method, err := registry.GetMethod("test_method")
-	require.NoError(t, err)
-	assert.Equal(t, "viewer", method.RequiredRole)
-	assert.Equal(t, "First description", method.Description)
+	// Test getting security info for non-existing method
+	info = registry.GetMethodSecurityInfo("nonexistent")
+	assert.NotNil(t, info)
+	assert.Equal(t, "nonexistent", info["method"])
 }

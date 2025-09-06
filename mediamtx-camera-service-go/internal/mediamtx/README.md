@@ -74,13 +74,17 @@ PathExists(ctx, name) bool
 - Handles file rotation and cleanup
 - Integrates with StreamManager for recording streams
 
-### 5. **SnapshotManager** (Snapshot Operations)
-**Role**: Manages snapshot capture and file operations
+### 5. **SnapshotManager** (Multi-Tier Snapshot Operations)
+**Role**: Manages intelligent snapshot capture with multi-tier fallback system
 **Location**: `snapshot_manager.go`
 **Responsibilities**:
-- Captures snapshots from camera devices
-- Manages snapshot file storage
+- **Tier 1**: Direct FFmpeg capture from USB devices (`/dev/video*`) - fastest path
+- **Tier 2**: RTSP immediate capture from existing MediaMTX streams
+- **Tier 3**: RTSP stream activation (creates MediaMTX path, then captures)
+- **Tier 4**: Error handling and fallback mechanisms
+- Manages snapshot file storage and metadata
 - Integrates with FFmpegManager for image processing
+- Supports both current USB devices and future external RTSP sources (STANAG 4609 UAVs)
 
 ### 6. **FFmpegManager** (FFmpeg Process Management)
 **Role**: Manages FFmpeg processes for snapshots
@@ -136,13 +140,16 @@ Controller.StartStreaming()
 → Stream available for viewing
 ```
 
-### Snapshot Flow
+### Snapshot Flow (Multi-Tier Architecture)
 ```
 Controller.TakeSnapshot()
 → SnapshotManager.TakeSnapshot()
-→ FFmpegManager.StartProcess()
-→ Image captured
-→ File saved
+→ Multi-Tier Fallback System:
+  ├─ Tier 1: Direct FFmpeg from /dev/video* (USB devices) - FASTEST
+  ├─ Tier 2: RTSP immediate capture (from existing MediaMTX streams)
+  ├─ Tier 3: RTSP stream activation (create MediaMTX path, then capture)
+  └─ Tier 4: Error handling (all methods failed)
+→ Image captured and file saved
 ```
 
 ## Configuration Integration
@@ -182,10 +189,12 @@ logger.WithFields(map[string]interface{}{
 - **Restart**: true
 
 ### UseCaseSnapshot
-- **Purpose**: Quick snapshot capture
+- **Purpose**: Quick snapshot capture via MediaMTX streaming paths
 - **Auto-close**: 60s (1 minute after capture)
 - **Suffix**: "_snapshot" 
 - **Restart**: false
+- **Use Case**: External RTSP sources (STANAG 4609 UAVs) that cannot use direct FFmpeg
+- **Integration**: Used by SnapshotManager Tier 3 for external RTSP stream activation
 
 ## Integration Points
 
@@ -197,10 +206,39 @@ logger.WithFields(map[string]interface{}{
 ### Internal Integration
 - **StreamManager** uses **PathManager** for MediaMTX paths
 - **RecordingManager** uses **StreamManager** for recording streams
-- **SnapshotManager** uses **FFmpegManager** for image processing
+- **SnapshotManager** uses **FFmpegManager** for direct image processing
+- **SnapshotManager** uses **StreamManager.StartSnapshotStream()** for external RTSP sources (Tier 3)
 - **HealthMonitor** monitors **MediaMTXClient** for service health
 - **Controller** orchestrates all components including health monitoring
 
+
+## Snapshot Architecture: Current vs Future Use Cases
+
+### Current Use Case: USB Devices (`/dev/video*`)
+```
+Controller.TakeSnapshot("/dev/video0", path)
+→ SnapshotManager.TakeSnapshot()
+→ Tier 1: Direct FFmpeg from /dev/video0
+→ Success (fastest path, ~100ms)
+```
+
+### Future Use Case: External RTSP Streams (STANAG 4609 UAVs)
+```
+Controller.TakeSnapshot("rtsp://uav-stream", path)
+→ SnapshotManager.TakeSnapshot()
+→ Tier 1: Direct FFmpeg fails (not USB device)
+→ Tier 2: RTSP immediate capture fails (no existing stream)
+→ Tier 3: StreamManager.StartSnapshotStream() creates MediaMTX path
+→ FFmpeg captures from RTSP stream
+→ Success (fallback path, ~500ms)
+```
+
+### Why StreamManager.StartSnapshotStream() is Required
+- **External RTSP sources** cannot use direct FFmpeg from `/dev/video*`
+- **MediaMTX paths must be created** to receive external RTSP streams
+- **StreamManager handles MediaMTX path creation** for all stream types
+- **SnapshotManager uses StreamManager** in Tier 3 for external sources
+- **Architecture supports both current and future requirements**
 
 ## Architecture Benefits
 
@@ -210,3 +248,4 @@ logger.WithFields(map[string]interface{}{
 4. **Reusable Components**: StreamManager handles all stream types
 5. **Proper Integration**: Components work together without duplication
 6. **Extensible**: Easy to add new use cases or stream types
+7. **Future-Ready**: Multi-tier snapshot system supports current USB and future RTSP sources

@@ -36,6 +36,8 @@ type SessionManager struct {
 }
 
 // NewSessionManager creates a new session manager with custom configuration.
+// This constructor initializes the session manager with automatic cleanup routines
+// and ensures proper resource management through graceful shutdown mechanisms.
 func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionManager {
 	manager := &SessionManager{
 		sessions:              make(map[string]*Session),
@@ -94,7 +96,9 @@ func (sm *SessionManager) CreateSession(userID string, role Role) (*Session, err
 }
 
 // ValidateSession validates a session and returns the session if valid.
-// Returns nil if the session is invalid, expired, or not found.
+// This method performs comprehensive session validation including expiration checks,
+// updates last activity timestamp, and automatically removes expired sessions.
+// Returns the session if valid, error if invalid, expired, or not found.
 func (sm *SessionManager) ValidateSession(sessionID string) (*Session, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("session ID cannot be empty")

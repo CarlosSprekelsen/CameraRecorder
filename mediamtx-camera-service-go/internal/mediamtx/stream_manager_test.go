@@ -267,7 +267,8 @@ func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
-	devicePath := "/dev/video0"
+	// Use external RTSP source for snapshot stream testing (Tier 3 scenario)
+	devicePath := "rtsp://test-source.example.com:554/stream"
 
 	// Start snapshot stream
 	stream, err := streamManager.StartSnapshotStream(ctx, devicePath)

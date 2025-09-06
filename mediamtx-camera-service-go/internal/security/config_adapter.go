@@ -6,13 +6,65 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
-// ConfigAdapter bridges existing configuration with security middleware
+// SecurityConfigProvider defines the interface for accessing security configuration
+// This interface provides type-safe access to security configuration values
+// and eliminates the need for interface{} usage in security components.
+type SecurityConfigProvider interface {
+	// Rate limiting configuration
+	GetRateLimitRequests() int
+	GetRateLimitWindow() time.Duration
+
+	// JWT configuration
+	GetJWTSecretKey() string
+	GetJWTExpiryHours() int
+
+	// Logging configuration
+	GetLogLevel() string
+	GetLogFormat() string
+	IsFileLoggingEnabled() bool
+	GetLogFilePath() string
+	GetMaxLogFileSize() int64
+	GetLogBackupCount() int
+	IsConsoleLoggingEnabled() bool
+
+	// Rate limiter configuration creation
+	CreateRateLimiterConfig() map[string]*RateLimitConfig
+
+	// Audit logger configuration creation
+	CreateAuditLoggerConfig() map[string]interface{}
+}
+
+// ConfigAdapter bridges existing configuration with security middleware.
+// It implements SecurityConfigProvider interface to provide type-safe access
+// to security configuration values and eliminates hardcoded defaults.
 type ConfigAdapter struct {
 	securityConfig *config.SecurityConfig
 	loggingConfig  *config.LoggingConfig
 }
 
-// NewConfigAdapter creates a new configuration adapter
+// Ensure ConfigAdapter implements SecurityConfigProvider interface
+var _ SecurityConfigProvider = (*ConfigAdapter)(nil)
+
+// Security configuration constants - centralized defaults
+const (
+	// Default rate limiting values
+	DefaultRateLimitRequests = 100
+	DefaultRateLimitWindow   = time.Minute
+
+	// Default JWT configuration
+	DefaultJWTExpiryHours = 24
+
+	// Default logging configuration
+	DefaultLogLevel    = "info"
+	DefaultLogFormat   = "json"
+	DefaultLogFilePath = "/var/log/camera-service"
+	DefaultMaxFileSize = 100 * 1024 * 1024 // 100 MB
+	DefaultBackupCount = 5
+)
+
+// NewConfigAdapter creates a new configuration adapter with centralized defaults.
+// This constructor ensures that all security components receive consistent
+// configuration values and eliminates hardcoded defaults throughout the module.
 func NewConfigAdapter(securityConfig *config.SecurityConfig, loggingConfig *config.LoggingConfig) *ConfigAdapter {
 	return &ConfigAdapter{
 		securityConfig: securityConfig,
@@ -30,92 +82,103 @@ func (ca *ConfigAdapter) GetLoggingConfig() *config.LoggingConfig {
 	return ca.loggingConfig
 }
 
-// GetRateLimitRequests returns rate limit requests from existing config
+// GetRateLimitRequests returns rate limit requests from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetRateLimitRequests() int {
 	if ca.securityConfig != nil {
 		return ca.securityConfig.RateLimitRequests
 	}
-	return 100 // Default fallback
+	return DefaultRateLimitRequests
 }
 
-// GetRateLimitWindow returns rate limit window from existing config
+// GetRateLimitWindow returns rate limit window from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetRateLimitWindow() time.Duration {
 	if ca.securityConfig != nil {
 		return ca.securityConfig.RateLimitWindow
 	}
-	return time.Minute // Default fallback
+	return DefaultRateLimitWindow
 }
 
-// GetJWTSecretKey returns JWT secret key from existing config
+// GetJWTSecretKey returns JWT secret key from existing config.
+// Returns empty string if configuration is not available (this should be validated elsewhere).
 func (ca *ConfigAdapter) GetJWTSecretKey() string {
 	if ca.securityConfig != nil {
 		return ca.securityConfig.JWTSecretKey
 	}
-	return "" // Default fallback
+	return "" // No default for security keys - must be explicitly configured
 }
 
-// GetJWTExpiryHours returns JWT expiry hours from existing config
+// GetJWTExpiryHours returns JWT expiry hours from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetJWTExpiryHours() int {
 	if ca.securityConfig != nil {
 		return ca.securityConfig.JWTExpiryHours
 	}
-	return 24 // Default fallback
+	return DefaultJWTExpiryHours
 }
 
-// GetLogLevel returns log level from existing config
+// GetLogLevel returns log level from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetLogLevel() string {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.Level
 	}
-	return "info" // Default fallback
+	return DefaultLogLevel
 }
 
-// GetLogFormat returns log format from existing config
+// GetLogFormat returns log format from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetLogFormat() string {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.Format
 	}
-	return "json" // Default fallback
+	return DefaultLogFormat
 }
 
-// IsFileLoggingEnabled returns whether file logging is enabled
+// IsFileLoggingEnabled returns whether file logging is enabled.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) IsFileLoggingEnabled() bool {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.FileEnabled
 	}
-	return false // Default fallback
+	return false // Default to console-only logging for security
 }
 
-// GetLogFilePath returns log file path from existing config
+// GetLogFilePath returns log file path from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetLogFilePath() string {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.FilePath
 	}
-	return "/var/log/camera-service" // Default fallback
+	return DefaultLogFilePath
 }
 
-// GetMaxLogFileSize returns max log file size from existing config
+// GetMaxLogFileSize returns max log file size from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetMaxLogFileSize() int64 {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.MaxFileSize
 	}
-	return 100 * 1024 * 1024 // 100 MB default fallback
+	return DefaultMaxFileSize
 }
 
-// GetLogBackupCount returns log backup count from existing config
+// GetLogBackupCount returns log backup count from existing config.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) GetLogBackupCount() int {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.BackupCount
 	}
-	return 5 // Default fallback
+	return DefaultBackupCount
 }
 
-// IsConsoleLoggingEnabled returns whether console logging is enabled
+// IsConsoleLoggingEnabled returns whether console logging is enabled.
+// Uses centralized default if configuration is not available.
 func (ca *ConfigAdapter) IsConsoleLoggingEnabled() bool {
 	if ca.loggingConfig != nil {
 		return ca.loggingConfig.ConsoleEnabled
 	}
-	return true // Default fallback
+	return true // Default to console logging for security visibility
 }
 
 // CreateAuditLoggerConfig creates audit logger config from existing config

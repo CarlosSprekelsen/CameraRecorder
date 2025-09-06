@@ -39,14 +39,16 @@ type ClientRateLimit struct {
 	BlockedCount int64
 }
 
-// EnhancedRateLimiter provides enhanced rate limiting with per-method limits and DDoS protection
+// EnhancedRateLimiter provides enhanced rate limiting with per-method limits and DDoS protection.
+// It uses SecurityConfigProvider for type-safe configuration access and eliminates
+// the need for interface{} usage, improving type safety and maintainability.
 type EnhancedRateLimiter struct {
 	limits        map[string]*RateLimitConfig
 	clientLimits  map[string]*ClientRateLimit
 	globalLimiter *rate.Limiter
 	mutex         sync.RWMutex
 	logger        *logging.Logger
-	config        interface{} // Will be typed based on existing config structure
+	config        SecurityConfigProvider // Type-safe configuration provider
 
 	// DDoS protection
 	maxRequestsPerMinute int
@@ -54,8 +56,10 @@ type EnhancedRateLimiter struct {
 	blockDuration        time.Duration
 }
 
-// NewEnhancedRateLimiter creates a new enhanced rate limiter
-func NewEnhancedRateLimiter(logger *logging.Logger, config interface{}) *EnhancedRateLimiter {
+// NewEnhancedRateLimiter creates a new enhanced rate limiter with type-safe configuration.
+// It accepts a SecurityConfigProvider interface to ensure type safety and eliminate
+// the need for interface{} usage and type assertions.
+func NewEnhancedRateLimiter(logger *logging.Logger, config SecurityConfigProvider) *EnhancedRateLimiter {
 	limiter := &EnhancedRateLimiter{
 		limits:               make(map[string]*RateLimitConfig),
 		clientLimits:         make(map[string]*ClientRateLimit),
@@ -67,15 +71,9 @@ func NewEnhancedRateLimiter(logger *logging.Logger, config interface{}) *Enhance
 		blockDuration:        5 * time.Minute, // Block for 5 minutes
 	}
 
-	// Set default rate limits from configuration if available
+	// Set rate limits from configuration if available
 	if config != nil {
-		// Try to use config adapter if available
-		if adapter, ok := config.(*ConfigAdapter); ok {
-			limiter.setConfigBasedLimits(adapter)
-		} else {
-			// Fall back to default limits
-			limiter.setDefaultLimits()
-		}
+		limiter.setConfigBasedLimits(config)
 	} else {
 		// No config provided, use defaults
 		limiter.setDefaultLimits()
@@ -84,18 +82,20 @@ func NewEnhancedRateLimiter(logger *logging.Logger, config interface{}) *Enhance
 	return limiter
 }
 
-// setConfigBasedLimits sets rate limits from configuration adapter
-func (erl *EnhancedRateLimiter) setConfigBasedLimits(adapter *ConfigAdapter) {
-	// Get rate limits from existing configuration
-	configLimits := adapter.CreateRateLimiterConfig()
+// setConfigBasedLimits sets rate limits from configuration provider.
+// This method uses the SecurityConfigProvider interface to access configuration
+// in a type-safe manner, eliminating the need for type assertions.
+func (erl *EnhancedRateLimiter) setConfigBasedLimits(config SecurityConfigProvider) {
+	// Get rate limits from configuration provider
+	configLimits := config.CreateRateLimiterConfig()
 
 	// Apply configured limits
-	for method, config := range configLimits {
-		erl.limits[method] = config
+	for method, limitConfig := range configLimits {
+		erl.limits[method] = limitConfig
 		erl.logger.WithFields(logging.Fields{
 			"method":              method,
-			"requests_per_second": config.RequestsPerSecond,
-			"burst_size":          config.BurstSize,
+			"requests_per_second": limitConfig.RequestsPerSecond,
+			"burst_size":          limitConfig.BurstSize,
 			"action":              "config_rate_limit_applied",
 			"component":           "security_rate_limiter",
 		}).Info("Configuration-based rate limit applied")

@@ -27,7 +27,8 @@ import (
 
 // TestJWTHandler creates a JWT handler for testing with test secret
 func TestJWTHandler(t *testing.T) *JWTHandler {
-	handler, err := NewJWTHandler("test_secret_key_for_unit_testing_only")
+	logger := logging.NewLogger("test-jwt-handler")
+	handler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
 	return handler
 }

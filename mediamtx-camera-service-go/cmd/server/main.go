@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// Initialize JWT handler with configuration
-	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey)
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
 	}

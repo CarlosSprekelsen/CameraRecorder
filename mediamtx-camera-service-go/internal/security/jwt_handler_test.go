@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,9 +85,6 @@ func TestJWTHandler_TokenGeneration(t *testing.T) {
 // =============================================================================
 
 func TestJWTHandler_CheckRateLimit(t *testing.T) {
-	t.Parallel()
-	jwtHandler := TestJWTHandler(t)
-
 	tests := []struct {
 		name        string
 		clientID    string
@@ -101,13 +99,20 @@ func TestJWTHandler_CheckRateLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			// Create a separate JWT handler for each test case to avoid interference
+			jwtHandler := TestJWTHandler(t)
+
 			// Make multiple requests to test rate limiting
 			for i := 0; i < tt.requests; i++ {
 				limited := jwtHandler.CheckRateLimit(tt.clientID)
+				// i is 0-based, so i=100 means the 101st request
+				// After 100 requests (i=99), the 101st request (i=100) should be rate limited
+				// limited=true means request allowed, limited=false means request blocked (rate limited)
 				if i >= 100 && tt.expectLimit {
-					assert.True(t, limited, "Should be rate limited after 100 requests")
+					assert.False(t, limited, "Should be rate limited after 100 requests (limited=false)")
 				} else {
-					assert.False(t, limited, "Should not be rate limited")
+					assert.True(t, limited, "Should not be rate limited (limited=true)")
 				}
 			}
 		})
@@ -119,7 +124,7 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
-	
+
 	// Record some requests
 	jwtHandler.RecordRequest(clientID)
 	jwtHandler.RecordRequest(clientID)
@@ -129,7 +134,7 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 	info := jwtHandler.GetClientRateInfo(clientID)
 	assert.NotNil(t, info)
 	assert.Equal(t, clientID, info.ClientID)
-	assert.Equal(t, 3, info.RequestCount)
+	assert.Equal(t, int64(3), info.RequestCount)
 }
 
 func TestJWTHandler_GetClientRateInfo(t *testing.T) {
@@ -137,7 +142,7 @@ func TestJWTHandler_GetClientRateInfo(t *testing.T) {
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
-	
+
 	// Record some requests
 	jwtHandler.RecordRequest(clientID)
 	jwtHandler.RecordRequest(clientID)
@@ -146,8 +151,7 @@ func TestJWTHandler_GetClientRateInfo(t *testing.T) {
 	info := jwtHandler.GetClientRateInfo(clientID)
 	assert.NotNil(t, info)
 	assert.Equal(t, clientID, info.ClientID)
-	assert.Equal(t, 2, info.RequestCount)
-	assert.False(t, info.IsLimited)
+	assert.Equal(t, int64(2), info.RequestCount)
 }
 
 func TestJWTHandler_SetRateLimit(t *testing.T) {
@@ -161,10 +165,11 @@ func TestJWTHandler_SetRateLimit(t *testing.T) {
 	clientID := "test_client"
 	for i := 0; i < 51; i++ {
 		limited := jwtHandler.CheckRateLimit(clientID)
+		// limited=true means request allowed, limited=false means request blocked (rate limited)
 		if i >= 50 {
-			assert.True(t, limited, "Should be rate limited after 50 requests")
+			assert.False(t, limited, "Should be rate limited after 50 requests (limited=false)")
 		} else {
-			assert.False(t, limited, "Should not be rate limited")
+			assert.True(t, limited, "Should not be rate limited (limited=true)")
 		}
 	}
 }
@@ -174,13 +179,13 @@ func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
-	
+
 	// Record some requests
 	jwtHandler.RecordRequest(clientID)
-	
+
 	// Cleanup expired clients (should not affect recent requests)
-	jwtHandler.CleanupExpiredClients()
-	
+	jwtHandler.CleanupExpiredClients(1 * time.Minute)
+
 	// Client should still exist
 	info := jwtHandler.GetClientRateInfo(clientID)
 	assert.NotNil(t, info)
@@ -196,19 +201,18 @@ func TestJWTHandler_IsTokenExpired(t *testing.T) {
 		token       string
 		expectError bool
 	}{
-		{"Valid token", GenerateTestToken(t, "user1", "admin"), false},
-		{"Expired token", GenerateExpiredTestToken(t), true},
+		{"Valid token", GenerateTestToken(t, jwtHandler, "user1", "admin"), false},
+		{"Expired token", GenerateExpiredTestToken(t, jwtHandler, "user1", "admin"), true},
 		{"Invalid token", "invalid.token.here", true},
 		{"Empty token", "", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expired, err := jwtHandler.IsTokenExpired(tt.token)
+			expired := jwtHandler.IsTokenExpired(tt.token)
 			if tt.expectError {
-				assert.Error(t, err)
+				assert.True(t, expired, "Token should be expired or invalid")
 			} else {
-				assert.NoError(t, err)
 				assert.False(t, expired, "Token should not be expired")
 			}
 		})
@@ -221,7 +225,7 @@ func TestJWTHandler_GetSecretKey(t *testing.T) {
 
 	secretKey := jwtHandler.GetSecretKey()
 	assert.NotEmpty(t, secretKey)
-	assert.Equal(t, "test_secret_key", secretKey)
+	assert.Equal(t, "test_secret_key_for_unit_testing_only", secretKey)
 }
 
 func TestJWTHandler_GetAlgorithm(t *testing.T) {
@@ -261,7 +265,8 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test token with wrong secret
-	wrongHandler, err := NewJWTHandler("wrong_secret_key")
+	logger := logging.NewLogger("test-wrong-handler")
+	wrongHandler, err := NewJWTHandler("wrong_secret_key", logger)
 	require.NoError(t, err)
 
 	_, err = wrongHandler.ValidateToken(token)
@@ -274,7 +279,8 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
-	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only")
+	logger := logging.NewLogger("test-jwt-handler")
+	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err)
 
 	// Test token with short expiry
@@ -303,7 +309,8 @@ func TestJWTHandler_ClaimsValidation(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
-	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only")
+	logger := logging.NewLogger("test-jwt-handler")
+	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err)
 
 	// Generate token and validate claims
@@ -335,16 +342,17 @@ func TestJWTHandler_ErrorHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Test invalid secret key
-	_, err := NewJWTHandler("")
+	logger := logging.NewLogger("test-invalid-handler")
+	_, err := NewJWTHandler("", logger)
 	assert.Error(t, err)
 
 	// Test very long secret key
 	longSecret := string(make([]byte, 1000))
-	_, err = NewJWTHandler(longSecret)
+	_, err = NewJWTHandler(longSecret, logger)
 	assert.NoError(t, err) // Should handle long secrets
 
 	// Test special characters in secret
 	specialSecret := "!@#$%^&*()_+-=[]{}|;':\",./<>?"
-	_, err = NewJWTHandler(specialSecret)
+	_, err = NewJWTHandler(specialSecret, logger)
 	assert.NoError(t, err) // Should handle special characters
 }

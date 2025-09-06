@@ -10,14 +10,18 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// InputValidator provides centralized input validation and sanitization
+// InputValidator provides centralized input validation and sanitization.
+// It uses SecurityConfigProvider for type-safe configuration access and eliminates
+// the need for interface{} usage, improving type safety and maintainability.
 type InputValidator struct {
 	logger *logging.Logger
-	config interface{} // Will be typed based on existing config structure
+	config SecurityConfigProvider // Type-safe configuration provider
 }
 
-// NewInputValidator creates a new input validator
-func NewInputValidator(logger *logging.Logger, config interface{}) *InputValidator {
+// NewInputValidator creates a new input validator with type-safe configuration.
+// It accepts a SecurityConfigProvider interface to ensure type safety and eliminate
+// the need for interface{} usage and type assertions.
+func NewInputValidator(logger *logging.Logger, config SecurityConfigProvider) *InputValidator {
 	return &InputValidator{
 		logger: logger,
 		config: config,
@@ -92,7 +96,10 @@ var (
 	}
 )
 
-// ValidateCameraID validates camera identifier format
+// ValidateCameraID validates camera identifier format against known patterns.
+// This method prevents injection attacks by ensuring camera IDs match expected
+// formats for USB cameras, IP cameras, HTTP cameras, network cameras, and file sources.
+// Returns a ValidationResult with detailed error information if validation fails.
 func (iv *InputValidator) ValidateCameraID(cameraID string) *ValidationResult {
 	result := NewValidationResult()
 
@@ -422,7 +429,10 @@ func (iv *InputValidator) ValidateRecordingOptions(options map[string]interface{
 	return result
 }
 
-// SanitizeString removes potentially dangerous characters from strings
+// SanitizeString removes potentially dangerous characters from strings.
+// This method removes null bytes and control characters (except tab, newline, carriage return)
+// to prevent injection attacks and ensure safe string handling.
+// Returns the sanitized string with trimmed whitespace.
 func (iv *InputValidator) SanitizeString(input string) string {
 	// Remove null bytes and control characters
 	sanitized := strings.Map(func(r rune) rune {
@@ -510,7 +520,10 @@ func (iv *InputValidator) ValidateOffset(offset interface{}) *ValidationResult {
 	return result
 }
 
-// ValidateDevicePath validates device path format and security
+// ValidateDevicePath validates device path format and security.
+// This method prevents path traversal attacks by checking for dangerous path characters
+// and validates camera identifier format if the device appears to be a camera.
+// Returns a ValidationResult with detailed error information if validation fails.
 func (iv *InputValidator) ValidateDevicePath(devicePath interface{}) *ValidationResult {
 	result := NewValidationResult()
 

@@ -155,9 +155,12 @@ func (sm *streamManager) validateDevicePath(devicePath string) error {
 		return fmt.Errorf("device path cannot be empty")
 	}
 
-	// Validate device path format (matches Python implementation)
-	if !strings.HasPrefix(devicePath, "/dev/video") && !strings.HasPrefix(devicePath, "/dev/custom") {
-		return fmt.Errorf("invalid device path format: %s. Must be /dev/video<N> or /dev/custom<name>", devicePath)
+	// Validate device path format - accept both local devices and external RTSP sources
+	if !strings.HasPrefix(devicePath, "/dev/video") &&
+		!strings.HasPrefix(devicePath, "/dev/custom") &&
+		!strings.HasPrefix(devicePath, "rtsp://") &&
+		!strings.HasPrefix(devicePath, "rtmp://") {
+		return fmt.Errorf("invalid device path format: %s. Must be /dev/video<N>, /dev/custom<name>, rtsp://, or rtmp://", devicePath)
 	}
 
 	return nil

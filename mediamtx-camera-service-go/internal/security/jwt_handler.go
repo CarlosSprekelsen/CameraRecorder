@@ -50,17 +50,24 @@ type JWTHandler struct {
 	rateWindow  time.Duration // Time window for rate limiting
 }
 
-// NewJWTHandler creates a new JWT handler instance.
+// NewJWTHandler creates a new JWT handler instance with dependency injection.
+// This constructor accepts a logger to ensure consistent logging across the security module
+// and eliminates the creation of separate logger instances, following centralized logging principles.
 // Returns an error if the secret key is empty or invalid.
-func NewJWTHandler(secretKey string) (*JWTHandler, error) {
+func NewJWTHandler(secretKey string, logger *logging.Logger) (*JWTHandler, error) {
 	if strings.TrimSpace(secretKey) == "" {
 		return nil, fmt.Errorf("secret key must be provided")
+	}
+
+	// Use provided logger or create a default one if none provided
+	if logger == nil {
+		logger = logging.NewLogger("jwt-handler")
 	}
 
 	handler := &JWTHandler{
 		secretKey: secretKey,
 		algorithm: "HS256",
-		logger:    logging.NewLogger("jwt-handler"),
+		logger:    logger,
 
 		// Rate limiting initialization (Phase 1 enhancement)
 		clientRates: make(map[string]*ClientRateInfo),
@@ -127,7 +134,10 @@ func (h *JWTHandler) GenerateToken(userID, role string, expiryHours int) (string
 
 // Rate limiting methods (Phase 1 enhancement)
 
-// CheckRateLimit checks if a client has exceeded the rate limit
+// CheckRateLimit checks if a client has exceeded the rate limit.
+// This method implements a sliding window rate limiter that tracks requests per client
+// and prevents abuse by blocking clients that exceed the configured rate limit.
+// Returns true if the request is allowed, false if rate limit is exceeded.
 func (h *JWTHandler) CheckRateLimit(clientID string) bool {
 	h.rateMutex.Lock()
 	defer h.rateMutex.Unlock()
@@ -155,7 +165,7 @@ func (h *JWTHandler) CheckRateLimit(clientID string) bool {
 		return true
 	}
 
-	// Check if within rate limit
+	// Check if rate limit is exceeded before incrementing
 	if clientRate.RequestCount >= h.rateLimit {
 		h.logger.WithFields(logging.Fields{
 			"client_id":     clientID,
@@ -166,7 +176,7 @@ func (h *JWTHandler) CheckRateLimit(clientID string) bool {
 		return false
 	}
 
-	// Increment request count
+	// Increment request count after checking
 	clientRate.RequestCount++
 	clientRate.LastRequest = now
 
@@ -258,8 +268,10 @@ func (h *JWTHandler) CleanupExpiredClients(maxInactive time.Duration) {
 	}
 }
 
-// ValidateToken validates a JWT token and extracts claims.
-// Returns the claims if valid, nil if invalid or expired.
+// ValidateToken validates a JWT token and extracts claims with security best practices.
+// This method implements algorithm restriction to prevent algorithm confusion attacks,
+// validates all required claims, and performs comprehensive security checks.
+// Returns the claims if valid, error if invalid or expired.
 // Matches Python implementation security model: uses JWT library validation with explicit algorithm restriction.
 func (h *JWTHandler) ValidateToken(tokenString string) (*JWTClaims, error) {
 	if strings.TrimSpace(tokenString) == "" {

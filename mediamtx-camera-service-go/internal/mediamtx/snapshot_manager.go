@@ -32,6 +32,7 @@ import (
 // SnapshotManager manages advanced snapshot operations
 type SnapshotManager struct {
 	ffmpegManager FFmpegManager
+	streamManager StreamManager // Required for Tier 3: external RTSP source path creation
 	config        *MediaMTXConfig
 	logger        *logging.Logger
 
@@ -57,9 +58,10 @@ type SnapshotSettings struct {
 }
 
 // NewSnapshotManager creates a new snapshot manager
-func NewSnapshotManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, logger *logging.Logger) *SnapshotManager {
+func NewSnapshotManager(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
+		streamManager: streamManager,
 		config:        config,
 		logger:        logger,
 		snapshots:     make(map[string]*Snapshot),
@@ -75,9 +77,10 @@ func NewSnapshotManager(ffmpegManager FFmpegManager, config *MediaMTXConfig, log
 }
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
-func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
+func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
+		streamManager: streamManager,
 		config:        config,
 		configManager: configManager,
 		logger:        logger,
@@ -312,9 +315,47 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		"tier":        2,
 	}).Info("Tier 2/3: Capturing from RTSP stream")
 
-	// Build RTSP URL from device path
-	streamName := sm.getStreamNameFromDevice(devicePath)
-	rtspURL := fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
+	// Determine if this is an external RTSP source or USB device
+	var streamName string
+	var rtspURL string
+
+	if strings.HasPrefix(devicePath, "rtsp://") || strings.HasPrefix(devicePath, "rtmp://") {
+		// External RTSP source - need to create MediaMTX path first
+		sm.logger.WithFields(logging.Fields{
+			"device": devicePath,
+			"tier":   3,
+		}).Info("Tier 3: External RTSP source detected, creating MediaMTX path")
+
+		// Use StreamManager to create MediaMTX path for external RTSP source
+		stream, err := sm.streamManager.StartSnapshotStream(ctx, devicePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create MediaMTX path for external RTSP source: %w", err)
+		}
+
+		streamName = stream.Name
+		rtspURL = fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
+
+		sm.logger.WithFields(logging.Fields{
+			"device":      devicePath,
+			"stream_name": streamName,
+			"rtsp_url":    rtspURL,
+			"tier":        3,
+		}).Info("Tier 3: MediaMTX path created for external RTSP source")
+
+		// Wait a moment for the stream to be ready
+		time.Sleep(2 * time.Second)
+	} else {
+		// USB device - assume MediaMTX path already exists from previous streaming
+		streamName = sm.getStreamNameFromDevice(devicePath)
+		rtspURL = fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
+
+		sm.logger.WithFields(logging.Fields{
+			"device":      devicePath,
+			"stream_name": streamName,
+			"rtsp_url":    rtspURL,
+			"tier":        2,
+		}).Info("Tier 2: Attempting capture from existing MediaMTX stream")
+	}
 
 	// Build FFmpeg command for RTSP capture
 	command := []string{"ffmpeg"}
@@ -358,8 +399,8 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"file_size":   fileSize,
-		"tier":        2,
-	}).Info("Tier 2/3: RTSP capture successful")
+		"stream_name": streamName,
+	}).Info("Tier 2/3: RTSP snapshot captured successfully")
 
 	return snapshot, nil
 }
