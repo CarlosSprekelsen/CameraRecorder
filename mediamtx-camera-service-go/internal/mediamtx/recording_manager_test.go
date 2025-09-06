@@ -397,18 +397,30 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Test 1: Invalid path should return 404 error as per swagger.json
-	_, err := client.Get(ctx, "/v3/paths/get/nonexistent_path")
+	// Use test-prefixed name to ensure proper cleanup
+	_, err := client.Get(ctx, "/v3/paths/get/test_nonexistent_path")
 	assert.Error(t, err, "Non-existent path should return error per swagger.json")
 
-	// Test 2: Invalid recording name should return 404 as per swagger.json
-	_, err = client.Get(ctx, "/v3/recordings/get/nonexistent_recording")
-	assert.Error(t, err, "Non-existent recording should return error per swagger.json")
+	// Test 2: Non-existent recording should return 200 with empty segments per swagger.json
+	// Use test-prefixed name to ensure proper cleanup
+	data, err := client.Get(ctx, "/v3/recordings/get/test_nonexistent_recording")
+	require.NoError(t, err, "Non-existent recording should return 200 with empty segments per swagger.json")
+
+	// Verify the response structure matches Recording schema
+	var recording struct {
+		Name     string     `json:"name"`
+		Segments []struct{} `json:"segments"`
+	}
+	err = json.Unmarshal(data, &recording)
+	require.NoError(t, err, "Response should be valid JSON")
+	assert.Equal(t, "test_nonexistent_recording", recording.Name, "Recording name should match")
+	assert.Empty(t, recording.Segments, "Segments should be empty for non-existent recording")
 
 	// Test 3: MediaMTX API endpoints should be available (this validates real integration)
 	// If MediaMTX API was broken, these calls would fail
-	data, err := client.Get(ctx, "/v3/recordings/list")
+	recordingsData, err := client.Get(ctx, "/v3/recordings/list")
 	require.NoError(t, err, "MediaMTX recordings API should be accessible")
-	require.NotNil(t, data, "Response data should not be nil")
+	require.NotNil(t, recordingsData, "Response data should not be nil")
 
 	pathData, err := client.Get(ctx, "/v3/paths/list")
 	require.NoError(t, err, "MediaMTX paths API should be accessible")

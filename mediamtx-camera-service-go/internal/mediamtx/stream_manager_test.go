@@ -307,10 +307,10 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	require.Error(t, err, "Empty stream name should cause error")
 
 	// Test getting non-existent stream
-	_, err = streamManager.GetStream(ctx, "non_existent_stream")
+	_, err = streamManager.GetStream(ctx, "test_non_existent_stream")
 	require.Error(t, err, "Getting non-existent stream should cause error")
 
 	// Test deleting non-existent stream
-	err = streamManager.DeleteStream(ctx, "non_existent_stream")
+	err = streamManager.DeleteStream(ctx, "test_non_existent_stream")
 	require.Error(t, err, "Deleting non-existent stream should cause error")
 }

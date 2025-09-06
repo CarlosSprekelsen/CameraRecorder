@@ -254,10 +254,10 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	require.Error(t, err, "Empty path name should cause error")
 
 	// Test getting non-existent path
-	_, err = pathManager.GetPath(ctx, "non_existent_path")
+	_, err = pathManager.GetPath(ctx, "test_non_existent_path")
 	require.Error(t, err, "Getting non-existent path should cause error")
 
 	// Test deleting non-existent path
-	err = pathManager.DeletePath(ctx, "non_existent_path")
+	err = pathManager.DeletePath(ctx, "test_non_existent_path")
 	require.Error(t, err, "Deleting non-existent path should cause error")
 }

@@ -185,7 +185,7 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	assert.Error(t, err, "Invalid path creation should return error")
 
 	// Test deleting non-existent path
-	err = client.Delete(ctx, "/v3/config/paths/delete/non_existent_path")
+	err = client.Delete(ctx, "/v3/config/paths/delete/test_non_existent_path")
 	assert.Error(t, err, "Deleting non-existent path should return error")
 }
 
