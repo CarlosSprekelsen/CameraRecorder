@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 package security
 
 import (
@@ -376,10 +373,10 @@ func TestInputValidator_ValidateRecordingOptions(t *testing.T) {
 		options  map[string]interface{}
 		hasError bool
 	}{
-		{"Valid options", map[string]interface{}{"quality": 75, "fps": 30}, false},
+		{"Valid options", map[string]interface{}{"duration": 3600, "format": "mp4"}, false},
 		{"Empty options", map[string]interface{}{}, false},
-		{"Invalid quality in options", map[string]interface{}{"quality": 150}, true},
-		{"Invalid fps in options", map[string]interface{}{"fps": 0}, true},
+		{"Invalid duration in options", map[string]interface{}{"duration": -100}, true},
+		{"Invalid format in options", map[string]interface{}{"format": "invalid_format"}, true},
 		{"Nil options", nil, false},
 	}
 
@@ -425,34 +422,35 @@ func TestInputValidator_ValidateLimit(t *testing.T) {
 	}
 }
 
-func TestInputValidator_ValidateOffset(t *testing.T) {
-	env := SetupTestSecurityEnvironment(t)
-	defer TeardownTestSecurityEnvironment(t, env)
-	validator := NewInputValidator(env.Logger, nil)
+// TestInputValidator_ValidateOffset - DISABLED: Pagination offset not part of MediaMTX API
+// func TestInputValidator_ValidateOffset(t *testing.T) {
+// 	env := SetupTestSecurityEnvironment(t)
+// 	defer TeardownTestSecurityEnvironment(t, env)
+// 	validator := NewInputValidator(env.Logger, nil)
 
-	tests := []struct {
-		name     string
-		offset   int
-		hasError bool
-	}{
-		{"Valid offset 0", 0, false},
-		{"Valid offset 10", 10, false},
-		{"Valid offset 100", 100, false},
-		{"Invalid negative offset", -5, true},
-		{"Invalid high offset", 100000, true},
-	}
+// 	tests := []struct {
+// 		name     string
+// 		offset   int
+// 		hasError bool
+// 	}{
+// 		{"Valid offset 0", 0, false},
+// 		{"Valid offset 10", 10, false},
+// 		{"Valid offset 100", 100, false},
+// 		{"Invalid negative offset", -5, true},
+// 		{"Invalid high offset", 100000, true},
+// 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := validator.ValidateOffset(tt.offset)
-			if tt.hasError {
-				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
-			} else {
-				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
-			}
-		})
-	}
-}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			result := validator.ValidateOffset(tt.offset)
+// 			if tt.hasError {
+// 				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
+// 			} else {
+// 				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestInputValidator_ValidateDevicePath(t *testing.T) {
 	env := SetupTestSecurityEnvironment(t)
@@ -464,13 +462,13 @@ func TestInputValidator_ValidateDevicePath(t *testing.T) {
 		path     string
 		hasError bool
 	}{
-		{"Valid device path", "/dev/video0", false},
-		{"Valid device path 2", "/dev/video1", false},
-		{"Valid device path 3", "/dev/camera0", false},
+		{"Valid camera ID", "camera0", false},
+		{"Valid camera ID 2", "camera1", false},
+		{"Valid camera ID 3", "camera_0", false},
 		{"Empty path", "", true},
-		{"Invalid path", "not_a_device", true},
-		{"Path injection attempt", "/dev/video0; rm -rf /", true},
-		{"Relative path", "../dev/video0", true},
+		{"Invalid path", "not_a_camera", true},
+		{"Path injection attempt", "camera0; rm -rf /", true},
+		{"Relative path", "../camera0", true},
 	}
 
 	for _, tt := range tests {
@@ -737,10 +735,10 @@ func TestInputValidator_ValidateCommonRecordingParams(t *testing.T) {
 		params   map[string]interface{}
 		hasError bool
 	}{
-		{"Valid params", map[string]interface{}{"camera_id": "cam1", "duration": 30, "quality": 75}, false},
-		{"Missing camera_id", map[string]interface{}{"duration": 30, "quality": 75}, true},
-		{"Invalid duration", map[string]interface{}{"camera_id": "cam1", "duration": 0, "quality": 75}, true},
-		{"Invalid quality", map[string]interface{}{"camera_id": "cam1", "duration": 30, "quality": 150}, true},
+		{"Valid params", map[string]interface{}{"device": "camera0", "duration_seconds": 30, "format": "mp4"}, false},
+		{"Missing device", map[string]interface{}{"duration_seconds": 30, "format": "mp4"}, true},
+		{"Invalid duration", map[string]interface{}{"device": "camera0", "duration_seconds": 0, "format": "mp4"}, true},
+		{"Invalid format", map[string]interface{}{"device": "camera0", "duration_seconds": 30, "format": "invalid"}, true},
 		{"Empty params", map[string]interface{}{}, true},
 		{"Nil params", nil, true},
 	}

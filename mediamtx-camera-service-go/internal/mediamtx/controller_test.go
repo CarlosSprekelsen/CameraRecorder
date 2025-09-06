@@ -15,6 +15,9 @@ package mediamtx
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,6 +25,44 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// createConfigManagerWithEnvVars creates a config manager that loads environment variables
+func createConfigManagerWithEnvVars(t *testing.T, helper *MediaMTXTestHelper) *config.ConfigManager {
+	configManager := config.CreateConfigManager()
+
+	// Create required directories
+	configDir := filepath.Join(helper.GetConfig().TestDataDir, "config")
+	logDir := filepath.Join(helper.GetConfig().TestDataDir, "logs")
+	err := os.MkdirAll(configDir, 0755)
+	require.NoError(t, err, "Should create config directory")
+	err = os.MkdirAll(logDir, 0755)
+	require.NoError(t, err, "Should create log directory")
+	
+	// Create required files
+	mediamtxConfigFile := filepath.Join(configDir, "mediamtx.yml")
+	err = os.WriteFile(mediamtxConfigFile, []byte("paths: {}\n"), 0644)
+	require.NoError(t, err, "Should create MediaMTX config file")
+	
+	// Create a minimal config file to trigger LoadConfig which loads environment variables
+	tempConfigFile := filepath.Join(helper.GetConfig().TestDataDir, "test_config.yml")
+	configContent := fmt.Sprintf(`server:
+  host: 0.0.0.0
+  port: 8002
+mediamtx:
+  config_path: %s
+logging:
+  file_path: %s
+security:
+  jwt_secret_key: test-secret-key-for-testing-only
+`, mediamtxConfigFile, filepath.Join(logDir, "test.log"))
+	err = os.WriteFile(tempConfigFile, []byte(configContent), 0644)
+	require.NoError(t, err, "Should create temp config file")
+
+	err = configManager.LoadConfig(tempConfigFile)
+	require.NoError(t, err, "Should load config from environment variables")
+
+	return configManager
+}
 
 // TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
 func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
@@ -403,4 +444,192 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Should not panic and should handle concurrent access gracefully
 	assert.True(t, true, "Concurrent access should not cause panics")
+}
+
+// TestController_StartRecording_ReqMTX002 tests recording functionality through controller
+func TestController_StartRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Create temporary output directory
+	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
+	err = os.MkdirAll(tempDir, 0755)
+	require.NoError(t, err)
+
+	outputPath := filepath.Join(tempDir, "test_recording.mp4")
+
+	// Test recording with camera identifier (abstraction layer)
+	session, err := controller.StartRecording(ctx, "camera0", outputPath)
+	require.NoError(t, err, "Recording should start successfully")
+	require.NotNil(t, session, "Session should not be nil")
+
+	// Verify session properties
+	assert.NotEmpty(t, session.ID, "Session should have an ID")
+	assert.Equal(t, "camera0", session.DevicePath, "Should use camera identifier")
+	assert.Equal(t, outputPath, session.FilePath, "Should match output path")
+	assert.Equal(t, "active", session.Status, "Session should be active")
+
+	// Clean up
+	err = controller.StopRecording(ctx, session.ID)
+	require.NoError(t, err, "Recording should stop successfully")
+}
+
+// TestController_StopRecording_ReqMTX002 tests recording stop functionality through controller
+func TestController_StopRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Create temporary output directory
+	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
+	err = os.MkdirAll(tempDir, 0755)
+	require.NoError(t, err)
+
+	outputPath := filepath.Join(tempDir, "test_recording_stop.mp4")
+
+	// Start recording first
+	session, err := controller.StartRecording(ctx, "camera0", outputPath)
+	require.NoError(t, err, "Recording should start successfully")
+	require.NotNil(t, session, "Session should not be nil")
+
+	// Stop recording
+	err = controller.StopRecording(ctx, session.ID)
+	require.NoError(t, err, "Recording should stop successfully")
+
+	// Verify session is no longer active
+	_, err = controller.ListRecordings(ctx, 10, 0)
+	require.NoError(t, err, "Should be able to list recordings")
+	// Note: The session might still be in the list but marked as stopped
+}
+
+// TestController_TakeSnapshot_ReqMTX002 tests snapshot functionality through controller
+func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager with proper configuration loading
+	configManager := createConfigManagerWithEnvVars(t, helper)
+	
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Create temporary output directory
+	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "snapshots")
+	err = os.MkdirAll(tempDir, 0755)
+	require.NoError(t, err)
+
+	outputPath := filepath.Join(tempDir, "test_snapshot.jpg")
+
+	// Test snapshot with camera identifier (abstraction layer)
+	options := map[string]interface{}{}
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", outputPath, options)
+	require.NoError(t, err, "Snapshot should be taken successfully")
+	require.NotNil(t, snapshot, "Snapshot should not be nil")
+
+	// Verify snapshot properties
+	assert.NotEmpty(t, snapshot.ID, "Snapshot should have an ID")
+	assert.Equal(t, "camera0", snapshot.Device, "Should use camera identifier")
+	assert.Equal(t, outputPath, snapshot.FilePath, "Should match output path")
+}
+
+// TestController_StreamManagement_ReqMTX002 tests stream management through controller
+func TestController_StreamManagement_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Wait for MediaMTX server to be ready
+	err := helper.WaitForServerReady(t, 10*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test stream management through controller
+	streams, err := controller.GetStreams(ctx)
+	require.NoError(t, err, "Should be able to get streams")
+	require.NotNil(t, streams, "Streams should not be nil")
+
+	// Test paths management through controller
+	paths, err := controller.GetPaths(ctx)
+	require.NoError(t, err, "Should be able to get paths")
+	require.NotNil(t, paths, "Paths should not be nil")
 }

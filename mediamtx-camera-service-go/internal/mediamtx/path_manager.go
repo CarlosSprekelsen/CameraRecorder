@@ -106,8 +106,18 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		}
 	}
 
-	// Marshal request
-	data, err := marshalCreatePathRequest(path)
+	// Marshal request - choose correct marshaling function based on path type
+	var data []byte
+	var err error
+
+	if path.RunOnDemand != "" {
+		// For on-demand streams (USB devices), use USB-specific marshaling
+		data, err = marshalCreateUSBPathRequest(name, path.RunOnDemand)
+	} else {
+		// For direct sources (external RTSP), use standard marshaling
+		data, err = marshalCreatePathRequest(path)
+	}
+
 	if err != nil {
 		return NewPathErrorWithErr(name, "create_path", "failed to marshal request", err)
 	}
@@ -284,8 +294,26 @@ func (pm *pathManager) validateSource(source string) error {
 		}
 	}
 
-	// Check for potentially dangerous characters
-	dangerousChars := []string{"..", "//", "\\", "<", ">", "|", "&", ";", "`", "$"}
+	// Check for potentially dangerous characters (but allow // in valid URL schemes)
+	dangerousChars := []string{"..", "\\", "<", ">", "|", "&", ";", "`", "$"}
+
+	// Special handling for // - only allow it in valid URL schemes
+	if strings.Contains(source, "//") {
+		// Allow // only in valid URL schemes
+		validSchemes := []string{"rtsp://", "rtmp://", "http://", "https://"}
+		hasValidScheme := false
+		for _, scheme := range validSchemes {
+			if strings.HasPrefix(source, scheme) {
+				hasValidScheme = true
+				break
+			}
+		}
+		if !hasValidScheme {
+			return fmt.Errorf("source contains potentially dangerous character sequence '//' - this may cause security issues")
+		}
+	}
+
+	// Check other dangerous characters
 	for _, char := range dangerousChars {
 		if strings.Contains(source, char) {
 			return fmt.Errorf("source contains potentially dangerous character sequence '%s' - this may cause security issues", char)

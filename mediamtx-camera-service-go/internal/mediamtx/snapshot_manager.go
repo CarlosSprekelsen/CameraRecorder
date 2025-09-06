@@ -596,6 +596,9 @@ func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath strin
 		command = append(command, "-vf", scaleFilter)
 	}
 
+	// Overwrite output file without asking (prevents hanging on interactive prompt)
+	command = append(command, "-y")
+
 	// Output path
 	command = append(command, outputPath)
 

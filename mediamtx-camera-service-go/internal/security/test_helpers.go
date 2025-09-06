@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +28,9 @@ import (
 
 // TestJWTHandler creates a JWT handler for testing with test secret
 func TestJWTHandler(t *testing.T) *JWTHandler {
+	// Use minimal logger to reduce test noise and improve performance
 	logger := logging.NewLogger("test-jwt-handler")
+	// TODO: Configure logger to ERROR level only for tests
 	handler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
 	return handler
@@ -51,14 +54,33 @@ func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *JWTHandler, userID st
 
 // GenerateExpiredTestToken creates an expired JWT token for testing expiry scenarios
 func GenerateExpiredTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
-	// Create token with 1 hour expiry and wait for it to expire
-	token, err := jwtHandler.GenerateToken(userID, role, 1)
-	require.NoError(t, err, "Failed to generate expired test token")
+	// Create a token with expiry time in the past (1 hour ago)
+	now := time.Now().Unix()
+	pastTime := now - 3600 // 1 hour ago
 
-	// Wait for token to expire (1 hour + buffer)
-	time.Sleep(1*time.Hour + 1*time.Minute)
+	// Create claims with past expiry
+	claims := JWTClaims{
+		UserID: userID,
+		Role:   role,
+		IAT:    now - 7200, // 2 hours ago
+		EXP:    pastTime,   // 1 hour ago (expired)
+	}
 
-	return token
+	// Create JWT token manually with past expiry
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": claims.UserID,
+		"role":    claims.Role,
+		"iat":     claims.IAT,
+		"exp":     claims.EXP,
+	})
+
+	// Sign with the same secret key as the handler
+	secretKey := jwtHandler.GetSecretKey()
+	tokenString, err := token.SignedString([]byte(secretKey))
+	require.NoError(t, err, "Failed to sign expired test token")
+	require.NotEmpty(t, tokenString, "Generated expired token should not be empty")
+
+	return tokenString
 }
 
 // =============================================================================

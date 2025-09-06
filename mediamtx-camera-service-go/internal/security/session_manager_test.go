@@ -94,8 +94,8 @@ func TestSessionManager_ExpiryHandling(t *testing.T) {
 	env := SetupTestSecurityEnvironment(t)
 	defer TeardownTestSecurityEnvironment(t, env)
 
-	// Create a custom session manager with short timeout for this test
-	shortTimeoutManager := NewSessionManager(1*time.Second, 1*time.Second)
+	// Create a custom session manager with very short timeout for this test
+	shortTimeoutManager := NewSessionManager(1*time.Millisecond, 1*time.Millisecond) // 1ms timeout
 	defer shortTimeoutManager.Stop()
 
 	// Create session using the short timeout manager
@@ -107,8 +107,11 @@ func TestSessionManager_ExpiryHandling(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, validSession)
 
-	// Wait for session to expire
-	time.Sleep(2 * time.Second)
+	// Wait just 2ms for session to actually expire (much faster than 2 seconds)
+	time.Sleep(2 * time.Millisecond)
+
+	// Manually trigger cleanup to remove expired sessions
+	shortTimeoutManager.CleanupExpiredSessions()
 
 	// Session should be expired
 	expiredSession, err := shortTimeoutManager.ValidateSession(session.SessionID)
@@ -116,7 +119,6 @@ func TestSessionManager_ExpiryHandling(t *testing.T) {
 	assert.Nil(t, expiredSession)
 
 	// Session count should be 0 after cleanup
-	time.Sleep(2 * time.Second) // Wait for cleanup
 	assert.Equal(t, 0, shortTimeoutManager.GetSessionCount())
 }
 
@@ -213,10 +215,7 @@ func TestSessionManager_EdgeCases(t *testing.T) {
 
 		initialActivity := session.LastActivity
 
-		// Wait a bit
-		time.Sleep(10 * time.Millisecond)
-
-		// Update activity
+		// Update activity (no delay needed for unit test)
 		env.SessionManager.UpdateActivity(session.SessionID)
 
 		// Get updated session
@@ -276,8 +275,9 @@ func TestSessionManager_AdditionalEdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, session)
 
-		// Wait for session to expire and cleanup to run
-		time.Sleep(10 * time.Millisecond)
+		// Wait 2ms for session to expire, then trigger cleanup
+		time.Sleep(2 * time.Millisecond)
+		shortTimeoutManager.CleanupExpiredSessions()
 
 		// Session should be removed by cleanup
 		_, err = shortTimeoutManager.ValidateSession(session.SessionID)

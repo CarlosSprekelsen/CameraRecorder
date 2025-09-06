@@ -328,7 +328,6 @@ type MediaMTXController interface {
 	// Recording operations
 	StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
 	StopRecording(ctx context.Context, sessionID string) error
-	TakeSnapshot(ctx context.Context, device, path string) (*Snapshot, error)
 	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
 
 	// Streaming operations

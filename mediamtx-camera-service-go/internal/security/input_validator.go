@@ -376,7 +376,7 @@ func (iv *InputValidator) ValidateAutoCleanup(autoCleanup interface{}) *Validati
 	return result
 }
 
-// ValidateRecordingOptions validates recording options map
+// ValidateRecordingOptions validates recording options map according to MediaMTX API specification
 func (iv *InputValidator) ValidateRecordingOptions(options map[string]interface{}) *ValidationResult {
 	result := NewValidationResult()
 
@@ -384,46 +384,28 @@ func (iv *InputValidator) ValidateRecordingOptions(options map[string]interface{
 		return result // Options are optional
 	}
 
-	// Validate individual options
+	// Validate MediaMTX API recording parameters
+	// According to API docs: start_recording accepts device (required), duration (optional), format (optional)
+
+	// Validate duration parameter (optional, number)
 	if duration, exists := options["duration"]; exists {
-		if durationResult, _ := iv.ValidateDuration(fmt.Sprintf("%v", duration)); durationResult.HasErrors() {
+		if durationResult := iv.ValidatePositiveInteger(duration, "duration"); durationResult.HasErrors() {
 			result.Errors = append(result.Errors, durationResult.Errors...)
 		}
 	}
 
-	if quality, exists := options["quality"]; exists {
-		if qualityResult := iv.ValidateQuality(fmt.Sprintf("%v", quality)); qualityResult.HasErrors() {
-			result.Errors = append(result.Errors, qualityResult.Errors...)
+	// Validate format parameter (optional, string) - must be "mp4" or "mkv" according to MediaMTX API
+	if format, exists := options["format"]; exists {
+		if formatResult := iv.ValidateOptionalString(format, "format"); formatResult.HasErrors() {
+			result.Errors = append(result.Errors, formatResult.Errors...)
+		} else {
+			// Additional format validation for MediaMTX API
+			if str, ok := format.(string); ok && str != "" {
+				if str != "mp4" && str != "mkv" {
+					result.AddError("format", "must be 'mp4' or 'mkv'", str)
+				}
+			}
 		}
-	}
-
-	if priority, exists := options["priority"]; exists {
-		if priorityResult := iv.ValidatePriority(priority); priorityResult.HasErrors() {
-			result.Errors = append(result.Errors, priorityResult.Errors...)
-		}
-	}
-
-	if retentionDays, exists := options["retention_days"]; exists {
-		if retentionResult := iv.ValidateRetentionDays(retentionDays); retentionResult.HasErrors() {
-			result.Errors = append(result.Errors, retentionResult.Errors...)
-		}
-	}
-
-	if useCase, exists := options["use_case"]; exists {
-		if useCaseResult := iv.ValidateUseCase(fmt.Sprintf("%v", useCase)); useCaseResult.HasErrors() {
-			result.Errors = append(result.Errors, useCaseResult.Errors...)
-		}
-	}
-
-	if autoCleanup, exists := options["auto_cleanup"]; exists {
-		if autoCleanupResult := iv.ValidateAutoCleanup(autoCleanup); autoCleanupResult.HasErrors() {
-			result.Errors = append(result.Errors, autoCleanupResult.Errors...)
-		}
-	}
-
-	// Update overall validation result
-	if len(result.Errors) > 0 {
-		result.Valid = false
 	}
 
 	return result
@@ -552,12 +534,10 @@ func (iv *InputValidator) ValidateDevicePath(devicePath interface{}) *Validation
 		return result
 	}
 
-	// Validate camera identifier format if it's a camera ID
-	if strings.HasPrefix(deviceStr, "camera") {
-		if cameraResult := iv.ValidateCameraID(deviceStr); cameraResult.HasErrors() {
-			result.Errors = append(result.Errors, cameraResult.Errors...)
-			result.Valid = false
-		}
+	// Validate camera identifier format - all device parameters should be valid camera IDs
+	if cameraResult := iv.ValidateCameraID(deviceStr); cameraResult.HasErrors() {
+		result.Errors = append(result.Errors, cameraResult.Errors...)
+		result.Valid = false
 	}
 
 	return result
@@ -583,13 +563,28 @@ func (iv *InputValidator) ValidateFilename(filename interface{}) *ValidationResu
 		return result
 	}
 
+	// Check filename length (prevent extremely long filenames)
+	if len(filenameStr) > 255 {
+		result.AddError("filename", "filename too long (max 255 characters)", filenameStr)
+		return result
+	}
+
 	// Sanitize the filename
 	filenameStr = iv.SanitizeString(filenameStr)
 
-	// Check for path traversal attempts
-	if strings.Contains(filenameStr, "..") || strings.Contains(filenameStr, "/") || strings.Contains(filenameStr, "\\") {
-		result.AddError("filename", "filename parameter contains invalid path characters", filenameStr)
+	// Check for path traversal attempts (but allow legitimate paths)
+	if strings.Contains(filenameStr, "..") {
+		result.AddError("filename", "filename parameter contains path traversal attempt", filenameStr)
 		return result
+	}
+
+	// Check for dangerous characters that could be used in injection attacks
+	dangerousChars := []string{"<", ">", ":", "\"", "|", "?", "*"}
+	for _, char := range dangerousChars {
+		if strings.Contains(filenameStr, char) {
+			result.AddError("filename", fmt.Sprintf("filename parameter contains invalid character: %s", char), filenameStr)
+			return result
+		}
 	}
 
 	// Check for potentially dangerous extensions (optional security measure)
@@ -661,6 +656,20 @@ func (iv *InputValidator) ValidateStringParameter(value interface{}, fieldName s
 		return result
 	}
 
+	// Check for whitespace-only strings
+	if strings.TrimSpace(str) == "" && str != "" {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter cannot be only whitespace", fieldName), str)
+		return result
+	}
+
+	// Check for control characters (newlines, tabs, etc.)
+	for _, char := range str {
+		if char < 32 { // Reject all control characters including tab, newline, carriage return
+			result.AddError(fieldName, fmt.Sprintf("%s parameter contains invalid control character", fieldName), str)
+			return result
+		}
+	}
+
 	// Sanitize the string
 	sanitized := iv.SanitizeString(str)
 	if sanitized != str {
@@ -684,6 +693,20 @@ func (iv *InputValidator) ValidateOptionalString(value interface{}, fieldName st
 		return result
 	}
 
+	// Check for whitespace-only strings (but allow empty strings)
+	if str != "" && strings.TrimSpace(str) == "" {
+		result.AddError(fieldName, fmt.Sprintf("%s parameter cannot be only whitespace", fieldName), str)
+		return result
+	}
+
+	// Check for control characters (newlines, tabs, etc.)
+	for _, char := range str {
+		if char < 32 { // Reject all control characters including tab, newline, carriage return
+			result.AddError(fieldName, fmt.Sprintf("%s parameter contains invalid control character", fieldName), str)
+			return result
+		}
+	}
+
 	// Sanitize the string if not empty
 	if str != "" {
 		sanitized := iv.SanitizeString(str)
@@ -700,15 +723,17 @@ func (iv *InputValidator) ValidateBooleanParameter(value interface{}, fieldName 
 	result := NewValidationResult()
 
 	if value == nil {
-		return result // Boolean is optional
+		result.AddError(fieldName, "boolean parameter is required", nil)
+		return result
 	}
 
 	switch v := value.(type) {
 	case bool:
 		// Boolean is always valid
 	case string:
-		if strings.ToLower(v) != "true" && strings.ToLower(v) != "false" {
-			result.AddError(fieldName, "must be true or false", v)
+		lowerStr := strings.ToLower(v)
+		if lowerStr != "true" && lowerStr != "false" && lowerStr != "1" && lowerStr != "0" {
+			result.AddError(fieldName, "must be true, false, 1, or 0", v)
 		}
 	case int:
 		if v != 0 && v != 1 {
@@ -760,7 +785,8 @@ func (iv *InputValidator) ValidateCommonRecordingParams(params map[string]interf
 	result := NewValidationResult()
 
 	if params == nil {
-		return result // No parameters to validate
+		result.AddError("params", "parameters are required", nil)
+		return result
 	}
 
 	// Validate device parameter (required)
@@ -782,6 +808,13 @@ func (iv *InputValidator) ValidateCommonRecordingParams(params map[string]interf
 	if format, exists := params["format"]; exists {
 		if formatResult := iv.ValidateOptionalString(format, "format"); formatResult.HasErrors() {
 			result.Errors = append(result.Errors, formatResult.Errors...)
+		} else {
+			// Additional format validation for MediaMTX API
+			if str, ok := format.(string); ok && str != "" {
+				if str != "mp4" && str != "mkv" {
+					result.AddError("format", "must be 'mp4' or 'mkv'", str)
+				}
+			}
 		}
 	}
 

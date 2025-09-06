@@ -617,6 +617,9 @@ func (fm *ffmpegManager) buildSnapshotCommand(device, outputPath string) []strin
 	// Video frames
 	command = append(command, "-vframes", "1")
 
+	// Overwrite output file without asking (prevents hanging on interactive prompt)
+	command = append(command, "-y")
+
 	// Output path
 	command = append(command, outputPath)
 

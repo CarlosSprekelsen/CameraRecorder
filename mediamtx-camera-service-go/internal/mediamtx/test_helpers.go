@@ -349,6 +349,12 @@ func (h *MediaMTXTestHelper) isTestPath(pathName string) bool {
 			return true
 		}
 	}
+
+	// Also check for camera0, camera1, etc. (without underscore)
+	if len(pathName) >= 7 && pathName[:6] == "camera" && pathName[6] >= '0' && pathName[6] <= '9' {
+		return true
+	}
+
 	return false
 }
 
