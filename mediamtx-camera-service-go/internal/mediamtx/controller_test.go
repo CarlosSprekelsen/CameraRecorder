@@ -60,7 +60,17 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get health
 	health, err := controller.GetHealth(ctx)
@@ -87,7 +97,17 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get metrics
 	metrics, err := controller.GetMetrics(ctx)
@@ -113,7 +133,17 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get system metrics
 	systemMetrics, err := controller.GetSystemMetrics(ctx)
@@ -139,7 +169,17 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get paths
 	paths, err := controller.GetPaths(ctx)
@@ -166,7 +206,17 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get streams
 	streams, err := controller.GetStreams(ctx)
@@ -193,7 +243,17 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Get config
 	config, err := controller.GetConfig(ctx)
@@ -220,7 +280,17 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// List recordings
 	recordings, err := controller.ListRecordings(ctx, 10, 0)
@@ -246,7 +316,17 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// List snapshots
 	snapshots, err := controller.ListSnapshots(ctx, 10, 0)
@@ -273,7 +353,17 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
+	// Start the controller
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	// Test concurrent access to different methods
 	done := make(chan bool, 4)

@@ -90,7 +90,22 @@ PathExists(ctx, name) bool
 - Monitors process health
 - Handles process cleanup
 
-### 7. **RTSPConnectionManager** (Connection Monitoring)
+### 7. **HealthMonitor** (Health Monitoring)
+**Role**: Monitors MediaMTX service health and implements circuit breaker pattern
+**Location**: `health_monitor.go`
+**Responsibilities**:
+- Continuous health checking via HTTP endpoints
+- Circuit breaker implementation for failure handling
+- Health metrics collection and status reporting
+- Automatic recovery from unhealthy states
+
+**Integration**:
+- Integrated with MediaMTXController lifecycle
+- Exposed via GetHealth() API method
+- Publishes health events via WebSocket
+- Included in system metrics responses
+
+### 8. **RTSPConnectionManager** (Connection Monitoring)
 **Role**: Monitors RTSP connections and sessions
 **Location**: `rtsp_connection_manager.go`
 **Responsibilities**:
@@ -183,7 +198,8 @@ logger.WithFields(map[string]interface{}{
 - **StreamManager** uses **PathManager** for MediaMTX paths
 - **RecordingManager** uses **StreamManager** for recording streams
 - **SnapshotManager** uses **FFmpegManager** for image processing
-- **Controller** orchestrates all components
+- **HealthMonitor** monitors **MediaMTXClient** for service health
+- **Controller** orchestrates all components including health monitoring
 
 
 ## Architecture Benefits

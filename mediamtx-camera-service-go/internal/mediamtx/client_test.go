@@ -111,10 +111,10 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 	_, err = client.Post(ctx, "/v3/config/paths/add/test_put_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
-	// Test PUT request to update path endpoint (from swagger.json)
+	// Test POST request to replace path endpoint (from swagger.json)
 	updateData := `{"name":"test_put_path","source":"publisher","maxReaders":5}`
-	data, err := client.Put(ctx, "/v3/config/paths/replace/test_put_path", []byte(updateData))
-	require.NoError(t, err, "PUT request should succeed")
+	data, err := client.Post(ctx, "/v3/config/paths/replace/test_put_path", []byte(updateData))
+	require.NoError(t, err, "POST request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 
 	// Clean up - delete the test path
