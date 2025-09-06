@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -47,14 +48,13 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		"options": options,
 	}).Debug("Creating MediaMTX path")
 
-	// Validate path name
-	if name == "" {
-		return fmt.Errorf("path name cannot be empty")
+	// Enhanced validation for better user experience and software resilience
+	if err := pm.validatePathName(name); err != nil {
+		return fmt.Errorf("invalid path name: %w", err)
 	}
 
-	// Validate source
-	if source == "" {
-		return fmt.Errorf("source cannot be empty")
+	if err := pm.validateSource(source); err != nil {
+		return fmt.Errorf("invalid source: %w", err)
 	}
 
 	// Create path request
@@ -215,4 +215,82 @@ func parsePathConfResponse(data []byte) (map[string]interface{}, error) {
 // parseDuration parses a duration string
 func parseDuration(durationStr string) (time.Duration, error) {
 	return time.ParseDuration(durationStr)
+}
+
+// validatePathName validates path name format and content
+func (pm *pathManager) validatePathName(name string) error {
+	if name == "" {
+		return fmt.Errorf("path name cannot be empty")
+	}
+
+	// Check for valid characters (alphanumeric, underscores, hyphens)
+	for _, char := range name {
+		if !((char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '_' || char == '-') {
+			return fmt.Errorf("path name contains invalid character '%c' - only alphanumeric characters, underscores, and hyphens are allowed", char)
+		}
+	}
+
+	// Check length limits
+	if len(name) > 64 {
+		return fmt.Errorf("path name too long (%d characters) - maximum 64 characters allowed", len(name))
+	}
+
+	if len(name) < 1 {
+		return fmt.Errorf("path name too short - minimum 1 character required")
+	}
+
+	// Check for reserved names
+	reservedNames := []string{"all", "~all", "~internal"}
+	for _, reserved := range reservedNames {
+		if name == reserved {
+			return fmt.Errorf("path name '%s' is reserved and cannot be used", name)
+		}
+	}
+
+	return nil
+}
+
+// validateSource validates source format and content
+func (pm *pathManager) validateSource(source string) error {
+	if source == "" {
+		return fmt.Errorf("source cannot be empty")
+	}
+
+	// Check for valid source formats
+	if strings.HasPrefix(source, "/dev/") {
+		// Device path validation
+		if !strings.HasPrefix(source, "/dev/video") &&
+			!strings.HasPrefix(source, "/dev/camera") &&
+			!strings.HasPrefix(source, "/dev/") {
+			return fmt.Errorf("invalid device path format: %s - must be a valid device path (e.g., /dev/video0)", source)
+		}
+	} else if strings.HasPrefix(source, "rtsp://") || strings.HasPrefix(source, "rtmp://") {
+		// Stream URL validation
+		if len(source) < 10 {
+			return fmt.Errorf("invalid stream URL format: %s - URL too short", source)
+		}
+	} else if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
+		// HTTP stream validation
+		if len(source) < 10 {
+			return fmt.Errorf("invalid HTTP stream URL format: %s - URL too short", source)
+		}
+	} else {
+		// Generic validation for other source types
+		if len(source) < 3 {
+			return fmt.Errorf("invalid source format: %s - source too short", source)
+		}
+	}
+
+	// Check for potentially dangerous characters
+	dangerousChars := []string{"..", "//", "\\", "<", ">", "|", "&", ";", "`", "$"}
+	for _, char := range dangerousChars {
+		if strings.Contains(source, char) {
+			return fmt.Errorf("source contains potentially dangerous character sequence '%s' - this may cause security issues", char)
+		}
+	}
+
+	return nil
 }
