@@ -103,7 +103,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	pi.cameraPathsMu.Lock()
 	if existingPath, exists := pi.cameraPaths[device]; exists {
 		pi.cameraPathsMu.Unlock()
-		pi.logger.WithFields(map[string]interface{}{
+		pi.logger.WithFields(logging.Fields{
 			"device": device,
 			"path":   existingPath,
 		}).Debug("Path already exists for camera")
@@ -150,7 +150,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	pi.cameraPaths[device] = pathName
 	pi.cameraPathsMu.Unlock()
 
-	pi.logger.WithFields(map[string]interface{}{
+	pi.logger.WithFields(logging.Fields{
 		"device": device,
 		"path":   pathName,
 		"status": cameraDevice.Status,
@@ -187,7 +187,7 @@ func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device strin
 	delete(pi.cameraPaths, device)
 	pi.cameraPathsMu.Unlock()
 
-	pi.logger.WithFields(map[string]interface{}{
+	pi.logger.WithFields(logging.Fields{
 		"device": device,
 		"path":   pathName,
 	}).Info("MediaMTX path deleted for camera")

@@ -143,7 +143,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 			Tracks:   []string{},
 			Readers:  []PathReader{},
 		}
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"stream_name": streamName,
 			"use_case":    useCase,
 			"device_path": devicePath,
@@ -157,7 +157,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 		return nil, NewStreamErrorWithErr(streamName, "create_stream", "failed to parse stream response", err)
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"stream_name": streamName,
 		"use_case":    useCase,
 		"device_path": devicePath,
@@ -211,7 +211,7 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 
 // CreateStream creates a new stream (legacy method for backward compatibility)
 func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Stream, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"name":   name,
 		"source": source,
 	}).Debug("Creating MediaMTX stream")
@@ -338,7 +338,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 
 // CreateStreamWithUseCase creates a new stream with use case specific configuration
 func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, source string, useCase StreamUseCase) (*Stream, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"name":     name,
 		"source":   source,
 		"use_case": useCase,
@@ -367,7 +367,7 @@ func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, sour
 	// Create the stream with use case specific configuration
 	// This would typically involve creating a MediaMTX path with the specific configuration
 	// For now, we'll use the basic CreateStream method but log the use case configuration
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"stream_name": streamName,
 		"use_case":    useCase,
 		"config":      useCaseConfig,
@@ -436,7 +436,7 @@ func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
 		return NewStreamErrorWithErr(id, "monitor_stream", "failed to get stream status", err)
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"stream_id": id,
 		"status":    status,
 	}).Debug("MediaMTX stream status")
@@ -462,7 +462,7 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, id string) (string
 
 // CheckStreamReadiness checks if a stream is ready for operations (enhanced existing stream manager)
 func (sm *streamManager) CheckStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"stream_name": streamName,
 		"timeout":     timeout,
 	}).Debug("Checking stream readiness")
@@ -502,7 +502,7 @@ func (sm *streamManager) CheckStreamReadiness(ctx context.Context, streamName st
 
 // WaitForStreamReadiness waits for a stream to become ready (enhanced existing stream manager)
 func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"stream_name": streamName,
 		"timeout":     timeout,
 	}).Info("Waiting for stream readiness")
@@ -535,7 +535,7 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 
 // StopViewingStream stops a viewing stream for the specified device
 func (sm *streamManager) StopViewingStream(ctx context.Context, device string) error {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device": device,
 		"action": "stop_viewing_stream",
 	}).Info("Stopping viewing stream")
@@ -546,7 +546,7 @@ func (sm *streamManager) StopViewingStream(ctx context.Context, device string) e
 	// Delete the stream from MediaMTX
 	err := sm.DeleteStream(ctx, streamName)
 	if err != nil {
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"device":      device,
 			"stream_name": streamName,
 			"error":       err.Error(),
@@ -554,7 +554,7 @@ func (sm *streamManager) StopViewingStream(ctx context.Context, device string) e
 		return fmt.Errorf("failed to stop viewing stream: %w", err)
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": streamName,
 	}).Info("Viewing stream stopped successfully")
@@ -564,7 +564,7 @@ func (sm *streamManager) StopViewingStream(ctx context.Context, device string) e
 
 // StopStreaming stops any active stream for the specified device
 func (sm *streamManager) StopStreaming(ctx context.Context, device string) error {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device": device,
 		"action": "stop_streaming",
 	}).Info("Stopping any active stream")
@@ -578,7 +578,7 @@ func (sm *streamManager) StopStreaming(ctx context.Context, device string) error
 	streamName := sm.GenerateStreamName(device, UseCaseRecording)
 	err := sm.DeleteStream(ctx, streamName)
 	if err != nil {
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"device":      device,
 			"stream_name": streamName,
 			"error":       err.Error(),
@@ -586,7 +586,7 @@ func (sm *streamManager) StopStreaming(ctx context.Context, device string) error
 		return fmt.Errorf("failed to stop recording stream: %w", err)
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": streamName,
 	}).Info("Recording stream stopped successfully")

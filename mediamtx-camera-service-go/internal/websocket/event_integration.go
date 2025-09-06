@@ -52,7 +52,7 @@ func NewCameraEventNotifier(eventManager *EventManager, logger *logging.Logger) 
 
 // NotifyCameraConnected notifies when a camera is connected
 func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":    device.Path,
 		"name":      device.Name,
 		"status":    string(device.Status),
@@ -74,7 +74,7 @@ func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice)
 
 // NotifyCameraDisconnected notifies when a camera is disconnected
 func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":    devicePath,
 		"status":    "disconnected",
 		"timestamp": time.Now().Format(time.RFC3339),
@@ -92,7 +92,7 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 
 // NotifyCameraStatusChange notifies when camera status changes
 func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevice, oldStatus, newStatus camera.DeviceStatus) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":     device.Path,
 		"name":       device.Name,
 		"old_status": string(oldStatus),
@@ -114,7 +114,7 @@ func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevi
 
 // NotifyCapabilityDetected notifies when camera capabilities are detected
 func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevice, capabilities camera.V4L2Capabilities) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":       device.Path,
 		"name":         device.Name,
 		"driver":       capabilities.DriverName,
@@ -137,7 +137,7 @@ func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevi
 
 // NotifyCapabilityError notifies when camera capability detection fails
 func (n *CameraEventNotifier) NotifyCapabilityError(devicePath string, errorMsg string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":    devicePath,
 		"error":     errorMsg,
 		"timestamp": time.Now().Format(time.RFC3339),
@@ -170,7 +170,7 @@ func NewMediaMTXEventNotifier(eventManager *EventManager, logger *logging.Logger
 
 // NotifyRecordingStarted notifies when MediaMTX recording starts
 func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filename string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":     device,
 		"session_id": sessionID,
 		"filename":   filename,
@@ -191,7 +191,7 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filena
 
 // NotifyRecordingStopped notifies when MediaMTX recording stops
 func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, sessionID, filename string, duration time.Duration) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":     device,
 		"session_id": sessionID,
 		"filename":   filename,
@@ -214,7 +214,7 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, sessionID, filena
 
 // NotifyStreamStarted notifies when MediaMTX stream starts
 func (n *MediaMTXEventNotifier) NotifyStreamStarted(device, streamID, streamType string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":      device,
 		"stream_id":   streamID,
 		"stream_type": streamType,
@@ -235,7 +235,7 @@ func (n *MediaMTXEventNotifier) NotifyStreamStarted(device, streamID, streamType
 
 // NotifyStreamStopped notifies when MediaMTX stream stops
 func (n *MediaMTXEventNotifier) NotifyStreamStopped(device, streamID, streamType string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"device":      device,
 		"stream_id":   streamID,
 		"stream_type": streamType,
@@ -270,7 +270,7 @@ func NewSystemEventNotifier(eventManager *EventManager, logger *logging.Logger) 
 
 // NotifySystemStartup notifies when the system starts up
 func (n *SystemEventNotifier) NotifySystemStartup(version, buildInfo string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"version":    version,
 		"build_info": buildInfo,
 		"timestamp":  time.Now().Format(time.RFC3339),
@@ -288,7 +288,7 @@ func (n *SystemEventNotifier) NotifySystemStartup(version, buildInfo string) {
 
 // NotifySystemShutdown notifies when the system shuts down
 func (n *SystemEventNotifier) NotifySystemShutdown(reason string) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"reason":    reason,
 		"timestamp": time.Now().Format(time.RFC3339),
 	}
@@ -305,7 +305,7 @@ func (n *SystemEventNotifier) NotifySystemShutdown(reason string) {
 
 // NotifySystemHealth notifies about system health status
 func (n *SystemEventNotifier) NotifySystemHealth(status string, metrics map[string]interface{}) {
-	eventData := map[string]interface{}{
+	eventData := logging.Fields{
 		"status":    status,
 		"metrics":   metrics,
 		"timestamp": time.Now().Format(time.RFC3339),

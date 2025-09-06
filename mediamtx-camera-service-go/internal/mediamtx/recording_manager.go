@@ -104,7 +104,7 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 
 // StartRecording starts a new recording session for a camera device using MediaMTX
 func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*RecordingSession, error) {
-	rm.logger.WithFields(map[string]interface{}{
+	rm.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
 		"output_path": outputPath,
 		"options":     options,
@@ -161,7 +161,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 	rm.deviceToSession[devicePath] = sessionID
 	rm.deviceMu.Unlock()
 
-	rm.logger.WithFields(map[string]interface{}{
+	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
 		"path_name":  pathName,
 		"device":     devicePath,
@@ -255,7 +255,7 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 	delete(rm.sessions, sessionID)
 	rm.sessionsMu.Unlock()
 
-	rm.logger.WithFields(map[string]interface{}{
+	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
 		"device":     session.DevicePath,
 		"duration":   session.EndTime.Sub(session.StartTime),
@@ -279,7 +279,7 @@ func (rm *RecordingManager) ListRecordingSessions() []*RecordingSession {
 
 // GetRecordingsList retrieves recordings from MediaMTX API
 func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	rm.logger.WithFields(map[string]interface{}{
+	rm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
 	}).Debug("Getting recordings list from MediaMTX API")
@@ -426,7 +426,7 @@ func (rm *RecordingManager) getRecordingOutputPath(outputPath string) string {
 
 // CleanupOldRecordings removes old recording files based on age and count limits
 func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	rm.logger.WithFields(map[string]interface{}{
+	rm.logger.WithFields(logging.Fields{
 		"max_age":   maxAge,
 		"max_count": maxCount,
 	}).Info("Starting cleanup of old recordings")

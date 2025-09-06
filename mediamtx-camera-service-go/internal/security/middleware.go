@@ -197,7 +197,7 @@ func (smr *SecureMethodRegistry) GetAllMethods() []string {
 func (smr *SecureMethodRegistry) GetMethodSecurityInfo(methodName string) map[string]interface{} {
 	// This would return detailed security information for auditing
 	// For now, return basic info
-	return map[string]interface{}{
+	return logging.Fields{
 		"method":         methodName,
 		"secured":        true,
 		"authentication": "required",

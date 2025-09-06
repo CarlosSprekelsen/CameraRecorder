@@ -112,7 +112,7 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	req.Header.Set("Accept", "application/json")
 
 	// Log request
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"method": method,
 		"url":    url,
 		"data":   string(data),
@@ -132,7 +132,7 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	}
 
 	// Log response
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"status_code": resp.StatusCode,
 		"body":        string(bodyBytes),
 	}).Debug("Received MediaMTX response")

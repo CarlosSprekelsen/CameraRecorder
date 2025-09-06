@@ -85,7 +85,7 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
 		ProcessKillTimeout:                  cfg.MediaMTX.ProcessKillTimeout,
 	}
 
-	ci.logger.WithFields(map[string]interface{}{
+	ci.logger.WithFields(logging.Fields{
 		"host":     mediaMTXConfig.Host,
 		"api_port": mediaMTXConfig.APIPort,
 		"base_url": mediaMTXConfig.BaseURL,

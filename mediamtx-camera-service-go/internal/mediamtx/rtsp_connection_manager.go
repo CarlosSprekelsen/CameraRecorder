@@ -56,7 +56,7 @@ func NewRTSPConnectionManager(client MediaMTXClient, config *MediaMTXConfig, log
 
 // ListConnections lists all RTSP connections
 func (rcm *rtspConnectionManager) ListConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error) {
-	rcm.logger.WithFields(map[string]interface{}{
+	rcm.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
 	}).Debug("Listing RTSP connections")
@@ -114,7 +114,7 @@ func (rcm *rtspConnectionManager) GetConnection(ctx context.Context, id string) 
 
 // ListSessions lists all RTSP sessions
 func (rcm *rtspConnectionManager) ListSessions(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionSessionList, error) {
-	rcm.logger.WithFields(map[string]interface{}{
+	rcm.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
 	}).Debug("Listing RTSP sessions")

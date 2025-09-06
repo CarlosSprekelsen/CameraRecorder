@@ -222,7 +222,7 @@ func (sm *SessionManager) GetSessionStats() map[string]interface{} {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
-	stats := map[string]interface{}{
+	stats := logging.Fields{
 		"total_sessions": len(sm.sessions),
 		"role_counts":    make(map[string]int),
 	}

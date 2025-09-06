@@ -99,7 +99,7 @@ func NewFFmpegManager(config *MediaMTXConfig, logger *logging.Logger) FFmpegMana
 
 // StartProcess starts an FFmpeg process
 func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, outputPath string) (int, error) {
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"command":     command,
 		"output_path": outputPath,
 	}).Debug("Starting FFmpeg process")
@@ -148,7 +148,7 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 	// Monitor process in background
 	go fm.monitorProcess(process)
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"pid":         process.PID,
 		"command":     strings.Join(command, " "),
 		"output_path": outputPath,
@@ -189,7 +189,7 @@ func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
 	delete(fm.processes, pid)
 	fm.processMu.Unlock()
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"pid":            pid,
 		"cleanup_result": cleanupResult,
 	}).Info("FFmpeg process stopped successfully")
@@ -202,7 +202,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	correlationID := fmt.Sprintf("cleanup_%d_%s", pid, operation)
 	cleanupActions := []string{}
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"operation":      operation,
@@ -218,7 +218,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	cleanupActions = append(cleanupActions, "terminate_attempt")
 	if err := process.cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		cleanupActions = append(cleanupActions, fmt.Sprintf("term_error_%s", err.Error()))
-		fm.logger.WithError(err).WithFields(map[string]interface{}{
+		fm.logger.WithError(err).WithFields(logging.Fields{
 			"pid":            pid,
 			"correlation_id": correlationID,
 		}).Warn("Failed to send SIGTERM to FFmpeg process")
@@ -235,7 +235,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		select {
 		case err := <-done:
 			if err != nil {
-				fm.logger.WithError(err).WithFields(map[string]interface{}{
+				fm.logger.WithError(err).WithFields(logging.Fields{
 					"pid":            pid,
 					"correlation_id": correlationID,
 				}).Warn("FFmpeg process exited with error during graceful shutdown")
@@ -243,7 +243,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 			cleanupActions = append(cleanupActions, "graceful_exit")
 		case <-time.After(terminationTimeout):
 			cleanupActions = append(cleanupActions, "term_timeout")
-			fm.logger.WithFields(map[string]interface{}{
+			fm.logger.WithFields(logging.Fields{
 				"pid":            pid,
 				"correlation_id": correlationID,
 				"timeout":        terminationTimeout,
@@ -256,7 +256,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		cleanupActions = append(cleanupActions, "kill_attempt")
 		if err := process.cmd.Process.Kill(); err != nil {
 			cleanupActions = append(cleanupActions, fmt.Sprintf("kill_error_%s", err.Error()))
-			fm.logger.WithError(err).WithFields(map[string]interface{}{
+			fm.logger.WithError(err).WithFields(logging.Fields{
 				"pid":            pid,
 				"correlation_id": correlationID,
 			}).Error("Failed to force kill FFmpeg process")
@@ -273,7 +273,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 			select {
 			case err := <-done:
 				if err != nil {
-					fm.logger.WithError(err).WithFields(map[string]interface{}{
+					fm.logger.WithError(err).WithFields(logging.Fields{
 						"pid":            pid,
 						"correlation_id": correlationID,
 					}).Warn("FFmpeg process exited with error during force kill")
@@ -281,7 +281,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 				cleanupActions = append(cleanupActions, "force_exit")
 			case <-time.After(killTimeout):
 				cleanupActions = append(cleanupActions, "kill_timeout")
-				fm.logger.WithFields(map[string]interface{}{
+				fm.logger.WithFields(logging.Fields{
 					"pid":            pid,
 					"correlation_id": correlationID,
 					"timeout":        killTimeout,
@@ -296,7 +296,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 	fm.cleanupMu.Unlock()
 
 	result := strings.Join(cleanupActions, "_")
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"cleanup_result": result,
@@ -333,7 +333,7 @@ func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath st
 	startTime := time.Now()
 	operationType := "snapshot_capture"
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"device":         device,
 		"output_path":    outputPath,
 		"operation_type": operationType,
@@ -387,7 +387,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 	var lastErr error
 
 	for attempt := 0; attempt <= retryAttempts; attempt++ {
-		fm.logger.WithFields(map[string]interface{}{
+		fm.logger.WithFields(logging.Fields{
 			"attempt":        attempt,
 			"max_attempts":   retryAttempts + 1,
 			"correlation_id": correlationID,
@@ -404,14 +404,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		if err := cmd.Start(); err != nil {
 			cancel()
 			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
-			fm.logger.WithError(err).WithFields(map[string]interface{}{
+			fm.logger.WithError(err).WithFields(logging.Fields{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("Failed to start FFmpeg process")
 
 			if attempt < retryAttempts {
 				backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
-				fm.logger.WithFields(map[string]interface{}{
+				fm.logger.WithFields(logging.Fields{
 					"attempt":        attempt,
 					"backoff_delay":  backoffDelay,
 					"correlation_id": correlationID,
@@ -435,14 +435,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		case err := <-done:
 			cancel()
 			if err == nil {
-				fm.logger.WithFields(map[string]interface{}{
+				fm.logger.WithFields(logging.Fields{
 					"attempt":        attempt,
 					"correlation_id": correlationID,
 				}).Info("FFmpeg operation completed successfully")
 				return nil
 			}
 			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
-			fm.logger.WithError(err).WithFields(map[string]interface{}{
+			fm.logger.WithError(err).WithFields(logging.Fields{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
 			}).Warn("FFmpeg operation failed")
@@ -452,7 +452,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 			// Cleanup the process
 			fm.cleanupFFmpegProcess(&FFmpegProcess{cmd: cmd}, 0, operation)
 			lastErr = NewFFmpegError(0, operation, operation, fmt.Sprintf("execution timeout after %v", executionTimeout))
-			fm.logger.WithFields(map[string]interface{}{
+			fm.logger.WithFields(logging.Fields{
 				"attempt":        attempt,
 				"timeout":        executionTimeout,
 				"correlation_id": correlationID,
@@ -461,7 +461,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 
 		if attempt < retryAttempts {
 			backoffDelay := fm.calculateBackoffDelay(retryDelay, attempt)
-			fm.logger.WithFields(map[string]interface{}{
+			fm.logger.WithFields(logging.Fields{
 				"attempt":        attempt,
 				"backoff_delay":  backoffDelay,
 				"correlation_id": correlationID,
@@ -525,7 +525,7 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 		metrics.AverageDuration = totalDuration / time.Duration(metrics.TotalOperations)
 	}
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"operation_type":   operationType,
 		"duration":         duration,
 		"average_duration": metrics.AverageDuration,
@@ -538,7 +538,7 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 
 // RotateFile rotates a file
 func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string) error {
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"old_path": oldPath,
 		"new_path": newPath,
 	}).Debug("Rotating FFmpeg file")
@@ -554,7 +554,7 @@ func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string
 		return NewFFmpegErrorWithErr(0, "rotate_file", "rename_file", "failed to rename file", err)
 	}
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"old_path": oldPath,
 		"new_path": newPath,
 	}).Info("FFmpeg file rotated successfully")
@@ -589,7 +589,7 @@ func (fm *ffmpegManager) executeFFmpeg(args []string) error {
 
 	// Execute command
 	if err := cmd.Run(); err != nil {
-		fm.logger.WithFields(map[string]interface{}{
+		fm.logger.WithFields(logging.Fields{
 			"error":  err,
 			"stdout": stdout.String(),
 			"stderr": stderr.String(),
@@ -598,7 +598,7 @@ func (fm *ffmpegManager) executeFFmpeg(args []string) error {
 		return NewFFmpegErrorWithErr(0, strings.Join(args, " "), "execute_ffmpeg", "FFmpeg command failed", err)
 	}
 
-	fm.logger.WithFields(map[string]interface{}{
+	fm.logger.WithFields(logging.Fields{
 		"stdout": stdout.String(),
 		"stderr": stderr.String(),
 	}).Debug("FFmpeg command executed successfully")

@@ -142,7 +142,7 @@ func (c *controller) StartActiveRecording(devicePath, sessionID, streamName stri
 		Status:     "RECORDING",
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
 		"session_id":  sessionID,
 		"stream_name": streamName,
@@ -173,7 +173,7 @@ func (c *controller) StopActiveRecording(devicePath string) error {
 	recording.Status = "STOPPED"
 	delete(c.activeRecordings, actualDevicePath)
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
 		"session_id":  recording.SessionID,
 		"duration":    time.Since(recording.StartTime),
@@ -594,7 +594,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		// Device is a camera identifier (e.g., "camera0")
 		cameraID = device
 		devicePath = c.getDevicePathFromCameraIdentifier(device)
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"camera_id":   cameraID,
 			"device_path": devicePath,
 		}).Debug("Converted camera identifier to device path")
@@ -652,7 +652,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to start active recording tracking")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id":       sessionID,
 		"device":           cameraID,
 		"device_path":      devicePath,
@@ -697,7 +697,7 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 
 	// Stop MediaMTX recording using RecordingManager
 	if err := c.recordingManager.StopRecording(ctx, sessionID); err != nil {
-		c.logger.WithError(err).WithFields(map[string]interface{}{
+		c.logger.WithError(err).WithFields(logging.Fields{
 			"session_id": sessionID,
 		}).Warning("Failed to stop MediaMTX recording")
 	}
@@ -721,7 +721,7 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to stop active recording tracking")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
 		"device":     session.Device,
 		"duration":   session.Duration,
@@ -750,7 +750,7 @@ func (c *controller) TakeSnapshot(ctx context.Context, device, path string) (*Sn
 		// Device is a camera identifier (e.g., "camera0")
 		cameraID = device
 		devicePath = c.getDevicePathFromCameraIdentifier(device)
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"camera_id":   cameraID,
 			"device_path": devicePath,
 		}).Debug("Converted camera identifier to device path")
@@ -785,7 +785,7 @@ func (c *controller) TakeSnapshot(ctx context.Context, device, path string) (*Sn
 		Created:  time.Now(),
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
 		"device":      cameraID,
 		"device_path": devicePath,
@@ -932,7 +932,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device":  device,
 		"path":    path,
 		"options": options,
@@ -951,7 +951,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 		// Device is a camera identifier (e.g., "camera0")
 		cameraID = device
 		devicePath = c.getDevicePathFromCameraIdentifier(device)
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"camera_id":   cameraID,
 			"device_path": devicePath,
 		}).Debug("Converted camera identifier to device path")
@@ -985,7 +985,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 		c.logger.WithError(err).WithField("session_id", session.ID).Warning("Failed to start active recording tracking")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id":    session.ID,
 		"device":        device,
 		"status":        session.Status,
@@ -1035,7 +1035,7 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 	// Persist session state for Python equivalence
 	c.persistSessionState(session)
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id":    sessionID,
 		"state":         session.State,
 		"duration":      session.Duration,
@@ -1047,7 +1047,7 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 
 // persistSessionState persists session state for Python equivalence
 func (c *controller) persistSessionState(session *RecordingSession) {
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id":    session.ID,
 		"state":         session.State,
 		"continuity_id": session.ContinuityID,
@@ -1059,7 +1059,7 @@ func (c *controller) persistSessionState(session *RecordingSession) {
 	c.sessionsMu.Unlock()
 
 	// Log session state for monitoring and debugging
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"session_id":    session.ID,
 		"device":        session.Device,
 		"state":         session.State,
@@ -1096,7 +1096,7 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device":  device,
 		"path":    path,
 		"options": options,
@@ -1110,7 +1110,7 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 		// Device is a camera identifier (e.g., "camera0")
 		cameraID = device
 		devicePath = c.getDevicePathFromCameraIdentifier(device)
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"camera_id":   cameraID,
 			"device_path": devicePath,
 		}).Debug("Converted camera identifier to device path")
@@ -1123,7 +1123,7 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 	// Use enhanced snapshot manager with multi-tier capability
 	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, path, options)
 	if err != nil {
-		c.logger.WithError(err).WithFields(map[string]interface{}{
+		c.logger.WithError(err).WithFields(logging.Fields{
 			"device": device,
 			"path":   path,
 		}).Error("Multi-tier snapshot failed")
@@ -1136,7 +1136,7 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 	// Log tier information for monitoring
 	if snapshot.Metadata != nil {
 		if tierUsed, ok := snapshot.Metadata["tier_used"]; ok {
-			c.logger.WithFields(map[string]interface{}{
+			c.logger.WithFields(logging.Fields{
 				"device":    cameraID,
 				"tier_used": tierUsed,
 				"file_size": snapshot.Size,
@@ -1207,7 +1207,7 @@ func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*Fi
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
 	}).Debug("Listing recordings")
@@ -1221,7 +1221,7 @@ func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*Fil
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
 	}).Debug("Listing snapshots")
@@ -1294,7 +1294,7 @@ func (c *controller) ListRTSPConnections(ctx context.Context, page, itemsPerPage
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
 	}).Debug("Listing RTSP connections")
@@ -1319,7 +1319,7 @@ func (c *controller) ListRTSPSessions(ctx context.Context, page, itemsPerPage in
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
 	}).Debug("Listing RTSP sessions")
@@ -1375,7 +1375,7 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device": device,
 		"action": "start_streaming",
 	}).Info("Starting streaming session")
@@ -1383,14 +1383,14 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 	// Use StreamManager to start viewing stream
 	stream, err := c.streamManager.StartViewingStream(ctx, device)
 	if err != nil {
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"device": device,
 			"error":  err.Error(),
 		}).Error("Failed to start streaming")
 		return nil, fmt.Errorf("failed to start streaming: %w", err)
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": stream.Name,
 		"stream_url":  stream.URL,
@@ -1405,7 +1405,7 @@ func (c *controller) StopStreaming(ctx context.Context, device string) error {
 		return fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device": device,
 		"action": "stop_streaming",
 	}).Info("Stopping streaming session")
@@ -1413,14 +1413,14 @@ func (c *controller) StopStreaming(ctx context.Context, device string) error {
 	// Use StreamManager to stop viewing stream
 	err := c.streamManager.StopViewingStream(ctx, device)
 	if err != nil {
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"device": device,
 			"error":  err.Error(),
 		}).Error("Failed to stop streaming")
 		return fmt.Errorf("failed to stop streaming: %w", err)
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device": device,
 	}).Info("Streaming session stopped successfully")
 
@@ -1437,7 +1437,7 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (string, e
 	streamName := c.streamManager.GenerateStreamName(device, UseCaseViewing)
 	streamURL := c.streamManager.GenerateStreamURL(streamName)
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": streamName,
 		"stream_url":  streamURL,
@@ -1458,7 +1458,7 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 	// Try to get the stream from MediaMTX
 	stream, err := c.streamManager.GetStream(ctx, streamName)
 	if err != nil {
-		c.logger.WithFields(map[string]interface{}{
+		c.logger.WithFields(logging.Fields{
 			"device":      device,
 			"stream_name": streamName,
 			"error":       err.Error(),
@@ -1466,7 +1466,7 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 		return nil, fmt.Errorf("stream not found or not active: %w", err)
 	}
 
-	c.logger.WithFields(map[string]interface{}{
+	c.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": stream.Name,
 		"ready":       stream.Ready,

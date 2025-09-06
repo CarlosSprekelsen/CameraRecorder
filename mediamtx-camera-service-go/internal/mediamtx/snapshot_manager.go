@@ -95,7 +95,7 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, config *MediaMTXC
 
 // TakeSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
 func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":  device,
 		"path":    path,
 		"options": options,
@@ -142,7 +142,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 	sm.snapshots[snapshotID] = snapshot
 	sm.snapshotsMu.Unlock()
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
 		"device":      device,
 		"path":        path,
@@ -160,7 +160,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	startTime := time.Now()
 	captureMethodsTried := []string{}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device": device,
 		"tier":   1,
 	}).Info("Tier 1: Attempting USB direct capture")
@@ -172,7 +172,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotDirect(tier1Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 1, captureTime, captureMethodsTried)
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"device":       device,
 			"tier":         1,
 			"capture_time": captureTime,
@@ -181,7 +181,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	}
 	captureMethodsTried = append(captureMethodsTried, "usb_direct")
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device": device,
 		"tier":   2,
 	}).Info("Tier 2: Attempting RTSP immediate capture")
@@ -193,7 +193,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotFromRTSP(tier2Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 2, captureTime, captureMethodsTried)
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"device":       device,
 			"tier":         2,
 			"capture_time": captureTime,
@@ -202,7 +202,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_immediate")
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device": device,
 		"tier":   3,
 	}).Info("Tier 3: Attempting RTSP stream activation")
@@ -214,7 +214,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	if snapshot, err := sm.captureSnapshotFromRTSP(tier3Ctx, device, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 3, captureTime, captureMethodsTried)
-		sm.logger.WithFields(map[string]interface{}{
+		sm.logger.WithFields(logging.Fields{
 			"device":       device,
 			"tier":         3,
 			"capture_time": captureTime,
@@ -225,7 +225,7 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 
 	// Tier 4: Error Handling - All methods failed
 	totalTime := time.Since(startTime)
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":        device,
 		"total_time":    totalTime,
 		"methods_tried": captureMethodsTried,
@@ -255,7 +255,7 @@ func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 
 // captureSnapshotDirect implements Tier 1: USB Direct Capture (Fastest Path)
 func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath, snapshotPath string) (*Snapshot, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"tier":        1,
@@ -294,7 +294,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		Created:  time.Now(),
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"file_size":   fileSize,
@@ -306,7 +306,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 
 // captureSnapshotFromRTSP implements Tier 2/3: RTSP Capture
 func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePath, snapshotPath string) (*Snapshot, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"tier":        2,
@@ -354,7 +354,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		Created:  time.Now(),
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"device":      devicePath,
 		"output_path": snapshotPath,
 		"file_size":   fileSize,
@@ -463,7 +463,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 		return NewFFmpegErrorWithErr(0, "delete_snapshot", "remove_file", "failed to delete snapshot file", err)
 	}
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
 		"file_path":   snapshot.FilePath,
 	}).Info("Snapshot deleted successfully")
@@ -473,7 +473,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 
 // CleanupOldSnapshots cleans up old snapshots based on age and count
 func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"max_age":   maxAge,
 		"max_count": maxCount,
 	}).Info("Cleaning up old snapshots")
@@ -592,7 +592,7 @@ func (sm *SnapshotManager) GetSnapshotSettings() *SnapshotSettings {
 // UpdateSnapshotSettings updates snapshot settings
 func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 	sm.snapshotSettings = settings
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"format":      settings.Format,
 		"quality":     settings.Quality,
 		"max_width":   settings.MaxWidth,
@@ -603,7 +603,7 @@ func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 
 // GetSnapshotsList scans the snapshots directory and returns a list of snapshot files with metadata
 func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
 	}).Debug("Getting snapshots list")
@@ -663,7 +663,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		// Add comprehensive metadata for Python equivalence
 		if metadata != nil {
 			// Store additional metadata in a way that's compatible with Python system
-			sm.logger.WithFields(map[string]interface{}{
+			sm.logger.WithFields(logging.Fields{
 				"filename": filename,
 				"metadata": metadata,
 			}).Debug("Extracted comprehensive snapshot metadata")
@@ -690,7 +690,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 
 	paginatedFiles := files[startIdx:endIdx]
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"total_files": totalCount,
 		"returned":    len(paginatedFiles),
 	}).Debug("Snapshots list retrieved successfully")
@@ -729,7 +729,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 
 	// Parse JSON output for comprehensive metadata
 	// For now, we'll log the raw output and extract basic information
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  string(output),
 	}).Debug("Extracted raw image metadata")
@@ -739,7 +739,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	metadata["extraction_method"] = "ffprobe"
 	metadata["extraction_time"] = time.Now().Unix()
 
-	sm.logger.WithFields(map[string]interface{}{
+	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  metadata,
 	}).Debug("Comprehensive snapshot metadata extracted successfully")

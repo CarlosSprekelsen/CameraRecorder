@@ -41,7 +41,7 @@ func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *loggi
 
 // CreatePath creates a new path
 func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error {
-	pm.logger.WithFields(map[string]interface{}{
+	pm.logger.WithFields(logging.Fields{
 		"name":    name,
 		"source":  source,
 		"options": options,

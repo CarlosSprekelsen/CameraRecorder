@@ -281,7 +281,7 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 	}
 
 	if len(changes) > 0 {
-		m.logger.WithFields(map[string]interface{}{
+		m.logger.WithFields(logging.Fields{
 			"changes": changes,
 			"action":  "configuration_updated",
 		}).Info("Camera monitor configuration updated via hot reload")
@@ -301,7 +301,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stats.Running = true
 	m.stats.ActiveTasks++
 
-	m.logger.WithFields(map[string]interface{}{
+	m.logger.WithFields(logging.Fields{
 		"poll_interval": m.pollInterval,
 		"device_range":  m.deviceRange,
 		"action":        "monitor_started",
@@ -334,7 +334,7 @@ func (m *HybridCameraMonitor) Stop() error {
 		close(m.stopChan)
 	}
 
-	m.logger.WithFields(map[string]interface{}{
+	m.logger.WithFields(logging.Fields{
 		"action": "monitor_stopped",
 	}).Info("Hybrid camera monitor stopped")
 
@@ -403,7 +403,7 @@ func (m *HybridCameraMonitor) AddEventHandler(handler CameraEventHandler) {
 	defer m.eventHandlersLock.Unlock()
 
 	m.eventHandlers = append(m.eventHandlers, handler)
-	m.logger.WithFields(map[string]interface{}{
+	m.logger.WithFields(logging.Fields{
 		"handler_type": fmt.Sprintf("%T", handler), // Keep fmt.Sprintf for type reflection
 		"action":       "event_handler_added",
 	}).Debug("Added camera event handler")
@@ -415,7 +415,7 @@ func (m *HybridCameraMonitor) AddEventCallback(callback func(CameraEventData)) {
 	defer m.eventHandlersLock.Unlock()
 
 	m.eventCallbacks = append(m.eventCallbacks, callback)
-	m.logger.WithFields(map[string]interface{}{
+	m.logger.WithFields(logging.Fields{
 		"action": "event_callback_added",
 	}).Debug("Added camera event callback")
 }
@@ -438,7 +438,7 @@ func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(m.currentPollInterval * float64(time.Second)))
 	defer ticker.Stop()
 
-	m.logger.WithFields(map[string]interface{}{
+	m.logger.WithFields(logging.Fields{
 		"poll_interval": m.currentPollInterval,
 		"device_range":  m.deviceRange,
 		"action":        "monitoring_loop_started",
@@ -447,13 +447,13 @@ func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"action": "monitoring_loop_stopped",
 				"reason": "context_cancelled",
 			}).Info("Camera monitoring loop stopped due to context cancellation")
 			return
 		case <-m.stopChan:
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"action": "monitoring_loop_stopped",
 				"reason": "stop_requested",
 			}).Info("Camera monitoring loop stopped")
@@ -489,7 +489,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 				// Recover from panics in goroutine and propagate as errors
 				if r := recover(); r != nil {
 					panicErr := fmt.Errorf("panic in device check goroutine for source %s: %v", src.Identifier, r)
-					m.logger.WithFields(map[string]interface{}{
+					m.logger.WithFields(logging.Fields{
 						"source": src.Identifier,
 						"panic":  r,
 						"action": "panic_recovered",
@@ -508,7 +508,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 
 			device, err := m.createCameraDeviceInfoFromSource(ctx, src)
 			if err != nil {
-				m.logger.WithFields(map[string]interface{}{
+				m.logger.WithFields(logging.Fields{
 					"source": src.Identifier,
 					"error":  err.Error(),
 					"action": "device_check_error",
@@ -535,11 +535,11 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 			// Recover from panics in goroutine and propagate as errors
 			if r := recover(); r != nil {
 				panicErr := fmt.Errorf("panic in device collection goroutine: %v", r)
-				m.logger.WithFields(map[string]interface{}{
+				m.logger.WithFields(logging.Fields{
 					"panic":  r,
 					"action": "panic_recovered",
 				}).Error("Recovered from panic in device collection goroutine")
-				
+
 				// Propagate panic as error
 				select {
 				case errorChan <- panicErr:
@@ -623,7 +623,7 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(ctx context.Context, device
 		if err := m.probeDeviceCapabilities(ctx, device); err != nil {
 			device.Status = DeviceStatusError
 			device.Error = err.Error()
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"device_path": devicePath,
 				"error":       err.Error(),
 				"action":      "capability_probe_failed",
@@ -773,7 +773,7 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(ctx context.Context, devic
 	formatsOutput, err := m.commandExecutor.ExecuteCommand(ctx, device.Path, "--list-formats-ext")
 	if err != nil {
 		// Log warning but don't fail - device might not support format listing
-		m.logger.WithFields(map[string]interface{}{
+		m.logger.WithFields(logging.Fields{
 			"device_path": device.Path,
 			"error":       err.Error(),
 			"action":      "format_listing_failed",
@@ -785,7 +785,7 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(ctx context.Context, devic
 		// Parse formats
 		formats, err := m.infoParser.ParseDeviceFormats(formatsOutput)
 		if err != nil {
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"device_path": device.Path,
 				"error":       err.Error(),
 				"action":      "format_parsing_failed",
@@ -835,7 +835,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 			m.stats.DeviceStateChanges++
 			m.stats.mu.Unlock()
 
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"device_path": path,
 				"device_name": device.Name,
 				"status":      device.Status,
@@ -855,7 +855,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 				m.stats.DeviceStateChanges++
 				m.stats.mu.Unlock()
 
-				m.logger.WithFields(map[string]interface{}{
+				m.logger.WithFields(logging.Fields{
 					"device_path": path,
 					"old_status":  existing.Status,
 					"new_status":  device.Status,
@@ -877,7 +877,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 			m.stats.DeviceStateChanges++
 			m.stats.mu.Unlock()
 
-			m.logger.WithFields(map[string]interface{}{
+			m.logger.WithFields(logging.Fields{
 				"device_path": path,
 				"device_name": device.Name,
 				"action":      "device_disconnected",
@@ -905,7 +905,7 @@ func (m *HybridCameraMonitor) generateCameraEvent(ctx context.Context, eventType
 			defer func() {
 				// Recover from panics in goroutine
 				if r := recover(); r != nil {
-					m.logger.WithFields(map[string]interface{}{
+					m.logger.WithFields(logging.Fields{
 						"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
 						"panic":        r,
 						"action":       "panic_recovered",
@@ -914,7 +914,7 @@ func (m *HybridCameraMonitor) generateCameraEvent(ctx context.Context, eventType
 			}()
 
 			if err := h.HandleCameraEvent(ctx, eventData); err != nil {
-				m.logger.WithFields(map[string]interface{}{
+				m.logger.WithFields(logging.Fields{
 					"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
 					"error":        err.Error(),
 					"action":       "event_handler_error",
@@ -952,7 +952,7 @@ func (m *HybridCameraMonitor) adjustPollingInterval() {
 		m.stats.CurrentPollInterval = m.currentPollInterval
 		m.stats.mu.Unlock()
 
-		m.logger.WithFields(map[string]interface{}{
+		m.logger.WithFields(logging.Fields{
 			"old_interval":  oldInterval,
 			"new_interval":  m.currentPollInterval,
 			"failure_count": m.pollingFailureCount,
