@@ -565,6 +565,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Test snapshot with camera identifier (abstraction layer)
 	options := map[string]interface{}{}
+	
 	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", outputPath, options)
 	if err != nil {
 		t.Logf("Snapshot error details: %v", err)

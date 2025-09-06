@@ -100,7 +100,7 @@ ffmpeg:
 # Performance settings (actually used)
 performance:
   snapshot_tiers:
-    tier1_usb_direct_timeout: 1.0
+    tier1_usb_direct_timeout: 5.0
     tier2_rtsp_ready_check_timeout: 2.0
     tier3_activation_timeout: 5.0
     tier3_activation_trigger_timeout: 10.0
