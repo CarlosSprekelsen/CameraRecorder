@@ -52,6 +52,12 @@ func NewCameraEventNotifier(eventManager *EventManager, logger *logging.Logger) 
 
 // NotifyCameraConnected notifies when a camera is connected
 func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice) {
+	// Check for nil device to prevent panic
+	if device == nil {
+		n.logger.Error("Cannot notify camera connected: device is nil")
+		return
+	}
+
 	eventData := logging.Fields{
 		"device":    device.Path,
 		"name":      device.Name,
@@ -92,6 +98,12 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 
 // NotifyCameraStatusChange notifies when camera status changes
 func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevice, oldStatus, newStatus camera.DeviceStatus) {
+	// Check for nil device to prevent panic
+	if device == nil {
+		n.logger.Error("Cannot notify camera status change: device is nil")
+		return
+	}
+
 	eventData := logging.Fields{
 		"device":     device.Path,
 		"name":       device.Name,
@@ -114,6 +126,12 @@ func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevi
 
 // NotifyCapabilityDetected notifies when camera capabilities are detected
 func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevice, capabilities camera.V4L2Capabilities) {
+	// Check for nil device to prevent panic
+	if device == nil {
+		n.logger.Error("Cannot notify capability detected: device is nil")
+		return
+	}
+
 	eventData := logging.Fields{
 		"device":       device.Path,
 		"name":         device.Name,

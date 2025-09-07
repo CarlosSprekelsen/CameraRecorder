@@ -17,6 +17,7 @@ package websocket
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,8 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 )
 
 // TestWebSocketServer_Creation tests server creation and initialization
@@ -369,4 +370,93 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 			t.Fatal("Timeout waiting for concurrent message processing")
 		}
 	}
+}
+
+// TestWebSocketServer_NotificationFunctions tests notification functions for bugs
+func TestWebSocketServer_NotificationFunctions(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+	defer CleanupTestServer(t, server)
+
+	// Test notifyRecordingStatusUpdate with edge cases
+	server.notifyRecordingStatusUpdate("", "", "", 0) // Empty parameters - might expose bugs
+	server.notifyRecordingStatusUpdate("/dev/video0", "started", "recording.mp4", -1*time.Second) // Negative duration - might expose bugs
+	server.notifyRecordingStatusUpdate("invalid_device", "invalid_status", "", 0) // Invalid parameters
+
+	// Test notifyCameraStatusUpdate with edge cases
+	server.notifyCameraStatusUpdate("", "", "") // Empty parameters - might expose bugs
+	server.notifyCameraStatusUpdate("/dev/video0", "", "Camera Name") // Empty status - might expose bugs
+	server.notifyCameraStatusUpdate("invalid_device", "connected", "") // Empty name - might expose bugs
+
+	// Test notifySnapshotTaken with edge cases
+	server.notifySnapshotTaken("", "", "") // Empty parameters - might expose bugs
+	server.notifySnapshotTaken("/dev/video0", "", "1920x1080") // Empty filename - might expose bugs
+	server.notifySnapshotTaken("invalid_device", "snapshot.jpg", "") // Empty resolution - might expose bugs
+
+	// Test notifySystemEvent with edge cases
+	server.notifySystemEvent("", nil) // Empty event type and nil data - might expose bugs
+	server.notifySystemEvent("system_startup", map[string]interface{}{}) // Empty data map
+	server.notifySystemEvent("invalid_event", map[string]interface{}{
+		"key": nil, // Nil value in data - might expose bugs
+	})
+}
+
+// TestWebSocketServer_ErrorHandlingFunctions tests error handling functions for bugs
+func TestWebSocketServer_ErrorHandlingFunctions(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+	defer CleanupTestServer(t, server)
+
+	// Test sendErrorResponse with edge cases - this might expose bugs
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Test with nil connection - this should expose a bug
+	server.sendErrorResponse(nil, "test-id", -32600, "Test error")
+
+	// Test with invalid error codes - this might expose bugs
+	server.sendErrorResponse(conn, "test-id", 0, "Zero error code")
+	server.sendErrorResponse(conn, "test-id", -99999, "Invalid error code")
+	server.sendErrorResponse(conn, "test-id", 99999, "Positive error code")
+
+	// Test with nil ID - this might expose bugs
+	server.sendErrorResponse(conn, nil, -32600, "Nil ID test")
+
+	// Test with empty message - this might expose bugs
+	server.sendErrorResponse(conn, "test-id", -32600, "")
+
+	// Test with very long message - this might expose bugs
+	longMessage := strings.Repeat("A", 10000)
+	server.sendErrorResponse(conn, "test-id", -32600, longMessage)
+}
+
+// TestWebSocketServer_PermissionAndRateLimit tests permission and rate limit functions for bugs
+func TestWebSocketServer_PermissionAndRateLimit(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+	defer CleanupTestServer(t, server)
+
+	// Test checkMethodPermissions with edge cases - this might expose bugs
+	// Note: We can't easily access the client connection, so we'll test with nil
+	err = server.checkMethodPermissions(nil, "") // Nil client and empty method - might expose bugs
+	// This should expose a nil pointer dereference bug
+
+	err = server.checkMethodPermissions(nil, "invalid_method") // Nil client with method - might expose bugs
+	// This should expose a nil pointer dereference bug
+
+	// Test checkRateLimit with edge cases - this might expose bugs
+	err = server.checkRateLimit(nil) // Nil client - might expose bugs
+	// This should expose a nil pointer dereference bug
 }

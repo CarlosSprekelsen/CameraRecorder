@@ -155,7 +155,9 @@ func (em *EventManager) Unsubscribe(clientID string, topics []EventTopic) error 
 
 	_, exists := em.subscriptions[clientID]
 	if !exists {
-		return fmt.Errorf("client %s has no subscriptions", clientID)
+		// Client has no subscriptions - this is already the desired state
+		em.logger.WithField("client_id", clientID).Debug("Client has no subscriptions to remove")
+		return nil
 	}
 
 	// Remove topics from subscription
@@ -409,11 +411,36 @@ func (em *EventManager) isClientInterested(subscription *EventSubscription, even
 
 func (em *EventManager) applyFilters(filters map[string]interface{}, eventData map[string]interface{}) bool {
 	for key, expectedValue := range filters {
-		if actualValue, exists := eventData[key]; !exists || actualValue != expectedValue {
+		if actualValue, exists := eventData[key]; !exists || !em.valuesEqual(actualValue, expectedValue) {
 			return false
 		}
 	}
 	return true
+}
+
+// valuesEqual safely compares two interface{} values, handling uncomparable types
+func (em *EventManager) valuesEqual(a, b interface{}) bool {
+	// Handle nil cases
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Handle uncomparable types first - reject them to prevent panics
+	switch a.(type) {
+	case map[string]interface{}, []interface{}, func():
+		// These types are uncomparable in Go - log warning and return false
+		em.logger.WithFields(logging.Fields{
+			"type_a": fmt.Sprintf("%T", a),
+			"type_b": fmt.Sprintf("%T", b),
+		}).Warn("Filter comparison skipped for uncomparable types")
+		return false
+	default:
+		// For other types, use direct comparison (should be safe)
+		return a == b
+	}
 }
 
 func (em *EventManager) processEventHandlers(event *EventMessage) error {

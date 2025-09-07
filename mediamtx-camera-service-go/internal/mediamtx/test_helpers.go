@@ -57,9 +57,12 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 
 // MediaMTXTestHelper provides utilities for MediaMTX server testing
 type MediaMTXTestHelper struct {
-	config *MediaMTXTestConfig
-	logger *logging.Logger
-	client MediaMTXClient
+	config           *MediaMTXTestConfig
+	logger           *logging.Logger
+	client           MediaMTXClient
+	pathManager      PathManager
+	streamManager    StreamManager
+	recordingManager *RecordingManager
 }
 
 // EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
@@ -281,6 +284,47 @@ func (h *MediaMTXTestHelper) GetLogger() *logging.Logger {
 // GetClient returns the MediaMTX client for testing
 func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 	return h.client
+}
+
+// GetPathManager returns a shared path manager instance
+func (h *MediaMTXTestHelper) GetPathManager() PathManager {
+	if h.pathManager == nil {
+		// Convert test config to MediaMTX config
+		mediaMTXConfig := &MediaMTXConfig{
+			BaseURL: h.config.BaseURL,
+			Timeout: 10 * time.Second,
+		}
+		h.pathManager = NewPathManager(h.client, mediaMTXConfig, h.logger)
+	}
+	return h.pathManager
+}
+
+// GetStreamManager returns a shared stream manager instance
+func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
+	if h.streamManager == nil {
+		// Convert test config to MediaMTX config
+		mediaMTXConfig := &MediaMTXConfig{
+			BaseURL: h.config.BaseURL,
+			Timeout: 10 * time.Second,
+		}
+		h.streamManager = NewStreamManager(h.client, mediaMTXConfig, h.logger)
+	}
+	return h.streamManager
+}
+
+// GetRecordingManager returns a shared recording manager instance
+func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
+	if h.recordingManager == nil {
+		// Convert test config to MediaMTX config
+		mediaMTXConfig := &MediaMTXConfig{
+			BaseURL: h.config.BaseURL,
+			Timeout: 10 * time.Second,
+		}
+		pathManager := h.GetPathManager()
+		streamManager := h.GetStreamManager()
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, h.logger)
+	}
+	return h.recordingManager
 }
 
 // CreateConfigManagerWithFixture creates a config manager that loads from test fixtures

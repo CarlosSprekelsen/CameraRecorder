@@ -45,12 +45,8 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	require.NotNil(t, configManager, "Real config manager should be created")
 
 	// Test that we can create a path manager directly
-	mediaMTXConfig := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: helper.GetConfig().Timeout,
-	}
-	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, helper.GetLogger())
-	pathManager := NewPathManager(client, mediaMTXConfig, helper.GetLogger())
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test basic path manager functionality
@@ -81,12 +77,8 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	require.NotNil(t, configManager, "Real config manager should be created")
 
 	// Create path manager
-	mediaMTXConfig := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: helper.GetConfig().Timeout,
-	}
-	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, helper.GetLogger())
-	pathManager := NewPathManager(client, mediaMTXConfig, helper.GetLogger())
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	ctx := context.Background()
@@ -140,12 +132,8 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	t.Logf("MediaMTX config: %+v", cfg.MediaMTX)
 
 	// Create path manager with real config
-	mediaMTXConfig := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: helper.GetConfig().Timeout,
-	}
-	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, helper.GetLogger())
-	pathManager := NewPathManager(client, mediaMTXConfig, helper.GetLogger())
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test path manager with real config
@@ -174,12 +162,8 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	require.NotNil(t, configManager, "Real config manager should be created")
 
 	// Create path manager
-	mediaMTXConfig := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: helper.GetConfig().Timeout,
-	}
-	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, helper.GetLogger())
-	pathManager := NewPathManager(client, mediaMTXConfig, helper.GetLogger())
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test path operations instead of health (PathManager doesn't have GetHealth)
@@ -218,12 +202,8 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	require.NotNil(t, configManager, "Real config manager should be created")
 
 	// Create path manager
-	mediaMTXConfig := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: helper.GetConfig().Timeout,
-	}
-	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, helper.GetLogger())
-	pathManager := NewPathManager(client, mediaMTXConfig, helper.GetLogger())
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test that we can interact with the real MediaMTX server

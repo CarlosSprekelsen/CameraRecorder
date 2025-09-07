@@ -35,22 +35,9 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
-	require.NotNil(t, recordingManager)
-
-	// Verify recording manager was created properly
-	assert.NotNil(t, recordingManager, "Recording manager should be initialized")
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
+	require.NotNil(t, recordingManager, "Recording manager should be initialized")
 }
 
 // TestRecordingManager_StartRecording_ReqMTX002 tests recording session creation with real server
@@ -64,18 +51,8 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -116,18 +93,8 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -168,18 +135,8 @@ func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -220,18 +177,8 @@ func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -266,18 +213,8 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 
 	ctx := context.Background()
 
@@ -291,7 +228,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 
 	// Validate that a path was actually created in MediaMTX server
 	// This validates real API integration - test would FAIL if MediaMTX API is broken
-	pathData, err := client.Get(ctx, "/v3/paths/get/"+session.Path)
+	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/get/"+session.Path)
 	require.NoError(t, err, "Path should exist in MediaMTX server after StartRecording")
 	require.NotNil(t, pathData, "Path data should be returned from MediaMTX API")
 
@@ -308,7 +245,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	require.NoError(t, err, "StopRecording should succeed")
 
 	// Verify path was deleted from MediaMTX server
-	_, err = client.Get(ctx, "/v3/paths/get/"+session.Path)
+	_, err = helper.GetClient().Get(ctx, "/v3/paths/get/"+session.Path)
 	assert.Error(t, err, "Path should be deleted from MediaMTX server after StopRecording")
 
 	t.Log("✅ MediaMTX path creation/deletion API validation passed")
@@ -324,17 +261,10 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
 	ctx := context.Background()
 
 	// Test 1: Validate /v3/recordings/list response matches RecordingList schema
-	data, err := client.Get(ctx, "/v3/recordings/list?itemsPerPage=10&page=0")
+	data, err := helper.GetClient().Get(ctx, "/v3/recordings/list?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/recordings/list API should respond")
 
 	var recordingListResponse struct {
@@ -357,7 +287,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	assert.NotNil(t, recordingListResponse.Items, "items array required per swagger.json")
 
 	// Test 2: Validate /v3/paths/list response matches PathList schema
-	pathData, err := client.Get(ctx, "/v3/paths/list?itemsPerPage=10&page=0")
+	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/paths/list API should respond")
 
 	var pathListResponse struct {
@@ -387,23 +317,16 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
 	ctx := context.Background()
 
 	// Test 1: Invalid path should return 404 error as per swagger.json
 	// Use test-prefixed name to ensure proper cleanup
-	_, err := client.Get(ctx, "/v3/paths/get/test_nonexistent_path")
+	_, err := helper.GetClient().Get(ctx, "/v3/paths/get/test_nonexistent_path")
 	assert.Error(t, err, "Non-existent path should return error per swagger.json")
 
 	// Test 2: Non-existent recording should return 200 with empty segments per swagger.json
 	// Use test-prefixed name to ensure proper cleanup
-	data, err := client.Get(ctx, "/v3/recordings/get/test_nonexistent_recording")
+	data, err := helper.GetClient().Get(ctx, "/v3/recordings/get/test_nonexistent_recording")
 	require.NoError(t, err, "Non-existent recording should return 200 with empty segments per swagger.json")
 
 	// Verify the response structure matches Recording schema
@@ -418,11 +341,11 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Test 3: MediaMTX API endpoints should be available (this validates real integration)
 	// If MediaMTX API was broken, these calls would fail
-	recordingsData, err := client.Get(ctx, "/v3/recordings/list")
+	recordingsData, err := helper.GetClient().Get(ctx, "/v3/recordings/list")
 	require.NoError(t, err, "MediaMTX recordings API should be accessible")
 	require.NotNil(t, recordingsData, "Response data should not be nil")
 
-	pathData, err := client.Get(ctx, "/v3/paths/list")
+	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list")
 	require.NoError(t, err, "MediaMTX paths API should be accessible")
 	require.NotNil(t, pathData, "Path data should not be nil")
 
@@ -439,18 +362,8 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -495,18 +408,8 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -540,18 +443,8 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()
@@ -602,18 +495,8 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
-	config := &MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-	}
-	logger := helper.GetLogger()
-
-	// Create MediaMTX client and path manager for API-based recording
-	client := NewClient("http://localhost:9997", config, logger)
-	defer client.Close()
-
-	pathManager := NewPathManager(client, config, logger)
-	streamManager := NewStreamManager(client, config, logger)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, config, logger)
+	// Use shared recording manager from test helper
+	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	ctx := context.Background()

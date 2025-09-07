@@ -634,6 +634,7 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.rtsp_port", 8554)
 	v.SetDefault("mediamtx.webrtc_port", 8889)
 	v.SetDefault("mediamtx.hls_port", 8888)
+	v.SetDefault("mediamtx.timeout", "10s")
 	v.SetDefault("mediamtx.config_path", "/opt/camera-service/config/mediamtx.yml")
 	v.SetDefault("mediamtx.recordings_path", "/opt/camera-service/recordings")
 	v.SetDefault("mediamtx.snapshots_path", "/opt/camera-service/snapshots")

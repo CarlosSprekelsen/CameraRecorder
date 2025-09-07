@@ -100,6 +100,12 @@ func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, metho
 		return nil
 	}
 
+	// Check for nil client to prevent panic
+	if client == nil {
+		s.logger.WithField("method", methodName).Error("Cannot check permissions: client is nil")
+		return fmt.Errorf("client is nil")
+	}
+
 	// Convert client role to security.Role
 	userRole, err := s.permissionChecker.ValidateRole(client.Role)
 	if err != nil {
@@ -126,6 +132,12 @@ func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, metho
 
 // checkRateLimit checks if a client has exceeded the rate limit
 func (s *WebSocketServer) checkRateLimit(client *ClientConnection) error {
+	// Check for nil client to prevent panic
+	if client == nil {
+		s.logger.Error("Cannot check rate limit: client is nil")
+		return fmt.Errorf("client is nil")
+	}
+
 	if !s.jwtHandler.CheckRateLimit(client.ClientID) {
 		s.logger.WithField("client_id", client.ClientID).Warn("Rate limit exceeded")
 		return fmt.Errorf("rate limit exceeded")
@@ -245,6 +257,11 @@ func (s *WebSocketServer) notifySystemEvent(eventType string, data map[string]in
 		topic = TopicSystemHealth
 	default:
 		topic = TopicSystemError
+	}
+
+	// Initialize data map if nil
+	if data == nil {
+		data = make(map[string]interface{})
 	}
 
 	// Add timestamp if not present
@@ -469,7 +486,7 @@ func NewWebSocketServer(
 func (s *WebSocketServer) Start() error {
 	if s.running {
 		s.logger.Warn("WebSocket server is already running")
-		return nil
+		return fmt.Errorf("WebSocket server is already running")
 	}
 
 	s.logger.WithFields(logging.Fields{
@@ -807,7 +824,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	// Parse JSON-RPC request
 	var request JsonRpcRequest
 	if err := json.Unmarshal(message, &request); err != nil {
-		s.sendErrorResponse(conn, nil, INVALID_PARAMS, "Invalid JSON-RPC request")
+		s.sendErrorResponse(conn, nil, INVALID_REQUEST, "Invalid JSON-RPC request")
 		return
 	}
 
@@ -817,6 +834,9 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 		return
 	}
 
+	// Check if this is a notification (ID is null)
+	isNotification := request.ID == nil
+
 	// Handle request
 	response, err := s.handleRequest(&request, client)
 	if err != nil {
@@ -824,14 +844,19 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 			"client_id": client.ClientID,
 			"method":    request.Method,
 		}).Error("Request handling error")
-		s.sendErrorResponse(conn, request.ID, INTERNAL_ERROR, "Internal server error")
+		// Only send error response for requests, not notifications
+		if !isNotification {
+			s.sendErrorResponse(conn, request.ID, INTERNAL_ERROR, "Internal server error")
+		}
 		return
 	}
 
-	// Send response
-	if err := s.sendResponse(conn, response); err != nil {
-		s.logger.WithError(err).WithField("client_id", client.ClientID).Error("Failed to send response")
-		return
+	// Only send response for requests, not notifications
+	if !isNotification {
+		if err := s.sendResponse(conn, response); err != nil {
+			s.logger.WithError(err).WithField("client_id", client.ClientID).Error("Failed to send response")
+			return
+		}
 	}
 
 	// Record performance metrics
@@ -937,6 +962,15 @@ func (s *WebSocketServer) sendResponse(conn *websocket.Conn, response *JsonRpcRe
 
 // sendErrorResponse sends a JSON-RPC error response to the client
 func (s *WebSocketServer) sendErrorResponse(conn *websocket.Conn, id interface{}, code int, message string) {
+	// Check for nil connection to prevent panic
+	if conn == nil {
+		s.logger.WithFields(logging.Fields{
+			"error_code": code,
+			"message":    message,
+		}).Error("Cannot send error response: connection is nil")
+		return
+	}
+
 	response := &JsonRpcResponse{
 		JSONRPC: "2.0",
 		ID:      id,
