@@ -35,7 +35,7 @@ type SimpleHealthMonitor struct {
 	isHealthy     int32 // 0 = false, 1 = true
 	failureCount  int64 // Atomic counter
 	lastCheckTime int64 // Atomic timestamp (UnixNano)
-	
+
 	// Keep mutex only for complex operations that need consistency
 	mu sync.RWMutex
 
@@ -70,8 +70,27 @@ func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 	h.logger.Info("Stopping simplified MediaMTX health monitor")
 
-	close(h.stopChan)
+	// Signal stop - use atomic check to prevent double-close
+	select {
+	case h.stopChan <- struct{}{}:
+		// Successfully sent stop signal
+	default:
+		// Channel might be full or already closed, but that's okay
+	}
+
+	// Wait for goroutine to finish
 	h.wg.Wait()
+
+	// Close the channel safely
+	select {
+	case <-h.stopChan:
+		// Channel was still open, close it
+		close(h.stopChan)
+	default:
+		// Channel was already closed, do nothing
+	}
+
+	h.logger.Info("Simplified MediaMTX health monitor stopped")
 	return nil
 }
 

@@ -64,17 +64,17 @@ type WebSocketServer struct {
 	// WebSocket server
 	upgrader websocket.Upgrader
 	server   *http.Server
-	running  bool
+	running  int32 // Atomic boolean: 0 = false, 1 = true
 
 	// Client connection management
 	clients       map[string]*ClientConnection
 	clientsMutex  sync.RWMutex
-	clientCounter int64 // Protected by clientsMutex
+	clientCounter int64 // Atomic counter for thread-safe client ID generation
 
 	// Method registration
-	methods        map[string]MethodHandler
-	methodsMutex   sync.RWMutex
-	methodVersions map[string]string
+	methods             sync.Map // map[string]MethodHandler - lock-free reads
+	methodVersions      map[string]string
+	methodVersionsMutex sync.RWMutex // Still needed for methodVersions map
 
 	// Performance metrics
 	metrics      *PerformanceMetrics
@@ -455,7 +455,7 @@ func NewWebSocketServer(
 		clientCounter: 0,
 
 		// Method registration
-		methods:        make(map[string]MethodHandler),
+		methods:        sync.Map{}, // Initialize sync.Map
 		methodVersions: make(map[string]string),
 
 		// Performance metrics
@@ -484,7 +484,7 @@ func NewWebSocketServer(
 
 // Start starts the WebSocket server
 func (s *WebSocketServer) Start() error {
-	if s.running {
+	if !atomic.CompareAndSwapInt32(&s.running, 0, 1) {
 		s.logger.Warn("WebSocket server is already running")
 		return fmt.Errorf("WebSocket server is already running")
 	}
@@ -517,7 +517,7 @@ func (s *WebSocketServer) Start() error {
 		}
 	}()
 
-	s.running = true
+	// running state already set to 1 by CompareAndSwapInt32 above
 
 	s.logger.WithFields(logging.Fields{
 		"host":   s.config.Host,
@@ -532,7 +532,7 @@ func (s *WebSocketServer) Start() error {
 
 // Stop stops the WebSocket server gracefully
 func (s *WebSocketServer) Stop() error {
-	if !s.running {
+	if atomic.LoadInt32(&s.running) == 0 {
 		s.logger.Warn("WebSocket server is not running")
 		return nil
 	}
@@ -560,7 +560,7 @@ func (s *WebSocketServer) Stop() error {
 	// Wait for all goroutines to finish
 	s.wg.Wait()
 
-	s.running = false
+	atomic.StoreInt32(&s.running, 0)
 
 	s.logger.Info("WebSocket server stopped successfully")
 	return nil
@@ -664,15 +664,12 @@ func (s *WebSocketServer) closeAllClientConnections() {
 
 // handleWebSocket handles WebSocket upgrade and connection management
 func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Check connection limit
-	s.clientsMutex.RLock()
-	if len(s.clients) >= s.config.MaxConnections {
-		s.clientsMutex.RUnlock()
+	// Check connection limit with atomic operation (lock-free)
+	if atomic.LoadInt64(&s.metrics.ActiveConnections) >= int64(s.config.MaxConnections) {
 		s.logger.Warn("Maximum connections reached")
 		http.Error(w, "Maximum connections reached", http.StatusServiceUnavailable)
 		return
 	}
-	s.clientsMutex.RUnlock()
 
 	// Upgrade HTTP connection to WebSocket
 	conn, err := s.upgrader.Upgrade(w, r, nil)
@@ -681,11 +678,9 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate client ID with proper synchronization
-	s.clientsMutex.Lock()
-	s.clientCounter++
-	clientID := "client_" + strconv.FormatInt(s.clientCounter, 10)
-	s.clientsMutex.Unlock()
+	// Generate client ID with atomic operations (lock-free)
+	clientCounter := atomic.AddInt64(&s.clientCounter, 1)
+	clientID := "client_" + strconv.FormatInt(clientCounter, 10)
 
 	// Create client connection
 	client := &ClientConnection{
@@ -722,11 +717,17 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 	defer func() {
 		// Recover from panics in goroutine and propagate as errors
 		if r := recover(); r != nil {
+			// Get stack trace for debugging
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			stackTrace := string(stack[:length])
+			
 			panicErr := fmt.Errorf("panic in client connection handler for client %s: %v", client.ClientID, r)
 			s.logger.WithFields(logging.Fields{
-				"client_id": client.ClientID,
-				"panic":     r,
-				"action":    "panic_recovered",
+				"client_id":   client.ClientID,
+				"panic":       r,
+				"action":      "panic_recovered",
+				"stack_trace": stackTrace,
 			}).Error("Recovered from panic in client connection handler")
 
 			// Propagate panic as error instead of swallowing it
@@ -886,10 +887,8 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}, nil
 	}
 
-	// Find method handler
-	s.methodsMutex.RLock()
-	handler, exists := s.methods[request.Method]
-	s.methodsMutex.RUnlock()
+	// Find method handler with lock-free lookup
+	handlerInterface, exists := s.methods.Load(request.Method)
 
 	if !exists {
 		return &JsonRpcResponse{
@@ -931,6 +930,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Call method handler
+	handler := handlerInterface.(MethodHandler)
 	response, err := handler(request.Params, client)
 	if err != nil {
 		// Update error metrics with atomic operation
@@ -1039,7 +1039,7 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 
 // IsRunning returns whether the server is currently running
 func (s *WebSocketServer) IsRunning() bool {
-	return s.running
+	return atomic.LoadInt32(&s.running) == 1
 }
 
 // GetConfig returns the server configuration (for testing purposes)

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -19,6 +20,7 @@ type ConfigManager struct {
 	configPath      string
 	updateCallbacks []func(*Config)
 	watcher         *fsnotify.Watcher
+	watcherActive   int32 // Atomic: 0 = inactive, 1 = active
 	watcherLock     sync.RWMutex
 	lock            sync.RWMutex
 	defaultConfig   *Config
@@ -334,6 +336,9 @@ func (cm *ConfigManager) startFileWatching() error {
 		return fmt.Errorf("failed to watch config directory %s: %w", configDir, err)
 	}
 
+	// Mark watcher as active atomically
+	atomic.StoreInt32(&cm.watcherActive, 1)
+
 	// Start watching goroutine
 	cm.wg.Add(1)
 	go cm.watchFileChanges()
@@ -348,6 +353,9 @@ func (cm *ConfigManager) startFileWatching() error {
 
 // stopFileWatching stops the file watcher.
 func (cm *ConfigManager) stopFileWatching() {
+	// Mark watcher as inactive atomically
+	atomic.StoreInt32(&cm.watcherActive, 0)
+
 	cm.watcherLock.Lock()
 	defer cm.watcherLock.Unlock()
 
@@ -373,6 +381,11 @@ func (cm *ConfigManager) watchFileChanges() {
 		case <-cm.stopChan:
 			return
 		default:
+			// Check if watcher is still active atomically
+			if atomic.LoadInt32(&cm.watcherActive) == 0 {
+				return
+			}
+
 			// Check if watcher is still valid before accessing its channels
 			cm.watcherLock.RLock()
 			if cm.watcher == nil {

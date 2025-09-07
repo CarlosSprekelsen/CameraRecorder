@@ -766,6 +766,8 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 // TestRTSPConnectionManager_InputValidation_DangerousBugs tests input validation
 // that can catch dangerous bugs in RTSP connection manager
 func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

@@ -341,6 +341,8 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 // TestClient_JSONParsingErrors_DangerousBugs tests JSON parsing functions with malformed data
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func TestClient_JSONParsingErrors_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -351,6 +353,8 @@ func TestClient_JSONParsingErrors_DangerousBugs(t *testing.T) {
 // TestClient_JSONParsingPanicProtection_DangerousBugs tests that JSON parsing functions don't panic
 // This function is designed to catch dangerous bugs that could cause crashes
 func TestClient_JSONParsingPanicProtection_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

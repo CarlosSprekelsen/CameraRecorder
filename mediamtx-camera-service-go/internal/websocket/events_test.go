@@ -252,7 +252,7 @@ func TestWebSocketEvents_GetSubscriptionStats(t *testing.T) {
 	// Get stats with no subscriptions
 	stats := eventManager.GetSubscriptionStats()
 	assert.NotNil(t, stats, "Should return subscription stats")
-	assert.Equal(t, 0, stats["total_clients"], "Should have zero clients initially")
+	assert.Equal(t, int64(0), stats["total_clients"], "Should have zero clients initially")
 
 	// Subscribe client
 	clientID := "test-client"
@@ -263,7 +263,7 @@ func TestWebSocketEvents_GetSubscriptionStats(t *testing.T) {
 	// Get stats with subscriptions
 	stats = eventManager.GetSubscriptionStats()
 	assert.NotNil(t, stats, "Should return subscription stats")
-	assert.Greater(t, stats["total_clients"], 0, "Should have clients after subscribing")
+	assert.Greater(t, stats["total_clients"], int64(0), "Should have clients after subscribing")
 }
 
 // TestWebSocketEvents_InvalidTopic tests invalid topic handling

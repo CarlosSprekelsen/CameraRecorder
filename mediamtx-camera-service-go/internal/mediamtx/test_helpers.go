@@ -497,21 +497,21 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 			Name:         "negative_page_number",
 			Page:         -1,
 			ItemsPerPage: 10,
-			ExpectError:  false, // Should be handled gracefully, not cause 400 errors
-			ErrorMsg:     "",
-			Description:  "Negative page numbers should be handled gracefully",
+			ExpectError:  true, // Should be rejected with clear error message
+			ErrorMsg:     "invalid page number",
+			Description:  "Negative page numbers should be rejected",
 		},
 		{
 			Name:         "zero_items_per_page",
 			Page:         0,
 			ItemsPerPage: 0,
-			ExpectError:  false, // Should use default values, not cause 400 errors
-			ErrorMsg:     "",
-			Description:  "Zero items per page should use default values",
+			ExpectError:  true, // Should be rejected with clear error message
+			ErrorMsg:     "invalid page number",
+			Description:  "Zero page numbers should be rejected",
 		},
 		{
 			Name:         "negative_items_per_page",
-			Page:         0,
+			Page:         1,
 			ItemsPerPage: -5,
 			ExpectError:  true, // Should be rejected with clear error message
 			ErrorMsg:     "invalid items per page",
@@ -527,11 +527,11 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 		},
 		{
 			Name:         "extremely_large_items_per_page",
-			Page:         0,
+			Page:         1,
 			ItemsPerPage: 999999999,
-			ExpectError:  false, // Should handle gracefully, not cause integer overflow
-			ErrorMsg:     "",
-			Description:  "Extremely large items per page should be handled gracefully",
+			ExpectError:  true, // Should be rejected - too large
+			ErrorMsg:     "invalid items per page",
+			Description:  "Extremely large items per page should be rejected",
 		},
 		{
 			Name:         "max_int_page",
@@ -543,11 +543,11 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 		},
 		{
 			Name:         "max_int_items_per_page",
-			Page:         0,
+			Page:         1,
 			ItemsPerPage: 2147483647, // Max int32
-			ExpectError:  false,      // Should handle gracefully
-			ErrorMsg:     "",
-			Description:  "Maximum integer items per page should be handled gracefully",
+			ExpectError:  true,       // Should be rejected - too large
+			ErrorMsg:     "invalid items per page",
+			Description:  "Maximum integer items per page should be rejected",
 		},
 	}
 }
@@ -776,35 +776,35 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 		},
 		{
 			Name:        "json_with_extra_fields",
-			JSONData:    []byte(`{"items": [], "extra_field": "should_be_ignored", "another_extra": 123}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "extra_field": "should_be_ignored", "another_extra": 123}`),
 			ExpectError: false, // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 		{
 			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"items": [], "unicode": "test\u0000null\u0000byte"}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "unicode": "test\u0000null\u0000byte"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with Unicode issues should be handled gracefully",
 		},
 		{
 			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(fmt.Sprintf(`{"items": [], "large_string": "%s"}`, strings.Repeat("x", 1000000))),
+			JSONData:    []byte(fmt.Sprintf(`{"name": "test_stream", "source": "rtsp://test", "large_string": "%s"}`, strings.Repeat("x", 1000000))),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with very large strings should be handled gracefully",
 		},
 		{
 			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"items": [], "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with deeply nested objects should be handled gracefully",
 		},
 		{
 			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"items": [], "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with special characters should be handled gracefully",

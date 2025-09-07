@@ -1087,6 +1087,8 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 // TestController_InputValidation_DangerousBugs tests input validation
 // that can catch dangerous bugs in controller methods
 func TestController_InputValidation_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1117,6 +1119,8 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 // TestController_InputValidationBoundaryConditions_DangerousBugs tests boundary conditions
 // that can cause dangerous bugs like integer overflow or panic conditions
 func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1147,6 +1151,8 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 // TestController_StateRaceConditions_DangerousBugs tests race conditions
 // that can cause dangerous bugs in controller state management
 func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
+	// REQ-MTX-007: Error handling and recovery
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1213,6 +1219,11 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 
 	// Test state checking during operations
 	t.Run("state_checking_during_operations", func(t *testing.T) {
+		// Ensure controller is stopped first
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		controller.Stop(stopCtx)
+		cancel()
+
 		// Start the controller
 		err := controller.Start(ctx)
 		require.NoError(t, err, "Controller start should succeed")
@@ -1232,8 +1243,9 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 		t.Logf("✅ State checking during operations completed successfully")
 
 		// Stop the controller
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
+		finalStopCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer finalCancel()
+		stopErr := controller.Stop(finalStopCtx)
+		require.NoError(t, stopErr, "Controller stop should succeed")
 	})
 }

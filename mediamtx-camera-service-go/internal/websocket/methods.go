@@ -88,9 +88,6 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 
 // registerMethod registers a JSON-RPC method handler
 func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, version string) {
-	s.methodsMutex.Lock()
-	defer s.methodsMutex.Unlock()
-
 	// Wrap the handler to ensure security and metrics are always applied
 	wrappedHandler := func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 		startTime := time.Now()
@@ -134,8 +131,13 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 		return response, err
 	}
 
-	s.methods[name] = wrappedHandler
+	// Store method handler in sync.Map (lock-free for reads)
+	s.methods.Store(name, wrappedHandler)
+
+	// Store method version (still needs mutex for map operations)
+	s.methodVersionsMutex.Lock()
 	s.methodVersions[name] = version
+	s.methodVersionsMutex.Unlock()
 
 	s.logger.WithFields(logging.Fields{
 		"method":  name,
@@ -718,7 +720,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 	}
 
 	// Check if server is running
-	if !s.running {
+	if !s.IsRunning() {
 		websocketServerStatus = "error"
 		systemStatus = "degraded"
 	}

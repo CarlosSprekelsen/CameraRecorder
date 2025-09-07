@@ -86,7 +86,7 @@ github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_moni
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:589.132,591.41 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:591.41,593.3 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:595.2,607.37 5 1
-github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:607.37,612.3 3 1
+github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:607.37,612.3 3 0
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:612.8,612.40 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:612.40,614.64 1 1
 github.com/camerarecorder/mediamtx-camera-service-go/internal/camera/hybrid_monitor.go:614.64,622.4 3 1

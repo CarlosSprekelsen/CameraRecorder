@@ -168,9 +168,24 @@ type healthResponse struct {
 
 // parseStreamsResponse parses the streams response
 func parseStreamsResponse(data []byte) ([]*Stream, error) {
+	// Handle empty response
+	if len(data) == 0 {
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_streams")
+	}
+
+	// Handle null JSON
+	if string(data) == "null" {
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_streams")
+	}
+
 	var response getStreamsResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse streams response", err.Error(), "parse_streams")
+	}
+
+	// Validate required fields
+	if response.Items == nil {
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_streams")
 	}
 
 	streams := make([]*Stream, len(response.Items))
@@ -183,9 +198,24 @@ func parseStreamsResponse(data []byte) ([]*Stream, error) {
 
 // parsePathsResponse parses the paths response
 func parsePathsResponse(data []byte) ([]*Path, error) {
+	// Handle empty response
+	if len(data) == 0 {
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_paths")
+	}
+
+	// Handle null JSON
+	if string(data) == "null" {
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_paths")
+	}
+
 	var response getPathsResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse paths response", err.Error(), "parse_paths")
+	}
+
+	// Validate required fields
+	if response.Items == nil {
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_paths")
 	}
 
 	paths := make([]*Path, len(response.Items))
@@ -205,9 +235,24 @@ func parsePathsResponse(data []byte) ([]*Path, error) {
 
 // parseHealthResponse parses the health response
 func parseHealthResponse(data []byte) (*HealthStatus, error) {
+	// Handle empty response
+	if len(data) == 0 {
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_health")
+	}
+
+	// Handle null JSON
+	if string(data) == "null" {
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_health")
+	}
+
 	var response healthResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse health response", err.Error(), "parse_health")
+	}
+
+	// Validate required fields
+	if response.Status == "" {
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "health response missing 'status' field", "parse_health")
 	}
 
 	// Parse timestamp
@@ -230,10 +275,20 @@ func parseStreamResponse(data []byte) (*Stream, error) {
 		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_stream")
 	}
 
+	// Handle null JSON
+	if string(data) == "null" {
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_stream")
+	}
+
 	// Parse directly into Stream struct (matches MediaMTX API)
 	var stream Stream
 	if err := json.Unmarshal(data, &stream); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse stream response", err.Error(), "parse_stream")
+	}
+
+	// Validate required fields
+	if stream.Name == "" {
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "stream missing 'name' field", "parse_stream")
 	}
 
 	return &stream, nil

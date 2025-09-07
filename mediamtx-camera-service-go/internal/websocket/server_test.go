@@ -41,7 +41,7 @@ func TestWebSocketServer_Creation(t *testing.T) {
 	assert.NotNil(t, server.jwtHandler, "Server JWT handler should be initialized")
 	assert.NotNil(t, server.clients, "Server clients map should be initialized")
 	assert.NotNil(t, server.methods, "Server methods map should be initialized")
-	assert.False(t, server.running, "Server should not be running initially")
+	assert.False(t, server.IsRunning(), "Server should not be running initially")
 }
 
 // TestWebSocketServer_StartStop tests server start and stop functionality
@@ -52,7 +52,7 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	// Test server start
 	err := server.Start()
 	require.NoError(t, err, "Server should start successfully")
-	assert.True(t, server.running, "Server should be running after start")
+	assert.True(t, server.IsRunning(), "Server should be running after start")
 
 	// Wait for server to be ready
 	WaitForServerReady(t, server, 1*time.Second)
@@ -60,7 +60,7 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	// Test server stop
 	err = server.Stop()
 	require.NoError(t, err, "Server should stop successfully")
-	assert.False(t, server.running, "Server should not be running after stop")
+	assert.False(t, server.IsRunning(), "Server should not be running after stop")
 }
 
 // TestWebSocketServer_DoubleStart tests starting server twice
@@ -75,7 +75,7 @@ func TestWebSocketServer_DoubleStart(t *testing.T) {
 	// Start server second time should fail
 	err = server.Start()
 	assert.Error(t, err, "Second start should fail")
-	assert.True(t, server.running, "Server should still be running")
+	assert.True(t, server.IsRunning(), "Server should still be running")
 }
 
 // TestWebSocketServer_DoubleStop tests stopping server twice
@@ -94,7 +94,7 @@ func TestWebSocketServer_DoubleStop(t *testing.T) {
 	// Stop server second time should not error
 	err = server.Stop()
 	assert.NoError(t, err, "Second stop should not error")
-	assert.False(t, server.running, "Server should not be running")
+	assert.False(t, server.IsRunning(), "Server should not be running")
 }
 
 // TestWebSocketServer_ClientConnection tests client connection handling
@@ -178,15 +178,13 @@ func TestWebSocketServer_MethodRegistration(t *testing.T) {
 	}, "1.0")
 
 	// Test method registration
-	server.methodsMutex.RLock()
-	_, exists := server.methods[methodName]
-	server.methodsMutex.RUnlock()
+	_, exists := server.methods.Load(methodName)
 	assert.True(t, exists, "Method should be registered")
 
 	// Test method version
-	server.methodsMutex.RLock()
+	server.methodVersionsMutex.RLock()
 	version, exists := server.methodVersions[methodName]
-	server.methodsMutex.RUnlock()
+	server.methodVersionsMutex.RUnlock()
 	assert.True(t, exists, "Method version should be registered")
 	assert.Equal(t, "1.0", version, "Method version should be correct")
 }
@@ -304,7 +302,7 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 
 	// Wait for server to stop
 	time.Sleep(100 * time.Millisecond)
-	assert.False(t, server.running, "Server should be stopped after context cancellation")
+	assert.False(t, server.IsRunning(), "Server should be stopped after context cancellation")
 }
 
 // TestWebSocketServer_ConcurrentConnections tests concurrent client connections
@@ -383,22 +381,22 @@ func TestWebSocketServer_NotificationFunctions(t *testing.T) {
 	defer CleanupTestServer(t, server)
 
 	// Test notifyRecordingStatusUpdate with edge cases
-	server.notifyRecordingStatusUpdate("", "", "", 0) // Empty parameters - might expose bugs
+	server.notifyRecordingStatusUpdate("", "", "", 0)                                             // Empty parameters - might expose bugs
 	server.notifyRecordingStatusUpdate("/dev/video0", "started", "recording.mp4", -1*time.Second) // Negative duration - might expose bugs
-	server.notifyRecordingStatusUpdate("invalid_device", "invalid_status", "", 0) // Invalid parameters
+	server.notifyRecordingStatusUpdate("invalid_device", "invalid_status", "", 0)                 // Invalid parameters
 
 	// Test notifyCameraStatusUpdate with edge cases
-	server.notifyCameraStatusUpdate("", "", "") // Empty parameters - might expose bugs
-	server.notifyCameraStatusUpdate("/dev/video0", "", "Camera Name") // Empty status - might expose bugs
+	server.notifyCameraStatusUpdate("", "", "")                        // Empty parameters - might expose bugs
+	server.notifyCameraStatusUpdate("/dev/video0", "", "Camera Name")  // Empty status - might expose bugs
 	server.notifyCameraStatusUpdate("invalid_device", "connected", "") // Empty name - might expose bugs
 
 	// Test notifySnapshotTaken with edge cases
-	server.notifySnapshotTaken("", "", "") // Empty parameters - might expose bugs
-	server.notifySnapshotTaken("/dev/video0", "", "1920x1080") // Empty filename - might expose bugs
+	server.notifySnapshotTaken("", "", "")                           // Empty parameters - might expose bugs
+	server.notifySnapshotTaken("/dev/video0", "", "1920x1080")       // Empty filename - might expose bugs
 	server.notifySnapshotTaken("invalid_device", "snapshot.jpg", "") // Empty resolution - might expose bugs
 
 	// Test notifySystemEvent with edge cases
-	server.notifySystemEvent("", nil) // Empty event type and nil data - might expose bugs
+	server.notifySystemEvent("", nil)                                    // Empty event type and nil data - might expose bugs
 	server.notifySystemEvent("system_startup", map[string]interface{}{}) // Empty data map
 	server.notifySystemEvent("invalid_event", map[string]interface{}{
 		"key": nil, // Nil value in data - might expose bugs

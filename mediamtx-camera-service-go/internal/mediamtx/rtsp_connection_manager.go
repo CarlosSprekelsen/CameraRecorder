@@ -65,6 +65,17 @@ func (rcm *rtspConnectionManager) ListConnections(ctx context.Context, page, ite
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
 	}).Debug("Listing RTSP connections")
 
+	// Input validation - prevent API errors
+	if page < 1 {
+		return nil, fmt.Errorf("invalid page number: %d (must be >= 1)", page)
+	}
+	if itemsPerPage < 1 {
+		return nil, fmt.Errorf("invalid items per page: %d (must be >= 1)", itemsPerPage)
+	}
+	if itemsPerPage > 1000 {
+		return nil, fmt.Errorf("invalid items per page: %d (must be <= 1000)", itemsPerPage)
+	}
+
 	// Build query parameters
 	params := fmt.Sprintf("?page=%d&itemsPerPage=%d", page, itemsPerPage)
 	url := "/v3/rtspconns/list" + params
@@ -193,9 +204,6 @@ func (rcm *rtspConnectionManager) KickSession(ctx context.Context, id string) er
 
 // GetConnectionHealth returns the health status of RTSP connections
 func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*HealthStatus, error) {
-	rcm.mu.Lock()
-	defer rcm.mu.Unlock()
-
 	// Check if monitoring is enabled
 	if !rcm.config.RTSPMonitoring.Enabled {
 		return &HealthStatus{
@@ -208,8 +216,8 @@ func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*Hea
 	// Try to get current connections to check health
 	_, err := rcm.ListConnections(ctx, 0, 10)
 	if err != nil {
-		rcm.isHealthy = false
-		rcm.lastCheck = time.Now()
+		atomic.StoreInt32(&rcm.isHealthy, 0)
+		atomic.StoreInt64(&rcm.lastCheck, time.Now().UnixNano())
 		return &HealthStatus{
 			Status:    "unhealthy",
 			Details:   fmt.Sprintf("Failed to list RTSP connections: %v", err),
@@ -226,8 +234,8 @@ func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*Hea
 	rcm.mu.RUnlock()
 
 	if connectionCount > rcm.config.RTSPMonitoring.MaxConnections {
-		rcm.isHealthy = false
-		rcm.lastCheck = time.Now()
+		atomic.StoreInt32(&rcm.isHealthy, 0)
+		atomic.StoreInt64(&rcm.lastCheck, time.Now().UnixNano())
 		return &HealthStatus{
 			Status:    "overloaded",
 			Details:   fmt.Sprintf("Too many RTSP connections: %d > %d", connectionCount, rcm.config.RTSPMonitoring.MaxConnections),
@@ -235,8 +243,8 @@ func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*Hea
 		}, nil
 	}
 
-	rcm.isHealthy = true
-	rcm.lastCheck = time.Now()
+	atomic.StoreInt32(&rcm.isHealthy, 1)
+	atomic.StoreInt64(&rcm.lastCheck, time.Now().UnixNano())
 	return &HealthStatus{
 		Status:    "healthy",
 		Details:   fmt.Sprintf("RTSP connections healthy: %d connections", connectionCount),
@@ -246,12 +254,17 @@ func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*Hea
 
 // GetConnectionMetrics returns metrics about RTSP connections
 func (rcm *rtspConnectionManager) GetConnectionMetrics(ctx context.Context) map[string]interface{} {
+	// Read atomic values
+	isHealthy := atomic.LoadInt32(&rcm.isHealthy) == 1
+	lastCheckNano := atomic.LoadInt64(&rcm.lastCheck)
+	lastCheckTime := time.Unix(0, lastCheckNano)
+
 	rcm.mu.RLock()
 	defer rcm.mu.RUnlock()
 
 	metrics := make(map[string]interface{})
-	metrics["is_healthy"] = rcm.isHealthy
-	metrics["last_check"] = rcm.lastCheck
+	metrics["is_healthy"] = isHealthy
+	metrics["last_check"] = lastCheckTime
 	metrics["monitoring_enabled"] = rcm.config.RTSPMonitoring.Enabled
 
 	// Connection metrics

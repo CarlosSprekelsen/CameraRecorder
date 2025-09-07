@@ -206,7 +206,7 @@ func NewTestWebSocketServerWithDependencies(
 // NewTestClient creates a test WebSocket client connection
 func NewTestClient(t *testing.T, server *WebSocketServer) *websocket.Conn {
 	// Start server if not running
-	if !server.running {
+	if !server.IsRunning() {
 		err := server.Start()
 		require.NoError(t, err, "Failed to start test server")
 
@@ -287,7 +287,7 @@ func SendTestNotification(t *testing.T, conn *websocket.Conn, notification *Json
 func WaitForServerReady(t *testing.T, server *WebSocketServer, timeout time.Duration) {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if server.running {
+		if server.IsRunning() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -297,7 +297,7 @@ func WaitForServerReady(t *testing.T, server *WebSocketServer, timeout time.Dura
 
 // CleanupTestServer stops and cleans up a test server
 func CleanupTestServer(t *testing.T, server *WebSocketServer) {
-	if server != nil && server.running {
+	if server != nil && server.IsRunning() {
 		err := server.Stop()
 		if err != nil {
 			t.Logf("Warning: Failed to stop test server: %v", err)

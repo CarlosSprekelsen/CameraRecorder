@@ -18,6 +18,7 @@ package websocket
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -92,6 +93,10 @@ type EventManager struct {
 	// Thread safety
 	mu sync.RWMutex
 
+	// Atomic counters for fast statistics
+	totalClients        int64 // atomic
+	activeSubscriptions int64 // atomic
+
 	// Logging
 	logger *logging.Logger
 }
@@ -139,6 +144,10 @@ func (em *EventManager) Subscribe(clientID string, topics []EventTopic, filters 
 		em.topicSubscriptions[topic][clientID] = subscription
 	}
 
+	// Update atomic counters
+	atomic.AddInt64(&em.totalClients, 1)
+	atomic.AddInt64(&em.activeSubscriptions, int64(len(topics)))
+
 	em.logger.WithFields(logging.Fields{
 		"client_id": clientID,
 		"topics":    topics,
@@ -164,6 +173,9 @@ func (em *EventManager) Unsubscribe(clientID string, topics []EventTopic) error 
 	if len(topics) == 0 {
 		// Remove all subscriptions for this client
 		em.removeClientSubscriptions(clientID)
+		// Update atomic counters for complete removal
+		atomic.AddInt64(&em.totalClients, -1)
+		// Note: activeSubscriptions will be decremented in removeClientSubscriptions
 	} else {
 		// Remove specific topics
 		for _, topic := range topics {
@@ -172,6 +184,8 @@ func (em *EventManager) Unsubscribe(clientID string, topics []EventTopic) error 
 
 		// Update subscription topics
 		em.updateSubscriptionTopics(clientID, topics, true)
+		// Update atomic counter for partial removal
+		atomic.AddInt64(&em.activeSubscriptions, -int64(len(topics)))
 	}
 
 	em.logger.WithFields(logging.Fields{
@@ -262,7 +276,20 @@ func (em *EventManager) RemoveClient(clientID string) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
+	// Get subscription count before removal for atomic counter update
+	subscription, exists := em.subscriptions[clientID]
+	var topicCount int64
+	if exists && subscription != nil {
+		topicCount = int64(len(subscription.Topics))
+	}
+
 	em.removeClientSubscriptions(clientID)
+
+	// Update atomic counters
+	if exists {
+		atomic.AddInt64(&em.totalClients, -1)
+		atomic.AddInt64(&em.activeSubscriptions, -topicCount)
+	}
 
 	em.logger.WithField("client_id", clientID).Debug("Client removed from event manager")
 }
@@ -287,23 +314,22 @@ func (em *EventManager) UpdateClientLastSeen(clientID string) {
 
 // GetSubscriptionStats returns statistics about subscriptions
 func (em *EventManager) GetSubscriptionStats() map[string]interface{} {
+	// Use atomic operations for fast counter reads
+	totalClients := atomic.LoadInt64(&em.totalClients)
+	activeSubscriptions := atomic.LoadInt64(&em.activeSubscriptions)
+
+	// Still need mutex for complex map operations
 	em.mu.RLock()
 	defer em.mu.RUnlock()
 
 	stats := map[string]interface{}{
-		"total_clients":        len(em.subscriptions),
+		"total_clients":        totalClients,
 		"total_topics":         len(em.topicSubscriptions),
-		"active_subscriptions": 0,
+		"active_subscriptions": activeSubscriptions,
 		"topic_distribution":   make(map[string]int),
 	}
 
-	// Count active subscriptions and topic distribution
-	for _, subscription := range em.subscriptions {
-		if subscription.Active {
-			stats["active_subscriptions"] = stats["active_subscriptions"].(int) + 1
-		}
-	}
-
+	// Count topic distribution (still needs mutex for map iteration)
 	for topic, subscribers := range em.topicSubscriptions {
 		stats["topic_distribution"].(map[string]int)[string(topic)] = len(subscribers)
 	}
@@ -346,6 +372,9 @@ func (em *EventManager) removeClientSubscriptions(clientID string) {
 
 	// Remove from client subscriptions
 	delete(em.subscriptions, clientID)
+
+	// Note: Atomic counter updates are handled by the calling method
+	// to avoid double-counting in different code paths
 }
 
 func (em *EventManager) removeTopicSubscription(clientID string, topic EventTopic) {

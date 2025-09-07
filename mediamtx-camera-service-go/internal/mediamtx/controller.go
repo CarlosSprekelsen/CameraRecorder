@@ -441,8 +441,8 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 
 	// Simplified error counts - only track basic failure count
 	errorCounts := make(map[string]int64)
-	if failureCount, ok := healthMetrics["failure_count"].(int); ok {
-		errorCounts["health_check"] = int64(failureCount)
+	if failureCount, ok := healthMetrics["failure_count"].(int64); ok {
+		errorCounts["health_check"] = failureCount
 	}
 
 	// Get circuit breaker state - simplified version
@@ -474,7 +474,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	systemMetrics := &SystemMetrics{
 		RequestCount:        0, // Will be populated by WebSocket server
 		ResponseTime:        responseTime,
-		ErrorCount:          int64(healthMetrics["failure_count"].(int)),
+		ErrorCount:          errorCounts["health_check"],
 		ActiveConnections:   int64(activeConnections),
 		ComponentStatus:     componentStatus,
 		ErrorCounts:         errorCounts,

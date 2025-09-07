@@ -729,6 +729,197 @@ func TestRealDeviceInfoParser_ParseDeviceFormats(t *testing.T) {
 		require.Len(t, formats, 1, "Should parse 1 format")
 		require.Equal(t, "VERY_LONG_PIXEL_FORMAT_NAME_THAT_EXCEEDS_NORMAL_LENGTH", formats[0].PixelFormat, "Should handle long format name")
 	})
+
+	// Test 16: Index pattern handling (uncovered path)
+	t.Run("index_pattern_format", func(t *testing.T) {
+		output := `Index : 0
+Name : MJPG
+Size : Discrete 640x480
+fps : 30.000
+
+Index : 1
+Name : YUYV
+Size : 1280x720
+fps : 60.000`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and parse Index pattern
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 2, "Should parse 2 formats")
+
+		// Check first format
+		require.Equal(t, "MJPG", formats[0].PixelFormat, "First format should be MJPG")
+		require.Equal(t, 640, formats[0].Width, "First format width should be 640")
+		require.Equal(t, 480, formats[0].Height, "First format height should be 480")
+		require.Len(t, formats[0].FrameRates, 1, "First format should have 1 frame rate")
+		require.Equal(t, "30.000", formats[0].FrameRates[0], "First format frame rate should be 30.000")
+
+		// Check second format
+		require.Equal(t, "YUYV", formats[1].PixelFormat, "Second format should be YUYV")
+		require.Equal(t, 1280, formats[1].Width, "Second format width should be 1280")
+		require.Equal(t, 720, formats[1].Height, "Second format height should be 720")
+		require.Len(t, formats[1].FrameRates, 1, "Second format should have 1 frame rate")
+		require.Equal(t, "60.000", formats[1].FrameRates[0], "Second format frame rate should be 60.000")
+	})
+
+	// Test 17: Index pattern with invalid size (uncovered path)
+	t.Run("index_pattern_invalid_size", func(t *testing.T) {
+		output := `Index : 0
+Name : MJPG
+Size : invalid_size
+fps : 30.000`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and handle invalid size in Index pattern
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Equal(t, "MJPG", formats[0].PixelFormat, "Format should be MJPG")
+		require.Equal(t, 0, formats[0].Width, "Width should be 0 for invalid size")
+		require.Equal(t, 0, formats[0].Height, "Height should be 0 for invalid size")
+		require.Len(t, formats[0].FrameRates, 1, "Should still parse frame rate")
+		require.Equal(t, "30.000", formats[0].FrameRates[0], "Frame rate should be preserved")
+	})
+
+	// Test 18: Index pattern with empty fps (uncovered path)
+	t.Run("index_pattern_empty_fps", func(t *testing.T) {
+		output := `Index : 0
+Name : MJPG
+Size : Discrete 640x480
+fps : `
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and handle empty fps
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Equal(t, "MJPG", formats[0].PixelFormat, "Format should be MJPG")
+		require.Equal(t, 640, formats[0].Width, "Width should be parsed correctly")
+		require.Equal(t, 480, formats[0].Height, "Height should be parsed correctly")
+		require.Empty(t, formats[0].FrameRates, "Frame rates should be empty for empty fps")
+	})
+
+	// Test 19: Test case pattern with Name and invalid_size (uncovered path)
+	t.Run("test_case_pattern_invalid_size", func(t *testing.T) {
+		output := `Name : YUYV
+Size : invalid_size`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and handle test case pattern
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Equal(t, "YUYV", formats[0].PixelFormat, "Format should be YUYV")
+		require.Equal(t, 0, formats[0].Width, "Width should be 0 for invalid size")
+		require.Equal(t, 0, formats[0].Height, "Height should be 0 for invalid size")
+		require.Empty(t, formats[0].FrameRates, "Frame rates should be empty")
+	})
+
+	// Test 20: Format with malformed interval line (uncovered path)
+	t.Run("format_malformed_interval", func(t *testing.T) {
+		output := `ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: 'MJPG' (Motion-JPEG, compressed)
+		Size: Discrete 640x480
+			Interval: Discrete 0.033s (30.000 fps)
+			Interval: malformed_interval_line
+			Interval: Discrete 0.067s (15.000 fps)`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and skip malformed interval
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Len(t, formats[0].FrameRates, 2, "Should have 2 valid frame rates")
+		require.Equal(t, "30.000", formats[0].FrameRates[0], "First frame rate should be valid")
+		require.Equal(t, "15.000", formats[0].FrameRates[1], "Second frame rate should be valid")
+	})
+
+	// Test 21: Format with interval missing fps (uncovered path)
+	t.Run("format_interval_no_fps", func(t *testing.T) {
+		output := `ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: 'MJPG' (Motion-JPEG, compressed)
+		Size: Discrete 640x480
+			Interval: Discrete 0.033s
+			Interval: Discrete 0.067s (15.000 fps)`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and skip interval without fps
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Len(t, formats[0].FrameRates, 1, "Should have 1 valid frame rate")
+		require.Equal(t, "15.000", formats[0].FrameRates[0], "Should keep valid frame rate")
+	})
+
+	// Test 22: Format with empty fps in interval (uncovered path)
+	t.Run("format_interval_empty_fps", func(t *testing.T) {
+		output := `ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: 'MJPG' (Motion-JPEG, compressed)
+		Size: Discrete 640x480
+			Interval: Discrete 0.033s (30.000 fps)
+			Interval: Discrete 0.067s ()
+			Interval: Discrete 0.100s (10.000 fps)`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and skip empty fps
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 1, "Should parse 1 format")
+		require.Len(t, formats[0].FrameRates, 2, "Should have 2 valid frame rates")
+		require.Equal(t, "30.000", formats[0].FrameRates[0], "First frame rate should be valid")
+		require.Equal(t, "10.000", formats[0].FrameRates[1], "Third frame rate should be valid")
+	})
+
+	// Test 23: Format declaration without quotes (uncovered path)
+	t.Run("format_declaration_no_quotes", func(t *testing.T) {
+		output := `ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: MJPG (Motion-JPEG, compressed)
+		Size: Discrete 640x480
+			Interval: Discrete 0.033s (30.000 fps)`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed but not create format without quotes
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Empty(t, formats, "Should not parse format without quotes")
+	})
+
+	// Test 24: Format with existing width/height before size (uncovered path)
+	t.Run("format_existing_dimensions_before_size", func(t *testing.T) {
+		output := `ioctl: VIDIOC_ENUM_FMT
+	Type: Video Capture
+
+	[0]: 'MJPG' (Motion-JPEG, compressed)
+		Size: Discrete 640x480
+			Interval: Discrete 0.033s (30.000 fps)
+		Size: Discrete 1280x720
+			Interval: Discrete 0.033s (30.000 fps)`
+
+		formats, err := parser.ParseDeviceFormats(output)
+
+		// Should succeed and create separate formats for each size
+		require.NoError(t, err, "ParseDeviceFormats should succeed")
+		require.Len(t, formats, 2, "Should parse 2 formats")
+
+		// First format
+		require.Equal(t, "MJPG", formats[0].PixelFormat, "First format should be MJPG")
+		require.Equal(t, 640, formats[0].Width, "First format should have 640 width")
+		require.Equal(t, 480, formats[0].Height, "First format should have 480 height")
+
+		// Second format
+		require.Equal(t, "MJPG", formats[1].PixelFormat, "Second format should be MJPG")
+		require.Equal(t, 1280, formats[1].Width, "Second format should have 1280 width")
+		require.Equal(t, 720, formats[1].Height, "Second format should have 720 height")
+	})
 }
 
 // TestRealDeviceInfoParser_parseCapabilities tests the deprecated parseCapabilities function
