@@ -618,6 +618,15 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("server.port", 8002)
 	v.SetDefault("server.websocket_path", "/ws")
 	v.SetDefault("server.max_connections", 100)
+	v.SetDefault("server.read_timeout", "5s")
+	v.SetDefault("server.write_timeout", "1s")
+	v.SetDefault("server.ping_interval", "30s")
+	v.SetDefault("server.pong_wait", "60s")
+	v.SetDefault("server.max_message_size", 1048576) // 1MB
+	v.SetDefault("server.read_buffer_size", 1024)
+	v.SetDefault("server.write_buffer_size", 1024)
+	v.SetDefault("server.shutdown_timeout", "30s")
+	v.SetDefault("server.client_cleanup_timeout", "10s")
 
 	// MediaMTX defaults
 	v.SetDefault("mediamtx.host", "127.0.0.1")
@@ -770,8 +779,13 @@ func (cm *ConfigManager) notifyConfigUpdated(oldConfig, newConfig *Config) {
 	// Create error channel for callback panics
 	panicChan := make(chan error, len(cm.updateCallbacks))
 
+	// Create WaitGroup to track callback goroutines
+	var callbackWg sync.WaitGroup
+
 	for _, callback := range cm.updateCallbacks {
+		callbackWg.Add(1)
 		go func(cb func(*Config), config *Config) {
+			defer callbackWg.Done()
 			defer func() {
 				// Recover from panics in goroutine and propagate as errors
 				if r := recover(); r != nil {
@@ -791,7 +805,19 @@ func (cm *ConfigManager) notifyConfigUpdated(oldConfig, newConfig *Config) {
 	}
 
 	// Process any panics that occurred in config callbacks
+	cm.wg.Add(1)
 	go func() {
+		defer cm.wg.Done()
+		// Wait for all callbacks to complete
+		callbackWg.Wait()
+		// Close the panic channel to signal the processing goroutine to exit
+		close(panicChan)
+	}()
+
+	// Process panic errors
+	cm.wg.Add(1)
+	go func() {
+		defer cm.wg.Done()
 		for err := range panicChan {
 			cm.logger.WithError(err).Warn("Config callback panic occurred")
 			// Optionally increment error counters or trigger recovery mechanisms
@@ -803,10 +829,19 @@ func (cm *ConfigManager) notifyConfigUpdated(oldConfig, newConfig *Config) {
 func getDefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Host:           "0.0.0.0",
-			Port:           8002,
-			WebSocketPath:  "/ws",
-			MaxConnections: 100,
+			Host:                 "0.0.0.0",
+			Port:                 8002,
+			WebSocketPath:        "/ws",
+			MaxConnections:       100,
+			ReadTimeout:          5 * time.Second,
+			WriteTimeout:         1 * time.Second,
+			PingInterval:         30 * time.Second,
+			PongWait:             60 * time.Second,
+			MaxMessageSize:       1024 * 1024, // 1MB
+			ReadBufferSize:       1024,
+			WriteBufferSize:      1024,
+			ShutdownTimeout:      30 * time.Second,
+			ClientCleanupTimeout: 10 * time.Second,
 		},
 		MediaMTX: MediaMTXConfig{
 			Host:                                "127.0.0.1",

@@ -1317,8 +1317,20 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 		"action": "start_streaming",
 	}).Info("Starting streaming session")
 
+	// Map camera identifier to device path if needed (camera0 -> /dev/video0)
+	var devicePath string
+	if c.validateCameraIdentifier(device) {
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logging.Fields{
+			"camera_id":   device,
+			"device_path": devicePath,
+		}).Debug("Mapped camera identifier to device path")
+	} else {
+		devicePath = device
+	}
+
 	// Use StreamManager to start viewing stream
-	stream, err := c.streamManager.StartViewingStream(ctx, device)
+	stream, err := c.streamManager.StartViewingStream(ctx, devicePath)
 	if err != nil {
 		c.logger.WithFields(logging.Fields{
 			"device": device,

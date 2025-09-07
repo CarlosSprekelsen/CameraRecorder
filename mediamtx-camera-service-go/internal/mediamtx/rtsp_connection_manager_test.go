@@ -115,7 +115,7 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Test server health first
@@ -140,7 +140,7 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create RTSP connection manager using test utilities
@@ -210,7 +210,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create config manager using test fixture (centralized in test helpers)
@@ -281,17 +281,17 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	
+
 	// Create configuration integration to get MediaMTX config
 	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
-	
+
 	// Customize RTSP monitoring settings (disable to avoid HTTP calls that might hang)
 	mediaMTXConfig.RTSPMonitoring.Enabled = false
 	mediaMTXConfig.RTSPMonitoring.CheckInterval = 15
@@ -398,6 +398,10 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
+	// Use optimized server ready check (single health check, not polling)
+	err := helper.WaitForServerReady(t, 2*time.Second)
+	require.NoError(t, err, "MediaMTX server should be ready")
+
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
 	logger := logging.NewLogger("rtsp-connection-manager-test")
@@ -435,7 +439,7 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Test different configuration scenarios
@@ -527,7 +531,7 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	rtspManager := createTestRTSPManager(t, helper)
@@ -613,7 +617,7 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	rtspManager := createTestRTSPManager(t, helper)
@@ -692,7 +696,7 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	rtspManager := createTestRTSPManager(t, helper)
@@ -741,7 +745,7 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create controller (which includes RTSP manager)

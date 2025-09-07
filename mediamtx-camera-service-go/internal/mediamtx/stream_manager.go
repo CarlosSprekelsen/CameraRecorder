@@ -155,12 +155,14 @@ func (sm *streamManager) validateDevicePath(devicePath string) error {
 		return fmt.Errorf("device path cannot be empty")
 	}
 
-	// Validate device path format - accept both local devices and external RTSP sources
+	// Validate device path format - accept both local devices, external RTSP sources, and abstract camera identifiers
+	// According to architecture: camera identifiers (camera0, camera1) are valid at API abstraction layer
 	if !strings.HasPrefix(devicePath, "/dev/video") &&
 		!strings.HasPrefix(devicePath, "/dev/custom") &&
 		!strings.HasPrefix(devicePath, "rtsp://") &&
-		!strings.HasPrefix(devicePath, "rtmp://") {
-		return fmt.Errorf("invalid device path format: %s. Must be /dev/video<N>, /dev/custom<name>, rtsp://, or rtmp://", devicePath)
+		!strings.HasPrefix(devicePath, "rtmp://") &&
+		!strings.HasPrefix(devicePath, "camera") {
+		return fmt.Errorf("invalid device path format: %s. Must be /dev/video<N>, /dev/custom<name>, rtsp://, rtmp://, or camera<N>", devicePath)
 	}
 
 	return nil

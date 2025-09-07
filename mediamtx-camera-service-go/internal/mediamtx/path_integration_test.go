@@ -37,7 +37,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create REAL config manager (not mock!)
@@ -73,7 +73,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create REAL config manager
@@ -124,7 +124,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create REAL config manager
@@ -166,7 +166,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create REAL config manager
@@ -210,7 +210,7 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create REAL config manager

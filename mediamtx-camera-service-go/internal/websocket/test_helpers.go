@@ -19,10 +19,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
@@ -30,38 +33,85 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// GetFreePort returns a free port for testing
+// GetFreePort returns a free port for testing using port 0 for automatic OS assignment
 func GetFreePort() int {
-	addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	// Use port 0 to let OS assign next available port
+	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return 8002 // fallback
 	}
 
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 8002 // fallback
-	}
-	defer l.Close()
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
 
-	return l.Addr().(*net.TCPAddr).Port
+	// Small delay to ensure port is released
+	time.Sleep(10 * time.Millisecond)
+
+	return port
 }
 
-// NewTestWebSocketServer creates a test WebSocket server with minimal dependencies
+// getTestConfigPath finds the WebSocket test configuration file in fixtures
+func getTestConfigPath(t *testing.T) string {
+	// Start from current directory and walk up to find project root
+	dir, err := os.Getwd()
+	require.NoError(t, err, "Failed to get current directory")
+
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			// Found project root, look for WebSocket test config
+			configPath := filepath.Join(dir, "tests", "fixtures", "config_websocket_test.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				return configPath
+			}
+			break
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root directory
+			break
+		}
+		dir = parent
+	}
+
+	require.Fail(t, "Could not find WebSocket test configuration file in fixtures")
+	return ""
+}
+
+// NewTestWebSocketServer creates a test WebSocket server using fixtures
 func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
-	// Create test configuration
+	// Load test configuration from fixtures
+	configPath := getTestConfigPath(t)
+	configManager := config.CreateConfigManager()
+	err := configManager.LoadConfig(configPath)
+	require.NoError(t, err, "Failed to load test configuration from fixtures")
+
+	// Get free port automatically (port 0 = OS assigns next available)
 	port := GetFreePort()
+
+	// Create server configuration from test config
+	cfg := configManager.GetConfig()
 	config := &ServerConfig{
-		Port:         port,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		PongWait:     60 * time.Second,
+		Host:                 cfg.Server.Host,
+		Port:                 port, // Use dynamically assigned port
+		WebSocketPath:        cfg.Server.WebSocketPath,
+		MaxConnections:       cfg.Server.MaxConnections,
+		ReadTimeout:          cfg.Server.ReadTimeout,
+		WriteTimeout:         cfg.Server.WriteTimeout,
+		PingInterval:         cfg.Server.PingInterval,
+		PongWait:             cfg.Server.PongWait,
+		MaxMessageSize:       cfg.Server.MaxMessageSize,
+		ReadBufferSize:       cfg.Server.ReadBufferSize,
+		WriteBufferSize:      cfg.Server.WriteBufferSize,
+		ShutdownTimeout:      cfg.Server.ShutdownTimeout,
+		ClientCleanupTimeout: cfg.Server.ClientCleanupTimeout,
 	}
 
 	// Create minimal test dependencies
 	logger := logging.NewLogger("websocket-test")
 
 	// Create test JWT handler
-	jwtHandler, err := security.NewJWTHandler("test-secret-key")
+	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
 
 	// Create test permission checker
@@ -85,9 +135,15 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 		clients:           make(map[string]*ClientConnection),
 		methods:           make(map[string]MethodHandler),
 		methodVersions:    make(map[string]string),
-		metrics:           &PerformanceMetrics{},
-		eventHandlers:     make([]func(string, interface{}), 0),
-		stopChan:          make(chan struct{}),
+		metrics: &PerformanceMetrics{
+			RequestCount:      0,
+			ResponseTimes:     make(map[string][]float64),
+			ErrorCount:        0,
+			ActiveConnections: 0,
+			StartTime:         time.Now(),
+		},
+		eventHandlers: make([]func(string, interface{}), 0),
+		stopChan:      make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true // Allow all origins in tests
@@ -95,7 +151,10 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 		},
 	}
 
-	// Register default test methods
+	// Register built-in methods (same as production server)
+	server.registerBuiltinMethods()
+
+	// Register additional test methods for testing
 	server.registerDefaultMethods()
 
 	return server

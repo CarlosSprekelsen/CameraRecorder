@@ -33,7 +33,7 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -65,7 +65,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -134,7 +134,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Use centralized configuration loading from test fixtures
@@ -207,7 +207,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -268,7 +268,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -332,7 +332,7 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -391,7 +391,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Use centralized configuration loading from test fixtures
@@ -506,7 +506,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -550,7 +550,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -626,7 +626,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -696,7 +696,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -773,7 +773,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -845,7 +845,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -935,7 +935,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	// Create config manager using test fixture
@@ -957,7 +957,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	t.Run("Tier2_RTSPImmediate", func(t *testing.T) {
 		// Create a test stream first to enable RTSP capture
 		path := "/tmp/mediamtx_test_data/snapshots/tier2_test.jpg"
-		
+
 		// Take snapshot - this should attempt tier 2 if tier 1 fails
 		options := map[string]interface{}{"quality": 85}
 		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)
@@ -976,7 +976,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	t.Run("Tier3_RTSPActivation", func(t *testing.T) {
 		// This tier requires an active RTSP stream, which might not be available in test environment
 		path := "/tmp/mediamtx_test_data/snapshots/tier3_test.jpg"
-		
+
 		// Take snapshot - this should attempt tier 3 if tiers 1 and 2 fail
 		options := map[string]interface{}{"quality": 85}
 		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)
@@ -994,7 +994,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	// Test Multi-tier fallback behavior
 	t.Run("MultiTierFallback", func(t *testing.T) {
 		path := "/tmp/mediamtx_test_data/snapshots/multitier_test.jpg"
-		
+
 		// This should try all tiers in sequence
 		options := map[string]interface{}{"quality": 85}
 		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)

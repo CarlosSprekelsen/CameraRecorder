@@ -154,9 +154,9 @@ type getStreamsResponse struct {
 
 // getPathsResponse represents the MediaMTX paths response
 type getPathsResponse struct {
-	ItemCount int    `json:"itemCount"`
-	PageCount int    `json:"pageCount"`
-	Items     []Path `json:"items"`
+	ItemCount int                    `json:"itemCount"`
+	PageCount int                    `json:"pageCount"`
+	Items     []MediaMTXPathResponse `json:"items"`
 }
 
 // healthResponse represents the MediaMTX health response
@@ -189,8 +189,15 @@ func parsePathsResponse(data []byte) ([]*Path, error) {
 	}
 
 	paths := make([]*Path, len(response.Items))
-	for i, path := range response.Items {
-		paths[i] = &path
+	for i, item := range response.Items {
+		// Convert MediaMTXPathResponse to Path
+		path := &Path{
+			ID:   item.Name, // Use name as ID
+			Name: item.Name,
+			// Extract source string from complex object
+			Source: extractSourceString(item.Source),
+		}
+		paths[i] = path
 	}
 
 	return paths, nil

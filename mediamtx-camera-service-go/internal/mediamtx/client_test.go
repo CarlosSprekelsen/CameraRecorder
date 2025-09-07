@@ -30,7 +30,7 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -50,7 +50,7 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -76,7 +76,7 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -100,7 +100,7 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -129,7 +129,7 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -152,7 +152,7 @@ func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -170,7 +170,7 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -196,7 +196,7 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -241,7 +241,7 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	client := helper.GetClient()
@@ -284,7 +284,7 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{

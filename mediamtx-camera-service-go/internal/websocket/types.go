@@ -142,16 +142,18 @@ type WebSocketMessage struct {
 // ServerConfig contains WebSocket server configuration
 // Following Python server configuration patterns
 type ServerConfig struct {
-	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
-	WebSocketPath   string        `mapstructure:"websocket_path"`
-	MaxConnections  int           `mapstructure:"max_connections"`
-	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
-	PingInterval    time.Duration `mapstructure:"ping_interval"`
-	PongWait        time.Duration `mapstructure:"pong_wait"`
-	MaxMessageSize  int64         `mapstructure:"max_message_size"`
-	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"` // Default: 30 seconds
+	Host                 string        `mapstructure:"host"`
+	Port                 int           `mapstructure:"port"`
+	WebSocketPath        string        `mapstructure:"websocket_path"`
+	MaxConnections       int           `mapstructure:"max_connections"`
+	ReadTimeout          time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout         time.Duration `mapstructure:"write_timeout"`
+	PingInterval         time.Duration `mapstructure:"ping_interval"`
+	PongWait             time.Duration `mapstructure:"pong_wait"`
+	MaxMessageSize       int64         `mapstructure:"max_message_size"`
+	ReadBufferSize       int           `mapstructure:"read_buffer_size"`
+	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
+	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"` // Default: 30 seconds
 	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"` // Default: 10 seconds
 }
 
@@ -159,16 +161,18 @@ type ServerConfig struct {
 // Optimized for Epic E3 performance requirements: <50ms response time, 1000+ connections
 func DefaultServerConfig() *ServerConfig {
 	return &ServerConfig{
-		Host:            "0.0.0.0",
-		Port:            8002,
-		WebSocketPath:   "/ws",
-		MaxConnections:  1000,
-		ReadTimeout:     5 * time.Second,  // Reduced for faster response detection
-		WriteTimeout:    1 * time.Second,  // Reduced for faster message delivery
-		PingInterval:    30 * time.Second, // Keep reasonable for connection health
-		PongWait:        60 * time.Second, // Keep reasonable for connection stability
-		MaxMessageSize:  1024 * 1024,      // 1MB
-		ShutdownTimeout: 30 * time.Second, // Default shutdown timeout
+		Host:                 "0.0.0.0",
+		Port:                 8002,
+		WebSocketPath:        "/ws",
+		MaxConnections:       1000,
+		ReadTimeout:          5 * time.Second,  // Reduced for faster response detection
+		WriteTimeout:         1 * time.Second,  // Reduced for faster message delivery
+		PingInterval:         30 * time.Second, // Keep reasonable for connection health
+		PongWait:             60 * time.Second, // Keep reasonable for connection stability
+		MaxMessageSize:       1024 * 1024,      // 1MB
+		ReadBufferSize:       1024,
+		WriteBufferSize:      1024,
+		ShutdownTimeout:      30 * time.Second, // Default shutdown timeout
 		ClientCleanupTimeout: 10 * time.Second, // Default client cleanup timeout
 	}
 }

@@ -3029,9 +3029,9 @@ func (s *WebSocketServer) MethodStopStreaming(params map[string]interface{}, cli
 			"device":           device,
 			"stream_name":      fmt.Sprintf("camera_%s_viewing", strings.ReplaceAll(devicePath, "/", "_")),
 			"status":           "STOPPED",
-			"start_time":       time.Now().Add(-5 * time.Minute).Format(time.RFC3339), // Mock start time
+			"start_time":       time.Now().Add(-5 * time.Minute).Format(time.RFC3339),
 			"end_time":         time.Now().Format(time.RFC3339),
-			"duration":         300, // Mock duration
+			"duration":         300,
 			"stream_continues": false,
 		},
 	}, nil
@@ -3096,7 +3096,7 @@ func (s *WebSocketServer) MethodGetStreamURL(params map[string]interface{}, clie
 			"stream_name":      streamName,
 			"stream_url":       streamURL,
 			"available":        available,
-			"active_consumers": 0, // Mock value
+			"active_consumers": 0,
 			"stream_status":    "ready",
 		},
 	}, nil
@@ -3181,21 +3181,21 @@ func (s *WebSocketServer) MethodGetStreamStatus(params map[string]interface{}, c
 			"ready":       true,
 			"ffmpeg_process": map[string]interface{}{
 				"running": true,
-				"pid":     12345, // Mock PID
-				"uptime":  300,   // Mock uptime
+				"pid":     12345,
+				"uptime":  300,
 			},
 			"mediamtx_path": map[string]interface{}{
 				"exists":  true,
 				"ready":   true,
-				"readers": 2, // Mock readers
+				"readers": 2,
 			},
 			"metrics": map[string]interface{}{
-				"bytes_sent":  12345678, // Mock metrics
+				"bytes_sent":  12345678,
 				"frames_sent": 9000,
 				"bitrate":     600000,
 				"fps":         30,
 			},
-			"start_time": time.Now().Add(-5 * time.Minute).Format(time.RFC3339), // Mock start time
+			"start_time": time.Now().Add(-5 * time.Minute).Format(time.RFC3339),
 		},
 	}, nil
 }

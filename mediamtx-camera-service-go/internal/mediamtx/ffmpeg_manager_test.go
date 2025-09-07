@@ -31,7 +31,7 @@ func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -50,7 +50,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -92,7 +92,7 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -134,7 +134,7 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -182,7 +182,7 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -234,7 +234,7 @@ func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -265,7 +265,7 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -308,7 +308,7 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{
@@ -364,7 +364,7 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
+	err := helper.WaitForServerReady(t, 2*time.Second)
 	require.NoError(t, err, "MediaMTX server should be ready")
 
 	config := &MediaMTXConfig{

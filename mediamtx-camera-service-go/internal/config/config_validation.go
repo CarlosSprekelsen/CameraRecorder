@@ -107,6 +107,42 @@ func validateServerConfig(config *ServerConfig) error {
 		return &ValidationError{Field: "server.max_connections", Message: fmt.Sprintf("max connections must be positive, got %d", config.MaxConnections)}
 	}
 
+	if config.ReadTimeout <= 0 {
+		return &ValidationError{Field: "server.read_timeout", Message: fmt.Sprintf("read timeout must be positive, got %v", config.ReadTimeout)}
+	}
+
+	if config.WriteTimeout <= 0 {
+		return &ValidationError{Field: "server.write_timeout", Message: fmt.Sprintf("write timeout must be positive, got %v", config.WriteTimeout)}
+	}
+
+	if config.PingInterval <= 0 {
+		return &ValidationError{Field: "server.ping_interval", Message: fmt.Sprintf("ping interval must be positive, got %v", config.PingInterval)}
+	}
+
+	if config.PongWait <= 0 {
+		return &ValidationError{Field: "server.pong_wait", Message: fmt.Sprintf("pong wait must be positive, got %v", config.PongWait)}
+	}
+
+	if config.MaxMessageSize <= 0 {
+		return &ValidationError{Field: "server.max_message_size", Message: fmt.Sprintf("max message size must be positive, got %d", config.MaxMessageSize)}
+	}
+
+	if config.ReadBufferSize <= 0 {
+		return &ValidationError{Field: "server.read_buffer_size", Message: fmt.Sprintf("read buffer size must be positive, got %d", config.ReadBufferSize)}
+	}
+
+	if config.WriteBufferSize <= 0 {
+		return &ValidationError{Field: "server.write_buffer_size", Message: fmt.Sprintf("write buffer size must be positive, got %d", config.WriteBufferSize)}
+	}
+
+	if config.ShutdownTimeout <= 0 {
+		return &ValidationError{Field: "server.shutdown_timeout", Message: fmt.Sprintf("shutdown timeout must be positive, got %v", config.ShutdownTimeout)}
+	}
+
+	if config.ClientCleanupTimeout <= 0 {
+		return &ValidationError{Field: "server.client_cleanup_timeout", Message: fmt.Sprintf("client cleanup timeout must be positive, got %v", config.ClientCleanupTimeout)}
+	}
+
 	return nil
 }
 

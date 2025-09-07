@@ -53,7 +53,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		return fmt.Errorf("invalid path name: %w", err)
 	}
 
-	if err := pm.validateSource(source); err != nil {
+	if err := pm.validateSource(source, options); err != nil {
 		return fmt.Errorf("invalid source: %w", err)
 	}
 
@@ -264,8 +264,12 @@ func (pm *pathManager) validatePathName(name string) error {
 }
 
 // validateSource validates source format and content
-func (pm *pathManager) validateSource(source string) error {
+func (pm *pathManager) validateSource(source string, options map[string]interface{}) error {
+	// Allow empty source if runOnDemand is specified
 	if source == "" {
+		if runOnDemand, exists := options["runOnDemand"]; exists && runOnDemand != "" {
+			return nil // Empty source is valid when using runOnDemand
+		}
 		return fmt.Errorf("source cannot be empty")
 	}
 

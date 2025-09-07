@@ -101,7 +101,6 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	// Start server
 	err := server.Start()
 	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -196,7 +195,6 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 	// Start server
 	err := server.Start()
 	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)

@@ -18,20 +18,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestWebSocketEvents_EventManagerCreation tests event manager creation
 func TestWebSocketEvents_EventManagerCreation(t *testing.T) {
-	eventManager := NewEventManager(logrus.New())
+	eventManager := NewEventManager(logging.NewLogger("events-test"))
 
 	assert.NotNil(t, eventManager, "Event manager should be created")
 }
 
 // TestWebSocketEvents_EventManagerBasicOperations tests basic event manager operations
 func TestWebSocketEvents_EventManagerBasicOperations(t *testing.T) {
-	eventManager := NewEventManager(logrus.New())
+	eventManager := NewEventManager(logging.NewLogger("events-test"))
 
 	// Test event manager creation
 	assert.NotNil(t, eventManager, "Event manager should be created")

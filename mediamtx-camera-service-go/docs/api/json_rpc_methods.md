@@ -2390,6 +2390,242 @@ func (c *Client) GetServerInfo() (*ServerInfo, error) {
 
 ---
 
+## Event Subscription Methods
+
+### subscribe_events
+Subscribe to real-time event notifications for specific topics.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- topics: array - Array of event topics to subscribe to (required)
+- filters: object - Optional filters for event filtering (optional)
+
+**Returns:** Subscription confirmation with subscribed topics and filters
+
+**Status:** ✅ Implemented
+
+**Implementation:** Manages client subscriptions to event topics through the EventManager with support for topic-based filtering and real-time event delivery.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "subscribe_events",
+  "params": {
+    "topics": ["camera.connected", "recording.start"],
+    "filters": {
+      "device": "camera0"
+    }
+  },
+  "id": 24
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "subscribed": true,
+    "topics": ["camera.connected", "recording.start"],
+    "filters": {
+      "device": "camera0"
+    }
+  },
+  "id": 24
+}
+```
+
+**Go Client Example:**
+```go
+type SubscribeEventsRequest struct {
+    Topics  []string               `json:"topics"`
+    Filters map[string]interface{} `json:"filters,omitempty"`
+}
+
+type SubscribeEventsResponse struct {
+    Subscribed bool                   `json:"subscribed"`
+    Topics     []string               `json:"topics"`
+    Filters    map[string]interface{} `json:"filters,omitempty"`
+}
+
+func (c *Client) SubscribeEvents(topics []string, filters map[string]interface{}) (*SubscribeEventsResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "subscribe_events",
+        Params:  SubscribeEventsRequest{Topics: topics, Filters: filters},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result SubscribeEventsResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### unsubscribe_events
+Unsubscribe from event notifications for specific topics or all topics.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:**
+- topics: array - Array of event topics to unsubscribe from (optional, if not provided unsubscribes from all)
+
+**Returns:** Unsubscription confirmation with unsubscribed topics
+
+**Status:** ✅ Implemented
+
+**Implementation:** Removes client subscriptions from event topics through the EventManager, supporting selective unsubscription or complete unsubscription.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "unsubscribe_events",
+  "params": {
+    "topics": ["camera.connected"]
+  },
+  "id": 25
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "unsubscribed": true,
+    "topics": ["camera.connected"]
+  },
+  "id": 25
+}
+```
+
+**Go Client Example:**
+```go
+type UnsubscribeEventsRequest struct {
+    Topics []string `json:"topics,omitempty"`
+}
+
+type UnsubscribeEventsResponse struct {
+    Unsubscribed bool     `json:"unsubscribed"`
+    Topics       []string `json:"topics"`
+}
+
+func (c *Client) UnsubscribeEvents(topics []string) (*UnsubscribeEventsResponse, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "unsubscribe_events",
+        Params:  UnsubscribeEventsRequest{Topics: topics},
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result UnsubscribeEventsResponse
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### get_subscription_stats
+Get statistics about event subscriptions including global stats and client-specific subscriptions.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:** None
+
+**Returns:** Subscription statistics including global stats and client-specific subscription information
+
+**Status:** ✅ Implemented
+
+**Implementation:** Provides comprehensive subscription statistics through the EventManager including global subscription counts, topic popularity, and client-specific subscription details.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_subscription_stats",
+  "id": 26
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "global_stats": {
+      "total_subscriptions": 15,
+      "active_clients": 3,
+      "topic_counts": {
+        "camera.connected": 2,
+        "recording.start": 1,
+        "recording.stop": 1
+      }
+    },
+    "client_topics": ["camera.connected", "recording.start"],
+    "client_id": "client_123"
+  },
+  "id": 26
+}
+```
+
+**Go Client Example:**
+```go
+type SubscriptionStats struct {
+    GlobalStats  map[string]interface{} `json:"global_stats"`
+    ClientTopics []string               `json:"client_topics"`
+    ClientID     string                 `json:"client_id"`
+}
+
+func (c *Client) GetSubscriptionStats() (*SubscriptionStats, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "get_subscription_stats",
+        ID:      c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result SubscriptionStats
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+**Available Event Topics:**
+- `camera.connected` - Camera device connected
+- `camera.disconnected` - Camera device disconnected
+- `camera.status_change` - Camera status changed
+- `recording.start` - Recording started
+- `recording.stop` - Recording stopped
+- `recording.error` - Recording error occurred
+- `snapshot.taken` - Snapshot captured
+- `system.health` - System health status
+- `system.startup` - System startup event
+- `system.shutdown` - System shutdown event
+
+---
+
 ## HTTP File Download Endpoints
 
 ### GET /files/recordings/{filename}

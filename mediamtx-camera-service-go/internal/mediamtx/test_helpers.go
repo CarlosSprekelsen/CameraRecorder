@@ -138,6 +138,25 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 
 // WaitForServerReady waits for the MediaMTX server to be ready using health check
 func (h *MediaMTXTestHelper) WaitForServerReady(t *testing.T, timeout time.Duration) error {
+	// Performance optimization: Since MediaMTX is already running (systemd service),
+	// we can skip the polling and just do a quick health check
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Single health check instead of polling
+	err := h.client.HealthCheck(ctx)
+	if err != nil {
+		// If health check fails, fall back to original polling behavior
+		t.Logf("Quick health check failed, falling back to polling: %v", err)
+		return h.waitForServerReadyWithPolling(t, timeout)
+	}
+
+	t.Log("MediaMTX server is ready")
+	return nil
+}
+
+// waitForServerReadyWithPolling implements the original polling behavior
+func (h *MediaMTXTestHelper) waitForServerReadyWithPolling(t *testing.T, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 

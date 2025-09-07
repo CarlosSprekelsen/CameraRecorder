@@ -16,9 +16,12 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +29,9 @@ import (
 
 // TestWebSocketMethods_Ping tests ping method
 func TestWebSocketMethods_Ping(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
@@ -37,6 +43,18 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	// Connect client
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
+
+	// Create a test JWT token for authentication using the same secret as the server
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+
+	// First authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
 
 	// Send ping message
 	message := CreateTestMessage("ping", map[string]interface{}{})
@@ -164,7 +182,7 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
 	assert.Nil(t, response.Result, "Response should not have result")
 	assert.NotNil(t, response.Error, "Response should have error")
-	assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Error should be invalid request")
+	assert.Equal(t, METHOD_NOT_FOUND, response.Error.Code, "Error should be method not found")
 }
 
 // TestWebSocketMethods_MissingJSONRPC tests missing JSON-RPC version
@@ -195,7 +213,7 @@ func TestWebSocketMethods_MissingJSONRPC(t *testing.T) {
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
 	assert.Nil(t, response.Result, "Response should not have result")
 	assert.NotNil(t, response.Error, "Response should have error")
-	assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Error should be invalid request")
+	assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Error should be invalid request per JSON-RPC 2.0 spec")
 }
 
 // TestWebSocketMethods_ConcurrentRequests tests concurrent request handling
@@ -208,16 +226,36 @@ func TestWebSocketMethods_ConcurrentRequests(t *testing.T) {
 	require.NoError(t, err, "Server should start successfully")
 	defer CleanupTestServer(t, server)
 
-	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
-
-	// Send multiple concurrent requests
+	// Send multiple concurrent requests using separate connections
 	const numRequests = 10
 	responses := make(chan *JsonRpcResponse, numRequests)
+	errors := make(chan error, numRequests)
 
 	for i := 0; i < numRequests; i++ {
 		go func(requestID int) {
+			// Create separate connection for each goroutine to avoid concurrent write panic
+			conn := NewTestClient(t, server)
+			defer CleanupTestClient(t, conn)
+
+			// Create a test JWT token for authentication
+			jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+			if err != nil {
+				errors <- err
+				return
+			}
+			testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+
+			// First authenticate the client
+			authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+				"auth_token": testToken,
+			})
+			authResponse := SendTestMessage(t, conn, authMessage)
+			if authResponse.Error != nil {
+				errors <- fmt.Errorf("authentication failed: %v", authResponse.Error)
+				return
+			}
+
+			// Send ping message
 			message := CreateTestMessage("ping", map[string]interface{}{"request_id": requestID})
 			response := SendTestMessage(t, conn, message)
 			responses <- response
@@ -226,17 +264,22 @@ func TestWebSocketMethods_ConcurrentRequests(t *testing.T) {
 
 	// Collect all responses
 	receivedResponses := 0
+	receivedErrors := 0
 	for i := 0; i < numRequests; i++ {
 		select {
 		case response := <-responses:
 			assert.Equal(t, "pong", response.Result, "Response should have correct result")
 			receivedResponses++
-		case <-time.After(5 * time.Second):
+		case err := <-errors:
+			t.Errorf("Request failed: %v", err)
+			receivedErrors++
+		case <-time.After(10 * time.Second):
 			t.Fatal("Timeout waiting for concurrent responses")
 		}
 	}
 
 	assert.Equal(t, numRequests, receivedResponses, "Should receive all responses")
+	assert.Equal(t, 0, receivedErrors, "Should have no errors")
 }
 
 // TestWebSocketMethods_LargePayload tests large payload handling

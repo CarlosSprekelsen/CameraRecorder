@@ -19,7 +19,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +26,7 @@ import (
 func TestValidationHelper_Creation(t *testing.T) {
 	logger := logging.NewLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
-	helper := NewValidationHelper(inputValidator, logrus.New())
+	helper := NewValidationHelper(inputValidator, logger)
 
 	assert.NotNil(t, helper, "Validation helper should be created")
 }
@@ -36,7 +35,7 @@ func TestValidationHelper_Creation(t *testing.T) {
 func TestValidationHelper_ValidatePaginationParams(t *testing.T) {
 	logger := logging.NewLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
-	helper := NewValidationHelper(inputValidator, logrus.New())
+	helper := NewValidationHelper(inputValidator, logger)
 
 	// Test valid pagination parameters
 	validParams := map[string]interface{}{

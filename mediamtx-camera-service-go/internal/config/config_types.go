@@ -4,15 +4,19 @@ import "time"
 
 // ServerConfig represents WebSocket server configuration settings.
 type ServerConfig struct {
-	Host           string        `mapstructure:"host"`
-	Port           int           `mapstructure:"port"`
-	WebSocketPath  string        `mapstructure:"websocket_path"`
-	MaxConnections int           `mapstructure:"max_connections"`
-	ReadTimeout    time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout   time.Duration `mapstructure:"write_timeout"`
-	PingInterval   time.Duration `mapstructure:"ping_interval"`
-	PongWait       time.Duration `mapstructure:"pong_wait"`
-	MaxMessageSize int64         `mapstructure:"max_message_size"`
+	Host                 string        `mapstructure:"host"`
+	Port                 int           `mapstructure:"port"`
+	WebSocketPath        string        `mapstructure:"websocket_path"`
+	MaxConnections       int           `mapstructure:"max_connections"`
+	ReadTimeout          time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout         time.Duration `mapstructure:"write_timeout"`
+	PingInterval         time.Duration `mapstructure:"ping_interval"`
+	PongWait             time.Duration `mapstructure:"pong_wait"`
+	MaxMessageSize       int64         `mapstructure:"max_message_size"`
+	ReadBufferSize       int           `mapstructure:"read_buffer_size"`
+	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
+	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`
+	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"`
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
