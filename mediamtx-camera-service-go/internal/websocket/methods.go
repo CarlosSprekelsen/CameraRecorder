@@ -136,7 +136,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 		"method":        name,
 		"handler_type":  fmt.Sprintf("%T", wrappedHandler),
 		"action":        "storing_method",
-	}).Debug("Storing method handler in sync.Map")
+	}).Info("Storing method handler in sync.Map")
 	
 	s.methods.Store(name, wrappedHandler)
 	
@@ -147,7 +147,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 			"stored_type":    fmt.Sprintf("%T", stored),
 			"stored_value":   fmt.Sprintf("%+v", stored),
 			"action":         "verification_success",
-		}).Debug("Method handler stored successfully")
+		}).Info("Method handler stored successfully")
 	} else {
 		s.logger.WithFields(logging.Fields{
 			"method": name,

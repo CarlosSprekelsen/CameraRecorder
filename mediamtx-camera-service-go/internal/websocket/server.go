@@ -897,11 +897,13 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	
 	handlerInterface, exists := s.methods.Load(request.Method)
 	s.logger.WithFields(logging.Fields{
-		"client_id": client.ClientID,
-		"method":    request.Method,
-		"exists":    exists,
-		"action":    "method_lookup_result",
-	}).Debug("Method lookup completed")
+		"client_id":      client.ClientID,
+		"method":         request.Method,
+		"exists":         exists,
+		"handler_type":   fmt.Sprintf("%T", handlerInterface),
+		"handler_value":  fmt.Sprintf("%+v", handlerInterface),
+		"action":         "method_lookup_result",
+	}).Info("Method lookup completed")
 
 	if !exists {
 		s.logger.WithFields(logging.Fields{

@@ -791,29 +791,29 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 	// Test the specific scenarios that were failing in the original tests
 	t.Run("negative_page_number_bug", func(t *testing.T) {
 		// This was failing with: strconv.ParseUint: parsing "-1": invalid syntax
-		// This indicates a bug - the API should handle negative page numbers gracefully
+		// Now it should be properly rejected with clear error message
 		_, err := rtspManager.ListConnections(ctx, -1, 10)
 
-		if err != nil {
-			// This is a BUG - negative page numbers should be handled gracefully
-			t.Errorf("🚨 BUG DETECTED: Negative page number (-1) should be handled gracefully but got error: %v", err)
-			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+		if err == nil {
+			// This is a BUG - negative page numbers should be rejected
+			t.Errorf("🚨 BUG DETECTED: Negative page number (-1) should be rejected but was accepted")
+			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
-			t.Logf("✅ Negative page number handled gracefully (no error)")
+			t.Logf("✅ Negative page number correctly rejected: %v", err)
 		}
 	})
 
 	t.Run("zero_items_per_page_bug", func(t *testing.T) {
 		// This was failing with: invalid items per page
-		// This indicates a bug - the API should handle zero items per page gracefully
+		// Now it should be properly rejected with clear error message
 		_, err := rtspManager.ListConnections(ctx, 0, 0)
 
-		if err != nil {
-			// This is a BUG - zero items per page should be handled gracefully
-			t.Errorf("🚨 BUG DETECTED: Zero items per page should be handled gracefully but got error: %v", err)
-			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+		if err == nil {
+			// This is a BUG - zero items per page should be rejected
+			t.Errorf("🚨 BUG DETECTED: Zero items per page should be rejected but was accepted")
+			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
-			t.Logf("✅ Zero items per page handled gracefully (no error)")
+			t.Logf("✅ Zero items per page correctly rejected: %v", err)
 		}
 	})
 
