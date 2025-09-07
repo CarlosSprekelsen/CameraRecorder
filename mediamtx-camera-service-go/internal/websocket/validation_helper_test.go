@@ -17,14 +17,13 @@ package websocket
 import (
 	"testing"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestValidationHelper_Creation tests validation helper creation
 func TestValidationHelper_Creation(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -33,7 +32,7 @@ func TestValidationHelper_Creation(t *testing.T) {
 
 // TestValidationHelper_ValidatePaginationParams tests pagination parameter validation
 func TestValidationHelper_ValidatePaginationParams(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -90,7 +89,7 @@ func TestValidationHelper_ValidateResult(t *testing.T) {
 
 // TestValidationHelper_ValidateDeviceParameter tests device parameter validation
 func TestValidationHelper_ValidateDeviceParameter(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -129,7 +128,7 @@ func TestValidationHelper_ValidateDeviceParameter(t *testing.T) {
 
 // TestValidationHelper_ValidateFilenameParameter tests filename parameter validation
 func TestValidationHelper_ValidateFilenameParameter(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -168,7 +167,7 @@ func TestValidationHelper_ValidateFilenameParameter(t *testing.T) {
 
 // TestValidationHelper_ValidateRecordingParameters tests recording parameter validation
 func TestValidationHelper_ValidateRecordingParameters(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -224,7 +223,7 @@ func TestValidationHelper_ValidateRecordingParameters(t *testing.T) {
 
 // TestValidationHelper_ValidateSnapshotParameters tests snapshot parameter validation
 func TestValidationHelper_ValidateSnapshotParameters(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -275,7 +274,7 @@ func TestValidationHelper_ValidateSnapshotParameters(t *testing.T) {
 
 // TestValidationHelper_ValidateRetentionPolicyParameters tests retention policy parameter validation
 func TestValidationHelper_ValidateRetentionPolicyParameters(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -350,7 +349,7 @@ func TestValidationHelper_ValidateRetentionPolicyParameters(t *testing.T) {
 
 // TestValidationHelper_CreateValidationErrorResponse tests validation error response creation
 func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 
@@ -369,7 +368,7 @@ func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
 
 // TestValidationHelper_LogValidationWarnings tests validation warning logging
 func TestValidationHelper_LogValidationWarnings(t *testing.T) {
-	logger := logging.NewLogger("test")
+	logger := NewTestLogger("test")
 	inputValidator := security.NewInputValidator(logger, nil)
 	helper := NewValidationHelper(inputValidator, logger)
 

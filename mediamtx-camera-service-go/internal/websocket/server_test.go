@@ -17,6 +17,7 @@ package websocket
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,9 +26,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 )
+
+// TestMain sets up logging configuration for all tests
+func TestMain(m *testing.M) {
+	// Setup logging configuration for all tests
+	setupTestLogging()
+	
+	// Run tests
+	code := m.Run()
+	
+	// Exit with test result code
+	os.Exit(code)
+}
 
 // TestWebSocketServer_Creation tests server creation and initialization
 func TestWebSocketServer_Creation(t *testing.T) {
@@ -178,7 +190,9 @@ func TestWebSocketServer_MethodRegistration(t *testing.T) {
 	}, "1.0")
 
 	// Test method registration
-	_, exists := server.methods.Load(methodName)
+	server.methodsMutex.RLock()
+	_, exists := server.methods[methodName]
+	server.methodsMutex.RUnlock()
 	assert.True(t, exists, "Method should be registered")
 
 	// Test method version
@@ -203,7 +217,7 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 	defer CleanupTestClient(t, conn)
 
 	// Create a test JWT token for authentication
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler")
 	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
 
@@ -333,7 +347,7 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 	assert.Equal(t, numClients, connectionCount, "Should have correct number of client connections")
 
 	// Create a test JWT token for authentication
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler")
 	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
 

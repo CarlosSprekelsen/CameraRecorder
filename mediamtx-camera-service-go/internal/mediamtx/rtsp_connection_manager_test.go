@@ -672,6 +672,7 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 
 // TestRTSPConnectionManager_StressTest tests stress scenarios
 func TestRTSPConnectionManager_StressTest(t *testing.T) {
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -719,33 +720,38 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 
 // TestRTSPConnectionManager_IntegrationWithController tests integration with controller
 func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// Server is ready via shared test helper
 
-	// Create controller (which includes RTSP manager)
-	config := createTestMediaMTXConfig()
+	// Create controller using proper constructor
 	logger := helper.GetLogger()
 	logger.SetLevel(logrus.ErrorLevel)
 
-	// Create a simple client for controller
-	client := helper.GetClient()
-	controller := &controller{
-		client:      client,
-		config:      config,
-		logger:      logger,
-		rtspManager: NewRTSPConnectionManager(client, config, logger),
-	}
+	// Create config manager and controller
+	configManager := config.CreateConfigManager()
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	// Start controller
+	err = controller.Start(context.Background())
+	require.NoError(t, err, "Controller should start successfully")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
 
 	ctx := context.Background()
 
 	// Test controller RTSP methods
-	connections, err := controller.ListRTSPConnections(ctx, 0, 10)
+	connections, err := controller.ListRTSPConnections(ctx, 1, 10)
 	require.NoError(t, err, "Controller ListRTSPConnections should succeed")
 	assert.NotNil(t, connections, "Connections should not be nil")
 
-	sessions, err := controller.ListRTSPSessions(ctx, 0, 10)
+	sessions, err := controller.ListRTSPSessions(ctx, 1, 10)
 	require.NoError(t, err, "Controller ListRTSPSessions should succeed")
 	assert.NotNil(t, sessions, "Sessions should not be nil")
 

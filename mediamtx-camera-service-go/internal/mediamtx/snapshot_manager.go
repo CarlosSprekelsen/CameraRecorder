@@ -57,24 +57,6 @@ type SnapshotSettings struct {
 	Compression int    `json:"compression"` // Compression level
 }
 
-// NewSnapshotManager creates a new snapshot manager
-func NewSnapshotManager(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, logger *logging.Logger) *SnapshotManager {
-	return &SnapshotManager{
-		ffmpegManager: ffmpegManager,
-		streamManager: streamManager,
-		config:        config,
-		logger:        logger,
-		snapshots:     make(map[string]*Snapshot),
-		snapshotSettings: &SnapshotSettings{
-			Format:      "jpg",
-			Quality:     85,
-			MaxWidth:    1920,
-			MaxHeight:   1080,
-			AutoResize:  true,
-			Compression: 6,
-		},
-	}
-}
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
 func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {

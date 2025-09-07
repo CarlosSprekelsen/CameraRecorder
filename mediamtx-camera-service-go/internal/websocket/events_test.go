@@ -20,21 +20,20 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestWebSocketEvents_EventManagerCreation tests event manager creation
 func TestWebSocketEvents_EventManagerCreation(t *testing.T) {
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	assert.NotNil(t, eventManager, "Event manager should be created")
 }
 
 // TestWebSocketEvents_EventManagerBasicOperations tests basic event manager operations
 func TestWebSocketEvents_EventManagerBasicOperations(t *testing.T) {
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test event manager creation
 	assert.NotNil(t, eventManager, "Event manager should be created")
@@ -114,7 +113,7 @@ func TestWebSocketEvents_PublishEventNoSubscribers(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Publish event to topic with no subscribers
 	err := eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
@@ -131,7 +130,7 @@ func TestWebSocketEvents_PublishEventWithSubscribers(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Subscribe client to topic
 	clientID := "test-client"
@@ -154,7 +153,7 @@ func TestWebSocketEvents_GetSubscribersForTopic(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test getting subscribers for topic with no subscribers
 	subscribers := eventManager.GetSubscribersForTopic(TopicCameraConnected)
@@ -176,7 +175,7 @@ func TestWebSocketEvents_RemoveClient(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Subscribe client to multiple topics
 	clientID := "test-client"
@@ -201,7 +200,7 @@ func TestWebSocketEvents_AddEventHandler(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Add event handler
 	handler := func(event *EventMessage) error {
@@ -226,7 +225,7 @@ func TestWebSocketEvents_UpdateClientLastSeen(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Subscribe client
 	clientID := "test-client"
@@ -247,7 +246,7 @@ func TestWebSocketEvents_GetSubscriptionStats(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Get stats with no subscriptions
 	stats := eventManager.GetSubscriptionStats()
@@ -271,7 +270,7 @@ func TestWebSocketEvents_InvalidTopic(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test subscribing to invalid topic
 	clientID := "test-client"
@@ -295,7 +294,7 @@ func TestWebSocketEvents_ConcurrentSubscriptions(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test concurrent subscriptions from multiple clients
 	const numClients = 10
@@ -331,7 +330,7 @@ func TestWebSocketEvents_GetClientSubscriptions(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test getting subscriptions for non-existent client
 	subscriptions := eventManager.GetClientSubscriptions("non-existent-client")
@@ -357,7 +356,7 @@ func TestWebSocketEvents_ApplyFilters(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Subscribe client with filters
 	clientID := "test-client"
@@ -390,8 +389,8 @@ func TestWebSocketEvents_EventIntegrationLayer(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
-	logger := logging.NewLogger("integration-test")
+	eventManager := NewEventManager(NewTestLogger("events-test"))
+	logger := NewTestLogger("integration-test")
 
 	// Test NewEventIntegration
 	integration := NewEventIntegration(eventManager, logger)
@@ -485,7 +484,7 @@ func TestWebSocketEvents_UnsubscribeEdgeCases(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test unsubscribing non-existent client
 	err := eventManager.Unsubscribe("non-existent-client", []EventTopic{TopicCameraConnected})
@@ -521,7 +520,7 @@ func TestWebSocketEvents_PublishEventEdgeCases(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test publishing with nil data - this might expose a bug
 	err := eventManager.PublishEvent(TopicCameraConnected, nil)
@@ -571,7 +570,7 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test client interest with complex filters
 	clientID := "test-client"
@@ -650,7 +649,7 @@ func TestWebSocketEvents_EventHandlersEdgeCases(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test event handler that returns an error - this might expose error handling bugs
 	errorHandler := func(event *EventMessage) error {
@@ -708,8 +707,8 @@ func TestWebSocketEvents_MediaMTXEventNotifier(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
-	logger := logging.NewLogger("mediamtx-test")
+	eventManager := NewEventManager(NewTestLogger("events-test"))
+	logger := NewTestLogger("mediamtx-test")
 
 	// Test NewMediaMTXEventNotifier
 	mediaNotifier := NewMediaMTXEventNotifier(eventManager, logger)
@@ -729,8 +728,8 @@ func TestWebSocketEvents_SystemEventNotifier(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
-	logger := logging.NewLogger("system-test")
+	eventManager := NewEventManager(NewTestLogger("events-test"))
+	logger := NewTestLogger("system-test")
 
 	// Test NewSystemEventNotifier
 	systemNotifier := NewSystemEventNotifier(eventManager, logger)
@@ -751,7 +750,7 @@ func TestWebSocketEvents_EdgeCases(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Test publishing event with nil data
 	err := eventManager.PublishEvent(TopicCameraConnected, nil)
@@ -783,7 +782,7 @@ func TestWebSocketEvents_EventHandlers(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	// Add multiple event handlers for the same topic
 	handler1 := func(event *EventMessage) error {
@@ -812,7 +811,7 @@ func TestWebSocketEvents_SubscriptionManagement(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	eventManager := NewEventManager(logging.NewLogger("events-test"))
+	eventManager := NewEventManager(NewTestLogger("events-test"))
 
 	clientID := "test-client"
 	topics := []EventTopic{TopicCameraConnected, TopicRecordingStart}

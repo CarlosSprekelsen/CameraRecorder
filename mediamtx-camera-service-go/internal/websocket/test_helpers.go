@@ -33,6 +33,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// setupTestLogging configures logging for all tests
+func setupTestLogging() {
+	// Apply the test logging configuration directly without loading config
+	// This prevents the config manager from creating loggers with default settings
+	logging.SetupLogging(&logging.LoggingConfig{
+		Level:          "error",
+		Format:         "json",
+		FileEnabled:    false,
+		ConsoleEnabled: false,
+	})
+}
+
+// getTestConfigPathForSetup gets the test config path for TestMain setup
+func getTestConfigPathForSetup() string {
+	// Start from current directory and walk up to find project root
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			// Found project root, look for WebSocket test config
+			configPath := filepath.Join(dir, "tests", "fixtures", "config_websocket_test.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				return configPath
+			}
+			break
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+
+	return ""
+}
+
+// NewTestLogger creates a logger for tests that uses the global logging configuration
+// This function should only be called after setupTestLogging() has been called
+// For now, we return the global logger to ensure it respects the configuration
+func NewTestLogger(name string) *logging.Logger {
+	// Use the global logger which respects the SetupLogging configuration
+	// This is a workaround for the logging system design issue
+	return logging.GetLogger()
+}
+
 // GetFreePort returns a free port for testing using port 0 for automatic OS assignment
 func GetFreePort() int {
 	// Use port 0 to let OS assign next available port
@@ -108,8 +157,8 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 		ClientCleanupTimeout: cfg.Server.ClientCleanupTimeout,
 	}
 
-	// Create logger
-	logger := logging.NewLogger("websocket-test")
+	// Create logger (logging configuration is set up globally in TestMain)
+	logger := NewTestLogger("websocket-test")
 
 	// Create test JWT handler
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
@@ -319,7 +368,7 @@ func CleanupTestClient(t *testing.T, conn *websocket.Conn) {
 // This eliminates duplication of JWT handler creation across tests
 func AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, role string) {
 	// Use the same secret key as the test configuration to ensure compatibility
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler with correct secret")
 	testToken := security.GenerateTestToken(t, jwtHandler, userID, role)
 

@@ -131,22 +131,24 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 		return response, err
 	}
 
-	// Store method handler in sync.Map (lock-free for reads)
+	// Store method handler in mutex-protected map
 	s.logger.WithFields(logging.Fields{
-		"method":        name,
-		"handler_type":  fmt.Sprintf("%T", wrappedHandler),
-		"action":        "storing_method",
-	}).Info("Storing method handler in sync.Map")
-	
-	s.methods.Store(name, wrappedHandler)
-	
+		"method":       name,
+		"handler_type": fmt.Sprintf("%T", wrappedHandler),
+		"action":       "storing_method",
+	}).Info("Storing method handler in map")
+
+	s.methodsMutex.Lock()
+	s.methods[name] = wrappedHandler
+	s.methodsMutex.Unlock()
+
 	// Verify storage
-	if stored, exists := s.methods.Load(name); exists {
+	s.methodsMutex.RLock()
+	if stored, exists := s.methods[name]; exists {
 		s.logger.WithFields(logging.Fields{
-			"method":         name,
-			"stored_type":    fmt.Sprintf("%T", stored),
-			"stored_value":   fmt.Sprintf("%+v", stored),
-			"action":         "verification_success",
+			"method":      name,
+			"stored_type": fmt.Sprintf("%T", stored),
+			"action":      "verification_success",
 		}).Info("Method handler stored successfully")
 	} else {
 		s.logger.WithFields(logging.Fields{
@@ -154,7 +156,8 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 			"action": "verification_failed",
 		}).Error("Failed to store method handler")
 	}
-	
+	s.methodsMutex.RUnlock()
+
 	// Store method version (still needs mutex for map operations)
 	s.methodVersionsMutex.Lock()
 	s.methodVersions[name] = version

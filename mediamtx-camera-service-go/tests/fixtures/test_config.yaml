@@ -11,11 +11,11 @@ camera:
     poll_interval: 0.1
 logging:
     backup_count: 5
-    console_enabled: true
-    file_enabled: true
+    console_enabled: false
+    file_enabled: false
     file_path: /opt/camera-service/logs/camera-service.log
     format: json
-    level: debug
+    level: error
     max_file_size: 10485760
 mediamtx:
     api_port: 9997

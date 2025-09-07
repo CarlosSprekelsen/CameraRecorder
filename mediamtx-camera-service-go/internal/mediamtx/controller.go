@@ -1476,6 +1476,11 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Validate camera identifier using existing pattern
+	if !c.validateCameraIdentifier(device) {
+		return nil, fmt.Errorf("invalid camera identifier: %s", device)
+	}
+
 	// Generate stream name for viewing use case
 	streamName := c.streamManager.GenerateStreamName(device, UseCaseViewing)
 

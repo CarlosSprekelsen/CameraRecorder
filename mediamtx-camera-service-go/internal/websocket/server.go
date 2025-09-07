@@ -73,9 +73,10 @@ type WebSocketServer struct {
 	clientCounter int64 // Atomic counter for thread-safe client ID generation
 
 	// Method registration
-	methods             sync.Map // map[string]MethodHandler - lock-free reads
+	methods             map[string]MethodHandler
+	methodsMutex        sync.RWMutex
 	methodVersions      map[string]string
-	methodVersionsMutex sync.RWMutex // Still needed for methodVersions map
+	methodVersionsMutex sync.RWMutex
 
 	// Performance metrics
 	metrics      *PerformanceMetrics
@@ -456,7 +457,8 @@ func NewWebSocketServer(
 		clientCounter: 0,
 
 		// Method registration
-		methods:        sync.Map{}, // Initialize sync.Map
+		methods:        make(map[string]MethodHandler),
+		methodsMutex:   sync.RWMutex{},
 		methodVersions: make(map[string]string),
 
 		// Performance metrics
@@ -888,21 +890,23 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}, nil
 	}
 
-	// Find method handler with lock-free lookup
+	// Find method handler with mutex-protected lookup
 	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    request.Method,
 		"action":    "method_lookup",
 	}).Debug("Looking up method handler")
-	
-	handlerInterface, exists := s.methods.Load(request.Method)
+
+	s.methodsMutex.RLock()
+	handler, exists := s.methods[request.Method]
+	s.methodsMutex.RUnlock()
+
 	s.logger.WithFields(logging.Fields{
-		"client_id":      client.ClientID,
-		"method":         request.Method,
-		"exists":         exists,
-		"handler_type":   fmt.Sprintf("%T", handlerInterface),
-		"handler_value":  fmt.Sprintf("%+v", handlerInterface),
-		"action":         "method_lookup_result",
+		"client_id":    client.ClientID,
+		"method":       request.Method,
+		"exists":       exists,
+		"handler_type": fmt.Sprintf("%T", handler),
+		"action":       "method_lookup_result",
 	}).Info("Method lookup completed")
 
 	if !exists {
@@ -929,7 +933,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 			"method":    request.Method,
 			"action":    "permission_check",
 		}).Debug("Checking method permissions")
-		
+
 		if err := s.checkMethodPermissions(client, request.Method); err != nil {
 			s.logger.WithFields(logging.Fields{
 				"client_id": client.ClientID,
@@ -937,7 +941,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 				"error":     err.Error(),
 				"action":    "permission_denied",
 			}).Debug("Permission check failed")
-			
+
 			// Check if client is not authenticated
 			if !client.Authenticated {
 				return &JsonRpcResponse{
@@ -966,35 +970,9 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"method":    request.Method,
-		"action":    "type_assertion",
-	}).Debug("Performing type assertion for method handler")
-	
-	handler, ok := handlerInterface.(MethodHandler)
-	if !ok {
-		s.logger.WithFields(logging.Fields{
-			"client_id":      client.ClientID,
-			"method":         request.Method,
-			"handler_type":   fmt.Sprintf("%T", handlerInterface),
-			"handler_value":  fmt.Sprintf("%+v", handlerInterface),
-			"action":         "type_assertion_failed",
-		}).Error("Type assertion failed for method handler")
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			ID:      request.ID,
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    fmt.Sprintf("Invalid handler type for method %s", request.Method),
-			},
-		}, nil
-	}
-	
-	s.logger.WithFields(logging.Fields{
-		"client_id": client.ClientID,
-		"method":    request.Method,
 		"action":    "calling_handler",
 	}).Debug("Calling method handler")
-	
+
 	response, err := handler(request.Params, client)
 	if err != nil {
 		// Update error metrics with atomic operation
