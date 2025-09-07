@@ -23,6 +23,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // TestWebSocketServer_Creation tests server creation and initialization
@@ -200,6 +203,18 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
+	// Create a test JWT token for authentication
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+
+	// First authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
+
 	// Send ping message
 	message := CreateTestMessage("ping", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
@@ -318,10 +333,27 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 	server.clientsMutex.RUnlock()
 	assert.Equal(t, numClients, connectionCount, "Should have correct number of client connections")
 
+	// Create a test JWT token for authentication
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+
 	// Send messages from all clients concurrently
 	done := make(chan bool, numClients)
 	for i, conn := range connections {
 		go func(conn *websocket.Conn, clientID int) {
+			// First authenticate the client
+			authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+				"auth_token": testToken,
+			})
+			authResponse := SendTestMessage(t, conn, authMessage)
+			if authResponse.Error != nil {
+				t.Errorf("Authentication failed for client %d: %v", clientID, authResponse.Error)
+				done <- true
+				return
+			}
+
+			// Send ping message
 			message := CreateTestMessage("ping", map[string]interface{}{"client_id": clientID})
 			response := SendTestMessage(t, conn, message)
 			assert.Equal(t, "pong", response.Result, "Client should receive pong response")

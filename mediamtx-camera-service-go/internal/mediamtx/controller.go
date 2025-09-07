@@ -73,6 +73,21 @@ func (c *controller) getCameraIdentifierFromDevicePath(devicePath string) string
 	return devicePath
 }
 
+// extractDevicePathFromStreamName extracts the device path from an internal stream name
+// Example: camera0_viewing -> /dev/video0, camera1_snapshot -> /dev/video1
+func (c *controller) extractDevicePathFromStreamName(streamName string) string {
+	// Internal stream name format: camera{N}_{suffix}
+	// Extract the camera{N} part
+	parts := strings.Split(streamName, "_")
+	if len(parts) > 0 && strings.HasPrefix(parts[0], "camera") {
+		cameraID := parts[0]
+		// Convert camera identifier to device path
+		return c.getDevicePathFromCameraIdentifier(cameraID)
+	}
+	// Fallback: return the original stream name
+	return streamName
+}
+
 // getDevicePathFromCameraIdentifier converts a camera identifier to a device path
 // Example: camera0 -> /dev/video0
 func (c *controller) getDevicePathFromCameraIdentifier(cameraID string) string {
@@ -469,7 +484,38 @@ func (c *controller) GetStreams(ctx context.Context) ([]*Stream, error) {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	return c.streamManager.ListStreams(ctx)
+	// Get streams from stream manager (contains internal stream names)
+	streams, err := c.streamManager.ListStreams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert internal stream names to abstract camera identifiers
+	abstractStreams := make([]*Stream, len(streams))
+	for i, stream := range streams {
+		// Extract device path from internal stream name
+		// Internal name format: camera0_viewing, camera1_snapshot, etc.
+		devicePath := c.extractDevicePathFromStreamName(stream.Name)
+
+		// Convert device path to abstract camera identifier
+		abstractID := c.getCameraIdentifierFromDevicePath(devicePath)
+
+		// Create stream with abstract identifier
+		abstractStreams[i] = &Stream{
+			Name:          abstractID, // Return abstract camera identifier
+			URL:           stream.URL,
+			ConfName:      stream.ConfName,
+			Source:        stream.Source,
+			Ready:         stream.Ready,
+			ReadyTime:     stream.ReadyTime,
+			Tracks:        stream.Tracks,
+			BytesReceived: stream.BytesReceived,
+			BytesSent:     stream.BytesSent,
+			Readers:       stream.Readers,
+		}
+	}
+
+	return abstractStreams, nil
 }
 
 // GetStream returns a specific stream
@@ -1339,13 +1385,42 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 		return nil, fmt.Errorf("failed to start streaming: %w", err)
 	}
 
+	// Wait for stream to become ready (FFmpeg startup time for STANAG 4609)
+	ready, err := c.streamManager.WaitForStreamReadiness(ctx, stream.Name, 10*time.Second)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{
+			"device":      device,
+			"stream_name": stream.Name,
+			"error":       err.Error(),
+		}).Warn("Stream readiness check failed, but stream may still be usable")
+	} else if !ready {
+		c.logger.WithFields(logging.Fields{
+			"device":      device,
+			"stream_name": stream.Name,
+		}).Warn("Stream did not become ready within timeout, but stream may still be usable")
+	}
+
+	// Return stream with abstract camera identifier for API consistency
+	abstractStream := &Stream{
+		Name:          device, // Return abstract camera identifier, not internal stream name
+		URL:           stream.URL,
+		ConfName:      stream.ConfName,
+		Source:        stream.Source,
+		Ready:         ready,
+		ReadyTime:     stream.ReadyTime,
+		Tracks:        stream.Tracks,
+		BytesReceived: stream.BytesReceived,
+		BytesSent:     stream.BytesSent,
+		Readers:       stream.Readers,
+	}
+
 	c.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": stream.Name,
-		"stream_url":  stream.URL,
+		"ready":       ready,
 	}).Info("Streaming session started successfully")
 
-	return stream, nil
+	return abstractStream, nil
 }
 
 // StopStreaming stops the streaming session for the specified device
@@ -1415,11 +1490,25 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 		return nil, fmt.Errorf("stream not found or not active: %w", err)
 	}
 
+	// Return stream with abstract camera identifier for API consistency
+	abstractStream := &Stream{
+		Name:          device, // Return abstract camera identifier, not internal stream name
+		URL:           stream.URL,
+		ConfName:      stream.ConfName,
+		Source:        stream.Source,
+		Ready:         stream.Ready,
+		ReadyTime:     stream.ReadyTime,
+		Tracks:        stream.Tracks,
+		BytesReceived: stream.BytesReceived,
+		BytesSent:     stream.BytesSent,
+		Readers:       stream.Readers,
+	}
+
 	c.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": stream.Name,
 		"ready":       stream.Ready,
 	}).Debug("Retrieved stream status")
 
-	return stream, nil
+	return abstractStream, nil
 }

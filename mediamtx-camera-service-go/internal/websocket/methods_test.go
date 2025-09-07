@@ -67,8 +67,11 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	assert.Nil(t, response.Error, "Response should not have error")
 }
 
-// TestWebSocketMethods_Echo tests echo method
-func TestWebSocketMethods_Echo(t *testing.T) {
+// TestWebSocketMethods_GetServerInfo tests get_server_info method
+func TestWebSocketMethods_GetServerInfo(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
@@ -81,24 +84,34 @@ func TestWebSocketMethods_Echo(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Send echo message with parameters
-	testParams := map[string]interface{}{
-		"message": "hello world",
-		"number":  42,
-		"boolean": true,
-	}
-	message := CreateTestMessage("echo", testParams)
+	// Create a test JWT token for authentication using the same secret as the server
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "admin") // admin role for get_server_info
+
+	// First authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
+
+	// Send get_server_info message
+	message := CreateTestMessage("get_server_info", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
 
 	// Test response
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.Equal(t, testParams, response.Result, "Response should echo parameters")
+	assert.NotNil(t, response.Result, "Response should have result")
 	assert.Nil(t, response.Error, "Response should not have error")
 }
 
-// TestWebSocketMethods_Error tests error method
-func TestWebSocketMethods_Error(t *testing.T) {
+// TestWebSocketMethods_GetStatus tests get_status method
+func TestWebSocketMethods_GetStatus(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
@@ -111,17 +124,27 @@ func TestWebSocketMethods_Error(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Send error message
-	message := CreateTestMessage("error", map[string]interface{}{})
+	// Create a test JWT token for authentication using the same secret as the server
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "admin") // admin role for get_status
+
+	// First authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
+
+	// Send get_status message
+	message := CreateTestMessage("get_status", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
 
-	// Test error response
+	// Test response
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.Nil(t, response.Result, "Response should not have result")
-	assert.NotNil(t, response.Error, "Response should have error")
-	assert.Equal(t, INTERNAL_ERROR, response.Error.Code, "Error should be internal error")
-	assert.Equal(t, "Test error", response.Error.Message, "Error should have correct message")
+	assert.NotNil(t, response.Result, "Response should have result")
+	assert.Nil(t, response.Error, "Response should not have error")
 }
 
 // TestWebSocketMethods_InvalidJSON tests invalid JSON handling
@@ -302,8 +325,20 @@ func TestWebSocketMethods_LargePayload(t *testing.T) {
 		largeData[i] = "This is a large string to test payload handling"
 	}
 
-	// Send echo message with large payload
-	message := CreateTestMessage("echo", map[string]interface{}{"large_data": largeData})
+	// Create a test JWT token for authentication
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler")
+	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+
+	// First authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
+
+	// Send get_server_info message (testing method execution)
+	message := CreateTestMessage("get_server_info", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
 
 	// Test response

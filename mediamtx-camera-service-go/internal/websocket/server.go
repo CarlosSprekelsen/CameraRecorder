@@ -813,7 +813,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 
 	// Validate JSON-RPC version
 	if request.JSONRPC != "2.0" {
-		s.sendErrorResponse(conn, request.ID, INVALID_PARAMS, "Invalid JSON-RPC version")
+		s.sendErrorResponse(conn, request.ID, INVALID_REQUEST, "Invalid JSON-RPC version")
 		return
 	}
 

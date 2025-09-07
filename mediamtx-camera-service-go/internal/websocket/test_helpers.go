@@ -154,9 +154,6 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	// Register built-in methods (same as production server)
 	server.registerBuiltinMethods()
 
-	// Register additional test methods for testing
-	server.registerDefaultMethods()
-
 	return server
 }
 

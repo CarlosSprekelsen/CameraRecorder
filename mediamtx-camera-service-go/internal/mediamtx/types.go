@@ -447,6 +447,9 @@ type StreamManager interface {
 	GenerateStreamName(devicePath string, useCase StreamUseCase) string
 	GenerateStreamURL(streamName string) string
 
+	// Stream readiness management
+	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)
+
 	// Legacy stream operations (for backward compatibility)
 	CreateStream(ctx context.Context, name, source string) (*Stream, error)
 	DeleteStream(ctx context.Context, id string) error

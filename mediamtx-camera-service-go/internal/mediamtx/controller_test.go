@@ -741,9 +741,9 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	require.NotNil(t, stream, "Stream should not be nil")
 
 	// Verify stream properties
-	assert.NotEmpty(t, stream.Name, "Stream name should not be empty")
+	assert.Equal(t, device, stream.Name, "Stream name should be the abstract camera identifier")
 	assert.NotEmpty(t, stream.URL, "Stream URL should not be empty")
-	assert.False(t, stream.Ready, "Stream should not be ready until accessed (on-demand behavior)")
+	assert.True(t, stream.Ready, "Stream should be ready after FFmpeg startup (abstraction layer handles timing)")
 
 	// Test getting stream status
 	status, err := controller.GetStreamStatus(ctx, device)
@@ -757,7 +757,7 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	assert.NotEmpty(t, streamURL, "Stream URL should not be empty")
 
 	// Stop the stream
-	err = controller.StopStreaming(ctx, stream.Name)
+	err = controller.StopStreaming(ctx, device)
 	require.NoError(t, err, "Stream should stop successfully")
 
 	t.Log("✅ Stream recording functionality working correctly")
