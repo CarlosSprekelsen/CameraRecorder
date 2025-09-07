@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -721,7 +722,7 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 			stack := make([]byte, 4096)
 			length := runtime.Stack(stack, false)
 			stackTrace := string(stack[:length])
-			
+
 			panicErr := fmt.Errorf("panic in client connection handler for client %s: %v", client.ClientID, r)
 			s.logger.WithFields(logging.Fields{
 				"client_id":   client.ClientID,
@@ -888,9 +889,26 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Find method handler with lock-free lookup
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    request.Method,
+		"action":    "method_lookup",
+	}).Debug("Looking up method handler")
+	
 	handlerInterface, exists := s.methods.Load(request.Method)
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    request.Method,
+		"exists":    exists,
+		"action":    "method_lookup_result",
+	}).Debug("Method lookup completed")
 
 	if !exists {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    request.Method,
+			"action":    "method_not_found",
+		}).Debug("Method not found")
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
@@ -904,7 +922,20 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	// Security extensions: Permission check (Phase 1 enhancement)
 	// Skip permission check for authenticate method
 	if request.Method != "authenticate" {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    request.Method,
+			"action":    "permission_check",
+		}).Debug("Checking method permissions")
+		
 		if err := s.checkMethodPermissions(client, request.Method); err != nil {
+			s.logger.WithFields(logging.Fields{
+				"client_id": client.ClientID,
+				"method":    request.Method,
+				"error":     err.Error(),
+				"action":    "permission_denied",
+			}).Debug("Permission check failed")
+			
 			// Check if client is not authenticated
 			if !client.Authenticated {
 				return &JsonRpcResponse{
@@ -930,7 +961,38 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Call method handler
-	handler := handlerInterface.(MethodHandler)
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    request.Method,
+		"action":    "type_assertion",
+	}).Debug("Performing type assertion for method handler")
+	
+	handler, ok := handlerInterface.(MethodHandler)
+	if !ok {
+		s.logger.WithFields(logging.Fields{
+			"client_id":      client.ClientID,
+			"method":         request.Method,
+			"handler_type":   fmt.Sprintf("%T", handlerInterface),
+			"handler_value":  fmt.Sprintf("%+v", handlerInterface),
+			"action":         "type_assertion_failed",
+		}).Error("Type assertion failed for method handler")
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			ID:      request.ID,
+			Error: &JsonRpcError{
+				Code:    INTERNAL_ERROR,
+				Message: ErrorMessages[INTERNAL_ERROR],
+				Data:    fmt.Sprintf("Invalid handler type for method %s", request.Method),
+			},
+		}, nil
+	}
+	
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    request.Method,
+		"action":    "calling_handler",
+	}).Debug("Calling method handler")
+	
 	response, err := handler(request.Params, client)
 	if err != nil {
 		// Update error metrics with atomic operation

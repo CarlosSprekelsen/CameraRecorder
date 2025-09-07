@@ -776,35 +776,35 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 		},
 		{
 			Name:        "json_with_extra_fields",
-			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "extra_field": "should_be_ignored", "another_extra": 123}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "extra_field": "should_be_ignored", "another_extra": 123}`),
 			ExpectError: false, // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 		{
 			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "unicode": "test\u0000null\u0000byte"}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "unicode": "test\u0000null\u0000byte"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with Unicode issues should be handled gracefully",
 		},
 		{
 			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(fmt.Sprintf(`{"name": "test_stream", "source": "rtsp://test", "large_string": "%s"}`, strings.Repeat("x", 1000000))),
+			JSONData:    []byte(fmt.Sprintf(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "large_string": "%s"}`, strings.Repeat("x", 1000000))),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with very large strings should be handled gracefully",
 		},
 		{
 			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with deeply nested objects should be handled gracefully",
 		},
 		{
 			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"name": "test_stream", "source": "rtsp://test", "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with special characters should be handled gracefully",
