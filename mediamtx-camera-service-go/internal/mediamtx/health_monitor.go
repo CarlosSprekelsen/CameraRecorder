@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -30,11 +31,13 @@ type SimpleHealthMonitor struct {
 	config *MediaMTXConfig
 	logger *logging.Logger
 
-	// Simple state: just healthy or not
-	isHealthy     bool
-	failureCount  int
-	lastCheckTime time.Time
-	mu            sync.RWMutex
+	// Atomic state: optimized for high-frequency reads
+	isHealthy     int32 // 0 = false, 1 = true
+	failureCount  int64 // Atomic counter
+	lastCheckTime int64 // Atomic timestamp (UnixNano)
+	
+	// Keep mutex only for complex operations that need consistency
+	mu sync.RWMutex
 
 	// Control
 	stopChan chan struct{}
@@ -44,12 +47,13 @@ type SimpleHealthMonitor struct {
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
 func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
-		client:       client,
-		config:       config,
-		logger:       logger,
-		isHealthy:    true, // Assume healthy initially
-		failureCount: 0,
-		stopChan:     make(chan struct{}, 1),
+		client:        client,
+		config:        config,
+		logger:        logger,
+		isHealthy:     1, // Assume healthy initially (1 = true)
+		failureCount:  0,
+		lastCheckTime: time.Now().UnixNano(),
+		stopChan:      make(chan struct{}, 1),
 	}
 }
 
@@ -111,42 +115,40 @@ func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
 
 	err := h.client.HealthCheck(ctx)
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.lastCheckTime = time.Now()
+	// Update timestamp atomically
+	atomic.StoreInt64(&h.lastCheckTime, time.Now().UnixNano())
 
 	if err != nil {
-		h.failureCount++
+		// Increment failure count atomically
+		failures := atomic.AddInt64(&h.failureCount, 1)
 		h.logger.WithError(err).Debug("Health check failed")
 
 		// Simple threshold: 3 failures = unhealthy (or use configured threshold)
-		threshold := 3
+		threshold := int64(3)
 		if h.config.HealthFailureThreshold > 0 {
-			threshold = h.config.HealthFailureThreshold
+			threshold = int64(h.config.HealthFailureThreshold)
 		}
 
-		if h.failureCount >= threshold {
-			if h.isHealthy {
+		if failures >= threshold {
+			// Use atomic compare-and-swap to set unhealthy
+			if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 				h.logger.Warn("MediaMTX service marked as unhealthy")
-				h.isHealthy = false
 			}
 		}
 	} else {
-		// Success - reset everything
-		if !h.isHealthy {
+		// Success - reset everything atomically
+		currentHealthy := atomic.LoadInt32(&h.isHealthy)
+		if currentHealthy == 0 {
 			h.logger.Info("MediaMTX service recovered")
 		}
-		h.isHealthy = true
-		h.failureCount = 0
+		atomic.StoreInt32(&h.isHealthy, 1)
+		atomic.StoreInt64(&h.failureCount, 0)
 	}
 }
 
 // IsHealthy returns true if the service is healthy
 func (h *SimpleHealthMonitor) IsHealthy() bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.isHealthy
+	return atomic.LoadInt32(&h.isHealthy) == 1
 }
 
 // IsCircuitOpen returns true if the circuit breaker is open (unhealthy)
@@ -156,66 +158,68 @@ func (h *SimpleHealthMonitor) IsCircuitOpen() bool {
 
 // GetStatus returns the current health status
 func (h *SimpleHealthMonitor) GetStatus() HealthStatus {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	// Read all atomic values
+	isHealthy := atomic.LoadInt32(&h.isHealthy) == 1
+	failureCount := atomic.LoadInt64(&h.failureCount)
+	lastCheckNano := atomic.LoadInt64(&h.lastCheckTime)
+	lastCheckTime := time.Unix(0, lastCheckNano)
 
 	status := "healthy"
-	if !h.isHealthy {
+	if !isHealthy {
 		status = "unhealthy"
 	}
 
 	return HealthStatus{
 		Status:              status,
-		Timestamp:           h.lastCheckTime,
-		Details:             fmt.Sprintf("Failure count: %d", h.failureCount),
-		ErrorCount:          int64(h.failureCount),
-		LastCheck:           h.lastCheckTime,
+		Timestamp:           lastCheckTime,
+		Details:             fmt.Sprintf("Failure count: %d", failureCount),
+		ErrorCount:          failureCount,
+		LastCheck:           lastCheckTime,
 		CircuitBreakerState: status,
 	}
 }
 
 // GetMetrics returns current health metrics
 func (h *SimpleHealthMonitor) GetMetrics() map[string]interface{} {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	// Read all atomic values
+	isHealthy := atomic.LoadInt32(&h.isHealthy) == 1
+	failureCount := atomic.LoadInt64(&h.failureCount)
+	lastCheckNano := atomic.LoadInt64(&h.lastCheckTime)
+	lastCheckTime := time.Unix(0, lastCheckNano)
 
 	return map[string]interface{}{
-		"is_healthy":    h.isHealthy,
-		"failure_count": h.failureCount,
-		"last_check":    h.lastCheckTime,
+		"is_healthy":    isHealthy,
+		"failure_count": failureCount,
+		"last_check":    lastCheckTime,
 		"status":        h.GetStatus().Status,
 	}
 }
 
 // RecordSuccess records a successful operation
 func (h *SimpleHealthMonitor) RecordSuccess() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if !h.isHealthy {
+	currentHealthy := atomic.LoadInt32(&h.isHealthy)
+	if currentHealthy == 0 {
 		h.logger.Info("Service recovered through success recording")
-		h.isHealthy = true
+		atomic.StoreInt32(&h.isHealthy, 1)
 	}
-	h.failureCount = 0
+	atomic.StoreInt64(&h.failureCount, 0)
 }
 
 // RecordFailure records a failed operation
 func (h *SimpleHealthMonitor) RecordFailure() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.failureCount++
+	// Increment failure count atomically
+	failures := atomic.AddInt64(&h.failureCount, 1)
 
 	// Simple threshold: 3 failures = unhealthy (or use configured threshold)
-	threshold := 3
+	threshold := int64(3)
 	if h.config.HealthFailureThreshold > 0 {
-		threshold = h.config.HealthFailureThreshold
+		threshold = int64(h.config.HealthFailureThreshold)
 	}
 
-	if h.failureCount >= threshold {
-		if h.isHealthy {
+	if failures >= threshold {
+		// Use atomic compare-and-swap to set unhealthy
+		if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 			h.logger.Warn("Service marked as unhealthy due to failure threshold")
-			h.isHealthy = false
 		}
 	}
 }

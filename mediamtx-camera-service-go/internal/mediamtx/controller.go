@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -41,7 +42,7 @@ type controller struct {
 
 	// State management
 	mu        sync.RWMutex
-	isRunning bool
+	isRunning int32 // Use int32 for atomic operations (0 = false, 1 = true)
 	startTime time.Time
 
 	// Recording sessions
@@ -51,6 +52,12 @@ type controller struct {
 	// Active recording tracking (Phase 2 enhancement)
 	activeRecordings map[string]*ActiveRecording
 	recordingMutex   sync.RWMutex
+}
+
+// Race condition protection helper
+// checkRunningState safely checks if the controller is running using atomic operations
+func (c *controller) checkRunningState() bool {
+	return atomic.LoadInt32(&c.isRunning) == 1
 }
 
 // Abstraction layer mapping functions
@@ -291,7 +298,7 @@ func (c *controller) Start(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.isRunning {
+	if atomic.LoadInt32(&c.isRunning) == 1 {
 		return fmt.Errorf("controller is already running")
 	}
 
@@ -302,7 +309,7 @@ func (c *controller) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start health monitor: %w", err)
 	}
 
-	c.isRunning = true
+	atomic.StoreInt32(&c.isRunning, 1)
 	c.startTime = time.Now()
 
 	c.logger.Info("MediaMTX controller started successfully")
@@ -314,7 +321,7 @@ func (c *controller) Stop(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -342,7 +349,7 @@ func (c *controller) Stop(ctx context.Context) error {
 		c.logger.WithError(err).Error("Failed to close HTTP client")
 	}
 
-	c.isRunning = false
+	atomic.StoreInt32(&c.isRunning, 0)
 
 	c.logger.Info("MediaMTX controller stopped successfully")
 	return nil
@@ -350,7 +357,7 @@ func (c *controller) Stop(ctx context.Context) error {
 
 // GetHealth returns the current health status
 func (c *controller) GetHealth(ctx context.Context) (*HealthStatus, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -360,7 +367,7 @@ func (c *controller) GetHealth(ctx context.Context) (*HealthStatus, error) {
 
 // GetMetrics returns the current metrics
 func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -404,7 +411,7 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 // GetSystemMetrics returns comprehensive system performance metrics
 // Following Python PerformanceMetrics.get_metrics() implementation
 func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -480,7 +487,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 
 // GetStreams returns all streams
 func (c *controller) GetStreams(ctx context.Context) ([]*Stream, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -520,7 +527,7 @@ func (c *controller) GetStreams(ctx context.Context) ([]*Stream, error) {
 
 // GetStream returns a specific stream
 func (c *controller) GetStream(ctx context.Context, id string) (*Stream, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -529,7 +536,7 @@ func (c *controller) GetStream(ctx context.Context, id string) (*Stream, error) 
 
 // CreateStream creates a new stream
 func (c *controller) CreateStream(ctx context.Context, name, source string) (*Stream, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -538,7 +545,7 @@ func (c *controller) CreateStream(ctx context.Context, name, source string) (*St
 
 // DeleteStream deletes a stream
 func (c *controller) DeleteStream(ctx context.Context, id string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -547,7 +554,7 @@ func (c *controller) DeleteStream(ctx context.Context, id string) error {
 
 // GetPaths returns all paths
 func (c *controller) GetPaths(ctx context.Context) ([]*Path, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -556,7 +563,7 @@ func (c *controller) GetPaths(ctx context.Context) ([]*Path, error) {
 
 // GetPath returns a specific path
 func (c *controller) GetPath(ctx context.Context, name string) (*Path, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -565,7 +572,7 @@ func (c *controller) GetPath(ctx context.Context, name string) (*Path, error) {
 
 // CreatePath creates a new path
 func (c *controller) CreatePath(ctx context.Context, path *Path) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -611,7 +618,7 @@ func (c *controller) CreatePath(ctx context.Context, path *Path) error {
 
 // DeletePath deletes a path
 func (c *controller) DeletePath(ctx context.Context, name string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -620,7 +627,7 @@ func (c *controller) DeletePath(ctx context.Context, name string) error {
 
 // StartRecording starts a recording session
 func (c *controller) StartRecording(ctx context.Context, device, path string) (*RecordingSession, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -712,7 +719,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 
 // StopRecording stops a recording session
 func (c *controller) StopRecording(ctx context.Context, sessionID string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -780,7 +787,7 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 
 // GetConfig returns the current configuration
 func (c *controller) GetConfig(ctx context.Context) (*MediaMTXConfig, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -789,7 +796,7 @@ func (c *controller) GetConfig(ctx context.Context) (*MediaMTXConfig, error) {
 
 // UpdateConfig updates the configuration
 func (c *controller) UpdateConfig(ctx context.Context, config *MediaMTXConfig) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -910,7 +917,7 @@ func generateSnapshotPath(device, snapshotID string) string {
 
 // StartAdvancedRecording starts a recording with advanced features and full state management
 func (c *controller) StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -981,7 +988,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 
 // StopAdvancedRecording stops a recording with advanced features and state persistence
 func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1066,7 +1073,7 @@ func (c *controller) ListAdvancedRecordingSessions() []*RecordingSession {
 
 // RotateRecordingFile rotates a recording file
 func (c *controller) RotateRecordingFile(ctx context.Context, sessionID string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1075,7 +1082,7 @@ func (c *controller) RotateRecordingFile(ctx context.Context, sessionID string) 
 
 // TakeAdvancedSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
 func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1142,7 +1149,7 @@ func (c *controller) ListAdvancedSnapshots() []*Snapshot {
 
 // DeleteAdvancedSnapshot deletes a snapshot
 func (c *controller) DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1161,7 +1168,7 @@ func (c *controller) UpdateSnapshotSettings(settings *SnapshotSettings) {
 
 // GetRecordingStatus gets the status of a recording session
 func (c *controller) GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1186,7 +1193,7 @@ func (c *controller) GetRecordingStatus(ctx context.Context, sessionID string) (
 
 // ListRecordings lists recording files with metadata and pagination
 func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1200,7 +1207,7 @@ func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*Fi
 
 // ListSnapshots lists snapshot files with metadata and pagination
 func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1214,7 +1221,7 @@ func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*Fil
 
 // GetRecordingInfo gets detailed information about a specific recording file
 func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1225,7 +1232,7 @@ func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*Fi
 
 // GetSnapshotInfo gets detailed information about a specific snapshot file
 func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1236,7 +1243,7 @@ func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*Fil
 
 // DeleteRecording deletes a recording file
 func (c *controller) DeleteRecording(ctx context.Context, filename string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1247,7 +1254,7 @@ func (c *controller) DeleteRecording(ctx context.Context, filename string) error
 
 // DeleteSnapshot deletes a snapshot file
 func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1273,7 +1280,7 @@ func (c *controller) GetSessionIDByDevice(device string) (string, bool) {
 
 // ListRTSPConnections lists all RTSP connections
 func (c *controller) ListRTSPConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1287,7 +1294,7 @@ func (c *controller) ListRTSPConnections(ctx context.Context, page, itemsPerPage
 
 // GetRTSPConnection gets a specific RTSP connection by ID
 func (c *controller) GetRTSPConnection(ctx context.Context, id string) (*RTSPConnection, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1298,7 +1305,7 @@ func (c *controller) GetRTSPConnection(ctx context.Context, id string) (*RTSPCon
 
 // ListRTSPSessions lists all RTSP sessions
 func (c *controller) ListRTSPSessions(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionSessionList, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1312,7 +1319,7 @@ func (c *controller) ListRTSPSessions(ctx context.Context, page, itemsPerPage in
 
 // GetRTSPSession gets a specific RTSP session by ID
 func (c *controller) GetRTSPSession(ctx context.Context, id string) (*RTSPConnectionSession, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1323,7 +1330,7 @@ func (c *controller) GetRTSPSession(ctx context.Context, id string) (*RTSPConnec
 
 // KickRTSPSession kicks out an RTSP session from the server
 func (c *controller) KickRTSPSession(ctx context.Context, id string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1334,7 +1341,7 @@ func (c *controller) KickRTSPSession(ctx context.Context, id string) error {
 
 // GetRTSPConnectionHealth returns the health status of RTSP connections
 func (c *controller) GetRTSPConnectionHealth(ctx context.Context) (*HealthStatus, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1343,7 +1350,7 @@ func (c *controller) GetRTSPConnectionHealth(ctx context.Context) (*HealthStatus
 
 // GetRTSPConnectionMetrics returns metrics about RTSP connections
 func (c *controller) GetRTSPConnectionMetrics(ctx context.Context) map[string]interface{} {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return map[string]interface{}{
 			"error": "controller is not running",
 		}
@@ -1354,7 +1361,7 @@ func (c *controller) GetRTSPConnectionMetrics(ctx context.Context) map[string]in
 
 // StartStreaming starts a live streaming session for the specified device
 func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
@@ -1418,7 +1425,7 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 
 // StopStreaming stops the streaming session for the specified device
 func (c *controller) StopStreaming(ctx context.Context, device string) error {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
@@ -1446,7 +1453,7 @@ func (c *controller) StopStreaming(ctx context.Context, device string) error {
 
 // GetStreamURL returns the stream URL for the specified device
 func (c *controller) GetStreamURL(ctx context.Context, device string) (string, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return "", fmt.Errorf("controller is not running")
 	}
 
@@ -1465,7 +1472,7 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (string, e
 
 // GetStreamStatus returns the status of the streaming session for the specified device
 func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Stream, error) {
-	if !c.isRunning {
+	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 

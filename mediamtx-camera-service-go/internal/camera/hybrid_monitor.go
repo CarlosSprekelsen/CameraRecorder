@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -76,8 +77,8 @@ type HybridCameraMonitor struct {
 	// Mutex for thread safety
 	stateLock sync.RWMutex
 
-	// Running state
-	running bool
+	// Running state - using atomic operations
+	running int32
 
 	// Event handlers mutex
 	eventHandlersLock sync.RWMutex
@@ -85,8 +86,8 @@ type HybridCameraMonitor struct {
 	// Cache mutex
 	cacheMutex sync.RWMutex
 
-	// Polling failure count
-	pollingFailureCount int
+	// Polling failure count - using atomic operations
+	pollingFailureCount int64
 
 	// Event system integration
 	eventNotifier EventNotifier
@@ -254,7 +255,7 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 
 	// Update adaptive polling base values
 	m.basePollInterval = newConfig.Camera.PollInterval
-	if !m.running {
+	if atomic.LoadInt32(&m.running) == 0 {
 		// If not running, update current interval immediately
 		m.currentPollInterval = newConfig.Camera.PollInterval
 	}
@@ -293,13 +294,12 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stateLock.Lock()
 	defer m.stateLock.Unlock()
 
-	if m.running {
+	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
 		return fmt.Errorf("monitor is already running")
 	}
 
-	m.running = true
 	m.stats.Running = true
-	m.stats.ActiveTasks++
+	atomic.AddInt64(&m.stats.ActiveTasks, 1)
 
 	m.logger.WithFields(logging.Fields{
 		"poll_interval": m.pollInterval,
@@ -318,13 +318,13 @@ func (m *HybridCameraMonitor) Stop() error {
 	m.stateLock.Lock()
 	defer m.stateLock.Unlock()
 
-	if !m.running {
+	if atomic.LoadInt32(&m.running) == 0 {
 		return fmt.Errorf("monitor is not running")
 	}
 
-	m.running = false
+	atomic.StoreInt32(&m.running, 0)
 	m.stats.Running = false
-	m.stats.ActiveTasks--
+	atomic.AddInt64(&m.stats.ActiveTasks, -1)
 
 	// Only close the channel if it hasn't been closed already
 	select {
@@ -343,9 +343,7 @@ func (m *HybridCameraMonitor) Stop() error {
 
 // IsRunning returns whether the monitor is currently running
 func (m *HybridCameraMonitor) IsRunning() bool {
-	m.stateLock.RLock()
-	defer m.stateLock.RUnlock()
-	return m.running
+	return atomic.LoadInt32(&m.running) == 1
 }
 
 // GetConnectedCameras returns all currently connected cameras
@@ -374,25 +372,22 @@ func (m *HybridCameraMonitor) GetDevice(devicePath string) (*CameraDevice, bool)
 
 // GetMonitorStats returns current monitoring statistics
 func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
-	m.stats.mu.RLock()
-	defer m.stats.mu.RUnlock()
-
-	// Create a copy to avoid race conditions
+	// Create a copy using atomic operations to avoid race conditions
 	stats := MonitorStats{
 		Running:                    m.stats.Running,
-		ActiveTasks:                m.stats.ActiveTasks,
-		PollingCycles:              m.stats.PollingCycles,
-		DeviceStateChanges:         m.stats.DeviceStateChanges,
-		CapabilityProbesAttempted:  m.stats.CapabilityProbesAttempted,
-		CapabilityProbesSuccessful: m.stats.CapabilityProbesSuccessful,
-		CapabilityTimeouts:         m.stats.CapabilityTimeouts,
-		CapabilityParseErrors:      m.stats.CapabilityParseErrors,
-		PollingFailureCount:        m.stats.PollingFailureCount,
+		ActiveTasks:                atomic.LoadInt64(&m.stats.ActiveTasks),
+		PollingCycles:              atomic.LoadInt64(&m.stats.PollingCycles),
+		DeviceStateChanges:         atomic.LoadInt64(&m.stats.DeviceStateChanges),
+		CapabilityProbesAttempted:  atomic.LoadInt64(&m.stats.CapabilityProbesAttempted),
+		CapabilityProbesSuccessful: atomic.LoadInt64(&m.stats.CapabilityProbesSuccessful),
+		CapabilityTimeouts:         atomic.LoadInt64(&m.stats.CapabilityTimeouts),
+		CapabilityParseErrors:      atomic.LoadInt64(&m.stats.CapabilityParseErrors),
+		PollingFailureCount:        atomic.LoadInt64(&m.stats.PollingFailureCount),
 		CurrentPollInterval:        m.stats.CurrentPollInterval,
-		KnownDevicesCount:          len(m.knownDevices),
-		UdevEventsProcessed:        m.stats.UdevEventsProcessed,
-		UdevEventsFiltered:         m.stats.UdevEventsFiltered,
-		UdevEventsSkipped:          m.stats.UdevEventsSkipped,
+		KnownDevicesCount:          int64(len(m.knownDevices)),
+		UdevEventsProcessed:        atomic.LoadInt64(&m.stats.UdevEventsProcessed),
+		UdevEventsFiltered:         atomic.LoadInt64(&m.stats.UdevEventsFiltered),
+		UdevEventsSkipped:          atomic.LoadInt64(&m.stats.UdevEventsSkipped),
 	}
 	return &stats
 }
@@ -430,9 +425,7 @@ func (m *HybridCameraMonitor) SetEventNotifier(notifier EventNotifier) {
 // monitoringLoop continuously monitors for device changes
 func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 	defer func() {
-		m.stats.mu.Lock()
-		m.stats.ActiveTasks--
-		m.stats.mu.Unlock()
+		atomic.AddInt64(&m.stats.ActiveTasks, -1)
 	}()
 
 	ticker := time.NewTicker(time.Duration(m.currentPollInterval * float64(time.Second)))
@@ -468,9 +461,7 @@ func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
 // discoverCameras scans for currently connected cameras using parallel processing
 // Enhanced to support multiple camera types beyond USB cameras
 func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
-	m.stats.mu.Lock()
-	m.stats.PollingCycles++
-	m.stats.mu.Unlock()
+	atomic.AddInt64(&m.stats.PollingCycles, 1)
 
 	currentDevices := make(map[string]*CameraDevice)
 	var wg sync.WaitGroup
@@ -562,7 +553,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 	for err := range errorChan {
 		m.logger.WithError(err).Warn("Device check error occurred")
 		// Optionally increment error counters or trigger recovery mechanisms
-		m.pollingFailureCount++
+		atomic.AddInt64(&m.pollingFailureCount, 1)
 	}
 
 	m.processDeviceStateChanges(ctx, currentDevices)
@@ -732,32 +723,24 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(ctx context.Context, devic
 		device.Name = cached.CardName
 		m.cacheMutex.RUnlock()
 
-		m.stats.mu.Lock()
-		m.stats.CapabilityProbesSuccessful++
-		m.stats.mu.Unlock()
+		atomic.AddInt64(&m.stats.CapabilityProbesSuccessful, 1)
 		return nil
 	}
 	m.cacheMutex.RUnlock()
 
-	m.stats.mu.Lock()
-	m.stats.CapabilityProbesAttempted++
-	m.stats.mu.Unlock()
+	atomic.AddInt64(&m.stats.CapabilityProbesAttempted, 1)
 
 	// Execute v4l2-ctl --device /dev/videoX --info
 	infoOutput, err := m.commandExecutor.ExecuteCommand(ctx, device.Path, "--info")
 	if err != nil {
-		m.stats.mu.Lock()
-		m.stats.CapabilityTimeouts++
-		m.stats.mu.Unlock()
+		atomic.AddInt64(&m.stats.CapabilityTimeouts, 1)
 		return fmt.Errorf("failed to get device info: %w", err)
 	}
 
 	// Parse device info
 	capabilities, err := m.infoParser.ParseDeviceInfo(infoOutput)
 	if err != nil {
-		m.stats.mu.Lock()
-		m.stats.CapabilityParseErrors++
-		m.stats.mu.Unlock()
+		atomic.AddInt64(&m.stats.CapabilityParseErrors, 1)
 		return fmt.Errorf("failed to parse device info: %w", err)
 	}
 
@@ -796,9 +779,7 @@ func (m *HybridCameraMonitor) probeDeviceCapabilities(ctx context.Context, devic
 		}
 	}
 
-	m.stats.mu.Lock()
-	m.stats.CapabilityProbesSuccessful++
-	m.stats.mu.Unlock()
+	atomic.AddInt64(&m.stats.CapabilityProbesSuccessful, 1)
 
 	return nil
 }
@@ -831,9 +812,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 		if existing, exists := m.knownDevices[path]; !exists {
 			// New device
 			m.knownDevices[path] = device
-			m.stats.mu.Lock()
-			m.stats.DeviceStateChanges++
-			m.stats.mu.Unlock()
+			atomic.AddInt64(&m.stats.DeviceStateChanges, 1)
 
 			m.logger.WithFields(logging.Fields{
 				"device_path": path,
@@ -851,9 +830,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 				existing.Status = device.Status
 				existing.Error = device.Error
 
-				m.stats.mu.Lock()
-				m.stats.DeviceStateChanges++
-				m.stats.mu.Unlock()
+				atomic.AddInt64(&m.stats.DeviceStateChanges, 1)
 
 				m.logger.WithFields(logging.Fields{
 					"device_path": path,
@@ -873,9 +850,7 @@ func (m *HybridCameraMonitor) processDeviceStateChanges(ctx context.Context, cur
 		if _, exists := currentDevices[path]; !exists {
 			// Device removed
 			device.Status = DeviceStatusDisconnected
-			m.stats.mu.Lock()
-			m.stats.DeviceStateChanges++
-			m.stats.mu.Unlock()
+			atomic.AddInt64(&m.stats.DeviceStateChanges, 1)
 
 			m.logger.WithFields(logging.Fields{
 				"device_path": path,
@@ -937,9 +912,10 @@ func (m *HybridCameraMonitor) adjustPollingInterval() {
 	oldInterval := m.currentPollInterval
 
 	// Factor in recent failures - decrease interval (increase frequency) when there are failures
-	if m.pollingFailureCount > 0 {
+	failureCount := atomic.LoadInt64(&m.pollingFailureCount)
+	if failureCount > 0 {
 		// Apply failure penalty that increases polling frequency (decreases interval)
-		failurePenalty := max(0.5, 1.0-float64(m.pollingFailureCount)*0.1) // Minimum 0.5x interval
+		failurePenalty := max(0.5, 1.0-float64(failureCount)*0.1) // Minimum 0.5x interval
 		m.currentPollInterval = max(m.minPollInterval, m.currentPollInterval*failurePenalty)
 	} else {
 		// Gradually return to base interval when no failures
@@ -948,14 +924,12 @@ func (m *HybridCameraMonitor) adjustPollingInterval() {
 
 	// Update stats if interval changed significantly
 	if abs(m.currentPollInterval-oldInterval) > 0.01 {
-		m.stats.mu.Lock()
 		m.stats.CurrentPollInterval = m.currentPollInterval
-		m.stats.mu.Unlock()
 
 		m.logger.WithFields(logging.Fields{
 			"old_interval":  oldInterval,
 			"new_interval":  m.currentPollInterval,
-			"failure_count": m.pollingFailureCount,
+			"failure_count": atomic.LoadInt64(&m.pollingFailureCount),
 			"action":        "polling_interval_adjusted",
 		}).Debug("Adjusted polling interval")
 	}

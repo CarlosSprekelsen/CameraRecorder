@@ -1056,3 +1056,184 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 
 	t.Log("✅ Stream deletion functionality working correctly")
 }
+
+// TestControllerWithConfigManagerFunction_ReqMTX001 tests ControllerWithConfigManager for 0% coverage
+func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Create a test config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger() // Use shared test helper logger
+
+	// Test controller creation with config manager
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "ControllerWithConfigManager should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Verify controller can be started and stopped
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start successfully")
+
+	stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = controller.Stop(stopCtx)
+	require.NoError(t, err, "Controller should stop successfully")
+}
+
+// TestController_InputValidation_DangerousBugs tests input validation
+// that can catch dangerous bugs in controller methods
+func TestController_InputValidation_DangerousBugs(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create controller
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test input validation scenarios that can catch dangerous bugs
+	helper.TestControllerInputValidation(t, controller)
+}
+
+// TestController_InputValidationBoundaryConditions_DangerousBugs tests boundary conditions
+// that can cause dangerous bugs like integer overflow or panic conditions
+func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create controller
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test boundary conditions that can catch dangerous bugs
+	helper.TestInputValidationBoundaryConditions(t, controller)
+}
+
+// TestController_StateRaceConditions_DangerousBugs tests race conditions
+// that can cause dangerous bugs in controller state management
+func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create controller
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Test concurrent start/stop operations that could cause race conditions
+	t.Run("concurrent_start_stop_race_condition", func(t *testing.T) {
+		// Start multiple goroutines that try to start/stop the controller
+		done := make(chan bool, 10)
+
+		for i := 0; i < 5; i++ {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+					}
+					done <- true
+				}()
+
+				// Try to start the controller
+				err := controller.Start(ctx)
+				if err != nil {
+					// Expected if already running
+					t.Logf("Start failed (expected if already running): %v", err)
+				}
+			}()
+		}
+
+		for i := 0; i < 5; i++ {
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+					}
+					done <- true
+				}()
+
+				// Try to stop the controller
+				stopCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
+				err := controller.Stop(stopCtx)
+				if err != nil {
+					// Expected if not running
+					t.Logf("Stop failed (expected if not running): %v", err)
+				}
+			}()
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < 10; i++ {
+			<-done
+		}
+
+		t.Logf("✅ Concurrent start/stop operations completed without panic")
+	})
+
+	// Test state checking during operations
+	t.Run("state_checking_during_operations", func(t *testing.T) {
+		// Start the controller
+		err := controller.Start(ctx)
+		require.NoError(t, err, "Controller start should succeed")
+
+		// Test that state checking works correctly during operations
+		// This tests the atomic operations we implemented
+		for i := 0; i < 100; i++ {
+			// Check if controller is running (this should be thread-safe now)
+			// Note: We can't access the private checkRunningState method from the interface
+			// This test verifies the public interface works correctly
+			_, err := controller.GetHealth(ctx)
+			if err != nil {
+				t.Errorf("🚨 BUG DETECTED: Controller health check failed during operation %d: %v", i, err)
+			}
+		}
+
+		t.Logf("✅ State checking during operations completed successfully")
+
+		// Stop the controller
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	})
+}

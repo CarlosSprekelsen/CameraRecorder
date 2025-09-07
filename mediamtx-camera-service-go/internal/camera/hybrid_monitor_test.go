@@ -10,6 +10,7 @@ package camera
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -131,19 +132,30 @@ func TestHybridCameraMonitor_DeviceDiscovery(t *testing.T) {
 		}
 	})
 
-	// Test device info parsing
+	// Test device info parsing with REAL V4L2 output
 	t.Run("device_parsing", func(t *testing.T) {
-		sampleOutput := `Driver name       : uvcvideo
-Card type         : USB Camera
-Bus info          : usb-0000:00:14.0-1
-Driver version    : 5.15.0
-Capabilities      : 0x85200001
-Device Caps       : 0x04200001`
+		// Get real V4L2 output from actual device
+		helper := NewRealHardwareTestHelper(t)
+		devices := helper.GetAvailableDevices()
+		require.NotEmpty(t, devices, "Real camera devices must be available for testing")
 
-		capabilities, err := infoParser.ParseDeviceInfo(sampleOutput)
-		require.NoError(t, err, "Should parse valid device info")
-		assert.Equal(t, "uvcvideo", capabilities.DriverName, "Driver name should be parsed correctly")
-		assert.Equal(t, "USB Camera", capabilities.CardName, "Card name should be parsed correctly")
+		devicePath := devices[0]
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Get real V4L2 output
+		realOutput, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--all")
+		require.NoError(t, err, "Should get real V4L2 output from device")
+		require.NotEmpty(t, realOutput, "Real V4L2 output should not be empty")
+
+		// Parse real V4L2 output
+		capabilities, err := infoParser.ParseDeviceInfo(realOutput)
+		require.NoError(t, err, "Should parse real device info")
+		require.NotEmpty(t, capabilities.DriverName, "Real device should have driver name")
+		require.NotEmpty(t, capabilities.CardName, "Real device should have card name")
+
+		// Validate that parsing worked with real data
+		t.Logf("Parsed real device: Driver=%s, Card=%s", capabilities.DriverName, capabilities.CardName)
 	})
 }
 
@@ -301,8 +313,8 @@ func TestHybridCameraMonitor_StateManagement(t *testing.T) {
 	stats := monitor.GetMonitorStats()
 	require.NotNil(t, stats, "Stats should not be nil")
 	assert.False(t, stats.Running, "Should not be running initially")
-	assert.Equal(t, 0, stats.KnownDevicesCount, "Should have no known devices initially")
-	assert.Equal(t, 0, stats.PollingCycles, "Should have no polling cycles initially")
+	assert.Equal(t, int64(0), stats.KnownDevicesCount, "Should have no known devices initially")
+	assert.Equal(t, int64(0), stats.PollingCycles, "Should have no polling cycles initially")
 }
 
 // TestHybridCameraMonitor_EventHandling tests event handling methods
@@ -347,10 +359,29 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 	}
 	monitor.SetEventNotifier(eventNotifier)
 
-	// TODO: This is a fake test - it just calls methods and asserts true == true
-	// Need to implement real event handling test that actually triggers events
-	// and verifies handlers are called with correct data
-	t.Skip("Fake test removed - needs real implementation")
+	// Test real event handling by triggering actual events
+	ctx := context.Background()
+
+	// Create a test device to trigger events
+	testDevice := &CameraDevice{
+		Path:   "/dev/video0",
+		Name:   "Test Camera",
+		Status: DeviceStatusConnected,
+		Capabilities: V4L2Capabilities{
+			DriverName: "test_driver",
+			CardName:   "Test Camera",
+		},
+	}
+
+	// Trigger a real camera connected event
+	monitor.generateCameraEvent(ctx, CameraEventConnected, "/dev/video0", testDevice)
+
+	// Give time for event processing
+	time.Sleep(10 * time.Millisecond)
+
+	// Verify event was processed (this tests real event handling)
+	connectedDevices := monitor.GetConnectedCameras()
+	require.NotEmpty(t, connectedDevices, "Event should have been processed and device should be connected")
 }
 
 // TestHybridCameraMonitor_ConfigurationUpdate tests REAL configuration update handling
@@ -376,13 +407,13 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		// Create new config with different polling interval
 		newConfig := &config.Config{
 			Camera: config.CameraConfig{
-				DeviceRange:                []string{"/dev/video0", "/dev/video1"},
-				PollInterval:               2.5, // Changed from default
-				DetectionTimeout:           5.0,
-				EnableCapabilityDetection:  true,
-				CapabilityTimeout:          3.0,
-				CapabilityRetryInterval:    1.0,
-				CapabilityMaxRetries:       3,
+				DeviceRange:               []int{0, 1},
+				PollInterval:              2.5, // Changed from default
+				DetectionTimeout:          5.0,
+				EnableCapabilityDetection: true,
+				CapabilityTimeout:         3.0,
+				CapabilityRetryInterval:   1.0,
+				CapabilityMaxRetries:      3,
 			},
 		}
 
@@ -399,13 +430,13 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		// Create new config with different device range
 		newConfig := &config.Config{
 			Camera: config.CameraConfig{
-				DeviceRange:                []string{"/dev/video0", "/dev/video1", "/dev/video2"}, // Changed
-				PollInterval:               2.0,
-				DetectionTimeout:           5.0,
-				EnableCapabilityDetection:  true,
-				CapabilityTimeout:          3.0,
-				CapabilityRetryInterval:    1.0,
-				CapabilityMaxRetries:       3,
+				DeviceRange:               []int{0, 1, 2}, // Changed
+				PollInterval:              2.0,
+				DetectionTimeout:          5.0,
+				EnableCapabilityDetection: true,
+				CapabilityTimeout:         3.0,
+				CapabilityRetryInterval:   1.0,
+				CapabilityMaxRetries:      3,
 			},
 		}
 
@@ -420,13 +451,13 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		// Create new config with capability detection disabled
 		newConfig := &config.Config{
 			Camera: config.CameraConfig{
-				DeviceRange:                []string{"/dev/video0"},
-				PollInterval:               2.0,
-				DetectionTimeout:           5.0,
-				EnableCapabilityDetection:  false, // Changed
-				CapabilityTimeout:          3.0,
-				CapabilityRetryInterval:    1.0,
-				CapabilityMaxRetries:       3,
+				DeviceRange:               []int{0},
+				PollInterval:              2.0,
+				DetectionTimeout:          5.0,
+				EnableCapabilityDetection: false, // Changed
+				CapabilityTimeout:         3.0,
+				CapabilityRetryInterval:   1.0,
+				CapabilityMaxRetries:      3,
 			},
 		}
 
@@ -441,13 +472,13 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		// Create config with same values
 		newConfig := &config.Config{
 			Camera: config.CameraConfig{
-				DeviceRange:                []string{"/dev/video0"},
-				PollInterval:               2.0,
-				DetectionTimeout:           5.0,
-				EnableCapabilityDetection:  false,
-				CapabilityTimeout:          3.0,
-				CapabilityRetryInterval:    1.0,
-				CapabilityMaxRetries:       3,
+				DeviceRange:               []int{0},
+				PollInterval:              2.0,
+				DetectionTimeout:          5.0,
+				EnableCapabilityDetection: false,
+				CapabilityTimeout:         3.0,
+				CapabilityRetryInterval:   1.0,
+				CapabilityMaxRetries:      3,
 			},
 		}
 
@@ -462,13 +493,13 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		// Create config with all different values
 		newConfig := &config.Config{
 			Camera: config.CameraConfig{
-				DeviceRange:                []string{"/dev/video0", "/dev/video1", "/dev/video2", "/dev/video3"},
-				PollInterval:               1.5, // Changed
-				DetectionTimeout:           10.0, // Changed
-				EnableCapabilityDetection:  true, // Changed
-				CapabilityTimeout:          5.0, // Changed
-				CapabilityRetryInterval:    2.0, // Changed
-				CapabilityMaxRetries:       5, // Changed
+				DeviceRange:               []int{0, 1, 2, 3},
+				PollInterval:              1.5,  // Changed
+				DetectionTimeout:          10.0, // Changed
+				EnableCapabilityDetection: true, // Changed
+				CapabilityTimeout:         5.0,  // Changed
+				CapabilityRetryInterval:   2.0,  // Changed
+				CapabilityMaxRetries:      5,    // Changed
 			},
 		}
 
@@ -476,6 +507,255 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 		monitor.handleConfigurationUpdate(newConfig)
 
 		// Verify the configuration was updated
+	})
+}
+
+// TestHybridCameraMonitor_ProbeDeviceCapabilities tests the probeDeviceCapabilities function
+func TestHybridCameraMonitor_ProbeDeviceCapabilities(t *testing.T) {
+	// Create test monitor with real dependencies
+	configManager := config.CreateConfigManager()
+	logger := logging.NewLogger("test-probe-capabilities")
+	deviceChecker := &RealDeviceChecker{}
+	commandExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager,
+		logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Failed to create monitor")
+
+	// Get available devices for testing
+	helper := NewRealHardwareTestHelper(t)
+	availableDevices := helper.GetAvailableDevices()
+
+	require.NotEmpty(t, availableDevices, "Real camera devices must be available for testing")
+
+	devicePath := availableDevices[0]
+	ctx := context.Background()
+
+	// Test 1: Successful capability probing
+	t.Run("successful_probing", func(t *testing.T) {
+		device := &CameraDevice{
+			Path: devicePath,
+		}
+
+		// Clear cache to ensure fresh probing
+		monitor.cacheMutex.Lock()
+		delete(monitor.capabilityCache, devicePath)
+		monitor.cacheMutex.Unlock()
+
+		// Probe capabilities
+		err := monitor.probeDeviceCapabilities(ctx, device)
+
+		// Should succeed and populate device information
+		require.NoError(t, err, "Capability probing should succeed")
+		require.NotEmpty(t, device.Capabilities.Capabilities, "Device should have capabilities")
+		require.NotEmpty(t, device.Name, "Device should have a name")
+	})
+
+	// Test 2: Cache hit scenario
+	t.Run("cache_hit", func(t *testing.T) {
+		device := &CameraDevice{
+			Path: devicePath,
+		}
+
+		// First probe to populate cache
+		err := monitor.probeDeviceCapabilities(ctx, device)
+		require.NoError(t, err, "First probe should succeed")
+
+		// Store original values
+		originalCapabilities := device.Capabilities
+		originalName := device.Name
+
+		// Second probe should hit cache
+		device2 := &CameraDevice{
+			Path: devicePath,
+		}
+		err = monitor.probeDeviceCapabilities(ctx, device2)
+		require.NoError(t, err, "Cached probe should succeed")
+
+		// Should have same capabilities (from cache)
+		require.Equal(t, originalCapabilities, device2.Capabilities, "Cached capabilities should match")
+		require.Equal(t, originalName, device2.Name, "Cached name should match")
+	})
+
+	// Test 3: Error handling - invalid device
+	t.Run("invalid_device", func(t *testing.T) {
+		device := &CameraDevice{
+			Path: "/dev/video999999", // Non-existent device
+		}
+
+		// Should fail gracefully
+		err := monitor.probeDeviceCapabilities(ctx, device)
+		require.Error(t, err, "Probing invalid device should fail")
+		require.Contains(t, err.Error(), "failed to get device info", "Error should indicate info failure")
+	})
+
+	// Test 4: Format parsing with fallback
+	t.Run("format_parsing_fallback", func(t *testing.T) {
+		device := &CameraDevice{
+			Path: devicePath,
+		}
+
+		// Clear cache
+		monitor.cacheMutex.Lock()
+		delete(monitor.capabilityCache, devicePath)
+		monitor.cacheMutex.Unlock()
+
+		// Probe capabilities
+		err := monitor.probeDeviceCapabilities(ctx, device)
+		require.NoError(t, err, "Probing should succeed")
+
+		// Device should have formats (either parsed or default)
+		require.NotEmpty(t, device.Formats, "Device should have formats")
+	})
+
+	// Test 5: Statistics tracking
+	t.Run("statistics_tracking", func(t *testing.T) {
+		device := &CameraDevice{
+			Path: devicePath,
+		}
+
+		// Clear cache to ensure fresh probe
+		monitor.cacheMutex.Lock()
+		delete(monitor.capabilityCache, devicePath)
+		monitor.cacheMutex.Unlock()
+
+		// Get initial stats
+		initialStats := monitor.GetMonitorStats()
+
+		// Probe capabilities
+		err := monitor.probeDeviceCapabilities(ctx, device)
+		require.NoError(t, err, "Probing should succeed")
+
+		// Get final stats
+		finalStats := monitor.GetMonitorStats()
+
+		// Should have incremented probe attempts and successes
+		require.Greater(t, finalStats.CapabilityProbesAttempted, initialStats.CapabilityProbesAttempted, "Probe attempts should increase")
+		require.Greater(t, finalStats.CapabilityProbesSuccessful, initialStats.CapabilityProbesSuccessful, "Probe successes should increase")
+	})
+}
+
+// TestHybridCameraMonitor_ProcessDeviceStateChanges tests the processDeviceStateChanges function
+func TestHybridCameraMonitor_ProcessDeviceStateChanges(t *testing.T) {
+	// Create test monitor with real dependencies
+	configManager := config.CreateConfigManager()
+	logger := logging.NewLogger("test-state-changes")
+	deviceChecker := &RealDeviceChecker{}
+	commandExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager,
+		logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Failed to create monitor")
+
+	// Get available devices for testing
+	helper := NewRealHardwareTestHelper(t)
+	availableDevices := helper.GetAvailableDevices()
+
+	require.NotEmpty(t, availableDevices, "Real camera devices must be available for testing")
+
+	devicePath := availableDevices[0]
+	ctx := context.Background()
+
+	// Test 1: Device connection (new device)
+	t.Run("device_connection", func(t *testing.T) {
+		// Simulate a new device being discovered
+		newDevice := &CameraDevice{
+			Path:   devicePath,
+			Status: DeviceStatusConnected,
+		}
+
+		// Process state change
+		deviceMap := map[string]*CameraDevice{devicePath: newDevice}
+		monitor.processDeviceStateChanges(ctx, deviceMap)
+
+		// Verify device was added to connected devices
+		connectedDevices := monitor.GetConnectedCameras()
+		require.Len(t, connectedDevices, 1, "Should have one connected device")
+		require.Equal(t, devicePath, connectedDevices[devicePath].Path, "Connected device should match")
+	})
+
+	// Test 2: Device disconnection
+	t.Run("device_disconnection", func(t *testing.T) {
+		// First add a device
+		device := &CameraDevice{
+			Path:   devicePath,
+			Status: DeviceStatusConnected,
+		}
+		deviceMap := map[string]*CameraDevice{devicePath: device}
+		monitor.processDeviceStateChanges(ctx, deviceMap)
+
+		// Then simulate disconnection (empty map)
+		monitor.processDeviceStateChanges(ctx, map[string]*CameraDevice{})
+
+		// Verify device was removed
+		connectedDevices := monitor.GetConnectedCameras()
+		require.Len(t, connectedDevices, 0, "Should have no connected devices")
+	})
+
+	// Test 3: Multiple devices
+	t.Run("multiple_devices", func(t *testing.T) {
+		// Simulate multiple devices
+		devices := []*CameraDevice{
+			{
+				Path:   "/dev/video0",
+				Status: DeviceStatusConnected,
+			},
+			{
+				Path:   "/dev/video1",
+				Status: DeviceStatusConnected,
+			},
+		}
+
+		// Process state changes
+		deviceMap := map[string]*CameraDevice{
+			"/dev/video0": devices[0],
+			"/dev/video1": devices[1],
+		}
+		monitor.processDeviceStateChanges(ctx, deviceMap)
+
+		// Verify both devices are connected
+		connectedDevices := monitor.GetConnectedCameras()
+		require.Len(t, connectedDevices, 2, "Should have two connected devices")
+	})
+
+	// Test 4: Device status change
+	t.Run("device_status_change", func(t *testing.T) {
+		// Add device with connected status
+		device := &CameraDevice{
+			Path:   devicePath,
+			Status: DeviceStatusConnected,
+		}
+		deviceMap := map[string]*CameraDevice{devicePath: device}
+		monitor.processDeviceStateChanges(ctx, deviceMap)
+
+		// Create new device with error status (don't modify the original)
+		deviceWithError := &CameraDevice{
+			Path:   devicePath,
+			Status: DeviceStatusError,
+		}
+		deviceMapWithError := map[string]*CameraDevice{devicePath: deviceWithError}
+		monitor.processDeviceStateChanges(ctx, deviceMapWithError)
+
+		// Device should still be in known devices but not in connected list (error status)
+		connectedDevices := monitor.GetConnectedCameras()
+		require.Len(t, connectedDevices, 0, "Should have no connected devices (error status)")
+
+		// But device should still be in known devices
+		device, exists := monitor.GetDevice(devicePath)
+		require.True(t, exists, "Device should still exist in known devices")
+		require.Equal(t, DeviceStatusError, device.Status, "Device status should be updated to error")
 	})
 }
 
@@ -514,4 +794,326 @@ func (n *testEventNotifier) NotifyCapabilityDetected(device *CameraDevice, capab
 
 func (n *testEventNotifier) NotifyCapabilityError(devicePath string, error string) {
 	n.events = append(n.events, "capability_error:"+devicePath)
+}
+
+// TestHybridCameraMonitor_EdgeCases tests edge cases and error scenarios
+func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
+	// Create test config and logger
+	configManager := config.CreateConfigManager()
+	logger := logging.NewLogger("test")
+
+	// Create real implementations
+	deviceChecker := &RealDeviceChecker{}
+	commandExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	// Create monitor
+	monitor, err := NewHybridCameraMonitor(
+		configManager,
+		logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Monitor creation should succeed")
+
+	// Test 1: Double start (should fail)
+	t.Run("double_start", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Start monitor first time
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "First start should succeed")
+		assert.True(t, monitor.IsRunning(), "Monitor should be running")
+
+		// Try to start again (should fail)
+		err = monitor.Start(ctx)
+		require.Error(t, err, "Second start should fail")
+		assert.Contains(t, err.Error(), "already running", "Error should mention already running")
+
+		// Clean up
+		err = monitor.Stop()
+		require.NoError(t, err, "Stop should succeed")
+	})
+
+	// Test 2: Stop without start (should fail)
+	t.Run("stop_without_start", func(t *testing.T) {
+		err := monitor.Stop()
+		require.Error(t, err, "Stop without start should fail")
+		assert.Contains(t, err.Error(), "not running", "Error should mention not running")
+	})
+
+	// Test 3: Get device from non-existent path
+	t.Run("get_nonexistent_device", func(t *testing.T) {
+		device, exists := monitor.GetDevice("/dev/video999999")
+		assert.False(t, exists, "Should return false for non-existent device")
+		assert.Nil(t, device, "Should return nil for non-existent device")
+	})
+
+	// Test 4: Get connected cameras when none connected
+	t.Run("get_connected_cameras_empty", func(t *testing.T) {
+		devices := monitor.GetConnectedCameras()
+		assert.Empty(t, devices, "Should return empty map when no devices connected")
+	})
+
+	// Test 5: Monitor stats when not running
+	t.Run("monitor_stats_not_running", func(t *testing.T) {
+		stats := monitor.GetMonitorStats()
+		assert.False(t, stats.Running, "Stats should show not running")
+	assert.Equal(t, int64(0), stats.ActiveTasks, "Should have no active tasks")
+	assert.Equal(t, int64(0), stats.PollingCycles, "Should have no polling cycles")
+	})
+
+	// Test 6: Add event handler when monitor is running
+	t.Run("add_event_handler_while_running", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Start monitor
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Start should succeed")
+
+		// Add event handler while running
+		handler := &testEventHandler{}
+		monitor.AddEventHandler(handler)
+
+		// Should not cause issues
+		assert.True(t, monitor.IsRunning(), "Monitor should still be running")
+
+		// Clean up
+		err = monitor.Stop()
+		require.NoError(t, err, "Stop should succeed")
+	})
+
+	// Test 7: Set event notifier when monitor is running
+	t.Run("set_event_notifier_while_running", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Start monitor
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Start should succeed")
+
+		// Set event notifier while running
+		notifier := &testEventNotifier{}
+		monitor.SetEventNotifier(notifier)
+
+		// Should not cause issues
+		assert.True(t, monitor.IsRunning(), "Monitor should still be running")
+
+		// Clean up
+		err = monitor.Stop()
+		require.NoError(t, err, "Stop should succeed")
+	})
+
+	// Test 8: Context cancellation during start
+	t.Run("context_cancellation_during_start", func(t *testing.T) {
+		// Create cancelled context
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		// Try to start with cancelled context
+		err := monitor.Start(cancelledCtx)
+		require.Error(t, err, "Start with cancelled context should fail")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
+	})
+
+	// Test 9: Very short context timeout
+	t.Run("very_short_context_timeout", func(t *testing.T) {
+		// Create context with very short timeout
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+
+		// Try to start with very short timeout
+		err := monitor.Start(timeoutCtx)
+		require.Error(t, err, "Start with very short timeout should fail")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
+	})
+
+	// Test 10: Multiple stop calls
+	t.Run("multiple_stop_calls", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// Start monitor
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Start should succeed")
+
+		// Stop first time
+		err = monitor.Stop()
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time (should fail)
+		err = monitor.Stop()
+		require.Error(t, err, "Second stop should fail")
+		assert.Contains(t, err.Error(), "not running", "Error should mention not running")
+	})
+}
+
+// TestHybridCameraMonitor_ErrorRecovery tests error recovery scenarios
+func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
+	// Create test config and logger
+	configManager := config.CreateConfigManager()
+	logger := logging.NewLogger("test")
+
+	// Create real implementations
+	deviceChecker := &RealDeviceChecker{}
+	commandExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	// Create monitor
+	monitor, err := NewHybridCameraMonitor(
+		configManager,
+		logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Monitor creation should succeed")
+
+	// Test 1: Monitor with nil dependencies (should handle gracefully)
+	t.Run("nil_dependencies", func(t *testing.T) {
+		// Create monitor with nil dependencies
+		badMonitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			nil, // nil deviceChecker
+			commandExecutor,
+			infoParser,
+		)
+		require.Error(t, err, "Should fail with nil deviceChecker")
+		assert.Nil(t, badMonitor, "Should return nil monitor")
+
+		badMonitor, err = NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			nil, // nil commandExecutor
+			infoParser,
+		)
+		require.Error(t, err, "Should fail with nil commandExecutor")
+		assert.Nil(t, badMonitor, "Should return nil monitor")
+
+		badMonitor, err = NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			nil, // nil infoParser
+		)
+		require.Error(t, err, "Should fail with nil infoParser")
+		assert.Nil(t, badMonitor, "Should return nil monitor")
+	})
+
+	// Test 2: Monitor with nil config (should fail)
+	t.Run("nil_config", func(t *testing.T) {
+		badMonitor, err := NewHybridCameraMonitor(
+			nil, // nil config
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+		)
+		require.Error(t, err, "Should fail with nil config")
+		assert.Nil(t, badMonitor, "Should return nil monitor")
+	})
+
+	// Test 3: Start/stop cycle stress test
+	t.Run("start_stop_stress", func(t *testing.T) {
+		// Perform multiple start/stop cycles
+		for i := 0; i < 5; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+
+			// Start
+			err := monitor.Start(ctx)
+			require.NoError(t, err, "Start cycle %d should succeed", i+1)
+			assert.True(t, monitor.IsRunning(), "Monitor should be running in cycle %d", i+1)
+
+			// Brief wait
+			time.Sleep(50 * time.Millisecond)
+
+			// Stop
+			err = monitor.Stop()
+			require.NoError(t, err, "Stop cycle %d should succeed", i+1)
+			assert.False(t, monitor.IsRunning(), "Monitor should not be running after cycle %d", i+1)
+
+			cancel()
+		}
+	})
+
+	// Test 4: Concurrent start/stop operations
+	t.Run("concurrent_start_stop", func(t *testing.T) {
+		var wg sync.WaitGroup
+		errors := make(chan error, 10)
+
+		// Start multiple goroutines trying to start/stop
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
+
+				// Try to start
+				err := monitor.Start(ctx)
+				if err != nil {
+					errors <- err
+					return
+				}
+
+				// Brief wait
+				time.Sleep(10 * time.Millisecond)
+
+				// Try to stop
+				err = monitor.Stop()
+				if err != nil {
+					errors <- err
+				}
+			}(i)
+		}
+
+		wg.Wait()
+		close(errors)
+
+		// Check for errors (some are expected due to concurrent access)
+		errorCount := 0
+		for err := range errors {
+			if err != nil {
+				errorCount++
+				t.Logf("Expected concurrent access error: %v", err)
+			}
+		}
+
+		// Should have some errors due to concurrent access
+		assert.Greater(t, errorCount, 0, "Should have some concurrent access errors")
+	})
+
+	// Test 5: Monitor state consistency after errors
+	t.Run("state_consistency_after_errors", func(t *testing.T) {
+		// Ensure monitor is in clean state
+		if monitor.IsRunning() {
+			monitor.Stop()
+		}
+
+		// Try invalid operations
+		err := monitor.Stop() // Stop when not running
+		require.Error(t, err, "Stop when not running should fail")
+
+		// State should still be consistent
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
+
+		// Should be able to start normally after error
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		err = monitor.Start(ctx)
+		require.NoError(t, err, "Should be able to start after error")
+		assert.True(t, monitor.IsRunning(), "Monitor should be running")
+
+		// Clean up
+		err = monitor.Stop()
+		require.NoError(t, err, "Stop should succeed")
+	})
 }

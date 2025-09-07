@@ -118,10 +118,7 @@ func (h *RealHardwareTestHelper) GetPrimaryDevice() string {
 func (h *RealHardwareTestHelper) TestWithRealDevice(testFunc func(devicePath string) error) {
 	devices := h.GetAvailableDevices()
 
-	if len(devices) == 0 {
-		h.t.Skip("No real camera devices available for testing")
-		return
-	}
+	require.NotEmpty(h.t, devices, "Real camera devices must be available for testing")
 
 	// Test with each available device
 	for _, device := range devices {
@@ -603,10 +600,7 @@ func (h *RealHardwareTestHelper) TestDeviceIntegration(devicePath string) error 
 func (h *RealHardwareTestHelper) TestAllAvailableDevices() {
 	devices := h.GetAvailableDevices()
 
-	if len(devices) == 0 {
-		h.t.Skip("No real camera devices available for testing")
-		return
-	}
+	require.NotEmpty(h.t, devices, "Real camera devices must be available for testing")
 
 	for _, device := range devices {
 		h.t.Run(fmt.Sprintf("comprehensive_test_%s", filepath.Base(device)), func(t *testing.T) {
@@ -676,10 +670,7 @@ func (h *RealHardwareTestHelper) TestDeviceErrorScenarios() {
 func (h *RealHardwareTestHelper) TestDevicePerformanceBenchmarks() {
 	devices := h.GetAvailableDevices()
 
-	if len(devices) == 0 {
-		h.t.Skip("No real camera devices available for performance testing")
-		return
-	}
+	require.NotEmpty(h.t, devices, "Real camera devices must be available for performance testing")
 
 	for _, device := range devices {
 		h.t.Run(fmt.Sprintf("performance_benchmark_%s", filepath.Base(device)), func(t *testing.T) {

@@ -30,6 +30,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -470,4 +471,511 @@ func (h *MediaMTXTestHelper) cleanupLocalTestData(t *testing.T) {
 	} else {
 		t.Logf("Cleaned up test data directory: %s", h.config.TestDataDir)
 	}
+}
+
+// ============================================================================
+// INPUT VALIDATION TEST HELPERS
+// ============================================================================
+// These helpers are designed to catch dangerous bugs through systematic
+// input validation testing, not just achieve coverage.
+
+// InputValidationTestScenario represents a test scenario for input validation
+type InputValidationTestScenario struct {
+	Name         string
+	Page         int
+	ItemsPerPage int
+	ExpectError  bool
+	ErrorMsg     string
+	Description  string
+}
+
+// GetRTSPInputValidationScenarios returns comprehensive input validation scenarios
+// for RTSP connection manager that can catch dangerous bugs
+func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
+	return []InputValidationTestScenario{
+		{
+			Name:         "negative_page_number",
+			Page:         -1,
+			ItemsPerPage: 10,
+			ExpectError:  false, // Should be handled gracefully, not cause 400 errors
+			ErrorMsg:     "",
+			Description:  "Negative page numbers should be handled gracefully",
+		},
+		{
+			Name:         "zero_items_per_page",
+			Page:         0,
+			ItemsPerPage: 0,
+			ExpectError:  false, // Should use default values, not cause 400 errors
+			ErrorMsg:     "",
+			Description:  "Zero items per page should use default values",
+		},
+		{
+			Name:         "negative_items_per_page",
+			Page:         0,
+			ItemsPerPage: -5,
+			ExpectError:  true, // Should be rejected with clear error message
+			ErrorMsg:     "invalid items per page",
+			Description:  "Negative items per page should be rejected",
+		},
+		{
+			Name:         "extremely_large_page",
+			Page:         999999999,
+			ItemsPerPage: 10,
+			ExpectError:  false, // Should handle gracefully, not cause integer overflow
+			ErrorMsg:     "",
+			Description:  "Extremely large page numbers should be handled gracefully",
+		},
+		{
+			Name:         "extremely_large_items_per_page",
+			Page:         0,
+			ItemsPerPage: 999999999,
+			ExpectError:  false, // Should handle gracefully, not cause integer overflow
+			ErrorMsg:     "",
+			Description:  "Extremely large items per page should be handled gracefully",
+		},
+		{
+			Name:         "max_int_page",
+			Page:         2147483647, // Max int32
+			ItemsPerPage: 10,
+			ExpectError:  false, // Should handle gracefully
+			ErrorMsg:     "",
+			Description:  "Maximum integer page should be handled gracefully",
+		},
+		{
+			Name:         "max_int_items_per_page",
+			Page:         0,
+			ItemsPerPage: 2147483647, // Max int32
+			ExpectError:  false,      // Should handle gracefully
+			ErrorMsg:     "",
+			Description:  "Maximum integer items per page should be handled gracefully",
+		},
+	}
+}
+
+// TestRTSPInputValidation tests RTSP connection manager input validation
+// This function is designed to catch dangerous bugs, not just achieve coverage
+func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager RTSPConnectionManager) {
+	ctx := context.Background()
+	scenarios := GetRTSPInputValidationScenarios()
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			t.Logf("Testing scenario: %s - %s", scenario.Name, scenario.Description)
+
+			// Test the input validation
+			_, err := rtspManager.ListConnections(ctx, scenario.Page, scenario.ItemsPerPage)
+
+			if scenario.ExpectError {
+				// Should get an error
+				require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+				if scenario.ErrorMsg != "" {
+					assert.Contains(t, err.Error(), scenario.ErrorMsg,
+						"Error message should contain expected text for scenario %s", scenario.Name)
+				}
+				t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+			} else {
+				// Should NOT get an error (graceful handling)
+				if err != nil {
+					// This is a BUG - the API should handle these inputs gracefully
+					t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+					t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+				} else {
+					t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+				}
+			}
+		})
+	}
+}
+
+// TestControllerInputValidation tests controller input validation
+// This function is designed to catch dangerous bugs in controller methods
+func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, controller MediaMTXController) {
+	ctx := context.Background()
+
+	// Test RTSP connection input validation through controller
+	t.Run("RTSP_Connections_Input_Validation", func(t *testing.T) {
+		scenarios := GetRTSPInputValidationScenarios()
+
+		for _, scenario := range scenarios {
+			t.Run(scenario.Name, func(t *testing.T) {
+				t.Logf("Testing controller RTSP scenario: %s - %s", scenario.Name, scenario.Description)
+
+				// Test through controller
+				_, err := controller.ListRTSPConnections(ctx, scenario.Page, scenario.ItemsPerPage)
+
+				if scenario.ExpectError {
+					require.Error(t, err, "Controller scenario %s should produce an error", scenario.Name)
+					if scenario.ErrorMsg != "" {
+						assert.Contains(t, err.Error(), scenario.ErrorMsg,
+							"Controller error message should contain expected text for scenario %s", scenario.Name)
+					}
+					t.Logf("✅ Controller scenario %s correctly produced expected error: %v", scenario.Name, err)
+				} else {
+					// Should NOT get an error (graceful handling)
+					if err != nil {
+						// This is a BUG - the controller should handle these inputs gracefully
+						t.Errorf("🚨 BUG DETECTED: Controller scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause controller failures instead of graceful handling")
+					} else {
+						t.Logf("✅ Controller scenario %s handled gracefully (no error)", scenario.Name)
+					}
+				}
+			})
+		}
+	})
+
+	// Test device path validation
+	t.Run("Device_Path_Validation", func(t *testing.T) {
+		invalidDevicePaths := []string{
+			"",                              // Empty device path
+			"invalid_device",                // Invalid device path
+			"/dev/video999",                 // Non-existent device
+			"camera999",                     // Non-existent camera
+			"../../etc/passwd",              // Path traversal attempt
+			"<script>alert('xss')</script>", // XSS attempt
+		}
+
+		for _, devicePath := range invalidDevicePaths {
+			t.Run(fmt.Sprintf("device_%s", devicePath), func(t *testing.T) {
+				t.Logf("Testing device path validation: %s", devicePath)
+
+				// Test various controller methods with invalid device paths
+				_, err := controller.GetStreamStatus(ctx, devicePath)
+				if err == nil {
+					t.Errorf("🚨 BUG DETECTED: GetStreamStatus should reject invalid device path '%s'", devicePath)
+				}
+
+				_, err = controller.StartStreaming(ctx, devicePath)
+				if err == nil {
+					t.Errorf("🚨 BUG DETECTED: StartStreaming should reject invalid device path '%s'", devicePath)
+				}
+
+				_, err = controller.TakeAdvancedSnapshot(ctx, devicePath, "/tmp/test.jpg", map[string]interface{}{})
+				if err == nil {
+					t.Errorf("🚨 BUG DETECTED: TakeAdvancedSnapshot should reject invalid device path '%s'", devicePath)
+				}
+
+				t.Logf("✅ Device path '%s' correctly rejected by controller methods", devicePath)
+			})
+		}
+	})
+}
+
+// TestInputValidationBoundaryConditions tests boundary conditions that can cause dangerous bugs
+func (h *MediaMTXTestHelper) TestInputValidationBoundaryConditions(t *testing.T, controller MediaMTXController) {
+	ctx := context.Background()
+
+	t.Run("Boundary_Conditions", func(t *testing.T) {
+		// Test boundary conditions that could cause integer overflow or underflow
+		boundaryTests := []struct {
+			name         string
+			page         int
+			itemsPerPage int
+			description  string
+		}{
+			{
+				name:         "min_int_page",
+				page:         -2147483648, // Min int32
+				itemsPerPage: 10,
+				description:  "Minimum integer page should be handled gracefully",
+			},
+			{
+				name:         "min_int_items_per_page",
+				page:         0,
+				itemsPerPage: -2147483648, // Min int32
+				description:  "Minimum integer items per page should be handled gracefully",
+			},
+		}
+
+		for _, test := range boundaryTests {
+			t.Run(test.name, func(t *testing.T) {
+				t.Logf("Testing boundary condition: %s - %s", test.name, test.description)
+
+				// Test that boundary conditions don't cause panics or crashes
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("🚨 BUG DETECTED: Boundary condition %s caused panic: %v", test.name, r)
+					}
+				}()
+
+				_, err := controller.ListRTSPConnections(ctx, test.page, test.itemsPerPage)
+				// We don't care about the error here, just that it doesn't panic
+				t.Logf("✅ Boundary condition %s handled without panic (error: %v)", test.name, err)
+			})
+		}
+	})
+}
+
+// ============================================================================
+// JSON MALFORMATION TEST HELPERS
+// ============================================================================
+// These helpers are designed to catch dangerous bugs through systematic
+// JSON malformation testing, not just achieve coverage.
+
+// JSONMalformationTestScenario represents a test scenario for JSON malformation
+type JSONMalformationTestScenario struct {
+	Name        string
+	JSONData    []byte
+	ExpectError bool
+	ErrorMsg    string
+	Description string
+}
+
+// GetJSONMalformationScenarios returns comprehensive JSON malformation scenarios
+// that can catch dangerous bugs in JSON parsing functions
+func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
+	return []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be handled gracefully",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Null JSON should be handled gracefully",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"invalid": json}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be handled gracefully",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"incomplete":`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be handled gracefully",
+		},
+		{
+			Name:        "unexpected_json_structure",
+			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Unexpected JSON structure should be handled gracefully",
+		},
+		{
+			Name:        "json_with_invalid_types",
+			JSONData:    []byte(`{"items": "not_an_array", "count": "not_a_number"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with invalid types should be handled gracefully",
+		},
+		{
+			Name:        "json_with_missing_required_fields",
+			JSONData:    []byte(`{"items": []}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with missing required fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_extra_fields",
+			JSONData:    []byte(`{"items": [], "extra_field": "should_be_ignored", "another_extra": 123}`),
+			ExpectError: false, // Should handle gracefully by ignoring extra fields
+			ErrorMsg:    "",
+			Description: "JSON with extra fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_unicode_issues",
+			JSONData:    []byte(`{"items": [], "unicode": "test\u0000null\u0000byte"}`),
+			ExpectError: false, // Should handle gracefully
+			ErrorMsg:    "",
+			Description: "JSON with Unicode issues should be handled gracefully",
+		},
+		{
+			Name:        "json_with_very_large_strings",
+			JSONData:    []byte(fmt.Sprintf(`{"items": [], "large_string": "%s"}`, strings.Repeat("x", 1000000))),
+			ExpectError: false, // Should handle gracefully
+			ErrorMsg:    "",
+			Description: "JSON with very large strings should be handled gracefully",
+		},
+		{
+			Name:        "json_with_deeply_nested_objects",
+			JSONData:    []byte(`{"items": [], "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
+			ExpectError: false, // Should handle gracefully
+			ErrorMsg:    "",
+			Description: "JSON with deeply nested objects should be handled gracefully",
+		},
+		{
+			Name:        "json_with_special_characters",
+			JSONData:    []byte(`{"items": [], "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
+			ExpectError: false, // Should handle gracefully
+			ErrorMsg:    "",
+			Description: "JSON with special characters should be handled gracefully",
+		},
+	}
+}
+
+// TestJSONParsingErrors tests JSON parsing functions with malformed data
+// This function is designed to catch dangerous bugs, not just achieve coverage
+func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
+	scenarios := GetJSONMalformationScenarios()
+
+	// Test parseStreamsResponse function
+	t.Run("parseStreamsResponse_JSON_Errors", func(t *testing.T) {
+		for _, scenario := range scenarios {
+			t.Run(scenario.Name, func(t *testing.T) {
+				t.Logf("Testing parseStreamsResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+
+				// Test the JSON parsing function
+				_, err := parseStreamsResponse(scenario.JSONData)
+
+				if scenario.ExpectError {
+					// Should get an error
+					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+					if scenario.ErrorMsg != "" {
+						assert.Contains(t, err.Error(), scenario.ErrorMsg,
+							"Error message should contain expected text for scenario %s", scenario.Name)
+					}
+					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+				} else {
+					// Should NOT get an error (graceful handling)
+					if err != nil {
+						// This is a BUG - the JSON parsing should handle these inputs gracefully
+						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+					} else {
+						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+					}
+				}
+			})
+		}
+	})
+
+	// Test parseStreamResponse function
+	t.Run("parseStreamResponse_JSON_Errors", func(t *testing.T) {
+		for _, scenario := range scenarios {
+			t.Run(scenario.Name, func(t *testing.T) {
+				t.Logf("Testing parseStreamResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+
+				// Test the JSON parsing function
+				_, err := parseStreamResponse(scenario.JSONData)
+
+				if scenario.ExpectError {
+					// Should get an error
+					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+					if scenario.ErrorMsg != "" {
+						assert.Contains(t, err.Error(), scenario.ErrorMsg,
+							"Error message should contain expected text for scenario %s", scenario.Name)
+					}
+					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+				} else {
+					// Should NOT get an error (graceful handling)
+					if err != nil {
+						// This is a BUG - the JSON parsing should handle these inputs gracefully
+						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+					} else {
+						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+					}
+				}
+			})
+		}
+	})
+
+	// Test parseHealthResponse function
+	t.Run("parseHealthResponse_JSON_Errors", func(t *testing.T) {
+		for _, scenario := range scenarios {
+			t.Run(scenario.Name, func(t *testing.T) {
+				t.Logf("Testing parseHealthResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+
+				// Test the JSON parsing function
+				_, err := parseHealthResponse(scenario.JSONData)
+
+				if scenario.ExpectError {
+					// Should get an error
+					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+					if scenario.ErrorMsg != "" {
+						assert.Contains(t, err.Error(), scenario.ErrorMsg,
+							"Error message should contain expected text for scenario %s", scenario.Name)
+					}
+					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+				} else {
+					// Should NOT get an error (graceful handling)
+					if err != nil {
+						// This is a BUG - the JSON parsing should handle these inputs gracefully
+						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+					} else {
+						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+					}
+				}
+			})
+		}
+	})
+
+	// Test parsePathsResponse function
+	t.Run("parsePathsResponse_JSON_Errors", func(t *testing.T) {
+		for _, scenario := range scenarios {
+			t.Run(scenario.Name, func(t *testing.T) {
+				t.Logf("Testing parsePathsResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+
+				// Test the JSON parsing function
+				_, err := parsePathsResponse(scenario.JSONData)
+
+				if scenario.ExpectError {
+					// Should get an error
+					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+					if scenario.ErrorMsg != "" {
+						assert.Contains(t, err.Error(), scenario.ErrorMsg,
+							"Error message should contain expected text for scenario %s", scenario.Name)
+					}
+					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+				} else {
+					// Should NOT get an error (graceful handling)
+					if err != nil {
+						// This is a BUG - the JSON parsing should handle these inputs gracefully
+						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+					} else {
+						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+					}
+				}
+			})
+		}
+	})
+}
+
+// TestJSONParsingPanicProtection tests that JSON parsing functions don't panic
+// This function is designed to catch dangerous bugs that could cause crashes
+func (h *MediaMTXTestHelper) TestJSONParsingPanicProtection(t *testing.T) {
+	// Test data that could cause panics
+	panicTestData := [][]byte{
+		[]byte(`{"items": [{"name": null}]}`),             // Null values in arrays
+		[]byte(`{"items": [{"name": {"nested": null}}]}`), // Nested null values
+		[]byte(`{"items": [{"name": []}]}`),               // Arrays instead of strings
+		[]byte(`{"items": [{"name": {}}]}`),               // Objects instead of strings
+		[]byte(`{"items": [{"name": 123}]}`),              // Numbers instead of strings
+		[]byte(`{"items": [{"name": true}]}`),             // Booleans instead of strings
+	}
+
+	t.Run("Panic_Protection_Tests", func(t *testing.T) {
+		for i, data := range panicTestData {
+			t.Run(fmt.Sprintf("panic_test_%d", i), func(t *testing.T) {
+				t.Logf("Testing panic protection with data: %s", string(data))
+
+				// Test that functions don't panic
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with data %s: %v", string(data), r)
+					}
+				}()
+
+				// Test all parsing functions
+				_, err1 := parseStreamsResponse(data)
+				_, err2 := parseStreamResponse(data)
+				_, err3 := parseHealthResponse(data)
+				_, err4 := parsePathsResponse(data)
+
+				// We don't care about errors here, just that no panic occurred
+				t.Logf("✅ No panic occurred (errors: %v, %v, %v, %v)", err1, err2, err3, err4)
+			})
+		}
+	})
 }

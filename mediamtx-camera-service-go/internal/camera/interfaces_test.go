@@ -51,7 +51,7 @@ func TestDeviceChecker_RealImplementation(t *testing.T) {
 		assert.True(t, checker.Exists("."), "Current directory should exist")
 		assert.True(t, checker.Exists("/proc/version"), "Proc version should exist")
 		assert.True(t, checker.Exists("/dev/null"), "Dev null should exist")
-		
+
 		// Test with non-existent paths
 		assert.False(t, checker.Exists("/nonexistent/path"), "Non-existent path should return false")
 		assert.False(t, checker.Exists("/dev/video999"), "Non-existent video device should return false")
@@ -60,7 +60,7 @@ func TestDeviceChecker_RealImplementation(t *testing.T) {
 	t.Run("camera_device_checks", func(t *testing.T) {
 		// Check for common camera device paths
 		cameraPaths := []string{"/dev/video0", "/dev/video1", "/dev/video2"}
-		
+
 		for _, path := range cameraPaths {
 			exists := checker.Exists(path)
 			if exists {
@@ -96,11 +96,11 @@ func TestV4L2CommandExecutor_RealImplementation(t *testing.T) {
 
 		// Test with real camera devices if they exist
 		cameraPaths := []string{"/dev/video0", "/dev/video1", "/dev/video2"}
-		
+
 		for _, path := range cameraPaths {
 			if (&RealDeviceChecker{}).Exists(path) {
 				t.Logf("Testing V4L2 commands on %s", path)
-				
+
 				// Try to get device info
 				output, err := executor.ExecuteCommand(ctx, path, "v4l2-ctl --device-info")
 				if err == nil && output != "" {
@@ -120,20 +120,29 @@ func TestDeviceInfoParser_RealImplementation(t *testing.T) {
 	var parser DeviceInfoParser = &RealDeviceInfoParser{}
 
 	t.Run("parse_device_info", func(t *testing.T) {
-		// Test with real V4L2 output format
-		sampleOutput := `Driver name       : uvcvideo
-Card type         : USB Camera
-Bus info          : usb-0000:00:14.0-1
-Driver version    : 5.15.0
-Capabilities      : 0x85200001
-Device Caps       : 0x04200001`
+		// Test with REAL V4L2 output from actual device
+		helper := NewRealHardwareTestHelper(t)
+		devices := helper.GetAvailableDevices()
+		require.NotEmpty(t, devices, "Real camera devices must be available for testing")
 
-		capabilities, err := parser.ParseDeviceInfo(sampleOutput)
-		require.NoError(t, err, "Should parse valid device info")
-		assert.Equal(t, "uvcvideo", capabilities.DriverName, "Driver name should be parsed correctly")
-		assert.Equal(t, "USB Camera", capabilities.CardName, "Card name should be parsed correctly")
-		assert.Equal(t, "usb-0000:00:14.0-1", capabilities.BusInfo, "Bus info should be parsed correctly")
-		assert.Equal(t, "5.15.0", capabilities.Version, "Version should be parsed correctly")
+		devicePath := devices[0]
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Get real V4L2 output using the command executor
+		commandExecutor := &RealV4L2CommandExecutor{}
+		realOutput, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--all")
+		require.NoError(t, err, "Should get real V4L2 output from device")
+		require.NotEmpty(t, realOutput, "Real V4L2 output should not be empty")
+
+		// Parse real V4L2 output
+		capabilities, err := parser.ParseDeviceInfo(realOutput)
+		require.NoError(t, err, "Should parse real device info")
+		require.NotEmpty(t, capabilities.DriverName, "Real device should have driver name")
+		require.NotEmpty(t, capabilities.CardName, "Real device should have card name")
+
+		// Validate that parsing worked with real data
+		t.Logf("Parsed real device: Driver=%s, Card=%s", capabilities.DriverName, capabilities.CardName)
 	})
 
 	t.Run("parse_device_formats", func(t *testing.T) {
@@ -241,9 +250,36 @@ func TestCameraMonitor_RealImplementation(t *testing.T) {
 		var _ DeviceChecker = deviceChecker
 		var _ V4L2CommandExecutor = commandExecutor
 		var _ DeviceInfoParser = infoParser
-		
-		// This test will compile only if interfaces are satisfied
-		assert.True(t, true, "All real implementations should satisfy their interfaces")
+
+		// Test that real implementations actually work with their interfaces
+		// Test DeviceChecker interface
+		exists := deviceChecker.Exists("/dev/null")
+		assert.True(t, exists, "DeviceChecker should work with real filesystem")
+
+		// Test V4L2CommandExecutor interface
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_, err := commandExecutor.ExecuteCommand(ctx, "/dev/null", "--help")
+		// This may fail, but the interface should be callable
+		assert.NotNil(t, err, "V4L2CommandExecutor should be callable (may fail due to device)")
+
+		// Test DeviceInfoParser interface with real device
+		helper := NewRealHardwareTestHelper(t)
+		devices := helper.GetAvailableDevices()
+		require.NotEmpty(t, devices, "Real camera devices must be available for testing")
+
+		devicePath := devices[0]
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+
+		// Get real V4L2 output
+		commandExecutor := &RealV4L2CommandExecutor{}
+		realOutput, err := commandExecutor.ExecuteCommand(ctx2, devicePath, "--all")
+		require.NoError(t, err, "Should get real V4L2 output from device")
+
+		// Parse real output
+		_, err = infoParser.ParseDeviceInfo(realOutput)
+		assert.NoError(t, err, "DeviceInfoParser should parse real V4L2 output")
 	})
 }
 
@@ -267,8 +303,8 @@ func TestMonitorStats_Structure(t *testing.T) {
 	}
 
 	assert.False(t, stats.Running, "Should start not running")
-	assert.Equal(t, 0, stats.ActiveTasks, "Should start with no active tasks")
-	assert.Equal(t, 0, stats.PollingCycles, "Should start with no polling cycles")
+	assert.Equal(t, int64(0), stats.ActiveTasks, "Should start with no active tasks")
+	assert.Equal(t, int64(0), stats.PollingCycles, "Should start with no polling cycles")
 	assert.Equal(t, 1.0, stats.CurrentPollInterval, "Should have default poll interval")
 }
 

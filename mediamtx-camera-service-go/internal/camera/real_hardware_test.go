@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -100,10 +101,7 @@ func TestRealHardware_QuickSuite(t *testing.T) {
 	devices := helper.GetAvailableDevices()
 	t.Logf("Found %d available camera devices", len(devices))
 
-	if len(devices) == 0 {
-		t.Skip("No real camera devices available for quick testing")
-		return
-	}
+	require.NotEmpty(t, devices, "Real camera devices must be available for testing")
 
 	// Run essential tests only
 	t.Run("device_discovery", TestRealHardware_DeviceDiscovery)
@@ -127,11 +125,7 @@ func TestRealHardware_DeviceDiscovery(t *testing.T) {
 		// REAL HARDWARE TEST: Should find actual camera devices
 		t.Logf("Found %d available camera devices", len(devices))
 
-		// Even if no devices found, test should not fail - just skip
-		if len(devices) == 0 {
-			t.Skip("No real camera devices available for testing")
-			return
-		}
+		require.NotEmpty(t, devices, "Real camera devices must be available for testing")
 
 		// Verify each device is actually accessible
 		for _, device := range devices {
@@ -498,10 +492,7 @@ func TestRealHardware_DeviceMonitoring(t *testing.T) {
 		// Test device discovery and monitoring
 		discoveredDevices := helper.TestDeviceDiscovery()
 
-		if len(discoveredDevices) == 0 {
-			t.Skip("No real camera devices available for monitoring test")
-			return
-		}
+		require.NotEmpty(t, discoveredDevices, "Real camera devices must be available for monitoring test")
 
 		// Test monitoring each discovered device
 		for _, device := range discoveredDevices {
@@ -646,10 +637,7 @@ func TestRealHardware_IntegrationWorkflow(t *testing.T) {
 
 		// 2. Discover devices
 		devices := helper.TestDeviceDiscovery()
-		if len(devices) == 0 {
-			t.Skip("No real camera devices available for integration test")
-			return
-		}
+		require.NotEmpty(t, devices, "Real camera devices must be available for integration test")
 
 		// 3. Test each device comprehensively
 		for _, device := range devices {
@@ -685,10 +673,7 @@ func TestRealHardware_DeviceHealthCheck(t *testing.T) {
 	t.Log("=== REAL HARDWARE DEVICE HEALTH CHECK STARTING ===")
 
 	devices := helper.GetAvailableDevices()
-	if len(devices) == 0 {
-		t.Skip("No real camera devices available for health check")
-		return
-	}
+	require.NotEmpty(t, devices, "Real camera devices must be available for health check")
 
 	// Health check results
 	type DeviceHealth struct {
@@ -1046,10 +1031,24 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// Test state change processing
-		// This should trigger processDeviceStateChanges
-		assert.NotNil(t, monitor, "Monitor should be created")
-		assert.True(t, true, "Device state change processing should be testable")
+		// Test real device state change processing
+		ctx := context.Background()
+
+		// Create a test device and process state changes
+		testDevice := &CameraDevice{
+			Path:   "/dev/video0",
+			Name:   "Test Camera",
+			Status: DeviceStatusConnected,
+		}
+
+		// Test processDeviceStateChanges with real device
+		deviceMap := map[string]*CameraDevice{"/dev/video0": testDevice}
+		monitor.processDeviceStateChanges(ctx, deviceMap)
+
+		// Verify device was processed
+		connectedDevices := monitor.GetConnectedCameras()
+		require.NotEmpty(t, connectedDevices, "Device state change should have been processed")
+		require.Contains(t, connectedDevices, "/dev/video0", "Device should be in connected devices")
 	})
 
 	t.Run("camera_event_generation", func(t *testing.T) {
@@ -1171,4 +1170,358 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 // Helper function for string contains check
 func contains(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// TestRealHardware_IntegrationScenarios tests complex integration scenarios
+func TestRealHardware_IntegrationScenarios(t *testing.T) {
+	helper := NewRealHardwareTestHelper(t)
+
+	t.Log("=== REAL HARDWARE INTEGRATION SCENARIOS STARTING ===")
+
+	devices := helper.GetAvailableDevices()
+	require.NotEmpty(t, devices, "Real camera devices must be available for integration testing")
+
+	// Test 1: Full device lifecycle simulation
+	t.Run("device_lifecycle_simulation", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Simulate device discovery
+		t.Logf("Simulating device discovery for %s", devicePath)
+		exists := helper.deviceChecker.Exists(devicePath)
+		require.True(t, exists, "Device should exist")
+
+		// Simulate capability detection
+		t.Logf("Simulating capability detection for %s", devicePath)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		commandExecutor := &RealV4L2CommandExecutor{}
+		output, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--all")
+		require.NoError(t, err, "Should get device info")
+
+		// Simulate parsing
+		infoParser := &RealDeviceInfoParser{}
+		capabilities, err := infoParser.ParseDeviceInfo(output)
+		require.NoError(t, err, "Should parse device info")
+
+		// Simulate format detection
+		formatOutput, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--list-formats-ext")
+		if err == nil {
+			formats, err := infoParser.ParseDeviceFormats(formatOutput)
+			require.NoError(t, err, "Should parse device formats")
+			t.Logf("Device supports %d formats", len(formats))
+		}
+
+		// Simulate device usage
+		t.Logf("Simulating device usage for %s", devicePath)
+		device := &CameraDevice{
+			Path:         devicePath,
+			Name:         capabilities.CardName,
+			Status:       DeviceStatusConnected,
+			Capabilities: capabilities,
+		}
+
+		// Simulate device disconnection
+		t.Logf("Simulating device disconnection for %s", devicePath)
+		device.Status = DeviceStatusDisconnected
+
+		t.Logf("Device lifecycle simulation completed for %s", devicePath)
+	})
+
+	// Test 2: Multiple device concurrent operations
+	t.Run("multiple_device_concurrent_operations", func(t *testing.T) {
+		var wg sync.WaitGroup
+		errors := make(chan error, len(devices))
+
+		// Test all available devices concurrently
+		for _, devicePath := range devices {
+			wg.Add(1)
+			go func(path string) {
+				defer wg.Done()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+
+				// Test device operations
+				commandExecutor := &RealV4L2CommandExecutor{}
+				_, err := commandExecutor.ExecuteCommand(ctx, path, "--info")
+				if err != nil {
+					errors <- fmt.Errorf("device %s failed: %v", path, err)
+				}
+			}(devicePath)
+		}
+
+		wg.Wait()
+		close(errors)
+
+		// Check for errors
+		errorCount := 0
+		for err := range errors {
+			if err != nil {
+				errorCount++
+				t.Logf("Device operation error: %v", err)
+			}
+		}
+
+		// Should have minimal errors
+		assert.Less(t, errorCount, len(devices)/2, "Should have minimal device operation errors")
+	})
+
+	// Test 3: Device error recovery simulation
+	t.Run("device_error_recovery_simulation", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Simulate device becoming unavailable
+		t.Logf("Simulating device error for %s", devicePath)
+
+		// Try to access device with invalid command
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		commandExecutor := &RealV4L2CommandExecutor{}
+		_, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--invalid-command")
+		require.Error(t, err, "Should fail with invalid command")
+
+		// Simulate recovery by trying valid command
+		t.Logf("Simulating device recovery for %s", devicePath)
+		_, err = commandExecutor.ExecuteCommand(ctx, devicePath, "--info")
+		require.NoError(t, err, "Should recover with valid command")
+
+		t.Logf("Device error recovery simulation completed for %s", devicePath)
+	})
+
+	// Test 4: Resource exhaustion simulation
+	t.Run("resource_exhaustion_simulation", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Simulate resource exhaustion by creating many contexts
+		t.Logf("Simulating resource exhaustion for %s", devicePath)
+
+		var contexts []context.Context
+		var cancels []context.CancelFunc
+
+		// Create many contexts
+		for i := 0; i < 100; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			contexts = append(contexts, ctx)
+			cancels = append(cancels, cancel)
+		}
+
+		// Try to use device with one of the contexts
+		commandExecutor := &RealV4L2CommandExecutor{}
+		_, err := commandExecutor.ExecuteCommand(contexts[0], devicePath, "--info")
+		require.NoError(t, err, "Should work even with many contexts")
+
+		// Clean up contexts
+		for _, cancel := range cancels {
+			cancel()
+		}
+
+		t.Logf("Resource exhaustion simulation completed for %s", devicePath)
+	})
+
+	// Test 5: Device state transition simulation
+	t.Run("device_state_transition_simulation", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Simulate device state transitions
+		states := []DeviceStatus{
+			DeviceStatusConnected,
+			DeviceStatusDisconnected,
+			DeviceStatusError,
+			DeviceStatusConnected,
+		}
+
+		device := &CameraDevice{
+			Path:   devicePath,
+			Name:   "Test Device",
+			Status: DeviceStatusConnected,
+		}
+
+		for i, state := range states {
+			t.Logf("Simulating state transition %d: %s -> %s", i+1, device.Status, state)
+			device.Status = state
+
+			// Simulate state-specific behavior
+			switch state {
+			case DeviceStatusConnected:
+				// Device should be accessible
+				exists := helper.deviceChecker.Exists(devicePath)
+				require.True(t, exists, "Device should exist when connected")
+			case DeviceStatusDisconnected:
+				// Device might not be accessible
+				t.Logf("Device %s is disconnected", devicePath)
+			case DeviceStatusError:
+				// Device is in error state
+				t.Logf("Device %s is in error state", devicePath)
+			}
+		}
+
+		t.Logf("Device state transition simulation completed for %s", devicePath)
+	})
+
+	// Test 6: Performance under load simulation
+	t.Run("performance_under_load_simulation", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Simulate performance under load
+		t.Logf("Simulating performance under load for %s", devicePath)
+
+		start := time.Now()
+		var wg sync.WaitGroup
+		operations := 50
+
+		// Perform many operations concurrently
+		for i := 0; i < operations; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+
+				commandExecutor := &RealV4L2CommandExecutor{}
+				_, err := commandExecutor.ExecuteCommand(ctx, devicePath, "--info")
+				if err != nil {
+					t.Logf("Operation %d failed: %v", id, err)
+				}
+			}(i)
+		}
+
+		wg.Wait()
+		duration := time.Since(start)
+
+		t.Logf("Completed %d operations in %v (%.2f ops/sec)",
+			operations, duration, float64(operations)/duration.Seconds())
+
+		// Should complete within reasonable time
+		assert.Less(t, duration, 10*time.Second, "Operations should complete within reasonable time")
+	})
+
+	t.Log("=== REAL HARDWARE INTEGRATION SCENARIOS COMPLETED ===")
+}
+
+// TestRealHardware_ErrorInjection tests error injection scenarios
+func TestRealHardware_ErrorInjection(t *testing.T) {
+	helper := NewRealHardwareTestHelper(t)
+
+	t.Log("=== REAL HARDWARE ERROR INJECTION STARTING ===")
+
+	devices := helper.GetAvailableDevices()
+	require.NotEmpty(t, devices, "Real camera devices must be available for error injection testing")
+
+	// Test 1: Invalid device path injection
+	t.Run("invalid_device_path_injection", func(t *testing.T) {
+		invalidPaths := []string{
+			"/dev/video999999",
+			"/dev/invalid",
+			"",
+			"/dev/video;rm -rf /",
+			"/dev/video\nrm -rf /",
+		}
+
+		commandExecutor := &RealV4L2CommandExecutor{}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		for _, invalidPath := range invalidPaths {
+			t.Logf("Testing invalid path: %s", invalidPath)
+			_, err := commandExecutor.ExecuteCommand(ctx, invalidPath, "--info")
+			require.Error(t, err, "Should fail with invalid path: %s", invalidPath)
+		}
+	})
+
+	// Test 2: Malicious command injection
+	t.Run("malicious_command_injection", func(t *testing.T) {
+		devicePath := devices[0]
+		maliciousCommands := []string{
+			"--info; rm -rf /",
+			"--info\nrm -rf /",
+			"--info\trm -rf /",
+			"--info\"rm -rf /\"",
+			"--info\\rm -rf /",
+		}
+
+		commandExecutor := &RealV4L2CommandExecutor{}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		for _, maliciousCmd := range maliciousCommands {
+			t.Logf("Testing malicious command: %s", maliciousCmd)
+			_, err := commandExecutor.ExecuteCommand(ctx, devicePath, maliciousCmd)
+			require.Error(t, err, "Should fail with malicious command: %s", maliciousCmd)
+		}
+	})
+
+	// Test 3: Context cancellation injection
+	t.Run("context_cancellation_injection", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Test immediate cancellation
+		cancelledCtx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+
+		commandExecutor := &RealV4L2CommandExecutor{}
+		_, err := commandExecutor.ExecuteCommand(cancelledCtx, devicePath, "--info")
+		require.Error(t, err, "Should fail with cancelled context")
+
+		// Test timeout injection
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+
+		_, err = commandExecutor.ExecuteCommand(timeoutCtx, devicePath, "--info")
+		require.Error(t, err, "Should fail with timeout context")
+	})
+
+	// Test 4: Resource exhaustion injection
+	t.Run("resource_exhaustion_injection", func(t *testing.T) {
+		devicePath := devices[0]
+
+		// Create many contexts to exhaust resources
+		var contexts []context.Context
+		var cancels []context.CancelFunc
+
+		for i := 0; i < 1000; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			contexts = append(contexts, ctx)
+			cancels = append(cancels, cancel)
+		}
+
+		// Try to use device
+		commandExecutor := &RealV4L2CommandExecutor{}
+		_, err := commandExecutor.ExecuteCommand(contexts[0], devicePath, "--info")
+
+		// Should still work (or fail gracefully)
+		if err != nil {
+			t.Logf("Resource exhaustion caused error (expected): %v", err)
+		}
+
+		// Clean up
+		for _, cancel := range cancels {
+			cancel()
+		}
+	})
+
+	// Test 5: Invalid data injection
+	t.Run("invalid_data_injection", func(t *testing.T) {
+		// Test parsing with invalid data
+		infoParser := &RealDeviceInfoParser{}
+
+		invalidOutputs := []string{
+			"",
+			"Invalid output",
+			"Driver name: \x00\x01\x02",
+			"Driver name: " + string(make([]byte, 10000)),
+			"Driver name: " + strings.Repeat("A", 10000),
+		}
+
+		for _, invalidOutput := range invalidOutputs {
+			t.Logf("Testing invalid output parsing")
+			capabilities, err := infoParser.ParseDeviceInfo(invalidOutput)
+			require.NoError(t, err, "Should handle invalid output gracefully")
+			require.NotNil(t, capabilities, "Should return valid capabilities struct")
+		}
+	})
+
+	t.Log("=== REAL HARDWARE ERROR INJECTION COMPLETED ===")
 }

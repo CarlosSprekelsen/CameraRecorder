@@ -762,3 +762,65 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 		"health_status":     health.Status,
 	})
 }
+
+// TestRTSPConnectionManager_InputValidation_DangerousBugs tests input validation
+// that can catch dangerous bugs in RTSP connection manager
+func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create RTSP connection manager
+	rtspManager := helper.GetRTSPConnectionManager()
+
+	// Test input validation scenarios that can catch dangerous bugs
+	helper.TestRTSPInputValidation(t, rtspManager)
+}
+
+// TestRTSPConnectionManager_ErrorScenarios_DangerousBugs tests error scenarios
+// that were identified in the original test failures
+func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create RTSP connection manager
+	rtspManager := helper.GetRTSPConnectionManager()
+	ctx := context.Background()
+
+	// Test the specific scenarios that were failing in the original tests
+	t.Run("negative_page_number_bug", func(t *testing.T) {
+		// This was failing with: strconv.ParseUint: parsing "-1": invalid syntax
+		// This indicates a bug - the API should handle negative page numbers gracefully
+		_, err := rtspManager.ListConnections(ctx, -1, 10)
+
+		if err != nil {
+			// This is a BUG - negative page numbers should be handled gracefully
+			t.Errorf("🚨 BUG DETECTED: Negative page number (-1) should be handled gracefully but got error: %v", err)
+			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+		} else {
+			t.Logf("✅ Negative page number handled gracefully (no error)")
+		}
+	})
+
+	t.Run("zero_items_per_page_bug", func(t *testing.T) {
+		// This was failing with: invalid items per page
+		// This indicates a bug - the API should handle zero items per page gracefully
+		_, err := rtspManager.ListConnections(ctx, 0, 0)
+
+		if err != nil {
+			// This is a BUG - zero items per page should be handled gracefully
+			t.Errorf("🚨 BUG DETECTED: Zero items per page should be handled gracefully but got error: %v", err)
+			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+		} else {
+			t.Logf("✅ Zero items per page handled gracefully (no error)")
+		}
+	})
+
+	t.Run("negative_items_per_page_should_fail", func(t *testing.T) {
+		// This should fail with a clear error message
+		_, err := rtspManager.ListConnections(ctx, 0, -5)
+
+		require.Error(t, err, "Negative items per page should produce an error")
+		assert.Contains(t, err.Error(), "invalid", "Error should indicate invalid input")
+		t.Logf("✅ Negative items per page correctly rejected: %v", err)
+	})
+}

@@ -126,7 +126,7 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 			if strings.Contains(line, "'") {
 				start := strings.Index(line, "'") + 1
 				end := strings.LastIndex(line, "'")
-				if start > 0 && end > start {
+				if start > 0 && end >= start { // Allow empty pixel format (end == start)
 					currentPixelFormat = line[start:end]
 
 					// Create format entry immediately when declaration is found
@@ -168,7 +168,11 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 					if start > 0 && end > start {
 						fps := strings.TrimSpace(line[start:end])
 						if fps != "" {
-							currentFormat.FrameRates = append(currentFormat.FrameRates, fps)
+							// Normalize frame rate to filter out invalid values
+							normalizedFps := r.normalizeFrameRate(fps)
+							if normalizedFps != "" {
+								currentFormat.FrameRates = append(currentFormat.FrameRates, normalizedFps)
+							}
 						}
 					}
 				}
@@ -283,11 +287,11 @@ func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, e
 	var frameRates []string
 
 	// Focus on real V4L2 output formats first, then handle test patterns
-	// Real V4L2 format: "Interval: Discrete 0.033s (30.000 fps)"
+	// Real V4L2 format: "Interval: Discrete 0.033s (30.000 fps)" or "Interval: Discrete -0.033s (-30.000 fps)"
 	frameRatePatterns := []string{
-		// Real V4L2 patterns (highest priority)
-		`Interval:\s*Discrete\s+\d+\.\d+s\s*\((\d+(?:\.\d+)?)\s*fps\)`, // Interval: Discrete 0.033s (30.000 fps)
-		`\((\d+(?:\.\d+)?)\s*fps\)`,                                    // (30.000 fps) - fallback for real V4L2
+		// Real V4L2 patterns (highest priority) - handle both positive and negative
+		`Interval:\s*Discrete\s+-?\d+\.\d+s\s*\((-?\d+(?:\.\d+)?)\s*fps\)`, // Interval: Discrete 0.033s (30.000 fps) or -0.033s (-30.000 fps)
+		`\((-?\d+(?:\.\d+)?)\s*fps\)`,                                      // (30.000 fps) or (-30.000 fps) - fallback for real V4L2
 
 		// Test patterns (lower priority - for artificial test input)
 		`^\s*(\d+(?:\.\d+)?)\s*fps\b`,                    // 30.000 fps (standalone)
@@ -408,12 +412,62 @@ func (r *RealDeviceInfoParser) parseCapabilities(line string) []string {
 		return capabilities
 	}
 
-	caps := strings.Fields(parts[1])
-	for _, cap := range caps {
-		cap = strings.TrimSpace(cap)
-		if cap != "" {
-			capabilities = append(capabilities, cap)
+	// FIXED: Properly parse capability names that contain spaces
+	// V4L2 output format: "0x84a00001 Video Capture Streaming"
+	// Expected result: ["0x84a00001", "Video Capture", "Streaming"]
+	capsText := strings.TrimSpace(parts[1])
+
+	// Split by spaces to get individual words
+	words := strings.Fields(capsText)
+
+	// Process words to group them into capabilities
+	var currentCap strings.Builder
+	for _, word := range words {
+		// If this word starts with 0x, it's a hex capability value
+		if strings.HasPrefix(word, "0x") {
+			// Save previous capability if any
+			if currentCap.Len() > 0 {
+				capabilities = append(capabilities, strings.TrimSpace(currentCap.String()))
+				currentCap.Reset()
+			}
+			// Add hex value as separate capability
+			capabilities = append(capabilities, word)
+		} else {
+			// This is part of a capability name
+			// Check if this is the start of a new capability
+			// Capability names are typically: "Video", "Capture", "Streaming", etc.
+			// We need to group "Video Capture" together but keep "Streaming" separate
+
+			// If current capability is empty, start a new one
+			if currentCap.Len() == 0 {
+				currentCap.WriteString(word)
+			} else {
+				// Check if this should be part of the current capability or a new one
+				// Common V4L2 capability patterns:
+				// - "Video Capture" (two words)
+				// - "Streaming" (single word)
+				// - "Metadata Capture" (two words)
+
+				// If the current capability is "Video" and this word is "Capture", combine them
+				if currentCap.String() == "Video" && word == "Capture" {
+					currentCap.WriteString(" ")
+					currentCap.WriteString(word)
+				} else if currentCap.String() == "Metadata" && word == "Capture" {
+					currentCap.WriteString(" ")
+					currentCap.WriteString(word)
+				} else {
+					// This is a new capability, save the current one and start new
+					capabilities = append(capabilities, strings.TrimSpace(currentCap.String()))
+					currentCap.Reset()
+					currentCap.WriteString(word)
+				}
+			}
 		}
+	}
+
+	// Add the last capability if any
+	if currentCap.Len() > 0 {
+		capabilities = append(capabilities, strings.TrimSpace(currentCap.String()))
 	}
 
 	return capabilities
@@ -425,8 +479,12 @@ func (r *RealDeviceInfoParser) parseSize(size string) (int, int) {
 		return 0, 0
 	}
 
-	width, _ := strconv.Atoi(strings.TrimSpace(parts[0]))
-	height, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
+	// FIXED: Strip non-numeric characters from width and height
+	widthStr := regexp.MustCompile(`\D`).ReplaceAllString(strings.TrimSpace(parts[0]), "")
+	heightStr := regexp.MustCompile(`\D`).ReplaceAllString(strings.TrimSpace(parts[1]), "")
+
+	width, _ := strconv.Atoi(widthStr)
+	height, _ := strconv.Atoi(heightStr)
 
 	return width, height
 }

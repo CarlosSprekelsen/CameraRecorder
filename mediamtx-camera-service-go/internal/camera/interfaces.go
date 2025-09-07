@@ -2,7 +2,6 @@ package camera
 
 import (
 	"context"
-	"sync"
 	"time"
 )
 
@@ -70,20 +69,20 @@ type CameraMonitor interface {
 // MonitorStats tracks monitoring statistics
 type MonitorStats struct {
 	Running                    bool    `json:"running"`
-	ActiveTasks                int     `json:"active_tasks"`
-	PollingCycles              int     `json:"polling_cycles"`
-	DeviceStateChanges         int     `json:"device_state_changes"`
-	CapabilityProbesAttempted  int     `json:"capability_probes_attempted"`
-	CapabilityProbesSuccessful int     `json:"capability_probes_successful"`
-	CapabilityTimeouts         int     `json:"capability_timeouts"`
-	CapabilityParseErrors      int     `json:"capability_parse_errors"`
-	PollingFailureCount        int     `json:"polling_failure_count"`
+	ActiveTasks                int64   `json:"active_tasks"`
+	PollingCycles              int64   `json:"polling_cycles"`
+	DeviceStateChanges         int64   `json:"device_state_changes"`
+	CapabilityProbesAttempted  int64   `json:"capability_probes_attempted"`
+	CapabilityProbesSuccessful int64   `json:"capability_probes_successful"`
+	CapabilityTimeouts         int64   `json:"capability_timeouts"`
+	CapabilityParseErrors      int64   `json:"capability_parse_errors"`
+	PollingFailureCount        int64   `json:"polling_failure_count"`
 	CurrentPollInterval        float64 `json:"current_poll_interval"`
-	KnownDevicesCount          int     `json:"known_devices_count"`
-	UdevEventsProcessed        int     `json:"udev_events_processed"`
-	UdevEventsFiltered         int     `json:"udev_events_filtered"`
-	UdevEventsSkipped          int     `json:"udev_events_skipped"`
-	mu                         sync.RWMutex
+	KnownDevicesCount          int64   `json:"known_devices_count"`
+	UdevEventsProcessed        int64   `json:"udev_events_processed"`
+	UdevEventsFiltered         int64   `json:"udev_events_filtered"`
+	UdevEventsSkipped          int64   `json:"udev_events_skipped"`
+	// Removed mu sync.RWMutex - using atomic operations instead
 }
 
 // CapabilityDetectionResult represents the result of device capability detection

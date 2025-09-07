@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -32,10 +33,12 @@ type rtspConnectionManager struct {
 	config *MediaMTXConfig
 	logger *logging.Logger
 
-	// State management
-	mu        sync.RWMutex
-	isHealthy bool
-	lastCheck time.Time
+	// Atomic state: optimized for high-frequency reads
+	isHealthy int32 // 0 = false, 1 = true
+	lastCheck int64 // Atomic timestamp (UnixNano)
+	
+	// Keep mutex only for complex data structures
+	mu sync.RWMutex
 
 	// Metrics cache
 	lastConnections *RTSPConnectionList
@@ -46,11 +49,12 @@ type rtspConnectionManager struct {
 // NewRTSPConnectionManager creates a new RTSP connection manager
 func NewRTSPConnectionManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) RTSPConnectionManager {
 	return &rtspConnectionManager{
-		client:       client,
-		config:       config,
-		logger:       logger,
-		isHealthy:    true,
-		metricsCache: make(map[string]interface{}),
+		client:        client,
+		config:        config,
+		logger:        logger,
+		isHealthy:     1, // Assume healthy initially (1 = true)
+		lastCheck:     time.Now().UnixNano(),
+		metricsCache:  make(map[string]interface{}),
 	}
 }
 
