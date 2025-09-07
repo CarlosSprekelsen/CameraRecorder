@@ -915,6 +915,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 
 	// Store the camera identifier in the session for API consistency
 	session.Device = cameraID
+	session.DevicePath = cameraID // Store camera identifier for API consistency
 
 	// Start tracking active recording for API consistency
 	if err := c.StartActiveRecording(cameraID, session.ID, ""); err != nil {

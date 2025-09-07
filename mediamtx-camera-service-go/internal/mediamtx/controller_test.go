@@ -25,6 +25,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Shared test resources for performance optimization
+var (
+	sharedHelper     *MediaMTXTestHelper
+	sharedController *controller
+	sharedConfigMgr  *config.ConfigManager
+)
+
+// TestMain sets up shared resources for all controller tests
+func TestMain(m *testing.M) {
+	// Create a dummy testing.T for TestMain
+	t := &testing.T{}
+
+	// Setup shared MediaMTX server (runs once for all tests)
+	sharedHelper = NewMediaMTXTestHelper(t, nil)
+	err := sharedHelper.WaitForServerReady(t, 30*time.Second)
+	if err != nil {
+		panic("Failed to start shared MediaMTX server: " + err.Error())
+	}
+
+	// Setup shared controller (runs once for all tests)
+	sharedConfigMgr = CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	controllerInterface, err := ControllerWithConfigManager(sharedConfigMgr, sharedHelper.GetLogger())
+	if err != nil {
+		panic("Failed to create shared controller: " + err.Error())
+	}
+
+	// Type assertion to get concrete controller type
+	sharedController = controllerInterface.(*controller)
+
+	ctx := context.Background()
+	err = sharedController.Start(ctx)
+	if err != nil {
+		panic("Failed to start shared controller: " + err.Error())
+	}
+
+	// Run all tests
+	code := m.Run()
+
+	// Cleanup shared resources
+	if sharedController != nil {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		sharedController.Stop(stopCtx)
+		cancel()
+	}
+	if sharedHelper != nil {
+		sharedHelper.Cleanup(t)
+	}
+
+	os.Exit(code)
+}
+
+// getSharedController returns the shared controller for tests (performance optimization)
+func getSharedController(t *testing.T) *controller {
+	require.NotNil(t, sharedController, "Shared controller should be initialized by TestMain")
+	return sharedController
+}
+
 // createConfigManagerWithEnvVars creates a config manager that loads environment variables
 func createConfigManagerWithEnvVars(t *testing.T, helper *MediaMTXTestHelper) *config.ConfigManager {
 	// Use centralized configuration loading from test helpers
@@ -608,35 +665,9 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 // TestController_AdvancedRecording_ReqMTX002 tests advanced recording functionality
 func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (advanced recording)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 10*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
-
-	// Create config manager using test fixture
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
-	_, err = configIntegration.GetMediaMTXConfig()
-	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
-
-	// Create controller
-	controller, err := ControllerWithConfigManager(configManager, helper.GetLogger())
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
+	// Use shared controller for performance optimization
+	controller := getSharedController(t)
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
 
 	// Test advanced recording with options
 	device := "camera0"
