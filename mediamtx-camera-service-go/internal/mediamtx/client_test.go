@@ -29,9 +29,7 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -49,9 +47,7 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
@@ -75,9 +71,7 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
@@ -99,16 +93,14 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
 
 	// First create a path
 	pathData := `{"name":"test_put_path","source":"publisher"}`
-	_, err = client.Post(ctx, "/v3/config/paths/add/test_put_path", []byte(pathData))
+	_, err := client.Post(ctx, "/v3/config/paths/add/test_put_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test POST request to replace path endpoint (from swagger.json)
@@ -128,16 +120,14 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
 
 	// First create a path
 	pathData := `{"name":"test_delete_path","source":"publisher"}`
-	_, err = client.Post(ctx, "/v3/config/paths/add/test_delete_path", []byte(pathData))
+	_, err := client.Post(ctx, "/v3/config/paths/add/test_delete_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test DELETE request to delete path endpoint (from swagger.json)
@@ -151,15 +141,13 @@ func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
 
 	// Test health check
-	err = client.HealthCheck(ctx)
+	err := client.HealthCheck(ctx)
 	require.NoError(t, err, "Health check should succeed")
 }
 
@@ -169,15 +157,13 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
 
 	// Test invalid endpoint
-	_, err = client.Get(ctx, "/v3/invalid/endpoint")
+	_, err := client.Get(ctx, "/v3/invalid/endpoint")
 	assert.Error(t, err, "Invalid endpoint should return error")
 
 	// Test invalid path creation (missing required fields per swagger.json)
@@ -195,9 +181,7 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
@@ -240,9 +224,7 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	client := helper.GetClient()
 	ctx := context.Background()
@@ -283,9 +265,7 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -297,6 +277,6 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 	require.NotNil(t, client, "Client should not be nil")
 
 	// Test close
-	err = client.Close()
+	err := client.Close()
 	require.NoError(t, err, "Client close should succeed")
 }

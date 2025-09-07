@@ -29,9 +29,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -55,9 +53,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -75,7 +71,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Start health monitoring
-	err = healthMonitor.Start(ctx)
+	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
 	// Wait for initial health check
@@ -96,9 +92,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -121,7 +115,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Start monitoring
-	err = healthMonitor.Start(ctx)
+	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
 	// Wait for health check
@@ -143,9 +137,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -169,7 +161,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Start monitoring
-	err = healthMonitor.Start(ctx)
+	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
 	// Wait for health check
@@ -191,9 +183,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -227,9 +217,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -270,9 +258,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Test different configurations
 	configs := []*MediaMTXConfig{

@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,18 +27,10 @@ func TestNewStreamManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager, "Stream manager should not be nil")
 }
 
@@ -50,18 +40,10 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
@@ -85,25 +67,17 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
 	testStreamName := "test_delete_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
-	_, err = streamManager.CreateStream(ctx, testStreamName, "publisher")
+	_, err := streamManager.CreateStream(ctx, testStreamName, "publisher")
 	require.NoError(t, err, "Stream creation should succeed")
 
 	// Delete the stream
@@ -117,25 +91,17 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
 	testStreamName := "test_get_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
-	_, err = streamManager.CreateStream(ctx, testStreamName, "publisher")
+	_, err := streamManager.CreateStream(ctx, testStreamName, "publisher")
 	require.NoError(t, err, "Stream creation should succeed")
 
 	// Get the stream
@@ -155,18 +121,10 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
@@ -184,18 +142,10 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
@@ -218,18 +168,10 @@ func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
@@ -252,18 +194,10 @@ func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
@@ -287,24 +221,16 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("stream-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	ctx := context.Background()
 
 	// Test invalid stream name
-	_, err = streamManager.CreateStream(ctx, "", "publisher")
+	_, err := streamManager.CreateStream(ctx, "", "publisher")
 	require.Error(t, err, "Empty stream name should cause error")
 
 	// Test getting non-existent stream

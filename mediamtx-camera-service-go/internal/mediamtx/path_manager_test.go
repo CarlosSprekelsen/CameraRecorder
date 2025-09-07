@@ -17,8 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,18 +27,10 @@ func TestNewPathManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should not be nil")
 }
 
@@ -50,18 +40,10 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	// Test path creation
@@ -76,7 +58,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 		}
 	}()
 
-	err = pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Verify path was created
@@ -90,25 +72,17 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	ctx := context.Background()
 	testPathName := "test_delete_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err = pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Verify path exists
@@ -130,25 +104,17 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	ctx := context.Background()
 	testPathName := "test_get_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err = pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Get the path
@@ -168,18 +134,10 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	ctx := context.Background()
@@ -197,25 +155,17 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	ctx := context.Background()
 	testPathName := "test_validate_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err = pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Validate the path
@@ -233,24 +183,16 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 30*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
-		BaseURL: helper.GetConfig().BaseURL,
-		Timeout: 30 * time.Second,
-	}
-	logger := logging.NewLogger("path-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	pathManager := NewPathManager(helper.GetClient(), config, logger)
+	// Use shared path manager from test helper
+	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
 	ctx := context.Background()
 
 	// Test invalid path name
-	err = pathManager.CreatePath(ctx, "", "publisher", nil)
+	err := pathManager.CreatePath(ctx, "", "publisher", nil)
 	require.Error(t, err, "Empty path name should cause error")
 
 	// Test getting non-existent path

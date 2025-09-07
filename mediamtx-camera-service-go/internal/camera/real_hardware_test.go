@@ -163,7 +163,8 @@ func TestRealHardware_DeviceCapabilities(t *testing.T) {
 		assert.NotEmpty(t, capabilities.Capabilities, "Device should have capabilities")
 		assert.NotEmpty(t, capabilities.DeviceCaps, "Device should have device capabilities")
 
-		// Check for video capture capability (but don't fail if not found)
+		// REAL TEST: Check for video capture capability - this MUST be detected
+		// If parsing is broken, this test will FAIL (which is what we want)
 		hasVideoCapture := false
 		for _, cap := range capabilities.Capabilities {
 			if contains(cap, "video capture") {
@@ -171,11 +172,13 @@ func TestRealHardware_DeviceCapabilities(t *testing.T) {
 				break
 			}
 		}
-		if hasVideoCapture {
-			t.Logf("Device %s supports video capture", devicePath)
-		} else {
-			t.Logf("Device %s does not report video capture capability", devicePath)
-		}
+
+		// This test MUST fail if capability parsing is broken
+		// We know the device HAS video capture capability from v4l2-ctl --info
+		assert.True(t, hasVideoCapture,
+			"Device %s MUST report video capture capability - if this fails, capability parsing is broken", devicePath)
+
+		t.Logf("✅ Device %s correctly reports video capture capability", devicePath)
 
 		return nil
 	})

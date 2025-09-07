@@ -32,9 +32,7 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -46,7 +44,8 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -64,9 +63,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -79,7 +76,8 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -88,7 +86,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -133,9 +131,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use centralized configuration loading from test fixtures
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -151,7 +147,8 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with configManager for proper multi-tier support
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, config, configManager, logger)
@@ -206,9 +203,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -219,7 +214,8 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -228,7 +224,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err)
 
 	// Create test snapshot file
@@ -267,9 +263,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -280,7 +274,8 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -289,7 +284,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err)
 
 	// Create test snapshot file
@@ -331,9 +326,7 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -344,7 +337,8 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -390,9 +384,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use centralized configuration loading from test fixtures
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -408,7 +400,8 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with configManager for proper multi-tier support
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, config, configManager, logger)
@@ -437,7 +430,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 			createdTime = time.Now().Add(-2 * time.Hour)
 			// Also make the file old
 			oldTime := time.Now().Add(-2 * time.Hour)
-			err = os.Chtimes(filePath, oldTime, oldTime)
+			err := os.Chtimes(filePath, oldTime, oldTime)
 			require.NoError(t, err)
 		}
 
@@ -465,14 +458,14 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 			_, exists := snapshotManager.snapshots[snapshotID]
 			assert.False(t, exists, "Old snapshot should be removed from memory")
 
-			_, err = os.Stat(filePath)
+			_, err := os.Stat(filePath)
 			assert.Error(t, err, "Old file should be deleted")
 			assert.True(t, os.IsNotExist(err), "Old file should not exist")
 		} else { // new snapshots should still exist in memory and on disk
 			_, exists := snapshotManager.snapshots[snapshotID]
 			assert.True(t, exists, "New snapshot should still exist in memory")
 
-			_, err = os.Stat(filePath)
+			_, err := os.Stat(filePath)
 			assert.NoError(t, err, "New file should still exist")
 		}
 	}
@@ -505,9 +498,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -518,7 +509,8 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -527,7 +519,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Test 1: GetSnapshotsList with unconfigured path
-	_, err = snapshotManager.GetSnapshotsList(ctx, 10, 0)
+	_, err := snapshotManager.GetSnapshotsList(ctx, 10, 0)
 	assert.Error(t, err, "Should return error for unconfigured snapshots path")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate path not configured")
 
@@ -549,9 +541,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -562,7 +552,8 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
 	// Create StreamManager using proper test infrastructure
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 
 	// Create SnapshotManager with real StreamManager
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
@@ -571,7 +562,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err)
 
 	// Test concurrent snapshot operations
@@ -625,9 +616,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -639,7 +628,8 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
 
 	// Test Tier 1: USB Direct Capture
@@ -648,7 +638,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(config.SnapshotsPath, "tier1_test.jpg")
 
 	// Create output directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -695,9 +685,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -709,7 +697,8 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
 
 	// Test Tier 2: RTSP Immediate Capture
@@ -718,7 +707,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(config.SnapshotsPath, "tier2_test.jpg")
 
 	// Create output directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -772,9 +761,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -786,7 +773,8 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
 
 	// Test Tier 3: RTSP Stream Activation
@@ -795,7 +783,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(config.SnapshotsPath, "tier3_test.jpg")
 
 	// Create output directory
-	err = os.MkdirAll(config.SnapshotsPath, 0755)
+	err := os.MkdirAll(config.SnapshotsPath, 0755)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -844,9 +832,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	config := &MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -858,7 +844,8 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(config, logger)
-	streamManager := NewStreamManager(helper.GetClient(), config, logger)
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
 	snapshotManager := NewSnapshotManager(ffmpegManager, streamManager, config, logger)
 
 	// Test different device types to verify multi-tier behavior
@@ -885,7 +872,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 			outputPath := filepath.Join(config.SnapshotsPath, fmt.Sprintf("integration_%s.jpg", tc.name))
 
 			// Create output directory
-			err = os.MkdirAll(config.SnapshotsPath, 0755)
+			err := os.MkdirAll(config.SnapshotsPath, 0755)
 			require.NoError(t, err, "Should create output directory")
 
 			options := map[string]interface{}{
@@ -934,9 +921,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")

@@ -1056,3 +1056,8 @@ func (s *WebSocketServer) SetConfig(config *ServerConfig) {
 func (s *WebSocketServer) GetEventManager() *EventManager {
 	return s.eventManager
 }
+
+// GetCameraMonitor returns the camera monitor for external access
+func (s *WebSocketServer) GetCameraMonitor() camera.CameraMonitor {
+	return s.cameraMonitor
+}

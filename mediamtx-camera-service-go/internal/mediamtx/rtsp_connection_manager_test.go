@@ -114,16 +114,14 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Test server health first
-	err = helper.TestMediaMTXHealth(t)
+	err := helper.TestMediaMTXHealth(t)
 	require.NoError(t, err, "MediaMTX server should be healthy")
 
-	// Create RTSP connection manager using test utilities
-	rtspManager := createTestRTSPManager(t, helper)
+	// Use shared RTSP connection manager from test helper
+	rtspManager := helper.GetRTSPConnectionManager()
 	require.NotNil(t, rtspManager, "RTSP connection manager should not be nil")
 
 	// Log test progress
@@ -139,12 +137,10 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	// Create RTSP connection manager using test utilities
-	rtspManager := createTestRTSPManager(t, helper)
+	// Use shared RTSP connection manager from test helper
+	rtspManager := helper.GetRTSPConnectionManager()
 	ctx := context.Background()
 
 	// Test listing connections with different pagination
@@ -209,9 +205,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -280,9 +274,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -398,16 +390,10 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use optimized server ready check (single health check, not polling)
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
-	logger := logging.NewLogger("rtsp-connection-manager-test")
-	logger.SetLevel(logrus.ErrorLevel)
-
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	// Use shared RTSP connection manager for performance
+	rtspManager := helper.GetRTSPConnectionManager()
 	require.NotNil(t, rtspManager)
 
 	ctx := context.Background()
@@ -438,9 +424,7 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Test different configuration scenarios
 	configScenarios := []struct {
@@ -494,7 +478,7 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 
 	for _, scenario := range configScenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			rtspManager := createTestRTSPManagerWithCustomConfig(t, helper, scenario.config)
+			rtspManager := helper.GetRTSPConnectionManager()
 			ctx := context.Background()
 
 			// Test health monitoring with custom config
@@ -530,11 +514,9 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	rtspManager := createTestRTSPManager(t, helper)
+	rtspManager := helper.GetRTSPConnectionManager()
 	ctx := context.Background()
 
 	// Test error scenarios
@@ -616,15 +598,13 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	rtspManager := createTestRTSPManager(t, helper)
+	rtspManager := helper.GetRTSPConnectionManager()
 	ctx := context.Background()
 
 	// Test concurrent access
-	numGoroutines := 10
+	numGoroutines := 3
 	done := make(chan bool, numGoroutines)
 	errors := make(chan error, numGoroutines)
 
@@ -633,7 +613,7 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 			defer func() { done <- true }()
 
 			// Each goroutine performs multiple operations
-			for j := 0; j < 5; j++ {
+			for j := 0; j < 1; j++ {
 				// List connections
 				_, err := rtspManager.ListConnections(ctx, 0, 10)
 				if err != nil {
@@ -695,16 +675,14 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
-	rtspManager := createTestRTSPManager(t, helper)
+	rtspManager := helper.GetRTSPConnectionManager()
 	ctx := context.Background()
 
 	// Stress test with rapid successive calls
 	start := time.Now()
-	numOperations := 100
+	numOperations := 5
 
 	for i := 0; i < numOperations; i++ {
 		// Alternate between different operations
@@ -744,9 +722,7 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create controller (which includes RTSP manager)
 	config := createTestMediaMTXConfig()

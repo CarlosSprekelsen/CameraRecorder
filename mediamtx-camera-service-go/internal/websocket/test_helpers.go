@@ -16,9 +16,9 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
+	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -78,7 +78,8 @@ func getTestConfigPath(t *testing.T) string {
 	return ""
 }
 
-// NewTestWebSocketServer creates a test WebSocket server using fixtures
+// NewTestWebSocketServer creates a test WebSocket server using the PRODUCTION constructor
+// with proper test dependencies. This ensures tests use the same code paths as production.
 func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	// Load test configuration from fixtures
 	configPath := getTestConfigPath(t)
@@ -91,7 +92,7 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 
 	// Create server configuration from test config
 	cfg := configManager.GetConfig()
-	config := &ServerConfig{
+	serverConfig := &ServerConfig{
 		Host:                 cfg.Server.Host,
 		Port:                 port, // Use dynamically assigned port
 		WebSocketPath:        cfg.Server.WebSocketPath,
@@ -107,54 +108,87 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 		ClientCleanupTimeout: cfg.Server.ClientCleanupTimeout,
 	}
 
-	// Create minimal test dependencies
+	// Create logger
 	logger := logging.NewLogger("websocket-test")
 
 	// Create test JWT handler
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
 
-	// Create test permission checker
-	permissionChecker := security.NewPermissionChecker()
+	// Create REAL test dependencies (not mocks)
+	cameraMonitor := createTestCameraMonitor(t, configManager, logger)
+	mediaMTXController := createTestMediaMTXController(t, logger)
 
-	// Create test validation helper
-	inputValidator := security.NewInputValidator(logger, nil)
-	validationHelper := NewValidationHelper(inputValidator, logging.NewLogger("test-validation-helper"))
+	// Use the PRODUCTION constructor with proper dependency injection
+	server, err := NewWebSocketServer(
+		configManager,
+		logger,
+		cameraMonitor, // Real camera monitor
+		jwtHandler,
+		mediaMTXController, // Real MediaMTX controller
+	)
+	require.NoError(t, err, "Failed to create WebSocket server with production constructor")
 
-	// Create test event manager
-	eventManager := NewEventManager(logging.NewLogger("test-event-manager"))
-
-	// Create server with test dependencies
-	server := &WebSocketServer{
-		config:            config,
-		logger:            logger,
-		jwtHandler:        jwtHandler,
-		permissionChecker: permissionChecker,
-		validationHelper:  validationHelper,
-		eventManager:      eventManager,
-		clients:           make(map[string]*ClientConnection),
-		methods:           make(map[string]MethodHandler),
-		methodVersions:    make(map[string]string),
-		metrics: &PerformanceMetrics{
-			RequestCount:      0,
-			ResponseTimes:     make(map[string][]float64),
-			ErrorCount:        0,
-			ActiveConnections: 0,
-			StartTime:         time.Now(),
-		},
-		eventHandlers: make([]func(string, interface{}), 0),
-		stopChan:      make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true // Allow all origins in tests
-			},
-		},
-	}
-
-	// Register built-in methods (same as production server)
-	server.registerBuiltinMethods()
+	// Override the config with our test-specific port
+	server.config = serverConfig
 
 	return server
+}
+
+// StartTestServerWithDependencies starts the WebSocket server following the same pattern as main()
+// This ensures proper startup sequence: camera monitor first, then WebSocket server
+func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
+	t.Helper()
+
+	// Follow main() startup pattern: start camera monitor first, then WebSocket server
+	// This is the responsibility of the test helper to set up unit tests properly
+
+	// Start camera monitor first (following main() pattern)
+	ctx := context.Background()
+	cameraMonitor := server.GetCameraMonitor()
+	if cameraMonitor != nil {
+		err := cameraMonitor.Start(ctx)
+		require.NoError(t, err, "Failed to start camera monitor")
+	}
+
+	// Start WebSocket server (following main() pattern)
+	err := server.Start()
+	require.NoError(t, err, "Failed to start WebSocket server")
+}
+
+// createTestCameraMonitor creates a real camera monitor for testing
+// NOTE: Monitor is created but NOT started - tests should start it explicitly following main() pattern
+func createTestCameraMonitor(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) camera.CameraMonitor {
+	// Create real camera monitor using the same pattern as camera tests
+	deviceChecker := &camera.RealDeviceChecker{}
+	commandExecutor := &camera.RealV4L2CommandExecutor{}
+	infoParser := &camera.RealDeviceInfoParser{}
+
+	monitor, err := camera.NewHybridCameraMonitor(
+		configManager,
+		logger,
+		deviceChecker,
+		commandExecutor,
+		infoParser,
+	)
+	require.NoError(t, err, "Failed to create test camera monitor")
+
+	return monitor
+}
+
+// createTestMediaMTXController creates a real MediaMTX controller for testing
+func createTestMediaMTXController(t *testing.T, logger *logging.Logger) mediamtx.MediaMTXController {
+	// Create MediaMTX test helper
+	helper := mediamtx.NewMediaMTXTestHelper(t, nil)
+
+	// Create config manager with test fixture
+	configManager := mediamtx.CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+
+	// Create controller using the same pattern as MediaMTX tests
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, helper.GetLogger())
+	require.NoError(t, err, "Failed to create test MediaMTX controller")
+
+	return controller
 }
 
 // NewTestWebSocketServerWithDependencies creates a test server with provided dependencies
@@ -279,6 +313,22 @@ func CleanupTestClient(t *testing.T, conn *websocket.Conn) {
 			t.Logf("Warning: Failed to close test client: %v", err)
 		}
 	}
+}
+
+// AuthenticateTestClient authenticates a test client using the existing security helpers
+// This eliminates duplication of JWT handler creation across tests
+func AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, role string) {
+	// Use the same secret key as the test configuration to ensure compatibility
+	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create JWT handler with correct secret")
+	testToken := security.GenerateTestToken(t, jwtHandler, userID, role)
+
+	// Authenticate the client
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
 }
 
 // registerDefaultMethods registers default test methods on the server

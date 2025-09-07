@@ -57,12 +57,13 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 
 // MediaMTXTestHelper provides utilities for MediaMTX server testing
 type MediaMTXTestHelper struct {
-	config           *MediaMTXTestConfig
-	logger           *logging.Logger
-	client           MediaMTXClient
-	pathManager      PathManager
-	streamManager    StreamManager
-	recordingManager *RecordingManager
+	config                *MediaMTXTestConfig
+	logger                *logging.Logger
+	client                MediaMTXClient
+	pathManager           PathManager
+	streamManager         StreamManager
+	recordingManager      *RecordingManager
+	rtspConnectionManager RTSPConnectionManager
 }
 
 // EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
@@ -325,6 +326,19 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, h.logger)
 	}
 	return h.recordingManager
+}
+
+// GetRTSPConnectionManager returns a shared RTSP connection manager instance
+func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
+	if h.rtspConnectionManager == nil {
+		// Convert test config to MediaMTX config
+		mediaMTXConfig := &MediaMTXConfig{
+			BaseURL: h.config.BaseURL,
+			Timeout: 10 * time.Second,
+		}
+		h.rtspConnectionManager = NewRTSPConnectionManager(h.client, mediaMTXConfig, h.logger)
+	}
+	return h.rtspConnectionManager
 }
 
 // CreateConfigManagerWithFixture creates a config manager that loads from test fixtures

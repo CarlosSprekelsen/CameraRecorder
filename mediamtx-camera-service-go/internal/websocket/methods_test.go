@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -45,17 +44,8 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Create a test JWT token for authentication using the same secret as the server
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
-
-	// First authenticate the client
-	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": testToken,
-	})
-	authResponse := SendTestMessage(t, conn, authMessage)
-	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	// Authenticate client using the helper
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 	// Send ping message
 	message := CreateTestMessage("ping", map[string]interface{}{})
@@ -85,17 +75,8 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Create a test JWT token for authentication using the same secret as the server
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "admin") // admin role for get_server_info
-
-	// First authenticate the client
-	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": testToken,
-	})
-	authResponse := SendTestMessage(t, conn, authMessage)
-	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	// Authenticate client using the helper (admin role for get_server_info)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	// Send get_server_info message
 	message := CreateTestMessage("get_server_info", map[string]interface{}{})
@@ -125,17 +106,8 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Create a test JWT token for authentication using the same secret as the server
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "admin") // admin role for get_status
-
-	// First authenticate the client
-	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": testToken,
-	})
-	authResponse := SendTestMessage(t, conn, authMessage)
-	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	// Authenticate client using the helper (admin role for get_status)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	// Send get_status message
 	message := CreateTestMessage("get_status", map[string]interface{}{})
@@ -255,18 +227,8 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Create a test JWT token for authentication
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
-
-	// Authenticate the client once
-	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": testToken,
-	})
-	authResponse := SendTestMessage(t, conn, authMessage)
-	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	// Authenticate the client once using the helper
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 	// Test multiple sequential requests
 	const numRequests = 10
@@ -299,10 +261,8 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	require.NoError(t, err, "Server should start successfully")
 	defer CleanupTestServer(t, server)
 
-	// Create a test JWT token for authentication
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-
+	// Create a test JWT token for authentication using the helper
+	jwtHandler := security.TestJWTHandler(t)
 	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
 
 	// Test multiple connections with proper synchronization
@@ -387,17 +347,8 @@ func TestWebSocketMethods_LargePayload(t *testing.T) {
 		largeData[i] = "This is a large string to test payload handling"
 	}
 
-	// Create a test JWT token for authentication
-	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", logging.NewLogger("test-jwt"))
-	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "admin") // admin role for get_server_info
-
-	// First authenticate the client
-	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": testToken,
-	})
-	authResponse := SendTestMessage(t, conn, authMessage)
-	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	// Authenticate client using the helper (admin role for get_server_info)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	// Send get_server_info message (testing method execution)
 	message := CreateTestMessage("get_server_info", map[string]interface{}{})
@@ -440,4 +391,267 @@ func TestWebSocketMethods_Timeout(t *testing.T) {
 	var response JsonRpcResponse
 	err = conn.ReadJSON(&response)
 	assert.Error(t, err, "Should timeout on slow method")
+}
+
+// =============================================================================
+// CRITICAL CAMERA OPERATIONS TESTS (0% Coverage - High Priority)
+// =============================================================================
+
+// TestWebSocketMethods_GetCameraList tests the get_camera_list method
+func TestWebSocketMethods_GetCameraList(t *testing.T) {
+	// REQ-API-004: Core method implementations (get_camera_list)
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client using the new helper (eliminates duplication)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test get_camera_list method
+	message := CreateTestMessage("get_camera_list", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Verify response structure
+	require.Nil(t, response.Error, "get_camera_list should not return error")
+	require.NotNil(t, response.Result, "get_camera_list should return result")
+
+	// Verify result is an object with cameras array (per API documentation)
+	resultMap, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "get_camera_list should return object with cameras array, got type %T", response.Result)
+
+	// Verify cameras field exists and is an array
+	cameras, ok := resultMap["cameras"].([]interface{})
+	require.True(t, ok, "get_camera_list result should have 'cameras' field as array")
+
+	// Verify metadata fields exist
+	connected, hasConnected := resultMap["connected"]
+	total, hasTotal := resultMap["total"]
+	require.True(t, hasConnected, "get_camera_list result should have 'connected' field")
+	require.True(t, hasTotal, "get_camera_list result should have 'total' field")
+
+	// Log the result for debugging
+	t.Logf("Found %d cameras (connected: %v, total: %v): %v", len(cameras), connected, total, cameras)
+}
+
+// TestWebSocketMethods_GetCameraStatus tests the get_camera_status method
+func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
+	// REQ-API-004: Core method implementations (get_camera_status)
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test get_camera_status with valid camera identifier
+	message := CreateTestMessage("get_camera_status", map[string]interface{}{
+		"camera_id": "camera0", // Using camera identifier abstraction layer
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Verify response structure
+	require.Nil(t, response.Error, "get_camera_status should not return error")
+	require.NotNil(t, response.Result, "get_camera_status should return result")
+
+	// Verify result structure
+	status, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "get_camera_status should return status object")
+
+	// Log the result for debugging
+	t.Logf("Camera status: %v", status)
+}
+
+// TestWebSocketMethods_GetCameraCapabilities tests the get_camera_capabilities method
+func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
+	// REQ-API-004: Core method implementations (get_camera_capabilities)
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test get_camera_capabilities with valid camera identifier
+	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
+		"camera_id": "camera0", // Using camera identifier abstraction layer
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Verify response structure
+	require.Nil(t, response.Error, "get_camera_capabilities should not return error")
+	require.NotNil(t, response.Result, "get_camera_capabilities should return result")
+
+	// Verify result structure
+	capabilities, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "get_camera_capabilities should return capabilities object")
+
+	// Log the result for debugging
+	t.Logf("Camera capabilities: %v", capabilities)
+}
+
+// TestWebSocketMethods_StartRecording tests the start_recording method
+func TestWebSocketMethods_StartRecording(t *testing.T) {
+	// REQ-API-004: Core method implementations (start_recording)
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client with admin role for recording operations
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Test start_recording with valid camera identifier
+	message := CreateTestMessage("start_recording", map[string]interface{}{
+		"camera_id": "camera0", // Using camera identifier abstraction layer
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Verify response structure
+	require.Nil(t, response.Error, "start_recording should not return error")
+	require.NotNil(t, response.Result, "start_recording should return result")
+
+	// Log the result for debugging
+	t.Logf("Start recording result: %v", response.Result)
+}
+
+// TestWebSocketMethods_StopRecording tests the stop_recording method
+func TestWebSocketMethods_StopRecording(t *testing.T) {
+	// REQ-API-004: Core method implementations (stop_recording)
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client with admin role for recording operations
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Test stop_recording with valid camera identifier
+	message := CreateTestMessage("stop_recording", map[string]interface{}{
+		"camera_id": "camera0", // Using camera identifier abstraction layer
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Verify response structure
+	require.Nil(t, response.Error, "stop_recording should not return error")
+	require.NotNil(t, response.Result, "stop_recording should return result")
+
+	// Log the result for debugging
+	t.Logf("Stop recording result: %v", response.Result)
+}
+
+// =============================================================================
+// AUTHENTICATION EDGE CASES TESTS
+// =============================================================================
+
+// TestWebSocketMethods_UnauthenticatedAccess tests that methods require authentication
+func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
+	// REQ-API-004: Core method implementations with authentication checks
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client WITHOUT authentication
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Test that unauthenticated access to protected methods fails
+	protectedMethods := []string{
+		"get_camera_list",
+		"get_camera_status",
+		"get_camera_capabilities",
+		"start_recording",
+		"stop_recording",
+	}
+
+	for _, method := range protectedMethods {
+		t.Run(method, func(t *testing.T) {
+			message := CreateTestMessage(method, map[string]interface{}{})
+			response := SendTestMessage(t, conn, message)
+
+			// Verify authentication error
+			require.NotNil(t, response.Error, "%s should require authentication", method)
+			require.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "%s should return AUTHENTICATION_REQUIRED error", method)
+		})
+	}
+}
+
+// TestWebSocketMethods_InvalidCameraID tests methods with invalid camera identifiers
+func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
+	// REQ-API-004: Core method implementations with parameter validation
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server
+	err := server.Start()
+	require.NoError(t, err, "Server should start successfully")
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test methods with invalid camera identifier
+	invalidCameraMethods := []string{
+		"get_camera_status",
+		"get_camera_capabilities",
+		"start_recording",
+		"stop_recording",
+	}
+
+	for _, method := range invalidCameraMethods {
+		t.Run(method, func(t *testing.T) {
+			message := CreateTestMessage(method, map[string]interface{}{
+				"camera_id": "invalid_camera_999", // Invalid camera identifier
+			})
+			response := SendTestMessage(t, conn, message)
+
+			// Verify error handling
+			require.NotNil(t, response.Error, "%s should return error for invalid camera", method)
+			t.Logf("%s with invalid camera returned error: %v", method, response.Error)
+		})
+	}
 }

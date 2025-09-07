@@ -74,6 +74,12 @@ func (r *RealDeviceInfoParser) ParseDeviceInfo(output string) (V4L2Capabilities,
 	}
 
 	lines := strings.Split(output, "\n")
+
+	// Parse capabilities with multi-line support
+	capabilities.Capabilities = r.parseMultiLineCapabilities(lines, "Capabilities")
+	capabilities.DeviceCaps = r.parseMultiLineCapabilities(lines, "Device Caps")
+
+	// Parse other device information
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
@@ -85,12 +91,6 @@ func (r *RealDeviceInfoParser) ParseDeviceInfo(output string) (V4L2Capabilities,
 			capabilities.BusInfo = r.extractValue(line)
 		} else if strings.HasPrefix(line, "Driver version") {
 			capabilities.Version = r.extractValue(line)
-		} else if strings.Contains(line, "Capabilities") {
-			caps := r.parseCapabilities(line)
-			capabilities.Capabilities = append(capabilities.Capabilities, caps...)
-		} else if strings.Contains(line, "Device Caps") {
-			caps := r.parseCapabilities(line)
-			capabilities.DeviceCaps = append(capabilities.DeviceCaps, caps...)
 		}
 	}
 
@@ -351,7 +351,56 @@ func (r *RealDeviceInfoParser) extractValue(line string) string {
 	return strings.TrimSpace(parts[1])
 }
 
+// parseMultiLineCapabilities parses capabilities that span multiple lines
+// Handles the format where capability names are on separate indented lines
+func (r *RealDeviceInfoParser) parseMultiLineCapabilities(lines []string, capabilityType string) []string {
+	var capabilities []string
+
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Look for the capability header line (e.g., "Capabilities     : 0x84a00001")
+		if strings.Contains(line, capabilityType) && strings.Contains(line, ":") {
+			// Parse the hex value from the header line (optional)
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				hexValue := strings.TrimSpace(parts[1])
+				if hexValue != "" {
+					// Add the hex value as the first capability (for backward compatibility)
+					capabilities = append(capabilities, hexValue)
+				}
+			}
+
+			// Look for capability names on subsequent indented lines
+			for j := i + 1; j < len(lines); j++ {
+				nextLine := strings.TrimSpace(lines[j])
+
+				// Stop if we hit an empty line or a non-indented line (new section)
+				if nextLine == "" || (!strings.HasPrefix(lines[j], "        ") && !strings.HasPrefix(lines[j], "\t")) {
+					break
+				}
+
+				// Skip lines that look like headers (contain colons)
+				if strings.Contains(nextLine, ":") {
+					continue
+				}
+
+				// Add the capability name
+				if nextLine != "" {
+					capabilities = append(capabilities, nextLine)
+				}
+			}
+			break
+		}
+	}
+
+	return capabilities
+}
+
+// parseCapabilities is kept for backward compatibility but now delegates to parseMultiLineCapabilities
 func (r *RealDeviceInfoParser) parseCapabilities(line string) []string {
+	// This function is now deprecated in favor of parseMultiLineCapabilities
+	// but kept for backward compatibility
 	var capabilities []string
 
 	parts := strings.SplitN(line, ":", 2)

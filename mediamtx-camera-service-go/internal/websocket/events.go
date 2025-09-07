@@ -450,10 +450,24 @@ func (em *EventManager) processEventHandlers(event *EventMessage) error {
 	}
 
 	for _, handler := range handlers {
-		if err := handler(event); err != nil {
-			em.logger.WithError(err).WithField("event_id", event.EventID).Error("Event handler failed")
-			return fmt.Errorf("event handler failed for event %s: %w", event.EventID, err)
-		}
+		// Use anonymous function with panic recovery to prevent panics from crashing the server
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					em.logger.WithFields(logging.Fields{
+						"event_id": event.EventID,
+						"topic":    string(event.Topic),
+						"panic":    r,
+					}).Error("Event handler panicked - recovered to prevent server crash")
+				}
+			}()
+
+			if err := handler(event); err != nil {
+				em.logger.WithError(err).WithField("event_id", event.EventID).Error("Event handler failed")
+				// Don't return error, continue processing other handlers
+				// This ensures one failing handler doesn't stop other handlers from executing
+			}
+		}()
 	}
 
 	return nil

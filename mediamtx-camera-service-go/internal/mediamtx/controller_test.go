@@ -74,9 +74,7 @@ func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -93,9 +91,7 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -130,9 +126,7 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -166,9 +160,7 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -202,9 +194,7 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -239,9 +229,7 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -276,9 +264,7 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -313,9 +299,7 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -349,9 +333,7 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -386,9 +368,7 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -456,9 +436,7 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -507,9 +485,7 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -557,9 +533,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager with proper configuration loading
 	configManager := createConfigManagerWithEnvVars(t, helper)
@@ -609,9 +583,7 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create real config manager
 	configManager := config.CreateConfigManager()
@@ -707,14 +679,12 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
-	_, err = configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
 	// Create controller
@@ -941,4 +911,148 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	controller.UpdateSnapshotSettings(newSettings)
 
 	t.Log("✅ Advanced snapshot functionality working correctly")
+}
+
+// TestController_IsDeviceRecording_ReqMTX002 tests device recording status checking
+func TestController_IsDeviceRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Use cached controller for performance
+	controller := getCachedController(t, "TestController_IsDeviceRecording_ReqMTX002")
+
+	// Test IsDeviceRecording for non-existent device
+	isRecording := controller.IsDeviceRecording("camera0")
+	assert.False(t, isRecording, "Non-existent device should not be recording")
+
+	// Test IsDeviceRecording for invalid device path
+	isRecording = controller.IsDeviceRecording("invalid_device")
+	assert.False(t, isRecording, "Invalid device should not be recording")
+
+	t.Log("✅ Device recording status checking working correctly")
+}
+
+// TestController_GetActiveRecordings_ReqMTX002 tests active recordings retrieval
+func TestController_GetActiveRecordings_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Use cached controller for performance
+	controller := getCachedController(t, "TestController_GetActiveRecordings_ReqMTX002")
+
+	// Test GetActiveRecordings when no recordings are active
+	activeRecordings := controller.GetActiveRecordings()
+	assert.NotNil(t, activeRecordings, "Active recordings map should not be nil")
+	assert.Empty(t, activeRecordings, "Should have no active recordings initially")
+
+	t.Log("✅ Active recordings retrieval working correctly")
+}
+
+// TestController_GetActiveRecording_ReqMTX002 tests individual active recording retrieval
+func TestController_GetActiveRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Use cached controller for performance
+	controller := getCachedController(t, "TestController_GetActiveRecording_ReqMTX002")
+
+	// Test GetActiveRecording for non-existent device
+	activeRecording := controller.GetActiveRecording("camera0")
+	assert.Nil(t, activeRecording, "Non-existent device should have no active recording")
+
+	// Test GetActiveRecording for invalid device path
+	activeRecording = controller.GetActiveRecording("invalid_device")
+	assert.Nil(t, activeRecording, "Invalid device should have no active recording")
+
+	t.Log("✅ Individual active recording retrieval working correctly")
+}
+
+// TestController_CreateStream_ReqMTX002 tests stream creation functionality
+func TestController_CreateStream_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test CreateStream with valid parameters
+	stream, err := controller.CreateStream(ctx, "test_stream", "rtsp://localhost:8554/test")
+	require.NoError(t, err, "Stream creation should succeed")
+	require.NotNil(t, stream, "Created stream should not be nil")
+	assert.Equal(t, "test_stream", stream.Name, "Stream name should match")
+
+	// Clean up the created stream
+	defer func() {
+		deleteErr := controller.DeleteStream(ctx, "test_stream")
+		if deleteErr != nil {
+			t.Logf("Warning: Failed to clean up test stream: %v", deleteErr)
+		}
+	}()
+
+	t.Log("✅ Stream creation functionality working correctly")
+}
+
+// TestController_DeleteStream_ReqMTX002 tests stream deletion functionality
+func TestController_DeleteStream_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// First create a stream to delete
+	stream, err := controller.CreateStream(ctx, "test_delete_stream", "rtsp://localhost:8554/test")
+	require.NoError(t, err, "Stream creation should succeed for deletion test")
+	require.NotNil(t, stream, "Created stream should not be nil")
+
+	// Test DeleteStream
+	err = controller.DeleteStream(ctx, "test_delete_stream")
+	require.NoError(t, err, "Stream deletion should succeed")
+
+	t.Log("✅ Stream deletion functionality working correctly")
 }

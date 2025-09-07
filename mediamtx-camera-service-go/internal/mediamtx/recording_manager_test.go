@@ -31,9 +31,7 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -47,9 +45,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -59,7 +55,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -89,9 +85,7 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -101,7 +95,7 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -131,9 +125,7 @@ func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -143,7 +135,7 @@ func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	// Initially no sessions
@@ -173,9 +165,7 @@ func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -209,9 +199,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -257,9 +245,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	ctx := context.Background()
 
@@ -358,9 +344,7 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -370,7 +354,7 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -404,9 +388,7 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -416,7 +398,7 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	// Test invalid device path
@@ -439,9 +421,7 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -451,7 +431,7 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	// Start multiple recordings concurrently
@@ -491,9 +471,7 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -503,7 +481,7 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"

@@ -36,9 +36,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create REAL config manager (not mock!)
 	configManager := config.CreateConfigManager()
@@ -68,9 +66,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -91,7 +87,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	}
 
 	// Create path using correct API signature
-	err = pathManager.CreatePath(ctx, testPathName, source, options)
+	err := pathManager.CreatePath(ctx, testPathName, source, options)
 	require.NoError(t, err, "Path should be created successfully")
 
 	// Verify path exists (PathExists returns bool, not (bool, error))
@@ -115,9 +111,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -153,9 +147,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -193,9 +185,7 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Wait for MediaMTX server to be ready
-	err := helper.WaitForServerReady(t, 2*time.Second)
-	require.NoError(t, err, "MediaMTX server should be ready")
+	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
