@@ -27,7 +27,6 @@ import (
 // that can catch dangerous bugs in JSON parsing
 func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 	EnsureSequentialExecution(t)
-	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

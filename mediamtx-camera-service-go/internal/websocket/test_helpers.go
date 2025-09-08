@@ -99,42 +99,38 @@ func GetFreePort() int {
 	return port
 }
 
-// getTestConfigPath finds the WebSocket test configuration file in fixtures
-func getTestConfigPath(t *testing.T) string {
-	// Start from current directory and walk up to find project root
-	dir, err := os.Getwd()
-	require.NoError(t, err, "Failed to get current directory")
+// createTestConfigManager creates a test configuration manager using existing fixtures
+// following the MediaMTX test helper pattern of using fixtures
+func createTestConfigManager(t *testing.T) *config.ConfigManager {
+	// Create test data directory and required files before loading fixture
+	testDataDir := "/tmp/websocket_test_data"
+	err := os.MkdirAll(testDataDir, 0755)
+	require.NoError(t, err, "Failed to create test data directory")
 
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			// Found project root, look for WebSocket test config
-			configPath := filepath.Join(dir, "tests", "fixtures", "config_websocket_test.yaml")
-			if _, err := os.Stat(configPath); err == nil {
-				return configPath
-			}
-			break
-		}
+	// Create required directories and files for configuration validation
+	recordingsDir := filepath.Join(testDataDir, "recordings")
+	snapshotsDir := filepath.Join(testDataDir, "snapshots")
+	mediamtxConfigFile := filepath.Join(testDataDir, "mediamtx.yml")
 
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root directory
-			break
-		}
-		dir = parent
-	}
+	err = os.MkdirAll(recordingsDir, 0755)
+	require.NoError(t, err, "Failed to create recordings directory")
 
-	require.Fail(t, "Could not find WebSocket test configuration file in fixtures")
-	return ""
+	err = os.MkdirAll(snapshotsDir, 0755)
+	require.NoError(t, err, "Failed to create snapshots directory")
+
+	// Create minimal MediaMTX config file
+	err = os.WriteFile(mediamtxConfigFile, []byte("# Test MediaMTX configuration\n"), 0644)
+	require.NoError(t, err, "Failed to create MediaMTX config file")
+
+	// Use existing fixture following MediaMTX pattern
+	return mediamtx.CreateConfigManagerWithFixture(t, "config_websocket_test.yaml")
 }
 
 // NewTestWebSocketServer creates a test WebSocket server using the PRODUCTION constructor
 // with proper test dependencies. This ensures tests use the same code paths as production.
 func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
-	// Load test configuration from fixtures
-	configPath := getTestConfigPath(t)
-	configManager := config.CreateConfigManager()
-	err := configManager.LoadConfig(configPath)
-	require.NoError(t, err, "Failed to load test configuration from fixtures")
+	// Create self-contained test configuration (following MediaMTX test helper pattern)
+	configManager := createTestConfigManager(t)
 
 	// Get free port automatically (port 0 = OS assigns next available)
 	port := GetFreePort()
@@ -234,8 +230,8 @@ func createTestMediaMTXController(t *testing.T, logger *logging.Logger) mediamtx
 	// Create MediaMTX test helper
 	helper := mediamtx.NewMediaMTXTestHelper(t, nil)
 
-	// Create config manager with test fixture
-	configManager := mediamtx.CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	// Use the same config manager as the WebSocket server to ensure consistency
+	configManager := createTestConfigManager(t)
 
 	// Create controller using the same pattern as MediaMTX tests
 	controller, err := mediamtx.ControllerWithConfigManager(configManager, helper.GetLogger())

@@ -736,8 +736,8 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 			Name:        "null_json",
 			JSONData:    []byte("null"),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Null JSON should be handled gracefully",
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
 		},
 		{
 			Name:        "malformed_json",
@@ -757,54 +757,54 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Unexpected JSON structure should be handled gracefully",
+			ErrorMsg:    "missing required field",
+			Description: "Unexpected JSON structure should be rejected",
 		},
 		{
 			Name:        "json_with_invalid_types",
 			JSONData:    []byte(`{"items": "not_an_array", "count": "not_a_number"}`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "JSON with invalid types should be handled gracefully",
+			ErrorMsg:    "missing required field",
+			Description: "JSON with invalid types should be rejected due to missing required fields",
 		},
 		{
 			Name:        "json_with_missing_required_fields",
-			JSONData:    []byte(`{"items": []}`),
+			JSONData:    []byte(`{"pageCount": 1, "itemCount": 0}`), // Missing 'items' field
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "JSON with missing required fields should be handled gracefully",
+			ErrorMsg:    "missing required field",
+			Description: "JSON with missing required fields should be rejected",
 		},
 		{
 			Name:        "json_with_extra_fields",
-			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "extra_field": "should_be_ignored", "another_extra": 123}`),
+			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "extra_field": "should_be_ignored", "another_extra": 123}]}`),
 			ExpectError: false, // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 		{
 			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "unicode": "test\u0000null\u0000byte"}`),
+			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "unicode": "test\u0000null\u0000byte"}]}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with Unicode issues should be handled gracefully",
 		},
 		{
 			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(fmt.Sprintf(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "large_string": "%s"}`, strings.Repeat("x", 1000000))),
+			JSONData:    []byte(fmt.Sprintf(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "large_string": "%s"}]}`, strings.Repeat("x", 1000000))),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with very large strings should be handled gracefully",
 		},
 		{
 			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
-			ExpectError: false, // Should handle gracefully
-			ErrorMsg:    "",
-			Description: "JSON with deeply nested objects should be handled gracefully",
+			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}]}`),
+			ExpectError: true, // Should reject malformed JSON
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be rejected",
 		},
 		{
 			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
+			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}]}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with special characters should be handled gracefully",

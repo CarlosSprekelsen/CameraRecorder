@@ -35,10 +35,8 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -66,10 +64,8 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -97,10 +93,8 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -125,17 +119,15 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
 	// Send invalid JSON
-	err = conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
+	err := conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
 	require.NoError(t, err, "Should send invalid JSON")
 
 	// Read response
@@ -155,10 +147,8 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -186,10 +176,8 @@ func TestWebSocketMethods_MissingJSONRPC(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -218,10 +206,8 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Create a single connection for all requests
 	conn := NewTestClient(t, server)
@@ -256,10 +242,8 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Create a test JWT token for authentication using the helper
 	jwtHandler := security.TestJWTHandler(t)
@@ -332,10 +316,8 @@ func TestWebSocketMethods_LargePayload(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -372,10 +354,8 @@ func TestWebSocketMethods_Timeout(t *testing.T) {
 		return CreateTestResponse("test-id", "slow_result"), nil
 	}, "1.0")
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -389,7 +369,7 @@ func TestWebSocketMethods_Timeout(t *testing.T) {
 
 	// This should timeout
 	var response JsonRpcResponse
-	err = conn.ReadJSON(&response)
+	err := conn.ReadJSON(&response)
 	assert.Error(t, err, "Should timeout on slow method")
 }
 
@@ -459,7 +439,7 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 
 	// Test get_camera_status with valid camera identifier
 	message := CreateTestMessage("get_camera_status", map[string]interface{}{
-		"device": "camera0", // Using device parameter as per API documentation
+		"camera_id": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -494,7 +474,7 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 
 	// Test get_camera_capabilities with valid camera identifier
 	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
-		"device": "camera0", // Using device parameter as per API documentation
+		"camera_id": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -529,7 +509,7 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 
 	// Test start_recording with valid camera identifier
 	message := CreateTestMessage("start_recording", map[string]interface{}{
-		"device": "camera0", // Using device parameter as per API documentation
+		"camera_id": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -583,9 +563,8 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client WITHOUT authentication
 	conn := NewTestClient(t, server)
@@ -640,7 +619,7 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 	for _, method := range invalidCameraMethods {
 		t.Run(method, func(t *testing.T) {
 			message := CreateTestMessage(method, map[string]interface{}{
-				"device": "invalid_camera_999", // Invalid camera identifier
+				"camera_id": "invalid_camera_999", // Invalid camera identifier
 			})
 			response := SendTestMessage(t, conn, message)
 
@@ -649,4 +628,201 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 			t.Logf("%s with invalid camera returned error: %v", method, response.Error)
 		})
 	}
+}
+
+// =============================================================================
+// ABSTRACTION LAYER INTEGRATION TESTS (Critical for catching mapping bugs)
+// =============================================================================
+
+// TestWebSocketMethods_AbstractionLayerMapping tests the camera identifier to device path mapping
+// This test is CRITICAL for catching abstraction layer implementation bugs
+func TestWebSocketMethods_AbstractionLayerMapping(t *testing.T) {
+	// REQ-API-004: Core method implementations with abstraction layer validation
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test round-trip conversion: camera0 -> /dev/video0 -> camera0
+	t.Run("RoundTripConversion", func(t *testing.T) {
+		// Test camera0 mapping
+		devicePath := server.getDevicePathFromCameraIdentifier("camera0")
+		assert.Equal(t, "/dev/video0", devicePath, "camera0 should map to /dev/video0")
+
+		// Test reverse mapping
+		cameraID := server.getCameraIdentifierFromDevicePath(devicePath)
+		assert.Equal(t, "camera0", cameraID, "/dev/video0 should map back to camera0")
+
+		// Test camera1 mapping
+		devicePath = server.getDevicePathFromCameraIdentifier("camera1")
+		assert.Equal(t, "/dev/video1", devicePath, "camera1 should map to /dev/video1")
+
+		// Test reverse mapping
+		cameraID = server.getCameraIdentifierFromDevicePath(devicePath)
+		assert.Equal(t, "camera1", cameraID, "/dev/video1 should map back to camera1")
+	})
+
+	// Test validation function catches invalid identifiers
+	t.Run("ValidationFunction", func(t *testing.T) {
+		// Valid identifiers
+		assert.True(t, server.validateCameraIdentifier("camera0"), "camera0 should be valid")
+		assert.True(t, server.validateCameraIdentifier("camera1"), "camera1 should be valid")
+		assert.True(t, server.validateCameraIdentifier("camera123"), "camera123 should be valid")
+
+		// Invalid identifiers
+		assert.False(t, server.validateCameraIdentifier("invalid_camera"), "invalid_camera should be invalid")
+		assert.False(t, server.validateCameraIdentifier("camera"), "camera should be invalid (missing number)")
+		assert.False(t, server.validateCameraIdentifier("camera_abc"), "camera_abc should be invalid (non-numeric)")
+		assert.False(t, server.validateCameraIdentifier(""), "Empty string should be invalid")
+		assert.False(t, server.validateCameraIdentifier("/dev/video0"), "Device path should be invalid as camera identifier")
+	})
+
+	// Test that API methods properly use abstraction layer
+	t.Run("APIMethodAbstraction", func(t *testing.T) {
+		// Test get_camera_status with valid camera identifier (API layer)
+		message := CreateTestMessage("get_camera_status", map[string]interface{}{
+			"camera_id": "camera0", // Using API abstraction layer
+		})
+		response := SendTestMessage(t, conn, message)
+
+		// The method should handle the abstraction layer correctly
+		// If it fails, it should be due to camera not being available, not mapping issues
+		if response.Error != nil {
+			// Error should be about camera not found, not invalid identifier
+			assert.NotEqual(t, INVALID_PARAMS, response.Error.Code,
+				"Error should not be INVALID_PARAMS for valid camera identifier")
+			t.Logf("get_camera_status with camera0 returned: %v", response.Error)
+		} else {
+			t.Logf("get_camera_status with camera0 succeeded: %v", response.Result)
+		}
+	})
+
+	// Test edge cases that could expose mapping bugs
+	t.Run("EdgeCases", func(t *testing.T) {
+		// Test with very high camera numbers
+		highCameraID := "camera999"
+		devicePath := server.getDevicePathFromCameraIdentifier(highCameraID)
+		assert.Equal(t, "/dev/video999", devicePath, "High camera number should map correctly")
+
+		// Test reverse mapping
+		cameraID := server.getCameraIdentifierFromDevicePath(devicePath)
+		assert.Equal(t, highCameraID, cameraID, "High device path should map back correctly")
+
+		// Test with zero
+		zeroCameraID := "camera0"
+		devicePath = server.getDevicePathFromCameraIdentifier(zeroCameraID)
+		assert.Equal(t, "/dev/video0", devicePath, "Camera0 should map to /dev/video0")
+
+		// Test reverse mapping
+		cameraID = server.getCameraIdentifierFromDevicePath(devicePath)
+		assert.Equal(t, zeroCameraID, cameraID, "/dev/video0 should map back to camera0")
+	})
+}
+
+// TestWebSocketMethods_AbstractionLayerErrorHandling tests error handling in abstraction layer
+// This test catches bugs where the abstraction layer doesn't properly handle edge cases
+func TestWebSocketMethods_AbstractionLayerErrorHandling(t *testing.T) {
+	// REQ-API-004: Core method implementations with abstraction layer error handling
+
+	server := NewTestWebSocketServer(t)
+	defer CleanupTestServer(t, server)
+
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
+
+	// Connect client
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Test methods that should reject device paths (internal implementation)
+	t.Run("RejectDevicePaths", func(t *testing.T) {
+		methods := []string{
+			"get_camera_status",
+			"get_camera_capabilities",
+			"start_recording",
+		}
+
+		for _, method := range methods {
+			t.Run(method, func(t *testing.T) {
+				// Try to use device path instead of camera identifier
+				message := CreateTestMessage(method, map[string]interface{}{
+					"camera_id": "/dev/video0", // Using device path instead of camera identifier
+				})
+				response := SendTestMessage(t, conn, message)
+
+				// Should reject device path as invalid camera identifier
+				require.NotNil(t, response.Error, "%s should reject device path as camera identifier", method)
+				assert.Equal(t, INVALID_PARAMS, response.Error.Code,
+					"%s should return INVALID_PARAMS for device path", method)
+				t.Logf("%s correctly rejected device path: %v", method, response.Error)
+			})
+		}
+	})
+
+	// Test methods that should reject malformed camera identifiers
+	t.Run("RejectMalformedIdentifiers", func(t *testing.T) {
+		malformedIdentifiers := []string{
+			"camera",     // Missing number
+			"camera_abc", // Non-numeric
+			"camera-1",   // Wrong separator
+			"camera 1",   // Space
+			"camera1.0",  // Decimal
+			"camera1a",   // Mixed alphanumeric
+		}
+
+		for _, identifier := range malformedIdentifiers {
+			t.Run(identifier, func(t *testing.T) {
+				message := CreateTestMessage("get_camera_status", map[string]interface{}{
+					"camera_id": identifier,
+				})
+				response := SendTestMessage(t, conn, message)
+
+				// Should reject malformed identifier
+				require.NotNil(t, response.Error, "Should reject malformed identifier: %s", identifier)
+				assert.Equal(t, INVALID_PARAMS, response.Error.Code,
+					"Should return INVALID_PARAMS for malformed identifier: %s", identifier)
+				t.Logf("Correctly rejected malformed identifier %s: %v", identifier, response.Error)
+			})
+		}
+	})
+
+	// Test that valid camera identifiers are accepted
+	t.Run("AcceptValidIdentifiers", func(t *testing.T) {
+		validIdentifiers := []string{
+			"camera0",
+			"camera1",
+			"camera123",
+			"camera999",
+		}
+
+		for _, identifier := range validIdentifiers {
+			t.Run(identifier, func(t *testing.T) {
+				message := CreateTestMessage("get_camera_status", map[string]interface{}{
+					"camera_id": identifier,
+				})
+				response := SendTestMessage(t, conn, message)
+
+				// Should accept valid identifier (may fail due to camera not available, but not due to validation)
+				if response.Error != nil {
+					assert.NotEqual(t, INVALID_PARAMS, response.Error.Code,
+						"Should not return INVALID_PARAMS for valid identifier: %s", identifier)
+					t.Logf("Valid identifier %s failed for other reason: %v", identifier, response.Error)
+				} else {
+					t.Logf("Valid identifier %s succeeded: %v", identifier, response.Result)
+				}
+			})
+		}
+	})
 }

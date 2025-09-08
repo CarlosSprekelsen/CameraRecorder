@@ -23,9 +23,9 @@ mediamtx:
   rtsp_port: 8554
   webrtc_port: 8889
   hls_port: 8888
-  config_path: "/tmp/mediamtx.yml"  # Use existing path
-  recordings_path: "/tmp/recordings"  # Use existing path
-  snapshots_path: "/tmp/snapshots"  # Use existing path
+  config_path: "/tmp/websocket_test_data/mediamtx.yml"  # Test-specific path
+  recordings_path: "/tmp/websocket_test_data/recordings"  # Test-specific path
+  snapshots_path: "/tmp/websocket_test_data/snapshots"  # Test-specific path
   health_check_interval: 30
   health_failure_threshold: 3
   health_circuit_breaker_timeout: 60
@@ -55,7 +55,7 @@ logging:
   level: "error"
   format: "json"
   file_enabled: false  # Disable file logging for tests
-  file_path: "/tmp/test_camera-service.log"
+  file_path: "/tmp/websocket_test_data/test_camera-service.log"
   max_file_size: 10485760
   backup_count: 5
   console_enabled: false
@@ -119,8 +119,8 @@ security:
 storage:
   warn_percent: 80
   block_percent: 90
-  default_path: "/tmp/recordings"
-  fallback_path: "/tmp/recordings"
+  default_path: "/tmp/websocket_test_data/recordings"
+  fallback_path: "/tmp/websocket_test_data/recordings"
 
 retention_policy:
   enabled: true

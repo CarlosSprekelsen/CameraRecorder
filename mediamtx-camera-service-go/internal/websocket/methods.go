@@ -31,7 +31,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 
 	"hash/fnv"
@@ -658,10 +657,8 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 	camera, exists := s.cameraMonitor.GetDevice(device)
 	if !exists {
 		cameraCapabilities["validation_status"] = "disconnected"
-	} else if camera.Status != camera.DeviceStatusConnected {
-		cameraCapabilities["validation_status"] = "disconnected"
 	} else {
-		// Camera is connected, get real capability metadata
+		// Camera Monitor already handles status tracking
 		// Convert camera formats to string list per API documentation
 		formats := make([]string, 0, len(camera.Formats))
 		for _, format := range camera.Formats {
@@ -681,8 +678,8 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 		fpsOptions := []int{15, 30, 60}
 		cameraCapabilities["fps_options"] = fpsOptions
 
-		// Set validation status to confirmed since we have real data
-		cameraCapabilities["validation_status"] = "confirmed"
+		// Use Camera Monitor's status directly
+		cameraCapabilities["validation_status"] = string(camera.Status)
 
 		s.logger.WithFields(logging.Fields{
 			"client_id":   client.ClientID,

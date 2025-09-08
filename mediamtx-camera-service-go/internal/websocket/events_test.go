@@ -77,14 +77,14 @@ func TestWebSocketEvents_EventMessage(t *testing.T) {
 	// Create test event message
 	eventMessage := &EventMessage{
 		Topic:     TopicCameraConnected,
-		Data:      map[string]interface{}{"device": "/dev/video0"},
+		Data:      map[string]interface{}{"camera_id": "camera0"}, // Use API abstraction layer
 		Timestamp: time.Now(),
 		EventID:   "test-event-123",
 	}
 
 	// Test event message structure
 	assert.Equal(t, TopicCameraConnected, eventMessage.Topic, "Event topic should be correct")
-	assert.Equal(t, "/dev/video0", eventMessage.Data["device"], "Event data should be correct")
+	assert.Equal(t, "camera0", eventMessage.Data["camera_id"], "Event data should use camera identifier")
 	assert.NotZero(t, eventMessage.Timestamp, "Event timestamp should be set")
 	assert.Equal(t, "test-event-123", eventMessage.EventID, "Event ID should be correct")
 }
@@ -95,7 +95,7 @@ func TestWebSocketEvents_EventSubscription(t *testing.T) {
 	subscription := &EventSubscription{
 		ClientID:  "test-client",
 		Topics:    []EventTopic{TopicCameraConnected, TopicRecordingStart},
-		Filters:   map[string]interface{}{"device": "/dev/video0"},
+		Filters:   map[string]interface{}{"camera_id": "camera0"}, // Use API abstraction layer
 		CreatedAt: time.Now(),
 		LastSeen:  time.Now(),
 		Active:    true,
@@ -104,7 +104,7 @@ func TestWebSocketEvents_EventSubscription(t *testing.T) {
 	// Test subscription structure
 	assert.Equal(t, "test-client", subscription.ClientID, "Client ID should be correct")
 	assert.Equal(t, 2, len(subscription.Topics), "Should have correct number of topics")
-	assert.Equal(t, "/dev/video0", subscription.Filters["device"], "Filters should be correct")
+	assert.Equal(t, "camera0", subscription.Filters["camera_id"], "Filters should use camera identifier")
 	assert.True(t, subscription.Active, "Subscription should be active")
 }
 
@@ -117,8 +117,8 @@ func TestWebSocketEvents_PublishEventNoSubscribers(t *testing.T) {
 
 	// Publish event to topic with no subscribers
 	err := eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 	})
 
 	// Should not error even with no subscribers
@@ -140,8 +140,8 @@ func TestWebSocketEvents_PublishEventWithSubscribers(t *testing.T) {
 
 	// Publish event to subscribed topic
 	err = eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 	})
 
 	// Should not error with subscribers
@@ -211,7 +211,7 @@ func TestWebSocketEvents_AddEventHandler(t *testing.T) {
 
 	// Publish event to trigger handler
 	err := eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
+		"camera_id": "camera0", // Use API abstraction layer
 	})
 
 	// Handler should be called
@@ -362,24 +362,24 @@ func TestWebSocketEvents_ApplyFilters(t *testing.T) {
 	clientID := "test-client"
 	topics := []EventTopic{TopicCameraConnected}
 	filters := map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 	}
 	err := eventManager.Subscribe(clientID, topics, filters)
 	require.NoError(t, err, "Should subscribe client with filters successfully")
 
 	// Publish event that matches filters
 	err = eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
-		"extra":  "data",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
+		"extra":     "data",
 	})
 	assert.NoError(t, err, "Publishing matching event should not error")
 
 	// Publish event that doesn't match filters
 	err = eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video1", // Different device
-		"status": "connected",
+		"camera_id": "camera1", // Different camera
+		"status":    "connected",
 	})
 	assert.NoError(t, err, "Publishing non-matching event should not error")
 }
@@ -402,10 +402,10 @@ func TestWebSocketEvents_EventIntegrationLayer(t *testing.T) {
 
 	// Test camera event notifications - these functions don't return errors
 	cameraNotifier.NotifyCameraConnected(nil)                                     // Test with nil device
-	cameraNotifier.NotifyCameraDisconnected("/dev/video0")                        // Test with device path
+	cameraNotifier.NotifyCameraDisconnected("/dev/video0")                        // Test with device path (internal layer)
 	cameraNotifier.NotifyCameraStatusChange(nil, "recording", "idle")             // Test with nil device
 	cameraNotifier.NotifyCapabilityDetected(nil, camera.V4L2Capabilities{})       // Test with nil device and empty capabilities
-	cameraNotifier.NotifyCapabilityError("/dev/video0", "Failed to detect codec") // Test with device path
+	cameraNotifier.NotifyCapabilityError("/dev/video0", "Failed to detect codec") // Test with device path (internal layer)
 }
 
 // TestWebSocketEvents_CameraIdentifierMapping tests the camera abstraction layer mapping
@@ -575,7 +575,7 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 	// Test client interest with complex filters
 	clientID := "test-client"
 	complexFilters := map[string]interface{}{
-		"device":     "/dev/video0",
+		"camera_id":  "camera0", // Use API abstraction layer
 		"status":     "connected",
 		"resolution": "1920x1080",
 		"fps":        30,
@@ -592,7 +592,7 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 
 	// Test event that matches all filter criteria
 	matchingEvent := map[string]interface{}{
-		"device":     "/dev/video0",
+		"camera_id":  "camera0", // Use API abstraction layer
 		"status":     "connected",
 		"resolution": "1920x1080",
 		"fps":        30,
@@ -610,8 +610,8 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 
 	// Test event that partially matches (should still be delivered)
 	partialMatchEvent := map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 		// Missing other fields
 	}
 
@@ -620,8 +620,8 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 
 	// Test event with no matching fields (should still be delivered - filters are inclusive)
 	noMatchEvent := map[string]interface{}{
-		"device": "/dev/video1",  // Different device
-		"status": "disconnected", // Different status
+		"camera_id": "camera1",      // Different camera
+		"status":    "disconnected", // Different status
 	}
 
 	err = eventManager.PublishEvent(TopicCameraConnected, noMatchEvent)
@@ -630,16 +630,16 @@ func TestWebSocketEvents_ClientInterestEdgeCases(t *testing.T) {
 	// Test event with nil values in filters - this might expose a bug
 	nilFilterClient := "nil-filter-client"
 	nilFilters := map[string]interface{}{
-		"device": nil,
-		"status": "connected",
+		"camera_id": nil, // Use API abstraction layer
+		"status":    "connected",
 	}
 
 	err = eventManager.Subscribe(nilFilterClient, []EventTopic{TopicCameraConnected}, nilFilters)
 	require.NoError(t, err, "Should subscribe with nil filters")
 
 	err = eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 	})
 	assert.NoError(t, err, "Publishing event with nil filter should not error")
 }
@@ -660,8 +660,8 @@ func TestWebSocketEvents_EventHandlersEdgeCases(t *testing.T) {
 
 	// Publish event to trigger error handler
 	err := eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
-		"status": "connected",
+		"camera_id": "camera0", // Use API abstraction layer
+		"status":    "connected",
 	})
 	assert.NoError(t, err, "Publishing event should not error even if handler fails")
 
@@ -674,8 +674,8 @@ func TestWebSocketEvents_EventHandlersEdgeCases(t *testing.T) {
 
 	// Publish event to trigger panic handler
 	err = eventManager.PublishEvent(TopicRecordingStart, map[string]interface{}{
-		"device":  "/dev/video0",
-		"session": "recording_001",
+		"camera_id": "camera0", // Use API abstraction layer
+		"session":   "recording_001",
 	})
 	assert.NoError(t, err, "Publishing event should not error even if handler panics")
 
@@ -798,7 +798,7 @@ func TestWebSocketEvents_EventHandlers(t *testing.T) {
 
 	// Publish event to trigger handlers
 	err := eventManager.PublishEvent(TopicCameraConnected, map[string]interface{}{
-		"device": "/dev/video0",
+		"camera_id": "camera0", // Use API abstraction layer
 	})
 
 	assert.NoError(t, err, "Publishing event should not error")

@@ -25,7 +25,6 @@ import (
 func TestNewPathManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	EnsureSequentialExecution(t)
-	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -39,7 +38,6 @@ func TestNewPathManager_ReqMTX001(t *testing.T) {
 // TestPathManager_CreatePath_ReqMTX003 tests path creation
 func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	EnsureSequentialExecution(t)
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -73,7 +71,6 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 // TestPathManager_DeletePath_ReqMTX003 tests path deletion
 func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	EnsureSequentialExecution(t)
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)

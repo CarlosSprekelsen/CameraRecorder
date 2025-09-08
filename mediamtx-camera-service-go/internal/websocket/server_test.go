@@ -33,10 +33,10 @@ import (
 func TestMain(m *testing.M) {
 	// Setup logging configuration for all tests
 	setupTestLogging()
-	
+
 	// Run tests
 	code := m.Run()
-	
+
 	// Exit with test result code
 	os.Exit(code)
 }
@@ -61,16 +61,15 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Test server start
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 	assert.True(t, server.IsRunning(), "Server should be running after start")
 
 	// Wait for server to be ready
 	WaitForServerReady(t, server, 1*time.Second)
 
 	// Test server stop
-	err = server.Stop()
+	err := server.Stop()
 	require.NoError(t, err, "Server should stop successfully")
 	assert.False(t, server.IsRunning(), "Server should not be running after stop")
 }
@@ -80,12 +79,12 @@ func TestWebSocketServer_DoubleStart(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server first time
-	err := server.Start()
-	require.NoError(t, err, "First start should succeed")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
+	assert.True(t, server.IsRunning(), "Server should be running after first start")
 
 	// Start server second time should fail
-	err = server.Start()
+	err := server.Start()
 	assert.Error(t, err, "Second start should fail")
 	assert.True(t, server.IsRunning(), "Server should still be running")
 }
@@ -95,12 +94,11 @@ func TestWebSocketServer_DoubleStop(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Stop server first time
-	err = server.Stop()
+	err := server.Stop()
 	require.NoError(t, err, "First stop should succeed")
 
 	// Stop server second time should not error
@@ -114,9 +112,8 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -129,7 +126,7 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	assert.Equal(t, 1, connectionCount, "Should have one client connection")
 
 	// Close client connection
-	err = conn.Close()
+	err := conn.Close()
 	require.NoError(t, err, "Client should close successfully")
 
 	// Wait for connection cleanup
@@ -145,10 +142,8 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect multiple clients
 	conn1 := NewTestClient(t, server)
@@ -167,7 +162,7 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	assert.Equal(t, 3, connectionCount, "Should have three client connections")
 
 	// Close one client
-	err = conn1.Close()
+	err := conn1.Close()
 	require.NoError(t, err, "Client should close successfully")
 
 	// Wait for connection cleanup
@@ -208,9 +203,8 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -244,10 +238,8 @@ func TestWebSocketServer_InvalidMethod(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -270,10 +262,8 @@ func TestWebSocketServer_Notification(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -288,7 +278,7 @@ func TestWebSocketServer_Notification(t *testing.T) {
 	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 
 	var response JsonRpcResponse
-	err = conn.ReadJSON(&response)
+	err := conn.ReadJSON(&response)
 	assert.Error(t, err, "Should not receive response for notification")
 }
 
@@ -297,9 +287,8 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -324,10 +313,8 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
-	defer CleanupTestServer(t, server)
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Create multiple concurrent connections
 	const numClients = 10
@@ -390,8 +377,7 @@ func TestWebSocketServer_NotificationFunctions(t *testing.T) {
 	// REQ-API-003: Request/response message handling
 
 	server := NewTestWebSocketServer(t)
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	StartTestServerWithDependencies(t, server)
 	defer CleanupTestServer(t, server)
 
 	// Test notifyRecordingStatusUpdate with edge cases
@@ -423,8 +409,7 @@ func TestWebSocketServer_ErrorHandlingFunctions(t *testing.T) {
 	// REQ-API-003: Request/response message handling
 
 	server := NewTestWebSocketServer(t)
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	StartTestServerWithDependencies(t, server)
 	defer CleanupTestServer(t, server)
 
 	// Test sendErrorResponse with edge cases - this might expose bugs
@@ -456,19 +441,18 @@ func TestWebSocketServer_PermissionAndRateLimit(t *testing.T) {
 	// REQ-API-003: Request/response message handling
 
 	server := NewTestWebSocketServer(t)
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	StartTestServerWithDependencies(t, server)
 	defer CleanupTestServer(t, server)
 
 	// Test checkMethodPermissions with edge cases - this might expose bugs
 	// Note: We can't easily access the client connection, so we'll test with nil
-	err = server.checkMethodPermissions(nil, "") // Nil client and empty method - might expose bugs
+	_ = server.checkMethodPermissions(nil, "") // Nil client and empty method - might expose bugs
 	// This should expose a nil pointer dereference bug
 
-	err = server.checkMethodPermissions(nil, "invalid_method") // Nil client with method - might expose bugs
+	_ = server.checkMethodPermissions(nil, "invalid_method") // Nil client with method - might expose bugs
 	// This should expose a nil pointer dereference bug
 
 	// Test checkRateLimit with edge cases - this might expose bugs
-	err = server.checkRateLimit(nil) // Nil client - might expose bugs
+	_ = server.checkRateLimit(nil) // Nil client - might expose bugs
 	// This should expose a nil pointer dereference bug
 }
