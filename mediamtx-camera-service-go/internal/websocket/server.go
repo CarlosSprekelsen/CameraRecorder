@@ -394,7 +394,7 @@ func NewWebSocketServer(
 	}
 
 	if logger == nil {
-		logger = logging.NewLogger("websocket-server")
+		logger = logging.GetLogger()
 	}
 
 	if cameraMonitor == nil {

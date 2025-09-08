@@ -265,7 +265,7 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test token with wrong secret
-	logger := logging.NewLogger("test-wrong-handler")
+	logger := logging.GetLogger()
 	wrongHandler, err := NewJWTHandler("wrong_secret_key", logger)
 	require.NoError(t, err)
 
@@ -279,7 +279,7 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
-	logger := logging.NewLogger("test-jwt-handler")
+	logger := logging.GetLogger()
 	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err)
 
@@ -309,7 +309,7 @@ func TestJWTHandler_ClaimsValidation(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
-	logger := logging.NewLogger("test-jwt-handler")
+	logger := logging.GetLogger()
 	jwtHandler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err)
 
@@ -342,7 +342,7 @@ func TestJWTHandler_ErrorHandling(t *testing.T) {
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Test invalid secret key
-	logger := logging.NewLogger("test-invalid-handler")
+	logger := logging.GetLogger()
 	_, err := NewJWTHandler("", logger)
 	assert.Error(t, err)
 

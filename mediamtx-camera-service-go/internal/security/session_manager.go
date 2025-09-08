@@ -41,7 +41,7 @@ type SessionManager struct {
 func NewSessionManager(sessionTimeout, cleanupInterval time.Duration) *SessionManager {
 	manager := &SessionManager{
 		sessions:              make(map[string]*Session),
-		logger:                logging.NewLogger("session-manager"),
+		logger:                logging.GetLogger(),
 		defaultSessionTimeout: sessionTimeout,
 		cleanupInterval:       cleanupInterval,
 		stopChan:              make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown

@@ -447,9 +447,8 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -460,7 +459,7 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 
 	// Test get_camera_status with valid camera identifier
 	message := CreateTestMessage("get_camera_status", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using device parameter as per API documentation
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -483,9 +482,8 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -496,7 +494,7 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 
 	// Test get_camera_capabilities with valid camera identifier
 	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using device parameter as per API documentation
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -519,9 +517,8 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -532,7 +529,7 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 
 	// Test start_recording with valid camera identifier
 	message := CreateTestMessage("start_recording", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using device parameter as per API documentation
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -551,9 +548,8 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -564,7 +560,7 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 
 	// Test stop_recording with valid camera identifier
 	message := CreateTestMessage("stop_recording", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using device parameter as per API documentation
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -623,9 +619,8 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 	server := NewTestWebSocketServer(t)
 	defer CleanupTestServer(t, server)
 
-	// Start server
-	err := server.Start()
-	require.NoError(t, err, "Server should start successfully")
+	// Start server with proper dependencies (following main() pattern)
+	StartTestServerWithDependencies(t, server)
 
 	// Connect client
 	conn := NewTestClient(t, server)
@@ -645,7 +640,7 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 	for _, method := range invalidCameraMethods {
 		t.Run(method, func(t *testing.T) {
 			message := CreateTestMessage(method, map[string]interface{}{
-				"camera_id": "invalid_camera_999", // Invalid camera identifier
+				"device": "invalid_camera_999", // Invalid camera identifier
 			})
 			response := SendTestMessage(t, conn, message)
 

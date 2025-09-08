@@ -258,6 +258,127 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	assert.IsType(t, []*Stream{}, streams, "Streams should be a slice of Stream pointers")
 }
 
+// TestController_GetStream_ReqMTX002 tests individual stream retrieval with real server
+func TestController_GetStream_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Server is ready via shared test helper
+
+	// Create real config manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	controller, err := ControllerWithConfigManager(configManager, logger)
+	require.NoError(t, err, "Controller should be created successfully")
+
+	// Start controller
+	err = controller.Start(context.Background())
+	require.NoError(t, err, "Controller should start successfully")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	ctx := context.Background()
+
+	// Test getting a non-existent stream (should return error)
+	_, err = controller.GetStream(ctx, "non_existent_stream")
+	require.Error(t, err, "GetStream should return error for non-existent stream")
+	assert.Contains(t, err.Error(), "stream", "Error should mention stream")
+
+	// Test getting stream with empty ID (should return error)
+	_, err = controller.GetStream(ctx, "")
+	require.Error(t, err, "GetStream should return error for empty stream ID")
+
+	// Test getting stream with invalid characters (should return error)
+	_, err = controller.GetStream(ctx, "invalid@stream#name")
+	require.Error(t, err, "GetStream should return error for invalid stream ID")
+}
+
+// TestConfigIntegration_GetRecordingConfig_ReqMTX001 tests recording config retrieval
+func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use existing pattern from snapshot manager tests
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+
+	// Test GetRecordingConfig
+	recordingConfig, err := configIntegration.GetRecordingConfig()
+	require.NoError(t, err, "Should get recording config from integration")
+	require.NotNil(t, recordingConfig, "Recording config should not be nil")
+}
+
+// TestConfigIntegration_GetSnapshotConfig_ReqMTX001 tests snapshot config retrieval
+func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use existing pattern from snapshot manager tests
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+
+	// Test GetSnapshotConfig
+	snapshotConfig, err := configIntegration.GetSnapshotConfig()
+	require.NoError(t, err, "Should get snapshot config from integration")
+	require.NotNil(t, snapshotConfig, "Snapshot config should not be nil")
+}
+
+// TestConfigIntegration_GetFFmpegConfig_ReqMTX001 tests FFmpeg config retrieval
+func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use existing pattern from snapshot manager tests
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+
+	// Test GetFFmpegConfig
+	ffmpegConfig, err := configIntegration.GetFFmpegConfig()
+	require.NoError(t, err, "Should get FFmpeg config from integration")
+	require.NotNil(t, ffmpegConfig, "FFmpeg config should not be nil")
+}
+
+// TestConfigIntegration_GetCameraConfig_ReqMTX001 tests camera config retrieval
+func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use existing pattern from snapshot manager tests
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+
+	// Test GetCameraConfig
+	cameraConfig, err := configIntegration.GetCameraConfig()
+	require.NoError(t, err, "Should get camera config from integration")
+	require.NotNil(t, cameraConfig, "Camera config should not be nil")
+}
+
+// TestConfigIntegration_GetPerformanceConfig_ReqMTX001 tests performance config retrieval
+func TestConfigIntegration_GetPerformanceConfig_ReqMTX001(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use existing pattern from snapshot manager tests
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+
+	// Test GetPerformanceConfig
+	performanceConfig, err := configIntegration.GetPerformanceConfig()
+	require.NoError(t, err, "Should get performance config from integration")
+	require.NotNil(t, performanceConfig, "Performance config should not be nil")
+}
+
 // TestController_GetConfig_ReqMTX001 tests configuration retrieval with real server
 func TestController_GetConfig_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration

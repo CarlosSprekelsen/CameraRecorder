@@ -87,7 +87,7 @@ func TestNewAuthMiddleware(t *testing.T) {
 	config := &MockSecurityConfig{}
 
 	// Following established pattern: use minimal logger for middleware compatibility
-	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
+	middleware := NewAuthMiddleware(logging.GetLogger(), config)
 
 	assert.NotNil(t, middleware, "Auth middleware should be created successfully")
 	// Note: Fields are unexported, so we can't test them directly
@@ -103,7 +103,7 @@ func TestAuthMiddleware_RequireAuth_Authenticated(t *testing.T) {
 	config := &MockSecurityConfig{}
 
 	// Following established pattern: use minimal logger for middleware compatibility
-	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
+	middleware := NewAuthMiddleware(logging.GetLogger(), config)
 
 	// Mock authenticated client
 	client := &MockClientConnection{
@@ -138,7 +138,7 @@ func TestAuthMiddleware_RequireAuth_NotAuthenticated(t *testing.T) {
 	config := &MockSecurityConfig{}
 
 	// Following established pattern: use minimal logger for middleware compatibility
-	middleware := NewAuthMiddleware(logging.NewLogger("test"), config)
+	middleware := NewAuthMiddleware(logging.GetLogger(), config)
 
 	// Mock unauthenticated client
 	client := &MockClientConnection{
@@ -179,7 +179,7 @@ func TestNewRBACMiddleware(t *testing.T) {
 	config := &MockSecurityConfig{}
 
 	// Following established pattern: use minimal logger for middleware compatibility
-	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
+	middleware := NewRBACMiddleware(permissionChecker, logging.GetLogger(), config)
 
 	assert.NotNil(t, middleware, "RBAC middleware should be created successfully")
 	// Note: Fields are unexported, so we can't test them directly
@@ -195,8 +195,8 @@ func TestRBACMiddleware_RequireRole_SufficientRole(t *testing.T) {
 	permissionChecker := NewPermissionChecker()
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: logging.NewLogger("test") (like other security components)
-	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
+	// Following established pattern: logging.GetLogger() (like other security components)
+	middleware := NewRBACMiddleware(permissionChecker, logging.GetLogger(), config)
 
 	// Mock authenticated client with sufficient role
 	client := &MockClientConnection{
@@ -231,8 +231,8 @@ func TestRBACMiddleware_RequireRole_InsufficientRole(t *testing.T) {
 	permissionChecker := NewPermissionChecker()
 	config := &MockSecurityConfig{}
 
-	// Following established pattern: logging.NewLogger("test") (like other security components)
-	middleware := NewRBACMiddleware(permissionChecker, logging.NewLogger("test"), config)
+	// Following established pattern: logging.GetLogger() (like other security components)
+	middleware := NewRBACMiddleware(permissionChecker, logging.GetLogger(), config)
 
 	// Mock authenticated client with insufficient role
 	client := &MockClientConnection{
@@ -269,8 +269,8 @@ func TestSecurityMiddleware_Integration(t *testing.T) {
 	defer TeardownTestSecurityEnvironment(t, env)
 
 	// Test complete security flow: Auth + RBAC
-	authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
-	rbacMiddleware := NewRBACMiddleware(env.RoleManager, logging.NewLogger("test"), &MockSecurityConfig{})
+	authMiddleware := NewAuthMiddleware(logging.GetLogger(), &MockSecurityConfig{})
+	rbacMiddleware := NewRBACMiddleware(env.RoleManager, logging.GetLogger(), &MockSecurityConfig{})
 
 	// Mock authenticated admin client
 	client := &MockClientConnection{
@@ -310,7 +310,7 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 	defer TeardownTestSecurityEnvironment(t, env)
 
 	t.Run("nil_handler", func(t *testing.T) {
-		authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
+		authMiddleware := NewAuthMiddleware(logging.GetLogger(), &MockSecurityConfig{})
 
 		// This should not panic
 		securedHandler := authMiddleware.RequireAuth(nil)
@@ -318,7 +318,7 @@ func TestSecurityMiddleware_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty_client_data", func(t *testing.T) {
-		authMiddleware := NewAuthMiddleware(logging.NewLogger("test"), &MockSecurityConfig{})
+		authMiddleware := NewAuthMiddleware(logging.GetLogger(), &MockSecurityConfig{})
 
 		client := &MockClientConnection{
 			clientID:      "",
@@ -347,7 +347,7 @@ func TestNewSecureMethodRegistry(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.NewLogger("test-middleware")
+	logger := logging.GetLogger()
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -362,7 +362,7 @@ func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.NewLogger("test-middleware")
+	logger := logging.GetLogger()
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -395,7 +395,7 @@ func TestSecureMethodRegistry_GetMethod(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.NewLogger("test-middleware")
+	logger := logging.GetLogger()
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -430,7 +430,7 @@ func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.NewLogger("test-middleware")
+	logger := logging.GetLogger()
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -470,7 +470,7 @@ func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.NewLogger("test-middleware")
+	logger := logging.GetLogger()
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil

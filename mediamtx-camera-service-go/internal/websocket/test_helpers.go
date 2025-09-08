@@ -198,6 +198,10 @@ func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
 	if cameraMonitor != nil {
 		err := cameraMonitor.Start(ctx)
 		require.NoError(t, err, "Failed to start camera monitor")
+
+		// Wait for camera validation to complete (cameras need time to be detected and validated)
+		// This ensures tests don't run before cameras are properly initialized
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	// Start WebSocket server (following main() pattern)

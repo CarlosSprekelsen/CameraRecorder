@@ -54,7 +54,7 @@ type PermissionChecker struct {
 func NewPermissionChecker() *PermissionChecker {
 	checker := &PermissionChecker{
 		methodPermissions: make(map[string]Role),
-		logger:            logging.NewLogger("permission-checker"),
+		logger:            logging.GetLogger(),
 	}
 
 	// Initialize method permissions based on Python system

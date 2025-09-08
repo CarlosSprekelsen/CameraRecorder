@@ -61,7 +61,7 @@ func NewJWTHandler(secretKey string, logger *logging.Logger) (*JWTHandler, error
 
 	// Use provided logger or create a default one if none provided
 	if logger == nil {
-		logger = logging.NewLogger("jwt-handler")
+		logger = logging.GetLogger()
 	}
 
 	handler := &JWTHandler{

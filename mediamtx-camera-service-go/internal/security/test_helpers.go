@@ -29,7 +29,7 @@ import (
 // TestJWTHandler creates a JWT handler for testing with test secret
 func TestJWTHandler(t *testing.T) *JWTHandler {
 	// Use minimal logger to reduce test noise and improve performance
-	logger := logging.NewLogger("test-jwt-handler")
+	logger := logging.GetLogger()
 	// TODO: Configure logger to ERROR level only for tests
 	handler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
@@ -198,7 +198,7 @@ func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 		JWTHandler:     TestJWTHandler(t),
 		RoleManager:    TestPermissionChecker(t),
 		SessionManager: TestSessionManager(t),
-		Logger:         logging.NewLogger("test"), // Following established pattern: env.Logger
+		Logger:         logging.GetLogger(), // Following established pattern: env.Logger
 	}
 
 	// Session manager cleanup is started automatically in NewSessionManager
