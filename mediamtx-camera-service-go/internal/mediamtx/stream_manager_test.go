@@ -24,6 +24,7 @@ import (
 // TestNewStreamManager_ReqMTX001 tests stream manager creation
 func TestNewStreamManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -37,6 +38,7 @@ func TestNewStreamManager_ReqMTX001(t *testing.T) {
 // TestStreamManager_CreateStream_ReqMTX002 tests stream creation
 func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -64,6 +66,7 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_DeleteStream_ReqMTX002 tests stream deletion
 func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -88,6 +91,7 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_GetStream_ReqMTX002 tests stream retrieval
 func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -118,6 +122,7 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_ListStreams_ReqMTX002 tests stream listing
 func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -139,6 +144,7 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartRecordingStream_ReqMTX002 tests recording stream creation
 func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -165,6 +171,7 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartViewingStream_ReqMTX002 tests viewing stream creation
 func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -191,6 +198,7 @@ func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartSnapshotStream_ReqMTX002 tests snapshot stream creation
 func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -218,6 +226,7 @@ func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_ErrorHandling_ReqMTX001 tests error handling
 func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

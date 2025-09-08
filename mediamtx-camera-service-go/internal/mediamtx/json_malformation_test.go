@@ -26,6 +26,8 @@ import (
 // TestJSONParsingErrors_DangerousBugs tests JSON parsing functions with malformed data
 // that can catch dangerous bugs in JSON parsing
 func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
+	EnsureSequentialExecution(t)
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -36,6 +38,7 @@ func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 // TestJSONParsingPanicProtection_DangerousBugs tests that JSON parsing functions
 // don't panic with malformed data that could cause crashes
 func TestJSONParsingPanicProtection_DangerousBugs(t *testing.T) {
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

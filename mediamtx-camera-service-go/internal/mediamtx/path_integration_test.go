@@ -33,6 +33,7 @@ import (
 // TestPathManager_RealServer_ReqMTX001 tests path manager with real MediaMTX server
 func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -63,6 +64,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 // TestPathManager_StreamManagement_ReqMTX002 tests stream management capabilities
 func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -108,6 +110,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 // TestPathManager_ConfigIntegration_ReqMTX003 tests real config integration
 func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -144,6 +147,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 // TestPathManager_HealthMonitoring_ReqMTX004 tests real health monitoring
 func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -182,6 +186,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 // TestPathManager_RealMediaMTXServer tests integration with real MediaMTX server
 func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	// Test real MediaMTX server integration
+	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
