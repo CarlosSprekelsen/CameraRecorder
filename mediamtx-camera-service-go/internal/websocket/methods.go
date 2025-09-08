@@ -631,18 +631,16 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 		}, nil
 	}
 
-	// Extract device parameter
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "device parameter is required",
-			},
-		}, nil
+	// Validate device parameter using centralized validation
+	validationResult := s.validationHelper.ValidateDeviceParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "get_camera_capabilities", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated device parameter
+	device := validationResult.Data["device"].(string)
 
 	// Initialize response with architecture defaults following API documentation exactly
 	cameraCapabilities := map[string]interface{}{
@@ -2146,29 +2144,16 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename parameter is required",
-			},
-		}, nil
+	// Validate filename parameter using centralized validation
+	validationResult := s.validationHelper.ValidateFilenameParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "get_recording_info", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	filename, ok := params["filename"].(string)
-	if !ok || filename == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename must be a non-empty string",
-			},
-		}, nil
-	}
+	// Extract validated filename parameter
+	filename := validationResult.Data["filename"].(string)
 
 	// Use MediaMTX controller to get recording info
 	fileMetadata, err := s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
@@ -2239,29 +2224,16 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 		}, nil
 	}
 
-	// Validate parameters
-	if params == nil {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename parameter is required",
-			},
-		}, nil
+	// Validate filename parameter using centralized validation
+	validationResult := s.validationHelper.ValidateFilenameParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "get_snapshot_info", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
 
-	filename, ok := params["filename"].(string)
-	if !ok || filename == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    INVALID_PARAMS,
-				Message: ErrorMessages[INVALID_PARAMS],
-				Data:    "filename must be a non-empty string",
-			},
-		}, nil
-	}
+	// Extract validated filename parameter
+	filename := validationResult.Data["filename"].(string)
 
 	// Use MediaMTX controller to get snapshot info
 	fileMetadata, err := s.mediaMTXController.GetSnapshotInfo(context.Background(), filename)
@@ -2914,18 +2886,16 @@ func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, cl
 		"action":    "method_call",
 	}).Debug("Start streaming method called")
 
-	// Validate parameters
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    -32602,
-				Message: "Invalid parameters",
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
+	// Validate device parameter using centralized validation
+	validationResult := s.validationHelper.ValidateDeviceParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "start_streaming", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated device parameter
+	device := validationResult.Data["device"].(string)
 
 	// Convert device identifier to device path
 	devicePath := s.getDevicePathFromCameraIdentifier(device)
@@ -2994,18 +2964,16 @@ func (s *WebSocketServer) MethodStopStreaming(params map[string]interface{}, cli
 		"action":    "method_call",
 	}).Debug("Stop streaming method called")
 
-	// Validate parameters
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    -32602,
-				Message: "Invalid parameters",
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
+	// Validate device parameter using centralized validation
+	validationResult := s.validationHelper.ValidateDeviceParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "stop_streaming", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated device parameter
+	device := validationResult.Data["device"].(string)
 
 	// Convert device identifier to device path
 	devicePath := s.getDevicePathFromCameraIdentifier(device)
@@ -3069,18 +3037,16 @@ func (s *WebSocketServer) MethodGetStreamURL(params map[string]interface{}, clie
 		"action":    "method_call",
 	}).Debug("Get stream URL method called")
 
-	// Validate parameters
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    -32602,
-				Message: "Invalid parameters",
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
+	// Validate device parameter using centralized validation
+	validationResult := s.validationHelper.ValidateDeviceParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "get_stream_url", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated device parameter
+	device := validationResult.Data["device"].(string)
 
 	// Convert device identifier to device path
 	devicePath := s.getDevicePathFromCameraIdentifier(device)
@@ -3134,18 +3100,16 @@ func (s *WebSocketServer) MethodGetStreamStatus(params map[string]interface{}, c
 		"action":    "method_call",
 	}).Debug("Get stream status method called")
 
-	// Validate parameters
-	device, ok := params["device"].(string)
-	if !ok || device == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error: &JsonRpcError{
-				Code:    -32602,
-				Message: "Invalid parameters",
-				Data:    "device parameter is required and must be a string",
-			},
-		}, nil
+	// Validate device parameter using centralized validation
+	validationResult := s.validationHelper.ValidateDeviceParameter(params)
+	if !validationResult.Valid {
+		// Log validation warnings for debugging
+		s.validationHelper.LogValidationWarnings(validationResult, "get_stream_status", client.ClientID)
+		return s.validationHelper.CreateValidationErrorResponse(validationResult), nil
 	}
+
+	// Extract validated device parameter
+	device := validationResult.Data["device"].(string)
 
 	// Convert device identifier to device path
 	devicePath := s.getDevicePathFromCameraIdentifier(device)

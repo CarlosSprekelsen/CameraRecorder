@@ -129,12 +129,18 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	err := conn.Close()
 	require.NoError(t, err, "Client should close successfully")
 
-	// Wait for connection cleanup
-	time.Sleep(100 * time.Millisecond)
-	server.clientsMutex.RLock()
-	connectionCount = len(server.clients)
-	server.clientsMutex.RUnlock()
-	assert.Equal(t, 0, connectionCount, "Should have no client connections")
+	// Wait for connection cleanup with proper verification
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		server.clientsMutex.RLock()
+		connectionCount = len(server.clients)
+		server.clientsMutex.RUnlock()
+		if connectionCount == 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	assert.Equal(t, 0, connectionCount, "Should have no client connections after cleanup")
 }
 
 // TestWebSocketServer_MultipleClients tests multiple client connections
@@ -165,12 +171,18 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	err := conn1.Close()
 	require.NoError(t, err, "Client should close successfully")
 
-	// Wait for connection cleanup
-	time.Sleep(100 * time.Millisecond)
-	server.clientsMutex.RLock()
-	connectionCount = len(server.clients)
-	server.clientsMutex.RUnlock()
-	assert.Equal(t, 2, connectionCount, "Should have two client connections")
+	// Wait for connection cleanup with proper verification
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		server.clientsMutex.RLock()
+		connectionCount = len(server.clients)
+		server.clientsMutex.RUnlock()
+		if connectionCount == 2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	assert.Equal(t, 2, connectionCount, "Should have two client connections after cleanup")
 }
 
 // TestWebSocketServer_MethodRegistration tests method registration
@@ -303,8 +315,14 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 	// Cancel context
 	cancel()
 
-	// Wait for server to stop
-	time.Sleep(100 * time.Millisecond)
+	// Wait for server to stop with proper verification
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		if !server.IsRunning() {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	assert.False(t, server.IsRunning(), "Server should be stopped after context cancellation")
 }
 

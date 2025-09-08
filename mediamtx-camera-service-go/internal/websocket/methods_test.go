@@ -16,12 +16,10 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -245,10 +243,6 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	// Start server with proper dependencies (following main() pattern)
 	StartTestServerWithDependencies(t, server)
 
-	// Create a test JWT token for authentication using the helper
-	jwtHandler := security.TestJWTHandler(t)
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
-
 	// Test multiple connections with proper synchronization
 	const numConnections = 5
 	responses := make(chan *JsonRpcResponse, numConnections)
@@ -271,15 +265,8 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 			conn := NewTestClient(t, server)
 			defer CleanupTestClient(t, conn)
 
-			// Authenticate the client
-			authMessage := CreateTestMessage("authenticate", map[string]interface{}{
-				"auth_token": testToken,
-			})
-			authResponse := SendTestMessage(t, conn, authMessage)
-			if authResponse.Error != nil {
-				errors <- fmt.Errorf("authentication failed for connection %d: %v", connectionID, authResponse.Error)
-				return
-			}
+			// Authenticate the client using the helper
+			AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 			// Send ping message
 			message := CreateTestMessage("ping", map[string]interface{}{"connection_id": connectionID})
@@ -439,7 +426,7 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 
 	// Test get_camera_status with valid camera identifier
 	message := CreateTestMessage("get_camera_status", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -474,7 +461,7 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 
 	// Test get_camera_capabilities with valid camera identifier
 	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -504,12 +491,12 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Authenticate client with admin role for recording operations
-	AuthenticateTestClient(t, conn, "test_user", "admin")
+	// Authenticate client with operator role for recording operations
+	AuthenticateTestClient(t, conn, "test_user", "operator")
 
 	// Test start_recording with valid camera identifier
 	message := CreateTestMessage("start_recording", map[string]interface{}{
-		"camera_id": "camera0", // Using camera identifier abstraction layer
+		"device": "camera0", // Using camera identifier abstraction layer
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -535,8 +522,8 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Authenticate client with admin role for recording operations
-	AuthenticateTestClient(t, conn, "test_user", "admin")
+	// Authenticate client with operator role for recording operations
+	AuthenticateTestClient(t, conn, "test_user", "operator")
 
 	// Test stop_recording with valid camera identifier
 	message := CreateTestMessage("stop_recording", map[string]interface{}{
@@ -619,7 +606,7 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 	for _, method := range invalidCameraMethods {
 		t.Run(method, func(t *testing.T) {
 			message := CreateTestMessage(method, map[string]interface{}{
-				"camera_id": "invalid_camera_999", // Invalid camera identifier
+				"device": "invalid_camera_999", // Invalid camera identifier
 			})
 			response := SendTestMessage(t, conn, message)
 
@@ -690,7 +677,7 @@ func TestWebSocketMethods_AbstractionLayerMapping(t *testing.T) {
 	t.Run("APIMethodAbstraction", func(t *testing.T) {
 		// Test get_camera_status with valid camera identifier (API layer)
 		message := CreateTestMessage("get_camera_status", map[string]interface{}{
-			"camera_id": "camera0", // Using API abstraction layer
+			"device": "camera0", // Using API abstraction layer
 		})
 		response := SendTestMessage(t, conn, message)
 
@@ -743,9 +730,6 @@ func TestWebSocketMethods_AbstractionLayerErrorHandling(t *testing.T) {
 	conn := NewTestClient(t, server)
 	defer CleanupTestClient(t, conn)
 
-	// Authenticate client
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
 	// Test methods that should reject device paths (internal implementation)
 	t.Run("RejectDevicePaths", func(t *testing.T) {
 		methods := []string{
@@ -756,9 +740,21 @@ func TestWebSocketMethods_AbstractionLayerErrorHandling(t *testing.T) {
 
 		for _, method := range methods {
 			t.Run(method, func(t *testing.T) {
+				// Use correct role for each method
+				var role string
+				switch method {
+				case "start_recording":
+					role = "operator" // start_recording requires operator role
+				default:
+					role = "viewer" // get_camera_status and get_camera_capabilities require viewer role
+				}
+
+				// Authenticate with correct role
+				AuthenticateTestClient(t, conn, "test_user", role)
+
 				// Try to use device path instead of camera identifier
 				message := CreateTestMessage(method, map[string]interface{}{
-					"camera_id": "/dev/video0", // Using device path instead of camera identifier
+					"device": "/dev/video0", // Using device path instead of camera identifier
 				})
 				response := SendTestMessage(t, conn, message)
 
@@ -784,8 +780,11 @@ func TestWebSocketMethods_AbstractionLayerErrorHandling(t *testing.T) {
 
 		for _, identifier := range malformedIdentifiers {
 			t.Run(identifier, func(t *testing.T) {
+				// Authenticate as viewer for get_camera_status
+				AuthenticateTestClient(t, conn, "test_user", "viewer")
+
 				message := CreateTestMessage("get_camera_status", map[string]interface{}{
-					"camera_id": identifier,
+					"device": identifier, // Use correct parameter name
 				})
 				response := SendTestMessage(t, conn, message)
 
@@ -809,8 +808,11 @@ func TestWebSocketMethods_AbstractionLayerErrorHandling(t *testing.T) {
 
 		for _, identifier := range validIdentifiers {
 			t.Run(identifier, func(t *testing.T) {
+				// Authenticate as viewer for get_camera_status
+				AuthenticateTestClient(t, conn, "test_user", "viewer")
+
 				message := CreateTestMessage("get_camera_status", map[string]interface{}{
-					"camera_id": identifier,
+					"device": identifier, // Use correct parameter name
 				})
 				response := SendTestMessage(t, conn, message)
 

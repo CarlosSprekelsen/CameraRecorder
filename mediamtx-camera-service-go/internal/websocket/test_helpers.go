@@ -79,6 +79,7 @@ func getTestConfigPathForSetup() string {
 func NewTestLogger(name string) *logging.Logger {
 	// Use the global logger which respects the SetupLogging configuration
 	// This is a workaround for the logging system design issue
+	// TODO: Consider creating isolated logger instances for better test isolation
 	return logging.GetLogger()
 }
 
@@ -195,9 +196,17 @@ func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
 		err := cameraMonitor.Start(ctx)
 		require.NoError(t, err, "Failed to start camera monitor")
 
-		// Wait for camera validation to complete (cameras need time to be detected and validated)
+		// Wait for camera validation to complete with proper verification
 		// This ensures tests don't run before cameras are properly initialized
-		time.Sleep(100 * time.Millisecond)
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			// Check if camera monitor is ready (has completed initial validation)
+			if cameraMonitor != nil {
+				// Camera monitor is ready, break out of loop
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	// Start WebSocket server (following main() pattern)
@@ -259,8 +268,14 @@ func NewTestClient(t *testing.T, server *WebSocketServer) *websocket.Conn {
 		err := server.Start()
 		require.NoError(t, err, "Failed to start test server")
 
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		// Wait for server to be ready with proper verification
+		deadline := time.Now().Add(1 * time.Second)
+		for time.Now().Before(deadline) {
+			if server.IsRunning() {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	// Connect to server

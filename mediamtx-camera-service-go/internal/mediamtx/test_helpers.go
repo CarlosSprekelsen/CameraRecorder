@@ -355,6 +355,33 @@ func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *config.Co
 		fixturePath = filepath.Join("..", "..", "tests", "fixtures", fixtureName)
 	}
 
+	// Create required directories and files for test fixtures that use /tmp paths
+	// This is needed because fixtures have hardcoded paths that need to exist
+	requiredDirs := []string{
+		"/tmp/recordings",
+		"/tmp/snapshots",
+		"/tmp",
+	}
+
+	for _, dir := range requiredDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("Failed to create required directory %s: %v", dir, err)
+		}
+	}
+
+	// Create required files that fixtures expect to exist
+	requiredFiles := []string{
+		"/tmp/mediamtx.yml",
+	}
+
+	for _, file := range requiredFiles {
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			if err := os.WriteFile(file, []byte("# Test MediaMTX config file\n"), 0644); err != nil {
+				t.Fatalf("Failed to create required file %s: %v", file, err)
+			}
+		}
+	}
+
 	err := configManager.LoadConfig(fixturePath)
 	if err != nil {
 		t.Fatalf("Failed to load config from fixture %s: %v", fixtureName, err)
@@ -723,6 +750,7 @@ type JSONMalformationTestScenario struct {
 
 // GetJSONMalformationScenarios returns comprehensive JSON malformation scenarios
 // that can catch dangerous bugs in JSON parsing functions
+// DEPRECATED: Use schema-specific scenarios instead
 func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 	return []JSONMalformationTestScenario{
 		{
@@ -812,13 +840,376 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 	}
 }
 
+// GetStreamsResponseScenarios returns test scenarios specific to parseStreamsResponse
+// Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
+func GetStreamsResponseScenarios() []JSONMalformationTestScenario {
+	return []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"items": [{"name": "test"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be rejected",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"items": [{"name": "test"}]`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be rejected",
+		},
+		{
+			Name:        "unexpected_json_structure",
+			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "Unexpected JSON structure should be rejected",
+		},
+		{
+			Name:        "json_with_invalid_types",
+			JSONData:    []byte(`{"items": "not_an_array", "pageCount": "not_a_number", "itemCount": "not_a_number"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with invalid types should be rejected due to parsing errors",
+		},
+		{
+			Name:        "json_with_missing_required_fields",
+			JSONData:    []byte(`{"pageCount": 1, "itemCount": 0}`), // Missing 'items' field
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "JSON with missing required fields should be rejected",
+		},
+		{
+			Name:        "json_with_extra_fields",
+			JSONData:    []byte(`{"items": [], "pageCount": 1, "itemCount": 0, "extraField": "should be ignored"}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with extra fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_unicode_issues",
+			JSONData:    []byte(`{"items": [{"name": "test\u0000stream", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with Unicode issues should be handled gracefully",
+		},
+		{
+			Name:        "json_with_very_large_strings",
+			JSONData:    []byte(`{"items": [{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with very large strings should be handled gracefully",
+		},
+		{
+			Name:        "json_with_deeply_nested_objects",
+			JSONData:    []byte(`{"items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with deeply nested objects should be handled gracefully",
+		},
+		{
+			Name:        "json_with_special_characters",
+			JSONData:    []byte(`{"items": [{"name": "test-stream_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with special characters should be handled gracefully",
+		},
+	}
+}
+
+// GetStreamResponseScenarios returns test scenarios specific to parseStreamResponse
+// Schema: {"name": "stream_name", "source": {...}, ...}
+func GetStreamResponseScenarios() []JSONMalformationTestScenario {
+	return []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"name": "test_stream"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be rejected",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"name": "test_stream"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be rejected",
+		},
+		{
+			Name:        "unexpected_json_structure",
+			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "Unexpected JSON structure should be rejected",
+		},
+		{
+			Name:        "json_with_invalid_types",
+			JSONData:    []byte(`{"name": 123, "source": "not_an_object"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with invalid types should be rejected due to parsing errors",
+		},
+		{
+			Name:        "json_with_missing_required_fields",
+			JSONData:    []byte(`{"source": {"type": "rtsp", "id": "test"}}`), // Missing 'name' field
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "JSON with missing required fields should be rejected",
+		},
+		{
+			Name:        "json_with_extra_fields",
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "extraField": "should be ignored"}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with extra fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_unicode_issues",
+			JSONData:    []byte(`{"name": "test\u0000stream", "source": {"type": "rtsp", "id": "test"}}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with Unicode issues should be handled gracefully",
+		},
+		{
+			Name:        "json_with_very_large_strings",
+			JSONData:    []byte(`{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with very large strings should be handled gracefully",
+		},
+		{
+			Name:        "json_with_deeply_nested_objects",
+			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with deeply nested objects should be handled gracefully",
+		},
+		{
+			Name:        "json_with_special_characters",
+			JSONData:    []byte(`{"name": "test-stream_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with special characters should be handled gracefully",
+		},
+	}
+}
+
+// GetPathsResponseScenarios returns test scenarios specific to parsePathsResponse
+// Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
+func GetPathsResponseScenarios() []JSONMalformationTestScenario {
+	return []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"items": [{"name": "test_path"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be rejected",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"items": [{"name": "test_path"}]`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be rejected",
+		},
+		{
+			Name:        "unexpected_json_structure",
+			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "Unexpected JSON structure should be rejected",
+		},
+		{
+			Name:        "json_with_invalid_types",
+			JSONData:    []byte(`{"items": "not_an_array", "pageCount": "not_a_number", "itemCount": "not_a_number"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with invalid types should be rejected due to parsing errors",
+		},
+		{
+			Name:        "json_with_missing_required_fields",
+			JSONData:    []byte(`{"pageCount": 1, "itemCount": 0}`), // Missing 'items' field
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "JSON with missing required fields should be rejected",
+		},
+		{
+			Name:        "json_with_extra_fields",
+			JSONData:    []byte(`{"items": [], "pageCount": 1, "itemCount": 0, "extraField": "should be ignored"}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with extra fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_unicode_issues",
+			JSONData:    []byte(`{"items": [{"name": "test\u0000path", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with Unicode issues should be handled gracefully",
+		},
+		{
+			Name:        "json_with_very_large_strings",
+			JSONData:    []byte(`{"items": [{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with very large strings should be handled gracefully",
+		},
+		{
+			Name:        "json_with_deeply_nested_objects",
+			JSONData:    []byte(`{"items": [{"name": "test_path", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with deeply nested objects should be handled gracefully",
+		},
+		{
+			Name:        "json_with_special_characters",
+			JSONData:    []byte(`{"items": [{"name": "test-path_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with special characters should be handled gracefully",
+		},
+	}
+}
+
+// GetHealthResponseScenarios returns test scenarios specific to parseHealthResponse
+// Schema: {"status": "ok", ...}
+func GetHealthResponseScenarios() []JSONMalformationTestScenario {
+	return []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"status": "ok"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be rejected",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"status": "ok"`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be rejected",
+		},
+		{
+			Name:        "unexpected_json_structure",
+			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "Unexpected JSON structure should be rejected",
+		},
+		{
+			Name:        "json_with_invalid_types",
+			JSONData:    []byte(`{"status": 123, "uptime": "not_a_number"}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "JSON with invalid types should be rejected due to parsing errors",
+		},
+		{
+			Name:        "json_with_missing_required_fields",
+			JSONData:    []byte(`{"uptime": 12345}`), // Missing 'status' field
+			ExpectError: true,
+			ErrorMsg:    "missing required field",
+			Description: "JSON with missing required fields should be rejected",
+		},
+		{
+			Name:        "json_with_extra_fields",
+			JSONData:    []byte(`{"status": "ok", "uptime": 12345, "extraField": "should be ignored"}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with extra fields should be handled gracefully",
+		},
+		{
+			Name:        "json_with_unicode_issues",
+			JSONData:    []byte(`{"status": "ok\u0000", "uptime": 12345}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with Unicode issues should be handled gracefully",
+		},
+		{
+			Name:        "json_with_very_large_strings",
+			JSONData:    []byte(`{"status": "` + strings.Repeat("a", 10000) + `", "uptime": 12345}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with very large strings should be handled gracefully",
+		},
+		{
+			Name:        "json_with_deeply_nested_objects",
+			JSONData:    []byte(`{"status": "ok", "uptime": 12345, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with deeply nested objects should be handled gracefully",
+		},
+		{
+			Name:        "json_with_special_characters",
+			JSONData:    []byte(`{"status": "ok-with.special@chars#123", "uptime": 12345}`),
+			ExpectError: false,
+			ErrorMsg:    "",
+			Description: "JSON with special characters should be handled gracefully",
+		},
+	}
+}
+
 // TestJSONParsingErrors tests JSON parsing functions with malformed data
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
-	scenarios := GetJSONMalformationScenarios()
-
-	// Test parseStreamsResponse function
+	// Test parseStreamsResponse function with schema-specific scenarios
 	t.Run("parseStreamsResponse_JSON_Errors", func(t *testing.T) {
+		scenarios := GetStreamsResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
 				t.Logf("Testing parseStreamsResponse with scenario: %s - %s", scenario.Name, scenario.Description)
@@ -848,8 +1239,9 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 		}
 	})
 
-	// Test parseStreamResponse function
+	// Test parseStreamResponse function with schema-specific scenarios
 	t.Run("parseStreamResponse_JSON_Errors", func(t *testing.T) {
+		scenarios := GetStreamResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
 				t.Logf("Testing parseStreamResponse with scenario: %s - %s", scenario.Name, scenario.Description)
@@ -879,8 +1271,9 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 		}
 	})
 
-	// Test parseHealthResponse function
+	// Test parseHealthResponse function with schema-specific scenarios
 	t.Run("parseHealthResponse_JSON_Errors", func(t *testing.T) {
+		scenarios := GetHealthResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
 				t.Logf("Testing parseHealthResponse with scenario: %s - %s", scenario.Name, scenario.Description)
@@ -910,8 +1303,9 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 		}
 	})
 
-	// Test parsePathsResponse function
+	// Test parsePathsResponse function with schema-specific scenarios
 	t.Run("parsePathsResponse_JSON_Errors", func(t *testing.T) {
+		scenarios := GetPathsResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
 				t.Logf("Testing parsePathsResponse with scenario: %s - %s", scenario.Name, scenario.Description)

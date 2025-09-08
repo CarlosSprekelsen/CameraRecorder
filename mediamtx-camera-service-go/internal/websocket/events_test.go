@@ -202,8 +202,10 @@ func TestWebSocketEvents_AddEventHandler(t *testing.T) {
 
 	eventManager := NewEventManager(NewTestLogger("events-test"))
 
-	// Add event handler
+	// Add event handler with proper async verification
+	handlerCalled := make(chan struct{})
 	handler := func(event *EventMessage) error {
+		close(handlerCalled) // Signal that handler was called
 		return nil
 	}
 
@@ -216,8 +218,14 @@ func TestWebSocketEvents_AddEventHandler(t *testing.T) {
 
 	// Handler should be called
 	assert.NoError(t, err, "Publishing event should not error")
-	// Note: Handler execution is asynchronous, so we can't easily test it in unit test
-	// This test verifies the handler registration doesn't cause errors
+
+	// Wait for async handler execution with proper verification
+	select {
+	case <-handlerCalled:
+		// Handler was called successfully
+	case <-time.After(1 * time.Second):
+		t.Fatal("Handler was not called within timeout")
+	}
 }
 
 // TestWebSocketEvents_UpdateClientLastSeen tests client activity tracking
@@ -784,12 +792,17 @@ func TestWebSocketEvents_EventHandlers(t *testing.T) {
 
 	eventManager := NewEventManager(NewTestLogger("events-test"))
 
-	// Add multiple event handlers for the same topic
+	// Add multiple event handlers for the same topic with proper async verification
+	handler1Called := make(chan struct{})
+	handler2Called := make(chan struct{})
+
 	handler1 := func(event *EventMessage) error {
+		close(handler1Called) // Signal that handler1 was called
 		return nil
 	}
 
 	handler2 := func(event *EventMessage) error {
+		close(handler2Called) // Signal that handler2 was called
 		return nil
 	}
 
@@ -802,8 +815,21 @@ func TestWebSocketEvents_EventHandlers(t *testing.T) {
 	})
 
 	assert.NoError(t, err, "Publishing event should not error")
-	// Note: Handler execution is asynchronous, so we can't easily verify they were called
-	// This test verifies the handler registration doesn't cause errors
+
+	// Wait for both handlers to be called with proper verification
+	select {
+	case <-handler1Called:
+		// Handler1 was called successfully
+	case <-time.After(1 * time.Second):
+		t.Fatal("Handler1 was not called within timeout")
+	}
+
+	select {
+	case <-handler2Called:
+		// Handler2 was called successfully
+	case <-time.After(1 * time.Second):
+		t.Fatal("Handler2 was not called within timeout")
+	}
 }
 
 // TestWebSocketEvents_SubscriptionManagement tests subscription management edge cases
