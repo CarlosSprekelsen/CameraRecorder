@@ -83,10 +83,11 @@ type JsonRpcRequest struct {
 // JsonRpcResponse represents a JSON-RPC 2.0 response structure
 // Following Python JsonRpcResponse dataclass
 type JsonRpcResponse struct {
-	JSONRPC string        `json:"jsonrpc"`
-	ID      interface{}   `json:"id,omitempty"`
-	Result  interface{}   `json:"result,omitempty"`
-	Error   *JsonRpcError `json:"error,omitempty"`
+	JSONRPC  string                 `json:"jsonrpc"`
+	ID       interface{}            `json:"id,omitempty"`
+	Result   interface{}            `json:"result,omitempty"`
+	Error    *JsonRpcError          `json:"error,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // JsonRpcNotification represents a JSON-RPC 2.0 notification structure
@@ -102,6 +103,26 @@ type JsonRpcError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
+}
+
+// ErrorData standardizes JSON-RPC error data payloads
+type ErrorData struct {
+	Reason     string `json:"reason,omitempty"`
+	Details    string `json:"details,omitempty"`
+	Suggestion string `json:"suggestion,omitempty"`
+}
+
+// NewJsonRpcError creates a standardized JSON-RPC error
+func NewJsonRpcError(code int, reason, details, suggestion string) *JsonRpcError {
+	return &JsonRpcError{
+		Code:    code,
+		Message: ErrorMessages[code],
+		Data: &ErrorData{
+			Reason:     reason,
+			Details:    details,
+			Suggestion: suggestion,
+		},
+	}
 }
 
 // ClientConnection represents a connected WebSocket client
@@ -153,7 +174,7 @@ type ServerConfig struct {
 	MaxMessageSize       int64         `mapstructure:"max_message_size"`
 	ReadBufferSize       int           `mapstructure:"read_buffer_size"`
 	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
-	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"` // Default: 30 seconds
+	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`       // Default: 30 seconds
 	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"` // Default: 10 seconds
 }
 

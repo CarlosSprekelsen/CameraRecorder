@@ -57,7 +57,7 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create camera monitor")
 	}
 
-	// Initialize MediaMTX controller with existing logger and camera monitor
+	// Initialize MediaMTX controller first (without event notifier for now)
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, cameraMonitor, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
@@ -87,13 +87,32 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create WebSocket server")
 	}
 
-	// Connect MediaMTX controller to event system
-	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), logger)
-	_ = mediaMTXEventNotifier // TODO: Connect to MediaMTX controller when available
+	// Connect MediaMTX controller to event system (MediaMTX manages camera events internally)
+	// MediaMTX Controller implements DeviceToCameraIDMapper interface for abstraction
+	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), mediaMTXController, logger)
+
+	// Connect the event notifier to MediaMTX controller
+	// Note: SetEventNotifier method needs to be added to MediaMTXController interface
+	if setterController, ok := mediaMTXController.(interface {
+		SetEventNotifier(mediamtx.MediaMTXEventNotifier)
+	}); ok {
+		setterController.SetEventNotifier(mediaMTXEventNotifier)
+	}
 
 	// Connect system events to event system
 	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger)
 	systemEventNotifier.NotifySystemStartup("1.0.0", "Go implementation")
+
+	// Connect SystemEventNotifier to health monitor for threshold-crossing notifications
+	if healthMonitorProvider, ok := mediaMTXController.(interface {
+		GetHealthMonitor() mediamtx.HealthMonitor
+	}); ok {
+		healthMonitor := healthMonitorProvider.GetHealthMonitor()
+		if healthMonitor != nil {
+			healthMonitor.SetSystemNotifier(systemEventNotifier)
+			logger.Info("Connected SystemEventNotifier to health monitor for threshold-crossing notifications")
+		}
+	}
 
 	// Start camera monitor
 	ctx := context.Background()

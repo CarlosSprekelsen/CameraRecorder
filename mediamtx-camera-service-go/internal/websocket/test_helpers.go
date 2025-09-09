@@ -317,10 +317,7 @@ func CreateTestErrorResponse(id interface{}, code int, message string) *JsonRpcR
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
 		ID:      id,
-		Error: &JsonRpcError{
-			Code:    code,
-			Message: message,
-		},
+		Error:   NewJsonRpcError(code, "test_error", message, "Check test parameters"),
 	}
 }
 

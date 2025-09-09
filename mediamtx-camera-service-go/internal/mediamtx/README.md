@@ -112,6 +112,9 @@ PathExists(ctx, name) bool
 - Manages snapshot file storage and metadata
 - Integrates with FFmpegManager for image processing
 - Supports both current USB devices and future external RTSP sources (STANAG 4609 UAVs)
+ 
+Notes:
+- Stream naming uses `StreamManager.GenerateStreamName`; no path-based fallbacks.
 
 ### 6. **FFmpegManager** (FFmpeg Process Management)
 **Role**: Manages FFmpeg processes for snapshots
@@ -135,6 +138,9 @@ PathExists(ctx, name) bool
 - Exposed via GetHealth() API method
 - Publishes health events via WebSocket
 - Included in system metrics responses
+
+Notes:
+- Intervals/timeouts are validated by centralized config; runtime emergency fallbacks are removed.
 
 ### 8. **RTSPConnectionManager** (Connection Monitoring)
 **Role**: Monitors RTSP connections and sessions

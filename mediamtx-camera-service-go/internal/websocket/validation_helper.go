@@ -471,18 +471,15 @@ func (vh *ValidationHelper) ValidateRetentionPolicyParameters(params map[string]
 
 // CreateValidationErrorResponse creates a JSON-RPC error response from validation results
 func (vh *ValidationHelper) CreateValidationErrorResponse(validationResult *ValidationResult) *JsonRpcResponse {
-	errorData := ""
+	reason := "validation_failed"
+	details := ""
 	if len(validationResult.Errors) > 0 {
-		errorData = validationResult.Errors[0]
+		details = validationResult.Errors[0]
 	}
 
 	return &JsonRpcResponse{
 		JSONRPC: "2.0",
-		Error: &JsonRpcError{
-			Code:    INVALID_PARAMS,
-			Message: ErrorMessages[INVALID_PARAMS],
-			Data:    errorData,
-		},
+		Error:   NewJsonRpcError(INVALID_PARAMS, reason, details, "Check parameter types and values"),
 	}
 }
 

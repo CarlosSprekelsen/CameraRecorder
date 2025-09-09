@@ -31,6 +31,9 @@ type SimpleHealthMonitor struct {
 	config *MediaMTXConfig
 	logger *logging.Logger
 
+	// Threshold-crossing notifications
+	systemNotifier SystemEventNotifier
+
 	// Atomic state: optimized for high-frequency reads
 	isHealthy     int32 // 0 = false, 1 = true
 	failureCount  int64 // Atomic counter
@@ -55,6 +58,13 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		lastCheckTime: time.Now().UnixNano(),
 		stopChan:      make(chan struct{}, 1),
 	}
+}
+
+// SetSystemNotifier sets the system event notifier for threshold-crossing notifications
+func (h *SimpleHealthMonitor) SetSystemNotifier(notifier SystemEventNotifier) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.systemNotifier = notifier
 }
 
 // Start starts the health monitoring
@@ -212,6 +222,17 @@ func (h *SimpleHealthMonitor) RecordSuccess() {
 	if currentHealthy == 0 {
 		h.logger.Info("Service recovered through success recording")
 		atomic.StoreInt32(&h.isHealthy, 1)
+
+		// Send recovery notification
+		if h.systemNotifier != nil {
+			h.systemNotifier.NotifySystemHealth("healthy", map[string]interface{}{
+				"component":       "mediamtx_health_monitor",
+				"severity":        "info",
+				"timestamp":       time.Now().Format(time.RFC3339),
+				"reason":          "service_recovered",
+				"previous_status": "unhealthy",
+			})
+		}
 	}
 	atomic.StoreInt64(&h.failureCount, 0)
 }
@@ -231,6 +252,18 @@ func (h *SimpleHealthMonitor) RecordFailure() {
 		// Use atomic compare-and-swap to set unhealthy
 		if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 			h.logger.Warn("Service marked as unhealthy due to failure threshold")
+
+			// Send threshold-crossing notification
+			if h.systemNotifier != nil {
+				h.systemNotifier.NotifySystemHealth("unhealthy", map[string]interface{}{
+					"failure_count": failures,
+					"threshold":     threshold,
+					"component":     "mediamtx_health_monitor",
+					"severity":      "critical",
+					"timestamp":     time.Now().Format(time.RFC3339),
+					"reason":        "failure_threshold_exceeded",
+				})
+			}
 		}
 	}
 }

@@ -65,10 +65,40 @@ const (
 type EventSubscription struct {
 	ClientID  string                 `json:"client_id"`
 	Topics    []EventTopic           `json:"topics"`
-	Filters   map[string]interface{} `json:"filters,omitempty"`
+	Filters   map[string]interface{} `json:"filters,omitempty"` // See SupportedFilters below
 	CreatedAt time.Time              `json:"created_at"`
 	LastSeen  time.Time              `json:"last_seen"`
 	Active    bool                   `json:"active"`
+}
+
+// SupportedFilters documents the supported subscription filter keys and their types
+//
+// ✅ **Supported Client-Facing Filters (per JSON-RPC API specification):**
+// - "device" (string): Filter by camera identifier (e.g., "camera0", "camera1") - **PRIMARY FILTER**
+// - "topic" (string): Filter by specific event topic
+// - "timestamp_after" (string): Filter events after RFC3339 timestamp (optional)
+// - "timestamp_before" (string): Filter events before RFC3339 timestamp (optional)
+//
+// ⚠️ **Internal/Debug Filters (avoid in client applications):**
+// - "device_path" (string): Filter by internal device path (e.g., "/dev/video0") - for internal tooling only
+//
+// **Filter Example (proper abstraction):**
+// ```json
+//
+//	{
+//	  "device": "camera0",
+//	  "timestamp_after": "2024-01-01T00:00:00Z"
+//	}
+//
+// ```
+//
+// **Matching Behavior:**
+// - All specified filters must match (AND logic)
+// - Exact string matching for device, topic, device_path
+// - Timestamp filters use RFC3339 format comparison
+// - Missing event fields cause filter to fail (no match)
+type SupportedFilters struct {
+	// This type exists only for documentation - use map[string]interface{} in practice
 }
 
 // EventMessage represents a structured event message
@@ -440,11 +470,61 @@ func (em *EventManager) isClientInterested(subscription *EventSubscription, even
 
 func (em *EventManager) applyFilters(filters map[string]interface{}, eventData map[string]interface{}) bool {
 	for key, expectedValue := range filters {
+		// Handle special timestamp filters
+		if key == "timestamp_after" || key == "timestamp_before" {
+			if !em.matchTimestampFilter(key, expectedValue, eventData) {
+				return false
+			}
+			continue
+		}
+
+		// Handle regular exact-match filters
 		if actualValue, exists := eventData[key]; !exists || !em.valuesEqual(actualValue, expectedValue) {
 			return false
 		}
 	}
 	return true
+}
+
+// matchTimestampFilter handles timestamp-based filtering with RFC3339 format
+func (em *EventManager) matchTimestampFilter(filterKey string, expectedValue interface{}, eventData map[string]interface{}) bool {
+	// Get event timestamp
+	eventTimestampRaw, exists := eventData["timestamp"]
+	if !exists {
+		return false // No timestamp in event data
+	}
+
+	eventTimestampStr, ok := eventTimestampRaw.(string)
+	if !ok {
+		return false // Timestamp is not a string
+	}
+
+	// Parse event timestamp
+	eventTime, err := time.Parse(time.RFC3339, eventTimestampStr)
+	if err != nil {
+		return false // Invalid timestamp format
+	}
+
+	// Parse filter timestamp
+	filterTimestampStr, ok := expectedValue.(string)
+	if !ok {
+		return false // Filter value is not a string
+	}
+
+	filterTime, err := time.Parse(time.RFC3339, filterTimestampStr)
+	if err != nil {
+		return false // Invalid filter timestamp format
+	}
+
+	// Apply timestamp comparison
+	switch filterKey {
+	case "timestamp_after":
+		return eventTime.After(filterTime)
+	case "timestamp_before":
+		return eventTime.Before(filterTime)
+	default:
+		return false
+	}
 }
 
 // valuesEqual safely compares two interface{} values, handling uncomparable types

@@ -44,7 +44,16 @@ func TestEventSystemIntegration(t *testing.T) {
 
 		// Setup logging
 		logger := logging.NewLogger("event-system-integration-test")
-		err = logging.SetupLogging(logging.NewLoggingConfigFromConfig(&configManager.GetConfig().Logging))
+		cfg := configManager.GetConfig()
+		err = logging.SetupLogging(&logging.LoggingConfig{
+			Level:          cfg.Logging.Level,
+			Format:         cfg.Logging.Format,
+			FileEnabled:    cfg.Logging.FileEnabled,
+			FilePath:       cfg.Logging.FilePath,
+			MaxFileSize:    int(cfg.Logging.MaxFileSize),
+			BackupCount:    cfg.Logging.BackupCount,
+			ConsoleEnabled: cfg.Logging.ConsoleEnabled,
+		})
 		if err != nil {
 			t.Skipf("Skipping test - logging setup failed: %v", err)
 		}
@@ -69,7 +78,7 @@ func TestEventSystemIntegration(t *testing.T) {
 		require.NoError(t, err, "Failed to create MediaMTX controller")
 
 		// Create JWT handler
-		cfg := configManager.GetConfig()
+		cfg = configManager.GetConfig()
 		jwtHandler, err := NewJWTHandler(cfg.Security.JWTSecretKey)
 		require.NoError(t, err, "Failed to create JWT handler")
 

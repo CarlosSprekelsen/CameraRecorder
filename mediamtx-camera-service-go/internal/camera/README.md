@@ -425,8 +425,8 @@ func main() {
     
     // Get connected cameras
     cameras := monitor.GetConnectedCameras()
-    for _, camera := range cameras {
-        logger.Info("Found camera: %s", camera.Name)
+    for _, cam := range cameras {
+        logger.WithFields(logging.Fields{"camera": cam.Name}).Info("Found camera")
     }
 }
 ```
@@ -484,14 +484,11 @@ for _, format := range device.Formats {
 
 ### WebSocket Module Integration
 
-The camera module integrates with the WebSocket module to provide real-time camera information:
+The camera module integrates through the MediaMTX Controller. The WebSocket layer remains thin and does not read the camera monitor directly.
 
 ```go
-// WebSocket methods use camera monitor
-func (s *WebSocketServer) handleGetCameraList(req *JsonRpcRequest) *JsonRpcResponse {
-    cameras := s.cameraMonitor.GetConnectedCameras()
-    // Convert to API format and return
-}
+// WebSocket delegates to MediaMTX Controller
+result, err := s.mediaMTXController.GetCameraList(ctx)
 ```
 
 ### MediaMTX Module Integration

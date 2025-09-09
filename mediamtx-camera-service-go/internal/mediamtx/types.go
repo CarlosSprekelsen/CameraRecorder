@@ -22,6 +22,24 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
+// EventNotifier interfaces for MediaMTX Controller event publishing
+// These interfaces allow MediaMTX Controller to publish events without direct WebSocket dependencies
+
+// DeviceToCameraIDMapper interface for converting device paths to camera IDs
+// This ensures event payloads use proper abstraction (camera0 vs /dev/video0)
+type DeviceToCameraIDMapper interface {
+	GetCameraForDevicePath(devicePath string) (string, bool)
+	GetDevicePathForCamera(cameraID string) (string, bool)
+}
+
+// MediaMTXEventNotifier interface for MediaMTX-specific events
+type MediaMTXEventNotifier interface {
+	NotifyRecordingStarted(device, sessionID, filename string)
+	NotifyRecordingStopped(device, sessionID, filename string, duration time.Duration)
+	NotifyStreamStarted(device, streamID, streamType string)
+	NotifyStreamStopped(device, streamID, streamType string)
+}
+
 // FFmpegConfig represents FFmpeg-specific configuration settings
 type FFmpegConfig struct {
 	Snapshot  SnapshotConfig  `mapstructure:"snapshot"`
@@ -308,10 +326,21 @@ type ActiveRecording struct {
 }
 
 // CameraListResponse represents the response for camera list operations
+// APICameraInfo represents camera information in API-ready format
+type APICameraInfo struct {
+	Device       string                 `json:"device"`       // API-ready camera ID (camera0)
+	Status       string                 `json:"status"`       // Camera status
+	Name         string                 `json:"name"`         // Camera name
+	Resolution   string                 `json:"resolution"`   // Default resolution
+	FPS          int                    `json:"fps"`          // Default FPS
+	Streams      map[string]string      `json:"streams"`      // Stream URLs
+	Capabilities map[string]interface{} `json:"capabilities"` // Camera capabilities
+}
+
 type CameraListResponse struct {
-	Cameras   []*camera.CameraDevice `json:"cameras"`
-	Total     int                    `json:"total"`
-	Connected int                    `json:"connected"`
+	Cameras   []*APICameraInfo `json:"cameras"`
+	Total     int              `json:"total"`
+	Connected int              `json:"connected"`
 }
 
 // CameraStatusResponse represents the response for camera status operations
@@ -333,6 +362,17 @@ type CameraMetrics struct {
 	Uptime    int64 `json:"uptime"`
 }
 
+// StorageInfo represents storage space and usage information
+type StorageInfo struct {
+	TotalSpace      uint64  `json:"total_space"`
+	UsedSpace       uint64  `json:"used_space"`
+	AvailableSpace  uint64  `json:"available_space"`
+	UsagePercentage float64 `json:"usage_percentage"`
+	RecordingsSize  int64   `json:"recordings_size"`
+	SnapshotsSize   int64   `json:"snapshots_size"`
+	LowSpaceWarning bool    `json:"low_space_warning"`
+}
+
 // MediaMTXController interface defines MediaMTX operations
 type MediaMTXController interface {
 	// Camera discovery operations
@@ -348,6 +388,8 @@ type MediaMTXController interface {
 	GetHealth(ctx context.Context) (*HealthStatus, error)
 	GetMetrics(ctx context.Context) (*Metrics, error)
 	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
+	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
+	GetHealthMonitor() HealthMonitor
 
 	// Stream management
 	GetStreams(ctx context.Context) ([]*Stream, error)
@@ -425,6 +467,48 @@ type MediaMTXController interface {
 	GetActiveRecording(devicePath string) *ActiveRecording
 }
 
+// MediaMTXControllerAPI is a restricted interface for higher layers (e.g., WebSocket)
+// It exposes only camera-identifier-based methods and hides implementation/mapping details.
+type MediaMTXControllerAPI interface {
+	// Camera queries
+	GetCameraList(ctx context.Context) (*CameraListResponse, error)
+	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
+
+	// Health and metrics
+	GetHealth(ctx context.Context) (*HealthStatus, error)
+	GetMetrics(ctx context.Context) (*Metrics, error)
+	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
+	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
+	GetHealthMonitor() HealthMonitor
+
+	// Streaming
+	GetStreams(ctx context.Context) ([]*Stream, error)
+	StartStreaming(ctx context.Context, device string) (*Stream, error)
+	StopStreaming(ctx context.Context, device string) error
+	GetStreamURL(ctx context.Context, device string) (string, error)
+	GetStreamStatus(ctx context.Context, device string) (*Stream, error)
+
+	// Recording and snapshots (identifier based)
+	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
+	StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error)
+	StopAdvancedRecording(ctx context.Context, sessionID string) error
+	GetSessionIDByDevice(device string) (string, bool)
+	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
+	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
+	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
+	ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error)
+	DeleteRecording(ctx context.Context, filename string) error
+	DeleteSnapshot(ctx context.Context, filename string) error
+
+	// Cleanup and manager access (for file retention operations)
+	GetRecordingManager() *RecordingManager
+	GetSnapshotManager() *SnapshotManager
+}
+
+// Compile-time assertion: controller implements the restricted API
+var _ MediaMTXControllerAPI = (*controller)(nil)
+
 // MediaMTXClient interface defines HTTP client operations
 type MediaMTXClient interface {
 	// HTTP operations
@@ -440,6 +524,11 @@ type MediaMTXClient interface {
 	Close() error
 }
 
+// SystemEventNotifier interface for threshold-crossing notifications
+type SystemEventNotifier interface {
+	NotifySystemHealth(status string, metrics map[string]interface{})
+}
+
 // HealthMonitor interface defines health monitoring operations
 type HealthMonitor interface {
 	// Health monitoring
@@ -453,6 +542,9 @@ type HealthMonitor interface {
 	IsCircuitOpen() bool
 	RecordSuccess()
 	RecordFailure()
+
+	// Threshold-crossing notifications
+	SetSystemNotifier(notifier SystemEventNotifier)
 }
 
 // PathManager interface defines path management operations
@@ -468,7 +560,7 @@ type PathManager interface {
 	PathExists(ctx context.Context, name string) bool
 
 	// Camera operations (PathManager handles camera-path integration)
-	GetCameraList(ctx context.Context) ([]*camera.CameraDevice, error)
+	GetCameraList(ctx context.Context) (*CameraListResponse, error)
 	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
 	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
 

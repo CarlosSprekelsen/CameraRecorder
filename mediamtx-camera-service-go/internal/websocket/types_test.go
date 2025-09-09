@@ -57,17 +57,19 @@ func TestWebSocketTypes_JsonRpcResponse(t *testing.T) {
 
 // TestWebSocketTypes_JsonRpcError tests JSON-RPC error structure
 func TestWebSocketTypes_JsonRpcError(t *testing.T) {
-	// Test JSON-RPC error creation
-	error := &JsonRpcError{
-		Code:    -32600,
-		Message: "Invalid Request",
-		Data:    "Invalid JSON-RPC request",
-	}
+	// Test JSON-RPC error creation using standardized helper
+	error := NewJsonRpcError(INVALID_REQUEST, "test_invalid_request", "Invalid JSON-RPC request", "Check request format")
 
 	// Test error structure
 	assert.Equal(t, -32600, error.Code, "Error should have correct code")
 	assert.Equal(t, "Invalid Request", error.Message, "Error should have correct message")
-	assert.Equal(t, "Invalid JSON-RPC request", error.Data, "Error should have correct data")
+
+	// Test error data structure
+	errorData, ok := error.Data.(*ErrorData)
+	assert.True(t, ok, "Error data should be ErrorData type")
+	assert.Equal(t, "test_invalid_request", errorData.Reason, "Error data should have correct reason")
+	assert.Equal(t, "Invalid JSON-RPC request", errorData.Details, "Error data should have correct details")
+	assert.Equal(t, "Check request format", errorData.Suggestion, "Error data should have correct suggestion")
 }
 
 // TestWebSocketTypes_JsonRpcNotification tests JSON-RPC notification structure

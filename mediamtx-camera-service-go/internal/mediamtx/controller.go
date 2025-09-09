@@ -26,6 +26,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"golang.org/x/sys/unix"
 )
 
 // controller represents the main MediaMTX controller
@@ -395,16 +396,34 @@ func (c *controller) GetHealth(ctx context.Context) (*HealthStatus, error) {
 	status := c.healthMonitor.GetStatus()
 
 	// Add camera monitor status
+	if status.ComponentStatus == nil {
+		status.ComponentStatus = make(map[string]string)
+	}
+
 	if c.cameraMonitor != nil {
 		if c.cameraMonitor.IsRunning() {
-			status.Components["camera_monitor"] = "healthy"
+			status.ComponentStatus["camera_monitor"] = "healthy"
 		} else {
-			status.Components["camera_monitor"] = "error"
+			status.ComponentStatus["camera_monitor"] = "error"
 			status.Status = "degraded"
 		}
 	} else {
-		status.Components["camera_monitor"] = "error"
+		status.ComponentStatus["camera_monitor"] = "error"
 		status.Status = "degraded"
+	}
+
+	// Include storage component health
+	if storage, err := c.GetStorageInfo(ctx); err == nil {
+		if storage.LowSpaceWarning {
+			status.ComponentStatus["storage"] = "warning"
+			if status.Status == "healthy" {
+				status.Status = "degraded"
+			}
+		} else {
+			status.ComponentStatus["storage"] = "healthy"
+		}
+	} else {
+		status.ComponentStatus["storage"] = "unknown"
 	}
 
 	return &status, nil
@@ -454,15 +473,8 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 	if c.cameraMonitor != nil {
 		stats := c.cameraMonitor.GetMonitorStats()
 		if stats != nil {
-			// Add camera-specific metrics to the response
-			metrics.CameraMetrics = map[string]interface{}{
-				"known_devices":        stats.KnownDevicesCount,
-				"polling_cycles":       stats.PollingCycles,
-				"device_state_changes": stats.DeviceStateChanges,
-				"capability_probes":    stats.CapabilityProbesAttempted,
-				"capability_success":   stats.CapabilityProbesSuccessful,
-				"udev_events":          stats.UdevEventsProcessed,
-			}
+			// Camera metrics are available in camera monitor stats but not currently exposed in Metrics struct
+			// TODO: Consider adding camera metrics to the main Metrics struct if needed
 		}
 	}
 
@@ -544,6 +556,59 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	}
 
 	return systemMetrics, nil
+}
+
+// GetStorageInfo returns information about the storage space used by recordings and snapshots.
+func (c *controller) GetStorageInfo(ctx context.Context) (*StorageInfo, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Disk totals from recordings path
+	root := c.config.RecordingsPath
+	var st unix.Statfs_t
+	if err := unix.Statfs(root, &st); err != nil {
+		return nil, fmt.Errorf("statfs failed: %w", err)
+	}
+	total := st.Blocks * uint64(st.Bsize)
+	free := st.Bfree * uint64(st.Bsize)
+	used := total - free
+	usagePct := 0.0
+	if total > 0 {
+		usagePct = float64(used) / float64(total) * 100.0
+	}
+
+	// Aggregate sizes via managers (no FS walking in API layer)
+	recList, err := c.recordingManager.GetRecordingsList(ctx, 100000, 0)
+	if err != nil {
+		return nil, fmt.Errorf("list recordings failed: %w", err)
+	}
+	snapList, err := c.snapshotManager.GetSnapshotsList(ctx, 100000, 0)
+	if err != nil {
+		return nil, fmt.Errorf("list snapshots failed: %w", err)
+	}
+	var recBytes int64
+	for _, f := range recList.Files {
+		recBytes += f.FileSize
+	}
+	var snapBytes int64
+	for _, f := range snapList.Files {
+		snapBytes += f.FileSize
+	}
+
+	// Low space threshold (use RetentionPolicy or default 80%)
+	lowWarn := usagePct >= 80.0
+
+	info := &StorageInfo{
+		TotalSpace:      total,
+		UsedSpace:       used,
+		AvailableSpace:  free,
+		UsagePercentage: usagePct,
+		RecordingsSize:  recBytes,
+		SnapshotsSize:   snapBytes,
+		LowSpaceWarning: lowWarn,
+	}
+	return info, nil
 }
 
 // GetStreams returns all streams
@@ -1585,23 +1650,17 @@ func (c *controller) GetCameraList(ctx context.Context) (*CameraListResponse, er
 		return nil, fmt.Errorf("controller not running")
 	}
 
-	// Delegate to PathManager (consolidates camera operations)
-	cameras, err := c.pathManager.GetCameraList(ctx)
+	// Delegate to PathManager (returns API-ready format)
+	response, err := c.pathManager.GetCameraList(ctx)
 	if err != nil {
 		c.logger.WithError(err).Error("Failed to get camera list from path manager")
 		return nil, fmt.Errorf("failed to get camera list: %w", err)
 	}
 
-	response := &CameraListResponse{
-		Cameras:   cameras,
-		Total:     len(cameras),
-		Connected: len(cameras),
-	}
-
 	c.logger.WithFields(logging.Fields{
 		"total":     response.Total,
 		"connected": response.Connected,
-	}).Info("Retrieved camera list through PathManager")
+	}).Info("Retrieved API-ready camera list through PathManager")
 
 	return response, nil
 }
@@ -1669,4 +1728,9 @@ func (c *controller) GetCameraForDevicePath(devicePath string) (string, bool) {
 func (c *controller) GetDevicePathForCamera(cameraID string) (string, bool) {
 	// Delegate to PathManager's centralized abstraction layer
 	return c.pathManager.GetDevicePathForCamera(cameraID)
+}
+
+// GetHealthMonitor returns the health monitor instance for threshold-crossing notifications
+func (c *controller) GetHealthMonitor() HealthMonitor {
+	return c.healthMonitor
 }

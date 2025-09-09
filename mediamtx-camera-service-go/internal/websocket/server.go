@@ -52,7 +52,7 @@ type WebSocketServer struct {
 	configManager      *config.ConfigManager
 	logger             *logging.Logger
 	jwtHandler         *security.JWTHandler
-	mediaMTXController mediamtx.MediaMTXController
+	mediaMTXController mediamtx.MediaMTXControllerAPI
 
 	// Security extensions (Phase 1 enhancement)
 	permissionChecker *security.PermissionChecker
@@ -384,7 +384,7 @@ func NewWebSocketServer(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
 	jwtHandler *security.JWTHandler,
-	mediaMTXController mediamtx.MediaMTXController,
+	mediaMTXController mediamtx.MediaMTXControllerAPI,
 ) (*WebSocketServer, error) {
 	if configManager == nil {
 		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
@@ -431,8 +431,8 @@ func NewWebSocketServer(
 		// Security extensions initialization (Phase 1 enhancement)
 		permissionChecker: security.NewPermissionChecker(),
 
-		// Input validation initialization
-		validationHelper: NewValidationHelper(nil, nil),
+		// Input validation initialization (wire real validator with config adapter)
+		validationHelper: NewValidationHelper(security.NewInputValidator(logger, security.NewConfigAdapter(&cfg.Security, &cfg.Logging)), logger),
 
 		// WebSocket upgrader configuration
 		upgrader: websocket.Upgrader{
@@ -820,13 +820,14 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	// Parse JSON-RPC request
 	var request JsonRpcRequest
 	if err := json.Unmarshal(message, &request); err != nil {
-		s.sendErrorResponse(conn, nil, INVALID_REQUEST, "Invalid JSON-RPC request")
+		// Standardized error
+		s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: nil, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_request", "Invalid JSON-RPC request", "Ensure valid JSON-RPC 2.0 structure")})
 		return
 	}
 
 	// Validate JSON-RPC version
 	if request.JSONRPC != "2.0" {
-		s.sendErrorResponse(conn, request.ID, INVALID_REQUEST, "Invalid JSON-RPC version")
+		s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_version", "Invalid JSON-RPC version", "Set jsonrpc to '2.0'")})
 		return
 	}
 
@@ -842,13 +843,22 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 		}).Error("Request handling error")
 		// Only send error response for requests, not notifications
 		if !isNotification {
-			s.sendErrorResponse(conn, request.ID, INTERNAL_ERROR, "Internal server error")
+			s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INTERNAL_ERROR, "internal_error", err.Error(), "Retry or contact support")})
 		}
 		return
 	}
 
 	// Only send response for requests, not notifications
 	if !isNotification {
+		// Attach API metadata
+		if response != nil {
+			if response.Metadata == nil {
+				response.Metadata = make(map[string]interface{})
+			}
+			response.Metadata["processing_time_ms"] = time.Since(startTime).Milliseconds()
+			response.Metadata["server_timestamp"] = time.Now().Format(time.RFC3339)
+			response.Metadata["request_id"] = request.ID
+		}
 		if err := s.sendResponse(conn, response); err != nil {
 			s.logger.WithError(err).WithField("client_id", client.ClientID).Error("Failed to send response")
 			return
@@ -874,11 +884,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: &JsonRpcError{
-				Code:    RATE_LIMIT_EXCEEDED,
-				Message: ErrorMessages[RATE_LIMIT_EXCEEDED],
-				Data:    err.Error(),
-			},
+			Error:   NewJsonRpcError(RATE_LIMIT_EXCEEDED, "rate_limit", err.Error(), "Reduce request rate or wait"),
 		}, nil
 	}
 
@@ -910,10 +916,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: &JsonRpcError{
-				Code:    METHOD_NOT_FOUND,
-				Message: ErrorMessages[METHOD_NOT_FOUND],
-			},
+			Error:   NewJsonRpcError(METHOD_NOT_FOUND, "method_not_found", request.Method, "Verify method name"),
 		}, nil
 	}
 
@@ -939,21 +942,14 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 				return &JsonRpcResponse{
 					JSONRPC: "2.0",
 					ID:      request.ID,
-					Error: &JsonRpcError{
-						Code:    AUTHENTICATION_REQUIRED,
-						Message: ErrorMessages[AUTHENTICATION_REQUIRED],
-					},
+					Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
 				}, nil
 			}
 
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
-				Error: &JsonRpcError{
-					Code:    INSUFFICIENT_PERMISSIONS,
-					Message: ErrorMessages[INSUFFICIENT_PERMISSIONS],
-					Data:    err.Error(),
-				},
+				Error:   NewJsonRpcError(INSUFFICIENT_PERMISSIONS, "permission_denied", err.Error(), "Use an account with permission"),
 			}, nil
 		}
 	}
@@ -973,11 +969,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
-			Error: &JsonRpcError{
-				Code:    INTERNAL_ERROR,
-				Message: ErrorMessages[INTERNAL_ERROR],
-				Data:    err.Error(),
-			},
+			Error:   NewJsonRpcError(INTERNAL_ERROR, "handler_error", err.Error(), "Retry or contact support"),
 		}, nil
 	}
 
@@ -1005,14 +997,7 @@ func (s *WebSocketServer) sendErrorResponse(conn *websocket.Conn, id interface{}
 		return
 	}
 
-	response := &JsonRpcResponse{
-		JSONRPC: "2.0",
-		ID:      id,
-		Error: &JsonRpcError{
-			Code:    code,
-			Message: message,
-		},
-	}
+	response := &JsonRpcResponse{JSONRPC: "2.0", ID: id, Error: NewJsonRpcError(code, "error", message, "See documentation")}
 
 	if err := s.sendResponse(conn, response); err != nil {
 		s.logger.WithError(err).Error("Failed to send error response")

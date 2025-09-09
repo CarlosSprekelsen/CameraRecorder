@@ -147,9 +147,9 @@ The WebSocket module is organized into focused components with clear responsibil
 
 ## API Abstraction Layer
 
-The API abstraction layer is the core architectural pattern that ensures clean separation between client interfaces and internal implementation:
+The WebSocket layer is thin and delegates all business logic to MediaMTX Controller. It does not perform camera ID mapping or device-path handling.
 
-### Camera Identifier Mapping
+### Delegation Example
 
 ```go
 // Client Request (API Layer)
@@ -157,25 +157,17 @@ The API abstraction layer is the core architectural pattern that ensures clean s
   "jsonrpc": "2.0",
   "method": "take_snapshot",
   "params": {
-    "device": "camera0",  // Client uses camera identifier
+    "device": "camera0",
     "format": "jpg"
   },
   "id": 1
 }
 
-// Internal Processing (Implementation Layer)
+// WebSocket method delegates directly to controller
 func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-    // Validate camera identifier format
-    cameraID := params["device"].(string) // "camera0"
-    if !validateCameraIdentifier(cameraID) {
-        return nil, fmt.Errorf("invalid camera identifier: %s", cameraID)
-    }
-    
-    // Map to internal device path
-    devicePath := getDevicePathFromCameraIdentifier(cameraID) // "/dev/video0"
-    
-    // Internal implementation uses device path
-    return s.takeSnapshotInternal(devicePath, client)
+    cameraID := params["device"].(string)
+    result, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), cameraID, params)
+    return s.createResponse(params["id"], result, err), nil
 }
 ```
 
@@ -308,10 +300,28 @@ subscription := &EventSubscription{
     ClientID: "client1",
     Topics:   []EventTopic{TopicCameraConnected, TopicRecordingStart},
     Filters: map[string]interface{}{
-        "device": "/dev/video0", // Only interested in specific device
+        "camera_id": "camera0", // Use abstraction, not device path
     },
 }
 ```
+
+### Event Payload Schema and Filters
+
+- Required fields:
+  - camera_id: string (e.g., "camera0")
+  - topic: string (EventTopic)
+  - timestamp: RFC3339 string
+  - event_id: string
+- Optional fields: name, status, session_id, filename, etc.
+- Internal-only (optional): device_path (deprecated for clients)
+
+Supported filters:
+- camera_id: string equality
+- topic: string equality
+
+Notes:
+- Filtering uses exact equality on top-level fields only.
+- Clients should not depend on device_path; use camera_id.
 
 ---
 
@@ -438,13 +448,16 @@ func SendTestMessage(t *testing.T, conn *websocket.Conn, message *JsonRpcRequest
 ### Basic WebSocket Connection
 
 ```go
-// Create WebSocket server
-config := DefaultServerConfig()
-server := NewWebSocketServer(config, logger, cameraMonitor, jwtHandler, mediaMTXController)
+// Load configuration
+configManager := config.CreateConfigManager()
+_ = configManager.LoadConfig("config/default.yaml")
+
+// Create WebSocket server from validated config
+server, err := NewWebSocketServer(configManager, logger, jwtHandler, mediaMTXController)
+if err != nil { log.Fatal("Failed to create WebSocket server:", err) }
 
 // Start server
-err := server.Start()
-if err != nil {
+if err := server.Start(); err != nil {
     log.Fatal("Failed to start WebSocket server:", err)
 }
 

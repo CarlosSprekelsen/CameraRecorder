@@ -25,13 +25,13 @@ type Logger struct {
 // LoggingConfig represents logging configuration settings.
 // It mirrors the configuration structure from the main config system.
 type LoggingConfig struct {
-	Level          string `mapstructure:"level"`           // Log level (debug, info, warn, error, fatal)
-	Format         string `mapstructure:"format"`          // Output format (text, json)
-	FileEnabled    bool   `mapstructure:"file_enabled"`    // Enable file logging
-	FilePath       string `mapstructure:"file_path"`       // Log file path
-	MaxFileSize    int    `mapstructure:"max_file_size"`   // Maximum file size in MB
-	BackupCount    int    `mapstructure:"backup_count"`    // Number of backup files to keep
-	ConsoleEnabled bool   `mapstructure:"console_enabled"` // Enable console logging
+	Level          string `mapstructure:"level"`
+	Format         string `mapstructure:"format"`
+	FileEnabled    bool   `mapstructure:"file_enabled"`
+	FilePath       string `mapstructure:"file_path"`
+	MaxFileSize    int    `mapstructure:"max_file_size"`
+	BackupCount    int    `mapstructure:"backup_count"`
+	ConsoleEnabled bool   `mapstructure:"console_enabled"`
 }
 
 // NewLoggingConfigFromConfig creates a LoggingConfig from config.LoggingConfig.
