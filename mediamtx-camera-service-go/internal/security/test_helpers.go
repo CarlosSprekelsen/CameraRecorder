@@ -489,12 +489,7 @@ type TestLoggerWrapper struct {
 	*MinimalLogger
 }
 
-// Type assertion to make TestLoggerWrapper compatible with *logging.Logger
-// This is a workaround for the middleware type requirements
-func (tw *TestLoggerWrapper) AsLoggingLogger() interface{} {
-	return tw
-}
-
+// Deprecated: AsLoggingLogger workaround removed; prefer direct interfaces
 // NewTestLoggerWrapper creates a wrapped logger for middleware compatibility
 func NewTestLoggerWrapper() *TestLoggerWrapper {
 	return &TestLoggerWrapper{

@@ -27,7 +27,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
@@ -52,7 +51,6 @@ type WebSocketServer struct {
 	// Dependencies (proper dependency injection)
 	configManager      *config.ConfigManager
 	logger             *logging.Logger
-	cameraMonitor      camera.CameraMonitor
 	jwtHandler         *security.JWTHandler
 	mediaMTXController mediamtx.MediaMTXController
 
@@ -385,7 +383,6 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 func NewWebSocketServer(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
-	cameraMonitor camera.CameraMonitor,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXController,
 ) (*WebSocketServer, error) {
@@ -395,10 +392,6 @@ func NewWebSocketServer(
 
 	if logger == nil {
 		logger = logging.GetLogger()
-	}
-
-	if cameraMonitor == nil {
-		return nil, fmt.Errorf("cameraMonitor cannot be nil - use existing internal/camera/CameraMonitor interface")
 	}
 
 	if jwtHandler == nil {
@@ -432,7 +425,6 @@ func NewWebSocketServer(
 		config:             serverConfig,
 		configManager:      configManager,
 		logger:             logger,
-		cameraMonitor:      cameraMonitor,
 		jwtHandler:         jwtHandler,
 		mediaMTXController: mediaMTXController,
 
@@ -1097,9 +1089,4 @@ func (s *WebSocketServer) SetConfig(config *ServerConfig) {
 // GetEventManager returns the event manager for external integration
 func (s *WebSocketServer) GetEventManager() *EventManager {
 	return s.eventManager
-}
-
-// GetCameraMonitor returns the camera monitor for external access
-func (s *WebSocketServer) GetCameraMonitor() camera.CameraMonitor {
-	return s.cameraMonitor
 }

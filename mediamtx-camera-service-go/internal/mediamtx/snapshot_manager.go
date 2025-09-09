@@ -57,7 +57,6 @@ type SnapshotSettings struct {
 	Compression int    `json:"compression"` // Compression level
 }
 
-
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
 func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
@@ -240,16 +239,12 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 // getTierConfiguration retrieves multi-tier configuration from existing config system
 func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 	if sm.configManager == nil {
-		sm.logger.Error("Config manager is nil - this should not happen in production")
-		// This is a critical error - return nil to force proper error handling
 		return nil
 	}
 
 	// Get performance configuration from centralized config system
 	cfg := sm.configManager.GetConfig()
 	if cfg == nil {
-		sm.logger.Error("Failed to get config from config manager - this should not happen in production")
-		// This is a critical error - return nil to force proper error handling
 		return nil
 	}
 
@@ -406,14 +401,12 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 }
 
 // getStreamNameFromDevice converts device path to stream name
+// DELEGATES TO PATHMANAGER - no duplicate abstraction logic
 func (sm *SnapshotManager) getStreamNameFromDevice(devicePath string) string {
-	// Extract device number from path (e.g., "/dev/video0" -> "camera0")
-	deviceName := filepath.Base(devicePath)
-	if strings.HasPrefix(deviceName, "video") {
-		deviceNum := strings.TrimPrefix(deviceName, "video")
-		return fmt.Sprintf("camera%s", deviceNum)
+	if sm.streamManager != nil {
+		return sm.streamManager.GenerateStreamName(devicePath, UseCaseSnapshot)
 	}
-	return fmt.Sprintf("camera_%s", deviceName)
+	return ""
 }
 
 // createSnapshotResult creates a snapshot result with tier information

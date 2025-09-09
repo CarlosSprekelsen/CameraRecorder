@@ -197,7 +197,7 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 		devicePath, sm.config.Host, sm.config.RTSPPort, streamName)
 }
 
-// CreateStream creates a new stream (legacy method for backward compatibility)
+// CreateStream creates a new stream with automatic USB device handling
 func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Stream, error) {
 	sm.logger.WithFields(logging.Fields{
 		"name":   name,
@@ -301,48 +301,6 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		sm.logger.WithField("stream_name", stream.Name).Info("MediaMTX stream created successfully")
 		return stream, nil
 	}
-}
-
-// CreateStreamWithUseCase creates a new stream with use case specific configuration
-func (sm *streamManager) CreateStreamWithUseCase(ctx context.Context, name, source string, useCase StreamUseCase) (*Stream, error) {
-	sm.logger.WithFields(logging.Fields{
-		"name":     name,
-		"source":   source,
-		"use_case": useCase,
-	}).Debug("Creating MediaMTX stream with use case configuration")
-
-	// Get use case configuration
-	useCaseConfig, exists := sm.useCaseConfigs[useCase]
-	if !exists {
-		return nil, fmt.Errorf("unsupported use case: %s", useCase)
-	}
-
-	// Add use case suffix to stream name if specified
-	streamName := name
-	if useCaseConfig.Suffix != "" {
-		streamName = name + useCaseConfig.Suffix
-	}
-
-	// Create path configuration with use case specific settings
-	// This would be used to configure MediaMTX paths with specific lifecycle policies
-	_ = map[string]interface{}{
-		"runOnDemandCloseAfter":   useCaseConfig.RunOnDemandCloseAfter,
-		"runOnDemandRestart":      useCaseConfig.RunOnDemandRestart,
-		"runOnDemandStartTimeout": useCaseConfig.RunOnDemandStartTimeout,
-	}
-
-	// Create the stream with use case specific configuration
-	// This would typically involve creating a MediaMTX path with the specific configuration
-	// For now, we'll use the basic CreateStream method but log the use case configuration
-	sm.logger.WithFields(logging.Fields{
-		"stream_name": streamName,
-		"use_case":    useCase,
-		"config":      useCaseConfig,
-	}).Info("Creating stream with use case specific configuration")
-
-	// Use the existing CreateStream method for now
-	// In a full implementation, this would create a MediaMTX path with the specific configuration
-	return sm.CreateStream(ctx, streamName, source)
 }
 
 // DeleteStream deletes a stream

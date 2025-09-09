@@ -19,24 +19,46 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // pathManager represents the MediaMTX path manager
 type pathManager struct {
-	client MediaMTXClient
-	config *MediaMTXConfig
-	logger *logging.Logger
+	client        MediaMTXClient
+	config        *MediaMTXConfig
+	logger        *logging.Logger
+	cameraMonitor camera.CameraMonitor
+
+	// Camera-path mapping for abstraction layer
+	cameraPaths  map[string]string // device path -> path name
+	pathCameras  map[string]string // path name -> device path
+	mappingMutex sync.RWMutex
 }
 
 // NewPathManager creates a new MediaMTX path manager
 func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) PathManager {
 	return &pathManager{
-		client: client,
-		config: config,
-		logger: logger,
+		client:      client,
+		config:      config,
+		logger:      logger,
+		cameraPaths: make(map[string]string),
+		pathCameras: make(map[string]string),
+	}
+}
+
+// NewPathManagerWithCamera creates a new MediaMTX path manager with camera monitor
+func NewPathManagerWithCamera(client MediaMTXClient, config *MediaMTXConfig, cameraMonitor camera.CameraMonitor, logger *logging.Logger) PathManager {
+	return &pathManager{
+		client:        client,
+		config:        config,
+		logger:        logger,
+		cameraMonitor: cameraMonitor,
+		cameraPaths:   make(map[string]string),
+		pathCameras:   make(map[string]string),
 	}
 }
 
@@ -325,4 +347,187 @@ func (pm *pathManager) validateSource(source string, options map[string]interfac
 	}
 
 	return nil
+}
+
+// Camera Operations - PathManager consolidates camera operations for better architecture
+
+// GetCameraList returns all discovered cameras
+func (pm *pathManager) GetCameraList(ctx context.Context) ([]*camera.CameraDevice, error) {
+	if pm.cameraMonitor == nil {
+		return nil, fmt.Errorf("camera monitor not available in path manager")
+	}
+
+	// Get cameras from camera monitor
+	cameras := pm.cameraMonitor.GetConnectedCameras()
+
+	// Convert map to slice
+	cameraList := make([]*camera.CameraDevice, 0, len(cameras))
+	for _, cameraDevice := range cameras {
+		cameraList = append(cameraList, cameraDevice)
+	}
+
+	pm.logger.WithFields(logging.Fields{
+		"total":     len(cameraList),
+		"connected": len(cameraList),
+	}).Debug("PathManager retrieved camera list")
+
+	return cameraList, nil
+}
+
+// GetCameraStatus returns status for a specific camera
+func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error) {
+	if pm.cameraMonitor == nil {
+		return nil, fmt.Errorf("camera monitor not available in path manager")
+	}
+
+	// Get actual device path using abstraction layer
+	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+
+	// Get camera from camera monitor
+	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return nil, fmt.Errorf("camera device not found: %s", device)
+	}
+
+	// Build response with abstraction layer
+	response := &CameraStatusResponse{
+		Device:       device, // Return camera identifier (camera0)
+		Status:       string(cameraDevice.Status),
+		Name:         cameraDevice.Name,
+		Resolution:   "",
+		FPS:          0,
+		Streams:      make(map[string]string),
+		Capabilities: &cameraDevice.Capabilities,
+	}
+
+	// Extract resolution and FPS from capabilities if available
+	if len(cameraDevice.Formats) > 0 {
+		format := cameraDevice.Formats[0]
+		response.Resolution = fmt.Sprintf("%dx%d", format.Width, format.Height)
+		if len(format.FrameRates) > 0 {
+			response.FPS = 30 // Default FPS
+		}
+	}
+
+	pm.logger.WithFields(logging.Fields{
+		"device": device,
+		"status": response.Status,
+		"name":   response.Name,
+	}).Debug("PathManager retrieved camera status")
+
+	return response, nil
+}
+
+// ValidateCameraDevice validates that a camera device exists and is accessible
+func (pm *pathManager) ValidateCameraDevice(ctx context.Context, device string) (bool, error) {
+	if pm.cameraMonitor == nil {
+		return false, fmt.Errorf("camera monitor not available in path manager")
+	}
+
+	// Get actual device path using abstraction layer
+	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+
+	// Check if camera exists
+	_, exists := pm.cameraMonitor.GetDevice(devicePath)
+
+	pm.logger.WithFields(logging.Fields{
+		"device":      device,
+		"device_path": devicePath,
+		"exists":      exists,
+	}).Debug("PathManager validated camera device")
+
+	return exists, nil
+}
+
+// GetPathForCamera gets the MediaMTX path name for a camera identifier
+// Since MediaMTX paths ARE camera identifiers (camera0), this is mostly identity mapping
+func (pm *pathManager) GetPathForCamera(cameraID string) (string, bool) {
+	// Direct mapping: camera0 -> camera0 (MediaMTX path name = camera identifier)
+	// But check if device actually exists
+	devicePath := pm.getDevicePathFromCameraIdentifier(cameraID)
+	
+	pm.mappingMutex.RLock()
+	defer pm.mappingMutex.RUnlock()
+	
+	// Check if we have this device mapped to a path
+	pathName, exists := pm.cameraPaths[devicePath]
+	if exists {
+		return pathName, true
+	}
+	
+	// For most cases, MediaMTX path name = camera identifier
+	return cameraID, false
+}
+
+// GetCameraForPath gets the camera identifier for a MediaMTX path name
+// Since MediaMTX paths ARE camera identifiers (camera0), this is mostly identity mapping
+func (pm *pathManager) GetCameraForPath(pathName string) (string, bool) {
+	pm.mappingMutex.RLock()
+	defer pm.mappingMutex.RUnlock()
+
+	devicePath, exists := pm.pathCameras[pathName]
+	if !exists {
+		// For most cases, MediaMTX path name = camera identifier
+		return pathName, false
+	}
+	
+	// Return camera identifier using abstraction layer
+	cameraID := pm.getCameraIdentifierFromDevicePath(devicePath)
+	return cameraID, true
+}
+
+// GetDevicePathForCamera gets the actual USB device path for a camera identifier
+// This is the main abstraction: camera0 -> /dev/video0
+func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
+	devicePath := pm.getDevicePathFromCameraIdentifier(cameraID)
+	
+	// Check if device actually exists via camera monitor
+	if pm.cameraMonitor != nil {
+		_, exists := pm.cameraMonitor.GetDevice(devicePath)
+		return devicePath, exists
+	}
+	
+	// Fallback: return converted path without validation
+	return devicePath, true
+}
+
+// GetCameraForDevicePath gets the camera identifier for a USB device path
+// This is the reverse abstraction: /dev/video0 -> camera0  
+func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) {
+	cameraID := pm.getCameraIdentifierFromDevicePath(devicePath)
+	
+	// Check if device actually exists via camera monitor
+	if pm.cameraMonitor != nil {
+		_, exists := pm.cameraMonitor.GetDevice(devicePath)
+		return cameraID, exists
+	}
+	
+	// Fallback: return converted identifier without validation
+	return cameraID, true
+}
+
+// Abstraction Layer Methods - Consolidated in PathManager
+
+// getCameraIdentifierFromDevicePath converts a device path to a camera identifier
+// Example: /dev/video0 -> camera0
+func (pm *pathManager) getCameraIdentifierFromDevicePath(devicePath string) string {
+	// Extract the number from /dev/video{N}
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		number := strings.TrimPrefix(devicePath, "/dev/video")
+		return fmt.Sprintf("camera%s", number)
+	}
+	// Fallback: return the device path as-is
+	return devicePath
+}
+
+// getDevicePathFromCameraIdentifier converts a camera identifier to a device path
+// Example: camera0 -> /dev/video0
+func (pm *pathManager) getDevicePathFromCameraIdentifier(cameraID string) string {
+	// Extract the number from camera{N}
+	if strings.HasPrefix(cameraID, "camera") {
+		number := strings.TrimPrefix(cameraID, "camera")
+		return fmt.Sprintf("/dev/video%s", number)
+	}
+	// If already a device path, return as-is
+	return cameraID
 }

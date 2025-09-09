@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
@@ -306,8 +307,43 @@ type ActiveRecording struct {
 	Status     string    `json:"status"`
 }
 
+// CameraListResponse represents the response for camera list operations
+type CameraListResponse struct {
+	Cameras   []*camera.CameraDevice `json:"cameras"`
+	Total     int                    `json:"total"`
+	Connected int                    `json:"connected"`
+}
+
+// CameraStatusResponse represents the response for camera status operations
+type CameraStatusResponse struct {
+	Device       string                   `json:"device"`
+	Status       string                   `json:"status"`
+	Name         string                   `json:"name"`
+	Resolution   string                   `json:"resolution"`
+	FPS          int                      `json:"fps"`
+	Streams      map[string]string        `json:"streams"`
+	Metrics      *CameraMetrics           `json:"metrics,omitempty"`
+	Capabilities *camera.V4L2Capabilities `json:"capabilities,omitempty"`
+}
+
+// CameraMetrics represents camera performance metrics
+type CameraMetrics struct {
+	BytesSent int64 `json:"bytes_sent"`
+	Readers   int   `json:"readers"`
+	Uptime    int64 `json:"uptime"`
+}
+
 // MediaMTXController interface defines MediaMTX operations
 type MediaMTXController interface {
+	// Camera discovery operations
+	GetCameraList(ctx context.Context) (*CameraListResponse, error)
+	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
+
+	// Camera abstraction layer (delegate to PathManager)
+	GetCameraForDevicePath(devicePath string) (string, bool) // /dev/video0 -> camera0
+	GetDevicePathForCamera(cameraID string) (string, bool)   // camera0 -> /dev/video0
+
 	// Health and status
 	GetHealth(ctx context.Context) (*HealthStatus, error)
 	GetMetrics(ctx context.Context) (*Metrics, error)
@@ -430,6 +466,19 @@ type PathManager interface {
 	// Path validation
 	ValidatePath(ctx context.Context, name string) error
 	PathExists(ctx context.Context, name string) bool
+
+	// Camera operations (PathManager handles camera-path integration)
+	GetCameraList(ctx context.Context) ([]*camera.CameraDevice, error)
+	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
+
+	// Camera-path mapping (abstraction layer)
+	GetPathForCamera(cameraID string) (string, bool) // camera0 -> camera0 (MediaMTX path)
+	GetCameraForPath(pathName string) (string, bool) // camera0 -> camera0 (camera ID)
+
+	// Device-camera mapping (main abstraction layer)
+	GetDevicePathForCamera(cameraID string) (string, bool)   // camera0 -> /dev/video0
+	GetCameraForDevicePath(devicePath string) (string, bool) // /dev/video0 -> camera0
 }
 
 // StreamManager interface defines stream management operations
@@ -450,7 +499,7 @@ type StreamManager interface {
 	// Stream readiness management
 	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)
 
-	// Legacy stream operations (for backward compatibility)
+	// Generic stream operations
 	CreateStream(ctx context.Context, name, source string) (*Stream, error)
 	DeleteStream(ctx context.Context, id string) error
 	GetStream(ctx context.Context, id string) (*Stream, error)

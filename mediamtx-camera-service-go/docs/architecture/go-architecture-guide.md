@@ -7,47 +7,32 @@
 
 ## Table of Contents
 
-1. [System Overview](#system-overview)
-2. [Component Architecture](#component-architecture)
-3. [Core Architecture Patterns](#core-architecture-patterns)
-4. [Testing Architecture](#testing-architecture)
-5. [Implementation Guidelines](#implementation-guidelines)
-6. [JSON-RPC API Contract](#json-rpc-api-contract)
-7. [Performance Targets](#performance-targets)
-8. [Technology Stack](#technology-stack)
-
----
-
-## System Overview
-
-The MediaMTX Camera Service Go implementation is a high-performance wrapper around MediaMTX, providing:
-
-1. **Real-time USB camera discovery and monitoring** (5x faster detection)
-2. **WebSocket JSON-RPC 2.0 API** (1000+ concurrent connections)
-3. **Dynamic MediaMTX configuration management** (100ms response time)
-4. **Streaming, recording, and snapshot coordination** (5x throughput improvement)
-5. **Resilient error recovery and health monitoring** (50% resource reduction)
-6. **Secure access control and authentication** (Go crypto libraries)
-
-### System Goals
-- **Performance**: High-performance camera service with real-time capabilities
-- **Resource Usage**: Efficient memory and CPU utilization
-- **Compatibility**: Standards-compliant API with broad client support
-- **Risk Management**: Working software first, integration incrementally
-
-### Success Criteria
-- Camera detection <200ms latency
-- WebSocket server handles 1000+ concurrent connections
-- Memory usage <60MB base, <200MB with 10 cameras
-- 1000+ concurrent WebSocket connections supported
-- **Working Service**: Fully functional camera service
-- **Basic Integration**: Added incrementally when platform systems exist
+1. [Security Architecture](#security-architecture)
+2. [System Overview](#system-overview)
+3. [Component Architecture](#component-architecture)
+4. [Core Architecture Patterns](#core-architecture-patterns)
+5. [Testing Architecture](#testing-architecture)
+6. [Implementation Guidelines](#implementation-guidelines)
+7. [JSON-RPC API Contract](#json-rpc-api-contract)
+8. [Performance Targets](#performance-targets)
+9. [Technology Stack](#technology-stack)
 
 ---
 
 ## Security Architecture
 
+**CRITICAL**: Security is the foundation of the entire system. All components must implement proper authentication, authorization, and security controls.
+
+### Security-First Design Principles
+
+1. **Zero Trust Architecture**: Every request must be authenticated and authorized
+2. **Defense in Depth**: Multiple security layers at every component
+3. **Least Privilege**: Users get minimum required permissions
+4. **Audit Everything**: All security events must be logged
+5. **Secure by Default**: All components start in secure state
+
 ### Security Middleware Design
+
 The security layer is designed to integrate seamlessly with existing systems rather than creating parallel infrastructure:
 
 ```
@@ -89,6 +74,7 @@ The security layer is designed to integrate seamlessly with existing systems rat
 ```
 
 ### Security Integration Principles
+
 1. **Leverage Existing Systems**: Use `SecurityConfig`, `LoggingConfig`, and existing logger
 2. **No Hard-coded Values**: All security parameters come from configuration
 3. **Transparent Integration**: Security middleware works seamlessly with existing code
@@ -96,12 +82,112 @@ The security layer is designed to integrate seamlessly with existing systems rat
 5. **Audit Trail**: Comprehensive logging of all security events
 
 ### Security Middleware Components
+
 - **AuthMiddleware**: Centralized authentication enforcement
 - **RBACMiddleware**: Role-based access control with existing permission matrix
 - **EnhancedRateLimiter**: Rate limiting using existing configuration values
 - **InputValidator**: Centralized input validation and sanitization
 - **SecurityAuditLogger**: Comprehensive security event logging
 - **ConfigAdapter**: Bridge between security middleware and existing configuration
+
+### Role-Based Access Control (RBAC)
+
+#### Role Definitions
+
+- **viewer**: Read-only access to camera status, file listings, and basic information
+- **operator**: Viewer permissions + camera control operations (snapshots, recording)
+- **admin**: Full access to all features including system metrics and configuration
+
+#### Permission Matrix
+
+| Method | viewer | operator | admin |
+|--------|--------|----------|-------|
+| ping | ✅ | ✅ | ✅ |
+| authenticate | ✅ | ✅ | ✅ |
+| get_camera_list | ✅ | ✅ | ✅ |
+| get_camera_status | ✅ | ✅ | ✅ |
+| get_camera_capabilities | ✅ | ✅ | ✅ |
+| take_snapshot | ❌ | ✅ | ✅ |
+| start_recording | ❌ | ✅ | ✅ |
+| stop_recording | ❌ | ✅ | ✅ |
+| list_recordings | ✅ | ✅ | ✅ |
+| list_snapshots | ✅ | ✅ | ✅ |
+| delete_recording | ❌ | ✅ | ✅ |
+| delete_snapshot | ❌ | ✅ | ✅ |
+| get_metrics | ❌ | ❌ | ✅ |
+| get_storage_info | ❌ | ❌ | ✅ |
+| set_retention_policy | ❌ | ❌ | ✅ |
+| cleanup_old_files | ❌ | ❌ | ✅ |
+
+### Security Enforcement Points
+
+#### WebSocket Server Security
+- **Authentication**: Every WebSocket connection must authenticate
+- **Authorization**: Every method call must be authorized
+- **Rate Limiting**: Per-client rate limits to prevent abuse
+- **Input Validation**: All parameters must be validated and sanitized
+
+#### MediaMTX Controller Security
+- **Device Access Control**: Only authorized devices can be accessed
+- **File System Security**: Secure file operations with proper permissions
+- **Process Security**: FFmpeg processes run with minimal privileges
+- **Network Security**: Secure communication with MediaMTX server
+
+### Security Compliance Checklist
+
+Before implementing any changes, verify security compliance:
+
+#### ✅ Authentication Compliance
+- [ ] All WebSocket connections require authentication
+- [ ] JWT tokens are properly validated
+- [ ] Session management is secure
+- [ ] Authentication failures are logged
+
+#### ✅ Authorization Compliance
+- [ ] RBAC is enforced for all methods
+- [ ] Permission matrix is properly implemented
+- [ ] Role escalation is prevented
+- [ ] Authorization failures are logged
+
+#### ✅ Input Validation Compliance
+- [ ] All parameters are validated
+- [ ] SQL injection prevention
+- [ ] Path traversal prevention
+- [ ] XSS prevention
+
+#### ✅ Audit Logging Compliance
+- [ ] All security events are logged
+- [ ] Logs include user context
+- [ ] Logs are tamper-proof
+- [ ] Log retention policies are enforced
+
+---
+
+## System Overview
+
+The MediaMTX Camera Service Go implementation is a high-performance wrapper around MediaMTX, providing:
+
+1. **Real-time USB camera discovery and monitoring** (5x faster detection)
+2. **WebSocket JSON-RPC 2.0 API** (1000+ concurrent connections)
+3. **Dynamic MediaMTX configuration management** (100ms response time)
+4. **Streaming, recording, and snapshot coordination** (5x throughput improvement)
+5. **Resilient error recovery and health monitoring** (50% resource reduction)
+6. **Secure access control and authentication** (Go crypto libraries)
+
+### System Goals
+- **Performance**: High-performance camera service with real-time capabilities
+- **Resource Usage**: Efficient memory and CPU utilization
+- **Compatibility**: Standards-compliant API with broad client support
+- **Risk Management**: Working software first, integration incrementally
+
+### Success Criteria
+- Camera detection <200ms latency
+- WebSocket server handles 1000+ concurrent connections
+- Memory usage <60MB base, <200MB with 10 cameras
+- 1000+ concurrent WebSocket connections supported
+- **Working Service**: Fully functional camera service
+- **Basic Integration**: Added incrementally when platform systems exist
+
 
 ## Component Architecture
 
@@ -114,16 +200,27 @@ The security layer is designed to integrate seamlessly with existing systems rat
 └─────────────────────┬──────────────────────────────────────┘
                       │ WebSocket JSON-RPC 2.0
 ┌─────────────────────▼──────────────────────────────────────┐
-│            Camera Service (Go Implementation)              │
-├─────────────────────────────────────────────────────────────┤
 │            WebSocket JSON-RPC Server (gorilla/websocket)  │
+│                 (THIN PROTOCOL LAYER)                     │
 │     • Client connection management (1000+ concurrent)     │
 │     • JSON-RPC 2.0 protocol handling                      │
 │     • Real-time notifications (<20ms latency)             │
 │     • Authentication and authorization (golang-jwt/jwt/v4) │
 │     • Security middleware with RBAC enforcement            │
 │     • Rate limiting and DDoS protection                   │
+│     • NO business logic - delegates to MediaMTX           │
+└─────────────────────┬──────────────────────────────────────┘
+                      │ Delegates to
+┌─────────────────────▼──────────────────────────────────────┐
+│                MediaMTX Controller                         │
+│              (COMPLETE BUSINESS LOGIC LAYER)              │
+│     • Camera discovery integration                         │
 │     • API abstraction layer (camera0 ↔ /dev/video0)       │
+│     • All camera operations (recording, snapshots, etc.)  │
+│     • Stream management and lifecycle                     │
+│     • File operations and storage management              │
+│     • Event management and notifications                  │
+│     • Single source of truth for all camera operations   │
 ├─────────────────────────────────────────────────────────────┤
 │             Camera Discovery Monitor (goroutines)         │
 │     • USB camera detection (<200ms)                       │
@@ -167,25 +264,43 @@ The security layer is designed to integrate seamlessly with existing systems rat
 
 ### Component Responsibilities
 
-#### WebSocket JSON-RPC Server (gorilla/websocket)
-- Client connection management and authentication (1000+ concurrent)
-- JSON-RPC 2.0 protocol implementation
-- Real-time event notifications (<20ms latency)
-- Session management and authorization
+#### WebSocket JSON-RPC Server (gorilla/websocket) - THIN PROTOCOL LAYER
+- **SECURITY FIRST**: Authentication, authorization, and input validation for every request
+- **ONLY** client connection management and authentication (1000+ concurrent)
+- **ONLY** JSON-RPC 2.0 protocol implementation
+- **ONLY** real-time event notifications (<20ms latency)
+- **ONLY** session management and authorization
+- **ONLY** rate limiting and DDoS protection
+- **NO business logic** - all operations delegate to MediaMTX Controller
+- **NO camera operations** - MediaMTX Controller handles all camera logic
+- **NO file operations** - MediaMTX Controller handles all file logic
+- **NO stream operations** - MediaMTX Controller handles all stream logic
 
-#### Camera Discovery Monitor (goroutines)
+#### MediaMTX Controller - COMPLETE BUSINESS LOGIC LAYER
+- **Single source of truth** for all camera operations
+- Camera discovery integration and management
+- API abstraction layer (camera0 ↔ /dev/video0 mapping)
+- All camera operations (recording, snapshots, streaming)
+- Stream management and lifecycle coordination
+- File operations and storage management
+- Event management and notifications
+- Orchestrates all sub-components (Camera Monitor, Path Manager, etc.)
+
+#### Camera Discovery Monitor (goroutines) - HARDWARE ABSTRACTION LAYER
 - USB camera detection via V4L2 (<200ms)
 - Hot-plug event handling with channels
 - Concurrent monitoring of multiple cameras
 - Camera capability probing and status tracking
+- **Internal to MediaMTX Controller** - not directly accessible
 
-#### MediaMTX Path Manager (net/http)
+#### MediaMTX Path Manager (net/http) - STREAM INFRASTRUCTURE LAYER
 - Dynamic path creation via MediaMTX REST API
 - FFmpeg command generation and management
 - Path lifecycle management (create, update, delete)
 - Error handling and automatic recovery
+- **Internal to MediaMTX Controller** - not directly accessible
 
-#### Health & Monitoring (logrus)
+#### Health & Monitoring (logrus) - OBSERVABILITY LAYER
 - Structured logging with correlation IDs
 - Service health monitoring and reporting
 - Resource usage tracking and alerts
@@ -195,9 +310,9 @@ The security layer is designed to integrate seamlessly with existing systems rat
 
 ## Core Architecture Patterns
 
-### 1. API Abstraction Layer
+### 1. Single Source of Truth Architecture
 
-The system implements a critical abstraction layer that separates client-facing API from internal hardware implementation. This ensures clean separation of concerns and provides a stable, hardware-independent interface.
+The system implements a **single source of truth** pattern where MediaMTX Controller is the complete business logic layer, with WebSocket server being a thin protocol layer that delegates all operations.
 
 #### Architectural Layers
 
@@ -212,67 +327,123 @@ The system implements a critical abstraction layer that separates client-facing 
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   API ABSTRACTION LAYER                     │
-│  • Validates camera identifiers (camera[0-9]+)             │
-│  • Maps camera0 → /dev/video0 internally                   │
-│  • Returns camera identifiers in responses                 │
-│  • Hides internal implementation details                   │
+│                WEBSOCKET PROTOCOL LAYER                     │
+│  • JSON-RPC 2.0 protocol handling                          │
+│  • Authentication and authorization                         │
+│  • Request/response formatting                             │
+│  • NO business logic - delegates to MediaMTX               │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  INTERNAL IMPLEMENTATION                    │
-│  • Works with device paths (/dev/video0, /dev/video1)      │
-│  • MediaMTX controller uses device paths                   │
-│  • Camera monitor uses device paths                        │
+│                MEDIAMTX CONTROLLER                          │
+│              (SINGLE SOURCE OF TRUTH)                      │
+│  • API abstraction layer (camera0 ↔ /dev/video0)          │
+│  • All camera operations                                   │
+│  • All business logic                                      │
+│  • Orchestrates all sub-components                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  HARDWARE LAYER                             │
+│  • Camera discovery monitor                                │
+│  • MediaMTX path manager                                   │
+│  • Device path operations (/dev/video0, /dev/video1)      │
 │  • Hardware-specific operations                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 #### Implementation Details
 
-**Camera Identifier Mapping**
+**WebSocket Server - Thin Protocol Layer**
 ```go
-// API Layer: Client uses camera identifiers
+// WebSocket Server: ONLY protocol handling
 func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
     cameraID := params["device"].(string) // "camera0"
     
+    // Simple delegation to MediaMTX Controller
+    result, err := s.mediaMTXController.TakeSnapshot(context.Background(), cameraID, options)
+    if err != nil {
+        return s.createErrorResponse(request.ID, err)
+    }
+    
+    return &JsonRpcResponse{Result: result, ID: request.ID}, nil
+}
+```
+
+**MediaMTX Controller - Complete Business Logic**
+```go
+// MediaMTX Controller: ALL business logic
+func (c *controller) TakeSnapshot(ctx context.Context, cameraID, options string) (*Snapshot, error) {
     // Validate camera identifier format
-    if !validateCameraIdentifier(cameraID) {
+    if !c.validateCameraIdentifier(cameraID) {
         return nil, fmt.Errorf("invalid camera identifier: %s", cameraID)
     }
     
     // Map to internal device path
-    devicePath := getDevicePathFromCameraIdentifier(cameraID) // "/dev/video0"
+    devicePath := c.getDevicePathFromCameraIdentifier(cameraID) // "/dev/video0"
     
-    // Internal implementation uses device path
-    return s.takeSnapshotInternal(devicePath, client)
+    // Validate camera exists
+    if !c.cameraMonitor.DeviceExists(devicePath) {
+        return nil, fmt.Errorf("camera device %s not found", cameraID)
+    }
+    
+    // Perform snapshot operation
+    return c.snapshotManager.TakeSnapshot(ctx, devicePath, options)
 }
 ```
 
-### 2. Interface Abstractions and Dependency Injection
+### 2. Strict Separation of Concerns
 
-The new architecture implements clean interface abstractions to prevent circular dependencies and enable better testing and flexibility.
+The architecture enforces strict separation of concerns with clear boundaries and responsibilities.
 
-#### Interface Definitions
+#### WebSocket Server Dependencies
 
 ```go
-// Camera Monitor Interface
-type CameraMonitor interface {
-    Start(ctx context.Context) error
-    Stop() error
-    GetCameraList() ([]*CameraDevice, error)
-    GetCameraStatus(devicePath string) (*CameraDevice, error)
-    SetEventNotifier(notifier EventNotifier) // New event integration
+// WebSocket Server: ONLY depends on MediaMTX Controller
+type WebSocketServer struct {
+    mediaMTXController MediaMTXController  // ONLY dependency
+    jwtHandler         *security.JWTHandler
+    eventManager       *EventManager
+    // NO camera monitor, NO business logic components
 }
 
-// Event Notifier Interface
-type EventNotifier interface {
-    NotifyCameraConnected(device *CameraDevice)
-    NotifyCameraDisconnected(devicePath string)
-    NotifyCameraStatusChange(device *CameraDevice, oldStatus, newStatus DeviceStatus)
-    NotifyCapabilityDetected(device *CameraDevice, capabilities V4L2Capabilities)
-    NotifyCapabilityError(devicePath string, error string)
+// Constructor enforces single dependency
+func NewWebSocketServer(
+    configManager *config.ConfigManager,
+    logger *logging.Logger,
+    mediaMTXController MediaMTXController,  // ONLY business logic dependency
+    jwtHandler *security.JWTHandler,
+) (*WebSocketServer, error)
+```
+
+#### MediaMTX Controller Dependencies
+
+```go
+// MediaMTX Controller: Orchestrates all business logic components
+type MediaMTXController interface {
+    // Camera discovery operations
+    GetCameraList(ctx context.Context) (*CameraListResponse, error)
+    GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+    ValidateCameraDevice(ctx context.Context, device string) (bool, error)
+    
+    // All camera operations
+    TakeSnapshot(ctx context.Context, device, options string) (*Snapshot, error)
+    StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
+    StopRecording(ctx context.Context, sessionID string) error
+    
+    // All other operations...
+}
+
+// Internal implementation has access to all sub-components
+type controller struct {
+    cameraMonitor      camera.CameraMonitor      // Internal only
+    pathManager        PathManager               // Internal only
+    streamManager      StreamManager             // Internal only
+    recordingManager   *RecordingManager         // Internal only
+    snapshotManager    *SnapshotManager          // Internal only
+    // All business logic components
 }
 ```
 
@@ -280,27 +451,69 @@ type EventNotifier interface {
 
 ```go
 func main() {
-    // Create components with interfaces
+    // Create camera monitor (hardware layer)
     cameraMonitor := camera.NewHybridCameraMonitor(...)
-    wsServer := websocket.NewWebSocketServer(...)
     
-    // Wire components through interfaces
-    cameraEventNotifier := websocket.NewCameraEventNotifier(
-        wsServer.GetEventManager(), 
-        logger.Logger,
+    // Create MediaMTX controller with camera monitor integration
+    mediaMTXController, err := mediamtx.ControllerWithConfigManager(
+        configManager, 
+        cameraMonitor,  // Camera monitor integrated into MediaMTX
+        logger,
     )
-    cameraMonitor.SetEventNotifier(cameraEventNotifier)
     
-    // Clean separation of concerns
-    // WebSocket server depends on CameraMonitor interface
-    // Camera monitor depends on EventNotifier interface
-    // No circular dependencies
+    // Create WebSocket server with ONLY MediaMTX dependency
+    wsServer, err := websocket.NewWebSocketServer(
+        configManager,
+        logger,
+        mediaMTXController,  // ONLY business logic dependency
+        jwtHandler,
+    )
+    
+    // Clean architecture: WebSocket → MediaMTX → Camera Monitor
+    // No circular dependencies, clear separation of concerns
 }
 ```
 
-### 3. Event-Driven Architecture
+### 3. Architecture Enforcement Rules
 
-The new event system replaces the inefficient broadcast-to-all approach with a high-performance, topic-based subscription system.
+The architecture document enforces strict rules to prevent the current broken implementation:
+
+#### **RULE 1: WebSocket Server MUST Be Thin**
+- **FORBIDDEN**: Direct camera monitor access (`s.cameraMonitor.GetConnectedCameras()`)
+- **FORBIDDEN**: Business logic in WebSocket methods
+- **FORBIDDEN**: Camera validation in WebSocket layer
+- **FORBIDDEN**: File operations in WebSocket layer
+- **REQUIRED**: All operations delegate to MediaMTX Controller
+
+#### **RULE 2: MediaMTX Controller MUST Be Complete**
+- **REQUIRED**: Camera monitor integration
+- **REQUIRED**: All camera discovery methods
+- **REQUIRED**: All business logic operations
+- **REQUIRED**: Single source of truth for camera operations
+- **REQUIRED**: Proper abstraction layer (camera0 ↔ /dev/video0)
+
+#### **RULE 3: No Direct Hardware Access**
+- **FORBIDDEN**: WebSocket server accessing camera monitor directly
+- **FORBIDDEN**: WebSocket server accessing file system directly
+- **FORBIDDEN**: WebSocket server accessing MediaMTX server directly
+- **REQUIRED**: All hardware access through MediaMTX Controller
+
+#### **RULE 4: Clear Dependency Chain**
+```
+WebSocket Server → MediaMTX Controller → Camera Monitor
+                → MediaMTX Controller → Path Manager
+                → MediaMTX Controller → File Manager
+```
+
+#### **RULE 5: No Duplicated Logic**
+- **FORBIDDEN**: Abstraction layer in both WebSocket and MediaMTX
+- **FORBIDDEN**: Camera validation in multiple places
+- **FORBIDDEN**: Stream URL generation in multiple places
+- **REQUIRED**: Single implementation in MediaMTX Controller
+
+### 4. Event-Driven Architecture
+
+The event system is managed by MediaMTX Controller, not WebSocket server.
 
 #### Event System Components
 
@@ -876,12 +1089,17 @@ func (jrh *JSONRPCHandler) HandleRequest(conn *websocket.Conn, request *JSONRPCR
 
 ## JSON-RPC API Contract
 
-The MediaMTX Camera Service implements a comprehensive JSON-RPC 2.0 API over WebSocket connections. This contract defines the complete interface for client applications.
+The MediaMTX Camera Service implements a comprehensive JSON-RPC 2.0 API over WebSocket connections. **All API methods are implemented by MediaMTX Controller, with WebSocket server providing only protocol handling.**
 
 ### Connection
 - **Protocol**: WebSocket
 - **Endpoint**: `ws://localhost:8002/ws`
 - **Authentication**: JWT token or API key required for all methods
+
+### Architecture Compliance
+- **WebSocket Server**: Thin protocol layer, delegates all operations to MediaMTX Controller
+- **MediaMTX Controller**: Implements all business logic and camera operations
+- **No Direct Access**: WebSocket server cannot access camera monitor, file system, or MediaMTX server directly
 
 ### Authentication & Authorization
 
@@ -1085,33 +1303,44 @@ The MediaMTX Camera Service implements a comprehensive JSON-RPC 2.0 API over Web
 ### Go Implementation Pattern
 
 ```go
-type JSONRPCHandler struct {
-    cameraMonitor *CameraMonitor
-    authManager   *AuthManager
-    logger        *logging.Logger
+// WebSocket Server: Thin protocol layer
+type WebSocketServer struct {
+    mediaMTXController MediaMTXController  // ONLY business logic dependency
+    jwtHandler         *security.JWTHandler
+    eventManager       *EventManager
+    logger             *logging.Logger
 }
 
-func (jrh *JSONRPCHandler) HandleRequest(conn *websocket.Conn, request *JSONRPCRequest) {
+func (s *WebSocketServer) HandleRequest(conn *websocket.Conn, request *JSONRPCRequest) {
     // Validate authentication
-    if err := jrh.validateAuth(request); err != nil {
-        jrh.sendError(conn, request.ID, -32001, "Authentication required", err)
+    if err := s.validateAuth(request); err != nil {
+        s.sendError(conn, request.ID, -32001, "Authentication required", err)
         return
     }
     
-    // Route to appropriate method handler
+    // Route to appropriate method handler - ALL delegate to MediaMTX
     var response *JSONRPCResponse
     switch request.Method {
     case "ping":
-        response = jrh.handlePing(request)
+        response = s.handlePing(request)
     case "authenticate":
-        response = jrh.handleAuthenticate(request)
+        response = s.handleAuthenticate(request)
     case "get_camera_list":
-        response = jrh.handleGetCameraList(request)
+        // Simple delegation to MediaMTX Controller
+        result, err := s.mediaMTXController.GetCameraList(context.Background())
+        response = s.createResponse(request.ID, result, err)
     case "take_snapshot":
-        response = jrh.handleTakeSnapshot(request)
+        // Simple delegation to MediaMTX Controller
+        cameraID := request.Params["device"].(string)
+        result, err := s.mediaMTXController.TakeSnapshot(context.Background(), cameraID, options)
+        response = s.createResponse(request.ID, result, err)
     case "start_recording":
-        response = jrh.handleStartRecording(request)
-    // ... other methods
+        // Simple delegation to MediaMTX Controller
+        cameraID := request.Params["device"].(string)
+        path := request.Params["path"].(string)
+        result, err := s.mediaMTXController.StartRecording(context.Background(), cameraID, path)
+        response = s.createResponse(request.ID, result, err)
+    // ... all other methods delegate to MediaMTX Controller
     default:
         response = &JSONRPCResponse{
             ID:    request.ID,
@@ -1119,7 +1348,7 @@ func (jrh *JSONRPCHandler) HandleRequest(conn *websocket.Conn, request *JSONRPCR
         }
     }
     
-    jrh.sendResponse(conn, response)
+    s.sendResponse(conn, response)
 }
 ```
 
@@ -1157,6 +1386,53 @@ func (jrh *JSONRPCHandler) HandleRequest(conn *websocket.Conn, request *JSONRPCR
 
 ---
 
-**Document Status**: Go implementation architecture guide with comprehensive patterns and implementation guidance  
+## Architecture Compliance Checklist
+
+Before implementing any changes, verify compliance with these architecture rules:
+
+### ✅ Security Compliance (CRITICAL)
+- [ ] All WebSocket connections require authentication
+- [ ] RBAC is enforced for all methods
+- [ ] Input validation is implemented for all parameters
+- [ ] Rate limiting is active for all clients
+- [ ] Security events are logged and audited
+- [ ] No hard-coded security values
+- [ ] Security configuration is externalized
+
+### ✅ WebSocket Server Compliance
+- [ ] WebSocket server has ONLY MediaMTX Controller as business logic dependency
+- [ ] NO direct camera monitor access (`s.cameraMonitor.GetConnectedCameras()`)
+- [ ] NO business logic in WebSocket methods
+- [ ] NO camera validation in WebSocket layer
+- [ ] NO file operations in WebSocket layer
+- [ ] ALL operations delegate to MediaMTX Controller
+- [ ] WebSocket server is under 500 lines of code
+- [ ] Security middleware is properly integrated
+
+### ✅ MediaMTX Controller Compliance
+- [ ] MediaMTX Controller has camera monitor integration
+- [ ] MediaMTX Controller implements all camera discovery methods
+- [ ] MediaMTX Controller implements all business logic operations
+- [ ] MediaMTX Controller is single source of truth for camera operations
+- [ ] MediaMTX Controller has proper abstraction layer (camera0 ↔ /dev/video0)
+- [ ] MediaMTX Controller validates all camera operations
+- [ ] MediaMTX Controller enforces device access controls
+
+### ✅ No Direct Hardware Access
+- [ ] WebSocket server does NOT access camera monitor directly
+- [ ] WebSocket server does NOT access file system directly
+- [ ] WebSocket server does NOT access MediaMTX server directly
+- [ ] ALL hardware access goes through MediaMTX Controller
+
+### ✅ No Duplicated Logic
+- [ ] Abstraction layer exists ONLY in MediaMTX Controller
+- [ ] Camera validation exists ONLY in MediaMTX Controller
+- [ ] Stream URL generation exists ONLY in MediaMTX Controller
+- [ ] NO duplicated business logic between layers
+- [ ] Security logic is centralized and not duplicated
+
+---
+
+**Document Status**: Updated architecture guide with strict enforcement rules to prevent broken implementations  
 **Last Updated**: 2025-01-15  
-**Next Review**: As needed based on implementation progress
+**Next Review**: Before any WebSocket server or MediaMTX controller changes

@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -210,13 +211,95 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 	}, nil
 }
 
-// DeleteRecording deletes a recording file
+// DeleteRecording deletes a recording segment via MediaMTX API
 func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string) error {
-	rm.logger.WithField("filename", filename).Info("Deleting recording")
+	rm.logger.WithField("filename", filename).Info("Deleting recording via MediaMTX API")
 
-	// For MediaMTX-based recording, we would use the MediaMTX API to delete
-	// For now, this is a placeholder
+	// Validate filename
+	if filename == "" {
+		return fmt.Errorf("filename cannot be empty")
+	}
+
+	// Parse filename to extract path and segment info
+	// Expected format: {path}_segment_{index}.{ext} (e.g., "camera0_segment_2.mp4")
+	pathName, segmentStart, err := rm.parseRecordingFilename(filename)
+	if err != nil {
+		rm.logger.WithError(err).WithField("filename", filename).Error("Failed to parse recording filename")
+		return fmt.Errorf("invalid recording filename format: %w", err)
+	}
+
+	// Call MediaMTX API to delete the segment
+	endpoint := fmt.Sprintf("/v3/recordings/deletesegment?path=%s&start=%s", pathName, segmentStart)
+	err = rm.client.Delete(ctx, endpoint)
+	if err != nil {
+		rm.logger.WithError(err).WithFields(logging.Fields{
+			"filename": filename,
+			"path":     pathName,
+			"start":    segmentStart,
+		}).Error("Failed to delete recording segment via MediaMTX API")
+		return fmt.Errorf("failed to delete recording segment: %w", err)
+	}
+
+	rm.logger.WithFields(logging.Fields{
+		"filename": filename,
+		"path":     pathName,
+		"start":    segmentStart,
+	}).Info("Recording segment deleted successfully via MediaMTX API")
+
 	return nil
+}
+
+// parseRecordingFilename extracts path and segment start time from filename
+// Expected format: {path}_segment_{index}.{ext} -> needs to map to actual segment start time
+func (rm *RecordingManager) parseRecordingFilename(filename string) (pathName, segmentStart string, err error) {
+	// Remove extension
+	nameWithoutExt := strings.TrimSuffix(filename, filepath.Ext(filename))
+
+	// Split by "_segment_"
+	parts := strings.Split(nameWithoutExt, "_segment_")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("filename must be in format {path}_segment_{index}.{ext}")
+	}
+
+	pathName = parts[0]
+	segmentIndexStr := parts[1]
+
+	// Convert segment index to int
+	segmentIndex, err := fmt.Sscanf(segmentIndexStr, "%d", new(int))
+	if err != nil || segmentIndex != 1 {
+		return "", "", fmt.Errorf("invalid segment index: %s", segmentIndexStr)
+	}
+
+	// Get actual recording data to find segment start time
+	recording, err := rm.getRecordingByName(context.Background(), pathName)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get recording data: %w", err)
+	}
+
+	// Extract segment start time
+	segmentIdx, _ := fmt.Sscanf(segmentIndexStr, "%d", new(int))
+	if segmentIdx < 0 || segmentIdx >= len(recording.Segments) {
+		return "", "", fmt.Errorf("segment index %d out of range", segmentIdx)
+	}
+
+	segmentStart = recording.Segments[segmentIdx].Start
+	return pathName, segmentStart, nil
+}
+
+// getRecordingByName gets recording data by name (helper for deletion)
+func (rm *RecordingManager) getRecordingByName(ctx context.Context, name string) (*MediaMTXRecording, error) {
+	endpoint := fmt.Sprintf("/v3/recordings/get/%s", name)
+	data, err := rm.client.Get(ctx, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get recording from MediaMTX: %w", err)
+	}
+
+	var recording MediaMTXRecording
+	if err := json.Unmarshal(data, &recording); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal recording data: %w", err)
+	}
+
+	return &recording, nil
 }
 
 // getSessionIDByDevice retrieves session ID by device path

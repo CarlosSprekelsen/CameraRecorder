@@ -100,10 +100,6 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 
 	// Use configured interval from centralized config
 	checkInterval := time.Duration(h.config.HealthCheckInterval) * time.Second
-	if checkInterval <= 0 {
-		h.logger.Error("Health check interval not configured - this should not happen in production")
-		checkInterval = 5 * time.Second // Emergency fallback only
-	}
 
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
@@ -124,10 +120,6 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
 	// Use configured timeout from centralized config
 	timeout := h.config.HealthCheckTimeout
-	if timeout <= 0 {
-		h.logger.Error("Health check timeout not configured - this should not happen in production")
-		timeout = 5 * time.Second // Emergency fallback only
-	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

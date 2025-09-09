@@ -1,7 +1,27 @@
-# MediaMTX Module Architecture
+# MediaMTX Controller Module
 
-## Overview
-The MediaMTX module provides unified streaming, recording, and snapshot capabilities for camera devices. It integrates with MediaMTX server to manage RTSP streams, FFmpeg processes, and file operations.
+## Architecture Overview
+The MediaMTX Controller is the complete business logic layer that orchestrates all camera operations. It provides a unified interface for streaming, recording, and snapshot capabilities while maintaining proper abstraction between client-facing APIs and hardware implementation.
+
+## Core Architecture Principles
+
+### Single Source of Truth
+- MediaMTX Controller is the only component that handles business logic
+- All camera operations flow through the controller
+- WebSocket server delegates all operations to MediaMTX Controller
+- No direct hardware access from external components
+
+### Abstraction Layer
+- Client APIs use camera identifiers (camera0, camera1)
+- Internal operations use device paths (/dev/video0, /dev/video1)
+- Controller manages the mapping between identifiers and paths
+- Hardware details are hidden from external consumers
+
+### Component Integration
+- All sub-components are orchestrated by the controller
+- Centralized configuration and logging across all components
+- Proper dependency injection and lifecycle management
+- Clear separation of concerns between components
 
 ## Core Components
 
@@ -13,9 +33,16 @@ The MediaMTX module provides unified streaming, recording, and snapshot capabili
 - Provides unified API for recording, streaming, and snapshots
 - Manages component lifecycle and state
 - Uses centralized config and logger
+- Implements camera discovery integration
+- Provides abstraction layer (camera0 ↔ /dev/video0)
 
 **Key Methods**:
 ```go
+// Camera discovery operations
+GetCameraList(ctx) (*CameraListResponse, error)
+GetCameraStatus(ctx, device) (*CameraStatusResponse, error)
+ValidateCameraDevice(ctx, device) (bool, error)
+
 // Recording operations
 StartRecording(ctx, device, path) (*RecordingSession, error)
 StopRecording(ctx, sessionID) error
@@ -152,27 +179,23 @@ Controller.TakeSnapshot()
 → Image captured and file saved
 ```
 
-## Configuration Integration
+## Configuration and Logging Integration
 
-### Centralized Config Usage
-All components use `*MediaMTXConfig` from centralized config:
-```go
-type MediaMTXConfig struct {
-    Host        string
-    Port        int
-    RTSPPort    int
-    // ... other fields
-}
-```
+### Centralized Configuration
+All components use `*config.ConfigManager` for configuration:
+- MediaMTX server connection settings
+- Stream configuration parameters
+- File storage paths and settings
+- Security and authentication settings
+- Performance tuning parameters
 
-### Centralized Logger Usage
-All components use `*logging.Logger` from centralized logging:
-```go
-logger.WithFields(map[string]interface{}{
-    "device": device,
-    "action": "start_streaming",
-}).Info("Starting streaming session")
-```
+### Centralized Logging
+All components use `*logging.Logger` for structured logging:
+- Correlation IDs for request tracing
+- Component-specific log contexts
+- Error tracking and debugging
+- Performance metrics logging
+- Security event logging
 
 ## Stream Use Cases
 
@@ -242,10 +265,10 @@ Controller.TakeSnapshot("rtsp://uav-stream", path)
 
 ## Architecture Benefits
 
-1. **Separation of Concerns**: Each component has a clear, single responsibility
-2. **Centralized Configuration**: All components use shared config and logger
-3. **Unified Interface**: MediaMTXController provides single entry point
-4. **Reusable Components**: StreamManager handles all stream types
-5. **Proper Integration**: Components work together without duplication
-6. **Extensible**: Easy to add new use cases or stream types
-7. **Future-Ready**: Multi-tier snapshot system supports current USB and future RTSP sources
+1. **Single Source of Truth**: MediaMTX Controller is the only business logic layer
+2. **Proper Abstraction**: Clean separation between client APIs and hardware implementation
+3. **Centralized Configuration**: All components use shared config and logger
+4. **Component Integration**: Clear dependencies and orchestration
+5. **Separation of Concerns**: Each component has a single, well-defined responsibility
+6. **Extensible Design**: Easy to add new capabilities and use cases
+7. **Future-Ready**: Supports current USB devices and future external RTSP sources

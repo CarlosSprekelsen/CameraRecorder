@@ -77,10 +77,8 @@ func getTestConfigPathForSetup() string {
 // This function should only be called after setupTestLogging() has been called
 // For now, we return the global logger to ensure it respects the configuration
 func NewTestLogger(name string) *logging.Logger {
-	// Use the global logger which respects the SetupLogging configuration
-	// This is a workaround for the logging system design issue
-	// TODO: Consider creating isolated logger instances for better test isolation
-	return logging.GetLogger()
+	// Create a component-scoped logger; SetupLogging() controls global sinks/levels
+	return logging.NewLogger(name)
 }
 
 // GetFreePort returns a free port for testing using port 0 for automatic OS assignment
@@ -169,7 +167,6 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	server, err := NewWebSocketServer(
 		configManager,
 		logger,
-		cameraMonitor, // Real camera monitor
 		jwtHandler,
 		mediaMTXController, // Real MediaMTX controller
 	)

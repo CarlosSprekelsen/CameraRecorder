@@ -378,9 +378,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		processCreationTimeout = cfg.ProcessCreationTimeout
 		executionTimeout = cfg.ExecutionTimeout
 	default:
-		// This should not happen with proper configuration
-		fm.logger.Error("Unknown configuration type - this indicates a configuration error")
-		return fmt.Errorf("unknown configuration type: %T", config)
+		return fmt.Errorf("unsupported configuration type for executeWithRetry: %T", config)
 	}
 
 	correlationID := fmt.Sprintf("retry_%s_%d", operation, time.Now().Unix())

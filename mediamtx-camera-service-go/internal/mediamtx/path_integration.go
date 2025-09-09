@@ -295,19 +295,26 @@ func (pi *PathIntegration) createPathsForExistingCameras(ctx context.Context) er
 
 // generatePathName generates a unique path name for a camera device
 func (pi *PathIntegration) generatePathName(device string) string {
-	// Convert device path to path name
-	// e.g., /dev/video0 -> camera_video0
-	pathName := fmt.Sprintf("camera_%s", device)
+	// Convert device path to MediaMTX path name
+	// e.g., /dev/video0 -> camera0, /dev/video1 -> camera1
 
-	// Remove leading slash and replace slashes with underscores
-	if len(pathName) > 0 && pathName[0] == '/' {
-		pathName = pathName[1:]
+	// Extract number from /dev/video{N}
+	if strings.HasPrefix(device, "/dev/video") {
+		number := strings.TrimPrefix(device, "/dev/video")
+		return fmt.Sprintf("camera%s", number)
 	}
 
-	// Replace slashes with underscores
-	pathName = strings.ReplaceAll(pathName, "/", "_")
+	// For custom devices like /dev/custom_cam1
+	if strings.HasPrefix(device, "/dev/") {
+		deviceName := strings.TrimPrefix(device, "/dev/")
+		// Replace non-alphanumeric with underscores for valid path names
+		deviceName = strings.ReplaceAll(deviceName, "/", "_")
+		return fmt.Sprintf("camera_%s", deviceName)
+	}
 
-	return pathName
+	// Fallback: sanitize the device string
+	sanitized := strings.ReplaceAll(device, "/", "_")
+	return fmt.Sprintf("camera_%s", sanitized)
 }
 
 // GetPathStatus gets the status of a specific path

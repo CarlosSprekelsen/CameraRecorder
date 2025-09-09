@@ -23,7 +23,20 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Setup logging
+	// Setup logging from validated config
+	cfg := configManager.GetConfig()
+	if cfg == nil {
+		log.Fatalf("Configuration not available")
+	}
+	_ = logging.SetupLogging(&logging.LoggingConfig{
+		Level:          cfg.Logging.Level,
+		Format:         cfg.Logging.Format,
+		FileEnabled:    cfg.Logging.FileEnabled,
+		FilePath:       cfg.Logging.FilePath,
+		MaxFileSize:    int(cfg.Logging.MaxFileSize),
+		BackupCount:    cfg.Logging.BackupCount,
+		ConsoleEnabled: cfg.Logging.ConsoleEnabled,
+	})
 	logger := logging.NewLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 
@@ -44,17 +57,13 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create camera monitor")
 	}
 
-	// Initialize MediaMTX controller with existing logger
-	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, logger)
+	// Initialize MediaMTX controller with existing logger and camera monitor
+	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, cameraMonitor, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
 	}
 
-	// Get configuration
-	cfg := configManager.GetConfig()
-	if cfg == nil {
-		logger.Fatal("Configuration not available")
-	}
+	// Get configuration (already loaded above)
 
 	// Initialize JWT handler with configuration
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
@@ -71,17 +80,12 @@ func main() {
 	wsServer, err := websocket.NewWebSocketServer(
 		configManager,
 		logger,
-		cameraMonitor,
 		jwtHandler,
 		mediaMTXController,
 	)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create WebSocket server")
 	}
-
-	// Connect camera monitor to event system
-	cameraEventNotifier := websocket.NewCameraEventNotifier(wsServer.GetEventManager(), logger)
-	cameraMonitor.SetEventNotifier(cameraEventNotifier)
 
 	// Connect MediaMTX controller to event system
 	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), logger)

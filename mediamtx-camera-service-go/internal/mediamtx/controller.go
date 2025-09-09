@@ -23,6 +23,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
@@ -32,11 +33,13 @@ type controller struct {
 	client           MediaMTXClient
 	healthMonitor    HealthMonitor
 	pathManager      PathManager
+	pathIntegration  *PathIntegration
 	streamManager    StreamManager
 	ffmpegManager    FFmpegManager
 	recordingManager *RecordingManager
 	snapshotManager  *SnapshotManager
 	rtspManager      RTSPConnectionManager
+	cameraMonitor    camera.CameraMonitor
 	config           *MediaMTXConfig
 	logger           *logging.Logger
 
@@ -66,18 +69,11 @@ func (c *controller) checkRunningState() bool {
 
 // getCameraIdentifierFromDevicePath converts a device path to a camera identifier
 // Example: /dev/video0 -> camera0
+// DELEGATES TO PATHMANAGER - no duplicate logic, forces proper architecture
 func (c *controller) getCameraIdentifierFromDevicePath(devicePath string) string {
-	// Extract the number from /dev/video{N}
-	if strings.HasPrefix(devicePath, "/dev/video") {
-		number := strings.TrimPrefix(devicePath, "/dev/video")
-		return "camera" + number
-	}
-	// If it's already a camera identifier, return as is
-	if strings.HasPrefix(devicePath, "camera") {
-		return devicePath
-	}
-	// Fallback: return the original path
-	return devicePath
+	// Use PathManager's centralized abstraction layer
+	cameraID, _ := c.pathManager.GetCameraForDevicePath(devicePath)
+	return cameraID
 }
 
 // extractDevicePathFromStreamName extracts the device path from an internal stream name
@@ -97,18 +93,11 @@ func (c *controller) extractDevicePathFromStreamName(streamName string) string {
 
 // getDevicePathFromCameraIdentifier converts a camera identifier to a device path
 // Example: camera0 -> /dev/video0
+// DELEGATES TO PATHMANAGER - no duplicate logic, forces proper architecture
 func (c *controller) getDevicePathFromCameraIdentifier(cameraID string) string {
-	// Extract the number from camera{N}
-	if strings.HasPrefix(cameraID, "camera") {
-		number := strings.TrimPrefix(cameraID, "camera")
-		return "/dev/video" + number
-	}
-	// If it's already a device path, return as is
-	if strings.HasPrefix(cameraID, "/dev/video") {
-		return cameraID
-	}
-	// Fallback: return the original identifier
-	return cameraID
+	// Use PathManager's centralized abstraction layer
+	devicePath, _ := c.pathManager.GetDevicePathForCamera(cameraID)
+	return devicePath
 }
 
 // validateCameraIdentifier validates that a camera identifier follows the correct pattern
@@ -243,7 +232,7 @@ func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 }
 
 // ControllerWithConfigManager creates a new MediaMTX controller with configuration integration
-func ControllerWithConfigManager(configManager *config.ConfigManager, logger *logging.Logger) (MediaMTXController, error) {
+func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor, logger *logging.Logger) (MediaMTXController, error) {
 	// Create configuration integration
 	configIntegration := NewConfigIntegration(configManager, logger)
 
@@ -259,8 +248,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, logger *lo
 	// Create health monitor
 	healthMonitor := NewHealthMonitor(client, mediaMTXConfig, logger)
 
-	// Create path manager
-	pathManager := NewPathManager(client, mediaMTXConfig, logger)
+	// Create path manager with camera monitor (consolidated camera operations)
+	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
 	// Create FFmpeg manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
@@ -277,15 +266,20 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, logger *lo
 	// Create RTSP connection manager
 	rtspManager := NewRTSPConnectionManager(client, mediaMTXConfig, logger)
 
+	// Create path integration (the missing link!)
+	pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configManager, logger)
+
 	return &controller{
 		client:           client,
 		healthMonitor:    healthMonitor,
 		pathManager:      pathManager,
+		pathIntegration:  pathIntegration,
 		streamManager:    streamManager,
 		ffmpegManager:    ffmpegManager,
 		recordingManager: recordingManager,
 		snapshotManager:  snapshotManager,
 		rtspManager:      rtspManager,
+		cameraMonitor:    cameraMonitor,
 		config:           mediaMTXConfig,
 		logger:           logger,
 		sessions:         make(map[string]*RecordingSession),
@@ -307,6 +301,24 @@ func (c *controller) Start(ctx context.Context) error {
 	// Start health monitor
 	if err := c.healthMonitor.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start health monitor: %w", err)
+	}
+
+	// Start camera monitor
+	if c.cameraMonitor != nil {
+		if err := c.cameraMonitor.Start(ctx); err != nil {
+			c.logger.WithError(err).Error("Failed to start camera monitor")
+			return fmt.Errorf("failed to start camera monitor: %w", err)
+		}
+		c.logger.Info("Camera monitor started successfully")
+	}
+
+	// Start path integration (connects cameras to MediaMTX paths)
+	if c.pathIntegration != nil {
+		if err := c.pathIntegration.Start(ctx); err != nil {
+			c.logger.WithError(err).Error("Failed to start path integration")
+			return fmt.Errorf("failed to start path integration: %w", err)
+		}
+		c.logger.Info("Path integration started successfully")
 	}
 
 	atomic.StoreInt32(&c.isRunning, 1)
@@ -339,6 +351,24 @@ func (c *controller) Stop(ctx context.Context) error {
 	}
 	c.sessionsMu.Unlock()
 
+	// Stop path integration first
+	if c.pathIntegration != nil {
+		if err := c.pathIntegration.Stop(ctx); err != nil {
+			c.logger.WithError(err).Error("Failed to stop path integration")
+		} else {
+			c.logger.Info("Path integration stopped successfully")
+		}
+	}
+
+	// Stop camera monitor
+	if c.cameraMonitor != nil {
+		if err := c.cameraMonitor.Stop(); err != nil {
+			c.logger.WithError(err).Error("Failed to stop camera monitor")
+		} else {
+			c.logger.Info("Camera monitor stopped successfully")
+		}
+	}
+
 	// Stop health monitor
 	if err := c.healthMonitor.Stop(ctx); err != nil {
 		c.logger.WithError(err).Error("Failed to stop health monitor")
@@ -361,7 +391,22 @@ func (c *controller) GetHealth(ctx context.Context) (*HealthStatus, error) {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Get base health status from health monitor
 	status := c.healthMonitor.GetStatus()
+
+	// Add camera monitor status
+	if c.cameraMonitor != nil {
+		if c.cameraMonitor.IsRunning() {
+			status.Components["camera_monitor"] = "healthy"
+		} else {
+			status.Components["camera_monitor"] = "error"
+			status.Status = "degraded"
+		}
+	} else {
+		status.Components["camera_monitor"] = "error"
+		status.Status = "degraded"
+	}
+
 	return &status, nil
 }
 
@@ -403,6 +448,22 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 		metrics.CPUUsage = healthStatus.Metrics.CPUUsage
 		metrics.MemoryUsage = healthStatus.Metrics.MemoryUsage
 		metrics.Uptime = healthStatus.Metrics.Uptime
+	}
+
+	// Add camera monitor metrics
+	if c.cameraMonitor != nil {
+		stats := c.cameraMonitor.GetMonitorStats()
+		if stats != nil {
+			// Add camera-specific metrics to the response
+			metrics.CameraMetrics = map[string]interface{}{
+				"known_devices":        stats.KnownDevicesCount,
+				"polling_cycles":       stats.PollingCycles,
+				"device_state_changes": stats.DeviceStateChanges,
+				"capability_probes":    stats.CapabilityProbesAttempted,
+				"capability_success":   stats.CapabilityProbesSuccessful,
+				"udev_events":          stats.UdevEventsProcessed,
+			}
+		}
 	}
 
 	return metrics, nil
@@ -1516,4 +1577,96 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 	}).Debug("Retrieved stream status")
 
 	return abstractStream, nil
+}
+
+// GetCameraList returns a list of all discovered cameras with their current status
+func (c *controller) GetCameraList(ctx context.Context) (*CameraListResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller not running")
+	}
+
+	// Delegate to PathManager (consolidates camera operations)
+	cameras, err := c.pathManager.GetCameraList(ctx)
+	if err != nil {
+		c.logger.WithError(err).Error("Failed to get camera list from path manager")
+		return nil, fmt.Errorf("failed to get camera list: %w", err)
+	}
+
+	response := &CameraListResponse{
+		Cameras:   cameras,
+		Total:     len(cameras),
+		Connected: len(cameras),
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"total":     response.Total,
+		"connected": response.Connected,
+	}).Info("Retrieved camera list through PathManager")
+
+	return response, nil
+}
+
+// GetCameraStatus returns the status for a specific camera device
+func (c *controller) GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller not running")
+	}
+
+	// Validate device parameter
+	if device == "" {
+		return nil, fmt.Errorf("device parameter is required")
+	}
+
+	// Delegate to PathManager (consolidates camera operations and abstraction layer)
+	response, err := c.pathManager.GetCameraStatus(ctx, device)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{"device": device}).WithError(err).Error("Failed to get camera status from path manager")
+		return nil, fmt.Errorf("camera device not found: %s", device)
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"device": device,
+		"status": response.Status,
+		"name":   response.Name,
+	}).Info("Retrieved camera status through PathManager")
+
+	return response, nil
+}
+
+// ValidateCameraDevice validates that a camera device exists and is accessible
+func (c *controller) ValidateCameraDevice(ctx context.Context, device string) (bool, error) {
+	if !c.checkRunningState() {
+		return false, fmt.Errorf("controller not running")
+	}
+
+	// Validate device parameter
+	if device == "" {
+		return false, fmt.Errorf("device parameter is required")
+	}
+
+	// Delegate to PathManager (consolidates camera operations and abstraction layer)
+	exists, err := c.pathManager.ValidateCameraDevice(ctx, device)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{"device": device}).WithError(err).Error("Failed to validate camera device through path manager")
+		return false, err
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"device": device,
+		"exists": exists,
+	}).Info("Device validation through PathManager")
+
+	return exists, nil
+}
+
+// GetCameraForDevicePath gets camera identifier for a device path (delegate to PathManager)
+func (c *controller) GetCameraForDevicePath(devicePath string) (string, bool) {
+	// Delegate to PathManager's centralized abstraction layer
+	return c.pathManager.GetCameraForDevicePath(devicePath)
+}
+
+// GetDevicePathForCamera gets device path for a camera identifier (delegate to PathManager)
+func (c *controller) GetDevicePathForCamera(cameraID string) (string, bool) {
+	// Delegate to PathManager's centralized abstraction layer
+	return c.pathManager.GetDevicePathForCamera(cameraID)
 }
