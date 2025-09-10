@@ -2,7 +2,7 @@
 WebSocket JSON-RPC 2.0 method registration and core method implementations.
 
 Provides method registration system and core JSON-RPC method implementations
-following the Python WebSocketJsonRpcServer patterns and project architecture standards.
+following project architecture standards.
 
 Requirements Coverage:
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
@@ -27,8 +27,8 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// Method Wrapper Helpers - Eliminate Code Duplication
-// These helpers centralize common patterns to reduce 3K+ lines to proper thin layer
+// Method Wrapper Helpers
+// These helpers centralize common patterns for consistent method execution
 
 // methodWrapper provides common method execution pattern with proper logging and error handling
 func (s *WebSocketServer) methodWrapper(methodName string, handler func() (interface{}, error)) func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
@@ -268,7 +268,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 // MethodPing implements the ping method
 // Following Python _method_ping implementation
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 30 lines → 8 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("ping", func() (interface{}, error) {
 		// Record performance metrics
 		startTime := time.Now()
@@ -283,7 +283,7 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 // MethodAuthenticate implements the authenticate method
 // Following Python _method_authenticate implementation
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 75 lines → 25 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.methodWrapper("authenticate", func() (interface{}, error) {
 		// Extract auth_token parameter
 		authToken, ok := params["auth_token"].(string)
@@ -325,7 +325,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 // MethodGetCameraList implements the get_camera_list method
 // Following Python _method_get_camera_list implementation
 func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: WebSocket is now a thin layer - MediaMTX Controller returns API-ready data
+	// Delegates to MediaMTX Controller for business logic
 	return s.authenticatedMethodWrapper("get_camera_list", func() (interface{}, error) {
 		// Delegate to MediaMTX controller - now returns API-ready APICameraInfo format
 		cameraListResponse, err := s.mediaMTXController.GetCameraList(context.Background())
@@ -342,7 +342,7 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 // MethodGetCameraStatus implements the get_camera_status method
 // Following Python _method_get_camera_status implementation
 func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 107 lines → 35 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_camera_status", func() (interface{}, error) {
 		// Extract device parameter
 		cameraID, ok := params["device"].(string)
@@ -420,7 +420,7 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 // MethodGetMetrics implements the get_metrics method
 // Following Python _method_get_metrics implementation
 func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 130 lines → 20 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_metrics", func() (interface{}, error) {
 
 		// Get system metrics from MediaMTX controller - thin delegation
@@ -470,7 +470,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		// Get heap allocation in bytes
 		heapAlloc := m.HeapAlloc
 
-		// Enhanced metrics result with sophisticated health monitoring (Phase 1 enhancement)
+		// Build metrics result with health monitoring data
 		result := map[string]interface{}{
 			"active_connections":    activeConnections,
 			"total_requests":        baseMetrics.RequestCount,
@@ -484,7 +484,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		// Check performance thresholds and send notifications
 		s.checkPerformanceThresholds(result)
 
-		// Use system metrics from controller if available (Phase 1 enhancement)
+		// Use system metrics from controller if available
 		if systemMetrics != nil {
 			// Use system metrics for response time and error rate, but keep WebSocket connection count
 			averageResponseTime = systemMetrics.ResponseTime
@@ -517,7 +517,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 // MethodGetCameraCapabilities implements the get_camera_capabilities method
 // Following Python _method_get_camera_capabilities implementation
 func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 75 lines → 25 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_camera_capabilities", func() (interface{}, error) {
 		// Validate device parameter using centralized validation
 		validationResult := s.validationHelper.ValidateDeviceParameter(params)
@@ -568,7 +568,7 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 // MethodGetStatus implements the get_status method
 // Following Python _method_get_status implementation
 func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 83 lines → 25 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_status", func() (interface{}, error) {
 
 		// Calculate uptime
@@ -622,7 +622,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 // MethodGetServerInfo implements the get_server_info method
 // Following Python _method_get_server_info implementation
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 66 lines → 20 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_server_info", func() (interface{}, error) {
 		// Return server info
 		return map[string]interface{}{
@@ -641,7 +641,7 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 // MethodGetStreams implements the get_streams method
 // Following Python _method_get_streams implementation
 func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 76 lines → 15 lines using wrapper helpers
+	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_streams", func() (interface{}, error) {
 		// Delegate to MediaMTX controller - investigate what it returns
 		streams, err := s.mediaMTXController.GetStreams(context.Background())

@@ -34,6 +34,11 @@ type SimpleHealthMonitor struct {
 	// Threshold-crossing notifications
 	systemNotifier SystemEventNotifier
 
+	// Debounce state for notifications
+	lastNotificationTime   int64  // Atomic timestamp (UnixNano)
+	lastNotificationStatus string // Last notification status sent
+	debounceDuration       time.Duration
+
 	// Atomic state: optimized for high-frequency reads
 	isHealthy     int32 // 0 = false, 1 = true
 	failureCount  int64 // Atomic counter
@@ -50,13 +55,14 @@ type SimpleHealthMonitor struct {
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
 func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
-		client:        client,
-		config:        config,
-		logger:        logger,
-		isHealthy:     1, // Assume healthy initially (1 = true)
-		failureCount:  0,
-		lastCheckTime: time.Now().UnixNano(),
-		stopChan:      make(chan struct{}, 1),
+		client:           client,
+		config:           config,
+		logger:           logger,
+		isHealthy:        1, // Assume healthy initially (1 = true)
+		failureCount:     0,
+		lastCheckTime:    time.Now().UnixNano(),
+		debounceDuration: 15 * time.Second, // 15s debounce for health notifications
+		stopChan:         make(chan struct{}, 1),
 	}
 }
 
@@ -65,6 +71,34 @@ func (h *SimpleHealthMonitor) SetSystemNotifier(notifier SystemEventNotifier) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.systemNotifier = notifier
+}
+
+// shouldNotifyWithDebounce checks if a notification should be sent based on debounce logic
+func (h *SimpleHealthMonitor) shouldNotifyWithDebounce(status string) bool {
+	now := time.Now().UnixNano()
+	lastTime := atomic.LoadInt64(&h.lastNotificationTime)
+
+	// Check if enough time has passed since last notification
+	if now-lastTime < int64(h.debounceDuration) {
+		return false
+	}
+
+	// Check if status actually changed
+	h.mu.RLock()
+	lastStatus := h.lastNotificationStatus
+	h.mu.RUnlock()
+
+	if lastStatus == status {
+		return false
+	}
+
+	// Update state atomically
+	atomic.StoreInt64(&h.lastNotificationTime, now)
+	h.mu.Lock()
+	h.lastNotificationStatus = status
+	h.mu.Unlock()
+
+	return true
 }
 
 // Start starts the health monitoring
@@ -223,8 +257,8 @@ func (h *SimpleHealthMonitor) RecordSuccess() {
 		h.logger.Info("Service recovered through success recording")
 		atomic.StoreInt32(&h.isHealthy, 1)
 
-		// Send recovery notification
-		if h.systemNotifier != nil {
+		// Send recovery notification with debounce
+		if h.systemNotifier != nil && h.shouldNotifyWithDebounce("healthy") {
 			h.systemNotifier.NotifySystemHealth("healthy", map[string]interface{}{
 				"component":       "mediamtx_health_monitor",
 				"severity":        "info",
@@ -253,8 +287,8 @@ func (h *SimpleHealthMonitor) RecordFailure() {
 		if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 			h.logger.Warn("Service marked as unhealthy due to failure threshold")
 
-			// Send threshold-crossing notification
-			if h.systemNotifier != nil {
+			// Send threshold-crossing notification with debounce
+			if h.systemNotifier != nil && h.shouldNotifyWithDebounce("unhealthy") {
 				h.systemNotifier.NotifySystemHealth("unhealthy", map[string]interface{}{
 					"failure_count": failures,
 					"threshold":     threshold,
