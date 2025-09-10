@@ -150,6 +150,17 @@ Notes:
 - Provides connection health metrics
 - Tracks session statistics
 
+### 9. **ExternalStreamDiscovery** (External Stream Management)
+**Role**: Discovers and manages external RTSP streams including UAVs
+**Location**: `external_discovery.go`
+**Responsibilities**:
+- Network scanning for external RTSP streams
+- UAV stream discovery (Skydio, generic models)
+- RTSP stream validation and health monitoring
+- On-demand and periodic discovery modes
+- STANAG 4609 compliance for military UAVs
+- Configurable network ranges and parameters
+
 ## Data Flow
 
 ### Recording Flow
@@ -183,6 +194,18 @@ Controller.TakeSnapshot()
   ├─ Tier 3: RTSP stream activation (create MediaMTX path, then capture)
   └─ Tier 4: Error handling (all methods failed)
 → Image captured and file saved
+```
+
+### External Stream Discovery Flow
+```
+Controller.DiscoverExternalStreams()
+→ ExternalStreamDiscovery.DiscoverExternalStreams()
+→ Network Scanning Process:
+  ├─ Skydio Discovery: Scan known IPs and network ranges
+  ├─ Generic UAV Discovery: Scan configurable ranges and ports
+  ├─ RTSP Validation: Test stream connectivity and capabilities
+  └─ Stream Registration: Add discovered streams to system
+→ External streams available for management
 ```
 
 ## Configuration and Logging Integration
@@ -237,8 +260,9 @@ All components use `*logging.Logger` for structured logging:
 - **RecordingManager** uses **StreamManager** for recording streams
 - **SnapshotManager** uses **FFmpegManager** for direct image processing
 - **SnapshotManager** uses **StreamManager.StartSnapshotStream()** for external RTSP sources (Tier 3)
+- **ExternalStreamDiscovery** uses **PathManager** for external stream integration
 - **HealthMonitor** monitors **MediaMTXClient** for service health
-- **Controller** orchestrates all components including health monitoring
+- **Controller** orchestrates all components including health monitoring and external discovery
 
 
 ## Snapshot Architecture: Current vs Future Use Cases
@@ -278,3 +302,6 @@ Controller.TakeSnapshot("rtsp://uav-stream", path)
 5. **Separation of Concerns**: Each component has a single, well-defined responsibility
 6. **Extensible Design**: Easy to add new capabilities and use cases
 7. **Future-Ready**: Supports current USB devices and future external RTSP sources
+8. **External Stream Support**: Comprehensive UAV and network-based stream discovery
+9. **Configurable Discovery**: Flexible network scanning with model-specific parameters
+10. **STANAG 4609 Compliance**: Military-grade UAV stream support

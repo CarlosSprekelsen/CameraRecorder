@@ -48,36 +48,23 @@ var (
 	once         sync.Once
 )
 
-// NewLogger creates a new logger instance for the specified component.
-// The component name is used for identification in log messages.
-func NewLogger(component string) *Logger {
-	logger := &Logger{
-		Logger:    logrus.New(),
-		component: component,
-	}
-
-	// Set default formatter with timestamp
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-	})
-
-	return logger
-}
-
-// GetLogger returns the global logger instance.
+// GetGlobalLogger returns the global logger instance.
 // Uses singleton pattern with thread-safe initialization.
-func GetLogger() *Logger {
+func GetGlobalLogger() *Logger {
 	once.Do(func() {
-		globalLogger = NewLogger("camera-service")
+		globalLogger = GetLogger("camera-service")
 	})
 	return globalLogger
 }
 
 // SetupLogging initializes the logging system with the given configuration.
 // Configures log level, formatters, and output handlers based on the provided config.
+// Also configures the global logger factory for consistent logger creation.
 func SetupLogging(config *LoggingConfig) error {
-	logger := GetLogger()
+	// Configure the global logger factory
+	ConfigureFactory(config)
+
+	logger := GetGlobalLogger()
 
 	// Parse and set log level
 	level, err := logrus.ParseLevel(strings.ToLower(config.Level))
@@ -266,7 +253,7 @@ func WithCorrelationID(ctx context.Context, id string) context.Context {
 // LogWithCorrelationID logs a message with correlation ID from context.
 // Convenience function that uses the global logger to log with context correlation ID.
 func LogWithCorrelationID(ctx context.Context, level logrus.Level, msg string) {
-	logger := GetLogger()
+	logger := GetGlobalLogger()
 	logger.LogWithContext(ctx, level, msg)
 }
 

@@ -34,7 +34,7 @@ func CreateConfigManager() *ConfigManager {
 	return &ConfigManager{
 		updateCallbacks: make([]func(*Config), 0),
 		defaultConfig:   getDefaultConfig(),
-		logger:          logging.GetLogger(),
+		logger:          logging.GetLogger("config-manager"),
 		stopChan:        make(chan struct{}, 5), // Buffered to prevent deadlock during shutdown
 	}
 }

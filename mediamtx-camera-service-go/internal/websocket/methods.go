@@ -291,43 +291,72 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 // MethodAuthenticate implements the authenticate method
 // Following Python _method_authenticate implementation
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// Uses wrapper helpers for consistent method execution
-	return s.methodWrapper("authenticate", func() (interface{}, error) {
-		// Extract auth_token parameter
-		authToken, ok := params["auth_token"].(string)
-		if !ok || authToken == "" {
-			return nil, fmt.Errorf("auth_token parameter is required")
-		}
+	// Handle authentication errors directly to return proper error codes
+	// Extract auth_token parameter
+	authToken, ok := params["auth_token"].(string)
+	if !ok || authToken == "" {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    "authenticate",
+			"action":    "auth_error",
+			"error":     "auth_token parameter is required",
+		}).Warn("Authentication failed: missing auth_token parameter")
 
-		// Validate JWT token
-		claims, err := s.jwtHandler.ValidateToken(authToken)
-		if err != nil {
-			return nil, fmt.Errorf("invalid or expired token: %v", err)
-		}
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "auth_token parameter is required", "Provide valid auth_token"),
+		}, nil
+	}
 
-		// Update client authentication state
-		client.Authenticated = true
-		client.UserID = claims.UserID
-		client.Role = claims.Role
-		client.AuthMethod = "jwt"
+	// Validate JWT token
+	claims, err := s.jwtHandler.ValidateToken(authToken)
+	if err != nil {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    "authenticate",
+			"action":    "auth_error",
+			"error":     err.Error(),
+		}).Warn("JWT token validation failed")
 
-		// Calculate expiration time
-		expiresAt := time.Unix(claims.EXP, 0)
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_failed", "Invalid or expired token", "Provide valid token"),
+		}, nil
+	}
 
-		// Record performance metrics
-		startTime := time.Now()
-		duration := time.Since(startTime).Seconds()
-		s.recordRequest("authenticate", duration)
+	// Update client authentication state
+	client.Authenticated = true
+	client.UserID = claims.UserID
+	client.Role = claims.Role
+	client.AuthMethod = "jwt"
 
-		// Return authentication result following Python implementation
-		return map[string]interface{}{
+	// Calculate expiration time
+	expiresAt := time.Unix(claims.EXP, 0)
+
+	// Record performance metrics
+	startTime := time.Now()
+	duration := time.Since(startTime).Seconds()
+	s.recordRequest("authenticate", duration)
+
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"user_id":   client.UserID,
+		"role":      client.Role,
+		"method":    "authenticate",
+		"action":    "auth_success",
+	}).Info("Authentication successful")
+
+	// Return authentication result following Python implementation
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
 			"authenticated": true,
 			"role":          claims.Role,
 			"permissions":   GetPermissionsForRole(claims.Role),
 			"expires_at":    expiresAt.Format(time.RFC3339),
 			"session_id":    client.ClientID,
-		}, nil
-	})(params, client)
+		},
+	}, nil
 }
 
 // MethodGetCameraList implements the get_camera_list method

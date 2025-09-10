@@ -108,7 +108,7 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	require.NoError(t, err, "Failed to load test configuration from fixtures")
 
 	// Create logger
-	logger := logging.NewLogger("websocket-test-utils")
+	logger := logging.GetLogger("websocket-test-utils")
 
 	// Get shared test server
 	server := GetSharedTestServer(t, configManager.GetConfig(), tempDir)

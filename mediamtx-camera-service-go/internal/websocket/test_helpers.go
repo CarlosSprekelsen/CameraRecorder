@@ -34,9 +34,9 @@ import (
 
 // setupTestLogging configures logging for all tests
 func setupTestLogging() {
-	// Apply the test logging configuration directly without loading config
-	// This prevents the config manager from creating loggers with default settings
-	logging.SetupLogging(&logging.LoggingConfig{
+	// Configure the global logger factory for tests
+	// This ensures all loggers created through the factory use test configuration
+	logging.ConfigureGlobalLogging(&logging.LoggingConfig{
 		Level:          "error",
 		Format:         "json",
 		FileEnabled:    false,
@@ -74,10 +74,10 @@ func getTestConfigPathForSetup() string {
 
 // NewTestLogger creates a logger for tests that uses the global logging configuration
 // This function should only be called after setupTestLogging() has been called
-// For now, we return the global logger to ensure it respects the configuration
+// Uses the logger factory to ensure consistent configuration across all test loggers
 func NewTestLogger(name string) *logging.Logger {
-	// Create a component-scoped logger; SetupLogging() controls global sinks/levels
-	return logging.NewLogger(name)
+	// Use the factory to get a logger with consistent configuration
+	return logging.GetLogger(name)
 }
 
 // GetFreePort returns a free port for testing using port 0 for automatic OS assignment

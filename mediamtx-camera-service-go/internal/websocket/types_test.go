@@ -102,13 +102,13 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 		error := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Please provide valid credentials")
 
 		assert.Equal(t, -32001, error.Code, "Error code should be set correctly")
-		assert.Equal(t, "AUTH_FAILED", error.Message, "Error message should be set correctly")
+		assert.Equal(t, "Authentication failed or token expired", error.Message, "Error message should match API specification")
 		assert.NotNil(t, error.Data, "Error data should be initialized")
 
 		// Cast Data to ErrorData
 		errorData, ok := error.Data.(*ErrorData)
 		assert.True(t, ok, "Error data should be of type *ErrorData")
-		assert.Equal(t, "Authentication failed", errorData.Reason, "Error reason should be set correctly")
+		assert.Equal(t, "AUTH_FAILED", errorData.Reason, "Error reason should be set correctly")
 		assert.Equal(t, "Please provide valid credentials", errorData.Suggestion, "Error suggestion should be set correctly")
 	})
 
@@ -151,9 +151,9 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 		// Test ErrorData fields
 		errorData, ok := error.Data.(*ErrorData)
 		assert.True(t, ok, "Error data should be of type *ErrorData")
-		assert.Equal(t, "Test error occurred", errorData.Reason, "Reason should be set correctly")
+		assert.Equal(t, "TEST_ERROR", errorData.Reason, "Reason should be set correctly")
 		assert.Equal(t, "Test suggestion", errorData.Suggestion, "Suggestion should be set correctly")
-		assert.Empty(t, errorData.Details, "Details should be empty when not provided")
+		assert.Equal(t, "Test error occurred", errorData.Details, "Details should be set correctly")
 	})
 
 	// Test 5: Error response format
@@ -174,7 +174,7 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 
 		// Test error structure
 		assert.Equal(t, -32001, response.Error.Code, "Error should have correct code")
-		assert.Equal(t, "AUTH_FAILED", response.Error.Message, "Error should have correct message")
+		assert.Equal(t, "Authentication failed or token expired", response.Error.Message, "Error should match API specification")
 		assert.NotNil(t, response.Error.Data, "Error should have data")
 	})
 
@@ -196,19 +196,19 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 			code    int
 			message string
 		}{
-			{-32600, "INVALID_REQUEST"},
-			{-32601, "METHOD_NOT_FOUND"},
-			{-32602, "INVALID_PARAMS"},
-			{-32603, "INTERNAL_ERROR"},
-			{-32001, "AUTH_FAILED"},
-			{-32002, "RATE_LIMIT"},
-			{-32003, "PERMISSION_DENIED"},
-			{-32004, "CAMERA_NOT_FOUND"},
+			{-32600, "Invalid Request"},
+			{-32601, "Method not found"},
+			{-32602, "Invalid parameters"},
+			{-32603, "Internal server error"},
+			{-32001, "Authentication failed or token expired"},
+			{-32002, "Rate limit exceeded"},
+			{-32003, "Insufficient permissions"},
+			{-32004, "Camera not found or disconnected"},
 		}
 
 		for _, testError := range errors {
-			error := NewJsonRpcError(testError.code, testError.message, "Test reason", "Test suggestion")
-			assert.Equal(t, testError.message, error.Message, "Error message should match expected value")
+			error := NewJsonRpcError(testError.code, "TEST_REASON", "Test reason", "Test suggestion")
+			assert.Equal(t, testError.message, error.Message, "Error message should match API specification")
 			assert.NotEmpty(t, error.Message, "Error message should not be empty")
 		}
 	})

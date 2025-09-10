@@ -49,7 +49,8 @@ func CreateTestLogger(t *testing.T, config *TestLoggerConfig) *Logger {
 		config = DefaultTestConfig()
 	}
 
-	logger := NewLogger(config.Component)
+	// Use the factory to get a logger with consistent configuration
+	logger := GetLogger(config.Component)
 	logger.SetLevel(config.Level)
 
 	return logger

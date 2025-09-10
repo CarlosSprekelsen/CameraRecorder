@@ -117,7 +117,7 @@ func NewHybridCameraMonitor(
 	}
 
 	if logger == nil {
-		logger = logging.GetLogger()
+		logger = logging.GetLogger("camera-monitor")
 	}
 
 	cfg := configManager.GetConfig()

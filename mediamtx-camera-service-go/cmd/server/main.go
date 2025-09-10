@@ -37,7 +37,7 @@ func main() {
 		BackupCount:    cfg.Logging.BackupCount,
 		ConsoleEnabled: cfg.Logging.ConsoleEnabled,
 	})
-	logger := logging.NewLogger("camera-service")
+	logger := logging.GetLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 
 	// Initialize real implementations for camera monitor dependencies

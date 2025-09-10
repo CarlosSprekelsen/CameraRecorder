@@ -2626,6 +2626,338 @@ func (c *Client) GetSubscriptionStats() (*SubscriptionStats, error) {
 
 ---
 
+## External Stream Discovery Methods
+
+### discover_external_streams
+Discover external RTSP streams including UAVs and other network-based video sources.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- skydio_enabled: boolean - Enable Skydio UAV discovery (optional, default: true)
+- generic_enabled: boolean - Enable generic UAV discovery (optional, default: false)
+- force_rescan: boolean - Force rescan even if recent scan exists (optional, default: false)
+- include_offline: boolean - Include offline/disconnected streams (optional, default: false)
+
+**Returns:** Discovery result with categorized streams and scan statistics
+
+**Status:** ✅ Implemented
+
+**Implementation:** Performs network scanning to discover external RTSP streams with configurable parameters for different UAV models and network ranges.
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "discover_external_streams",
+  "params": {
+    "skydio_enabled": true,
+    "generic_enabled": false,
+    "force_rescan": false
+  },
+  "id": 27
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "discovered_streams": [
+      {
+        "url": "rtsp://192.168.42.10:5554/subject",
+        "type": "skydio_stanag4609",
+        "name": "Skydio_EO_192.168.42.10_eo_/subject",
+        "status": "discovered",
+        "discovered_at": "2025-01-15T14:30:00Z",
+        "last_seen": "2025-01-15T14:30:00Z",
+        "capabilities": {
+          "protocol": "rtsp",
+          "format": "stanag4609",
+          "source": "skydio_uav",
+          "stream_type": "eo",
+          "port": 5554,
+          "stream_path": "/subject",
+          "codec": "h264",
+          "metadata": "klv_mpegts"
+        }
+      }
+    ],
+    "skydio_streams": [
+      {
+        "url": "rtsp://192.168.42.10:5554/subject",
+        "type": "skydio_stanag4609",
+        "name": "Skydio_EO_192.168.42.10_eo_/subject",
+        "status": "discovered",
+        "discovered_at": "2025-01-15T14:30:00Z",
+        "last_seen": "2025-01-15T14:30:00Z",
+        "capabilities": {
+          "protocol": "rtsp",
+          "format": "stanag4609",
+          "source": "skydio_uav",
+          "stream_type": "eo",
+          "port": 5554,
+          "stream_path": "/subject",
+          "codec": "h264",
+          "metadata": "klv_mpegts"
+        }
+      }
+    ],
+    "generic_streams": [],
+    "scan_timestamp": 1737039000,
+    "total_found": 1,
+    "discovery_options": {
+      "skydio_enabled": true,
+      "generic_enabled": false,
+      "force_rescan": false,
+      "include_offline": false
+    },
+    "scan_duration": "2.5s",
+    "errors": []
+  },
+  "id": 27
+}
+```
+
+**Go Client Example:**
+```go
+type ExternalStream struct {
+    URL          string                 `json:"url"`
+    Type         string                 `json:"type"`
+    Name         string                 `json:"name"`
+    Status       string                 `json:"status"`
+    DiscoveredAt time.Time              `json:"discovered_at"`
+    LastSeen     time.Time              `json:"last_seen"`
+    Capabilities map[string]interface{} `json:"capabilities"`
+}
+
+type DiscoveryResult struct {
+    DiscoveredStreams []*ExternalStream `json:"discovered_streams"`
+    SkydioStreams     []*ExternalStream `json:"skydio_streams"`
+    GenericStreams    []*ExternalStream `json:"generic_streams"`
+    ScanTimestamp     int64             `json:"scan_timestamp"`
+    TotalFound        int               `json:"total_found"`
+    DiscoveryOptions  map[string]interface{} `json:"discovery_options"`
+    ScanDuration      string            `json:"scan_duration"`
+    Errors            []string          `json:"errors,omitempty"`
+}
+
+func (c *Client) DiscoverExternalStreams(skydioEnabled, genericEnabled, forceRescan, includeOffline bool) (*DiscoveryResult, error) {
+    req := JSONRPCRequest{
+        JSONRPC: "2.0",
+        Method:  "discover_external_streams",
+        Params: map[string]interface{}{
+            "skydio_enabled":  skydioEnabled,
+            "generic_enabled": genericEnabled,
+            "force_rescan":    forceRescan,
+            "include_offline": includeOffline,
+        },
+        ID: c.nextID(),
+    }
+    
+    var resp JSONRPCResponse
+    if err := c.sendRequest(req, &resp); err != nil {
+        return nil, err
+    }
+    
+    var result DiscoveryResult
+    if err := json.Unmarshal(resp.Result, &result); err != nil {
+        return nil, err
+    }
+    
+    return &result, nil
+}
+```
+
+### add_external_stream
+Add an external RTSP stream to the system for management and monitoring.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- stream_url: string - RTSP URL of the external stream (required)
+- stream_name: string - Human-readable name for the stream (required)
+- stream_type: string - Type of stream (optional, default: "generic_rtsp")
+
+**Returns:** Stream addition confirmation with metadata
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "add_external_stream",
+  "params": {
+    "stream_url": "rtsp://192.168.42.15:5554/subject",
+    "stream_name": "Skydio_UAV_15",
+    "stream_type": "skydio_stanag4609"
+  },
+  "id": 28
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "stream_url": "rtsp://192.168.42.15:5554/subject",
+    "stream_name": "Skydio_UAV_15",
+    "stream_type": "skydio_stanag4609",
+    "status": "added",
+    "timestamp": 1737039000
+  },
+  "id": 28
+}
+```
+
+### remove_external_stream
+Remove an external stream from the system.
+
+**Authentication:** Required (operator role)
+
+**Parameters:**
+- stream_url: string - RTSP URL of the stream to remove (required)
+
+**Returns:** Stream removal confirmation
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "remove_external_stream",
+  "params": {
+    "stream_url": "rtsp://192.168.42.15:5554/subject"
+  },
+  "id": 29
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "stream_url": "rtsp://192.168.42.15:5554/subject",
+    "status": "removed",
+    "timestamp": 1737039000
+  },
+  "id": 29
+}
+```
+
+### get_external_streams
+Get all currently discovered and managed external streams.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:** None
+
+**Returns:** List of all external streams with categorization
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_external_streams",
+  "id": 30
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "external_streams": [
+      {
+        "url": "rtsp://192.168.42.10:5554/subject",
+        "type": "skydio_stanag4609",
+        "name": "Skydio_EO_192.168.42.10_eo_/subject",
+        "status": "discovered",
+        "discovered_at": "2025-01-15T14:30:00Z",
+        "last_seen": "2025-01-15T14:30:00Z",
+        "capabilities": {
+          "protocol": "rtsp",
+          "format": "stanag4609",
+          "source": "skydio_uav",
+          "stream_type": "eo",
+          "port": 5554,
+          "stream_path": "/subject",
+          "codec": "h264",
+          "metadata": "klv_mpegts"
+        }
+      }
+    ],
+    "skydio_streams": [
+      {
+        "url": "rtsp://192.168.42.10:5554/subject",
+        "type": "skydio_stanag4609",
+        "name": "Skydio_EO_192.168.42.10_eo_/subject",
+        "status": "discovered",
+        "discovered_at": "2025-01-15T14:30:00Z",
+        "last_seen": "2025-01-15T14:30:00Z",
+        "capabilities": {
+          "protocol": "rtsp",
+          "format": "stanag4609",
+          "source": "skydio_uav",
+          "stream_type": "eo",
+          "port": 5554,
+          "stream_path": "/subject",
+          "codec": "h264",
+          "metadata": "klv_mpegts"
+        }
+      }
+    ],
+    "generic_streams": [],
+    "total_count": 1,
+    "timestamp": 1737039000
+  },
+  "id": 30
+}
+```
+
+### set_discovery_interval
+Configure the automatic discovery scan interval for external streams.
+
+**Authentication:** Required (admin role)
+
+**Parameters:**
+- scan_interval: number - Scan interval in seconds (0 = on-demand only, >0 = periodic scanning)
+
+**Returns:** Configuration update confirmation
+
+**Status:** ✅ Implemented
+
+**Example:**
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "set_discovery_interval",
+  "params": {
+    "scan_interval": 300
+  },
+  "id": 31
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "scan_interval": 300,
+    "status": "updated",
+    "message": "Discovery interval updated (restart required for changes to take effect)",
+    "timestamp": 1737039000
+  },
+  "id": 31
+}
+```
+
+---
+
 ## HTTP File Download Endpoints
 
 ### GET /files/recordings/{filename}

@@ -391,7 +391,7 @@ func NewWebSocketServer(
 	}
 
 	if logger == nil {
-		logger = logging.GetLogger()
+		logger = logging.GetLogger("websocket-server")
 	}
 
 	if jwtHandler == nil {

@@ -213,8 +213,8 @@ func TestValidationHelper_ValidateRecordingParameters(t *testing.T) {
 
 	// Test invalid duration parameter
 	invalidDurationParams := map[string]interface{}{
-		"device":           "camera0",
-		"duration_seconds": -10, // Invalid negative duration
+		"device":   "camera0",
+		"duration": -10, // Invalid negative duration
 	}
 	result = helper.ValidateRecordingParameters(invalidDurationParams)
 	assert.False(t, result.Valid, "Invalid duration parameter should fail validation")
@@ -363,7 +363,12 @@ func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
 	assert.NotNil(t, response.Error, "Error should be present")
 	assert.Equal(t, INVALID_PARAMS, response.Error.Code, "Error code should be INVALID_PARAMS")
 	assert.Equal(t, ErrorMessages[INVALID_PARAMS], response.Error.Message, "Error message should match")
-	assert.Equal(t, "Test validation error", response.Error.Data, "Error data should contain validation error")
+	// Error data should be *ErrorData struct according to API documentation
+	errorData, ok := response.Error.Data.(*ErrorData)
+	assert.True(t, ok, "Error data should be of type *ErrorData")
+	assert.Equal(t, "validation_failed", errorData.Reason, "Error reason should match")
+	assert.Equal(t, "Test validation error", errorData.Details, "Error details should contain validation error")
+	assert.Equal(t, "Check parameter types and values", errorData.Suggestion, "Error suggestion should match")
 }
 
 // TestValidationHelper_ExistingMethods tests the actual validation methods that exist

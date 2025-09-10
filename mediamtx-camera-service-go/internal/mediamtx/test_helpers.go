@@ -85,7 +85,7 @@ func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTe
 	}
 
 	// Create logger for testing
-	logger := logging.GetLogger()
+	logger := logging.GetLogger("test-mediamtx-controller")
 	logger.SetLevel(logrus.ErrorLevel) // Reduce noise during tests
 
 	// Create MediaMTX client configuration
