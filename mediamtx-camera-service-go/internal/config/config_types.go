@@ -186,11 +186,29 @@ type OptimizationConfig struct {
 	ConnectionPoolSize      int  `mapstructure:"connection_pool_size"`
 }
 
+// MonitoringThresholdsConfig represents monitoring threshold configuration.
+type MonitoringThresholdsConfig struct {
+	MemoryUsagePercent     float64 `mapstructure:"memory_usage_percent"`     // Default: 90.0
+	ErrorRatePercent       float64 `mapstructure:"error_rate_percent"`       // Default: 5.0
+	AverageResponseTimeMs  float64 `mapstructure:"average_response_time_ms"` // Default: 1000.0
+	ActiveConnectionsLimit int     `mapstructure:"active_connections_limit"` // Default: 900
+	GoroutinesLimit        int     `mapstructure:"goroutines_limit"`         // Default: 1000
+}
+
+// DebounceConfig represents debounce configuration for notifications.
+type DebounceConfig struct {
+	HealthMonitorSeconds      int `mapstructure:"health_monitor_seconds"`      // Default: 15
+	StorageMonitorSeconds     int `mapstructure:"storage_monitor_seconds"`     // Default: 30
+	PerformanceMonitorSeconds int `mapstructure:"performance_monitor_seconds"` // Default: 45
+}
+
 // PerformanceConfig represents performance tuning configuration.
 type PerformanceConfig struct {
-	ResponseTimeTargets ResponseTimeTargetsConfig `mapstructure:"response_time_targets"`
-	SnapshotTiers       SnapshotTiersConfig       `mapstructure:"snapshot_tiers"`
-	Optimization        OptimizationConfig        `mapstructure:"optimization"`
+	ResponseTimeTargets  ResponseTimeTargetsConfig  `mapstructure:"response_time_targets"`
+	SnapshotTiers        SnapshotTiersConfig        `mapstructure:"snapshot_tiers"`
+	Optimization         OptimizationConfig         `mapstructure:"optimization"`
+	MonitoringThresholds MonitoringThresholdsConfig `mapstructure:"monitoring_thresholds"`
+	Debounce             DebounceConfig             `mapstructure:"debounce"`
 }
 
 // CameraConfig represents camera discovery configuration.

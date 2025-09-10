@@ -34,9 +34,9 @@ type SimpleHealthMonitor struct {
 	// Threshold-crossing notifications
 	systemNotifier SystemEventNotifier
 
-	// Debounce state for notifications
-	lastNotificationTime   int64  // Atomic timestamp (UnixNano)
-	lastNotificationStatus string // Last notification status sent
+	// Debounce state for notifications (all atomic to prevent race conditions)
+	lastNotificationTime   int64 // Atomic timestamp (UnixNano)
+	lastNotificationStatus int32 // Atomic status: 0=healthy, 1=unhealthy, 2=unknown
 	debounceDuration       time.Duration
 
 	// Atomic state: optimized for high-frequency reads
@@ -74,6 +74,7 @@ func (h *SimpleHealthMonitor) SetSystemNotifier(notifier SystemEventNotifier) {
 }
 
 // shouldNotifyWithDebounce checks if a notification should be sent based on debounce logic
+// Uses atomic operations to prevent race conditions
 func (h *SimpleHealthMonitor) shouldNotifyWithDebounce(status string) bool {
 	now := time.Now().UnixNano()
 	lastTime := atomic.LoadInt64(&h.lastNotificationTime)
@@ -83,22 +84,31 @@ func (h *SimpleHealthMonitor) shouldNotifyWithDebounce(status string) bool {
 		return false
 	}
 
-	// Check if status actually changed
-	h.mu.RLock()
-	lastStatus := h.lastNotificationStatus
-	h.mu.RUnlock()
+	// Convert status string to atomic int32
+	var statusValue int32
+	switch status {
+	case "healthy":
+		statusValue = 0
+	case "unhealthy":
+		statusValue = 1
+	default:
+		statusValue = 2 // unknown
+	}
 
-	if lastStatus == status {
+	// Check if status actually changed using atomic compare-and-swap
+	lastStatus := atomic.LoadInt32(&h.lastNotificationStatus)
+	if lastStatus == statusValue {
 		return false
 	}
 
-	// Update state atomically
-	atomic.StoreInt64(&h.lastNotificationTime, now)
-	h.mu.Lock()
-	h.lastNotificationStatus = status
-	h.mu.Unlock()
+	// Update state atomically - use compare-and-swap to ensure atomicity
+	if atomic.CompareAndSwapInt32(&h.lastNotificationStatus, lastStatus, statusValue) {
+		atomic.StoreInt64(&h.lastNotificationTime, now)
+		return true
+	}
 
-	return true
+	// If CAS failed, another goroutine updated it, check again
+	return atomic.LoadInt32(&h.lastNotificationStatus) != statusValue
 }
 
 // Start starts the health monitoring

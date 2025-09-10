@@ -373,6 +373,26 @@ type StorageInfo struct {
 	LowSpaceWarning bool    `json:"low_space_warning"`
 }
 
+// GetUsagePercentage returns the usage percentage
+func (s *StorageInfo) GetUsagePercentage() float64 {
+	return s.UsagePercentage
+}
+
+// GetAvailableSpace returns the available space
+func (s *StorageInfo) GetAvailableSpace() int64 {
+	return int64(s.AvailableSpace)
+}
+
+// GetTotalSpace returns the total space
+func (s *StorageInfo) GetTotalSpace() int64 {
+	return int64(s.TotalSpace)
+}
+
+// IsLowSpaceWarning returns the low space warning status
+func (s *StorageInfo) IsLowSpaceWarning() bool {
+	return s.LowSpaceWarning
+}
+
 // MediaMTXController interface defines MediaMTX operations
 type MediaMTXController interface {
 	// Camera discovery operations

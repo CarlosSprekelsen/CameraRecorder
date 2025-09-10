@@ -733,6 +733,18 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("performance.optimization.max_concurrent_operations", 5)
 	v.SetDefault("performance.optimization.connection_pool_size", 10)
 
+	// Monitoring thresholds defaults
+	v.SetDefault("performance.monitoring_thresholds.memory_usage_percent", 90.0)
+	v.SetDefault("performance.monitoring_thresholds.error_rate_percent", 5.0)
+	v.SetDefault("performance.monitoring_thresholds.average_response_time_ms", 1000.0)
+	v.SetDefault("performance.monitoring_thresholds.active_connections_limit", 900)
+	v.SetDefault("performance.monitoring_thresholds.goroutines_limit", 1000)
+
+	// Debounce configuration defaults
+	v.SetDefault("performance.debounce.health_monitor_seconds", 15)
+	v.SetDefault("performance.debounce.storage_monitor_seconds", 30)
+	v.SetDefault("performance.debounce.performance_monitor_seconds", 45)
+
 	// Camera defaults
 	v.SetDefault("camera.poll_interval", 0.1)
 	v.SetDefault("camera.detection_timeout", 2.0)

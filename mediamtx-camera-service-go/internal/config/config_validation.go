@@ -640,6 +640,14 @@ func validatePerformanceConfig(config *PerformanceConfig) error {
 		return fmt.Errorf("failed to validate optimization config: %w", err)
 	}
 
+	if err := validateMonitoringThresholdsConfig(&config.MonitoringThresholds); err != nil {
+		return fmt.Errorf("failed to validate monitoring thresholds config: %w", err)
+	}
+
+	if err := validateDebounceConfig(&config.Debounce); err != nil {
+		return fmt.Errorf("failed to validate debounce config: %w", err)
+	}
+
 	return nil
 }
 
@@ -713,6 +721,48 @@ func validateOptimizationConfig(config *OptimizationConfig) error {
 
 	if config.ConnectionPoolSize <= 0 {
 		return &ValidationError{Field: "performance.optimization.connection_pool_size", Message: fmt.Sprintf("connection pool size must be positive, got %d", config.ConnectionPoolSize)}
+	}
+
+	return nil
+}
+
+// validateMonitoringThresholdsConfig validates monitoring thresholds configuration.
+func validateMonitoringThresholdsConfig(config *MonitoringThresholdsConfig) error {
+	if config.MemoryUsagePercent <= 0 || config.MemoryUsagePercent > 100 {
+		return &ValidationError{Field: "performance.monitoring_thresholds.memory_usage_percent", Message: fmt.Sprintf("memory usage percent must be between 0 and 100, got %f", config.MemoryUsagePercent)}
+	}
+
+	if config.ErrorRatePercent < 0 || config.ErrorRatePercent > 100 {
+		return &ValidationError{Field: "performance.monitoring_thresholds.error_rate_percent", Message: fmt.Sprintf("error rate percent must be between 0 and 100, got %f", config.ErrorRatePercent)}
+	}
+
+	if config.AverageResponseTimeMs <= 0 {
+		return &ValidationError{Field: "performance.monitoring_thresholds.average_response_time_ms", Message: fmt.Sprintf("average response time must be positive, got %f", config.AverageResponseTimeMs)}
+	}
+
+	if config.ActiveConnectionsLimit <= 0 {
+		return &ValidationError{Field: "performance.monitoring_thresholds.active_connections_limit", Message: fmt.Sprintf("active connections limit must be positive, got %d", config.ActiveConnectionsLimit)}
+	}
+
+	if config.GoroutinesLimit <= 0 {
+		return &ValidationError{Field: "performance.monitoring_thresholds.goroutines_limit", Message: fmt.Sprintf("goroutines limit must be positive, got %d", config.GoroutinesLimit)}
+	}
+
+	return nil
+}
+
+// validateDebounceConfig validates debounce configuration.
+func validateDebounceConfig(config *DebounceConfig) error {
+	if config.HealthMonitorSeconds <= 0 {
+		return &ValidationError{Field: "performance.debounce.health_monitor_seconds", Message: fmt.Sprintf("health monitor debounce seconds must be positive, got %d", config.HealthMonitorSeconds)}
+	}
+
+	if config.StorageMonitorSeconds <= 0 {
+		return &ValidationError{Field: "performance.debounce.storage_monitor_seconds", Message: fmt.Sprintf("storage monitor debounce seconds must be positive, got %d", config.StorageMonitorSeconds)}
+	}
+
+	if config.PerformanceMonitorSeconds <= 0 {
+		return &ValidationError{Field: "performance.debounce.performance_monitor_seconds", Message: fmt.Sprintf("performance monitor debounce seconds must be positive, got %d", config.PerformanceMonitorSeconds)}
 	}
 
 	return nil

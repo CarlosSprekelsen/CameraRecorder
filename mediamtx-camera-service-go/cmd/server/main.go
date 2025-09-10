@@ -103,15 +103,12 @@ func main() {
 	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger)
 	systemEventNotifier.NotifySystemStartup("1.0.0", "Go implementation")
 
-	// Connect SystemEventNotifier to health monitor for threshold-crossing notifications
-	if healthMonitorProvider, ok := mediaMTXController.(interface {
-		GetHealthMonitor() mediamtx.HealthMonitor
+	// Connect SystemEventNotifier to controller for unified health notifications
+	if controllerWithNotifier, ok := mediaMTXController.(interface {
+		SetSystemEventNotifier(notifier mediamtx.SystemEventNotifier)
 	}); ok {
-		healthMonitor := healthMonitorProvider.GetHealthMonitor()
-		if healthMonitor != nil {
-			healthMonitor.SetSystemNotifier(systemEventNotifier)
-			logger.Info("Connected SystemEventNotifier to health monitor for threshold-crossing notifications")
-		}
+		controllerWithNotifier.SetSystemEventNotifier(systemEventNotifier)
+		logger.Info("Connected SystemEventNotifier to controller for unified health notifications")
 	}
 
 	// Start camera monitor

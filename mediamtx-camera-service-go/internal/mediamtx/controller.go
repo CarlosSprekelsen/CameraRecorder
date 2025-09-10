@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +44,9 @@ type controller struct {
 	cameraMonitor    camera.CameraMonitor
 	config           *MediaMTXConfig
 	logger           *logging.Logger
+
+	// Health notification management
+	healthNotificationManager *HealthNotificationManager
 
 	// State management
 	mu        sync.RWMutex
@@ -270,21 +274,31 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create path integration (the missing link!)
 	pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configManager, logger)
 
+	// Get full config for health notification manager
+	fullConfig := configManager.GetConfig()
+	if fullConfig == nil {
+		return nil, fmt.Errorf("failed to get full configuration for health notification manager")
+	}
+
+	// Create health notification manager (will be connected to SystemEventNotifier later)
+	healthNotificationManager := NewHealthNotificationManager(fullConfig, logger, nil)
+
 	return &controller{
-		client:           client,
-		healthMonitor:    healthMonitor,
-		pathManager:      pathManager,
-		pathIntegration:  pathIntegration,
-		streamManager:    streamManager,
-		ffmpegManager:    ffmpegManager,
-		recordingManager: recordingManager,
-		snapshotManager:  snapshotManager,
-		rtspManager:      rtspManager,
-		cameraMonitor:    cameraMonitor,
-		config:           mediaMTXConfig,
-		logger:           logger,
-		sessions:         make(map[string]*RecordingSession),
-		activeRecordings: make(map[string]*ActiveRecording),
+		client:                    client,
+		healthMonitor:             healthMonitor,
+		pathManager:               pathManager,
+		pathIntegration:           pathIntegration,
+		streamManager:             streamManager,
+		ffmpegManager:             ffmpegManager,
+		recordingManager:          recordingManager,
+		snapshotManager:           snapshotManager,
+		rtspManager:               rtspManager,
+		cameraMonitor:             cameraMonitor,
+		config:                    mediaMTXConfig,
+		logger:                    logger,
+		healthNotificationManager: healthNotificationManager,
+		sessions:                  make(map[string]*RecordingSession),
+		activeRecordings:          make(map[string]*ActiveRecording),
 	}, nil
 }
 
@@ -555,7 +569,32 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		CircuitBreakerState: circuitBreakerState,
 	}
 
+	// Check performance thresholds and send notifications with debounce
+	if c.healthNotificationManager != nil {
+		// Convert SystemMetrics to map for threshold checking
+		metricsMap := map[string]interface{}{
+			"memory_usage":          0.0,                                          // TODO: Add memory usage calculation
+			"error_rate":            float64(errorCounts["health_check"]) / 100.0, // Simplified error rate
+			"average_response_time": responseTime,
+			"active_connections":    activeConnections,
+			"goroutines":            runtime.NumGoroutine(),
+		}
+		c.healthNotificationManager.CheckPerformanceThresholds(metricsMap)
+	}
+
 	return systemMetrics, nil
+}
+
+// SetSystemEventNotifier sets the system event notifier for health notifications
+func (c *controller) SetSystemEventNotifier(notifier SystemEventNotifier) {
+	if c.healthNotificationManager != nil {
+		c.healthNotificationManager.systemNotifier = notifier
+	}
+
+	// Also set it on the health monitor
+	if c.healthMonitor != nil {
+		c.healthMonitor.SetSystemNotifier(notifier)
+	}
 }
 
 // GetStorageInfo returns information about the storage space used by recordings and snapshots.
@@ -608,6 +647,12 @@ func (c *controller) GetStorageInfo(ctx context.Context) (*StorageInfo, error) {
 		SnapshotsSize:   snapBytes,
 		LowSpaceWarning: lowWarn,
 	}
+
+	// Check storage thresholds and send notifications with debounce
+	if c.healthNotificationManager != nil {
+		c.healthNotificationManager.CheckStorageThresholds(info)
+	}
+
 	return info, nil
 }
 

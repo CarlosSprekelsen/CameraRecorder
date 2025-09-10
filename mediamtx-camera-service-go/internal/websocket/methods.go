@@ -482,7 +482,7 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		}
 
 		// Check performance thresholds and send notifications
-		s.checkPerformanceThresholds(result)
+		// Performance threshold checking moved to controller layer
 
 		// Use system metrics from controller if available
 		if systemMetrics != nil {
@@ -761,8 +761,7 @@ func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, cl
 			return nil, fmt.Errorf("error getting storage information: %v", err)
 		}
 
-		// Check storage thresholds and send notifications
-		s.checkStorageThresholds(info)
+		// Storage threshold checking moved to controller layer
 
 		// Build response per API specification
 		response := map[string]interface{}{
@@ -1623,128 +1622,4 @@ func (s *WebSocketServer) validateCameraIdentifier(id string) bool {
 	return matched
 }
 
-// checkStorageThresholds checks storage usage against thresholds and sends notifications
-func (s *WebSocketServer) checkStorageThresholds(info interface{}) {
-	// Type assert to get storage info
-	storageInfo, ok := info.(interface {
-		GetUsagePercentage() float64
-		GetAvailableSpace() int64
-		GetTotalSpace() int64
-		IsLowSpaceWarning() bool
-	})
-	if !ok {
-		return // Cannot check thresholds
-	}
-
-	// Get configuration thresholds
-	cfg := s.configManager.GetConfig()
-	if cfg == nil {
-		return
-	}
-
-	usagePercent := storageInfo.GetUsagePercentage()
-	warnThreshold := float64(cfg.Storage.WarnPercent)
-	blockThreshold := float64(cfg.Storage.BlockPercent)
-
-	// Check critical threshold (block_percent)
-	if usagePercent >= blockThreshold {
-		s.sendStorageNotification("storage_critical", usagePercent, blockThreshold, storageInfo)
-	} else if usagePercent >= warnThreshold {
-		// Check warning threshold (warn_percent)
-		s.sendStorageNotification("storage_warning", usagePercent, warnThreshold, storageInfo)
-	}
-}
-
-// sendStorageNotification sends storage threshold-crossing notifications
-func (s *WebSocketServer) sendStorageNotification(status string, usagePercent, threshold float64, storageInfo interface {
-	GetAvailableSpace() int64
-	GetTotalSpace() int64
-}) {
-	if s.eventManager == nil {
-		return
-	}
-
-	// Determine severity
-	severity := "warning"
-	if status == "storage_critical" {
-		severity = "critical"
-	}
-
-	// Build notification payload
-	notificationData := map[string]interface{}{
-		"usage_percentage": usagePercent,
-		"threshold":        threshold,
-		"available_space":  storageInfo.GetAvailableSpace(),
-		"total_space":      storageInfo.GetTotalSpace(),
-		"component":        "storage_monitor",
-		"severity":         severity,
-		"timestamp":        time.Now().Format(time.RFC3339),
-		"reason":           "storage_threshold_exceeded",
-	}
-
-	// Send system health notification
-	s.eventManager.PublishEvent("system.health", notificationData)
-
-	s.logger.WithFields(logging.Fields{
-		"status":           status,
-		"usage_percentage": usagePercent,
-		"threshold":        threshold,
-		"severity":         severity,
-	}).Warn("Storage threshold exceeded")
-}
-
-// checkPerformanceThresholds checks performance metrics against thresholds and sends notifications
-func (s *WebSocketServer) checkPerformanceThresholds(metrics map[string]interface{}) {
-	if s.eventManager == nil {
-		return
-	}
-
-	// Memory usage threshold (90%)
-	if memUsage, ok := metrics["memory_usage"].(float64); ok && memUsage > 90.0 {
-		s.sendPerformanceNotification("memory_pressure", "memory_usage", memUsage, 90.0, "critical")
-	}
-
-	// Error rate threshold (5%)
-	if errorRate, ok := metrics["error_rate"].(float64); ok && errorRate > 5.0 {
-		s.sendPerformanceNotification("high_error_rate", "error_rate", errorRate, 5.0, "warning")
-	}
-
-	// Average response time threshold (1000ms)
-	if avgResponseTime, ok := metrics["average_response_time"].(float64); ok && avgResponseTime > 1000.0 {
-		s.sendPerformanceNotification("slow_response_time", "average_response_time", avgResponseTime, 1000.0, "warning")
-	}
-
-	// Active connections threshold (900 out of 1000 limit)
-	if activeConn, ok := metrics["active_connections"].(int); ok && activeConn > 900 {
-		s.sendPerformanceNotification("connection_limit_warning", "active_connections", float64(activeConn), 900.0, "warning")
-	}
-
-	// Goroutines threshold (excessive goroutines indicate possible leaks)
-	if goroutines, ok := metrics["goroutines"].(int); ok && goroutines > 1000 {
-		s.sendPerformanceNotification("goroutine_leak_warning", "goroutines", float64(goroutines), 1000.0, "warning")
-	}
-}
-
-// sendPerformanceNotification sends performance threshold-crossing notifications
-func (s *WebSocketServer) sendPerformanceNotification(status, metricName string, value, threshold float64, severity string) {
-	notificationData := map[string]interface{}{
-		"metric":    metricName,
-		"value":     value,
-		"threshold": threshold,
-		"component": "performance_monitor",
-		"severity":  severity,
-		"timestamp": time.Now().Format(time.RFC3339),
-		"reason":    "performance_threshold_exceeded",
-	}
-
-	// Send system health notification
-	s.eventManager.PublishEvent("system.health", notificationData)
-
-	s.logger.WithFields(logging.Fields{
-		"status":    status,
-		"metric":    metricName,
-		"value":     value,
-		"threshold": threshold,
-		"severity":  severity,
-	}).Warn("Performance threshold exceeded")
-}
+// Threshold checking functions moved to controller layer for proper architecture
