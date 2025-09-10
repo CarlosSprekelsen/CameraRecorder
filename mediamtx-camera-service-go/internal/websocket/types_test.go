@@ -92,6 +92,128 @@ func TestWebSocketTypes_JsonRpcNotification(t *testing.T) {
 	assert.Equal(t, "online", notification.Params["status"], "Status should be in params")
 }
 
+// TestWebSocketTypes_ErrorStandardization tests standardized error response format
+func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
+	// Test 1: NewJsonRpcError helper function
+	t.Run("NewJsonRpcErrorHelper", func(t *testing.T) {
+		error := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Please provide valid credentials")
+
+		assert.Equal(t, -32001, error.Code, "Error code should be set correctly")
+		assert.Equal(t, "AUTH_FAILED", error.Message, "Error message should be set correctly")
+		assert.NotNil(t, error.Data, "Error data should be initialized")
+
+		// Cast Data to ErrorData
+		errorData, ok := error.Data.(*ErrorData)
+		assert.True(t, ok, "Error data should be of type *ErrorData")
+		assert.Equal(t, "Authentication failed", errorData.Reason, "Error reason should be set correctly")
+		assert.Equal(t, "Please provide valid credentials", errorData.Suggestion, "Error suggestion should be set correctly")
+	})
+
+	// Test 2: Standard error codes
+	t.Run("StandardErrorCodes", func(t *testing.T) {
+		// Test standard JSON-RPC error codes
+		invalidRequest := NewJsonRpcError(-32600, "INVALID_REQUEST", "Invalid request format", "Check JSON-RPC 2.0 specification")
+		assert.Equal(t, -32600, invalidRequest.Code, "Invalid request error code should be -32600")
+
+		methodNotFound := NewJsonRpcError(-32601, "METHOD_NOT_FOUND", "Method not found", "Check method name")
+		assert.Equal(t, -32601, methodNotFound.Code, "Method not found error code should be -32601")
+
+		invalidParams := NewJsonRpcError(-32602, "INVALID_PARAMS", "Invalid parameters", "Check parameter types and values")
+		assert.Equal(t, -32602, invalidParams.Code, "Invalid params error code should be -32602")
+
+		internalError := NewJsonRpcError(-32603, "INTERNAL_ERROR", "Internal server error", "Contact system administrator")
+		assert.Equal(t, -32603, internalError.Code, "Internal error code should be -32603")
+	})
+
+	// Test 3: Service-specific error codes
+	t.Run("ServiceSpecificErrorCodes", func(t *testing.T) {
+		// Test service-specific error codes
+		authFailed := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Provide valid token")
+		assert.Equal(t, -32001, authFailed.Code, "Auth failed error code should be -32001")
+
+		rateLimit := NewJsonRpcError(-32002, "RATE_LIMIT", "Rate limit exceeded", "Wait before retrying")
+		assert.Equal(t, -32002, rateLimit.Code, "Rate limit error code should be -32002")
+
+		permissionDenied := NewJsonRpcError(-32003, "PERMISSION_DENIED", "Insufficient permissions", "Contact administrator")
+		assert.Equal(t, -32003, permissionDenied.Code, "Permission denied error code should be -32003")
+
+		cameraNotFound := NewJsonRpcError(-32004, "CAMERA_NOT_FOUND", "Camera not found", "Check camera identifier")
+		assert.Equal(t, -32004, cameraNotFound.Code, "Camera not found error code should be -32004")
+	})
+
+	// Test 4: Error data structure
+	t.Run("ErrorDataStructure", func(t *testing.T) {
+		error := NewJsonRpcError(-32001, "TEST_ERROR", "Test error occurred", "Test suggestion")
+
+		// Test ErrorData fields
+		errorData, ok := error.Data.(*ErrorData)
+		assert.True(t, ok, "Error data should be of type *ErrorData")
+		assert.Equal(t, "Test error occurred", errorData.Reason, "Reason should be set correctly")
+		assert.Equal(t, "Test suggestion", errorData.Suggestion, "Suggestion should be set correctly")
+		assert.Empty(t, errorData.Details, "Details should be empty when not provided")
+	})
+
+	// Test 5: Error response format
+	t.Run("ErrorResponseFormat", func(t *testing.T) {
+		error := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Provide valid token")
+
+		response := &JsonRpcResponse{
+			JSONRPC: "2.0",
+			ID:      "test-id",
+			Error:   error,
+		}
+
+		// Test response structure
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+		assert.Equal(t, "test-id", response.ID, "Response should have correct ID")
+		assert.NotNil(t, response.Error, "Response should have error")
+		assert.Nil(t, response.Result, "Error response should not have result")
+
+		// Test error structure
+		assert.Equal(t, -32001, response.Error.Code, "Error should have correct code")
+		assert.Equal(t, "AUTH_FAILED", response.Error.Message, "Error should have correct message")
+		assert.NotNil(t, response.Error.Data, "Error should have data")
+	})
+
+	// Test 6: Error code ranges
+	t.Run("ErrorCodeRanges", func(t *testing.T) {
+		// Standard JSON-RPC errors should be in -32768 to -32000 range
+		standardError := NewJsonRpcError(-32600, "STANDARD", "Standard error", "Standard suggestion")
+		assert.True(t, standardError.Code >= -32768 && standardError.Code <= -32000, "Standard error codes should be in -32768 to -32000 range")
+
+		// Service-specific errors should be in -32099 to -32000 range
+		serviceError := NewJsonRpcError(-32001, "SERVICE", "Service error", "Service suggestion")
+		assert.True(t, serviceError.Code >= -32099 && serviceError.Code <= -32000, "Service error codes should be in -32099 to -32000 range")
+	})
+
+	// Test 7: Error message consistency
+	t.Run("ErrorMessageConsistency", func(t *testing.T) {
+		// Test that error messages are consistent and descriptive
+		errors := []struct {
+			code    int
+			message string
+		}{
+			{-32600, "INVALID_REQUEST"},
+			{-32601, "METHOD_NOT_FOUND"},
+			{-32602, "INVALID_PARAMS"},
+			{-32603, "INTERNAL_ERROR"},
+			{-32001, "AUTH_FAILED"},
+			{-32002, "RATE_LIMIT"},
+			{-32003, "PERMISSION_DENIED"},
+			{-32004, "CAMERA_NOT_FOUND"},
+		}
+
+		for _, testError := range errors {
+			error := NewJsonRpcError(testError.code, testError.message, "Test reason", "Test suggestion")
+			assert.Equal(t, testError.message, error.Message, "Error message should match expected value")
+			assert.NotEmpty(t, error.Message, "Error message should not be empty")
+		}
+	})
+}
+
 // TestWebSocketTypes_ClientConnection tests client connection structure
 func TestWebSocketTypes_ClientConnection(t *testing.T) {
 	// Test client connection creation

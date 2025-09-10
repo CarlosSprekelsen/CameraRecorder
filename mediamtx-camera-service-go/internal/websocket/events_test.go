@@ -24,6 +24,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockDeviceToCameraIDMapper is a simple mock for testing
+type mockDeviceToCameraIDMapper struct{}
+
+func (m *mockDeviceToCameraIDMapper) GetCameraForDevicePath(devicePath string) (string, bool) {
+	// Simple mapping for testing
+	if devicePath == "/dev/video0" {
+		return "camera0", true
+	}
+	return "", false
+}
+
+func (m *mockDeviceToCameraIDMapper) GetDevicePathForCamera(cameraID string) (string, bool) {
+	// Simple mapping for testing
+	if cameraID == "camera0" {
+		return "/dev/video0", true
+	}
+	return "", false
+}
+
 // TestWebSocketEvents_EventManagerCreation tests event manager creation
 func TestWebSocketEvents_EventManagerCreation(t *testing.T) {
 	eventManager := NewEventManager(NewTestLogger("events-test"))
@@ -404,8 +423,10 @@ func TestWebSocketEvents_EventIntegrationLayer(t *testing.T) {
 	integration := NewEventIntegration(eventManager, logger)
 	assert.NotNil(t, integration, "Event integration should be created")
 
-	// Test NewCameraEventNotifier
-	cameraNotifier := NewCameraEventNotifier(eventManager, logger)
+	// Test NewCameraEventNotifier - requires DeviceToCameraIDMapper
+	// For testing, we can use a simple mock mapper
+	mockMapper := &mockDeviceToCameraIDMapper{}
+	cameraNotifier := NewCameraEventNotifier(eventManager, mockMapper, logger)
 	assert.NotNil(t, cameraNotifier, "Camera event notifier should be created")
 
 	// Test camera event notifications - these functions don't return errors
@@ -416,76 +437,13 @@ func TestWebSocketEvents_EventIntegrationLayer(t *testing.T) {
 	cameraNotifier.NotifyCapabilityError("/dev/video0", "Failed to detect codec") // Test with device path (internal layer)
 }
 
-// TestWebSocketEvents_CameraIdentifierMapping tests the camera abstraction layer mapping
-func TestWebSocketEvents_CameraIdentifierMapping(t *testing.T) {
-	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-	// REQ-API-003: Request/response message handling
+// TestWebSocketEvents_CameraIdentifierMapping - REMOVED
+// Device path mapping is now handled by MediaMTX Controller (single source of truth)
+// WebSocket server is thin protocol layer and does not perform device path mapping
 
-	// Create a test server to access the mapping functions
-	server := &WebSocketServer{}
-
-	// Test USB camera mapping: camera0 -> /dev/video0
-	devicePath := server.getDevicePathFromCameraIdentifier("camera0")
-	assert.Equal(t, "/dev/video0", devicePath, "camera0 should map to /dev/video0")
-
-	devicePath = server.getDevicePathFromCameraIdentifier("camera1")
-	assert.Equal(t, "/dev/video1", devicePath, "camera1 should map to /dev/video1")
-
-	// Test reverse mapping: /dev/video0 -> camera0
-	cameraID := server.getCameraIdentifierFromDevicePath("/dev/video0")
-	assert.Equal(t, "camera0", cameraID, "/dev/video0 should map to camera0")
-
-	cameraID = server.getCameraIdentifierFromDevicePath("/dev/video1")
-	assert.Equal(t, "camera1", cameraID, "/dev/video1 should map to camera1")
-
-	// Test IP camera mapping
-	ipCameraID := server.getCameraIdentifierFromDevicePath("rtsp://192.168.1.100:554/stream")
-	assert.Equal(t, "ip_camera_192_168_1_100", ipCameraID, "IP camera should map correctly")
-
-	devicePath = server.getDevicePathFromCameraIdentifier("ip_camera_192_168_1_100")
-	assert.Equal(t, "rtsp://192.168.1.100:554/stream", devicePath, "IP camera identifier should map to RTSP URL")
-
-	// Test HTTP camera mapping
-	httpCameraID := server.getCameraIdentifierFromDevicePath("http://192.168.1.101:8080/mjpeg")
-	assert.Equal(t, "http_camera_192_168_1_101", httpCameraID, "HTTP camera should map correctly")
-
-	devicePath = server.getDevicePathFromCameraIdentifier("http_camera_192_168_1_101")
-	assert.Equal(t, "http://192.168.1.101:8080/mjpeg", devicePath, "HTTP camera identifier should map to HTTP URL")
-
-	// Test network camera mapping
-	networkCameraID := server.getCameraIdentifierFromDevicePath("udp://239.0.0.1:1234")
-	assert.Equal(t, "network_camera_239_0_0_1_1234", networkCameraID, "Network camera should map correctly")
-
-	devicePath = server.getDevicePathFromCameraIdentifier("network_camera_239_0_0_1_1234")
-	assert.Equal(t, "udp://239.0.0.1:1234", devicePath, "Network camera identifier should map to UDP URL")
-}
-
-// TestWebSocketEvents_CameraIdentifierValidation tests camera identifier validation
-func TestWebSocketEvents_CameraIdentifierValidation(t *testing.T) {
-	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-	// REQ-API-003: Request/response message handling
-
-	server := &WebSocketServer{}
-
-	// Test valid camera identifiers
-	assert.True(t, server.validateCameraIdentifier("camera0"), "camera0 should be valid")
-	assert.True(t, server.validateCameraIdentifier("camera1"), "camera1 should be valid")
-	assert.True(t, server.validateCameraIdentifier("camera123"), "camera123 should be valid")
-	assert.True(t, server.validateCameraIdentifier("ip_camera_192_168_1_100"), "IP camera identifier should be valid")
-	assert.True(t, server.validateCameraIdentifier("http_camera_192_168_1_101"), "HTTP camera identifier should be valid")
-	assert.True(t, server.validateCameraIdentifier("network_camera_239_0_0_1_1234"), "Network camera identifier should be valid")
-	assert.True(t, server.validateCameraIdentifier("file_camera_video"), "File camera identifier should be valid")
-
-	// Test invalid camera identifiers
-	assert.False(t, server.validateCameraIdentifier("invalid_camera"), "invalid_camera should be invalid")
-	assert.False(t, server.validateCameraIdentifier("camera"), "camera should be invalid (missing number)")
-	assert.False(t, server.validateCameraIdentifier("camera_abc"), "camera_abc should be invalid (non-numeric)")
-	assert.False(t, server.validateCameraIdentifier("ip_camera_192_168_1"), "Incomplete IP camera identifier should be invalid")
-	assert.False(t, server.validateCameraIdentifier("http_camera_192_168"), "Incomplete HTTP camera identifier should be invalid")
-	assert.False(t, server.validateCameraIdentifier("network_camera_239_0_0"), "Incomplete network camera identifier should be invalid")
-	assert.False(t, server.validateCameraIdentifier(""), "Empty string should be invalid")
-	assert.False(t, server.validateCameraIdentifier("random_string"), "Random string should be invalid")
-}
+// TestWebSocketEvents_CameraIdentifierValidation - REMOVED
+// Camera identifier validation is now handled by MediaMTX Controller (single source of truth)
+// WebSocket server is thin protocol layer and does not perform validation
 
 // TestWebSocketEvents_UnsubscribeEdgeCases tests unsubscribe edge cases and potential bugs
 func TestWebSocketEvents_UnsubscribeEdgeCases(t *testing.T) {
@@ -718,8 +676,9 @@ func TestWebSocketEvents_MediaMTXEventNotifier(t *testing.T) {
 	eventManager := NewEventManager(NewTestLogger("events-test"))
 	logger := NewTestLogger("mediamtx-test")
 
-	// Test NewMediaMTXEventNotifier
-	mediaNotifier := NewMediaMTXEventNotifier(eventManager, logger)
+	// Test NewMediaMTXEventNotifier - requires DeviceToCameraIDMapper
+	mockMapper := &mockDeviceToCameraIDMapper{}
+	mediaNotifier := NewMediaMTXEventNotifier(eventManager, mockMapper, logger)
 	assert.NotNil(t, mediaNotifier, "MediaMTX event notifier should be created")
 
 	// Test recording event notifications - these functions don't return errors

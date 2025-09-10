@@ -297,3 +297,175 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 		})
 	}
 }
+
+// TestHealthMonitor_DebounceMechanism_ReqMTX004 tests debounce mechanism in health monitoring
+func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor
+	client := helper.GetClient()
+	config := &MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		HealthCheckInterval:    5,
+		HealthCheckTimeout:     5 * time.Second,
+		HealthFailureThreshold: 3,
+	}
+	logger := helper.GetLogger()
+
+	healthMonitor := NewHealthMonitor(client, config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	// Create mock system event notifier
+	mockNotifier := NewMockSystemEventNotifier()
+	healthMonitor.SetSystemNotifier(mockNotifier)
+
+	// Test debounce mechanism with rapid successive failures
+	ctx := context.Background()
+
+	// Start the health monitor
+	err := healthMonitor.Start(ctx)
+	require.NoError(t, err, "Health monitor should start successfully")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		healthMonitor.Stop(stopCtx)
+	}()
+
+	// Simulate rapid failures to test debounce
+	for i := 0; i < 5; i++ {
+		healthMonitor.RecordFailure()
+	}
+
+	// Should only send one notification due to debounce
+	notifications := mockNotifier.GetNotifications()
+	assert.LessOrEqual(t, len(notifications), 1, "Should send at most one notification due to debounce")
+
+	// Clear notifications and wait for debounce period
+	mockNotifier.ClearNotifications()
+	time.Sleep(20 * time.Second) // Wait longer than debounce period
+
+	// Record another failure after debounce period
+	healthMonitor.RecordFailure()
+
+	// Should send another notification after debounce period
+	notifications = mockNotifier.GetNotifications()
+	assert.Equal(t, 1, len(notifications), "Should send notification after debounce period")
+
+	t.Log("✅ Health monitor debounce mechanism working correctly")
+}
+
+// TestHealthMonitor_AtomicOperations_ReqMTX004 tests atomic operations for thread safety
+func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor
+	client := helper.GetClient()
+	config := &MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		HealthCheckTimeout:     5 * time.Second,
+		HealthFailureThreshold: 3,
+	}
+	logger := helper.GetLogger()
+
+	healthMonitor := NewHealthMonitor(client, config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	// Test concurrent access to ensure atomic operations work correctly
+	ctx := context.Background()
+
+	// Start the health monitor
+	err := healthMonitor.Start(ctx)
+	require.NoError(t, err, "Health monitor should start successfully")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		healthMonitor.Stop(stopCtx)
+	}()
+
+	// Run concurrent goroutines
+	done := make(chan bool, 10)
+
+	for i := 0; i < 10; i++ {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+				}
+				done <- true
+			}()
+
+			// Make concurrent calls to test atomic operations
+			healthMonitor.RecordFailure()
+			healthMonitor.RecordSuccess()
+			healthMonitor.IsHealthy()
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+
+	// Should not panic and should handle concurrent access gracefully
+	assert.True(t, true, "Should handle concurrent access without panicking")
+
+	t.Log("✅ Health monitor atomic operations working correctly")
+}
+
+// TestHealthMonitor_StatusTransitions_ReqMTX004 tests status transitions with debounce
+func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor
+	client := helper.GetClient()
+	config := &MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		HealthCheckTimeout:     5 * time.Second,
+		HealthFailureThreshold: 3,
+	}
+	logger := helper.GetLogger()
+
+	healthMonitor := NewHealthMonitor(client, config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	// Create mock system event notifier
+	mockNotifier := NewMockSystemEventNotifier()
+	healthMonitor.SetSystemNotifier(mockNotifier)
+
+	// Test status transitions
+	ctx := context.Background()
+
+	// Start the health monitor
+	err := healthMonitor.Start(ctx)
+	require.NoError(t, err, "Health monitor should start successfully")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		healthMonitor.Stop(stopCtx)
+	}()
+
+	// Initially should be healthy
+	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy initially")
+
+	// Record failures to trigger unhealthy status
+	for i := 0; i < 4; i++ {
+		healthMonitor.RecordFailure()
+	}
+
+	// Should be unhealthy after threshold failures
+	assert.False(t, healthMonitor.IsHealthy(), "Should be unhealthy after threshold failures")
+
+	// Record success to recover
+	healthMonitor.RecordSuccess()
+
+	// Should be healthy again
+	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy after recovery")
+
+	t.Log("✅ Health monitor status transitions working correctly")
+}

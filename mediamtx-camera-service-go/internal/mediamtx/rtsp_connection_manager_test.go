@@ -730,9 +730,8 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	logger := helper.GetLogger()
 	logger.SetLevel(logrus.ErrorLevel)
 
-	// Create config manager and controller
-	configManager := config.CreateConfigManager()
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Start controller

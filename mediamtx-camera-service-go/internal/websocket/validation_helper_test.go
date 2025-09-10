@@ -366,6 +366,179 @@ func TestValidationHelper_CreateValidationErrorResponse(t *testing.T) {
 	assert.Equal(t, "Test validation error", response.Error.Data, "Error data should contain validation error")
 }
 
+// TestValidationHelper_ExistingMethods tests the actual validation methods that exist
+func TestValidationHelper_ExistingMethods(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	logger := NewTestLogger("test")
+	inputValidator := security.NewInputValidator(logger, nil)
+	helper := NewValidationHelper(inputValidator, logger)
+
+	// Test 1: Device parameter validation
+	t.Run("DeviceParameterValidation", func(t *testing.T) {
+		// Valid device parameter
+		params := map[string]interface{}{
+			"device": "camera0",
+		}
+		result := helper.ValidateDeviceParameter(params)
+		assert.True(t, result.Valid, "Valid device parameter should pass")
+
+		// Missing device parameter
+		params = map[string]interface{}{}
+		result = helper.ValidateDeviceParameter(params)
+		assert.False(t, result.Valid, "Missing device parameter should fail")
+
+		// Invalid device parameter type
+		params = map[string]interface{}{
+			"device": 123,
+		}
+		result = helper.ValidateDeviceParameter(params)
+		assert.False(t, result.Valid, "Invalid device parameter type should fail")
+	})
+
+	// Test 2: Filename parameter validation
+	t.Run("FilenameParameterValidation", func(t *testing.T) {
+		// Valid filename parameter
+		params := map[string]interface{}{
+			"filename": "test_file.mp4",
+		}
+		result := helper.ValidateFilenameParameter(params)
+		assert.True(t, result.Valid, "Valid filename parameter should pass")
+
+		// Missing filename parameter
+		params = map[string]interface{}{}
+		result = helper.ValidateFilenameParameter(params)
+		assert.False(t, result.Valid, "Missing filename parameter should fail")
+
+		// Invalid filename parameter type
+		params = map[string]interface{}{
+			"filename": 123,
+		}
+		result = helper.ValidateFilenameParameter(params)
+		assert.False(t, result.Valid, "Invalid filename parameter type should fail")
+	})
+
+	// Test 3: Pagination parameter validation
+	t.Run("PaginationParameterValidation", func(t *testing.T) {
+		// Valid pagination parameters
+		params := map[string]interface{}{
+			"limit":  10,
+			"offset": 0,
+		}
+		result := helper.ValidatePaginationParams(params)
+		assert.True(t, result.Valid, "Valid pagination parameters should pass")
+
+		// Invalid limit (negative)
+		params = map[string]interface{}{
+			"limit":  -1,
+			"offset": 0,
+		}
+		result = helper.ValidatePaginationParams(params)
+		assert.False(t, result.Valid, "Negative limit should fail")
+
+		// Invalid offset (negative)
+		params = map[string]interface{}{
+			"limit":  10,
+			"offset": -1,
+		}
+		result = helper.ValidatePaginationParams(params)
+		assert.False(t, result.Valid, "Negative offset should fail")
+
+		// Invalid limit type
+		params = map[string]interface{}{
+			"limit":  "invalid",
+			"offset": 0,
+		}
+		result = helper.ValidatePaginationParams(params)
+		assert.False(t, result.Valid, "Invalid limit type should fail")
+	})
+
+	// Test 4: Recording parameter validation
+	t.Run("RecordingParameterValidation", func(t *testing.T) {
+		// Valid recording parameters
+		params := map[string]interface{}{
+			"device":   "camera0",
+			"duration": 3600,
+			"format":   "mp4",
+		}
+		result := helper.ValidateRecordingParameters(params)
+		assert.True(t, result.Valid, "Valid recording parameters should pass")
+
+		// Missing required device parameter
+		params = map[string]interface{}{
+			"duration": 3600,
+			"format":   "mp4",
+		}
+		result = helper.ValidateRecordingParameters(params)
+		assert.False(t, result.Valid, "Missing device parameter should fail")
+
+		// Invalid duration (negative)
+		params = map[string]interface{}{
+			"device":   "camera0",
+			"duration": -1,
+			"format":   "mp4",
+		}
+		result = helper.ValidateRecordingParameters(params)
+		assert.False(t, result.Valid, "Negative duration should fail")
+	})
+
+	// Test 5: Snapshot parameter validation
+	t.Run("SnapshotParameterValidation", func(t *testing.T) {
+		// Valid snapshot parameters
+		params := map[string]interface{}{
+			"device":   "camera0",
+			"filename": "snapshot.jpg",
+		}
+		result := helper.ValidateSnapshotParameters(params)
+		assert.True(t, result.Valid, "Valid snapshot parameters should pass")
+
+		// Missing required device parameter
+		params = map[string]interface{}{
+			"filename": "snapshot.jpg",
+		}
+		result = helper.ValidateSnapshotParameters(params)
+		assert.False(t, result.Valid, "Missing device parameter should fail")
+
+		// Invalid filename type
+		params = map[string]interface{}{
+			"device":   "camera0",
+			"filename": 123,
+		}
+		result = helper.ValidateSnapshotParameters(params)
+		assert.False(t, result.Valid, "Invalid filename type should fail")
+	})
+
+	// Test 6: Retention policy parameter validation
+	t.Run("RetentionPolicyParameterValidation", func(t *testing.T) {
+		// Valid retention policy parameters
+		params := map[string]interface{}{
+			"policy_type":  "age",
+			"max_age_days": 30,
+			"enabled":      true,
+		}
+		result := helper.ValidateRetentionPolicyParameters(params)
+		assert.True(t, result.Valid, "Valid retention policy parameters should pass")
+
+		// Missing required policy_type
+		params = map[string]interface{}{
+			"max_age_days": 30,
+			"enabled":      true,
+		}
+		result = helper.ValidateRetentionPolicyParameters(params)
+		assert.False(t, result.Valid, "Missing policy_type should fail")
+
+		// Invalid policy_type
+		params = map[string]interface{}{
+			"policy_type":  "invalid",
+			"max_age_days": 30,
+			"enabled":      true,
+		}
+		result = helper.ValidateRetentionPolicyParameters(params)
+		assert.False(t, result.Valid, "Invalid policy_type should fail")
+	})
+}
+
 // TestValidationHelper_LogValidationWarnings tests validation warning logging
 func TestValidationHelper_LogValidationWarnings(t *testing.T) {
 	logger := NewTestLogger("test")

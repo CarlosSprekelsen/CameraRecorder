@@ -81,6 +81,9 @@ type MediaMTXConfig struct {
 
 	// RTSP Connection Monitoring Configuration
 	RTSPMonitoring RTSPMonitoringConfig `mapstructure:"rtsp_monitoring"`
+
+	// External Stream Discovery Configuration
+	ExternalDiscovery ExternalDiscoveryConfig `mapstructure:"external_discovery"`
 }
 
 // HealthMonitorDefaults represents health monitoring default values
@@ -88,6 +91,42 @@ type HealthMonitorDefaults struct {
 	CheckInterval   float64 `mapstructure:"check_interval"`    // Default: 5.0 seconds
 	MaxBackoffDelay float64 `mapstructure:"max_backoff_delay"` // Default: 30.0 seconds
 	ShutdownTimeout float64 `mapstructure:"shutdown_timeout"`  // Default: 30.0 seconds
+}
+
+// ExternalDiscoveryConfig represents external stream discovery configuration
+type ExternalDiscoveryConfig struct {
+	Enabled            bool `mapstructure:"enabled"`              // Default: true
+	ScanInterval       int  `mapstructure:"scan_interval"`        // Default: 0 (on-demand only)
+	ScanTimeout        int  `mapstructure:"scan_timeout"`         // Default: 30 seconds
+	MaxConcurrentScans int  `mapstructure:"max_concurrent_scans"` // Default: 5
+	EnableStartupScan  bool `mapstructure:"enable_startup_scan"`  // Default: true
+
+	// Skydio-specific configuration
+	Skydio SkydioDiscoveryConfig `mapstructure:"skydio"`
+
+	// Generic UAV configuration (for other models)
+	GenericUAV GenericUAVConfig `mapstructure:"generic_uav"`
+}
+
+// SkydioDiscoveryConfig represents Skydio UAV discovery configuration
+type SkydioDiscoveryConfig struct {
+	Enabled           bool     `mapstructure:"enabled"`             // Default: true
+	NetworkRanges     []string `mapstructure:"network_ranges"`      // Default: ["192.168.42.0/24"]
+	EOPort            int      `mapstructure:"eo_port"`             // Default: 5554
+	IRPort            int      `mapstructure:"ir_port"`             // Default: 6554
+	EOStreamPath      string   `mapstructure:"eo_stream_path"`      // Default: "/subject"
+	IRStreamPath      string   `mapstructure:"ir_stream_path"`      // Default: "/infrared"
+	EnableBothStreams bool     `mapstructure:"enable_both_streams"` // Default: true
+	KnownIPs          []string `mapstructure:"known_ips"`           // Default: ["192.168.42.10"]
+}
+
+// GenericUAVConfig represents generic UAV discovery configuration
+type GenericUAVConfig struct {
+	Enabled       bool     `mapstructure:"enabled"`        // Default: false
+	NetworkRanges []string `mapstructure:"network_ranges"` // Default: []
+	CommonPorts   []int    `mapstructure:"common_ports"`   // Default: [554, 8554]
+	StreamPaths   []string `mapstructure:"stream_paths"`   // Default: ["/stream", "/live", "/video"]
+	KnownIPs      []string `mapstructure:"known_ips"`      // Default: []
 }
 
 // RTSPMonitoringConfig represents RTSP connection monitoring configuration

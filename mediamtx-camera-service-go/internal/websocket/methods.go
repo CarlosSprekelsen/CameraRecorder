@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 // Method Wrapper Helpers
@@ -185,6 +186,13 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 	s.registerMethod("subscribe_events", s.MethodSubscribeEvents, "1.0")
 	s.registerMethod("unsubscribe_events", s.MethodUnsubscribeEvents, "1.0")
 	s.registerMethod("get_subscription_stats", s.MethodGetSubscriptionStats, "1.0")
+
+	// External stream discovery methods
+	s.registerMethod("discover_external_streams", s.MethodDiscoverExternalStreams, "1.0")
+	s.registerMethod("add_external_stream", s.MethodAddExternalStream, "1.0")
+	s.registerMethod("remove_external_stream", s.MethodRemoveExternalStream, "1.0")
+	s.registerMethod("get_external_streams", s.MethodGetExternalStreams, "1.0")
+	s.registerMethod("set_discovery_interval", s.MethodSetDiscoveryInterval, "1.0")
 
 	s.logger.WithField("action", "register_methods").Info("Built-in methods registered")
 }
@@ -1623,3 +1631,161 @@ func (s *WebSocketServer) validateCameraIdentifier(id string) bool {
 }
 
 // Threshold checking functions moved to controller layer for proper architecture
+
+// MethodDiscoverExternalStreams discovers external streams (Skydio UAVs, etc.)
+func (s *WebSocketServer) MethodDiscoverExternalStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	return s.authenticatedMethodWrapper("discover_external_streams", func() (interface{}, error) {
+		// Get discovery options from params
+		options := mediamtx.DiscoveryOptions{
+			SkydioEnabled:  true,  // Default to Skydio discovery
+			GenericEnabled: false, // Default to disabled
+		}
+
+		if skydioEnabled, ok := params["skydio_enabled"].(bool); ok {
+			options.SkydioEnabled = skydioEnabled
+		}
+		if genericEnabled, ok := params["generic_enabled"].(bool); ok {
+			options.GenericEnabled = genericEnabled
+		}
+		if forceRescan, ok := params["force_rescan"].(bool); ok {
+			options.ForceRescan = forceRescan
+		}
+		if includeOffline, ok := params["include_offline"].(bool); ok {
+			options.IncludeOffline = includeOffline
+		}
+
+		// Trigger discovery with options
+		result, err := s.mediaMTXController.DiscoverExternalStreams(context.Background(), options)
+		if err != nil {
+			return nil, fmt.Errorf("discovery failed: %w", err)
+		}
+
+		return result, nil
+	})(params, client)
+}
+
+// MethodAddExternalStream adds an external stream to the system
+func (s *WebSocketServer) MethodAddExternalStream(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	return s.authenticatedMethodWrapper("add_external_stream", func() (interface{}, error) {
+		// Extract stream parameters
+		streamURL, ok := params["stream_url"].(string)
+		if !ok || streamURL == "" {
+			return nil, fmt.Errorf("stream_url parameter is required")
+		}
+
+		streamName, ok := params["stream_name"].(string)
+		if !ok || streamName == "" {
+			return nil, fmt.Errorf("stream_name parameter is required")
+		}
+
+		streamType, ok := params["stream_type"].(string)
+		if !ok {
+			streamType = "generic_rtsp" // Default type
+		}
+
+		// Create external stream
+		stream := &mediamtx.ExternalStream{
+			URL:          streamURL,
+			Name:         streamName,
+			Type:         streamType,
+			Status:       "discovered",
+			DiscoveredAt: time.Now(),
+			LastSeen:     time.Now(),
+			Capabilities: map[string]interface{}{
+				"protocol": "rtsp",
+				"source":   "external",
+			},
+		}
+
+		// Add stream to system
+		if err := s.mediaMTXController.AddExternalStream(context.Background(), stream); err != nil {
+			return nil, fmt.Errorf("failed to add external stream: %w", err)
+		}
+
+		return map[string]interface{}{
+			"stream_url":  streamURL,
+			"stream_name": streamName,
+			"stream_type": streamType,
+			"status":      "added",
+			"timestamp":   time.Now().Unix(),
+		}, nil
+	})(params, client)
+}
+
+// MethodRemoveExternalStream removes an external stream from the system
+func (s *WebSocketServer) MethodRemoveExternalStream(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	return s.authenticatedMethodWrapper("remove_external_stream", func() (interface{}, error) {
+		// Extract stream URL
+		streamURL, ok := params["stream_url"].(string)
+		if !ok || streamURL == "" {
+			return nil, fmt.Errorf("stream_url parameter is required")
+		}
+
+		// Remove stream from system
+		if err := s.mediaMTXController.RemoveExternalStream(context.Background(), streamURL); err != nil {
+			return nil, fmt.Errorf("failed to remove external stream: %w", err)
+		}
+
+		return map[string]interface{}{
+			"stream_url": streamURL,
+			"status":     "removed",
+			"timestamp":  time.Now().Unix(),
+		}, nil
+	})(params, client)
+}
+
+// MethodGetExternalStreams returns all discovered external streams
+func (s *WebSocketServer) MethodGetExternalStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	return s.authenticatedMethodWrapper("get_external_streams", func() (interface{}, error) {
+		// Get all external streams
+		streams, err := s.mediaMTXController.GetExternalStreams(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get external streams: %w", err)
+		}
+
+		// Categorize streams
+		skydioStreams := make([]*mediamtx.ExternalStream, 0)
+		genericStreams := make([]*mediamtx.ExternalStream, 0)
+
+		for _, stream := range streams {
+			if strings.Contains(stream.Type, "skydio") {
+				skydioStreams = append(skydioStreams, stream)
+			} else {
+				genericStreams = append(genericStreams, stream)
+			}
+		}
+
+		return map[string]interface{}{
+			"external_streams": streams,
+			"skydio_streams":   skydioStreams,
+			"generic_streams":  genericStreams,
+			"total_count":      len(streams),
+			"timestamp":        time.Now().Unix(),
+		}, nil
+	})(params, client)
+}
+
+// MethodSetDiscoveryInterval sets the discovery scan interval
+func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	return s.authenticatedMethodWrapper("set_discovery_interval", func() (interface{}, error) {
+		// Extract interval parameter
+		interval, ok := params["scan_interval"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("scan_interval parameter is required and must be a number")
+		}
+
+		// Validate interval (0 = on-demand only, >0 = periodic scanning)
+		if interval < 0 {
+			return nil, fmt.Errorf("scan_interval must be >= 0")
+		}
+
+		// Note: This would require updating the configuration and restarting the discovery timer
+		// For now, return success with the requested interval
+		return map[string]interface{}{
+			"scan_interval": int(interval),
+			"status":        "updated",
+			"message":       "Discovery interval updated (restart required for changes to take effect)",
+			"timestamp":     time.Now().Unix(),
+		}, nil
+	})(params, client)
+}

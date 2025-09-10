@@ -423,6 +423,12 @@ type MediaMTXController interface {
 	CreatePath(ctx context.Context, path *Path) error
 	DeletePath(ctx context.Context, name string) error
 
+	// External stream discovery
+	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error)
+	AddExternalStream(ctx context.Context, stream *ExternalStream) error
+	RemoveExternalStream(ctx context.Context, streamURL string) error
+	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
+
 	// Recording operations
 	StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
 	StopRecording(ctx context.Context, sessionID string) error
@@ -524,6 +530,12 @@ type MediaMTXControllerAPI interface {
 	// Cleanup and manager access (for file retention operations)
 	GetRecordingManager() *RecordingManager
 	GetSnapshotManager() *SnapshotManager
+
+	// External stream discovery
+	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error)
+	AddExternalStream(ctx context.Context, stream *ExternalStream) error
+	RemoveExternalStream(ctx context.Context, streamURL string) error
+	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
 }
 
 // Compile-time assertion: controller implements the restricted API

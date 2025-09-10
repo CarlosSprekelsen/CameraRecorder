@@ -681,6 +681,30 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.rtsp_monitoring.packet_loss_threshold", 0.05)
 	v.SetDefault("mediamtx.rtsp_monitoring.jitter_threshold", 50.0)
 
+	// External Stream Discovery defaults
+	v.SetDefault("mediamtx.external_discovery.enabled", true)
+	v.SetDefault("mediamtx.external_discovery.scan_interval", 0)        // On-demand only
+	v.SetDefault("mediamtx.external_discovery.scan_timeout", 30)        // 30 seconds max
+	v.SetDefault("mediamtx.external_discovery.max_concurrent_scans", 5) // Limit concurrency
+	v.SetDefault("mediamtx.external_discovery.enable_startup_scan", true)
+
+	// Skydio-specific defaults (validated from official docs)
+	v.SetDefault("mediamtx.external_discovery.skydio.enabled", true)
+	v.SetDefault("mediamtx.external_discovery.skydio.network_ranges", []string{"192.168.42.0/24"})
+	v.SetDefault("mediamtx.external_discovery.skydio.eo_port", 5554)
+	v.SetDefault("mediamtx.external_discovery.skydio.ir_port", 6554)
+	v.SetDefault("mediamtx.external_discovery.skydio.eo_stream_path", "/subject")
+	v.SetDefault("mediamtx.external_discovery.skydio.ir_stream_path", "/infrared")
+	v.SetDefault("mediamtx.external_discovery.skydio.enable_both_streams", true)
+	v.SetDefault("mediamtx.external_discovery.skydio.known_ips", []string{"192.168.42.10"})
+
+	// Generic UAV defaults (for other models)
+	v.SetDefault("mediamtx.external_discovery.generic_uav.enabled", false)
+	v.SetDefault("mediamtx.external_discovery.generic_uav.network_ranges", []string{})
+	v.SetDefault("mediamtx.external_discovery.generic_uav.common_ports", []int{554, 8554})
+	v.SetDefault("mediamtx.external_discovery.generic_uav.stream_paths", []string{"/stream", "/live", "/video"})
+	v.SetDefault("mediamtx.external_discovery.generic_uav.known_ips", []string{})
+
 	// MediaMTX stream readiness defaults
 	v.SetDefault("mediamtx.stream_readiness.timeout", 15.0)
 	v.SetDefault("mediamtx.stream_readiness.retry_attempts", 3)
@@ -719,7 +743,7 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("performance.response_time_targets.recording_stop", 2.0)
 	v.SetDefault("performance.response_time_targets.file_listing", 1.0)
 
-	v.SetDefault("performance.snapshot_tiers.tier1_usb_direct_timeout", 0.5)
+	v.SetDefault("performance.snapshot_tiers.tier1_usb_direct_timeout", 2.0)
 	v.SetDefault("performance.snapshot_tiers.tier2_rtsp_ready_check_timeout", 1.0)
 	v.SetDefault("performance.snapshot_tiers.tier3_activation_timeout", 3.0)
 	v.SetDefault("performance.snapshot_tiers.tier3_activation_trigger_timeout", 1.0)

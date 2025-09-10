@@ -48,6 +48,9 @@ type controller struct {
 	// Health notification management
 	healthNotificationManager *HealthNotificationManager
 
+	// External stream discovery
+	externalDiscovery *ExternalStreamDiscovery
+
 	// State management
 	mu        sync.RWMutex
 	isRunning int32 // Use int32 for atomic operations (0 = false, 1 = true)
@@ -794,6 +797,93 @@ func (c *controller) DeletePath(ctx context.Context, name string) error {
 	}
 
 	return c.pathManager.DeletePath(ctx, name)
+}
+
+// DiscoverExternalStreams discovers external streams
+func (c *controller) DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	if c.externalDiscovery == nil {
+		return nil, fmt.Errorf("external discovery not initialized")
+	}
+
+	return c.externalDiscovery.DiscoverExternalStreams(ctx, options)
+}
+
+// AddExternalStream adds an external stream to the system
+func (c *controller) AddExternalStream(ctx context.Context, stream *ExternalStream) error {
+	if !c.checkRunningState() {
+		return fmt.Errorf("controller is not running")
+	}
+
+	if c.externalDiscovery == nil {
+		return fmt.Errorf("external discovery not initialized")
+	}
+
+	// Create MediaMTX path for the external stream
+	path := &Path{
+		Name:   stream.Name,
+		Source: stream.URL,
+	}
+
+	if err := c.CreatePath(ctx, path); err != nil {
+		return fmt.Errorf("failed to create MediaMTX path for external stream: %w", err)
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"stream_url":  stream.URL,
+		"stream_name": stream.Name,
+		"stream_type": stream.Type,
+	}).Info("External stream added successfully")
+
+	return nil
+}
+
+// RemoveExternalStream removes an external stream from the system
+func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string) error {
+	if !c.checkRunningState() {
+		return fmt.Errorf("controller is not running")
+	}
+
+	// Find the stream by URL
+	streams := c.externalDiscovery.GetDiscoveredStreams()
+	stream, exists := streams[streamURL]
+	if !exists {
+		return fmt.Errorf("external stream not found: %s", streamURL)
+	}
+
+	// Delete MediaMTX path
+	if err := c.DeletePath(ctx, stream.Name); err != nil {
+		return fmt.Errorf("failed to delete MediaMTX path for external stream: %w", err)
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"stream_url":  streamURL,
+		"stream_name": stream.Name,
+	}).Info("External stream removed successfully")
+
+	return nil
+}
+
+// GetExternalStreams returns all discovered external streams
+func (c *controller) GetExternalStreams(ctx context.Context) ([]*ExternalStream, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	if c.externalDiscovery == nil {
+		return nil, fmt.Errorf("external discovery not initialized")
+	}
+
+	streams := c.externalDiscovery.GetDiscoveredStreams()
+	result := make([]*ExternalStream, 0, len(streams))
+	for _, stream := range streams {
+		result = append(result, stream)
+	}
+
+	return result, nil
 }
 
 // StartRecording starts a recording session

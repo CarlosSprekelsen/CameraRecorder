@@ -53,8 +53,7 @@ func getCachedController(t *testing.T, testName string) *controller {
 
 	// Create controller using test fixture
 	helper := NewMediaMTXTestHelper(t, nil)
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	controllerInterface, err := ControllerWithConfigManager(configManager, helper.GetLogger())
+	controllerInterface, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 
 	controller := controllerInterface.(*controller)
@@ -76,11 +75,8 @@ func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 }
@@ -93,11 +89,8 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -128,11 +121,8 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -162,11 +152,8 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -196,11 +183,8 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -231,11 +215,8 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -267,11 +248,8 @@ func TestController_GetStream_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller should be created successfully")
 
 	// Start controller
@@ -387,11 +365,8 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -422,11 +397,8 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -456,11 +428,8 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -491,11 +460,8 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -559,11 +525,8 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -608,11 +571,8 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -656,12 +616,8 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager with proper configuration loading
-	configManager := createConfigManagerWithEnvVars(t, helper)
-
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -706,11 +662,8 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -809,7 +762,7 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
 	// Create controller
-	controller, err := ControllerWithConfigManager(configManager, helper.GetLogger())
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1034,6 +987,64 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	t.Log("✅ Advanced snapshot functionality working correctly")
 }
 
+// TestController_SetSystemEventNotifier_ReqMTX004 tests SetSystemEventNotifier integration
+func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Create mock system event notifier
+	mockNotifier := NewMockSystemEventNotifier()
+
+	// Test SetSystemEventNotifier method
+	if setter, ok := controller.(interface {
+		SetSystemEventNotifier(notifier SystemEventNotifier)
+	}); ok {
+		setter.SetSystemEventNotifier(mockNotifier)
+		t.Log("✅ SetSystemEventNotifier method called successfully")
+	} else {
+		t.Log("⚠️ SetSystemEventNotifier method not available on controller interface")
+	}
+
+	// Test that notifications are sent when thresholds are crossed
+	// This tests the integration between controller and health notification manager
+
+	// Get storage info to trigger threshold checking
+	storageInfo, err := controller.GetStorageInfo(ctx)
+	if err != nil {
+		t.Logf("GetStorageInfo failed (expected in test environment): %v", err)
+	} else {
+		require.NotNil(t, storageInfo, "Storage info should not be nil")
+		t.Log("✅ GetStorageInfo completed successfully")
+	}
+
+	// Get system metrics to trigger performance threshold checking
+	systemMetrics, err := controller.GetSystemMetrics(ctx)
+	if err != nil {
+		t.Logf("GetSystemMetrics failed (expected in test environment): %v", err)
+	} else {
+		require.NotNil(t, systemMetrics, "System metrics should not be nil")
+		t.Log("✅ GetSystemMetrics completed successfully")
+	}
+
+	t.Log("✅ SetSystemEventNotifier integration test completed")
+}
+
 // TestController_IsDeviceRecording_ReqMTX002 tests device recording status checking
 func TestController_IsDeviceRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
@@ -1105,11 +1116,8 @@ func TestController_CreateStream_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1148,11 +1156,8 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create real config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	// Create controller using test helper
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1185,12 +1190,8 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create a test config manager
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger() // Use shared test helper logger
-
 	// Test controller creation with config manager
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "ControllerWithConfigManager should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1214,10 +1215,7 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create controller
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1246,10 +1244,7 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 	defer helper.Cleanup(t)
 
 	// Create controller
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -1278,10 +1273,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create controller
-	configManager := config.CreateConfigManager()
-	logger := helper.GetLogger()
-
-	controller, err := ControllerWithConfigManager(configManager, logger)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 

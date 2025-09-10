@@ -1,2 +1,0 @@
-export CAMERA_SERVICE_JWT_SECRET=Scaq-2DW2rPXmAgs_-wfBXRosQlh3lkF7qlUSkA6FOE
-export CAMERA_SERVICE_API_KEYS_PATH="/tmp/test_api_keys.json"

@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
@@ -65,6 +66,7 @@ type MediaMTXTestHelper struct {
 	streamManager         StreamManager
 	recordingManager      *RecordingManager
 	rtspConnectionManager RTSPConnectionManager
+	cameraMonitor         camera.CameraMonitor
 }
 
 // EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
@@ -329,6 +331,23 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	return h.recordingManager
 }
 
+// GetCameraMonitor returns a shared camera monitor instance
+func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
+	if h.cameraMonitor == nil {
+		h.cameraMonitor = NewTestCameraMonitor()
+	}
+	return h.cameraMonitor
+}
+
+// GetController creates a MediaMTX controller with proper dependencies
+func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, error) {
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	cameraMonitor := h.GetCameraMonitor()
+	logger := h.GetLogger()
+
+	return ControllerWithConfigManager(configManager, cameraMonitor, logger)
+}
+
 // GetRTSPConnectionManager returns a shared RTSP connection manager instance
 func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 	if h.rtspConnectionManager == nil {
@@ -525,7 +544,7 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 			Page:         -1,
 			ItemsPerPage: 10,
 			ExpectError:  true, // Should be rejected with clear error message
-			ErrorMsg:     "invalid page number",
+			ErrorMsg:     "invalid page number: -1 (must be >= 0)",
 			Description:  "Negative page numbers should be rejected",
 		},
 		{
@@ -533,8 +552,8 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 			Page:         0,
 			ItemsPerPage: 0,
 			ExpectError:  true, // Should be rejected with clear error message
-			ErrorMsg:     "invalid page number",
-			Description:  "Zero page numbers should be rejected",
+			ErrorMsg:     "invalid items per page",
+			Description:  "Zero items per page should be rejected",
 		},
 		{
 			Name:         "negative_items_per_page",

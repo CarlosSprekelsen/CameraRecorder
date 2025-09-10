@@ -474,3 +474,531 @@ func TestWebSocketServer_PermissionAndRateLimit(t *testing.T) {
 	_ = server.checkRateLimit(nil) // Nil client - might expose bugs
 	// This should expose a nil pointer dereference bug
 }
+
+// TestWebSocketServer_JsonRpcProtocolCompliance tests JSON-RPC 2.0 protocol compliance
+func TestWebSocketServer_JsonRpcProtocolCompliance(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Test 1: Valid JSON-RPC 2.0 request
+	t.Run("ValidJsonRpcRequest", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		// Validate JSON-RPC 2.0 response structure
+		assert.Equal(t, "2.0", response.JSONRPC, "JSON-RPC version should be 2.0")
+		assert.Equal(t, message.ID, response.ID, "Response ID should match request ID")
+		assert.Nil(t, response.Error, "Valid request should not have error")
+		assert.NotNil(t, response.Result, "Valid request should have result")
+	})
+
+	// Test 2: Invalid JSON-RPC version
+	t.Run("InvalidJsonRpcVersion", func(t *testing.T) {
+		invalidMessage := &JsonRpcRequest{
+			JSONRPC: "1.0", // Invalid version
+			Method:  "ping",
+			ID:      "test-invalid-version",
+		}
+
+		err := conn.WriteJSON(invalidMessage)
+		require.NoError(t, err, "Failed to send invalid version message")
+
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		require.NoError(t, err, "Failed to read response")
+
+		assert.NotNil(t, response.Error, "Invalid version should return error")
+		assert.Equal(t, -32600, response.Error.Code, "Should return invalid request error")
+	})
+
+	// Test 3: Missing JSON-RPC version
+	t.Run("MissingJsonRpcVersion", func(t *testing.T) {
+		invalidMessage := map[string]interface{}{
+			"method": "ping",
+			"id":     "test-missing-version",
+		}
+
+		err := conn.WriteJSON(invalidMessage)
+		require.NoError(t, err, "Failed to send missing version message")
+
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		require.NoError(t, err, "Failed to read response")
+
+		assert.NotNil(t, response.Error, "Missing version should return error")
+		assert.Equal(t, -32600, response.Error.Code, "Should return invalid request error")
+	})
+
+	// Test 4: Request ID handling (string vs number)
+	t.Run("RequestIdHandling", func(t *testing.T) {
+		// Test string ID
+		stringMessage := &JsonRpcRequest{
+			JSONRPC: "2.0",
+			Method:  "ping",
+			ID:      "string-id",
+		}
+
+		err := conn.WriteJSON(stringMessage)
+		require.NoError(t, err, "Failed to send string ID message")
+
+		var stringResponse JsonRpcResponse
+		err = conn.ReadJSON(&stringResponse)
+		require.NoError(t, err, "Failed to read string ID response")
+
+		assert.Equal(t, "string-id", stringResponse.ID, "String ID should be preserved")
+
+		// Test numeric ID
+		numericMessage := &JsonRpcRequest{
+			JSONRPC: "2.0",
+			Method:  "ping",
+			ID:      12345,
+		}
+
+		err = conn.WriteJSON(numericMessage)
+		require.NoError(t, err, "Failed to send numeric ID message")
+
+		var numericResponse JsonRpcResponse
+		err = conn.ReadJSON(&numericResponse)
+		require.NoError(t, err, "Failed to read numeric ID response")
+
+		assert.Equal(t, 12345, numericResponse.ID, "Numeric ID should be preserved")
+	})
+
+	// Test 5: Null request ID (notification)
+	t.Run("NullRequestId", func(t *testing.T) {
+		notification := &JsonRpcNotification{
+			JSONRPC: "2.0",
+			Method:  "ping",
+			Params:  nil,
+		}
+
+		err := conn.WriteJSON(notification)
+		require.NoError(t, err, "Failed to send notification")
+
+		// Notifications should not receive responses
+		// Set a short timeout to verify no response
+		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		assert.Error(t, err, "Notifications should not receive responses")
+	})
+}
+
+// TestWebSocketServer_ErrorCodeCompliance tests JSON-RPC error code compliance
+func TestWebSocketServer_ErrorCodeCompliance(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-002: JSON-RPC 2.0 protocol implementation
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Test 1: Method not found (-32601)
+	t.Run("MethodNotFound", func(t *testing.T) {
+		message := CreateTestMessage("nonexistent_method", nil)
+		response := SendTestMessage(t, conn, message)
+
+		assert.NotNil(t, response.Error, "Non-existent method should return error")
+		assert.Equal(t, -32601, response.Error.Code, "Should return method not found error")
+		assert.Contains(t, response.Error.Message, "not found", "Error message should indicate method not found")
+	})
+
+	// Test 2: Invalid parameters (-32602)
+	t.Run("InvalidParameters", func(t *testing.T) {
+		// Send ping with invalid parameters (ping takes no parameters)
+		message := CreateTestMessage("ping", map[string]interface{}{
+			"invalid_param": "should_not_be_here",
+		})
+		response := SendTestMessage(t, conn, message)
+
+		// Note: This test might pass if ping method ignores parameters
+		// The important thing is that the response is valid JSON-RPC
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should be valid JSON-RPC 2.0")
+	})
+
+	// Test 3: Invalid request (-32600)
+	t.Run("InvalidRequest", func(t *testing.T) {
+		// Send malformed JSON
+		malformedJSON := `{"jsonrpc": "2.0", "method": "ping", "id": 1, "extra": "invalid"}`
+		err := conn.WriteMessage(websocket.TextMessage, []byte(malformedJSON))
+		require.NoError(t, err, "Failed to send malformed JSON")
+
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		require.NoError(t, err, "Failed to read response")
+
+		// Should still be valid JSON-RPC response
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should be valid JSON-RPC 2.0")
+	})
+
+	// Test 4: Internal error (-32603)
+	t.Run("InternalError", func(t *testing.T) {
+		// This would require a method that can trigger internal errors
+		// For now, we'll test that error responses follow the correct format
+		message := CreateTestMessage("nonexistent_method", nil)
+		response := SendTestMessage(t, conn, message)
+
+		if response.Error != nil {
+			assert.True(t, response.Error.Code <= -32000, "Error code should be in valid range")
+			assert.NotEmpty(t, response.Error.Message, "Error message should not be empty")
+		}
+	})
+}
+
+// TestWebSocketServer_AuthenticationFlow tests JWT token validation and authentication flow
+func TestWebSocketServer_AuthenticationFlow(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	// Test 1: Valid authentication
+	t.Run("ValidAuthentication", func(t *testing.T) {
+		AuthenticateTestClient(t, conn, "test-user", "viewer")
+
+		// After authentication, ping should work
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		assert.Nil(t, response.Error, "Authenticated request should succeed")
+		assert.Equal(t, "pong", response.Result, "Ping should return pong")
+	})
+
+	// Test 2: Invalid token
+	t.Run("InvalidToken", func(t *testing.T) {
+		// Create new connection for this test
+		conn2 := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn2)
+
+		authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+			"auth_token": "invalid-token",
+		})
+		authResponse := SendTestMessage(t, conn2, authMessage)
+
+		assert.NotNil(t, authResponse.Error, "Invalid token should return error")
+		assert.Equal(t, -32001, authResponse.Error.Code, "Should return authentication failed error")
+	})
+
+	// Test 3: Missing token
+	t.Run("MissingToken", func(t *testing.T) {
+		// Create new connection for this test
+		conn3 := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn3)
+
+		// Try to call method without authentication
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn3, message)
+
+		assert.NotNil(t, response.Error, "Unauthenticated request should return error")
+		assert.Equal(t, -32001, response.Error.Code, "Should return authentication required error")
+	})
+
+	// Test 4: Expired token (simulated)
+	t.Run("ExpiredToken", func(t *testing.T) {
+		// Create new connection for this test
+		conn4 := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn4)
+
+		// Create expired token (this would need proper JWT creation with past expiry)
+		// For now, we'll test with a malformed token
+		authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+			"auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+		})
+		authResponse := SendTestMessage(t, conn4, authMessage)
+
+		assert.NotNil(t, authResponse.Error, "Expired/malformed token should return error")
+	})
+}
+
+// TestWebSocketServer_RoleBasedAccessControl tests RBAC enforcement
+func TestWebSocketServer_RoleBasedAccessControl(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	// Test 1: Viewer role permissions
+	t.Run("ViewerRolePermissions", func(t *testing.T) {
+		conn := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn)
+
+		AuthenticateTestClient(t, conn, "viewer-user", "viewer")
+
+		// Viewer should be able to call read-only methods
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+		assert.Nil(t, response.Error, "Viewer should be able to ping")
+
+		// Viewer should NOT be able to call control methods
+		controlMessage := CreateTestMessage("take_snapshot", map[string]interface{}{
+			"device": "camera0",
+		})
+		controlResponse := SendTestMessage(t, conn, controlMessage)
+		assert.NotNil(t, controlResponse.Error, "Viewer should not be able to take snapshots")
+		assert.Equal(t, -32003, controlResponse.Error.Code, "Should return insufficient permissions error")
+	})
+
+	// Test 2: Operator role permissions
+	t.Run("OperatorRolePermissions", func(t *testing.T) {
+		conn := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn)
+
+		AuthenticateTestClient(t, conn, "operator-user", "operator")
+
+		// Operator should be able to call control methods
+		controlMessage := CreateTestMessage("take_snapshot", map[string]interface{}{
+			"device": "camera0",
+		})
+		controlResponse := SendTestMessage(t, conn, controlMessage)
+		// Note: This might fail due to camera not existing, but should not fail due to permissions
+		if controlResponse.Error != nil {
+			assert.NotEqual(t, -32003, controlResponse.Error.Code, "Should not fail due to insufficient permissions")
+		}
+
+		// Operator should NOT be able to call admin methods
+		adminMessage := CreateTestMessage("get_metrics", nil)
+		adminResponse := SendTestMessage(t, conn, adminMessage)
+		assert.NotNil(t, adminResponse.Error, "Operator should not be able to get metrics")
+		assert.Equal(t, -32003, adminResponse.Error.Code, "Should return insufficient permissions error")
+	})
+
+	// Test 3: Admin role permissions
+	t.Run("AdminRolePermissions", func(t *testing.T) {
+		conn := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn)
+
+		AuthenticateTestClient(t, conn, "admin-user", "admin")
+
+		// Admin should be able to call all methods
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+		assert.Nil(t, response.Error, "Admin should be able to ping")
+
+		adminMessage := CreateTestMessage("get_metrics", nil)
+		adminResponse := SendTestMessage(t, conn, adminMessage)
+		// Note: This might fail due to implementation, but should not fail due to permissions
+		if adminResponse.Error != nil {
+			assert.NotEqual(t, -32003, adminResponse.Error.Code, "Should not fail due to insufficient permissions")
+		}
+	})
+
+	// Test 4: Invalid role
+	t.Run("InvalidRole", func(t *testing.T) {
+		conn := NewTestClient(t, server)
+		defer CleanupTestClient(t, conn)
+
+		// Try to authenticate with invalid role
+		authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+			"auth_token": "invalid-role-token", // This would need proper JWT with invalid role
+		})
+		authResponse := SendTestMessage(t, conn, authMessage)
+
+		assert.NotNil(t, authResponse.Error, "Invalid role should return error")
+	})
+}
+
+// TestWebSocketServer_ResponseMetadata tests response metadata inclusion
+func TestWebSocketServer_ResponseMetadata(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	AuthenticateTestClient(t, conn, "test-user", "viewer")
+
+	// Test 1: Response metadata presence
+	t.Run("ResponseMetadataPresence", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		// Check that metadata is present
+		assert.NotNil(t, response.Metadata, "Response should include metadata")
+
+		// Check required metadata fields
+		metadata := response.Metadata
+		assert.Contains(t, metadata, "processing_time_ms", "Should include processing time")
+		assert.Contains(t, metadata, "server_timestamp", "Should include server timestamp")
+		assert.Contains(t, metadata, "request_id", "Should include request ID")
+	})
+
+	// Test 2: Processing time validation
+	t.Run("ProcessingTimeValidation", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		metadata := response.Metadata
+		processingTime, exists := metadata["processing_time_ms"]
+		assert.True(t, exists, "Processing time should exist")
+
+		// Processing time should be a number and reasonable (< 1000ms for ping)
+		processingTimeFloat, ok := processingTime.(float64)
+		assert.True(t, ok, "Processing time should be a number")
+		assert.True(t, processingTimeFloat >= 0, "Processing time should be non-negative")
+		assert.True(t, processingTimeFloat < 1000, "Processing time should be reasonable for ping")
+	})
+
+	// Test 3: Server timestamp validation
+	t.Run("ServerTimestampValidation", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		metadata := response.Metadata
+		serverTimestamp, exists := metadata["server_timestamp"]
+		assert.True(t, exists, "Server timestamp should exist")
+
+		// Server timestamp should be a valid RFC3339 string
+		timestampStr, ok := serverTimestamp.(string)
+		assert.True(t, ok, "Server timestamp should be a string")
+
+		_, err := time.Parse(time.RFC3339, timestampStr)
+		assert.NoError(t, err, "Server timestamp should be valid RFC3339 format")
+
+		// Timestamp should be recent (within last minute)
+		timestamp, _ := time.Parse(time.RFC3339, timestampStr)
+		now := time.Now()
+		diff := now.Sub(timestamp)
+		assert.True(t, diff < time.Minute, "Server timestamp should be recent")
+	})
+
+	// Test 4: Request ID correlation
+	t.Run("RequestIdCorrelation", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		metadata := response.Metadata
+		requestID, exists := metadata["request_id"]
+		assert.True(t, exists, "Request ID should exist in metadata")
+
+		// Request ID in metadata should match response ID
+		assert.Equal(t, response.ID, requestID, "Request ID in metadata should match response ID")
+	})
+
+	// Test 5: Error response metadata
+	t.Run("ErrorResponseMetadata", func(t *testing.T) {
+		// Send request to non-existent method to get error response
+		message := CreateTestMessage("nonexistent_method", nil)
+		response := SendTestMessage(t, conn, message)
+
+		// Error responses should also include metadata
+		assert.NotNil(t, response.Metadata, "Error response should include metadata")
+
+		metadata := response.Metadata
+		assert.Contains(t, metadata, "processing_time_ms", "Error response should include processing time")
+		assert.Contains(t, metadata, "server_timestamp", "Error response should include server timestamp")
+		assert.Contains(t, metadata, "request_id", "Error response should include request ID")
+	})
+}
+
+// TestWebSocketServer_MessageSizeLimits tests message size limit handling
+func TestWebSocketServer_MessageSizeLimits(t *testing.T) {
+	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
+	// REQ-API-003: Request/response message handling
+
+	server := NewTestWebSocketServer(t)
+	StartTestServerWithDependencies(t, server)
+	defer CleanupTestServer(t, server)
+
+	conn := NewTestClient(t, server)
+	defer CleanupTestClient(t, conn)
+
+	AuthenticateTestClient(t, conn, "test-user", "viewer")
+
+	// Test 1: Normal size message
+	t.Run("NormalSizeMessage", func(t *testing.T) {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		assert.Nil(t, response.Error, "Normal size message should succeed")
+	})
+
+	// Test 2: Large parameter message
+	t.Run("LargeParameterMessage", func(t *testing.T) {
+		// Create a large parameter (1MB of data)
+		largeData := strings.Repeat("A", 1024*1024) // 1MB
+		message := CreateTestMessage("ping", map[string]interface{}{
+			"large_data": largeData,
+		})
+
+		response := SendTestMessage(t, conn, message)
+
+		// Should either succeed (if ping ignores parameters) or fail gracefully
+		// The important thing is that it doesn't crash the server
+		assert.NotNil(t, response, "Should receive a response")
+	})
+
+	// Test 3: Very large message (exceeds typical limits)
+	t.Run("VeryLargeMessage", func(t *testing.T) {
+		// Create a very large message (10MB)
+		veryLargeData := strings.Repeat("B", 10*1024*1024) // 10MB
+		message := CreateTestMessage("ping", map[string]interface{}{
+			"very_large_data": veryLargeData,
+		})
+
+		// This might fail due to message size limits, which is expected
+		err := conn.WriteJSON(message)
+		if err != nil {
+			// If write fails due to size, that's acceptable
+			t.Logf("Large message write failed (expected): %v", err)
+			return
+		}
+
+		// If write succeeds, we should get some response
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		if err != nil {
+			// If read fails due to size limits, that's also acceptable
+			t.Logf("Large message read failed (expected): %v", err)
+			return
+		}
+
+		// If we get a response, it should be valid JSON-RPC
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should be valid JSON-RPC 2.0")
+	})
+
+	// Test 4: Malformed large message
+	t.Run("MalformedLargeMessage", func(t *testing.T) {
+		// Send malformed JSON that's also large
+		largeMalformedJSON := `{"jsonrpc": "2.0", "method": "ping", "id": 1, "data": "` + strings.Repeat("X", 1024*1024) + `"}`
+
+		err := conn.WriteMessage(websocket.TextMessage, []byte(largeMalformedJSON))
+		if err != nil {
+			// If write fails due to size, that's acceptable
+			t.Logf("Large malformed message write failed (expected): %v", err)
+			return
+		}
+
+		// Should get some response or connection should handle it gracefully
+		var response JsonRpcResponse
+		err = conn.ReadJSON(&response)
+		if err != nil {
+			// If read fails, that's acceptable for malformed large messages
+			t.Logf("Large malformed message read failed (expected): %v", err)
+			return
+		}
+
+		// If we get a response, it should be valid JSON-RPC
+		assert.Equal(t, "2.0", response.JSONRPC, "Response should be valid JSON-RPC 2.0")
+	})
+}

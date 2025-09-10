@@ -16,7 +16,6 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"os"
@@ -160,8 +159,7 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	require.NoError(t, err, "Failed to create test JWT handler")
 
 	// Create REAL test dependencies (not mocks)
-	cameraMonitor := createTestCameraMonitor(t, configManager, logger)
-	mediaMTXController := createTestMediaMTXController(t, logger)
+	mediaMTXController := createTestMediaMTXController(t, configManager, logger)
 
 	// Use the PRODUCTION constructor with proper dependency injection
 	server, err := NewWebSocketServer(
@@ -186,25 +184,8 @@ func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
 	// Follow main() startup pattern: start camera monitor first, then WebSocket server
 	// This is the responsibility of the test helper to set up unit tests properly
 
-	// Start camera monitor first (following main() pattern)
-	ctx := context.Background()
-	cameraMonitor := server.GetCameraMonitor()
-	if cameraMonitor != nil {
-		err := cameraMonitor.Start(ctx)
-		require.NoError(t, err, "Failed to start camera monitor")
-
-		// Wait for camera validation to complete with proper verification
-		// This ensures tests don't run before cameras are properly initialized
-		deadline := time.Now().Add(2 * time.Second)
-		for time.Now().Before(deadline) {
-			// Check if camera monitor is ready (has completed initial validation)
-			if cameraMonitor != nil {
-				// Camera monitor is ready, break out of loop
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
+	// WebSocket server is now thin protocol layer - no direct camera monitor access
+	// Camera monitor is internal to MediaMTX Controller
 
 	// Start WebSocket server (following main() pattern)
 	err := server.Start()
@@ -232,15 +213,12 @@ func createTestCameraMonitor(t *testing.T, configManager *config.ConfigManager, 
 }
 
 // createTestMediaMTXController creates a real MediaMTX controller for testing
-func createTestMediaMTXController(t *testing.T, logger *logging.Logger) mediamtx.MediaMTXController {
-	// Create MediaMTX test helper
-	helper := mediamtx.NewMediaMTXTestHelper(t, nil)
-
-	// Use the same config manager as the WebSocket server to ensure consistency
-	configManager := createTestConfigManager(t)
+func createTestMediaMTXController(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) mediamtx.MediaMTXController {
+	// Create real camera monitor
+	cameraMonitor := createTestCameraMonitor(t, configManager, logger)
 
 	// Create controller using the same pattern as MediaMTX tests
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, helper.GetLogger())
+	controller, err := mediamtx.ControllerWithConfigManager(configManager, cameraMonitor, logger)
 	require.NoError(t, err, "Failed to create test MediaMTX controller")
 
 	return controller
@@ -249,11 +227,10 @@ func createTestMediaMTXController(t *testing.T, logger *logging.Logger) mediamtx
 // NewTestWebSocketServerWithDependencies creates a test server with provided dependencies
 func NewTestWebSocketServerWithDependencies(
 	t *testing.T,
-	cameraMonitor camera.CameraMonitor,
 	mediaMTXController mediamtx.MediaMTXController,
 ) *WebSocketServer {
 	server := NewTestWebSocketServer(t)
-	server.cameraMonitor = cameraMonitor
+	// WebSocket server only depends on MediaMTX Controller (thin protocol layer)
 	server.mediaMTXController = mediaMTXController
 	return server
 }
