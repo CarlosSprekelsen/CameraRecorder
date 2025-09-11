@@ -58,6 +58,7 @@ type CameraMonitor interface {
 	Start(ctx context.Context) error
 	Stop() error
 	IsRunning() bool
+	IsReady() bool // indicates first discovery cycle completed
 	GetConnectedCameras() map[string]*CameraDevice
 	GetDevice(devicePath string) (*CameraDevice, bool)
 	GetMonitorStats() *MonitorStats

@@ -347,7 +347,7 @@ func TestNewSecureMethodRegistry(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -362,7 +362,7 @@ func TestSecureMethodRegistry_RegisterMethod(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -395,7 +395,7 @@ func TestSecureMethodRegistry_GetMethod(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -430,7 +430,7 @@ func TestSecureMethodRegistry_GetAllMethods(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil
@@ -470,7 +470,7 @@ func TestSecureMethodRegistry_GetMethodSecurityInfo(t *testing.T) {
 	t.Parallel()
 
 	// Create test dependencies
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	authMiddleware := &AuthMiddleware{logger: logger}
 	rbacMiddleware := &RBACMiddleware{logger: logger}
 	var securityConfig SecurityConfig = nil

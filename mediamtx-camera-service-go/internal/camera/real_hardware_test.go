@@ -788,7 +788,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("configuration_update_handling", func(t *testing.T) {
 		// Test configuration update handling (0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		// Create monitor
 		monitor, err := NewHybridCameraMonitor(
@@ -825,7 +825,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("file_camera_device_creation", func(t *testing.T) {
 		// Test file camera device creation (0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -880,7 +880,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("generic_camera_device_creation", func(t *testing.T) {
 		// Test generic camera device creation (0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -916,7 +916,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("default_formats_handling", func(t *testing.T) {
 		// Test default format handling (0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1020,7 +1020,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("device_state_change_processing", func(t *testing.T) {
 		// Test device state change processing (44.4% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1054,7 +1054,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("camera_event_generation", func(t *testing.T) {
 		// Test camera event generation (50.0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1103,7 +1103,7 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 	t.Run("polling_interval_adjustment", func(t *testing.T) {
 		// Test polling interval adjustment (50.0% coverage)
 		configManager := config.CreateConfigManager()
-		logger := logging.GetLogger()
+		logger := logging.CreateTestLogger(t, nil)
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,

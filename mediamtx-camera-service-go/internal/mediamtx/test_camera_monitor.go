@@ -30,15 +30,15 @@ import (
 // without requiring real camera hardware.
 type TestCameraMonitor struct {
 	// State management
-	mu              sync.RWMutex
-	isRunning       bool
+	mu               sync.RWMutex
+	isRunning        bool
 	connectedCameras map[string]*camera.CameraDevice
-	
+
 	// Event handling
 	eventHandlers  []camera.CameraEventHandler
 	eventCallbacks []func(camera.CameraEventData)
 	eventNotifier  camera.EventNotifier
-	
+
 	// Statistics
 	stats *camera.MonitorStats
 }
@@ -72,17 +72,17 @@ func NewTestCameraMonitor() *TestCameraMonitor {
 func (m *TestCameraMonitor) Start(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.isRunning {
 		return nil // Already running
 	}
-	
+
 	m.isRunning = true
 	m.stats.Running = true
-	
+
 	// Simulate camera discovery for testing
 	m.simulateCameraDiscovery()
-	
+
 	return nil
 }
 
@@ -90,14 +90,14 @@ func (m *TestCameraMonitor) Start(ctx context.Context) error {
 func (m *TestCameraMonitor) Stop() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if !m.isRunning {
 		return nil // Already stopped
 	}
-	
+
 	m.isRunning = false
 	m.stats.Running = false
-	
+
 	return nil
 }
 
@@ -108,11 +108,19 @@ func (m *TestCameraMonitor) IsRunning() bool {
 	return m.isRunning
 }
 
+// IsReady returns true if the monitor has completed its first discovery cycle
+func (m *TestCameraMonitor) IsReady() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	// For test monitor, we consider it ready if it's running and has discovered cameras
+	return m.isRunning && len(m.connectedCameras) > 0
+}
+
 // GetConnectedCameras returns a map of connected cameras
 func (m *TestCameraMonitor) GetConnectedCameras() map[string]*camera.CameraDevice {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy to prevent external modification
 	result := make(map[string]*camera.CameraDevice)
 	for k, v := range m.connectedCameras {
@@ -125,7 +133,7 @@ func (m *TestCameraMonitor) GetConnectedCameras() map[string]*camera.CameraDevic
 func (m *TestCameraMonitor) GetDevice(devicePath string) (*camera.CameraDevice, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	device, exists := m.connectedCameras[devicePath]
 	return device, exists
 }
@@ -134,7 +142,7 @@ func (m *TestCameraMonitor) GetDevice(devicePath string) (*camera.CameraDevice, 
 func (m *TestCameraMonitor) GetMonitorStats() *camera.MonitorStats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy to prevent external modification
 	stats := *m.stats
 	return &stats
@@ -144,7 +152,7 @@ func (m *TestCameraMonitor) GetMonitorStats() *camera.MonitorStats {
 func (m *TestCameraMonitor) AddEventHandler(handler camera.CameraEventHandler) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.eventHandlers = append(m.eventHandlers, handler)
 }
 
@@ -152,7 +160,7 @@ func (m *TestCameraMonitor) AddEventHandler(handler camera.CameraEventHandler) {
 func (m *TestCameraMonitor) AddEventCallback(callback func(camera.CameraEventData)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.eventCallbacks = append(m.eventCallbacks, callback)
 }
 
@@ -160,7 +168,7 @@ func (m *TestCameraMonitor) AddEventCallback(callback func(camera.CameraEventDat
 func (m *TestCameraMonitor) SetEventNotifier(notifier camera.EventNotifier) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.eventNotifier = notifier
 }
 
@@ -197,12 +205,12 @@ func (m *TestCameraMonitor) simulateCameraDiscovery() {
 			LastSeen: time.Now(),
 		},
 	}
-	
+
 	// Add test cameras to connected cameras
 	for path, device := range testCameras {
 		m.connectedCameras[path] = device
 	}
-	
+
 	// Update statistics
 	m.stats.KnownDevicesCount = int64(len(m.connectedCameras))
 	m.stats.DeviceStateChanges += int64(len(testCameras))
@@ -212,7 +220,7 @@ func (m *TestCameraMonitor) simulateCameraDiscovery() {
 func (m *TestCameraMonitor) AddTestCamera(devicePath string, device *camera.CameraDevice) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.connectedCameras[devicePath] = device
 	m.stats.KnownDevicesCount = int64(len(m.connectedCameras))
 	m.stats.DeviceStateChanges++
@@ -222,7 +230,7 @@ func (m *TestCameraMonitor) AddTestCamera(devicePath string, device *camera.Came
 func (m *TestCameraMonitor) RemoveTestCamera(devicePath string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	delete(m.connectedCameras, devicePath)
 	m.stats.KnownDevicesCount = int64(len(m.connectedCameras))
 	m.stats.DeviceStateChanges++
@@ -232,7 +240,7 @@ func (m *TestCameraMonitor) RemoveTestCamera(devicePath string) {
 func (m *TestCameraMonitor) ClearTestCameras() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.connectedCameras = make(map[string]*camera.CameraDevice)
 	m.stats.KnownDevicesCount = 0
 }

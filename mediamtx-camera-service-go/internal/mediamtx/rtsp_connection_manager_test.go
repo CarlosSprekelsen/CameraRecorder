@@ -182,7 +182,7 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
@@ -216,7 +216,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
 	// Create RTSP connection manager
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
@@ -242,7 +242,7 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
@@ -290,7 +290,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	mediaMTXConfig.RTSPMonitoring.MaxConnections = 25
 	mediaMTXConfig.RTSPMonitoring.BandwidthThreshold = 2000000
 
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
@@ -322,7 +322,7 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
@@ -356,7 +356,7 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)

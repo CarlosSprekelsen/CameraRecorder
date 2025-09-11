@@ -346,6 +346,11 @@ func (m *HybridCameraMonitor) IsRunning() bool {
 	return atomic.LoadInt32(&m.running) == 1
 }
 
+// IsReady returns whether the monitor has completed at least one discovery cycle
+func (m *HybridCameraMonitor) IsReady() bool {
+	return atomic.LoadInt64(&m.stats.PollingCycles) > 0
+}
+
 // GetConnectedCameras returns all currently connected cameras
 func (m *HybridCameraMonitor) GetConnectedCameras() map[string]*CameraDevice {
 	m.stateLock.RLock()

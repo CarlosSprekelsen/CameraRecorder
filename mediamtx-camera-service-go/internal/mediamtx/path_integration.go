@@ -39,6 +39,11 @@ type PathIntegration struct {
 	// Camera-path mapping
 	cameraPaths   map[string]string // device -> path name
 	cameraPathsMu sync.RWMutex
+
+	// Goroutine management
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // NewPathIntegration creates a new path integration
@@ -57,10 +62,20 @@ func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMoni
 func (pi *PathIntegration) Start(ctx context.Context) error {
 	pi.logger.Info("Starting MediaMTX path integration")
 
-	// Start monitoring camera changes
-	go pi.monitorCameraChanges(ctx)
+	// Create cancellable context for background goroutine
+	pi.ctx, pi.cancel = context.WithCancel(ctx)
 
-	// Create paths for existing cameras
+	// Start monitoring camera changes with proper goroutine management
+	pi.wg.Add(1)
+	go pi.monitorCameraChanges(pi.ctx)
+
+	// Wait for camera monitor to complete initial discovery
+	if err := pi.waitForCameraMonitorReady(ctx); err != nil {
+		pi.logger.WithError(err).Warn("Camera monitor not ready, will retry in background")
+		// Don't fail startup, just log warning
+	}
+
+	// Create paths for existing cameras (now that discovery is complete)
 	if err := pi.createPathsForExistingCameras(ctx); err != nil {
 		pi.logger.WithError(err).Error("Failed to create paths for existing cameras")
 	}
@@ -69,9 +84,41 @@ func (pi *PathIntegration) Start(ctx context.Context) error {
 	return nil
 }
 
+// waitForCameraMonitorReady waits for the camera monitor to complete initial discovery
+func (pi *PathIntegration) waitForCameraMonitorReady(ctx context.Context) error {
+	const maxWaitTime = 2 * time.Second // Reasonable timeout
+	const checkInterval = 50 * time.Millisecond // Check every 50ms
+	
+	timeout := time.After(maxWaitTime)
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for camera monitor to be ready")
+		case <-ticker.C:
+			if pi.cameraMonitor.IsReady() {
+				pi.logger.Info("Camera monitor is ready, proceeding with path creation")
+				return nil
+			}
+		}
+	}
+}
+
 // Stop stops the path integration
 func (pi *PathIntegration) Stop(ctx context.Context) error {
 	pi.logger.Info("Stopping MediaMTX path integration")
+
+	// Cancel the background goroutine context
+	if pi.cancel != nil {
+		pi.cancel()
+	}
+
+	// Wait for background goroutine to finish
+	pi.wg.Wait()
 
 	// Clean up all active paths
 	pi.activePathsMu.Lock()
@@ -219,6 +266,8 @@ func (pi *PathIntegration) ListActivePaths() []*Path {
 
 // monitorCameraChanges monitors camera changes and updates paths accordingly
 func (pi *PathIntegration) monitorCameraChanges(ctx context.Context) {
+	defer pi.wg.Done() // Ensure WaitGroup is decremented when goroutine exits
+
 	// Use configurable ticker interval (default 5 seconds)
 	tickerInterval := 5 * time.Second // Default fallback
 	if pi.configManager != nil {

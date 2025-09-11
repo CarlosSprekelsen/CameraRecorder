@@ -1184,8 +1184,8 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 			return nil, fmt.Errorf("camera '%s' not found or not accessible", devicePath)
 		}
 
-		// Start recording using MediaMTX controller - pass camera ID
-		session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, "", options)
+		// Start recording using MediaMTX controller with default path
+		session, err := s.mediaMTXController.StartRecordingWithDefaultPath(context.Background(), devicePath, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start recording: %v", err)
 		}

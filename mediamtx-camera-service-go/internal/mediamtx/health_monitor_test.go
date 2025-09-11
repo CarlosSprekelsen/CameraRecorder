@@ -39,7 +39,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -63,7 +63,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -102,7 +102,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -147,7 +147,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -193,7 +193,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 3,
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -227,7 +227,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 		HealthFailureThreshold: 2, // Lower threshold for testing
 		HealthCheckTimeout:     5 * time.Second,
 	}
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	logger.SetLevel(logrus.ErrorLevel)
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -285,7 +285,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 
 	for i, config := range configs {
 		t.Run(fmt.Sprintf("config_%d", i), func(t *testing.T) {
-			logger := logging.GetLogger()
+			logger := logging.CreateTestLogger(t, nil)
 			logger.SetLevel(logrus.ErrorLevel)
 
 			healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
@@ -366,6 +366,7 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	client := helper.GetClient()
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
+		HealthCheckInterval:    5,
 		HealthCheckTimeout:     5 * time.Second,
 		HealthFailureThreshold: 3,
 	}
@@ -426,6 +427,7 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	client := helper.GetClient()
 	config := &MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
+		HealthCheckInterval:    5,
 		HealthCheckTimeout:     5 * time.Second,
 		HealthFailureThreshold: 3,
 	}

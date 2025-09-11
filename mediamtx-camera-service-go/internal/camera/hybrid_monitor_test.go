@@ -44,7 +44,7 @@ func TestHybridCameraMonitor_Basic(t *testing.T) {
 func TestHybridCameraMonitor_StartStop(t *testing.T) {
 	// Create test config and logger directly
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -90,7 +90,7 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 func TestHybridCameraMonitor_DeviceDiscovery(t *testing.T) {
 	// Create test config and logger directly
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -178,7 +178,7 @@ func TestHybridCameraMonitor_Performance(t *testing.T) {
 func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
 	// Create test config and logger directly
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -249,7 +249,7 @@ func TestHybridCameraMonitor_UtilityFunctions(t *testing.T) {
 func TestHybridCameraMonitor_Integration(t *testing.T) {
 	// Create test config and logger directly for MediaMTX integration
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -284,7 +284,7 @@ func TestHybridCameraMonitor_Integration(t *testing.T) {
 func TestHybridCameraMonitor_StateManagement(t *testing.T) {
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -321,7 +321,7 @@ func TestHybridCameraMonitor_StateManagement(t *testing.T) {
 func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -388,7 +388,7 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 	// Create test monitor with real dependencies
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	deviceChecker := &RealDeviceChecker{}
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
@@ -514,7 +514,7 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 func TestHybridCameraMonitor_ProbeDeviceCapabilities(t *testing.T) {
 	// Create test monitor with real dependencies
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	deviceChecker := &RealDeviceChecker{}
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
@@ -645,7 +645,7 @@ func TestHybridCameraMonitor_ProbeDeviceCapabilities(t *testing.T) {
 func TestHybridCameraMonitor_ProcessDeviceStateChanges(t *testing.T) {
 	// Create test monitor with real dependencies
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 	deviceChecker := &RealDeviceChecker{}
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
@@ -800,7 +800,7 @@ func (n *testEventNotifier) NotifyCapabilityError(devicePath string, error strin
 func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -955,7 +955,7 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
-	logger := logging.GetLogger()
+	logger := logging.CreateTestLogger(t, nil)
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}

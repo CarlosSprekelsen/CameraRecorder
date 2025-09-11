@@ -331,10 +331,28 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	return h.recordingManager
 }
 
-// GetCameraMonitor returns a shared camera monitor instance
+// GetCameraMonitor returns a shared camera monitor instance using REAL hardware
 func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	if h.cameraMonitor == nil {
-		h.cameraMonitor = NewTestCameraMonitor()
+		// Create real camera monitor with real hardware (per test guidelines)
+		configManager := config.CreateConfigManager()
+		logger := logging.GetLogger("test-camera-monitor")
+
+		// Use real implementations for camera hardware
+		deviceChecker := &camera.RealDeviceChecker{}
+		commandExecutor := &camera.RealV4L2CommandExecutor{}
+		infoParser := &camera.RealDeviceInfoParser{}
+
+		// Create real camera monitor
+		realMonitor, err := camera.NewHybridCameraMonitor(
+			configManager, logger, deviceChecker, commandExecutor, infoParser)
+		if err != nil {
+			// Fallback to test monitor if real monitor creation fails
+			h.logger.WithError(err).Warn("Failed to create real camera monitor, using test monitor")
+			h.cameraMonitor = NewTestCameraMonitor()
+		} else {
+			h.cameraMonitor = realMonitor
+		}
 	}
 	return h.cameraMonitor
 }

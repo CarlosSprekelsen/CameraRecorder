@@ -129,13 +129,13 @@ func (c *controller) validateDiscoveredDevice(device string) (bool, error) {
 		if devicePath == "" {
 			return false, fmt.Errorf("invalid camera identifier: %s", device)
 		}
-		
+
 		// Check if the device actually exists in the camera monitor
 		_, exists := c.cameraMonitor.GetDevice(devicePath)
 		if !exists {
 			return false, fmt.Errorf("camera device not found: %s (device path: %s)", device, devicePath)
 		}
-		
+
 		return true, nil
 	}
 
@@ -429,6 +429,15 @@ func (c *controller) Stop(ctx context.Context) error {
 	// Stop health monitor
 	if err := c.healthMonitor.Stop(ctx); err != nil {
 		c.logger.WithError(err).Error("Failed to stop health monitor")
+	}
+
+	// Stop external discovery
+	if c.externalDiscovery != nil {
+		if err := c.externalDiscovery.Stop(); err != nil {
+			c.logger.WithError(err).Error("Failed to stop external discovery")
+		} else {
+			c.logger.Info("External discovery stopped successfully")
+		}
 	}
 
 	// Close HTTP client

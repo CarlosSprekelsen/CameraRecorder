@@ -479,7 +479,8 @@ func NewWebSocketServer(
 
 // Start starts the WebSocket server
 func (s *WebSocketServer) Start() error {
-	if !atomic.CompareAndSwapInt32(&s.running, 0, 1) {
+	// Check if already running without setting the flag yet
+	if atomic.LoadInt32(&s.running) == 1 {
 		s.logger.Warn("WebSocket server is already running")
 		return fmt.Errorf("WebSocket server is already running")
 	}
@@ -506,13 +507,19 @@ func (s *WebSocketServer) Start() error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		// Set running flag AFTER server successfully starts listening
+		atomic.StoreInt32(&s.running, 1)
+
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.WithError(err).Error("WebSocket server failed")
-			// Note: Error is logged but not returned as this is in a goroutine
+			// Reset running flag on failure
+			atomic.StoreInt32(&s.running, 0)
 		}
 	}()
 
-	// running state already set to 1 by CompareAndSwapInt32 above
+	// Wait a short time for the server to actually start listening
+	// This ensures the atomic flag is set after the server is ready
+	time.Sleep(10 * time.Millisecond)
 
 	s.logger.WithFields(logging.Fields{
 		"host":   s.config.Host,

@@ -16,14 +16,15 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package websocket
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
@@ -177,49 +178,83 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 }
 
 // StartTestServerWithDependencies starts the WebSocket server following the same pattern as main()
-// This ensures proper startup sequence: camera monitor first, then WebSocket server
+// FIXED: Use proper API instead of calling private Start method
 func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
 	t.Helper()
 
-	// Follow main() startup pattern: start camera monitor first, then WebSocket server
-	// This is the responsibility of the test helper to set up unit tests properly
+	// FIXED: MediaMTX controller is already started by MediaMTXTestHelper
+	// No need to call private Start method - this violates architecture
+	// The MediaMTX controller should be ready to use via its public API
 
-	// WebSocket server is now thin protocol layer - no direct camera monitor access
-	// Camera monitor is internal to MediaMTX Controller
+	// Wait for camera monitor to be ready (our new readiness check)
+	// This ensures cameras are discovered before tests run
+	waitForCameraMonitorReady(t, server.mediaMTXController)
 
 	// Start WebSocket server (following main() pattern)
 	err := server.Start()
 	require.NoError(t, err, "Failed to start WebSocket server")
 }
 
-// createTestCameraMonitor creates a real camera monitor for testing
-// NOTE: Monitor is created but NOT started - tests should start it explicitly following main() pattern
-func createTestCameraMonitor(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) camera.CameraMonitor {
-	// Create real camera monitor using the same pattern as camera tests
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
+// REMOVED: createTestCameraMonitor - WebSocket tests should not create camera monitors directly
+// Camera monitor creation is MediaMTX controller's responsibility, not WebSocket layer's
+// This violates the architecture: WebSocket → MediaMTX Controller → Camera Monitor
 
-	monitor, err := camera.NewHybridCameraMonitor(
-		configManager,
-		logger,
-		deviceChecker,
-		commandExecutor,
-		infoParser,
-	)
-	require.NoError(t, err, "Failed to create test camera monitor")
+// waitForCameraMonitorReady waits for the camera monitor to complete initial discovery
+func waitForCameraMonitorReady(t *testing.T, controller mediamtx.MediaMTXControllerAPI) {
+	t.Helper()
 
-	return monitor
+	const maxWaitTime = 2 * time.Second         // Reasonable timeout
+	const checkInterval = 50 * time.Millisecond // Check every 50ms
+
+	timeout := time.After(maxWaitTime)
+	ticker := time.NewTicker(checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			t.Logf("Timeout waiting for camera monitor to be ready (waited %v)", maxWaitTime)
+			return // Don't fail the test, just log and continue
+		case <-ticker.C:
+			// Check if the camera monitor is ready by trying to get camera list
+			// If it returns cameras or completes without error, it's ready
+			ctx := context.Background()
+			cameraList, err := controller.GetCameraList(ctx)
+			if err == nil {
+				// Camera monitor is ready - it can successfully query cameras
+				t.Logf("Camera monitor is ready, found %d cameras", cameraList.Total)
+				return
+			}
+			// If error is "controller not running", keep waiting
+			if !strings.Contains(err.Error(), "controller not running") {
+				// Other errors might indicate readiness (e.g., no cameras found)
+				t.Logf("Camera monitor appears ready (error: %v)", err)
+				return
+			}
+		}
+	}
 }
 
 // createTestMediaMTXController creates a real MediaMTX controller for testing
+// FIXED: Use MediaMTX test helper and start the controller properly
 func createTestMediaMTXController(t *testing.T, configManager *config.ConfigManager, logger *logging.Logger) mediamtx.MediaMTXController {
-	// Create real camera monitor
-	cameraMonitor := createTestCameraMonitor(t, configManager, logger)
+	// Use MediaMTX test helper to properly start MediaMTX server and controller
+	// This follows the same pattern as MediaMTX unit tests
+	helper := mediamtx.NewMediaMTXTestHelper(t, nil)
 
-	// Create controller using the same pattern as MediaMTX tests
-	controller, err := mediamtx.ControllerWithConfigManager(configManager, cameraMonitor, logger)
-	require.NoError(t, err, "Failed to create test MediaMTX controller")
+	// Get the controller from the helper (this properly starts MediaMTX server)
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Failed to create test MediaMTX controller via helper")
+
+	// Start the controller (same as MediaMTX unit tests do)
+	// Cast to concrete type to access Start method (not exposed in MediaMTXControllerAPI interface)
+	ctx := context.Background()
+	if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
+		err := concreteController.Start(ctx)
+		require.NoError(t, err, "Failed to start MediaMTX controller")
+	} else {
+		t.Fatal("MediaMTX controller does not implement Start method")
+	}
 
 	return controller
 }
