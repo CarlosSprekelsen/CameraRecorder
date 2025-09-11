@@ -334,8 +334,9 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 // GetCameraMonitor returns a shared camera monitor instance using REAL hardware
 func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	if h.cameraMonitor == nil {
-		// Create real camera monitor with real hardware (per test guidelines)
-		configManager := config.CreateConfigManager()
+		// Create real camera monitor with SAME configuration as controller (test fixture)
+		// This ensures configuration consistency between camera monitor and controller
+		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
 		logger := logging.GetLogger("test-camera-monitor")
 
 		// Use real implementations for camera hardware

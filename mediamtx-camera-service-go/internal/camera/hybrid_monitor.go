@@ -177,8 +177,8 @@ func NewHybridCameraMonitor(
 		// Adaptive polling
 		basePollInterval:       cfg.Camera.PollInterval,
 		currentPollInterval:    cfg.Camera.PollInterval,
-		minPollInterval:        0.05, // 50ms minimum
-		maxPollInterval:        5.0,  // 5s maximum
+		minPollInterval:        0.1, // 100ms minimum (same as default)
+		maxPollInterval:        5.0, // 5s maximum
 		maxConsecutiveFailures: 5,
 
 		// Capability detection
@@ -339,7 +339,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 			m.stats.Running = false
 			atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 		}()
-		
+
 		// Run the monitoring loop
 		m.monitoringLoop(ctx)
 	}()

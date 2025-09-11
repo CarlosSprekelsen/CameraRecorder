@@ -76,6 +76,9 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 
 		// Monitor should be running immediately after Start() returns
 		assert.True(t, monitor.IsRunning(), "Monitor should be running after start")
+
+		// Allow monitoring loop to run for a short time to ensure it starts properly
+		time.Sleep(100 * time.Millisecond)
 	})
 
 	// Test stop functionality
@@ -97,23 +100,33 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 
 	// Test readiness state
 	t.Run("readiness_state", func(t *testing.T) {
+		// Create a fresh monitor for this test to ensure clean initial state
+		freshMonitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+		)
+		require.NoError(t, err, "Fresh monitor creation should succeed")
+
 		// Initially not ready (no discovery cycles completed)
-		require.False(t, monitor.IsReady(), "Monitor should not be ready initially")
+		require.False(t, freshMonitor.IsReady(), "Monitor should not be ready initially")
 
 		// Start monitor and wait for at least one discovery cycle
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		err := monitor.Start(ctx)
+		err = freshMonitor.Start(ctx)
 		require.NoError(t, err, "Monitor should start successfully")
 
 		// Wait for at least one polling cycle to complete
 		require.Eventually(t, func() bool {
-			return monitor.IsReady()
+			return freshMonitor.IsReady()
 		}, 3*time.Second, 100*time.Millisecond, "Monitor should become ready after discovery cycle")
 
 		// Stop monitor
-		err = monitor.Stop()
+		err = freshMonitor.Stop()
 		require.NoError(t, err, "Monitor should stop successfully")
 	})
 }

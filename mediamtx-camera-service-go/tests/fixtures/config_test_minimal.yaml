@@ -40,13 +40,13 @@ mediamtx:
     preset: "fast"
 
 camera:
-  poll_interval: 5.0
-  detection_timeout: 10.0
+  poll_interval: 0.2
+  detection_timeout: 2.0
   device_range: [0, 9]
   enable_capability_detection: true
   auto_start_streams: false
-  capability_timeout: 5.0
-  capability_retry_interval: 1.0
+  capability_timeout: 2.0
+  capability_retry_interval: 0.5
   capability_max_retries: 3
 
 logging:

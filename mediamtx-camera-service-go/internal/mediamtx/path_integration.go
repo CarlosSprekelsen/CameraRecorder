@@ -115,15 +115,15 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	// Generate path name
 	pathName := pi.generatePathName(device)
 
-	// Check if path already exists
+	// Check if path already exists in cache
 	pi.cameraPathsMu.Lock()
 	if existingPath, exists := pi.cameraPaths[device]; exists {
 		pi.cameraPathsMu.Unlock()
 		pi.logger.WithFields(logging.Fields{
 			"device": device,
 			"path":   existingPath,
-		}).Debug("Path already exists for camera")
-		return fmt.Errorf("path already exists for device: %s", device)
+		}).Debug("Path already exists in cache for camera")
+		return nil // Idempotent success - path already exists
 	}
 	pi.cameraPathsMu.Unlock()
 

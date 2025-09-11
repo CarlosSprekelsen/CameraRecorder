@@ -26,6 +26,7 @@ import (
 // TestController_StartAdvancedRecording_ReqMTX002 tests advanced recording with options
 func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -39,6 +40,11 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
+	// CRITICAL: Wait for controller to be ready (architecture requirement)
+	require.Eventually(t, func() bool {
+		return controller.IsReady()
+	}, 10*time.Second, 100*time.Millisecond, "Controller should become ready within 10 seconds")
+
 	// Ensure controller is stopped after test
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -46,15 +52,8 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create test output directory
-	outputDir := "/tmp/test_advanced_recordings"
-	err = os.MkdirAll(outputDir, 0755)
-	require.NoError(t, err, "Creating output directory should succeed")
-	defer os.RemoveAll(outputDir)
-
 	// Test advanced recording with options
 	device := "camera0"
-	outputPath := filepath.Join(outputDir, "advanced_test.mp4")
 	options := map[string]interface{}{
 		"quality":    "high",
 		"resolution": "1920x1080",
@@ -65,29 +64,41 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 		"duration":   10, // 10 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, options)
+	// Start recording with proper timeout for FFmpeg startup
+	recordingCtx, recordingCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer recordingCancel()
+
+	session, err := controller.StartAdvancedRecording(recordingCtx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
 	// Verify session properties
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
 	assert.Equal(t, device, session.DevicePath, "Device path should match")
-	assert.Equal(t, outputPath, session.FilePath, "File path should match")
+	assert.NotEmpty(t, session.FilePath, "File path should be generated")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 	assert.NotZero(t, session.StartTime, "Start time should be set")
+
+	// CRITICAL: Wait for FFmpeg to actually start and create the file
+	// This gives FFmpeg time to start (config shows 10s process creation timeout)
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(session.FilePath)
+		return err == nil
+	}, 15*time.Second, 500*time.Millisecond, "FFmpeg should create recording file within 15 seconds")
 
 	// Stop the recording
 	err = controller.StopAdvancedRecording(ctx, session.ID)
 	require.NoError(t, err, "Stopping advanced recording should succeed")
 
 	// Verify output file was created
-	_, err = os.Stat(outputPath)
+	_, err = os.Stat(session.FilePath)
 	assert.NoError(t, err, "Output file should be created")
 }
 
 // TestController_StopAdvancedRecording_ReqMTX002 tests stopping advanced recording
 func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -147,6 +158,7 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 // TestController_GetAdvancedRecordingSession_ReqMTX002 tests getting advanced recording session
 func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -205,6 +217,7 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 // TestController_ListAdvancedRecordingSessions_ReqMTX002 tests listing advanced recording sessions
 func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -274,6 +287,7 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 // TestController_RotateRecordingFile_ReqMTX002 tests rotating recording files
 func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -336,6 +350,7 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 // TestController_AdvancedRecording_ErrorHandling_ReqMTX004 tests error handling for advanced recording
 func TestController_AdvancedRecording_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
