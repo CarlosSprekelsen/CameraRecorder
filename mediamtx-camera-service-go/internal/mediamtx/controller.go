@@ -72,6 +72,58 @@ func (c *controller) checkRunningState() bool {
 	return atomic.LoadInt32(&c.isRunning) == 1
 }
 
+// IsReady returns whether the controller is fully operational
+func (c *controller) IsReady() bool {
+	if !c.checkRunningState() {
+		return false
+	}
+
+	// Check if camera monitor has completed at least one discovery cycle
+	if c.cameraMonitor != nil && !c.cameraMonitor.IsReady() {
+		return false
+	}
+
+	// Check if health monitor is operational
+	if c.healthMonitor != nil && !c.healthMonitor.IsHealthy() {
+		return false
+	}
+
+	return true
+}
+
+// GetReadinessState returns detailed readiness information
+func (c *controller) GetReadinessState() map[string]interface{} {
+	state := map[string]interface{}{
+		"controller_running":     c.checkRunningState(),
+		"camera_monitor_ready":   false,
+		"health_monitor_healthy": false,
+		"available_cameras":      []string{},
+	}
+
+	if c.cameraMonitor != nil {
+		state["camera_monitor_ready"] = c.cameraMonitor.IsReady()
+		state["camera_monitor_running"] = c.cameraMonitor.IsRunning()
+
+		if c.cameraMonitor.IsReady() {
+			cameras := c.cameraMonitor.GetConnectedCameras()
+			cameraIDs := make([]string, 0, len(cameras))
+			for devicePath := range cameras {
+				// Convert device path to camera ID (camera0, camera1, etc.)
+				if cameraID := c.getCameraIdentifierFromDevicePath(devicePath); cameraID != "" {
+					cameraIDs = append(cameraIDs, cameraID)
+				}
+			}
+			state["available_cameras"] = cameraIDs
+		}
+	}
+
+	if c.healthMonitor != nil {
+		state["health_monitor_healthy"] = c.healthMonitor.IsHealthy()
+	}
+
+	return state
+}
+
 // Abstraction layer mapping functions
 // These functions handle the conversion between camera identifiers (camera0, camera1)
 // and device paths (/dev/video0, /dev/video1) to maintain proper API abstraction
@@ -1426,11 +1478,11 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 	fullPath := filepath.Join(defaultPath, filename)
 
 	c.logger.WithFields(logging.Fields{
-		"device":        device,
-		"default_path":  defaultPath,
-		"filename":      filename,
-		"full_path":     fullPath,
-		"options":       options,
+		"device":       device,
+		"default_path": defaultPath,
+		"filename":     filename,
+		"full_path":    fullPath,
+		"options":      options,
 	}).Info("Taking multi-tier advanced snapshot with configured default path")
 
 	// Abstraction layer: Convert camera identifier to device path if needed

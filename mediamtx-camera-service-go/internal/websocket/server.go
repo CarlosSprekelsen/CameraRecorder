@@ -93,6 +93,55 @@ type WebSocketServer struct {
 
 // Security extension methods (Phase 1 enhancement)
 
+// isSystemReady checks if the MediaMTX controller is ready
+func (s *WebSocketServer) isSystemReady() bool {
+	if s.mediaMTXController == nil {
+		return false
+	}
+
+	// Check if controller implements IsReady method
+	if readyChecker, ok := s.mediaMTXController.(interface{ IsReady() bool }); ok {
+		return readyChecker.IsReady()
+	}
+
+	// Fallback: assume ready if controller exists
+	return true
+}
+
+// getSystemReadinessResponse returns a standardized readiness response
+func (s *WebSocketServer) getSystemReadinessResponse() map[string]interface{} {
+	response := map[string]interface{}{
+		"status":            "starting",
+		"message":           "System is initializing, please wait",
+		"available_cameras": []string{},
+		"discovery_active":  false,
+	}
+
+	if s.mediaMTXController == nil {
+		return response
+	}
+
+	// Get detailed readiness state if available
+	if stateProvider, ok := s.mediaMTXController.(interface{ GetReadinessState() map[string]interface{} }); ok {
+		state := stateProvider.GetReadinessState()
+
+		if cameras, ok := state["available_cameras"].([]string); ok {
+			response["available_cameras"] = cameras
+		}
+
+		if cameraReady, ok := state["camera_monitor_ready"].(bool); ok {
+			response["discovery_active"] = !cameraReady
+		}
+
+		if len(response["available_cameras"].([]string)) > 0 {
+			response["status"] = "partial"
+			response["message"] = "Some cameras available, discovery in progress"
+		}
+	}
+
+	return response
+}
+
 // checkMethodPermissions checks if a client has permission to access a specific method
 func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, methodName string) error {
 	// Skip permission check for authentication method
@@ -923,6 +972,22 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 			ID:      request.ID,
 			Error:   NewJsonRpcError(METHOD_NOT_FOUND, "method_not_found", request.Method, "Verify method name"),
 		}, nil
+	}
+
+	// System readiness check - skip for authenticate and system status methods
+	if request.Method != "authenticate" && request.Method != "get_system_status" {
+		if !s.isSystemReady() {
+			s.logger.WithFields(logging.Fields{
+				"client_id": client.ClientID,
+				"method":    request.Method,
+				"action":    "system_not_ready",
+			}).Debug("System not ready, returning status")
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Result:  s.getSystemReadinessResponse(),
+			}, nil
+		}
 	}
 
 	// Security extensions: Permission check (Phase 1 enhancement)

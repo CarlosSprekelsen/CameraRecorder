@@ -411,6 +411,10 @@ type MediaMTXController interface {
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
 	GetHealthMonitor() HealthMonitor
 
+	// System readiness
+	IsReady() bool
+	GetReadinessState() map[string]interface{}
+
 	// Stream management
 	GetStreams(ctx context.Context) ([]*Stream, error)
 	GetStream(ctx context.Context, id string) (*Stream, error)

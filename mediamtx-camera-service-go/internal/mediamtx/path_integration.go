@@ -69,13 +69,9 @@ func (pi *PathIntegration) Start(ctx context.Context) error {
 	pi.wg.Add(1)
 	go pi.monitorCameraChanges(pi.ctx)
 
-	// Create paths for existing cameras in background (non-blocking)
-	// This eliminates the race condition and polling overhead
-	go func() {
-		if err := pi.createPathsForExistingCameras(ctx); err != nil {
-			pi.logger.WithError(err).Error("Failed to create paths for existing cameras")
-		}
-	}()
+	// Skip initial path creation - paths will be created on-demand
+	// This eliminates the race condition with camera discovery
+	pi.logger.Info("Path integration configured for on-demand path creation")
 
 	pi.logger.Info("MediaMTX path integration started successfully")
 	return nil

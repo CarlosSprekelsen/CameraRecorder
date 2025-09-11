@@ -14,7 +14,6 @@ package mediamtx
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -117,7 +116,6 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Start advanced recording
 	device := "camera0"
-	outputPath := filepath.Join(outputDir, "stop_test.mp4")
 	options := map[string]interface{}{
 		"quality":    "medium",
 		"resolution": "1280x720",
@@ -177,7 +175,6 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 
 	// Start advanced recording
 	device := "camera0"
-	outputPath := filepath.Join(outputDir, "get_test.mp4")
 	options := map[string]interface{}{
 		"quality":    "low",
 		"resolution": "640x480",
@@ -243,7 +240,6 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 	sessionIDs := make([]string, 3)
 
 	for i := 0; i < 3; i++ {
-		outputPath := filepath.Join(outputDir, fmt.Sprintf("list_test_%d.mp4", i))
 		options := map[string]interface{}{
 			"quality":    "medium",
 			"resolution": "1280x720",
@@ -362,18 +358,12 @@ func TestController_AdvancedRecording_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Test starting recording with invalid device
 	invalidDevice := "camera999"
-	outputPath := "/tmp/invalid_test.mp4"
 	options := map[string]interface{}{
 		"quality": "high",
 	}
 
-	_, err = controller.StartAdvancedRecording(ctx, invalidDevice, outputPath, options)
+	_, err = controller.StartAdvancedRecording(ctx, invalidDevice, options)
 	assert.Error(t, err, "Starting recording with invalid device should fail")
-
-	// Test starting recording with invalid output path (non-existent directory)
-	invalidPath := "/nonexistent/directory/test.mp4"
-	_, err = controller.StartAdvancedRecording(ctx, "camera0", invalidPath, options)
-	assert.Error(t, err, "Starting recording with invalid path should fail")
 
 	// Test stopping non-existent recording
 	err = controller.StopAdvancedRecording(ctx, "non-existent-session-id")

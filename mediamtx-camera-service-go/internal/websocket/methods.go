@@ -155,6 +155,7 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 	s.registerMethod("get_status", s.MethodGetStatus, "1.0")
 	s.registerMethod("get_server_info", s.MethodGetServerInfo, "1.0")
 	s.registerMethod("get_streams", s.MethodGetStreams, "1.0")
+	s.registerMethod("get_system_status", s.MethodGetSystemStatus, "1.0")
 
 	// File management methods
 	s.registerMethod("list_recordings", s.MethodListRecordings, "1.0")
@@ -654,6 +655,17 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 			},
 		}, nil
 	})(params, client)
+}
+
+// MethodGetSystemStatus implements the get_system_status method
+// Returns detailed system readiness information
+func (s *WebSocketServer) MethodGetSystemStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	// No authentication required for system status
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		ID:      params["id"],
+		Result:  s.getSystemReadinessResponse(),
+	}, nil
 }
 
 // MethodGetServerInfo implements the get_server_info method

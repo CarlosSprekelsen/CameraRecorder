@@ -1,683 +1,674 @@
-# MediaMTX Camera Service Architecture
+# MediaMTX Camera Service
 
-**Version:** 2.0  
-**Date:** 2025-01-15  
-**Status:** Language-Agnostic Architecture  
-**Related Epic/Story:** Architecture Standardization  
-
-## Table of Contents
-
-1. [System Overview](#system-overview)
-2. [Architectural Principles](#architectural-principles)
-3. [Component Architecture](#component-architecture)
-4. [Security Architecture](#security-architecture)
-5. [Logging Architecture](#logging-architecture)
-6. [Testing Architecture](#testing-architecture)
-7. [Performance Targets](#performance-targets)
-8. [API Contract](#api-contract)
-
----
+A distributed video sensor management service designed for OCI-compliant container environments. This service provides real-time video source discovery, streaming, recording, and management capabilities as part of a larger multi-sensor ecosystem with centralized service discovery. It will allow users to take snapshots and record videos from USB-V4L2 devices and STANAG 4609 UAV streams from external UAVs connected to the container.
 
 ## System Overview
 
-The MediaMTX Camera Service is a high-performance camera management system providing:
+The MediaMTX Camera Service is an always-on containerized service that manages both USB video devices and external RTSP feeds within a coordinated sensor ecosystem. It operates as a specialized video sensor container that registers with a central service discovery aggregator and provides standardized video services to client applications.
 
-1. **Real-time USB camera discovery and monitoring**
-2. **WebSocket JSON-RPC 2.0 API** (1000+ concurrent connections)
-3. **Dynamic MediaMTX configuration management** (100ms response time)
-4. **Streaming, recording, and snapshot coordination**
-5. **External stream discovery and management** (STANAG 4609 UAV streams and network-based sources)
-6. **Resilient error recovery and health monitoring**
-7. **Secure access control and authentication**
-
-### System Goals
-- **Performance**: High-performance camera service with real-time capabilities
-- **Resource Usage**: Efficient memory and CPU utilization, power efficient
-- **Compatibility**: Standards-compliant API with broad client support
-- **Risk Management**: Working software first, integration incrementally
-
-### Success Criteria
-- Camera detection <200ms latency
-- WebSocket server handles 1000+ concurrent connections
-- Memory usage <60MB base, <200MB with 10 cameras
-- 1000+ concurrent WebSocket connections supported
-- **Working Service**: Fully functional camera service
-- **Basic Integration**: Added incrementally when platform systems exist (i.e. UAVs)
+**Version:** 3.2  
+**Date:** 2025-01-15  
+**Status:** Production Architecture Documentation  
+**Document Type:** System Architecture Specification
 
 ---
 
-## Architectural Principles
+## 1. System Context
 
-### 1. Single Source of Truth Architecture
+### 1.1 System Boundaries
 
-The system implements a **single source of truth** pattern where MediaMTX Controller is the complete business logic layer, with WebSocket server being a thin protocol layer that delegates all operations.
+```plantuml
+@startuml SystemContext
+title System Context - MediaMTX Camera Service
 
-#### Architectural Layers
+actor "Client Applications" as client
+rectangle "MediaMTX Camera Service" as service
+database "MediaMTX Server" as mediamtx
+component "USB V4L2 Cameras" as cameras
+cloud "RTSP UAV Sources" as rtsp
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CLIENT LAYER                             │
-│  • Works with camera identifiers (camera0, camera1)         │
-│  • No knowledge of internal device paths                    │
-│  • Clean, abstract API interface                           │
-│  • Hardware-independent client code                        │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                WEBSOCKET PROTOCOL LAYER                     │
-│  • JSON-RPC 2.0 protocol handling                          │
-│  • Authentication and authorization                         │
-│  • Request/response formatting                             │
-│  • NO business logic - delegates to MediaMTX               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                MEDIAMTX CONTROLLER                          │
-│              (SINGLE SOURCE OF TRUTH)                      │
-│  • API abstraction layer (camera0 ↔ /dev/video0)          │
-│  • All camera operations                                   │
-│  • All business logic                                      │
-│  • Orchestrates all sub-components                         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  HARDWARE LAYER                             │
-│  • Camera discovery monitor                                │
-│  • MediaMTX path manager                                   │
-│  • Device path operations (/dev/video0, /dev/video1)      │
-│  • Hardware-specific operations                            │
-└─────────────────────────────────────────────────────────────┘
+client --> service : WebSocket JSON-RPC 2.0
+service --> mediamtx : HTTP REST API\n(Path Management)
+service --> cameras : V4L2 System Calls\n(Direct Access)
+rtsp --> mediamtx : RTSP Streams\n(UAV Sources)
+mediamtx --> cameras : FFmpeg Processing
+
+note right of service
+  Core Capabilities:
+  • Real-time video source discovery
+  • Snapshot capture from USB cameras
+  • Video recording capabilities
+  • MediaMTX path management for UAV streams
+  • Service discovery registration
+end note
+
+note right of rtsp
+  RTSP UAV Sources:
+  • STANAG 4609 compliant streams
+  • External video sources
+  • Consumed by MediaMTX Server
+  • NOT directly accessed by service
+end note
+
+@enduml
 ```
 
-### 2. Strict Separation of Concerns
+### 1.2 Quality Attributes
 
-The architecture enforces strict separation of concerns with clear boundaries and responsibilities.
-
-#### WebSocket Server Dependencies
-- **ONLY** depends on MediaMTX Controller for business logic
-- **NO** direct camera monitor access
-- **NO** direct file system access
-- **NO** direct MediaMTX server access
-- **ONLY** protocol handling and security
-
-#### MediaMTX Controller Dependencies
-- **Orchestrates** all business logic components
-- **Single source of truth** for all camera operations
-- **Manages** all sub-components (Camera Monitor, Path Manager, etc.)
-- **Provides** complete API abstraction layer
-
-### 3. Architecture Enforcement Rules
-
-#### **RULE 1: WebSocket Server MUST Be Thin**
-- **FORBIDDEN**: Direct camera monitor access
-- **FORBIDDEN**: Business logic in WebSocket methods
-- **FORBIDDEN**: Camera validation in WebSocket layer
-- **FORBIDDEN**: File operations in WebSocket layer
-- **REQUIRED**: All operations delegate to MediaMTX Controller
-
-#### **RULE 2: MediaMTX Controller MUST Be Complete**
-- **REQUIRED**: Camera monitor integration
-- **REQUIRED**: All camera discovery methods
-- **REQUIRED**: All business logic operations
-- **REQUIRED**: Single source of truth for camera operations
-- **REQUIRED**: Proper abstraction layer (camera0 ↔ /dev/video0)
-
-#### **RULE 3: No Direct Hardware Access**
-- **FORBIDDEN**: WebSocket server accessing camera monitor directly
-- **FORBIDDEN**: WebSocket server accessing file system directly
-- **FORBIDDEN**: WebSocket server accessing MediaMTX server directly
-- **REQUIRED**: All hardware access through MediaMTX Controller
-
-#### **RULE 4: Clear Dependency Chain**
-```
-WebSocket Server → MediaMTX Controller → Camera Monitor
-                → MediaMTX Controller → Path Manager
-                → MediaMTX Controller → File Manager
-```
-
-#### **RULE 5: No Duplicated Logic**
-- **FORBIDDEN**: Abstraction layer in both WebSocket and MediaMTX
-- **FORBIDDEN**: Camera validation in multiple places
-- **FORBIDDEN**: Stream URL generation in multiple places
-- **REQUIRED**: Single implementation in MediaMTX Controller
-
-### 4. Event-Driven Architecture
-
-The event system is managed by MediaMTX Controller, not WebSocket server.
-
-#### Event System Components
-- **EventManager**: Central hub for event distribution
-- **Topic-Based Filtering**: Events sent only to interested clients
-- **Component Adapters**: Bridge between components and event system
-- **Performance**: O(log n) scaling with client count
-
-#### Event Topics
-- **Camera Events**: Connected, disconnected, status changes
-- **Recording Events**: Start, stop, status updates
-- **System Events**: Health, startup, configuration changes
-
-### 5. Stream Lifecycle Management
-
-#### Stream Lifecycle Types
-- **Recording Streams**: Long-duration video recording with file rotation
-- **Viewing Streams**: Live stream viewing with auto-close after inactivity
-- **Snapshot Streams**: Quick photo capture with immediate activation/deactivation
-
-#### On-Demand Stream Activation
-- **Power Efficiency**: FFmpeg processes start only when needed
-- **Configuration-Driven**: MediaMTX settings control lifecycle behavior
-- **Automatic Management**: Streams activate/deactivate based on demand
+| Attribute | Target | Measurement |
+|-----------|--------|-------------|
+| **Performance** | <100ms response time | 95th percentile API calls |
+| **Concurrency** | 1000+ connections | Simultaneous WebSocket clients |
+| **Availability** | 99.9% uptime | System operational time |
+| **Reliability** | <0.1% error rate | Failed operations ratio |
 
 ---
 
-## Security Architecture
+## 2. External Interface Architecture
 
-**CRITICAL**: Security is the foundation of the entire system. All components must implement proper authentication, authorization, and security controls.
+### 2.1 Exposed Interfaces (Inbound)
 
-### Security-First Design Principles
+**JSON-RPC 2.0 API (Primary External Interface)**
+- **Protocol:** WebSocket over TCP
+- **Port:** 8002
+- **Documentation:** `docs/api/json_rpc_methods.md`
+- **Authentication:** JWT Bearer tokens
+- **Clients:** Web browsers, mobile apps, desktop applications
 
-1. **Zero Trust Architecture**: Every request must be authenticated and authorized
-2. **Defense in Depth**: Multiple security layers at every component
-3. **Least Privilege**: Users get minimum required permissions
-4. **Audit Everything**: All security events must be logged
-5. **Secure by Default**: All components start in secure state
+```plantuml
+@startuml ExposedInterface
+title Exposed Interface - JSON-RPC 2.0 API
 
-### Security Middleware Design
+actor "Client" as client
+interface "WebSocket\nPort 8002" as ws
+component "JSON-RPC Handler" as rpc
+component "Authentication" as auth
+component "MediaMTX Controller" as controller
 
-The security layer is designed to integrate seamlessly with existing systems rather than creating parallel infrastructure:
+client --> ws : WebSocket Connection
+ws --> auth : Token Validation
+auth --> rpc : Authenticated Request
+rpc --> controller : Business Logic
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    Security Layer                          │
-├─────────────────────────────────────────────────────────────┤
-│            Authentication Middleware                       │
-│     • JWT token validation                                │
-│     • Session management                                  │
-│     • Uses existing SecurityConfig                        │
-├─────────────────────────────────────────────────────────────┤
-│            RBAC Middleware                                │
-│     • Role-based access control                           │
-│     • Permission matrix enforcement                       │
-│     • Integrates with existing PermissionChecker          │
-├─────────────────────────────────────────────────────────────┤
-│            Rate Limiting                                  │
-│     • Per-method rate limits                              │
-│     • DDoS protection                                     │
-│     • Uses existing SecurityConfig values                 │
-├─────────────────────────────────────────────────────────────┤
-│            Input Validation                               │
-│     • Parameter sanitization                              │
-│     • Type safety enforcement                             │
-│     • Centralized validation logic                        │
-├─────────────────────────────────────────────────────────────┤
-│            Audit Logging                                  │
-│     • Security event tracking                             │
-│     • Uses existing LoggingConfig                         │
-│     • File rotation and retention                         │
-└─────────────────────┬──────────────────────────────────────┘
-                      │ Configuration Integration
-┌─────────────────────▼──────────────────────────────────────┐
-│            Existing Configuration System                   │
-│     • SecurityConfig for rate limits and JWT settings     │
-│     • LoggingConfig for audit log configuration           │
-│     • No hard-coded values or parallel infrastructure    │
-└─────────────────────────────────────────────────────────────┘
+note bottom of rpc
+  Supported Methods:
+  • get_camera_list()
+  • take_snapshot()
+  • start_recording()
+  • stop_recording()
+  • get_camera_status()
+  
+  Documentation: docs/api/json_rpc_methods.md
+end note
+
+@enduml
 ```
 
-### Security Integration Principles
+### 2.2 Consumed Interfaces (Outbound)
 
-1. **Leverage Existing Systems**: Use `SecurityConfig`, `LoggingConfig`, and existing logger
-2. **No Hard-coded Values**: All security parameters come from configuration
-3. **Transparent Integration**: Security middleware works seamlessly with existing code
-4. **Configuration Adapter Pattern**: Bridge between security middleware and existing config
-5. **Audit Trail**: Comprehensive logging of all security events
+**MediaMTX REST API (External Dependency)**
+- **Protocol:** HTTP/1.1
+- **Endpoint:** http://localhost:9997/v3/
+- **Purpose:** Stream path management, configuration
+- **Required Version:** MediaMTX v1.0+
 
-### Security Middleware Components
+**V4L2 Hardware Interface**
+- **Protocol:** Linux system calls
+- **Devices:** /dev/video* character devices
+- **Purpose:** Direct camera hardware access
 
-- **AuthMiddleware**: Centralized authentication enforcement
-- **RBACMiddleware**: Role-based access control with existing permission matrix
-- **EnhancedRateLimiter**: Rate limiting using existing configuration values
-- **InputValidator**: Centralized input validation and sanitization
-- **SecurityAuditLogger**: Comprehensive security event logging
-- **ConfigAdapter**: Bridge between security middleware and existing configuration
+```plantuml
+@startuml ConsumedInterfaces
+title Consumed Interfaces - External Dependencies
 
-### Role-Based Access Control (RBAC)
+component "MediaMTX Controller" as controller
+interface "HTTP REST\nPort 9997" as http
+database "MediaMTX Server" as mediamtx
+interface "V4L2 System Calls" as v4l2
+component "USB Cameras" as cameras
 
-#### Role Definitions
+controller --> http : Path Management
+http --> mediamtx : Stream Configuration
+controller --> v4l2 : Hardware Access
+v4l2 --> cameras : Device Control
 
-- **viewer**: Read-only access to camera status, file listings, and basic information
-- **operator**: Viewer permissions + camera control operations (snapshots, recording)
-- **admin**: Full access to all features including system metrics and configuration
+note bottom of http
+  MediaMTX API Endpoints:
+  • GET /v3/config/paths/list
+  • POST /v3/config/paths/add/{name}
+  • DELETE /v3/config/paths/delete/{name}
+end note
 
-#### Permission Matrix
-
-| Method | viewer | operator | admin |
-|--------|--------|----------|-------|
-| ping | ✅ | ✅ | ✅ |
-| authenticate | ✅ | ✅ | ✅ |
-| get_camera_list | ✅ | ✅ | ✅ |
-| get_camera_status | ✅ | ✅ | ✅ |
-| get_camera_capabilities | ✅ | ✅ | ✅ |
-| take_snapshot | ❌ | ✅ | ✅ |
-| start_recording | ❌ | ✅ | ✅ |
-| stop_recording | ❌ | ✅ | ✅ |
-| list_recordings | ✅ | ✅ | ✅ |
-| list_snapshots | ✅ | ✅ | ✅ |
-| delete_recording | ❌ | ✅ | ✅ |
-| delete_snapshot | ❌ | ✅ | ✅ |
-| get_metrics | ❌ | ❌ | ✅ |
-| get_storage_info | ❌ | ❌ | ✅ |
-| set_retention_policy | ❌ | ❌ | ✅ |
-| cleanup_old_files | ❌ | ❌ | ✅ |
-
-### Security Enforcement Points
-
-#### WebSocket Server Security
-- **Authentication**: Every WebSocket connection must authenticate
-- **Authorization**: Every method call must be authorized
-- **Rate Limiting**: Per-client rate limits to prevent abuse
-- **Input Validation**: All parameters must be validated and sanitized
-
-#### MediaMTX Controller Security
-- **Device Access Control**: Only authorized devices can be accessed
-- **File System Security**: Secure file operations with proper permissions
-- **Process Security**: FFmpeg processes run with minimal privileges
-- **Network Security**: Secure communication with MediaMTX server
-
-### Security Compliance Checklist
-
-Before implementing any changes, verify security compliance:
-
-#### ✅ Authentication Compliance
-- [ ] All WebSocket connections require authentication
-- [ ] JWT tokens are properly validated
-- [ ] Session management is secure
-- [ ] Authentication failures are logged
-
-#### ✅ Authorization Compliance
-- [ ] RBAC is enforced for all methods
-- [ ] Permission matrix is properly implemented
-- [ ] Role escalation is prevented
-- [ ] Authorization failures are logged
-
-#### ✅ Input Validation Compliance
-- [ ] All parameters are validated
-- [ ] SQL injection prevention
-- [ ] Path traversal prevention
-- [ ] XSS prevention
-
-#### ✅ Audit Logging Compliance
-- [ ] All security events are logged
-- [ ] Logs include user context
-- [ ] Logs are tamper-proof
-- [ ] Log retention policies are enforced
+@enduml
+```
 
 ---
 
-## Logging Architecture
+## 3. Internal Component Architecture
 
-### Logger Factory Pattern
+### 3.1 Component Structure
 
-The system implements a **Logger Factory Pattern** to ensure consistent logging configuration across all components.
+```plantuml
+@startuml InternalComponents
+title Internal Component Architecture
 
-#### Architecture Principles
+package "MediaMTX Camera Service" {
+    component "WebSocket Server" as ws
+    component "MediaMTX Controller" as controller
+    component "Camera Monitor" as camera
+    component "Security Framework" as security
+    
+    interface "ControllerAPI" as ctrl_api
+    interface "CameraAPI" as cam_api
+    interface "SecurityAPI" as sec_api
+}
 
-1. **Centralized Logger Creation**: Single LoggerFactory responsible for creating all logger instances
-2. **Configuration-Driven**: Factory respects global configuration settings
-3. **No Direct Logger Creation**: Modules request loggers from factory, don't create directly
-4. **Test Isolation**: Test configuration affects factory behavior
-5. **Language Agnostic**: Pattern works in any programming language
+ws --> ctrl_api
+controller ..> ctrl_api
+controller --> cam_api
+camera ..> cam_api
+ws --> sec_api
+security ..> sec_api
 
-#### Logger Factory Design
+note right of ws
+  Architecture Rules:
+  • WebSocket Server contains NO business logic
+  • All operations delegate to MediaMTX Controller
+  • No direct component-to-component calls
+  • Interface-based dependency injection
+end note
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    LOGGER FACTORY                           │
-│  • Centralized logger creation                             │
-│  • Respects global configuration                           │
-│  • Provides configured logger instances                    │
-│  • Supports test configuration override                    │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│                GLOBAL CONFIGURATION                        │
-│  • Log level settings                                      │
-│  • Output format configuration                             │
-│  • File/console output settings                            │
-│  • Test-specific overrides                                 │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    MODULE LOGGERS                          │
-│  • WebSocket Server Logger                                 │
-│  • MediaMTX Controller Logger                              │
-│  • Camera Monitor Logger                                   │
-│  • Security Middleware Logger                              │
-│  • All components use factory-created loggers              │
-└─────────────────────────────────────────────────────────────┘
+@enduml
 ```
 
-#### Logger Factory Interface
+### 3.2 Component Responsibilities
 
-**Core Responsibilities:**
-- **Create Logger**: `GetLogger(componentName)` - Returns configured logger instance
-- **Configuration Management**: Respects global logging configuration
-- **Test Support**: Allows test-specific configuration overrides
-- **Consistency**: Ensures all loggers use same configuration
+**WebSocket Server (Protocol Layer)**
+- JSON-RPC 2.0 protocol implementation
+- WebSocket connection management (1000+ concurrent)
+- Authentication enforcement
+- **Constraint:** NO business logic - delegates all operations
 
-**Configuration Integration:**
-- **Global Settings**: Log level, format, output destinations
-- **Component Identification**: Each logger tagged with component name
-- **Test Overrides**: Test fixtures can override configuration
-- **Runtime Changes**: Configuration changes affect all new loggers
+**MediaMTX Controller (Business Logic Layer)**
+- Camera operations coordination
+- Stream lifecycle management
+- API abstraction (camera0 ↔ /dev/video0)
+- **Pattern:** Single Source of Truth for all operations
 
-#### Benefits
+**Camera Monitor (Hardware Abstraction Layer)**
+- USB camera detection via V4L2
+- Real-time status monitoring
+- Hardware capability probing
+- **Integration:** Interface-based design with dependency injection
 
-1. **Configuration Consistency**: All loggers use same configuration
-2. **Test Isolation**: Test configuration affects all loggers
-3. **Maintainability**: Single point of logging configuration
-4. **No Global State**: No singleton pattern complexity
-5. **Easy Testing**: Simple to inject test loggers
-6. **Language Agnostic**: Works in any programming language
+**Security Framework (Cross-Cutting Layer)**
+- JWT token management
+- Role-based access control (viewer/operator/admin)
+- Session management
+- **Pattern:** Middleware integration with existing configuration
 
-#### Implementation Requirements
+### 3.3 Internal Interface Contracts
 
-**Logger Factory:**
-- Must implement `GetLogger(componentName)` method
-- Must respect global configuration settings
-- Must support test configuration overrides
-- Must provide consistent logger instances
+```plantuml
+@startuml InterfaceContracts
+title Internal Interface Contracts
 
-**Module Integration:**
-- Modules must use factory to get logger instances
-- Modules must not create loggers directly
-- Modules must pass component name to factory
-- Modules must not store logger configuration
+interface ControllerAPI {
+    +GetCameraList() : CameraListResponse
+    +GetCameraStatus(device : string) : CameraStatusResponse
+    +TakeSnapshot(device : string, path : string) : SnapshotResponse
+    +StartRecording(device : string) : RecordingResponse
+    +StopRecording(device : string) : RecordingResponse
+}
 
-**Test Integration:**
-- Test fixtures must configure factory before use
-- Test fixtures must use factory-created loggers
-- Test configuration must override global settings
-- Test isolation must be maintained
+interface CameraAPI {
+    +Start(ctx : Context) : error
+    +Stop() : error
+    +GetConnectedCameras() : map[string]CameraDevice
+    +GetDevice(path : string) : CameraDevice
+}
 
-#### Security Integration
+interface SecurityAPI {
+    +ValidateToken(token : string) : JWTClaims
+    +CheckPermission(role : string, method : string) : bool
+    +CreateSession(userID : string) : Session
+}
 
-**Audit Logging:**
-- All security events logged through factory-created loggers
-- Consistent log format across all components
-- User context included in security logs
-- Log retention policies enforced globally
-
-**Compliance:**
-- All security events are logged
-- Logs include user context and correlation IDs
-- Logs are tamper-proof and auditable
-- Log retention policies are enforced
-
-
-## Component Architecture
-
-```
-┌────────────────────────────────────────────────────────────┐
-│                    Client Applications                      │
-│            (Web browsers, mobile apps, etc.)               │
-│  • Use camera identifiers (camera0, camera1)               │
-│  • Hardware-independent interface                          │
-└─────────────────────┬──────────────────────────────────────┘
-                      │ WebSocket JSON-RPC 2.0
-┌─────────────────────▼──────────────────────────────────────┐
-│            WebSocket JSON-RPC Server                       │
-│                 (THIN PROTOCOL LAYER)                     │
-│     • Client connection management (1000+ concurrent)     │
-│     • JSON-RPC 2.0 protocol handling                      │
-│     • Real-time notifications (<20ms latency)             │
-│     • Authentication and authorization                     │
-│     • Security middleware with RBAC enforcement            │
-│     • Rate limiting and DDoS protection                   │
-│     • NO business logic - delegates to MediaMTX           │
-└─────────────────────┬──────────────────────────────────────┘
-                      │ Delegates to
-┌─────────────────────▼──────────────────────────────────────┐
-│                MediaMTX Controller                         │
-│              (COMPLETE BUSINESS LOGIC LAYER)              │
-│     • Camera discovery integration                         │
-│     • API abstraction layer (camera0 ↔ /dev/video0)       │
-│     • All camera operations (recording, snapshots, etc.)  │
-│     • Stream management and lifecycle                     │
-│     • File operations and storage management              │
-│     • Event management and notifications                  │
-│     • Single source of truth for all camera operations   │
-├─────────────────────────────────────────────────────────────┤
-│             Camera Discovery Monitor                       │
-│     • USB camera detection (<200ms)                       │
-│     • Camera status tracking                              │
-│     • Hot-plug event handling                             │
-│     • Concurrent monitoring                               │
-│     • Internal device path management (/dev/video*)       │
-├─────────────────────────────────────────────────────────────┤
-│         External Stream Discovery                          │
-│     • UAV stream discovery                                │
-│     • Network range scanning                              │
-│     • RTSP stream validation and health monitoring        │
-│     • On-demand and periodic discovery modes              │
-│     • STANAG 4609 compliance for military UAVs            │
-├─────────────────────────────────────────────────────────────┤
-│            MediaMTX Path Manager                           │
-│     • Dynamic path creation via REST API                  │
-│     • FFmpeg command generation                           │
-│     • Path lifecycle management                           │
-│     • Error handling and recovery                         │
-│     • Internal device path operations                     │
-├─────────────────────────────────────────────────────────────┤
-│               Health & Monitoring                          │
-│     • Service health checks                               │
-│     • Resource usage monitoring                           │
-│     • Error tracking and recovery                         │
-│     • Configuration management                            │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ HTTP REST API
-┌─────────────────────▼───────────────────────────────────────┐
-│                   MediaMTX Server                          │
-├─────────────────────────────────────────────────────────────┤
-│                Media Processing                           │
-│     • RTSP/WebRTC/HLS streaming                           │
-│     • FFmpeg process management                           │
-│     • Multi-protocol support                              │
-│     • Recording and snapshot generation                   │
-│     • Internal device path operations                     │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ FFmpeg Processes
-┌─────────────────────▼───────────────────────────────────────┐
-│                 USB Cameras                                 │
-│         /dev/video0, /dev/video1, etc.                     │
-│  • Hardware layer (internal only)                          │
-│  • Not exposed to clients                                  │
-└─────────────────────────────────────────────────────────────┘
+@enduml
 ```
 
-### Component Responsibilities
+---
 
-#### WebSocket JSON-RPC Server - THIN PROTOCOL LAYER
-- **SECURITY FIRST**: Authentication, authorization, and input validation for every request
-- **ONLY** client connection management and authentication (1000+ concurrent)
-- **ONLY** JSON-RPC 2.0 protocol implementation
-- **ONLY** real-time event notifications (<20ms latency)
-- **ONLY** session management and authorization
-- **ONLY** rate limiting and DDoS protection
-- **NO business logic** - all operations delegate to MediaMTX Controller
-- **NO camera operations** - MediaMTX Controller handles all camera logic
-- **NO file operations** - MediaMTX Controller handles all file logic
-- **NO stream operations** - MediaMTX Controller handles all stream logic
+## 4. Process Architecture
 
-#### MediaMTX Controller - COMPLETE BUSINESS LOGIC LAYER
-- **Single source of truth** for all camera operations
-- Camera discovery integration and management
-- API abstraction layer (camera0 ↔ /dev/video0 mapping)
-- All camera operations (recording, snapshots, streaming)
-- Stream management and lifecycle coordination
-- File operations and storage management
-- Event management and notifications
-- Orchestrates all sub-components (Camera Monitor, Path Manager, etc.)
+### 4.1 Authentication Flow
 
-#### Camera Discovery Monitor - HARDWARE ABSTRACTION LAYER
-- USB camera detection via V4L2 (<200ms)
-- Hot-plug event handling
-- Concurrent monitoring of multiple cameras
-- Camera capability probing and status tracking
-- **Internal to MediaMTX Controller** - not directly accessible
+```plantuml
+@startuml AuthenticationFlow
+title Authentication Flow
 
-#### External Stream Discovery - NETWORK ABSTRACTION LAYER
-- UAV stream discovery with configurable parameters
-- Network range scanning and IP enumeration
-- RTSP stream validation and health monitoring
-- On-demand and periodic discovery modes
-- STANAG 4609 compliance for military UAVs
-- **Internal to MediaMTX Controller** - not directly accessible
+participant "Client" as C
+participant "WebSocket Server" as WS
+participant "Security Framework" as S
+participant "MediaMTX Controller" as MC
 
-#### MediaMTX Path Manager - STREAM INFRASTRUCTURE LAYER
-- Dynamic path creation via MediaMTX REST API
-- FFmpeg command generation and management
-- Path lifecycle management (create, update, delete)
-- Error handling and automatic recovery
-- **Internal to MediaMTX Controller** - not directly accessible
+C -> WS : WebSocket Connection
+WS -> S : Validate Connection
+S --> WS : Connection Authorized
+WS --> C : Connection Established
 
-#### Health & Monitoring - OBSERVABILITY LAYER
-- Structured logging with correlation IDs
-- Service health monitoring and reporting
-- Resource usage tracking and alerts
-- Configuration management with hot-reload
+C -> WS : authenticate(credentials)
+WS -> S : Validate Credentials
+S -> S : Generate JWT Token
+S --> WS : JWT Token + Role
+WS --> C : Authentication Success
+
+note over C, MC
+All subsequent calls include JWT token
+for authentication and authorization
+end note
+
+@enduml
+```
+
+### 4.2 Snapshot Capture Flow
+
+```plantuml
+@startuml SnapshotFlow
+title Snapshot Capture Flow (Multi-Tier)
+
+participant "Client" as C
+participant "WebSocket Server" as WS
+participant "MediaMTX Controller" as MC
+participant "Camera Monitor" as CM
+participant "Hardware" as H
+
+C -> WS : take_snapshot(camera0)
+WS -> MC : TakeSnapshot(camera0)
+
+alt Tier 1: Direct V4L2 Capture
+    MC -> CM : CaptureDirectV4L2(/dev/video0)
+    CM -> H : Direct hardware access
+    H --> CM : Frame data
+    CM --> MC : Snapshot created
+else Tier 2: RTSP Stream Reuse
+    MC -> MC : Check existing RTSP stream
+    MC -> MC : Capture from stream
+else Tier 3: On-Demand Activation
+    MC -> MC : Activate MediaMTX path
+    MC -> MC : Capture from activated stream
+end
+
+MC --> WS : SnapshotResponse
+WS --> C : Snapshot result
+
+@enduml
+```
+
+### 4.3 System Startup Coordination
+
+```plantuml
+@startuml StartupFlow
+title System Startup Coordination
+
+start
+
+:Load Configuration;
+:Initialize Security Framework;
+:Start Camera Monitor;
+:Initialize MediaMTX Controller;
+:Start WebSocket Server;
+
+:System Operational;
+
+note right
+Progressive Readiness Pattern:
+• System accepts connections immediately
+• Features become available as components initialize
+• No blocking startup dependencies
+• Clear status communication to clients
+end note
+
+stop
+
+@enduml
+```
 
 ---
 
-## Testing Architecture
+## 5. Physical Architecture
 
-### Single Systemd-Managed MediaMTX Instance
+### 5.1 Deployment Architecture
 
-**Decision**: All tests MUST use the single systemd-managed MediaMTX service instance.
+```plantuml
+@startuml DeploymentArchitecture
+title Deployment Architecture
 
-#### Service Configuration
-- MediaMTX service managed by systemd
-- Fixed ports: API (9997), RTSP (8554), WebRTC (8889), HLS (8888)
-- Tests verify service availability before execution
-- No test-specific MediaMTX instances
+node "Container Host" {
+    node "Camera Service Container" {
+        artifact "MediaMTX Camera Service" as service
+        database "Configuration Files" as config
+        database "Recording Storage" as storage
+    }
+    
+    node "MediaMTX Container" {
+        artifact "MediaMTX Server" as mediamtx
+    }
+    
+    component "USB Cameras" as cameras
+}
 
-#### Test Integration Requirements
-- Tests must check MediaMTX service status before execution
-- Tests must wait for MediaMTX API readiness
-- Tests must use real MediaMTX service, not mocks
-- Tests must clean up after execution
+cloud "External Network" {
+    actor "Client Applications" as clients
+    cloud "UAV RTSP Sources" as uav
+}
 
-#### Port Configuration
-- **API Port**: 9997 (fixed systemd service port)
-- **RTSP Port**: 8554 (fixed systemd service port)
-- **WebRTC Port**: 8889 (fixed systemd service port)
-- **HLS Port**: 8888 (fixed systemd service port)
+service --> mediamtx : HTTP API\nContainer Network
+service --> cameras : V4L2 API\nDevice Passthrough
+uav --> mediamtx : RTSP Streams\nExternal Network
+clients --> service : WebSocket API\nHost Network
 
----
+@enduml
+```
 
-## Performance Targets
+### 5.3 Container Deployment Strategy
 
-### Response Time Targets
-- **Camera Detection**: <200ms latency
-- **WebSocket Response**: <50ms for JSON-RPC methods
-- **Stream Activation**: <3s for on-demand activation
-- **Snapshot Capture**: <0.5s (Tier 1), <3s (Tier 2), <5s (Tier 3)
-- **External Stream Discovery**: <30s for network scan completion
+**Option 1: Separate Containers (Recommended)**
+- **Advantages:**
+  - Independent scaling of MediaMTX and camera service
+  - Separate lifecycle management and updates
+  - Better resource isolation and fault isolation
+  - Follows microservices architecture principles
 
-### Concurrency Targets
-- **WebSocket Connections**: 1000+ concurrent connections
-- **Camera Monitoring**: 10+ cameras with concurrent monitoring
-- **FFmpeg Processes**: 10+ concurrent FFmpeg processes
-- **External Stream Discovery**: 5+ concurrent network scans
+**Option 2: Single Container**
+- **Advantages:**
+  - Simpler deployment and management
+  - Faster inter-process communication
+  - Shared resource utilization
+  - Reduced network overhead
 
-### Resource Usage Targets
-- **Memory Usage**: <60MB base, <200MB with 10 cameras
-- **CPU Usage**: <20% idle, <80% under load
-- **Network**: <100Mbps per camera stream
+**Recommendation:** Separate containers for production deployments to enable independent scaling and lifecycle management. Single container acceptable for development or resource-constrained environments.
 
----
+### 5.2 Network Architecture
 
-## API Contract
-
-The MediaMTX Camera Service implements a comprehensive JSON-RPC 2.0 API over WebSocket connections. **All API methods are implemented by MediaMTX Controller, with WebSocket server providing only protocol handling.**
-
-### API Documentation Reference
-
-**Complete API Specification**: See `docs/api/json_rpc_methods.md` for the complete, accurate, and up-to-date API documentation including:
-- All available methods with detailed parameters and responses
-- Authentication and authorization requirements
-- Error codes and response formats
-- Real-time notifications and event subscriptions
-- External stream discovery methods
-- File management operations
-- System management and monitoring
-
-### Architecture Compliance
-
-- **WebSocket Server**: Thin protocol layer, delegates all operations to MediaMTX Controller
-- **MediaMTX Controller**: Implements all business logic and camera operations
-- **No Direct Access**: WebSocket server cannot access camera monitor, file system, or MediaMTX server directly
-- **API Ground Truth**: API documentation (`docs/api/json_rpc_methods.md`) is the authoritative source for all API specifications
+| Port | Protocol | Purpose | Security |
+|------|----------|---------|----------|
+| 8002 | WebSocket | Client API | JWT Authentication |
+| 8003 | HTTP | Health checks | Internal only |
+| 9997 | HTTP | MediaMTX API | Internal only |
+| 8554 | RTSP | Media streaming | Internal only |
 
 ---
 
-## Architecture Compliance Checklist
+## 6. Data Architecture
 
-Before implementing any changes, verify compliance with these architecture rules:
+### 6.1 Core Data Models
 
-### ✅ Security Compliance (CRITICAL)
-- [ ] All WebSocket connections require authentication
-- [ ] RBAC is enforced for all methods
-- [ ] Input validation is implemented for all parameters
-- [ ] Rate limiting is active for all clients
-- [ ] Security events are logged and audited
-- [ ] No hard-coded security values
-- [ ] Security configuration is externalized
+```plantuml
+@startuml DataModels
+title Core Data Models
 
-### ✅ WebSocket Server Compliance
-- [ ] WebSocket server has ONLY MediaMTX Controller as business logic dependency
-- [ ] NO direct camera monitor access
-- [ ] NO business logic in WebSocket methods
-- [ ] NO camera validation in WebSocket layer
-- [ ] NO file operations in WebSocket layer
-- [ ] ALL operations delegate to MediaMTX Controller
-- [ ] Security middleware is properly integrated
+class CameraDevice {
+    +Path : string
+    +Name : string
+    +Status : string
+    +Capabilities : V4L2Capabilities
+    +LastSeen : time
+    +Error : error
+}
 
-### ✅ MediaMTX Controller Compliance
-- [ ] MediaMTX Controller has camera monitor integration
-- [ ] MediaMTX Controller implements all camera discovery methods
-- [ ] MediaMTX Controller implements all business logic operations
-- [ ] MediaMTX Controller is single source of truth for camera operations
-- [ ] MediaMTX Controller has proper abstraction layer (camera0 ↔ /dev/video0)
-- [ ] MediaMTX Controller validates all camera operations
-- [ ] MediaMTX Controller enforces device access controls
+class V4L2Capabilities {
+    +DriverName : string
+    +CardName : string
+    +BusInfo : string
+    +Version : string
+    +Capabilities : array
+    +DeviceCaps : array
+}
 
-### ✅ No Direct Hardware Access
-- [ ] WebSocket server does NOT access camera monitor directly
-- [ ] WebSocket server does NOT access file system directly
-- [ ] WebSocket server does NOT access MediaMTX server directly
-- [ ] ALL hardware access goes through MediaMTX Controller
+class Session {
+    +ID : string
+    +UserID : string
+    +Role : string
+    +Created : time
+    +LastActivity : time
+    +IsActive : bool
+}
 
-### ✅ No Duplicated Logic
-- [ ] Abstraction layer exists ONLY in MediaMTX Controller
-- [ ] Camera validation exists ONLY in MediaMTX Controller
-- [ ] Stream URL generation exists ONLY in MediaMTX Controller
-- [ ] NO duplicated business logic between layers
-- [ ] Security logic is centralized and not duplicated
+class SnapshotResult {
+    +Device : string
+    +FilePath : string
+    +Size : int64
+    +Created : time
+    +TierUsed : int
+    +CaptureTime : float64
+}
 
-### ✅ Logging Architecture Compliance
-- [ ] All modules use LoggerFactory to create logger instances
-- [ ] NO direct logger creation in modules
-- [ ] Test configuration affects all loggers
-- [ ] Logger configuration is centralized
-- [ ] Security events are logged through factory-created loggers
+CameraDevice *-- V4L2Capabilities
+Session ||--o{ SnapshotResult
+
+@enduml
+```
+
+### 6.2 Configuration Schema
+
+```plantuml
+@startuml ConfigurationSchema
+title Configuration Schema
+
+class Config {
+    +ServerConfig Server
+    +CameraConfig Camera
+    +MediaMTXConfig MediaMTX
+    +SecurityConfig Security
+    +LoggingConfig Logging
+}
+
+class ServerConfig {
+    +string Host
+    +int Port
+    +string WebSocketPath
+    +int MaxConnections
+}
+
+class SecurityConfig {
+    +string JWTSecretKey
+    +int JWTExpiryHours
+    +int RateLimitRequests
+    +string RateLimitWindow
+}
+
+class CameraConfig {
+    +float64 PollInterval
+    +[]int DeviceRange
+    +float64 DetectionTimeout
+    +bool EnableCapabilityDetection
+}
+
+Config *-- ServerConfig
+Config *-- SecurityConfig
+Config *-- CameraConfig
+
+@enduml
+```
 
 ---
 
-**Document Status**: Architecture guide
-**Next Review**: Before any architectural changes
+## 7. Security Architecture
+
+### 7.1 Security Model
+
+```plantuml
+@startuml SecurityModel
+title Security Architecture
+
+rectangle "Security Layers" {
+    (Network Security) --> (Authentication)
+    (Authentication) --> (Authorization)
+    (Authorization) --> (Input Validation)
+    (Input Validation) --> (Audit Logging)
+}
+
+rectangle "Authentication Components" {
+    (JWT Tokens) --> (Session Management)
+    (Session Management) --> (Role Assignment)
+}
+
+rectangle "Authorization Components" {
+    (Permission Matrix) --> (Method-Level RBAC)
+    (Method-Level RBAC) --> (Resource Access Control)
+}
+
+@enduml
+```
+
+### 7.2 Role-Based Access Control
+
+| Role | Permissions | Use Case |
+|------|-------------|----------|
+| **viewer** | Read-only access to status and listings | Monitoring dashboards |
+| **operator** | Camera control + viewer permissions | Day-to-day operations |
+| **admin** | Full system access + metrics | System administration |
+
+### 7.3 Security Implementation
+
+```plantuml
+@startuml SecurityImplementation
+title Security Implementation Flow
+
+start
+
+:Client Request;
+:Rate Limiting Check;
+
+if (Rate Limit Exceeded?) then (yes)
+    :Return Rate Limit Error;
+    stop
+else (no)
+    :JWT Token Validation;
+endif
+
+if (Token Valid?) then (yes)
+    :Extract Role from Token;
+    :Check Method Permissions;
+    
+    if (Permission Granted?) then (yes)
+        :Execute Method;
+        :Log Success Event;
+        :Return Response;
+    else (no)
+        :Log Authorization Failure;
+        :Return Authorization Error;
+    endif
+else (no)
+    :Log Authentication Failure;
+    :Return Authentication Error;
+endif
+
+stop
+
+@enduml
+```
+
+---
+
+## 8. Quality Attributes
+
+### 8.1 Performance Architecture
+
+**Response Time Optimization:**
+- **Tier 0 Snapshots:** Direct V4L2 access (<200ms)
+- **Connection Pooling:** Reuse MediaMTX connections
+- **Event System:** O(log n) client notification scaling
+- **Memory Management:** Object pooling for high-frequency operations
+
+**Concurrency Design:**
+- **Goroutine-Based:** Non-blocking concurrent operations
+- **Channel Communication:** Lock-free inter-component communication
+- **Context Cancellation:** Graceful operation termination
+- **Resource Limiting:** Bounded goroutine pools
+
+### 8.2 Reliability Architecture
+
+**Fault Tolerance:**
+- **Multi-Tier Fallback:** Snapshot capture tier degradation
+- **Circuit Breaker:** MediaMTX communication protection
+- **Health Monitoring:** Component status tracking
+- **Graceful Degradation:** Partial functionality under failure
+
+**Error Handling:**
+- **Structured Errors:** Consistent error response format
+- **Error Propagation:** Clean error context preservation
+- **Recovery Mechanisms:** Automatic retry with exponential backoff
+- **Failure Isolation:** Component failures don't cascade
+
+### 8.3 Scalability Architecture
+
+**Horizontal Scaling Readiness:**
+- **Stateless Design:** Session state externalization capability
+- **Resource Separation:** Compute vs storage separation
+- **Event Distribution:** External event system integration ready
+- **Service Discovery:** Container orchestration compatibility
+
+---
+
+## 9. Design Principles
+
+### 9.1 Architectural Principles Applied
+
+**Single Responsibility Principle:**
+- Each component has one clear responsibility
+- Clean separation between protocol, business logic, and hardware
+- Interface-based design enables component substitution
+
+**Dependency Inversion Principle:**
+- High-level modules don't depend on low-level modules
+- Both depend on abstractions (interfaces)
+- Enables testing and component replacement
+
+**Open/Closed Principle:**
+- Components open for extension via interfaces
+- Closed for modification through stable contracts
+- Plugin architecture ready for future extensions
+
+---
+
+## 10. Architectural Debt
+
+### 10.1 Current Technical Debt
+
+**Performance Optimization Debt:**
+- FFmpeg process management could be optimized with process pooling
+- Memory allocation patterns could benefit from object pooling
+- Network connection pooling not yet implemented
+
+**Monitoring and Observability Debt:**
+- Distributed tracing not implemented
+- Advanced metrics collection could be enhanced
+- Performance analytics could be more comprehensive
+
+**Extensibility Debt:**
+- Plugin architecture interfaces defined but not fully implemented
+- External authentication providers not yet supported
+- Advanced camera types (IP cameras) have basic support only
+
+### 10.2 Debt Prioritization
+
+**High Priority:**
+- Process management optimization for production scalability
+- Enhanced error handling and recovery mechanisms
+
+**Medium Priority:**
+- Advanced monitoring and observability features
+- External authentication provider integration
+
+**Low Priority:**
+- Plugin architecture full implementation
+- Advanced analytics integration points
+
+---
+
+**Document Status:** Production Architecture Documentation  
+**Last Updated:** 2025-01-15  
+**Review Cycle:** Quarterly architecture reviews  
+**Document Maintenance:** Architecture changes require PM and IV&V approval
