@@ -129,9 +129,6 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
-	// Wait a moment for recording to start
-	time.Sleep(1 * time.Second)
-
 	// Stop the recording
 	err = controller.StopAdvancedRecording(ctx, session.ID)
 	require.NoError(t, err, "Stopping advanced recording should succeed")
@@ -320,9 +317,6 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
-
-	// Wait a moment for recording to start
-	time.Sleep(1 * time.Second)
 
 	// Rotate the recording file
 	err = controller.RotateRecordingFile(ctx, session.ID)

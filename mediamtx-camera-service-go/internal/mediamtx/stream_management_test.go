@@ -296,9 +296,6 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all goroutines to complete
-	time.Sleep(2 * time.Second)
-
 	// Check results
 	successCount := 0
 	for i := 0; i < numStreams; i++ {
