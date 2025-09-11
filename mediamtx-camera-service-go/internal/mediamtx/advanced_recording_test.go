@@ -66,7 +66,7 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 		"duration":   10, // 10 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
+	session, err := controller.StartAdvancedRecording(ctx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -125,7 +125,7 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 		"duration":   5, // 5 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
+	session, err := controller.StartAdvancedRecording(ctx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -185,7 +185,7 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 		"duration":   3, // 3 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
+	session, err := controller.StartAdvancedRecording(ctx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -251,7 +251,7 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 			"duration":   2, // 2 seconds
 		}
 
-		session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
+		session, err := controller.StartAdvancedRecording(ctx, device, options)
 		require.NoError(t, err, "Advanced recording should start successfully")
 		require.NotNil(t, session, "Recording session should not be nil")
 		sessionIDs[i] = session.ID
@@ -314,7 +314,7 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 		"duration":   10, // 10 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
+	session, err := controller.StartAdvancedRecording(ctx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 

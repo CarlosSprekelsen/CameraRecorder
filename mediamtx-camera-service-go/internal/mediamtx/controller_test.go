@@ -717,7 +717,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		"segment_time": 60,
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, path, options)
+	session, err := controller.StartAdvancedRecording(ctx, device, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
