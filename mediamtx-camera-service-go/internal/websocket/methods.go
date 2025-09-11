@@ -1088,7 +1088,7 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 		}
 
 		// Take snapshot using MediaMTX controller - thin delegation
-		snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), devicePath, "", options)
+		snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), devicePath, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to take snapshot: %v", err)
 		}

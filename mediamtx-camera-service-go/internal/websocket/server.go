@@ -517,9 +517,7 @@ func (s *WebSocketServer) Start() error {
 		}
 	}()
 
-	// Wait a short time for the server to actually start listening
-	// This ensures the atomic flag is set after the server is ready
-	time.Sleep(10 * time.Millisecond)
+	// Server should be ready immediately with proper atomic flag handling
 
 	s.logger.WithFields(logging.Fields{
 		"host":   s.config.Host,

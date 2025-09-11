@@ -641,7 +641,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Test snapshot with camera identifier (abstraction layer)
 	options := map[string]interface{}{}
 
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", outputPath, options)
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", options)
 	if err != nil {
 		t.Logf("Snapshot error details: %v", err)
 	}
@@ -949,7 +949,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		"tier":    "all",
 	}
 
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, device, path, options)
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, device, options)
 	if err != nil {
 		t.Logf("Advanced snapshot failed (expected in test environment): %v", err)
 		// This is expected to fail in test environment without real camera

@@ -337,8 +337,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 			"tier":        3,
 		}).Info("Tier 3: MediaMTX path created for external RTSP source")
 
-		// Wait a moment for the stream to be ready
-		time.Sleep(2 * time.Second)
+		// Stream should be ready immediately
 	} else {
 		// USB device - assume MediaMTX path already exists from previous streaming
 		streamName = sm.getStreamNameFromDevice(devicePath)

@@ -1404,16 +1404,34 @@ func (c *controller) RotateRecordingFile(ctx context.Context, sessionID string) 
 }
 
 // TakeAdvancedSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
-func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error) {
+func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Validate device exists
+	if device == "" {
+		return nil, fmt.Errorf("device path is required")
+	}
+
+	// Get default snapshot path from configuration
+	defaultPath := c.config.SnapshotsPath
+	if defaultPath == "" {
+		return nil, fmt.Errorf("default snapshot path not configured")
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("%s_%s.jpg", device, timestamp)
+	fullPath := filepath.Join(defaultPath, filename)
+
 	c.logger.WithFields(logging.Fields{
-		"device":  device,
-		"path":    path,
-		"options": options,
-	}).Info("Taking multi-tier advanced snapshot")
+		"device":        device,
+		"default_path":  defaultPath,
+		"filename":      filename,
+		"full_path":     fullPath,
+		"options":       options,
+	}).Info("Taking multi-tier advanced snapshot with configured default path")
 
 	// Abstraction layer: Convert camera identifier to device path if needed
 	var devicePath string
@@ -1434,11 +1452,11 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device, path stri
 	}
 
 	// Use enhanced snapshot manager with multi-tier capability
-	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, path, options)
+	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, fullPath, options)
 	if err != nil {
 		c.logger.WithError(err).WithFields(logging.Fields{
 			"device": device,
-			"path":   path,
+			"path":   fullPath,
 		}).Error("Multi-tier snapshot failed")
 		return nil, fmt.Errorf("failed to take multi-tier snapshot for device %s: %w", device, err)
 	}

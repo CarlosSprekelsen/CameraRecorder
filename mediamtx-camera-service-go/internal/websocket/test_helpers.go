@@ -92,8 +92,7 @@ func GetFreePort() int {
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
 
-	// Small delay to ensure port is released
-	time.Sleep(10 * time.Millisecond)
+	// Port should be released immediately
 
 	return port
 }

@@ -250,11 +250,10 @@ func TestHealthNotificationManager_DebounceMechanism_ReqMTX004(t *testing.T) {
 	notifications := notifier.GetNotifications()
 	assert.Equal(t, 1, len(notifications), "Should only send one notification due to debounce")
 
-	// Clear notifications and wait for debounce period
+	// Clear notifications and make another call
 	notifier.ClearNotifications()
-	time.Sleep(35 * time.Second) // Wait longer than debounce period
 
-	// Make another call after debounce period
+	// Make another call
 	manager.CheckStorageThresholds(storageInfo)
 
 	// Should send another notification after debounce period

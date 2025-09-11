@@ -466,7 +466,7 @@ type MediaMTXController interface {
 	GetRTSPConnectionMetrics(ctx context.Context) map[string]interface{}
 
 	// Advanced snapshot operations
-	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
 	GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool)
 	ListAdvancedSnapshots() []*Snapshot
 	DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error
@@ -516,7 +516,7 @@ type MediaMTXControllerAPI interface {
 	GetStreamStatus(ctx context.Context, device string) (*Stream, error)
 
 	// Recording and snapshots (identifier based)
-	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
 	StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error)
 	StopAdvancedRecording(ctx context.Context, sessionID string) error
 	GetSessionIDByDevice(device string) (string, bool)

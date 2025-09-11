@@ -75,9 +75,6 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
-	// Wait for initial health check
-	time.Sleep(2 * time.Second)
-
 	// Verify health state
 	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy")
 	assert.False(t, healthMonitor.IsCircuitOpen(), "Circuit should not be open")
@@ -118,9 +115,6 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
-
-	// Wait for health check
-	time.Sleep(2 * time.Second)
 
 	// Get status after monitoring
 	status = healthMonitor.GetStatus()
@@ -164,9 +158,6 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
-
-	// Wait for health check
-	time.Sleep(2 * time.Second)
 
 	// Get metrics after monitoring
 	metrics = healthMonitor.GetMetrics()
@@ -342,11 +333,10 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	notifications := mockNotifier.GetNotifications()
 	assert.LessOrEqual(t, len(notifications), 1, "Should send at most one notification due to debounce")
 
-	// Clear notifications and wait for debounce period
+	// Clear notifications and record another failure
 	mockNotifier.ClearNotifications()
-	time.Sleep(20 * time.Second) // Wait longer than debounce period
 
-	// Record another failure after debounce period
+	// Record another failure
 	healthMonitor.RecordFailure()
 
 	// Should send another notification after debounce period

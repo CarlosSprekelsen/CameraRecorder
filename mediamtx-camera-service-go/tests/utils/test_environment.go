@@ -112,7 +112,7 @@ func GetTestServerPort() int {
 	defer envMutex.RUnlock()
 
 	if envManager != nil && envManager.initialized && envManager.environment != nil {
-		return envManager.environment.Server.Config.Port
+		return envManager.environment.Server.GetConfig().Port
 	}
 	return 0
 }
