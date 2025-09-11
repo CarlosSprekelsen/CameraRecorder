@@ -294,12 +294,9 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stateLock.Lock()
 	defer m.stateLock.Unlock()
 
-	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
+	if atomic.LoadInt32(&m.running) == 1 {
 		return fmt.Errorf("monitor is already running")
 	}
-
-	m.stats.Running = true
-	atomic.AddInt64(&m.stats.ActiveTasks, 1)
 
 	m.logger.WithFields(logging.Fields{
 		"poll_interval": m.pollInterval,
@@ -307,8 +304,21 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":        "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
-	// Start monitoring loop
-	go m.monitoringLoop(ctx)
+	// Start monitoring loop and set running flag AFTER it actually starts
+	go func() {
+		// Set running flag AFTER monitoring loop actually begins
+		atomic.StoreInt32(&m.running, 1)
+		m.stats.Running = true
+		atomic.AddInt64(&m.stats.ActiveTasks, 1)
+
+		// Run the monitoring loop
+		m.monitoringLoop(ctx)
+
+		// Reset flag when loop exits
+		atomic.StoreInt32(&m.running, 0)
+		m.stats.Running = false
+		atomic.AddInt64(&m.stats.ActiveTasks, -1)
+	}()
 
 	return nil
 }

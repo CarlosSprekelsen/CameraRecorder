@@ -1185,7 +1185,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}
 
 		// Start recording using MediaMTX controller with default path
-		session, err := s.mediaMTXController.StartRecordingWithDefaultPath(context.Background(), devicePath, options)
+		session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start recording: %v", err)
 		}

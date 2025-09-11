@@ -1,0 +1,5 @@
+# github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx [github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.test]
+internal/mediamtx/controller.go:1266:34: c.configManager undefined (type *controller has no field or method configManager)
+internal/mediamtx/controller.go:1274:33: undefined: filepath
+FAIL	github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx [build failed]
+FAIL

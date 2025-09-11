@@ -78,7 +78,7 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 	// First create a stream
 	streamName := "test_stream"
 	source := "rtsp://localhost:8554/camera0"
-	
+
 	createdStream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
 	require.NotNil(t, createdStream, "Created stream should not be nil")
@@ -286,7 +286,7 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 		go func(index int) {
 			streamName := fmt.Sprintf("concurrent_stream_%d", index)
 			source := fmt.Sprintf("rtsp://localhost:8554/camera%d", index)
-			
+
 			stream, err := controller.CreateStream(ctx, streamName, source)
 			if err != nil {
 				errors[index] = err

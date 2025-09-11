@@ -69,43 +69,16 @@ func (pi *PathIntegration) Start(ctx context.Context) error {
 	pi.wg.Add(1)
 	go pi.monitorCameraChanges(pi.ctx)
 
-	// Wait for camera monitor to complete initial discovery
-	if err := pi.waitForCameraMonitorReady(ctx); err != nil {
-		pi.logger.WithError(err).Warn("Camera monitor not ready, will retry in background")
-		// Don't fail startup, just log warning
-	}
-
-	// Create paths for existing cameras (now that discovery is complete)
-	if err := pi.createPathsForExistingCameras(ctx); err != nil {
-		pi.logger.WithError(err).Error("Failed to create paths for existing cameras")
-	}
+	// Create paths for existing cameras in background (non-blocking)
+	// This eliminates the race condition and polling overhead
+	go func() {
+		if err := pi.createPathsForExistingCameras(ctx); err != nil {
+			pi.logger.WithError(err).Error("Failed to create paths for existing cameras")
+		}
+	}()
 
 	pi.logger.Info("MediaMTX path integration started successfully")
 	return nil
-}
-
-// waitForCameraMonitorReady waits for the camera monitor to complete initial discovery
-func (pi *PathIntegration) waitForCameraMonitorReady(ctx context.Context) error {
-	const maxWaitTime = 2 * time.Second // Reasonable timeout
-	const checkInterval = 50 * time.Millisecond // Check every 50ms
-	
-	timeout := time.After(maxWaitTime)
-	ticker := time.NewTicker(checkInterval)
-	defer ticker.Stop()
-	
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for camera monitor to be ready")
-		case <-ticker.C:
-			if pi.cameraMonitor.IsReady() {
-				pi.logger.Info("Camera monitor is ready, proceeding with path creation")
-				return nil
-			}
-		}
-	}
 }
 
 // Stop stops the path integration

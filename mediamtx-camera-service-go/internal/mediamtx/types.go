@@ -449,7 +449,7 @@ type MediaMTXController interface {
 	DeleteSnapshot(ctx context.Context, filename string) error
 
 	// Advanced recording operations
-	StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error)
+	StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error)
 	StopAdvancedRecording(ctx context.Context, sessionID string) error
 	GetAdvancedRecordingSession(sessionID string) (*RecordingSession, bool)
 	ListAdvancedRecordingSessions() []*RecordingSession
@@ -517,7 +517,7 @@ type MediaMTXControllerAPI interface {
 
 	// Recording and snapshots (identifier based)
 	TakeAdvancedSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error)
-	StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error)
+	StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error)
 	StopAdvancedRecording(ctx context.Context, sessionID string) error
 	GetSessionIDByDevice(device string) (string, bool)
 	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)

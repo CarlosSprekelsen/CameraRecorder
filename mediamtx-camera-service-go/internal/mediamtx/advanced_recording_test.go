@@ -57,13 +57,13 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	device := "camera0"
 	outputPath := filepath.Join(outputDir, "advanced_test.mp4")
 	options := map[string]interface{}{
-		"quality":     "high",
-		"resolution":  "1920x1080",
-		"framerate":   30,
-		"bitrate":     "5000k",
-		"codec":       "h264",
-		"audio":       true,
-		"duration":    10, // 10 seconds
+		"quality":    "high",
+		"resolution": "1920x1080",
+		"framerate":  30,
+		"bitrate":    "5000k",
+		"codec":      "h264",
+		"audio":      true,
+		"duration":   10, // 10 seconds
 	}
 
 	session, err := controller.StartAdvancedRecording(ctx, device, outputPath, options)
@@ -76,9 +76,6 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	assert.Equal(t, outputPath, session.FilePath, "File path should match")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 	assert.NotZero(t, session.StartTime, "Start time should be set")
-
-	// Wait a moment for recording to start
-	time.Sleep(2 * time.Second)
 
 	// Stop the recording
 	err = controller.StopAdvancedRecording(ctx, session.ID)

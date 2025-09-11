@@ -16,6 +16,7 @@ package mediamtx
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -1225,21 +1226,34 @@ func generateSnapshotPath(device, snapshotID string) string {
 }
 
 // StartAdvancedRecording starts a recording with advanced features and full state management
-func (c *controller) StartAdvancedRecording(ctx context.Context, device, path string, options map[string]interface{}) (*RecordingSession, error) {
+func (c *controller) StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
-
-	c.logger.WithFields(logging.Fields{
-		"device":  device,
-		"path":    path,
-		"options": options,
-	}).Info("Starting advanced recording with full state management")
 
 	// Validate device exists
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
 	}
+
+	// Get default recording path from configuration
+	defaultPath := c.config.RecordingsPath
+	if defaultPath == "" {
+		return nil, fmt.Errorf("default recording path not configured")
+	}
+
+	// Generate filename with timestamp
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("%s_%s.mp4", device, timestamp)
+	fullPath := filepath.Join(defaultPath, filename)
+
+	c.logger.WithFields(logging.Fields{
+		"device":       device,
+		"default_path": defaultPath,
+		"filename":     filename,
+		"full_path":    fullPath,
+		"options":      options,
+	}).Info("Starting advanced recording with configured default path")
 
 	// Abstraction layer: Convert camera identifier to device path if needed
 	var devicePath string
@@ -1260,7 +1274,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device, path st
 	}
 
 	// Create advanced recording session with full state management
-	session, err := c.recordingManager.StartRecording(ctx, devicePath, path, options)
+	session, err := c.recordingManager.StartRecording(ctx, devicePath, fullPath, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start advanced recording: %w", err)
 	}
