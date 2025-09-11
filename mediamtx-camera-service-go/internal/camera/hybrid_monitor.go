@@ -216,38 +216,9 @@ func (m *HybridCameraMonitor) initializeCameraSources() {
 
 // addIPCameraSources adds IP camera sources from configuration
 func (m *HybridCameraMonitor) addIPCameraSources() {
-	// Example IP camera sources - these should come from configuration
-	// In a real implementation, this would read from config file or environment variables
-
-	// Example RTSP camera
-	m.cameraSources = append(m.cameraSources, CameraSource{
-		Type:        "rtsp",
-		Identifier:  "ip_camera_192_168_1_100",
-		Source:      "rtsp://192.168.1.100:554/stream",
-		Enabled:     true,
-		Options:     map[string]string{"port": "554", "path": "/stream"},
-		Description: "IP Camera 192.168.1.100",
-	})
-
-	// Example HTTP camera
-	m.cameraSources = append(m.cameraSources, CameraSource{
-		Type:        "http",
-		Identifier:  "http_camera_192_168_1_101",
-		Source:      "http://192.168.1.101:8080/mjpeg",
-		Enabled:     true,
-		Options:     map[string]string{"port": "8080", "path": "/mjpeg"},
-		Description: "HTTP Camera 192.168.1.101",
-	})
-
-	// Example network camera
-	m.cameraSources = append(m.cameraSources, CameraSource{
-		Type:        "network",
-		Identifier:  "network_camera_239_0_0_1_1234",
-		Source:      "udp://239.0.0.1:1234",
-		Enabled:     true,
-		Options:     map[string]string{"protocol": "udp", "multicast": "true"},
-		Description: "Network Camera 239.0.0.1:1234",
-	})
+	// IP camera sources should be added from configuration when needed
+	// This function is intentionally empty to avoid hardcoded examples
+	// IP cameras can be added via configuration files or environment variables
 }
 
 // handleConfigurationUpdate handles configuration hot-reload updates
