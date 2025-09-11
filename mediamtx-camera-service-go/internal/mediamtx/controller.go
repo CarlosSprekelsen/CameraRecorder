@@ -361,7 +361,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, logger)
 
 	// Create snapshot manager with configuration integration
-	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, mediaMTXConfig, configManager, logger)
+	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 
 	// Create RTSP connection manager
 	rtspManager := NewRTSPConnectionManager(client, mediaMTXConfig, logger)

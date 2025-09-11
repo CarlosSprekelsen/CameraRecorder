@@ -53,3 +53,17 @@ type DeviceCapabilityState struct {
 	LastError        string                     `json:"last_error,omitempty"`
 	CapabilityResult *CapabilityDetectionResult `json:"capability_result,omitempty"`
 }
+
+// DirectSnapshot represents a snapshot captured via V4L2 direct capture
+type DirectSnapshot struct {
+	ID          string                 `json:"id"`
+	DevicePath  string                 `json:"device_path"`
+	FilePath    string                 `json:"file_path"`
+	Size        int64                  `json:"size"`
+	Format      string                 `json:"format"`
+	Width       int                    `json:"width,omitempty"`
+	Height      int                    `json:"height,omitempty"`
+	CaptureTime time.Duration          `json:"capture_time"`
+	Created     time.Time              `json:"created"`
+	Metadata    map[string]interface{} `json:"metadata"`
+}

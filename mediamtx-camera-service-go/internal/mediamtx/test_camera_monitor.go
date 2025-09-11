@@ -19,6 +19,7 @@ package mediamtx
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -243,4 +244,35 @@ func (m *TestCameraMonitor) ClearTestCameras() {
 
 	m.connectedCameras = make(map[string]*camera.CameraDevice)
 	m.stats.KnownDevicesCount = 0
+}
+
+// TakeDirectSnapshot implements the new V4L2 direct snapshot method for testing
+func (m *TestCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*camera.DirectSnapshot, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Check if device exists in our test cameras
+	device, exists := m.connectedCameras[devicePath]
+	if !exists {
+		return nil, fmt.Errorf("device %s not found in monitor", devicePath)
+	}
+
+	// Simulate successful V4L2 direct capture for testing
+	return &camera.DirectSnapshot{
+		ID:          "test_snapshot_123",
+		DevicePath:  devicePath,
+		FilePath:    outputPath,
+		Size:        1024,
+		Format:      "jpg",
+		Width:       640,
+		Height:      480,
+		CaptureTime: 50 * time.Millisecond,
+		Created:     time.Now(),
+		Metadata: map[string]interface{}{
+			"tier_used":      0,
+			"capture_method": "v4l2_direct",
+			"device_name":    device.Name,
+			"device_caps":    device.Capabilities.Capabilities,
+		},
+	}, nil
 }

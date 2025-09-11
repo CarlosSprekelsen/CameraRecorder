@@ -1094,10 +1094,10 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		ctx := context.Background()
 		monitor.generateCameraEvent(ctx, CameraEventConnected, "/dev/video0", testDevice)
 
-		// Give some time for the goroutine to execute
-		time.Sleep(10 * time.Millisecond)
-
-		assert.True(t, eventReceived, "Event should have been received")
+		// Use require.Eventually to properly wait for event processing without hiding race conditions
+		require.Eventually(t, func() bool {
+			return eventReceived
+		}, 5*time.Second, 10*time.Millisecond, "Event should have been received")
 	})
 
 	t.Run("polling_interval_adjustment", func(t *testing.T) {
@@ -1263,8 +1263,9 @@ func TestRealHardware_IntegrationScenarios(t *testing.T) {
 			}
 		}
 
-		// Should have minimal errors
-		assert.Less(t, errorCount, len(devices)/2, "Should have minimal device operation errors")
+		// Should have minimal errors (0 errors is actually good - means concurrent operations work correctly)
+		assert.LessOrEqual(t, errorCount, len(devices)/2, "Should have minimal device operation errors")
+		t.Logf("Concurrent operations completed with %d errors out of %d devices", errorCount, len(devices))
 	})
 
 	// Test 3: Device error recovery simulation

@@ -18,8 +18,11 @@ package camera
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -114,6 +117,18 @@ func NewHybridCameraMonitor(
 ) (*HybridCameraMonitor, error) {
 	if configManager == nil {
 		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
+	}
+
+	if deviceChecker == nil {
+		return nil, fmt.Errorf("deviceChecker cannot be nil")
+	}
+
+	if commandExecutor == nil {
+		return nil, fmt.Errorf("commandExecutor cannot be nil")
+	}
+
+	if infoParser == nil {
+		return nil, fmt.Errorf("infoParser cannot be nil")
 	}
 
 	if logger == nil {
@@ -298,26 +313,35 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		return fmt.Errorf("monitor is already running")
 	}
 
+	// Check context cancellation before starting
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	m.logger.WithFields(logging.Fields{
 		"poll_interval": m.pollInterval,
 		"device_range":  m.deviceRange,
 		"action":        "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
-	// Start monitoring loop and set running flag AFTER it actually starts
-	go func() {
-		// Set running flag AFTER monitoring loop actually begins
-		atomic.StoreInt32(&m.running, 1)
-		m.stats.Running = true
-		atomic.AddInt64(&m.stats.ActiveTasks, 1)
+	// Set running flag BEFORE starting goroutine to prevent race condition
+	atomic.StoreInt32(&m.running, 1)
+	m.stats.Running = true
+	atomic.StoreInt64(&m.stats.ActiveTasks, 1)
 
+	// Start monitoring loop
+	go func() {
+		defer func() {
+			// Reset flag when loop exits
+			atomic.StoreInt32(&m.running, 0)
+			m.stats.Running = false
+			atomic.StoreInt64(&m.stats.ActiveTasks, 0)
+		}()
+		
 		// Run the monitoring loop
 		m.monitoringLoop(ctx)
-
-		// Reset flag when loop exits
-		atomic.StoreInt32(&m.running, 0)
-		m.stats.Running = false
-		atomic.AddInt64(&m.stats.ActiveTasks, -1)
 	}()
 
 	return nil
@@ -334,7 +358,7 @@ func (m *HybridCameraMonitor) Stop() error {
 
 	atomic.StoreInt32(&m.running, 0)
 	m.stats.Running = false
-	atomic.AddInt64(&m.stats.ActiveTasks, -1)
+	atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 
 	// Only close the channel if it hasn't been closed already
 	select {
@@ -389,7 +413,7 @@ func (m *HybridCameraMonitor) GetDevice(devicePath string) (*CameraDevice, bool)
 func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
 	// Create a copy using atomic operations to avoid race conditions
 	stats := MonitorStats{
-		Running:                    m.stats.Running,
+		Running:                    atomic.LoadInt32(&m.running) == 1, // Use atomic field consistently
 		ActiveTasks:                atomic.LoadInt64(&m.stats.ActiveTasks),
 		PollingCycles:              atomic.LoadInt64(&m.stats.PollingCycles),
 		DeviceStateChanges:         atomic.LoadInt64(&m.stats.DeviceStateChanges),
@@ -405,6 +429,129 @@ func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
 		UdevEventsSkipped:          atomic.LoadInt64(&m.stats.UdevEventsSkipped),
 	}
 	return &stats
+}
+
+// TakeDirectSnapshot captures a snapshot directly via V4L2 (Tier 0 - Fastest)
+func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*DirectSnapshot, error) {
+	startTime := time.Now()
+
+	m.logger.WithFields(logging.Fields{
+		"device_path": devicePath,
+		"output_path": outputPath,
+		"options":     options,
+		"tier":        0,
+	}).Info("Taking V4L2 direct snapshot")
+
+	// Validate device exists using existing infrastructure
+	if !m.deviceChecker.Exists(devicePath) {
+		return nil, fmt.Errorf("device %s does not exist", devicePath)
+	}
+
+	// Get device information for validation
+	device, exists := m.GetDevice(devicePath)
+	if !exists {
+		return nil, fmt.Errorf("device %s not found in monitor", devicePath)
+	}
+
+	if device.Status != DeviceStatusConnected {
+		return nil, fmt.Errorf("device %s is not connected (status: %s)", devicePath, device.Status)
+	}
+
+	// Extract options with defaults
+	format := "jpg"
+	if f, ok := options["format"].(string); ok && f != "" {
+		format = f
+	}
+
+	width := 0
+	height := 0
+	if w, ok := options["width"].(int); ok && w > 0 {
+		width = w
+	}
+	if h, ok := options["height"].(int); ok && h > 0 {
+		height = h
+	}
+
+	// Build V4L2 command arguments
+	args := m.buildV4L2SnapshotArgs(outputPath, format, width, height)
+
+	// Execute V4L2 direct capture using existing command executor
+	_, err := m.commandExecutor.ExecuteCommand(ctx, devicePath, args)
+	if err != nil {
+		m.logger.WithFields(logging.Fields{
+			"device_path": devicePath,
+			"output_path": outputPath,
+			"error":       err.Error(),
+			"tier":        0,
+		}).Error("V4L2 direct snapshot failed")
+		return nil, fmt.Errorf("V4L2 direct capture failed: %w", err)
+	}
+
+	// Verify file was created and get size
+	fileInfo, err := os.Stat(outputPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify snapshot file: %w", err)
+	}
+
+	captureTime := time.Since(startTime)
+
+	// Create snapshot result
+	snapshot := &DirectSnapshot{
+		ID:          m.generateSnapshotID(devicePath),
+		DevicePath:  devicePath,
+		FilePath:    outputPath,
+		Size:        fileInfo.Size(),
+		Format:      format,
+		Width:       width,
+		Height:      height,
+		CaptureTime: captureTime,
+		Created:     time.Now(),
+		Metadata: map[string]interface{}{
+			"tier_used":      0,
+			"capture_method": "v4l2_direct",
+			"device_name":    device.Name,
+			"device_caps":    device.Capabilities.Capabilities,
+		},
+	}
+
+	m.logger.WithFields(logging.Fields{
+		"device_path":  devicePath,
+		"output_path":  outputPath,
+		"file_size":    fileInfo.Size(),
+		"capture_time": captureTime,
+		"format":       format,
+		"tier":         0,
+	}).Info("V4L2 direct snapshot successful")
+
+	return snapshot, nil
+}
+
+// buildV4L2SnapshotArgs builds V4L2 command arguments for direct snapshot capture
+func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(outputPath, format string, width, height int) string {
+	args := []string{
+		"--stream-mmap",           // Use memory-mapped streaming
+		"--stream-to", outputPath, // Output file path
+		"--stream-count", "1", // Capture only 1 frame
+	}
+
+	// Add format if specified
+	if format != "" {
+		args = append(args, "--set-fmt-video", fmt.Sprintf("pixelformat=%s", format))
+	}
+
+	// Add resolution if specified
+	if width > 0 && height > 0 {
+		args = append(args, "--set-fmt-video", fmt.Sprintf("width=%d,height=%d", width, height))
+	}
+
+	return strings.Join(args, " ")
+}
+
+// generateSnapshotID generates a unique snapshot ID
+func (m *HybridCameraMonitor) generateSnapshotID(devicePath string) string {
+	timestamp := time.Now().UnixNano()
+	deviceName := filepath.Base(devicePath)
+	return fmt.Sprintf("v4l2_direct_%s_%d", deviceName, timestamp)
 }
 
 // AddEventHandler adds a camera event handler
@@ -439,9 +586,6 @@ func (m *HybridCameraMonitor) SetEventNotifier(notifier EventNotifier) {
 
 // monitoringLoop continuously monitors for device changes
 func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
-	defer func() {
-		atomic.AddInt64(&m.stats.ActiveTasks, -1)
-	}()
 
 	ticker := time.NewTicker(time.Duration(m.currentPollInterval * float64(time.Second)))
 	defer ticker.Stop()

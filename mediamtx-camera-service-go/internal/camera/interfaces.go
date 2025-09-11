@@ -65,6 +65,9 @@ type CameraMonitor interface {
 	AddEventHandler(handler CameraEventHandler)
 	AddEventCallback(callback func(CameraEventData))
 	SetEventNotifier(notifier EventNotifier)
+
+	// V4L2 Direct Snapshot Capture (Tier 0 - Fastest)
+	TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*DirectSnapshot, error)
 }
 
 // MonitorStats tracks monitoring statistics

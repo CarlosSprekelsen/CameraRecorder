@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
@@ -32,7 +33,8 @@ import (
 // SnapshotManager manages advanced snapshot operations
 type SnapshotManager struct {
 	ffmpegManager FFmpegManager
-	streamManager StreamManager // Required for Tier 3: external RTSP source path creation
+	streamManager StreamManager        // Required for Tier 3: external RTSP source path creation
+	cameraMonitor camera.CameraMonitor // Required for Tier 0: V4L2 direct capture
 	config        *MediaMTXConfig
 	logger        *logging.Logger
 
@@ -58,10 +60,11 @@ type SnapshotSettings struct {
 }
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
-func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
+func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		streamManager: streamManager,
+		cameraMonitor: cameraMonitor,
 		config:        config,
 		configManager: configManager,
 		logger:        logger,
@@ -139,10 +142,37 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 	return snapshot, nil
 }
 
-// takeSnapshotMultiTier implements the 4-tier snapshot capture system
+// takeSnapshotMultiTier implements the 5-tier snapshot capture system
 func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, snapshotPath string, options map[string]interface{}, tierConfig *config.SnapshotTiersConfig) (*Snapshot, error) {
 	startTime := time.Now()
 	captureMethodsTried := []string{}
+
+	sm.logger.WithFields(logging.Fields{
+		"device": device,
+		"tier":   0,
+	}).Info("Tier 0: Attempting V4L2 direct capture")
+
+	// Tier 0: V4L2 Direct Capture (Fastest Path - NEW)
+	tier0Ctx, tier0Cancel := context.WithTimeout(ctx, time.Duration(tierConfig.Tier1USBDirectTimeout*float64(time.Second)))
+	defer tier0Cancel()
+
+	if snapshot, err := sm.captureSnapshotV4L2Direct(tier0Ctx, device, snapshotPath, options); err == nil {
+		captureTime := time.Since(startTime)
+		result := sm.createSnapshotResult(snapshot, 0, captureTime, captureMethodsTried)
+		sm.logger.WithFields(logging.Fields{
+			"device":       device,
+			"tier":         0,
+			"capture_time": captureTime,
+		}).Info("Tier 0: V4L2 direct capture successful")
+		return result, nil
+	} else {
+		sm.logger.WithFields(logging.Fields{
+			"device": device,
+			"tier":   0,
+			"error":  err.Error(),
+		}).Warn("Tier 0: V4L2 direct capture failed")
+	}
+	captureMethodsTried = append(captureMethodsTried, "v4l2_direct")
 
 	sm.logger.WithFields(logging.Fields{
 		"device": device,
@@ -249,6 +279,60 @@ func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 	}
 
 	return &cfg.Performance.SnapshotTiers
+}
+
+// captureSnapshotV4L2Direct implements Tier 0: V4L2 Direct Capture (Fastest Path - NEW)
+func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, devicePath, snapshotPath string, options map[string]interface{}) (*Snapshot, error) {
+	sm.logger.WithFields(logging.Fields{
+		"device":      devicePath,
+		"output_path": snapshotPath,
+		"tier":        0,
+	}).Info("Tier 0: Attempting V4L2 direct capture")
+
+	// Check if camera monitor is available
+	if sm.cameraMonitor == nil {
+		return nil, fmt.Errorf("camera monitor not available for V4L2 direct capture")
+	}
+
+	// Create output directory if it doesn't exist
+	outputDir := filepath.Dir(snapshotPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, NewFFmpegErrorWithErr(0, "v4l2_direct", "create_output_dir", "failed to create output directory", err)
+	}
+
+	// Use camera monitor's direct snapshot capability
+	directSnapshot, err := sm.cameraMonitor.TakeDirectSnapshot(ctx, devicePath, snapshotPath, options)
+	if err != nil {
+		return nil, NewFFmpegErrorWithErr(0, "v4l2_direct", "take_direct_snapshot", "V4L2 direct capture failed", err)
+	}
+
+	// Convert DirectSnapshot to Snapshot for compatibility
+	snapshot := &Snapshot{
+		ID:       directSnapshot.ID,
+		Device:   directSnapshot.DevicePath,
+		Path:     filepath.Dir(directSnapshot.FilePath),
+		FilePath: directSnapshot.FilePath,
+		Size:     directSnapshot.Size,
+		Created:  directSnapshot.Created,
+		Metadata: map[string]interface{}{
+			"tier_used":      0,
+			"capture_method": "v4l2_direct",
+			"capture_time":   directSnapshot.CaptureTime,
+			"format":         directSnapshot.Format,
+			"width":          directSnapshot.Width,
+			"height":         directSnapshot.Height,
+		},
+	}
+
+	sm.logger.WithFields(logging.Fields{
+		"device":       devicePath,
+		"output_path":  snapshotPath,
+		"file_size":    directSnapshot.Size,
+		"capture_time": directSnapshot.CaptureTime,
+		"tier":         0,
+	}).Info("Tier 0: V4L2 direct capture successful")
+
+	return snapshot, nil
 }
 
 // captureSnapshotDirect implements Tier 1: USB Direct Capture (Fastest Path)
