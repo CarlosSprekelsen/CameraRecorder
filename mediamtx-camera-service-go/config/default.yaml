@@ -170,6 +170,33 @@ retention_policy:
   max_size_gb: 0.5     # Reduced from 1 GB
   auto_cleanup: true
 
+# External discovery configuration (disabled by default for edge devices)
+external_discovery:
+  enabled: false                      # Disabled by default for edge devices
+  scan_interval: 0                    # On-demand only (0 = disabled)
+  scan_timeout: 30                    # 30 seconds max scan time
+  max_concurrent_scans: 3             # Reduced from 5 for edge devices
+  enable_startup_scan: false          # Disabled for edge devices
+  
+  # Skydio UAV discovery configuration
+  skydio:
+    enabled: false                    # Disabled by default
+    network_ranges: ["192.168.42.0/24"]  # Skydio default network range
+    eo_port: 5554                     # EO stream port
+    ir_port: 6554                     # IR stream port
+    eo_stream_path: "/subject"        # EO stream path
+    ir_stream_path: "/infrared"       # IR stream path
+    enable_both_streams: true         # Enable both EO and IR streams
+    known_ips: ["192.168.42.10"]      # Known Skydio IP addresses
+  
+  # Generic UAV discovery configuration (for other models)
+  generic_uav:
+    enabled: false                    # Disabled by default
+    network_ranges: []                # Empty by default
+    common_ports: [554, 8554]         # Common RTSP ports
+    stream_paths: ["/stream", "/live", "/video"]  # Common stream paths
+    known_ips: []                     # Empty by default
+
 # Health server port for edge device monitoring
 health_port: 8080
 
