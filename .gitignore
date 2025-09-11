@@ -1,25 +1,31 @@
-﻿# Python
-__pycache__/
-*.py[cod]
-*.class
+﻿# Go
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+*.cout
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Build artifacts
+/bin/
+/build/
+/dist/
+
+# Go module proxy cache
+$GOPATH/pkg/mod/
 
 # Virtual Environment
 venv/
@@ -57,10 +63,18 @@ snapshots/
 *.png
 
 # Test files
-.coverage
-.pytest_cache/
-htmlcov/
+# Go test coverage
+coverage.out
+coverage.html
+*.cover
+*.coverprofile
+
+# Go test cache
+.cache/
+
+# Test artifacts
 artifacts/
+test-results/
 
 # MediaMTX
 go1.25.0.linux-amd64.tar.gz
