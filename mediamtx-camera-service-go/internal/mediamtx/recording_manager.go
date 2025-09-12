@@ -143,6 +143,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 
 	// Use StreamManager to handle device-to-stream conversion
 	// This creates the FFmpeg process and MediaMTX path in one operation
+	rm.logger.WithField("device_path", devicePath).Info("Calling StreamManager.StartRecordingStream")
 	stream, err := rm.streamManager.StartRecordingStream(ctx, devicePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start recording stream: %w", err)

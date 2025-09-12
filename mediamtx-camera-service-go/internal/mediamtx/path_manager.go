@@ -145,13 +145,24 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	}
 
 	// Send request - name must be in URL path per Swagger spec
+	pm.logger.WithFields(logging.Fields{
+		"name": name,
+		"data": string(data),
+		"url": fmt.Sprintf("/v3/config/paths/add/%s", name),
+	}).Info("Sending CreatePath request to MediaMTX")
+	
 	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
-		// Check if this is a "path already exists" error (idempotent success)
+		// Log the actual error for debugging
 		errorMsg := err.Error()
+		pm.logger.WithError(err).WithFields(logging.Fields{
+			"name": name,
+			"data": string(data),
+		}).Error("CreatePath HTTP request failed")
+		
+		// Check if this is a "path already exists" error (idempotent success)
 		if strings.Contains(errorMsg, "path already exists") || 
-		   strings.Contains(errorMsg, "already exists") ||
-		   strings.Contains(errorMsg, "400") {
+		   strings.Contains(errorMsg, "already exists") {
 			pm.logger.WithFields(logging.Fields{
 				"name": name,
 				"error": errorMsg,

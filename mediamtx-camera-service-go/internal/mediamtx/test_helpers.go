@@ -60,6 +60,7 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 // MediaMTXTestHelper provides utilities for MediaMTX server testing
 type MediaMTXTestHelper struct {
 	config                *MediaMTXTestConfig
+	configManager         *config.ConfigManager
 	logger                *logging.Logger
 	client                MediaMTXClient
 	pathManager           PathManager
@@ -102,11 +103,15 @@ func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTe
 
 	// Create MediaMTX client
 	client := NewClient(config.BaseURL, clientConfig, logger)
+	
+	// Create config manager for centralized configuration
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	helper := &MediaMTXTestHelper{
-		config: config,
-		logger: logger,
-		client: client,
+		config:        config,
+		configManager: configManager,
+		logger:        logger,
+		client:        client,
 	}
 
 	// Ensure test data directory exists
@@ -326,7 +331,8 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		}
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, h.logger)
+		configIntegration := NewConfigIntegration(h.configManager, h.logger)
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, configIntegration, h.logger)
 	}
 	return h.recordingManager
 }

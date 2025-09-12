@@ -91,6 +91,11 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 
 	// Generate stream name with use case suffix
 	streamName := sm.GenerateStreamName(devicePath, useCase)
+	sm.logger.WithFields(logging.Fields{
+		"device_path": devicePath,
+		"use_case": useCase,
+		"stream_name": streamName,
+	}).Info("Generated stream name for use case")
 
 	// Get use case configuration
 	useCaseConfig, exists := sm.useCaseConfigs[useCase]
@@ -113,8 +118,17 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 	// Use PathManager for proper architectural integration and validation
 	err := sm.pathManager.CreatePath(ctx, streamName, devicePath, pathConfig)
 	if err != nil {
+		// Log the actual error for debugging
+		sm.logger.WithError(err).WithFields(logging.Fields{
+			"stream_name": streamName,
+			"device_path": devicePath,
+			"path_config": pathConfig,
+		}).Error("CreatePath failed - investigating error")
+		
 		// Check if this is a "path already exists" error (idempotent success)
-		if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+		errorMsg := err.Error()
+		sm.logger.WithField("error_message", errorMsg).Error("CreatePath error message")
+		if strings.Contains(errorMsg, "path already exists") || strings.Contains(errorMsg, "already exists") {
 			sm.logger.WithField("stream_name", streamName).Info("MediaMTX path already exists, treating as success")
 			// Return a mock stream response for idempotent success
 			stream := &Stream{
