@@ -260,6 +260,9 @@ type CameraConfig struct {
 	CapabilityTimeout         float64 `mapstructure:"capability_timeout"`
 	CapabilityRetryInterval   float64 `mapstructure:"capability_retry_interval"`
 	CapabilityMaxRetries      int     `mapstructure:"capability_max_retries"`
+	// Device discovery configuration
+	DiscoveryMode        string  `mapstructure:"discovery_mode"`         // "event-first" (default) or "poll-only"
+	FallbackPollInterval float64 `mapstructure:"fallback_poll_interval"` // default 90s for reconcile fallback
 }
 
 // LoggingConfig represents logging configuration.

@@ -39,16 +39,19 @@ type HybridCameraMonitor struct {
 	pollInterval              float64
 	detectionTimeout          float64
 	enableCapabilityDetection bool
+	discoveryMode             string
+	fallbackPollInterval      float64
 
 	// Enhanced camera sources beyond USB
 	cameraSources []CameraSource
 
 	// Dependencies
-	configManager   *config.ConfigManager
-	logger          *logging.Logger
-	deviceChecker   DeviceChecker
-	commandExecutor V4L2CommandExecutor
-	infoParser      DeviceInfoParser
+	configManager     *config.ConfigManager
+	logger            *logging.Logger
+	deviceChecker     DeviceChecker
+	commandExecutor   V4L2CommandExecutor
+	infoParser        DeviceInfoParser
+	deviceEventSource DeviceEventSource
 
 	// State
 	knownDevices     map[string]*CameraDevice
@@ -114,6 +117,7 @@ func NewHybridCameraMonitor(
 	deviceChecker DeviceChecker,
 	commandExecutor V4L2CommandExecutor,
 	infoParser DeviceInfoParser,
+	deviceEventSource DeviceEventSource,
 ) (*HybridCameraMonitor, error) {
 	if configManager == nil {
 		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
@@ -131,6 +135,10 @@ func NewHybridCameraMonitor(
 		return nil, fmt.Errorf("infoParser cannot be nil")
 	}
 
+	if deviceEventSource == nil {
+		return nil, fmt.Errorf("deviceEventSource cannot be nil")
+	}
+
 	if logger == nil {
 		logger = logging.GetLogger("camera-monitor")
 	}
@@ -140,22 +148,37 @@ func NewHybridCameraMonitor(
 		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
 	}
 
+	// Set default discovery mode if not configured
+	discoveryMode := cfg.Camera.DiscoveryMode
+	if discoveryMode == "" {
+		discoveryMode = "event-first"
+	}
+
+	// Set default fallback poll interval if not configured
+	fallbackPollInterval := cfg.Camera.FallbackPollInterval
+	if fallbackPollInterval <= 0 {
+		fallbackPollInterval = 90.0 // 90 seconds default
+	}
+
 	monitor := &HybridCameraMonitor{
 		// Configuration from config manager
 		deviceRange:               cfg.Camera.DeviceRange,
 		pollInterval:              cfg.Camera.PollInterval,
 		detectionTimeout:          cfg.Camera.DetectionTimeout,
 		enableCapabilityDetection: cfg.Camera.EnableCapabilityDetection,
+		discoveryMode:             discoveryMode,
+		fallbackPollInterval:      fallbackPollInterval,
 
 		// Enhanced camera sources
 		cameraSources: []CameraSource{},
 
 		// Dependencies
-		configManager:   configManager,
-		logger:          logger,
-		deviceChecker:   deviceChecker,
-		commandExecutor: commandExecutor,
-		infoParser:      infoParser,
+		configManager:     configManager,
+		logger:            logger,
+		deviceChecker:     deviceChecker,
+		commandExecutor:   commandExecutor,
+		infoParser:        infoParser,
+		deviceEventSource: deviceEventSource,
 
 		// State
 		knownDevices:     make(map[string]*CameraDevice),
@@ -292,9 +315,10 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	}
 
 	m.logger.WithFields(logging.Fields{
-		"poll_interval": m.pollInterval,
-		"device_range":  m.deviceRange,
-		"action":        "monitor_started",
+		"discovery_mode":         m.discoveryMode,
+		"fallback_poll_interval": m.fallbackPollInterval,
+		"device_range":           m.deviceRange,
+		"action":                 "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
 	// Set running flag BEFORE starting goroutine to prevent race condition
@@ -302,7 +326,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stats.Running = true
 	atomic.StoreInt64(&m.stats.ActiveTasks, 1)
 
-	// Start monitoring loop
+	// Start appropriate monitoring based on discovery mode
 	go func() {
 		defer func() {
 			// Reset flag when loop exits
@@ -311,8 +335,13 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 			atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 		}()
 
-		// Run the monitoring loop
-		m.monitoringLoop(ctx)
+		if m.discoveryMode == "event-first" {
+			// Start event-first monitoring
+			m.startEventFirstMonitoring(ctx)
+		} else {
+			// Start poll-only monitoring
+			m.startPollOnlyMonitoring(ctx)
+		}
 	}()
 
 	return nil
@@ -337,6 +366,13 @@ func (m *HybridCameraMonitor) Stop() error {
 		// Channel already closed, do nothing
 	default:
 		close(m.stopChan)
+	}
+
+	// Close device event source if it was started
+	if m.deviceEventSource != nil {
+		if err := m.deviceEventSource.Close(); err != nil {
+			m.logger.WithError(err).Warn("Error closing device event source")
+		}
 	}
 
 	m.logger.WithFields(logging.Fields{
@@ -398,6 +434,9 @@ func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
 		UdevEventsProcessed:        atomic.LoadInt64(&m.stats.UdevEventsProcessed),
 		UdevEventsFiltered:         atomic.LoadInt64(&m.stats.UdevEventsFiltered),
 		UdevEventsSkipped:          atomic.LoadInt64(&m.stats.UdevEventsSkipped),
+		DeviceEventsProcessed:      atomic.LoadInt64(&m.stats.DeviceEventsProcessed),
+		DeviceEventsDropped:        atomic.LoadInt64(&m.stats.DeviceEventsDropped),
+		DevicesConnected:           atomic.LoadInt64(&m.stats.DevicesConnected),
 	}
 	return &stats
 }
@@ -555,37 +594,307 @@ func (m *HybridCameraMonitor) SetEventNotifier(notifier EventNotifier) {
 	m.eventNotifier = notifier
 }
 
-// monitoringLoop continuously monitors for device changes
-func (m *HybridCameraMonitor) monitoringLoop(ctx context.Context) {
+// startEventFirstMonitoring starts event-first monitoring with slow reconcile fallback
+func (m *HybridCameraMonitor) startEventFirstMonitoring(ctx context.Context) {
+	m.logger.WithFields(logging.Fields{
+		"action": "event_first_monitoring_started",
+	}).Info("Starting event-first camera monitoring")
 
-	ticker := time.NewTicker(time.Duration(m.currentPollInterval * float64(time.Second)))
-	defer ticker.Stop()
+	// Start device event source
+	if err := m.deviceEventSource.Start(ctx); err != nil {
+		m.logger.WithError(err).Error("Failed to start device event source, falling back to poll-only")
+		m.startPollOnlyMonitoring(ctx)
+		return
+	}
+
+	// Start event processing loop
+	go m.eventLoop(ctx)
+
+	// Start slow reconcile loop for drift correction
+	m.reconcileLoop(ctx)
+}
+
+// startPollOnlyMonitoring starts poll-only monitoring
+func (m *HybridCameraMonitor) startPollOnlyMonitoring(ctx context.Context) {
+	m.logger.WithFields(logging.Fields{
+		"poll_interval": m.pollInterval,
+		"device_range":  m.deviceRange,
+		"action":        "poll_only_monitoring_started",
+	}).Info("Starting poll-only camera monitoring")
+
+	// Use the configured poll interval for poll-only mode
+	m.reconcileLoop(ctx)
+}
+
+// eventLoop processes device events from the event source
+func (m *HybridCameraMonitor) eventLoop(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			m.logger.WithFields(logging.Fields{
+				"panic":  r,
+				"action": "panic_recovered",
+			}).Error("Recovered from panic in event loop")
+		}
+	}()
 
 	m.logger.WithFields(logging.Fields{
-		"poll_interval": m.currentPollInterval,
-		"device_range":  m.deviceRange,
-		"action":        "monitoring_loop_started",
-	}).Info("Camera monitoring loop started")
+		"action": "event_loop_started",
+	}).Debug("Device event loop started")
 
 	for {
 		select {
 		case <-ctx.Done():
 			m.logger.WithFields(logging.Fields{
-				"action": "monitoring_loop_stopped",
+				"action": "event_loop_stopped",
 				"reason": "context_cancelled",
-			}).Info("Camera monitoring loop stopped due to context cancellation")
+			}).Debug("Device event loop stopped due to context cancellation")
 			return
 		case <-m.stopChan:
 			m.logger.WithFields(logging.Fields{
-				"action": "monitoring_loop_stopped",
+				"action": "event_loop_stopped",
 				"reason": "stop_requested",
-			}).Info("Camera monitoring loop stopped")
+			}).Debug("Device event loop stopped")
 			return
-		case <-ticker.C:
-			m.discoverCameras(ctx)
-			m.adjustPollingInterval()
+		case event, ok := <-m.deviceEventSource.Events():
+			if !ok {
+				m.logger.Debug("Device event source channel closed")
+				return
+			}
+			m.processDeviceEvent(ctx, event)
 		}
 	}
+}
+
+// reconcileLoop performs slow periodic reconciliation to correct drift
+func (m *HybridCameraMonitor) reconcileLoop(ctx context.Context) {
+	// Use fallback poll interval for event-first mode, configured interval for poll-only
+	pollInterval := m.fallbackPollInterval
+	if m.discoveryMode == "poll-only" {
+		pollInterval = m.pollInterval
+	}
+
+	ticker := time.NewTicker(time.Duration(pollInterval * float64(time.Second)))
+	defer ticker.Stop()
+
+	m.logger.WithFields(logging.Fields{
+		"poll_interval": pollInterval,
+		"mode":          m.discoveryMode,
+		"action":        "reconcile_loop_started",
+	}).Info("Camera reconcile loop started")
+
+	for {
+		select {
+		case <-ctx.Done():
+			m.logger.WithFields(logging.Fields{
+				"action": "reconcile_loop_stopped",
+				"reason": "context_cancelled",
+			}).Info("Camera reconcile loop stopped due to context cancellation")
+			return
+		case <-m.stopChan:
+			m.logger.WithFields(logging.Fields{
+				"action": "reconcile_loop_stopped",
+				"reason": "stop_requested",
+			}).Info("Camera reconcile loop stopped")
+			return
+		case <-ticker.C:
+			m.reconcileDevices(ctx)
+		}
+	}
+}
+
+// processDeviceEvent processes a single device event from the event source
+func (m *HybridCameraMonitor) processDeviceEvent(ctx context.Context, event DeviceEvent) {
+	atomic.AddInt64(&m.stats.DeviceEventsProcessed, 1)
+
+	m.logger.WithFields(logging.Fields{
+		"action":      "device_event_processing",
+		"device_path": event.DevicePath,
+		"event_type":  event.Type,
+		"vendor":      event.Vendor,
+		"product":     event.Product,
+		"serial":      event.Serial,
+	}).Debug("Processing device event")
+
+	switch event.Type {
+	case DeviceEventAdd:
+		m.handleDeviceAdd(ctx, event)
+	case DeviceEventRemove:
+		m.handleDeviceRemove(ctx, event)
+	case DeviceEventChange:
+		m.handleDeviceChange(ctx, event)
+	default:
+		m.logger.WithFields(logging.Fields{
+			"device_path": event.DevicePath,
+			"event_type":  event.Type,
+			"action":      "unknown_event_type",
+		}).Warn("Unknown device event type")
+	}
+}
+
+// handleDeviceAdd handles device add events
+func (m *HybridCameraMonitor) handleDeviceAdd(ctx context.Context, event DeviceEvent) {
+	// Check if device already exists in our map
+	m.stateLock.RLock()
+	_, exists := m.knownDevices[event.DevicePath]
+	m.stateLock.RUnlock()
+
+	if exists {
+		// Device already known, skip
+		return
+	}
+
+	// Create device info for the new device
+	device, err := m.createDeviceFromEvent(ctx, event)
+	if err != nil {
+		m.logger.WithFields(logging.Fields{
+			"device_path": event.DevicePath,
+			"error":       err.Error(),
+			"action":      "device_add_failed",
+		}).Warn("Failed to create device info for new device")
+		return
+	}
+
+	// Add to known devices
+	m.stateLock.Lock()
+	m.knownDevices[event.DevicePath] = device
+	atomic.AddInt64(&m.stats.DeviceStateChanges, 1)
+	atomic.AddInt64(&m.stats.DevicesConnected, 1)
+	m.stateLock.Unlock()
+
+	m.logger.WithFields(logging.Fields{
+		"device_path": event.DevicePath,
+		"device_name": device.Name,
+		"status":      device.Status,
+		"action":      "device_discovered",
+	}).Info("New V4L2 device discovered via event")
+
+	// Generate event
+	m.generateCameraEvent(ctx, CameraEventConnected, event.DevicePath, device)
+}
+
+// handleDeviceRemove handles device remove events
+func (m *HybridCameraMonitor) handleDeviceRemove(ctx context.Context, event DeviceEvent) {
+	m.stateLock.Lock()
+	device, exists := m.knownDevices[event.DevicePath]
+	if exists {
+		device.Status = DeviceStatusDisconnected
+		atomic.AddInt64(&m.stats.DeviceStateChanges, 1)
+		atomic.AddInt64(&m.stats.DevicesConnected, -1)
+	}
+	m.stateLock.Unlock()
+
+	if exists {
+		m.logger.WithFields(logging.Fields{
+			"device_path": event.DevicePath,
+			"device_name": device.Name,
+			"action":      "device_disconnected",
+		}).Info("V4L2 device disconnected via event")
+
+		// Generate event
+		m.generateCameraEvent(ctx, CameraEventDisconnected, event.DevicePath, device)
+	}
+}
+
+// handleDeviceChange handles device change events
+func (m *HybridCameraMonitor) handleDeviceChange(ctx context.Context, event DeviceEvent) {
+	m.stateLock.RLock()
+	device, exists := m.knownDevices[event.DevicePath]
+	m.stateLock.RUnlock()
+
+	if !exists {
+		// Device not known, treat as add
+		m.handleDeviceAdd(ctx, event)
+		return
+	}
+
+	// Update device info
+	device.LastSeen = time.Now()
+	// Could probe capabilities again here if needed
+
+	m.logger.WithFields(logging.Fields{
+		"device_path": event.DevicePath,
+		"device_name": device.Name,
+		"action":      "device_changed",
+	}).Debug("V4L2 device changed via event")
+
+	// Generate event
+	m.generateCameraEvent(ctx, CameraEventStatusChanged, event.DevicePath, device)
+}
+
+// createDeviceFromEvent creates a CameraDevice from a DeviceEvent
+func (m *HybridCameraMonitor) createDeviceFromEvent(ctx context.Context, event DeviceEvent) (*CameraDevice, error) {
+	// Extract device number from path
+	var deviceNum int
+	_, err := fmt.Sscanf(event.DevicePath, "/dev/video%d", &deviceNum)
+	if err != nil {
+		return nil, fmt.Errorf("invalid device path: %s", event.DevicePath)
+	}
+
+	device := &CameraDevice{
+		Path:      event.DevicePath,
+		DeviceNum: deviceNum,
+		Status:    DeviceStatusConnected,
+		LastSeen:  time.Now(),
+		Vendor:    event.Vendor,
+		Product:   event.Product,
+		Serial:    event.Serial,
+	}
+
+	// Set default name
+	device.Name = fmt.Sprintf("Video Device %d", deviceNum)
+
+	// Probe capabilities if enabled
+	if m.enableCapabilityDetection {
+		if err := m.probeDeviceCapabilities(ctx, device); err != nil {
+			device.Status = DeviceStatusError
+			device.Error = err.Error()
+			m.logger.WithFields(logging.Fields{
+				"device_path": event.DevicePath,
+				"error":       err.Error(),
+				"action":      "capability_probe_failed",
+			}).Debug("Failed to probe device capabilities")
+		}
+	}
+
+	return device, nil
+}
+
+// reconcileDevices performs slow periodic reconciliation to correct drift
+func (m *HybridCameraMonitor) reconcileDevices(ctx context.Context) {
+	atomic.AddInt64(&m.stats.PollingCycles, 1)
+
+	m.logger.WithFields(logging.Fields{
+		"action": "reconcile_devices",
+	}).Debug("Performing device reconciliation")
+
+	// Get current devices from filesystem (only real devices, no index guessing)
+	currentDevices := make(map[string]*CameraDevice)
+
+	// Check each device in our known devices to see if it still exists
+	m.stateLock.RLock()
+	knownPaths := make([]string, 0, len(m.knownDevices))
+	for path := range m.knownDevices {
+		knownPaths = append(knownPaths, path)
+	}
+	m.stateLock.RUnlock()
+
+	for _, path := range knownPaths {
+		if m.deviceChecker.Exists(path) {
+			// Device still exists, keep it
+			m.stateLock.RLock()
+			device := m.knownDevices[path]
+			m.stateLock.RUnlock()
+
+			if device != nil {
+				device.LastSeen = time.Now()
+				currentDevices[path] = device
+			}
+		}
+		// If device doesn't exist, it will be removed in processDeviceStateChanges
+	}
+
+	// Process any state changes (removals)
+	m.processDeviceStateChanges(ctx, currentDevices)
 }
 
 // discoverCameras scans for currently connected cameras using parallel processing

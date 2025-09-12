@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
@@ -45,6 +46,17 @@ type pathManager struct {
 	// Per-path mutexes for serializing create→ready→patch operations
 	pathMutexes map[string]*sync.Mutex
 	pathMutexMu sync.RWMutex
+
+	// Metrics tracking
+	metrics *PathManagerMetrics
+}
+
+// PathManagerMetrics tracks path operation metrics
+type PathManagerMetrics struct {
+	PathReadyLatencyMs  int64 `json:"path_ready_latency_ms"` // Histogram of path ready latency
+	PatchAttemptsTotal  int64 `json:"patch_attempts_total"`  // Counter of patch attempts
+	DeviceEventsTotal   int64 `json:"device_events_total"`   // Counter of device events (add/remove/change)
+	PathOperationsTotal int64 `json:"path_operations_total"` // Counter of total path operations
 }
 
 // NewPathManager creates a new MediaMTX path manager
@@ -56,6 +68,7 @@ func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *loggi
 		cameraPaths: make(map[string]string),
 		pathCameras: make(map[string]string),
 		pathMutexes: make(map[string]*sync.Mutex),
+		metrics:     &PathManagerMetrics{},
 	}
 }
 
@@ -69,6 +82,7 @@ func NewPathManagerWithCamera(client MediaMTXClient, config *MediaMTXConfig, cam
 		cameraPaths:   make(map[string]string),
 		pathCameras:   make(map[string]string),
 		pathMutexes:   make(map[string]*sync.Mutex),
+		metrics:       &PathManagerMetrics{},
 	}
 }
 
@@ -98,10 +112,23 @@ func (pm *pathManager) getPathMutex(pathName string) *sync.Mutex {
 
 // CreatePath creates a new path with idempotency protection
 func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error {
+	// Track path operation metrics
+	atomic.AddInt64(&pm.metrics.PathOperationsTotal, 1)
+
+	// Get device path for logging context
+	devicePath := pm.getDevicePathFromCameraIdentifier(name)
+	if devicePath == "" {
+		devicePath = source // fallback to source if not a camera identifier
+	}
+
 	pm.logger.WithFields(logging.Fields{
-		"name":    name,
-		"source":  source,
-		"options": options,
+		"camera_id":   name,
+		"device_path": devicePath,
+		"path_name":   name,
+		"method":      "POST",
+		"endpoint":    fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"source":      source,
+		"options":     options,
 	}).Debug("Creating MediaMTX path")
 
 	// Enhanced validation for better user experience and software resilience
@@ -115,7 +142,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 
 	// Use singleflight to prevent concurrent creation attempts for the same path
 	result, err, _ := pm.createGroup.Do(name, func() (interface{}, error) {
-		return nil, pm.createPathInternal(ctx, name, source, options)
+		return nil, pm.createPathInternal(ctx, name, source, options, devicePath)
 	})
 
 	if err != nil {
@@ -128,7 +155,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 }
 
 // createPathInternal performs the actual path creation logic
-func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options map[string]interface{}) error {
+func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options map[string]interface{}, devicePath string) error {
 	// Create path request
 	path := &Path{
 		Name:   name,
@@ -206,8 +233,13 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		// Log the actual error for debugging with full context
 		errorMsg := err.Error()
 		pm.logger.WithError(err).WithFields(logging.Fields{
-			"name":          name,
-			"data":          string(data),
+			"camera_id":     name,
+			"device_path":   devicePath,
+			"path_name":     name,
+			"method":        "POST",
+			"endpoint":      fmt.Sprintf("/v3/config/paths/add/%s", name),
+			"status":        "failed",
+			"body":          truncateString(string(data), 200), // Trimmed body
 			"error_type":    fmt.Sprintf("%T", err),
 			"error_message": errorMsg,
 		}).Error("CreatePath HTTP request failed - investigating idempotency")
@@ -234,15 +266,35 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		return NewPathErrorWithErr(name, "create_path", "failed to create path", err)
 	}
 
-	pm.logger.WithField("name", name).Info("MediaMTX path created successfully")
+	pm.logger.WithFields(logging.Fields{
+		"camera_id":   name,
+		"device_path": devicePath,
+		"path_name":   name,
+		"method":      "POST",
+		"endpoint":    fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"status":      "success",
+	}).Info("MediaMTX path created successfully")
 	return nil
 }
 
 // PatchPath patches a path configuration with retry and jitter
 func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[string]interface{}) error {
+	// Track patch attempt metrics
+	atomic.AddInt64(&pm.metrics.PatchAttemptsTotal, 1)
+
+	// Get device path for logging context
+	devicePath := pm.getDevicePathFromCameraIdentifier(name)
+	if devicePath == "" {
+		devicePath = name // fallback if not a camera identifier
+	}
+
 	pm.logger.WithFields(logging.Fields{
-		"name":   name,
-		"config": config,
+		"camera_id":   name,
+		"device_path": devicePath,
+		"path_name":   name,
+		"method":      "PATCH",
+		"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+		"config":      config,
 	}).Debug("Patching MediaMTX path configuration")
 
 	if err := pm.validatePathName(name); err != nil {
@@ -268,7 +320,14 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 
 		err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
 		if err == nil {
-			pm.logger.WithField("name", name).Info("MediaMTX path configuration patched successfully")
+			pm.logger.WithFields(logging.Fields{
+				"camera_id":   name,
+				"device_path": devicePath,
+				"path_name":   name,
+				"method":      "PATCH",
+				"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+				"status":      "success",
+			}).Info("MediaMTX path configuration patched successfully")
 			return nil
 		}
 
@@ -294,10 +353,18 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 		}).Debug("Retry decision")
 
 		if !isRetryable || attempt == len(backoffs)-1 {
+			// Log with comprehensive context including status and response body
+			errorMsg := err.Error()
 			pm.logger.WithError(err).WithFields(logging.Fields{
-				"path_name":    name,
-				"json_payload": string(data),
-				"attempt":      attempt + 1,
+				"camera_id":   name,
+				"device_path": devicePath,
+				"path_name":   name,
+				"method":      "PATCH",
+				"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+				"status":      "failed",
+				"body":        truncateString(string(data), 200), // Trimmed body
+				"attempt":     attempt + 1,
+				"error_msg":   errorMsg,
 			}).Error("MediaMTX PATCH request failed")
 			return NewPathErrorWithErr(name, "patch_path", "failed to patch path", err)
 		}
@@ -333,6 +400,8 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 
 // WaitForPathReady waits for a path to be ready in runtime (not config)
 func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeout time.Duration) error {
+	startTime := time.Now()
+
 	pm.logger.WithFields(logging.Fields{
 		"path_name": name,
 		"timeout":   timeout,
@@ -354,7 +423,14 @@ func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeou
 			// Check runtime path visibility (not config)
 			_, err := pm.GetPath(ctx, name)
 			if err == nil {
-				pm.logger.WithField("path_name", name).Debug("Path is ready in runtime")
+				// Track path ready latency
+				latencyMs := time.Since(startTime).Milliseconds()
+				atomic.AddInt64(&pm.metrics.PathReadyLatencyMs, latencyMs)
+
+				pm.logger.WithFields(logging.Fields{
+					"path_name":  name,
+					"latency_ms": latencyMs,
+				}).Debug("Path is ready in runtime")
 				return nil
 			}
 
@@ -794,4 +870,31 @@ func (pm *pathManager) getDevicePathFromCameraIdentifier(cameraID string) string
 	}
 	// If already a device path, return as-is
 	return cameraID
+}
+
+// GetMetrics returns the current path manager metrics
+func (pm *pathManager) GetMetrics() *PathManagerMetrics {
+	return &PathManagerMetrics{
+		PathReadyLatencyMs:  atomic.LoadInt64(&pm.metrics.PathReadyLatencyMs),
+		PatchAttemptsTotal:  atomic.LoadInt64(&pm.metrics.PatchAttemptsTotal),
+		DeviceEventsTotal:   atomic.LoadInt64(&pm.metrics.DeviceEventsTotal),
+		PathOperationsTotal: atomic.LoadInt64(&pm.metrics.PathOperationsTotal),
+	}
+}
+
+// TrackDeviceEvent tracks device events for metrics
+func (pm *pathManager) TrackDeviceEvent(eventType string) {
+	atomic.AddInt64(&pm.metrics.DeviceEventsTotal, 1)
+	pm.logger.WithFields(logging.Fields{
+		"event_type":   eventType,
+		"total_events": atomic.LoadInt64(&pm.metrics.DeviceEventsTotal),
+	}).Debug("Device event tracked")
+}
+
+// truncateString truncates a string to the specified length for logging
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }

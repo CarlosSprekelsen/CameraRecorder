@@ -45,6 +45,12 @@ func main() {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
+	// Create device event source (default to fsnotify)
+	deviceEventSource, err := camera.NewFsnotifyDeviceEventSource(logger)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to create device event source")
+	}
+
 	// Initialize camera monitor with real implementations
 	cameraMonitor, err := camera.NewHybridCameraMonitor(
 		configManager,
@@ -52,6 +58,7 @@ func main() {
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create camera monitor")

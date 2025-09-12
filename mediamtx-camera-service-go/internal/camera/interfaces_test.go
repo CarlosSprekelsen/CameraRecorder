@@ -242,7 +242,7 @@ func TestCameraMonitor_RealImplementation(t *testing.T) {
 
 	// Test monitor creation (this will fail without config, but tests the interface)
 	t.Run("monitor_creation", func(t *testing.T) {
-		monitor, err := NewHybridCameraMonitor(nil, nil, deviceChecker, commandExecutor, infoParser)
+		monitor, err := NewHybridCameraMonitor(nil, nil, deviceChecker, commandExecutor, infoParser, nil)
 		assert.Error(t, err, "Should fail without config")
 		assert.Nil(t, monitor, "Should be nil when creation fails")
 	})
@@ -299,12 +299,16 @@ func TestCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		commandExecutor := &RealV4L2CommandExecutor{}
 		infoParser := &RealDeviceInfoParser{}
 
+		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
+		require.NoError(t, err, "Should create device event source")
+
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
 			logger,
 			deviceChecker,
 			commandExecutor,
 			infoParser,
+			deviceEventSource,
 		)
 		require.NoError(t, err, "Should create monitor successfully")
 

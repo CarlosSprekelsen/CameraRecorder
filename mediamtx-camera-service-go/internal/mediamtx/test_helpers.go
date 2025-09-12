@@ -360,9 +360,16 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		commandExecutor := &camera.RealV4L2CommandExecutor{}
 		infoParser := &camera.RealDeviceInfoParser{}
 
+		// Create device event source for testing
+		deviceEventSource, err := camera.NewFsnotifyDeviceEventSource(logger)
+		if err != nil {
+			h.logger.WithError(err).Error("Failed to create device event source - test requires real hardware")
+			panic(fmt.Sprintf("Device event source creation failed: %v", err))
+		}
+
 		// Create real camera monitor - NO MOCKS, real hardware only
 		realMonitor, err := camera.NewHybridCameraMonitor(
-			configManager, logger, deviceChecker, commandExecutor, infoParser)
+			configManager, logger, deviceChecker, commandExecutor, infoParser, deviceEventSource)
 		if err != nil {
 			// Real system - if camera monitor fails, test should fail
 			h.logger.WithError(err).Error("Failed to create real camera monitor - test requires real hardware")

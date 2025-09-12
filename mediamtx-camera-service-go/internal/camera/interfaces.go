@@ -53,6 +53,32 @@ type EventNotifier interface {
 	NotifyCapabilityError(devicePath string, error string)
 }
 
+// DeviceEventSource interface for device event discovery (udev/fsnotify abstraction)
+type DeviceEventSource interface {
+	Start(ctx context.Context) error
+	Events() <-chan DeviceEvent
+	Close() error
+}
+
+// DeviceEvent represents a device event from udev/fsnotify
+type DeviceEvent struct {
+	Type       DeviceEventType `json:"type"`
+	DevicePath string          `json:"device_path"`
+	Vendor     string          `json:"vendor,omitempty"`
+	Product    string          `json:"product,omitempty"`
+	Serial     string          `json:"serial,omitempty"`
+	Timestamp  time.Time       `json:"timestamp"`
+}
+
+// DeviceEventType represents the type of device event
+type DeviceEventType string
+
+const (
+	DeviceEventAdd    DeviceEventType = "add"
+	DeviceEventRemove DeviceEventType = "remove"
+	DeviceEventChange DeviceEventType = "change"
+)
+
 // CameraMonitor interface for camera discovery and monitoring
 type CameraMonitor interface {
 	Start(ctx context.Context) error
@@ -86,6 +112,9 @@ type MonitorStats struct {
 	UdevEventsProcessed        int64   `json:"udev_events_processed"`
 	UdevEventsFiltered         int64   `json:"udev_events_filtered"`
 	UdevEventsSkipped          int64   `json:"udev_events_skipped"`
+	DeviceEventsProcessed      int64   `json:"device_events_processed"`
+	DeviceEventsDropped        int64   `json:"device_events_dropped"`
+	DevicesConnected           int64   `json:"devices_connected"`
 	// Removed mu sync.RWMutex - using atomic operations instead
 }
 

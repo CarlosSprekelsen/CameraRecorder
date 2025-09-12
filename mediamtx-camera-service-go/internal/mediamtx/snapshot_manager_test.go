@@ -41,8 +41,12 @@ func NewRealHardwareCameraMonitor(t *testing.T) camera.CameraMonitor {
 	configManager := config.CreateConfigManager()
 	logger := logging.CreateTestLogger(t, nil)
 
+	// Create device event source for testing
+	deviceEventSource, err := camera.NewFsnotifyDeviceEventSource(logger)
+	require.NoError(t, err, "Should create device event source")
+
 	// Create real camera monitor
-	monitor, err := camera.NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser)
+	monitor, err := camera.NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser, deviceEventSource)
 	require.NoError(t, err, "Should create real camera monitor")
 	require.NotNil(t, monitor, "Real camera monitor should not be nil")
 

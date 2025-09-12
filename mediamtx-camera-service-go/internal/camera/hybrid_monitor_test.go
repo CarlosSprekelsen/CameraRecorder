@@ -21,6 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// createTestDeviceEventSource creates a device event source for testing
+func createTestDeviceEventSource(t *testing.T, logger *logging.Logger) DeviceEventSource {
+	deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
+	require.NoError(t, err, "Should create device event source for testing")
+	return deviceEventSource
+}
+
 // TestHybridCameraMonitor_Basic tests basic monitor functionality
 func TestHybridCameraMonitor_Basic(t *testing.T) {
 	// Create real implementations
@@ -29,13 +36,15 @@ func TestHybridCameraMonitor_Basic(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Test monitor creation with nil config (should fail)
-	monitor, err := NewHybridCameraMonitor(nil, nil, deviceChecker, commandExecutor, infoParser)
+	monitor, err := NewHybridCameraMonitor(nil, nil, deviceChecker, commandExecutor, infoParser, nil)
 	assert.Error(t, err, "Should fail without config")
 	assert.Nil(t, monitor, "Should be nil when creation fails")
 
 	// Test monitor creation with nil logger (should use default)
 	configManager := config.CreateConfigManager()
-	monitor, err = NewHybridCameraMonitor(configManager, nil, deviceChecker, commandExecutor, infoParser)
+	logger := logging.CreateTestLogger(t, nil)
+	deviceEventSource := createTestDeviceEventSource(t, logger)
+	monitor, err = NewHybridCameraMonitor(configManager, nil, deviceChecker, commandExecutor, infoParser, deviceEventSource)
 	require.NoError(t, err, "Should succeed with valid config")
 	require.NotNil(t, monitor, "Should not be nil when creation succeeds")
 	assert.False(t, monitor.IsRunning(), "Monitor should not be running initially")
@@ -53,12 +62,14 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor with test config
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Monitor creation should succeed")
 	require.NotNil(t, monitor, "Monitor should not be nil")
@@ -101,12 +112,14 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 	// Test readiness state
 	t.Run("readiness_state", func(t *testing.T) {
 		// Create a fresh monitor for this test to ensure clean initial state
+		deviceEventSource := createTestDeviceEventSource(t, logger)
 		freshMonitor, err := NewHybridCameraMonitor(
 			configManager,
 			logger,
 			deviceChecker,
 			commandExecutor,
 			infoParser,
+			deviceEventSource,
 		)
 		require.NoError(t, err, "Fresh monitor creation should succeed")
 
@@ -143,12 +156,14 @@ func TestHybridCameraMonitor_DeviceDiscovery(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, monitor)
@@ -231,12 +246,14 @@ func TestHybridCameraMonitor_ErrorHandling(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, monitor)
@@ -302,12 +319,14 @@ func TestHybridCameraMonitor_Integration(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor with MediaMTX environment
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Monitor creation should succeed with MediaMTX environment")
 	require.NotNil(t, monitor, "Monitor should not be nil")
@@ -337,12 +356,14 @@ func TestHybridCameraMonitor_StateManagement(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, monitor)
@@ -374,12 +395,14 @@ func TestHybridCameraMonitor_EventHandling(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, monitor)
@@ -443,12 +466,14 @@ func TestHybridCameraMonitor_ConfigurationUpdate(t *testing.T) {
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
 
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Failed to create monitor")
 
@@ -569,12 +594,14 @@ func TestHybridCameraMonitor_ProbeDeviceCapabilities(t *testing.T) {
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
 
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Failed to create monitor")
 
@@ -700,12 +727,14 @@ func TestHybridCameraMonitor_ProcessDeviceStateChanges(t *testing.T) {
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
 
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Failed to create monitor")
 
@@ -858,12 +887,14 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Monitor creation should succeed")
 
@@ -1013,12 +1044,14 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
+	deviceEventSource := createTestDeviceEventSource(t, logger)
 	monitor, err := NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
+		deviceEventSource,
 	)
 	require.NoError(t, err, "Monitor creation should succeed")
 
@@ -1031,6 +1064,7 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 			nil, // nil deviceChecker
 			commandExecutor,
 			infoParser,
+			deviceEventSource,
 		)
 		require.Error(t, err, "Should fail with nil deviceChecker")
 		assert.Nil(t, badMonitor, "Should return nil monitor")
@@ -1041,6 +1075,7 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 			deviceChecker,
 			nil, // nil commandExecutor
 			infoParser,
+			deviceEventSource,
 		)
 		require.Error(t, err, "Should fail with nil commandExecutor")
 		assert.Nil(t, badMonitor, "Should return nil monitor")
@@ -1051,6 +1086,7 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 			deviceChecker,
 			commandExecutor,
 			nil, // nil infoParser
+			deviceEventSource,
 		)
 		require.Error(t, err, "Should fail with nil infoParser")
 		assert.Nil(t, badMonitor, "Should return nil monitor")
@@ -1064,6 +1100,7 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 			deviceChecker,
 			commandExecutor,
 			infoParser,
+			deviceEventSource,
 		)
 		require.Error(t, err, "Should fail with nil config")
 		assert.Nil(t, badMonitor, "Should return nil monitor")
@@ -1184,7 +1221,8 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 	infoParser := &RealDeviceInfoParser{}
 
 	// Create monitor
-	monitor, err := NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser)
+	deviceEventSource := createTestDeviceEventSource(t, logger)
+	monitor, err := NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser, deviceEventSource)
 	require.NoError(t, err)
 	require.NotNil(t, monitor)
 
