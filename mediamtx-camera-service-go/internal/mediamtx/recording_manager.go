@@ -160,6 +160,14 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 		UseCase:    UseCaseRecording,
 	}
 
+	// Apply recording configuration to the MediaMTX path
+	// Use stream.Name which is the actual MediaMTX path name created by StreamManager
+	recordingConfig := rm.createRecordingPathConfig(outputPath)
+	err = rm.pathManager.PatchPath(ctx, stream.Name, recordingConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to configure recording: %w", err)
+	}
+
 	// Store session
 	rm.sessionsMu.Lock()
 	rm.sessions[sessionID] = session
@@ -171,7 +179,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 
 	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
-		"path_name":  pathName,
+		"path_name":  stream.Name,
 		"device":     devicePath,
 	}).Info("MediaMTX recording session started successfully")
 
@@ -417,37 +425,18 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 }
 
 // createRecordingPathConfig creates a MediaMTX path configuration for recording
-func (rm *RecordingManager) createRecordingPathConfig(devicePath, outputPath string, options map[string]interface{}) (map[string]interface{}, error) {
+func (rm *RecordingManager) createRecordingPathConfig(outputPath string) map[string]interface{} {
 	config := map[string]interface{}{
-		"sourceOnDemand":             true,  // Wait for stream to be available
-		"sourceOnDemandStartTimeout": "10s", // Timeout for stream to start
-		"sourceOnDemandCloseAfter":   "30s", // Close stream after this duration of inactivity
-		"record":                     true,
-		"recordPath":                 rm.getRecordingOutputPath(outputPath),
-		"recordFormat":               rm.getRecordFormat(),
-		"recordPartDuration":         rm.getRecordPartDuration().String(),
-		"recordMaxPartSize":          rm.getRecordMaxPartSize(),
-		"recordSegmentDuration":      rm.getRecordSegmentDuration().String(),
-		"recordDeleteAfter":          rm.getRecordDeleteAfter().String(),
+		"record":                true,
+		"recordPath":            rm.getRecordingOutputPath(outputPath),
+		"recordFormat":          rm.getRecordFormat(),
+		"recordPartDuration":    rm.getRecordPartDuration().String(),
+		"recordMaxPartSize":     rm.getRecordMaxPartSize(),
+		"recordSegmentDuration": rm.getRecordSegmentDuration().String(),
+		"recordDeleteAfter":     rm.getRecordDeleteAfter().String(),
 	}
 
-	// Apply options overrides
-	for key, value := range options {
-		switch key {
-		case "record_format":
-			config["recordFormat"] = value
-		case "record_path":
-			config["recordPath"] = value
-		case "segment_duration":
-			config["recordSegmentDuration"] = value
-		case "part_duration":
-			config["recordPartDuration"] = value
-		case "max_part_size":
-			config["recordMaxPartSize"] = value
-		}
-	}
-
-	return config, nil
+	return config
 }
 
 // convertRecordingToFileMetadata converts MediaMTX recording to our FileMetadata format
@@ -492,26 +481,23 @@ func (rm *RecordingManager) generatePathName(devicePath string) string {
 		deviceID = strings.TrimPrefix(deviceID, "_")
 	}
 
-	// Add timestamp with microseconds for uniqueness
-	timestamp := time.Now().Format("20060102_150405.000000")
+	// Add timestamp with microseconds for uniqueness (no dots allowed in MediaMTX path names)
+	timestamp := time.Now().Format("20060102_150405_000000")
 
 	return fmt.Sprintf("camera_%s_%s", deviceID, timestamp)
 }
 
 // getRecordingOutputPath processes the output path for MediaMTX recording
 func (rm *RecordingManager) getRecordingOutputPath(outputPath string) string {
-	// If output path is provided, use it
+	// MediaMTX requires both %path and time placeholders in recordPath
 	if outputPath != "" {
-		return outputPath
+		dir := filepath.Dir(outputPath)
+		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S.mp4")
 	}
-
-	// Use configured recordings path from centralized config
 	if rm.config.RecordingsPath != "" {
-		return rm.config.RecordingsPath
+		return filepath.Join(rm.config.RecordingsPath, "%path_%Y-%m-%d_%H-%M-%S.mp4")
 	}
-
-	// Default recordings path
-	return "/tmp/recordings"
+	return "/tmp/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
 }
 
 // CleanupOldRecordings removes old recording files based on age and count limits
@@ -584,7 +570,7 @@ func (rm *RecordingManager) getRecordPartDuration() time.Duration {
 		rm.logger.WithError(err).Warn("Failed to get recording config, using default part duration")
 		return 1 * time.Hour // fallback
 	}
-	return recordingConfig.PartDuration
+	return recordingConfig.DefaultMaxDuration
 }
 
 func (rm *RecordingManager) getRecordMaxPartSize() string {
@@ -593,7 +579,7 @@ func (rm *RecordingManager) getRecordMaxPartSize() string {
 		rm.logger.WithError(err).Warn("Failed to get recording config, using default max part size")
 		return "100MB" // fallback
 	}
-	return recordingConfig.MaxPartSize
+	return fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024)
 }
 
 func (rm *RecordingManager) getRecordSegmentDuration() time.Duration {
@@ -602,7 +588,7 @@ func (rm *RecordingManager) getRecordSegmentDuration() time.Duration {
 		rm.logger.WithError(err).Warn("Failed to get recording config, using default segment duration")
 		return 10 * time.Second // fallback
 	}
-	return recordingConfig.SegmentDuration
+	return time.Duration(recordingConfig.SegmentDuration) * time.Second
 }
 
 func (rm *RecordingManager) getRecordDeleteAfter() time.Duration {
@@ -611,5 +597,5 @@ func (rm *RecordingManager) getRecordDeleteAfter() time.Duration {
 		rm.logger.WithError(err).Warn("Failed to get recording config, using default delete after duration")
 		return 7 * 24 * time.Hour // fallback: 7 days
 	}
-	return recordingConfig.DeleteAfter
+	return time.Duration(recordingConfig.DefaultRetentionDays) * 24 * time.Hour
 }
