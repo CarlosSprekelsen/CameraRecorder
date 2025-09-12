@@ -14,6 +14,9 @@ type CameraDevice struct {
 	LastSeen     time.Time        `json:"last_seen"`
 	DeviceNum    int              `json:"device_num"`
 	Error        string           `json:"error,omitempty"`
+	Vendor       string           `json:"vendor,omitempty"`
+	Product      string           `json:"product,omitempty"`
+	Serial       string           `json:"serial,omitempty"`
 }
 
 // DeviceStatus represents the current status of a V4L2 device

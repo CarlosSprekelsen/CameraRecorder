@@ -203,12 +203,14 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 
 	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
-		// Log the actual error for debugging
+		// Log the actual error for debugging with full context
 		errorMsg := err.Error()
 		pm.logger.WithError(err).WithFields(logging.Fields{
-			"name": name,
-			"data": string(data),
-		}).Error("CreatePath HTTP request failed")
+			"name":          name,
+			"data":          string(data),
+			"error_type":    fmt.Sprintf("%T", err),
+			"error_message": errorMsg,
+		}).Error("CreatePath HTTP request failed - investigating idempotency")
 
 		// Check if this is a "path already exists" error (idempotent success)
 		// Check both the error message and details for the specific error text

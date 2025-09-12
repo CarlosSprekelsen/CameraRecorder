@@ -120,12 +120,16 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	// Log request
+	// Log request with detailed information
 	c.logger.WithFields(logging.Fields{
 		"method": method,
 		"url":    url,
 		"data":   string(data),
-	}).Debug("Making MediaMTX request")
+		"headers": map[string]string{
+			"Content-Type": req.Header.Get("Content-Type"),
+			"Accept":       req.Header.Get("Accept"),
+		},
+	}).Info("Making MediaMTX request")
 
 	// Execute request
 	resp, err := c.httpClient.Do(req)
@@ -140,11 +144,16 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 		return nil, NewMediaMTXErrorWithOp(0, "failed to read response", err.Error(), "read_body")
 	}
 
-	// Log response
+	// Log response with detailed information
 	c.logger.WithFields(logging.Fields{
 		"status_code": resp.StatusCode,
+		"status":      resp.Status,
 		"body":        string(bodyBytes),
-	}).Debug("Received MediaMTX response")
+		"headers": map[string]string{
+			"Content-Type":   resp.Header.Get("Content-Type"),
+			"Content-Length": resp.Header.Get("Content-Length"),
+		},
+	}).Info("Received MediaMTX response")
 
 	// Check for HTTP errors
 	if resp.StatusCode >= 400 {

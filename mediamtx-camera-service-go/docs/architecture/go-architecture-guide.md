@@ -6,8 +6,8 @@ A distributed video sensor management service designed for OCI-compliant contain
 
 The MediaMTX Camera Service is an always-on containerized service that manages both USB video devices and external RTSP feeds within a coordinated sensor ecosystem. It operates as a specialized video sensor container that registers with a central service discovery aggregator and provides standardized video services to client applications.
 
-**Version:** 3.2  
-**Date:** 2025-01-15  
+**Version:** 3.3  
+**Date:** 2025-09-12  
 **Status:** Production Architecture Documentation  
 **Document Type:** System Architecture Specification
 
@@ -26,12 +26,14 @@ rectangle "MediaMTX Camera Service" as service
 database "MediaMTX Server" as mediamtx
 component "USB V4L2 Cameras" as cameras
 cloud "RTSP UAV Sources" as rtsp
+queue "Device Event Source" as devsrc
 
 client --> service : WebSocket JSON-RPC 2.0
 service --> mediamtx : HTTP REST API\n(Path Management)
 service --> cameras : V4L2 System Calls\n(Direct Access)
 rtsp --> mediamtx : RTSP Streams\n(UAV Sources)
 mediamtx --> cameras : FFmpeg Processing
+devsrc --> service : udev/fsnotify Events\n(/dev/video*)
 
 note right of service
   Core Capabilities:
@@ -40,6 +42,7 @@ note right of service
   • Video recording capabilities
   • MediaMTX path management for UAV streams
   • Service discovery registration
+  • Event-driven device lifecycle (udev), with polling fallback
 end note
 
 note right of rtsp
@@ -122,6 +125,11 @@ end note
 - **Devices:** /dev/video* character devices
 - **Purpose:** Direct camera hardware access
 
+**Linux Device Event Source (NEW)**
+- **Primary:** udev (netlink; add/remove/change)
+- **Fallback:** fsnotify on `/dev` for `/dev/video*`
+- **Purpose:** Push-based propagation of device lifecycle (no index polling)
+
 ```plantuml
 @startuml ConsumedInterfaces
 title Consumed Interfaces - External Dependencies
@@ -131,11 +139,13 @@ interface "HTTP REST\nPort 9997" as http
 database "MediaMTX Server" as mediamtx
 interface "V4L2 System Calls" as v4l2
 component "USB Cameras" as cameras
+queue "udev / fsnotify" as devsrc
 
 controller --> http : Path Management
 http --> mediamtx : Stream Configuration
 controller --> v4l2 : Hardware Access
 v4l2 --> cameras : Device Control
+devsrc --> controller : Device add/remove/change
 
 note bottom of http
   MediaMTX API Endpoints:
@@ -162,6 +172,10 @@ package "MediaMTX Camera Service" {
     component "MediaMTX Controller" as controller
     component "Camera Monitor" as camera
     component "Security Framework" as security
+    queue "Device Event Source" as devsrc
+    component "Path Manager" as pm
+    component "Stream Manager" as sm
+    component "Recording Manager" as rm
     
     interface "ControllerAPI" as ctrl_api
     interface "CameraAPI" as cam_api
@@ -174,6 +188,10 @@ controller --> cam_api
 camera ..> cam_api
 ws --> sec_api
 security ..> sec_api
+devsrc --> camera : udev/fsnotify Events
+controller --> pm
+controller --> sm
+controller --> rm
 
 note right of ws
   Architecture Rules:
@@ -200,6 +218,7 @@ end note
 - API abstraction (camera0 ↔ /dev/video0)
 - Recording session management
 - Path reuse optimization
+- **Mapping Rule:** External identifiers (`camera0`) map to **discovered devices only**; no synthetic indices
 - **Pattern:** Single Source of Truth for all operations
 
 **Recording Manager (Sub-component of MediaMTX Controller)**
@@ -208,12 +227,26 @@ end note
 - File management and rotation
 - **Key Insight:** Uses same MediaMTX path for streaming and recording
 - **Pattern:** Path reuse instead of unique path per recording
+- **Sequence (hard invariant):** Ensure path → **Wait runtime ready** → Enable recording (PATCH)
 
 **Camera Monitor (Hardware Abstraction Layer)**
-- USB camera detection via V4L2
-- Real-time status monitoring
-- Hardware capability probing
+- **Mode:** Event-first, Polling-fallback
+- **Device Discovery:** udev/fsnotify events (add/remove/change)
+- **Polling Fallback:** Slow periodic reconcile when events unavailable
+- **State Store:** Authoritative device map (`/dev/video*` → metadata)
+- **Responsibilities:**
+  1. Emit debounced add/remove to Controller
+  2. Validate device readiness (optional capability probe)
+  3. Never guess indices (no `[0-9]` scans); real paths only
+  4. Provide lookups for abstraction mapping (cameraX ↔ /dev/videoN)
 - **Integration:** Interface-based design with dependency injection
+
+**Path Manager (Configuration & Readiness)**
+- **Contract:** Create → **Wait (runtime visibility)** → Patch (retry)
+- **Idempotent Create:** Config add if missing; "already exists" = success
+- **Readiness Gate:** Poll `/v3/paths/get/{name}` (runtime) before PATCH
+- **Patch Resilience:** Exponential backoff on 404/409; include path/device context in errors
+- **Per-Path Mutex:** Serialize operations for a path across callers
 
 **Security Framework (Cross-Cutting Layer)**
 - JWT token management
@@ -367,12 +400,13 @@ API --> MAP: camera0 (abstract)
 MAP --> HW: /dev/video0 (concrete)
 
 note bottom
-CRITICAL Rules:
+CRITICAL Rules (updated):
 1. External APIs ONLY use camera identifiers (camera0, camera1)
-2. Internal operations use device paths (/dev/video0)
+2. Internal operations use discovered device paths (/dev/videoN) from Camera Monitor
 3. Controller manages ALL mapping
 4. NEVER expose device paths to clients
-5. Mapping is centralized in PathManager
+5. Mapping reads from Camera Monitor (source of truth), PathManager derives simple path names
+6. No regex/index guesses; discovery is event-driven (or slow reconcile fallback)
 end note
 
 @enduml
@@ -419,6 +453,7 @@ package "Layer 6: API" #lavender {
 [PathManager] --> [StreamManager]
 [StreamManager] --> [RecordingManager]
 [RecordingManager] --> [Controller]
+[CameraMonitor] --> [Controller] : Events
 [Controller] --> [WebSocketServer]
 
 note right
@@ -522,6 +557,37 @@ partition "Tier 3: Stream Activation" {
 - Tier 2: <300ms (stream reuse)
 - Tier 3: <500ms (stream creation)
 
+### 4.2.1 Device Event Flow (NEW)
+
+```plantuml
+@startuml DeviceEventFlow
+title Device Event Flow - udev/fsnotify with Polling Fallback
+
+queue "Device Event Source\n(udev/fsnotify)" as E
+component "Camera Monitor" as M
+component "MediaMTX Controller" as C
+database "Device Map" as DM
+
+E --> M : add/remove/change(/dev/videoN)
+M -> DM : update state (debounced)
+M --> C : OnChange(camera list delta)
+C -> C : cameraX ↔ /dev/videoN mapping updates
+
+== Fallback ==
+M -> M : Periodic reconcile (slow) if events unavailable
+M -> DM : correct drift
+M --> C : delta if changed
+
+note right of M
+Rules:
+• Event-first architecture
+• Poll only as safety net
+• No index guessing (regex)
+end note
+
+@enduml
+```
+
 ### 4.3 System Startup Coordination
 
 ```plantuml
@@ -574,6 +640,7 @@ MC -> MC : Map camera0 → /dev/video0
 MC -> RM : StartRecording(/dev/video0, outputPath)
 RM -> SM : StartRecordingStream(/dev/video0)
 SM -> PM : CreatePath("camera0", runOnDemand)
+PM -> PM : Per-path mutex (serialize ops)
 
 note over PM, MS
   Path Configuration:
@@ -585,7 +652,8 @@ end note
 
 PM -> MS : POST /v3/config/paths/add/camera0
 MS --> PM : Path created (or already exists)
-PM --> SM : Success
+PM -> PM : WaitForPathReady (runtime: /v3/paths/get)
+PM --> SM : Ready
 SM --> RM : Stream ready
 
 == Recording Configuration (Step 2) ==
@@ -599,7 +667,7 @@ note over RM
   recordSegmentDuration: "3600s"
 end note
 
-RM -> PM : PatchPath("camera0", recordingConfig)
+RM -> PM : PatchPath("camera0", recordingConfig)  << retry 404/409 with backoff >>
 PM -> MS : PATCH /v3/config/paths/patch/camera0
 MS --> PM : Path updated with recording enabled
 PM --> RM : Configuration applied
@@ -681,6 +749,14 @@ Key Insights:
 • Path names are simple identifiers (not filenames)
 • Recording filenames are configured separately
 • Paths can be reused across sessions
+end note
+
+note bottom
+Operational Guarantees:
+• Create is idempotent; no pre-checks
+• Readiness is runtime-based (not config)
+• Patch is retried with backoff (handles propagation lag)
+• Per-path mutex prevents interleaving races
 end note
 
 @enduml
@@ -925,6 +1001,8 @@ class RecordingSession {
     +StartTime : time
     +Status : string
     +State : SessionState
+    +Attempts : int // PATCH retries used
+    +ReadyLatencyMs : int // time from create to runtime-visible
 }
 
 class MediaMTXPath {
@@ -933,6 +1011,7 @@ class MediaMTXPath {
     +Record : bool  // Recording enabled
     +RecordPath : string  // File pattern with timestamps
     +RecordFormat : string  // fmp4 for STANAG 4609
+    +RuntimeVisible : bool  // updated by readiness checks
 }
 
 CameraDevice *-- V4L2Capabilities
@@ -1099,7 +1178,7 @@ stop
 **Error Handling:**
 - **Structured Errors:** Consistent error response format
 - **Error Propagation:** Clean error context preservation
-- **Recovery Mechanisms:** Automatic retry with exponential backoff
+- **Recovery Mechanisms:** Automatic retry with exponential backoff (PATCH), runtime readiness gates, per-path serialization
 - **Failure Isolation:** Component failures don't cascade
 
 #### Circuit Breaker Implementation
@@ -1139,7 +1218,7 @@ end note
 ### 8.3 Scalability Architecture
 
 **Horizontal Scaling Readiness:**
-- **Stateless Design:** Session state externalization capability
+- **Stateless Design:** Session state externalization capability; device map can be externalized if clustered
 - **Resource Separation:** Compute vs storage separation
 - **Event Distribution:** External event system integration ready
 - **Service Discovery:** Container orchestration compatibility
@@ -1155,6 +1234,7 @@ end note
 - One path can handle multiple functions (streaming + recording)
 - Path names are simple identifiers, not complex unique strings
 - Recording filenames are managed independently via MediaMTX patterns
+- Readiness and patching are **decoupled** with an explicit runtime gate
 
 **Single Responsibility Principle:**
 - Each component has one clear responsibility
@@ -1165,6 +1245,7 @@ end note
 - High-level modules don't depend on low-level modules
 - Both depend on abstractions (interfaces)
 - Enables testing and component replacement
+- **DeviceEventSource** abstracts udev/fsnotify vs polling
 
 **Open/Closed Principle:**
 - Components open for extension via interfaces
@@ -1271,17 +1352,17 @@ package "Test Helpers" {
 @enduml
 ```
 
-### 11.2 Test Environment Requirements
+### 11.2 Test Environment Requirements (updated)
 
 | Test Type | MediaMTX | Hardware | Duration | Purpose |
 |-----------|----------|----------|----------|---------|
-| Unit | Mocked | Mocked | <30s | Logic validation |
+| Unit | Mocked | Mocked | <30s | Logic validation; inject fake DeviceEventSource; assert create→ready→patch order |
 | Integration | Real server | Real camera | <5min | API validation |
-| E2E | Real server | Real camera | <10min | Full flow validation |
+| E2E | Real server | Real camera | <10min | Full flow validation; event-first device lifecycle |
 
 ---
 
 **Document Status:** Production Architecture Documentation  
-**Last Updated:** 2025-01-15  
+**Last Updated:** 2025-09-12  
 **Review Cycle:** Quarterly architecture reviews  
 **Document Maintenance:** Architecture changes require PM and IV&V approval
