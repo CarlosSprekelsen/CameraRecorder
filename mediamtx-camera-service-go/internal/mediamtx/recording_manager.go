@@ -27,11 +27,12 @@ import (
 
 // RecordingManager manages MediaMTX-based recording operations
 type RecordingManager struct {
-	client        MediaMTXClient
-	config        *MediaMTXConfig
-	logger        *logging.Logger
-	pathManager   PathManager
-	streamManager StreamManager
+	client            MediaMTXClient
+	config            *MediaMTXConfig
+	configIntegration *ConfigIntegration
+	logger            *logging.Logger
+	pathManager       PathManager
+	streamManager     StreamManager
 
 	// Recording sessions
 	sessions   map[string]*RecordingSession
@@ -40,9 +41,6 @@ type RecordingManager struct {
 	// Device to session mapping for efficient lookup
 	deviceToSession map[string]string // device path -> session ID
 	deviceMu        sync.RWMutex
-
-	// Recording configuration is derived from the centralized config
-	// No separate recordingConfig field needed - use config directly
 }
 
 // MediaMTXRecordingConfig defines MediaMTX-specific recording configuration
@@ -86,17 +84,18 @@ type MediaMTXRecordingSegment struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *MediaMTXConfig, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
 
 	return &RecordingManager{
-		client:          client,
-		config:          config,
-		logger:          logger,
-		pathManager:     pathManager,
-		streamManager:   streamManager,
+		client:            client,
+		config:            config,
+		configIntegration: configIntegration,
+		logger:            logger,
+		pathManager:       pathManager,
+		streamManager:     streamManager,
 		sessions:        make(map[string]*RecordingSession),
 		deviceToSession: make(map[string]string),
 		// recordingConfig is derived from config field - no separate initialization needed
@@ -571,26 +570,46 @@ func generateRandomString(length int) string {
 // These methods provide recording settings from the centralized MediaMTXConfig
 
 func (rm *RecordingManager) getRecordFormat() string {
-	// Default recording format - can be overridden by config if needed
-	return "mp4"
+	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		rm.logger.WithError(err).Warn("Failed to get recording config, using default format")
+		return "mp4" // fallback
+	}
+	return recordingConfig.Format
 }
 
 func (rm *RecordingManager) getRecordPartDuration() time.Duration {
-	// Default part duration - can be overridden by config if needed
-	return 1 * time.Hour
+	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		rm.logger.WithError(err).Warn("Failed to get recording config, using default part duration")
+		return 1 * time.Hour // fallback
+	}
+	return recordingConfig.PartDuration
 }
 
 func (rm *RecordingManager) getRecordMaxPartSize() string {
-	// Default max part size - can be overridden by config if needed
-	return "100MB"
+	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		rm.logger.WithError(err).Warn("Failed to get recording config, using default max part size")
+		return "100MB" // fallback
+	}
+	return recordingConfig.MaxPartSize
 }
 
 func (rm *RecordingManager) getRecordSegmentDuration() time.Duration {
-	// Default segment duration - can be overridden by config if needed
-	return 10 * time.Second
+	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		rm.logger.WithError(err).Warn("Failed to get recording config, using default segment duration")
+		return 10 * time.Second // fallback
+	}
+	return recordingConfig.SegmentDuration
 }
 
 func (rm *RecordingManager) getRecordDeleteAfter() time.Duration {
-	// Default delete after duration - can be overridden by config if needed
-	return 7 * 24 * time.Hour // 7 days
+	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		rm.logger.WithError(err).Warn("Failed to get recording config, using default delete after duration")
+		return 7 * 24 * time.Hour // fallback: 7 days
+	}
+	return recordingConfig.DeleteAfter
 }
