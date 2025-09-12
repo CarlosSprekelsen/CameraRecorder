@@ -623,8 +623,12 @@ type StreamManager interface {
 	StopStreaming(ctx context.Context, device string) error
 
 	// Stream utilities
-	GenerateStreamName(devicePath string, useCase StreamUseCase) string
 	GenerateStreamURL(streamName string) string
+	GenerateStreamName(devicePath string, useCase StreamUseCase) string
+
+	// Recording control (simplified - operates on stable paths)
+	EnableRecording(ctx context.Context, devicePath string, outputPath string) error
+	DisableRecording(ctx context.Context, devicePath string) error
 
 	// Stream readiness management
 	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)

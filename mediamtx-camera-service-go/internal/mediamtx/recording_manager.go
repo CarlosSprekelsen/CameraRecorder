@@ -129,44 +129,27 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 	// Generate unique session ID
 	sessionID := fmt.Sprintf("rec_%d_%s", time.Now().Unix(), generateRandomString(8))
 
-	// Create path name from device path
-	pathName := rm.generatePathName(devicePath)
+	// Create path name from device path using unified function
+	pathName := GetMediaMTXPathName(devicePath)
 
-	// Check if path already exists and handle collision
-	if rm.pathManager.PathExists(ctx, pathName) {
-		rm.logger.WithField("path_name", pathName).Warn("Path already exists, deleting it first")
-		err := rm.pathManager.DeletePath(ctx, pathName)
-		if err != nil {
-			rm.logger.WithError(err).WithField("path_name", pathName).Warn("Failed to delete existing path")
-		}
-	}
-
-	// Use StreamManager to handle device-to-stream conversion
-	// This creates the FFmpeg process and MediaMTX path in one operation
-	rm.logger.WithField("device_path", devicePath).Info("Calling StreamManager.StartRecordingStream")
-	stream, err := rm.streamManager.StartRecordingStream(ctx, devicePath)
+	// SIMPLIFIED: Use StreamManager's new EnableRecording method
+	// This handles path creation and recording configuration in one step
+	rm.logger.WithField("device_path", devicePath).Info("Enabling recording via StreamManager")
+	err := rm.streamManager.EnableRecording(ctx, devicePath, outputPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start recording stream: %w", err)
+		return nil, fmt.Errorf("failed to enable recording: %w", err)
 	}
 
 	// Create recording session
 	session := &RecordingSession{
 		ID:         sessionID,
 		DevicePath: devicePath,
-		Path:       stream.Name, // Use the stream name as the MediaMTX path
+		Path:       pathName, // Use the stable path name
 		FilePath:   outputPath,
 		StartTime:  time.Now(),
 		Status:     "active",
 		State:      SessionStateRecording,
 		UseCase:    UseCaseRecording,
-	}
-
-	// Apply recording configuration to the MediaMTX path
-	// Use stream.Name which is the actual MediaMTX path name created by StreamManager
-	recordingConfig := rm.createRecordingPathConfig(outputPath)
-	err = rm.pathManager.PatchPath(ctx, stream.Name, recordingConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to configure recording: %w", err)
 	}
 
 	// Store session
@@ -180,7 +163,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 
 	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
-		"path_name":  stream.Name,
+		"path_name":  pathName,
 		"device":     devicePath,
 	}).Info("MediaMTX recording session started successfully")
 
@@ -331,11 +314,11 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 	}
 	rm.sessionsMu.RUnlock()
 
-	// Remove the path from MediaMTX
-	if session.Path != "" {
-		err := rm.pathManager.DeletePath(ctx, session.Path)
+	// SIMPLIFIED: Disable recording but keep path alive for streaming
+	if session.DevicePath != "" {
+		err := rm.streamManager.DisableRecording(ctx, session.DevicePath)
 		if err != nil {
-			rm.logger.WithError(err).WithField("path_name", session.Path).Warn("Failed to delete path from MediaMTX")
+			rm.logger.WithError(err).WithField("device_path", session.DevicePath).Warn("Failed to disable recording")
 		}
 	}
 
@@ -426,10 +409,10 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 }
 
 // createRecordingPathConfig creates a MediaMTX path configuration for recording
-func (rm *RecordingManager) createRecordingPathConfig(outputPath string) map[string]interface{} {
+func (rm *RecordingManager) createRecordingPathConfig(pathName, outputPath string) map[string]interface{} {
 	config := map[string]interface{}{
 		"record":                true,
-		"recordPath":            rm.getRecordingOutputPath(outputPath),
+		"recordPath":            rm.getRecordingOutputPath(pathName, outputPath),
 		"recordFormat":          rm.getRecordFormat(),
 		"recordPartDuration":    rm.getRecordPartDuration().String(),
 		"recordMaxPartSize":     rm.getRecordMaxPartSize(),
@@ -471,34 +454,19 @@ func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRe
 	return files
 }
 
-// generatePathName generates a unique path name for a device
-func (rm *RecordingManager) generatePathName(devicePath string) string {
-	// Extract device identifier from path
-	deviceID := strings.ReplaceAll(devicePath, "/", "_")
-	deviceID = strings.ReplaceAll(deviceID, "\\", "_")
-
-	// Remove leading underscore if present
-	if strings.HasPrefix(deviceID, "_") {
-		deviceID = strings.TrimPrefix(deviceID, "_")
-	}
-
-	// Add timestamp with microseconds for uniqueness (no dots allowed in MediaMTX path names)
-	timestamp := time.Now().Format("20060102_150405_000000")
-
-	return fmt.Sprintf("camera_%s_%s", deviceID, timestamp)
-}
-
 // getRecordingOutputPath processes the output path for MediaMTX recording
-func (rm *RecordingManager) getRecordingOutputPath(outputPath string) string {
-	// MediaMTX requires both %path and time placeholders in recordPath
+func (rm *RecordingManager) getRecordingOutputPath(pathName, outputPath string) string {
+	// MediaMTX supports timestamp patterns in recordPath
+	// Use the actual path name (e.g., "camera0") with timestamp pattern for unique filenames
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
-		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S.mp4")
+		// Use path name with timestamp pattern: camera0_2024-01-15_14-30-00.mp4
+		return filepath.Join(dir, fmt.Sprintf("%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName))
 	}
 	if rm.config.RecordingsPath != "" {
-		return filepath.Join(rm.config.RecordingsPath, "%path_%Y-%m-%d_%H-%M-%S.mp4")
+		return filepath.Join(rm.config.RecordingsPath, fmt.Sprintf("%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName))
 	}
-	return "/tmp/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
+	return fmt.Sprintf("/tmp/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName)
 }
 
 // CleanupOldRecordings removes old recording files based on age and count limits

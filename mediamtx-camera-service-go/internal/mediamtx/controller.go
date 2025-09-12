@@ -1864,7 +1864,7 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (string, e
 		return "", fmt.Errorf("controller is not running")
 	}
 
-	// Generate stream name and URL using existing StreamManager method
+	// Generate stream name and URL using unified path naming
 	streamName := c.streamManager.GenerateStreamName(device, UseCaseViewing)
 	streamURL := c.streamManager.GenerateStreamURL(streamName)
 

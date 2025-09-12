@@ -148,9 +148,9 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	pm.logger.WithFields(logging.Fields{
 		"name": name,
 		"data": string(data),
-		"url": fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"url":  fmt.Sprintf("/v3/config/paths/add/%s", name),
 	}).Info("Sending CreatePath request to MediaMTX")
-	
+
 	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
 		// Log the actual error for debugging
@@ -159,12 +159,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			"name": name,
 			"data": string(data),
 		}).Error("CreatePath HTTP request failed")
-		
+
 		// Check if this is a "path already exists" error (idempotent success)
-		if strings.Contains(errorMsg, "path already exists") || 
-		   strings.Contains(errorMsg, "already exists") {
+		if strings.Contains(errorMsg, "path already exists") ||
+			strings.Contains(errorMsg, "already exists") {
 			pm.logger.WithFields(logging.Fields{
-				"name": name,
+				"name":  name,
 				"error": errorMsg,
 			}).Info("MediaMTX path already exists, treating as success")
 			return nil // Idempotent success - path exists, which is what we wanted
@@ -187,13 +187,36 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 		return fmt.Errorf("invalid path name: %w", err)
 	}
 
+	// Check if path exists before patching
+	pathExists := pm.PathExists(ctx, name)
+	pm.logger.WithFields(logging.Fields{
+		"path_name":   name,
+		"path_exists": pathExists,
+	}).Info("Checking if path exists before patching")
+
+	if !pathExists {
+		return NewPathErrorWithErr(name, "patch_path", "path does not exist - cannot patch non-existent path", nil)
+	}
+
 	data, err := json.Marshal(config)
 	if err != nil {
 		return NewPathErrorWithErr(name, "patch_path", "failed to marshal config", err)
 	}
 
+	// Log the exact JSON being sent to MediaMTX
+	pm.logger.WithFields(logging.Fields{
+		"path_name":    name,
+		"url":          fmt.Sprintf("/v3/config/paths/patch/%s", name),
+		"json_payload": string(data),
+		"config":       config,
+	}).Info("Sending PATCH request to MediaMTX")
+
 	err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
 	if err != nil {
+		pm.logger.WithError(err).WithFields(logging.Fields{
+			"path_name":    name,
+			"json_payload": string(data),
+		}).Error("MediaMTX PATCH request failed")
 		return NewPathErrorWithErr(name, "patch_path", "failed to patch path", err)
 	}
 
