@@ -1170,6 +1170,11 @@ func (s *WebSocketServer) SetConfig(config *ServerConfig) {
 	s.config = config
 }
 
+// SetMediaMTXController sets the MediaMTX controller (for testing purposes)
+func (s *WebSocketServer) SetMediaMTXController(controller mediamtx.MediaMTXControllerAPI) {
+	s.mediaMTXController = controller
+}
+
 // GetEventManager returns the event manager for external integration
 func (s *WebSocketServer) GetEventManager() *EventManager {
 	return s.eventManager

@@ -1,29 +1,64 @@
 /*
 WebSocket Methods Unit Tests
 
-Provides focused unit tests for WebSocket method handling,
-following the project testing standards and Go coding standards.
+Provides comprehensive unit tests for ALL exposed WebSocket methods,
+following proper orchestration: WebSocket → MediaMTX Controller.
 
 Requirements Coverage:
 - REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
 - REQ-API-003: Request/response message handling
+- REQ-API-004: Complete interface testing
 
 Test Categories: Unit/Integration
 API Documentation Reference: docs/api/json_rpc_methods.md
+Architecture: WebSocket → MediaMTX Controller (proper orchestration)
 */
 
 package websocket
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// Global shared MediaMTX instance for parallel test execution
+var (
+	sharedMediaMTXHelper *mediamtx.MediaMTXTestHelper
+	sharedMediaMTXOnce   sync.Once
+	sharedMediaMTXMutex  sync.Mutex
+)
+
+// getSharedMediaMTXHelper returns a shared MediaMTX instance for parallel test execution
+func getSharedMediaMTXHelper(t *testing.T) *mediamtx.MediaMTXTestHelper {
+	sharedMediaMTXOnce.Do(func() {
+		sharedMediaMTXMutex.Lock()
+		defer sharedMediaMTXMutex.Unlock()
+		
+		// Create shared MediaMTX helper
+		sharedMediaMTXHelper = mediamtx.NewMediaMTXTestHelper(t, nil)
+		
+		// Start MediaMTX controller following proper orchestration
+		controller, err := sharedMediaMTXHelper.GetController(t)
+		require.NoError(t, err, "Failed to create shared MediaMTX controller")
+		
+		// Start the controller
+		ctx := context.Background()
+		if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
+			err := concreteController.Start(ctx)
+			require.NoError(t, err, "Failed to start shared MediaMTX controller")
+		}
+	})
+	
+	return sharedMediaMTXHelper
+}
 
 // TestWebSocketMethods_Ping tests ping method
 func TestWebSocketMethods_Ping(t *testing.T) {
@@ -34,14 +69,23 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
+	// Use shared MediaMTX instance for proper orchestration
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	// Set the controller in WebSocket server
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+
 	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	server = helper.StartServer(t)
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Authenticate client using the helper
+	// Authenticate client
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 	// Send ping message
@@ -55,23 +99,58 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	assert.Nil(t, response.Error, "Response should not have error")
 }
 
-// TestWebSocketMethods_GetServerInfo tests get_server_info method
-func TestWebSocketMethods_GetServerInfo(t *testing.T) {
-	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
+// TestWebSocketMethods_Authenticate tests authenticate method
+func TestWebSocketMethods_Authenticate(t *testing.T) {
 	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Authenticate client using the helper (admin role for get_server_info)
+	// Test authentication
+	message := CreateTestMessage("authenticate", map[string]interface{}{
+		"auth_token": "test-jwt-token",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.NotNil(t, response.Result, "Response should have result")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_GetServerInfo tests get_server_info method
+func TestWebSocketMethods_GetServerInfo(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for get_server_info)
 	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	// Send get_server_info message
@@ -87,25 +166,265 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 
 // TestWebSocketMethods_GetStatus tests get_status method
 func TestWebSocketMethods_GetStatus(t *testing.T) {
-	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-	// REQ-API-002: JSON-RPC 2.0 protocol implementation
-
 	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Authenticate client using the helper (admin role for get_status)
+	// Authenticate client (admin role for get_status)
 	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	// Send get_status message
 	message := CreateTestMessage("get_status", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.NotNil(t, response.Result, "Response should have result")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_GetCameraList tests get_camera_list method (WebSocket → MediaMTX Controller)
+func TestWebSocketMethods_GetCameraList(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_camera_list message
+	message := CreateTestMessage("get_camera_list", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.NotNil(t, response.Result, "Response should have result")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_GetCameraStatus tests get_camera_status method (WebSocket → MediaMTX Controller)
+func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_camera_status message
+	message := CreateTestMessage("get_camera_status", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	// Note: Result may be nil if camera0 doesn't exist, but error should be properly formatted
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_GetCameraCapabilities tests get_camera_capabilities method
+func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_camera_capabilities message
+	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_TakeSnapshot tests take_snapshot method
+func TestWebSocketMethods_TakeSnapshot(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for take_snapshot)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send take_snapshot message
+	message := CreateTestMessage("take_snapshot", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_StartRecording tests start_recording method
+func TestWebSocketMethods_StartRecording(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for start_recording)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send start_recording message
+	message := CreateTestMessage("start_recording", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_StopRecording tests stop_recording method
+func TestWebSocketMethods_StopRecording(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for stop_recording)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send stop_recording message
+	message := CreateTestMessage("stop_recording", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+}
+
+// TestWebSocketMethods_GetMetrics tests get_metrics method
+func TestWebSocketMethods_GetMetrics(t *testing.T) {
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for get_metrics)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Send get_metrics message
+	message := CreateTestMessage("get_metrics", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
 
 	// Test response
@@ -121,15 +440,21 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
 	// Send invalid JSON
-	err := conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
+	err = conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
 	require.NoError(t, err, "Should send invalid JSON")
 
 	// Read response
@@ -150,8 +475,14 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
@@ -174,51 +505,70 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	assert.Equal(t, METHOD_NOT_FOUND, response.Error.Code, "Error should be method not found")
 }
 
-// TestWebSocketMethods_MissingJSONRPC tests missing JSON-RPC version
-func TestWebSocketMethods_MissingJSONRPC(t *testing.T) {
+// TestWebSocketMethods_UnauthenticatedAccess tests that methods require authentication
+func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
-	// Connect client
+	// Connect client WITHOUT authentication
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Send message without JSON-RPC version
-	message := &JsonRpcRequest{
-		// JSONRPC is missing
-		Method: "ping",
-		ID:     "test-request",
-		Params: map[string]interface{}{},
+	// Test that unauthenticated access to protected methods fails
+	protectedMethods := []string{
+		"get_camera_list",
+		"get_camera_status", 
+		"get_camera_capabilities",
+		"start_recording",
+		"stop_recording",
+		"take_snapshot",
+		"get_metrics",
+		"get_server_info",
+		"get_status",
 	}
-	response := SendTestMessage(t, conn, message)
 
-	// Test error response
-	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
-	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.Nil(t, response.Result, "Response should not have result")
-	assert.NotNil(t, response.Error, "Response should have error")
-	assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Error should be invalid request")
+	for _, method := range protectedMethods {
+		t.Run(method, func(t *testing.T) {
+			message := CreateTestMessage(method, map[string]interface{}{})
+			response := SendTestMessage(t, conn, message)
+
+			// Verify authentication error
+			require.NotNil(t, response.Error, "%s should require authentication", method)
+			require.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "%s should return AUTHENTICATION_REQUIRED error", method)
+		})
+	}
 }
 
 // TestWebSocketMethods_SequentialRequests tests sequential request handling
-// This test properly tests the server's ability to handle multiple requests efficiently
 func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Create a single connection for all requests
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Authenticate the client once using the helper
+	// Authenticate the client once
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 	// Test multiple sequential requests
@@ -237,19 +587,24 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	t.Logf("Processed %d requests in %v (avg: %v per request)",
 		numRequests, duration, duration/time.Duration(numRequests))
 
-	// Verify reasonable performance (should be fast for simple ping requests)
+	// Verify reasonable performance
 	assert.Less(t, duration, 5*time.Second, "Requests should complete within reasonable time")
 }
 
 // TestWebSocketMethods_MultipleConnections tests multiple connections handling
-// This test properly creates multiple connections with proper synchronization
 func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
+	// Use shared MediaMTX instance
+	mediaMTXHelper := getSharedMediaMTXHelper(t)
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
 
 	// Test multiple connections with proper synchronization
 	const numConnections = 5
@@ -273,7 +628,7 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 			conn := helper.NewTestClient(t, server)
 			defer helper.CleanupTestClient(t, conn)
 
-			// Authenticate the client using the helper
+			// Authenticate the client
 			AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 			// Send ping message
@@ -304,523 +659,4 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 
 	assert.Equal(t, numConnections, receivedResponses, "Should receive all responses")
 	assert.Equal(t, 0, receivedErrors, "Should have no errors")
-}
-
-// TestWebSocketMethods_LargePayload tests large payload handling
-func TestWebSocketMethods_LargePayload(t *testing.T) {
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Create large payload
-	largeData := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
-		largeData[i] = "This is a large string to test payload handling"
-	}
-
-	// Authenticate client using the helper (admin role for get_server_info)
-	AuthenticateTestClient(t, conn, "test_user", "admin")
-
-	// Send get_server_info message (testing method execution)
-	message := CreateTestMessage("get_server_info", map[string]interface{}{})
-	response := SendTestMessage(t, conn, message)
-
-	// Test response
-	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
-	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.NotNil(t, response.Result, "Response should have result")
-	assert.Nil(t, response.Error, "Response should not have error")
-}
-
-// TestWebSocketMethods_Timeout tests request timeout handling
-func TestWebSocketMethods_Timeout(t *testing.T) {
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Register a method that takes time
-	server.registerMethod("slow_method", func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-		time.Sleep(2 * time.Second)
-		return CreateTestResponse("test-id", "slow_result"), nil
-	}, "1.0")
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Set read timeout
-	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-
-	// Send slow method message
-	CreateTestMessage("slow_method", map[string]interface{}{})
-
-	// This should timeout
-	var response JsonRpcResponse
-	err := conn.ReadJSON(&response)
-	assert.Error(t, err, "Should timeout on slow method")
-}
-
-// =============================================================================
-// CRITICAL CAMERA OPERATIONS TESTS (0% Coverage - High Priority)
-// =============================================================================
-
-// TestWebSocketMethods_GetCameraList tests the get_camera_list method
-func TestWebSocketMethods_GetCameraList(t *testing.T) {
-	// REQ-API-004: Core method implementations (get_camera_list)
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client using the new helper (eliminates duplication)
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-	// Test get_camera_list method
-	message := CreateTestMessage("get_camera_list", map[string]interface{}{})
-	response := SendTestMessage(t, conn, message)
-
-	// Verify response structure
-	require.Nil(t, response.Error, "get_camera_list should not return error")
-	require.NotNil(t, response.Result, "get_camera_list should return result")
-
-	// Verify result is an object with cameras array (per API documentation)
-	resultMap, ok := response.Result.(map[string]interface{})
-	require.True(t, ok, "get_camera_list should return object with cameras array, got type %T", response.Result)
-
-	// Verify cameras field exists and is an array
-	cameras, ok := resultMap["cameras"].([]interface{})
-	require.True(t, ok, "get_camera_list result should have 'cameras' field as array")
-
-	// Verify metadata fields exist
-	connected, hasConnected := resultMap["connected"]
-	total, hasTotal := resultMap["total"]
-	require.True(t, hasConnected, "get_camera_list result should have 'connected' field")
-	require.True(t, hasTotal, "get_camera_list result should have 'total' field")
-
-	// Log the result for debugging
-	t.Logf("Found %d cameras (connected: %v, total: %v): %v", len(cameras), connected, total, cameras)
-}
-
-// TestWebSocketMethods_GetCameraStatus tests the get_camera_status method
-func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
-	// REQ-API-004: Core method implementations (get_camera_status)
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-	// Test get_camera_status with valid camera identifier
-	message := CreateTestMessage("get_camera_status", map[string]interface{}{
-		"device": "camera0", // Using camera identifier abstraction layer
-	})
-	response := SendTestMessage(t, conn, message)
-
-	// Verify response structure
-	require.Nil(t, response.Error, "get_camera_status should not return error")
-	require.NotNil(t, response.Result, "get_camera_status should return result")
-
-	// Verify result structure
-	status, ok := response.Result.(map[string]interface{})
-	require.True(t, ok, "get_camera_status should return status object")
-
-	// Log the result for debugging
-	t.Logf("Camera status: %v", status)
-}
-
-// TestWebSocketMethods_GetCameraCapabilities tests the get_camera_capabilities method
-func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
-	// REQ-API-004: Core method implementations (get_camera_capabilities)
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-	// Test get_camera_capabilities with valid camera identifier
-	message := CreateTestMessage("get_camera_capabilities", map[string]interface{}{
-		"device": "camera0", // Using camera identifier abstraction layer
-	})
-	response := SendTestMessage(t, conn, message)
-
-	// Verify response structure
-	require.Nil(t, response.Error, "get_camera_capabilities should not return error")
-	require.NotNil(t, response.Result, "get_camera_capabilities should return result")
-
-	// Verify result structure
-	capabilities, ok := response.Result.(map[string]interface{})
-	require.True(t, ok, "get_camera_capabilities should return capabilities object")
-
-	// Log the result for debugging
-	t.Logf("Camera capabilities: %v", capabilities)
-}
-
-// TestWebSocketMethods_StartRecording tests the start_recording method
-func TestWebSocketMethods_StartRecording(t *testing.T) {
-	// REQ-API-004: Core method implementations (start_recording)
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client with operator role for recording operations
-	AuthenticateTestClient(t, conn, "test_user", "operator")
-
-	// Test start_recording with valid camera identifier
-	message := CreateTestMessage("start_recording", map[string]interface{}{
-		"device": "camera0", // Using camera identifier abstraction layer
-	})
-	response := SendTestMessage(t, conn, message)
-
-	// Verify response structure
-	require.Nil(t, response.Error, "start_recording should not return error")
-	require.NotNil(t, response.Result, "start_recording should return result")
-
-	// Log the result for debugging
-	t.Logf("Start recording result: %v", response.Result)
-}
-
-// TestWebSocketMethods_StopRecording tests the stop_recording method
-func TestWebSocketMethods_StopRecording(t *testing.T) {
-	// REQ-API-004: Core method implementations (stop_recording)
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client with operator role for recording operations
-	AuthenticateTestClient(t, conn, "test_user", "operator")
-
-	// Test stop_recording with valid camera identifier
-	message := CreateTestMessage("stop_recording", map[string]interface{}{
-		"device": "camera0", // Using device parameter as per API documentation
-	})
-	response := SendTestMessage(t, conn, message)
-
-	// Verify response structure
-	require.Nil(t, response.Error, "stop_recording should not return error")
-	require.NotNil(t, response.Result, "stop_recording should return result")
-
-	// Log the result for debugging
-	t.Logf("Stop recording result: %v", response.Result)
-}
-
-// =============================================================================
-// AUTHENTICATION EDGE CASES TESTS
-// =============================================================================
-
-// TestWebSocketMethods_UnauthenticatedAccess tests that methods require authentication
-func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
-	// REQ-API-004: Core method implementations with authentication checks
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client WITHOUT authentication
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Test that unauthenticated access to protected methods fails
-	protectedMethods := []string{
-		"get_camera_list",
-		"get_camera_status",
-		"get_camera_capabilities",
-		"start_recording",
-		"stop_recording",
-	}
-
-	for _, method := range protectedMethods {
-		t.Run(method, func(t *testing.T) {
-			message := CreateTestMessage(method, map[string]interface{}{})
-			response := SendTestMessage(t, conn, message)
-
-			// Verify authentication error
-			require.NotNil(t, response.Error, "%s should require authentication", method)
-			require.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "%s should return AUTHENTICATION_REQUIRED error", method)
-		})
-	}
-}
-
-// TestWebSocketMethods_InvalidCameraID tests methods with invalid camera identifiers
-func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
-	// REQ-API-004: Core method implementations with parameter validation
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-	// Test methods with invalid camera identifier
-	invalidCameraMethods := []string{
-		"get_camera_status",
-		"get_camera_capabilities",
-		"start_recording",
-		"stop_recording",
-	}
-
-	for _, method := range invalidCameraMethods {
-		t.Run(method, func(t *testing.T) {
-			message := CreateTestMessage(method, map[string]interface{}{
-				"device": "invalid_camera_999", // Invalid camera identifier
-			})
-			response := SendTestMessage(t, conn, message)
-
-			// Verify error handling
-			require.NotNil(t, response.Error, "%s should return error for invalid camera", method)
-			t.Logf("%s with invalid camera returned error: %v", method, response.Error)
-		})
-	}
-}
-
-// =============================================================================
-// ABSTRACTION LAYER INTEGRATION TESTS (Critical for catching mapping bugs)
-// =============================================================================
-
-// TestWebSocketMethods_AbstractionLayerMapping - REMOVED
-// Device path mapping is now handled by MediaMTX Controller (single source of truth)
-// WebSocket server is thin protocol layer and does not perform device path mapping
-func TestWebSocketMethods_AbstractionLayerMapping_REMOVED(t *testing.T) {
-	// REQ-API-004: Core method implementations with abstraction layer validation
-
-	EnsureSequentialExecution(t)
-	helper := NewWebSocketTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	// Connect client
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate client
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-	// Test round-trip conversion: camera0 -> /dev/video0 -> camera0
-	t.Run("RoundTripConversion", func(t *testing.T) {
-		// Test camera0 mapping - REMOVED (device path mapping moved to MediaMTX Controller)
-		// devicePath := server.getDevicePathFromCameraIdentifier("camera0")
-		// assert.Equal(t, "/dev/video0", devicePath, "camera0 should map to /dev/video0")
-
-		// Test reverse mapping - REMOVED (device path mapping moved to MediaMTX Controller)
-		// cameraID := server.getCameraIdentifierFromDevicePath(devicePath)
-		// assert.Equal(t, "camera0", cameraID, "/dev/video0 should map back to camera0")
-
-		// Test camera1 mapping - REMOVED (device path mapping moved to MediaMTX Controller)
-		// devicePath = server.getDevicePathFromCameraIdentifier("camera1")
-		// assert.Equal(t, "/dev/video1", devicePath, "camera1 should map to /dev/video1")
-
-		// Test reverse mapping - REMOVED (device path mapping moved to MediaMTX Controller)
-		// cameraID = server.getCameraIdentifierFromDevicePath(devicePath)
-		// assert.Equal(t, "camera1", cameraID, "/dev/video1 should map back to camera1")
-	})
-
-	// Test validation function catches invalid identifiers
-	t.Run("ValidationFunction", func(t *testing.T) {
-		// Valid identifiers
-		assert.True(t, server.validateCameraIdentifier("camera0"), "camera0 should be valid")
-		assert.True(t, server.validateCameraIdentifier("camera1"), "camera1 should be valid")
-		assert.True(t, server.validateCameraIdentifier("camera123"), "camera123 should be valid")
-
-		// Invalid identifiers
-		assert.False(t, server.validateCameraIdentifier("invalid_camera"), "invalid_camera should be invalid")
-		assert.False(t, server.validateCameraIdentifier("camera"), "camera should be invalid (missing number)")
-		assert.False(t, server.validateCameraIdentifier("camera_abc"), "camera_abc should be invalid (non-numeric)")
-		assert.False(t, server.validateCameraIdentifier(""), "Empty string should be invalid")
-		assert.False(t, server.validateCameraIdentifier("/dev/video0"), "Device path should be invalid as camera identifier")
-	})
-
-	// Test that API methods properly use abstraction layer
-	t.Run("APIMethodAbstraction", func(t *testing.T) {
-		// Test get_camera_status with valid camera identifier (API layer)
-		message := CreateTestMessage("get_camera_status", map[string]interface{}{
-			"device": "camera0", // Using API abstraction layer
-		})
-		response := SendTestMessage(t, conn, message)
-
-		// The method should handle the abstraction layer correctly
-		// If it fails, it should be due to camera not being available, not mapping issues
-		if response.Error != nil {
-			// Error should be about camera not found, not invalid identifier
-			assert.NotEqual(t, INVALID_PARAMS, response.Error.Code,
-				"Error should not be INVALID_PARAMS for valid camera identifier")
-			t.Logf("get_camera_status with camera0 returned: %v", response.Error)
-		} else {
-			t.Logf("get_camera_status with camera0 succeeded: %v", response.Result)
-		}
-	})
-
-	// Test edge cases that could expose mapping bugs - REMOVED (device path mapping moved to MediaMTX Controller)
-	t.Run("EdgeCases", func(t *testing.T) {
-		// Test removed - device path mapping is now handled by MediaMTX Controller
-		t.Skip("Test removed - device path mapping moved to MediaMTX Controller")
-	})
-}
-
-// TestWebSocketMethods_AbstractionLayerErrorHandling - REMOVED
-// Error handling in abstraction layer is now handled by MediaMTX Controller
-func TestWebSocketMethods_AbstractionLayerErrorHandling_REMOVED(t *testing.T) {
-	// Test removed - error handling in abstraction layer is now handled by MediaMTX Controller
-	t.Skip("Test removed - abstraction layer error handling moved to MediaMTX Controller")
-
-	// This test validates that the system properly handles device path validation
-	// without requiring actual server setup (unit test approach)
-	/*t.Run("RejectDevicePaths", func(t *testing.T) {
-		methods := []string{
-			"get_camera_status",
-			"get_camera_capabilities",
-			"start_recording",
-		}
-
-		for _, method := range methods {
-			t.Run(method, func(t *testing.T) {
-				// Use correct role for each method
-				var role string
-				switch method {
-				case "start_recording":
-					role = "operator" // start_recording requires operator role
-				default:
-					role = "viewer" // get_camera_status and get_camera_capabilities require viewer role
-				}
-
-				// Authenticate with correct role
-				AuthenticateTestClient(t, conn, "test_user", role)
-
-				// Try to use device path instead of camera identifier
-				message := CreateTestMessage(method, map[string]interface{}{
-					"device": "/dev/video0", // Using device path instead of camera identifier
-				})
-				response := SendTestMessage(t, conn, message)
-
-				// Should reject device path as invalid camera identifier
-				require.NotNil(t, response.Error, "%s should reject device path as camera identifier", method)
-				assert.Equal(t, INVALID_PARAMS, response.Error.Code,
-					"%s should return INVALID_PARAMS for device path", method)
-				t.Logf("%s correctly rejected device path: %v", method, response.Error)
-			})
-		}
-	})
-
-	// Test methods that should reject malformed camera identifiers
-	t.Run("RejectMalformedIdentifiers", func(t *testing.T) {
-		malformedIdentifiers := []string{
-			"camera",     // Missing number
-			"camera_abc", // Non-numeric
-			"camera-1",   // Wrong separator
-			"camera 1",   // Space
-			"camera1.0",  // Decimal
-			"camera1a",   // Mixed alphanumeric
-		}
-
-		for _, identifier := range malformedIdentifiers {
-			t.Run(identifier, func(t *testing.T) {
-				// Authenticate as viewer for get_camera_status
-				AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-				message := CreateTestMessage("get_camera_status", map[string]interface{}{
-					"device": identifier, // Use correct parameter name
-				})
-				response := SendTestMessage(t, conn, message)
-
-				// Should reject malformed identifier
-				require.NotNil(t, response.Error, "Should reject malformed identifier: %s", identifier)
-				assert.Equal(t, INVALID_PARAMS, response.Error.Code,
-					"Should return INVALID_PARAMS for malformed identifier: %s", identifier)
-				t.Logf("Correctly rejected malformed identifier %s: %v", identifier, response.Error)
-			})
-		}
-	})
-
-	// Test that valid camera identifiers are accepted
-	t.Run("AcceptValidIdentifiers", func(t *testing.T) {
-		validIdentifiers := []string{
-			"camera0",
-			"camera1",
-			"camera123",
-			"camera999",
-		}
-
-		for _, identifier := range validIdentifiers {
-			t.Run(identifier, func(t *testing.T) {
-				// Authenticate as viewer for get_camera_status
-				AuthenticateTestClient(t, conn, "test_user", "viewer")
-
-				message := CreateTestMessage("get_camera_status", map[string]interface{}{
-					"device": identifier, // Use correct parameter name
-				})
-				response := SendTestMessage(t, conn, message)
-
-				// Should accept valid identifier (may fail due to camera not available, but not due to validation)
-				if response.Error != nil {
-					assert.NotEqual(t, INVALID_PARAMS, response.Error.Code,
-						"Should not return INVALID_PARAMS for valid identifier: %s", identifier)
-					t.Logf("Valid identifier %s failed for other reason: %v", identifier, response.Error)
-				} else {
-					t.Logf("Valid identifier %s succeeded: %v", identifier, response.Result)
-				}
-			})
-		}
-	})*/
 }

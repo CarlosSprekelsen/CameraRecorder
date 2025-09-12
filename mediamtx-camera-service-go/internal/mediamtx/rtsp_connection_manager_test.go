@@ -47,23 +47,24 @@ func createTestMediaMTXConfig() *MediaMTXConfig {
 	}
 }
 
-// createTestRTSPManager creates a test RTSP connection manager with proper logging
-func createTestRTSPManager(t *testing.T, helper *MediaMTXTestHelper) RTSPConnectionManager {
-	config := createTestMediaMTXConfig()
-	logger := helper.GetLogger()
-
-	// Set appropriate log level for testing
-	logger.SetLevel(logrus.ErrorLevel)
-
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
-	require.NotNil(t, rtspManager, "RTSP connection manager should not be nil")
-
-	return rtspManager
-}
-
 // createTestRTSPManagerWithCustomConfig creates a test RTSP manager with custom configuration
 func createTestRTSPManagerWithCustomConfig(t *testing.T, helper *MediaMTXTestHelper, customConfig *config.RTSPMonitoringConfig) RTSPConnectionManager {
-	config := createTestMediaMTXConfig()
+	// For custom config, we need to create a new instance with the custom configuration
+	// This is a legitimate use case that requires a new instance
+	config := &MediaMTXConfig{
+		BaseURL: "http://localhost:9997",
+		Timeout: 10 * time.Second,
+		RTSPMonitoring: config.RTSPMonitoringConfig{
+			Enabled:             true,
+			CheckInterval:       30,
+			ConnectionTimeout:   10,
+			MaxConnections:      50,
+			SessionTimeout:      300,
+			BandwidthThreshold:  1000000,
+			PacketLossThreshold: 0.05,
+			JitterThreshold:     50.0,
+		},
+	}
 	if customConfig != nil {
 		config.RTSPMonitoring = *customConfig
 	}

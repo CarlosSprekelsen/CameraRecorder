@@ -142,7 +142,7 @@ authJWTInHTTPQuery: true
 # Global settings -> Control API
 
 # Enable controlling the server through the Control API.
-api: no
+api: yes
 # Address of the Control API listener.
 apiAddress: :9997
 # Enable TLS/HTTPS on the Control API server.
@@ -155,6 +155,7 @@ apiServerKey: server.key
 # Path to the server certificate.
 apiServerCert: server.crt
 # Value of the Access-Control-Allow-Origin header provided in every HTTP response.
+# Prevent runtime path persistence
 apiAllowOrigin: '*'
 # List of IPs or CIDRs of proxies placed before the HTTP server.
 # If the server receives a request from one of these entries, IP in logs
@@ -426,6 +427,9 @@ srtAddress: :8890
 # Settings in "pathDefaults" are applied anywhere,
 # unless they are overridden in "paths".
 pathDefaults:
+  # Auto-cleanup unused paths
+  runOnDemandCloseAfter: 10s
+  sourceOnDemandCloseAfter: 10s
 
   ###############################################
   # Default path settings -> General

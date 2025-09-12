@@ -24,50 +24,12 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // RealHardwareCameraMonitor creates a real camera monitor for testing with actual hardware
 // Follows Progressive Readiness Pattern - no blocking on connected cameras
-func NewRealHardwareCameraMonitor(t *testing.T) camera.CameraMonitor {
-	// Create real implementations using the established pattern
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	// Create config manager and logger
-	configManager := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
-
-	// Create device event source for testing
-	deviceEventSource, err := camera.NewFsnotifyDeviceEventSource(logger)
-	require.NoError(t, err, "Should create device event source")
-
-	// Create real camera monitor
-	monitor, err := camera.NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser, deviceEventSource)
-	require.NoError(t, err, "Should create real camera monitor")
-	require.NotNil(t, monitor, "Real camera monitor should not be nil")
-
-	// Start the monitor using the established pattern
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel() // Ensure context is cancelled when function returns
-
-	err = monitor.Start(ctx)
-	require.NoError(t, err, "Should start camera monitor")
-
-	// Use require.Eventually to properly wait for the running state without hiding race conditions
-	require.Eventually(t, func() bool {
-		return monitor.IsRunning()
-	}, 5*time.Second, 10*time.Millisecond, "Monitor should become running after start")
-
-	// DON'T wait for IsReady() or check GetConnectedCameras() - this violates Progressive Readiness
-	// The system should accept operations immediately and features become available as components initialize
-
-	t.Logf("Camera monitor started successfully (Progressive Readiness Pattern)")
-	return monitor
-}
 
 // TestNewSnapshotManager_ReqMTX001 tests snapshot manager creation with real server
 func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
@@ -94,7 +56,7 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -130,7 +92,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -209,7 +171,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 
 	// Create SnapshotManager with configManager for proper multi-tier support
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -280,7 +242,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -344,7 +306,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -411,7 +373,7 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -477,7 +439,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 
 	// Create SnapshotManager with configManager for proper multi-tier support
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -590,7 +552,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -637,7 +599,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// Create SnapshotManager with real StreamManager
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
@@ -718,7 +680,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 
@@ -791,7 +753,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 
@@ -871,7 +833,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 
@@ -947,7 +909,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
 
@@ -1036,7 +998,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
 	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, helper.GetLogger())
 	// Create real hardware camera monitor for testing
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
@@ -1125,7 +1087,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
 	// Create real hardware camera monitor for testing (Progressive Readiness Pattern)
-	cameraMonitor := NewRealHardwareCameraMonitor(t)
+	cameraMonitor := helper.GetCameraMonitor()
 	require.NotNil(t, cameraMonitor, "Camera monitor should be created successfully")
 
 	// Create snapshot manager with configuration integration

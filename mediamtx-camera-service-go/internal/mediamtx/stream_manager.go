@@ -322,6 +322,14 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			"source": source,
 		}
 
+		// Special handling for "publisher" source - PathManager will convert this
+		// to runOnDemand configuration, so we need to ensure proper options
+		if source == "publisher" {
+			// PathManager will handle the conversion to runOnDemand
+			// Just pass the source and let PathManager do the conversion
+			pathConfig = map[string]interface{}{}
+		}
+
 		// Use PathManager for proper architectural integration
 		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {

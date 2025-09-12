@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,12 +59,6 @@ func getCachedController(t *testing.T, testName string) *controller {
 	controller := controllerInterface.(*controller)
 	controllerCache[testName] = controller
 	return controller
-}
-
-// createConfigManagerWithEnvVars creates a config manager that loads environment variables
-func createConfigManagerWithEnvVars(t *testing.T, helper *MediaMTXTestHelper) *config.ConfigManager {
-	// Use centralized configuration loading from test helpers
-	return CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 }
 
 // TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
@@ -709,7 +702,6 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Test advanced recording with options
 	device := "camera0"
-	path := "/tmp/recordings/advanced_test.mp4" // Use configured path from fixture
 	options := map[string]interface{}{
 		"quality":      "high",
 		"resolution":   "1920x1080",
@@ -724,7 +716,20 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Verify session properties
 	assert.Equal(t, "camera0", session.DevicePath, "Should use camera identifier for API consistency")
-	assert.Equal(t, path, session.FilePath, "File path should match")
+
+	// Verify file path follows expected pattern: /tmp/recordings/camera0_YYYY-MM-DD_HH-MM-SS.mp4
+	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/camera0_"), "File path should start with expected prefix")
+	assert.True(t, strings.HasSuffix(session.FilePath, ".mp4"), "File path should end with .mp4 extension")
+
+	// Verify timestamp format in filename (YYYY-MM-DD_HH-MM-SS)
+	pathParts := strings.Split(session.FilePath, "/")
+	filename := pathParts[len(pathParts)-1]
+	filenameWithoutExt := strings.TrimSuffix(filename, ".mp4")
+	deviceAndTimestamp := strings.TrimPrefix(filenameWithoutExt, "camera0_")
+
+	// Parse timestamp to verify it's valid
+	_, err = time.Parse("2006-01-02_15-04-05", deviceAndTimestamp)
+	assert.NoError(t, err, "Timestamp in filename should be valid")
 	assert.Equal(t, "active", session.Status, "Status should be active")
 	assert.NotEmpty(t, session.ID, "Session ID should not be empty")
 	assert.NotEmpty(t, session.ContinuityID, "Continuity ID should not be empty")
@@ -1275,9 +1280,10 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Test concurrent start/stop operations that could cause race conditions
+	// Test concurrent start/stop operations - should be handled gracefully by controller
 	t.Run("concurrent_start_stop_race_condition", func(t *testing.T) {
 		// Start multiple goroutines that try to start/stop the controller
+		// The controller should handle this gracefully using atomic operations
 		done := make(chan bool, 10)
 
 		for i := 0; i < 5; i++ {
@@ -1292,7 +1298,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 				// Try to start the controller
 				err := controller.Start(ctx)
 				if err != nil {
-					// Expected if already running
+					// Expected if already running - controller should handle this gracefully
 					t.Logf("Start failed (expected if already running): %v", err)
 				}
 			}()
@@ -1312,7 +1318,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 				defer cancel()
 				err := controller.Stop(stopCtx)
 				if err != nil {
-					// Expected if not running
+					// Expected if not running - controller should handle this gracefully
 					t.Logf("Stop failed (expected if not running): %v", err)
 				}
 			}()

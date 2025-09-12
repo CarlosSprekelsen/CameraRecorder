@@ -141,6 +141,11 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 
 	t.Log("Starting MediaMTX test cleanup...")
 
+	// ARCHITECTURE COMPLIANCE: Don't manage camera monitor lifecycle directly
+	// The camera monitor follows Progressive Readiness Pattern - it manages its own lifecycle
+	// Tests should not interfere with the monitor's internal state management
+	// The monitor will clean up its own resources when the test process exits
+
 	// Clean up MediaMTX paths created during tests
 	h.cleanupMediaMTXPaths(t)
 
@@ -348,6 +353,7 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 }
 
 // GetCameraMonitor returns a shared camera monitor instance using REAL hardware
+// ARCHITECTURE COMPLIANCE: Follows Progressive Readiness Pattern - no blocking startup
 func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
@@ -375,8 +381,22 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 			h.logger.WithError(err).Error("Failed to create real camera monitor - test requires real hardware")
 			panic(fmt.Sprintf("Camera monitor creation failed: %v", err))
 		}
+
+		// ARCHITECTURE COMPLIANCE: Progressive Readiness Pattern
+		// Start the monitor in background - don't block on startup
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			if err := realMonitor.Start(ctx); err != nil {
+				h.logger.WithError(err).Error("Failed to start camera monitor")
+				// Don't panic - let the system continue with progressive readiness
+			}
+		}()
+
 		h.cameraMonitor = realMonitor
 	})
+
 	return h.cameraMonitor
 }
 

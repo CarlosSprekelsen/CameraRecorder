@@ -140,10 +140,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
 			if _, hasRunOnDemand := options["runOnDemand"]; !hasRunOnDemand {
-				// Set a placeholder that won't create runtime path
-				options["sourceOnDemand"] = true
-				options["sourceOnDemandStartTimeout"] = "10s"
-				options["sourceOnDemandCloseAfter"] = "10s"
+				// Set a placeholder runOnDemand command that won't create runtime path
+				// This allows the validation to pass while creating a config path
+				options["runOnDemand"] = "echo 'Publisher source - waiting for connection'"
+				options["runOnDemandRestart"] = true
+				options["runOnDemandStartTimeout"] = "10s"
+				options["runOnDemandCloseAfter"] = "10s"
 			}
 		}
 	}
@@ -531,9 +533,9 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 				return nil // Return success for idempotency
 			}
 
-			// Path doesn't exist at all - that's fine
+			// Path doesn't exist at all - return error for proper error handling
 			pm.logger.WithField("name", name).Debug("Path does not exist")
-			return nil // Idempotent success
+			return NewPathErrorWithErr(name, "delete_path", "path not found", err)
 		}
 
 		return NewPathErrorWithErr(name, "delete_path", "failed to delete path", err)

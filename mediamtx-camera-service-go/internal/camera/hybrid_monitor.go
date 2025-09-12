@@ -326,6 +326,10 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stats.Running = true
 	atomic.StoreInt64(&m.stats.ActiveTasks, 1)
 
+	// CRITICAL: Release the lock before starting the goroutine to prevent deadlock
+	// The goroutine will call discoverCameras which needs to acquire stateLock
+	m.stateLock.Unlock()
+
 	// Start appropriate monitoring based on discovery mode
 	go func() {
 		defer func() {

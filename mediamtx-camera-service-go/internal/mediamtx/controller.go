@@ -444,13 +444,15 @@ func (c *controller) Stop(ctx context.Context) error {
 	}
 	c.sessionsMu.RUnlock()
 
-	// Stop each active session (stopRecordingInternal will acquire its own lock)
+	// Stop each active session - release main lock to avoid nested locking deadlock
+	c.mu.Unlock()
 	for _, sessionID := range activeSessions {
 		c.logger.WithField("session_id", sessionID).Info("Stopping recording session")
 		if err := c.stopRecordingInternal(ctx, sessionID); err != nil {
 			c.logger.WithError(err).WithField("session_id", sessionID).Error("Failed to stop recording session")
 		}
 	}
+	c.mu.Lock() // Re-acquire the lock for the rest of the method
 
 	// Stop path integration first
 	if c.pathIntegration != nil {
@@ -1274,6 +1276,19 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device string, 
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Validate that the device is actually discovered (USB camera or external stream)
+	valid, err := c.validateDiscoveredDevice(device)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{
+			"device": device,
+			"error":  err.Error(),
+		}).Error("Device validation failed")
+		return nil, fmt.Errorf("device validation failed: %w", err)
+	}
+	if !valid {
+		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
+	}
+
 	// Validate device exists
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
@@ -1455,6 +1470,19 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 	// Validate device exists
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
+	}
+
+	// Validate that the device is actually discovered (USB camera or external stream)
+	valid, err := c.validateDiscoveredDevice(device)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{
+			"device": device,
+			"error":  err.Error(),
+		}).Error("Device validation failed")
+		return nil, fmt.Errorf("device validation failed: %w", err)
+	}
+	if !valid {
+		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
 	}
 
 	// Get default snapshot path from configuration
