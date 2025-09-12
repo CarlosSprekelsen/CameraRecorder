@@ -68,6 +68,13 @@ type MediaMTXTestHelper struct {
 	recordingManager      *RecordingManager
 	rtspConnectionManager RTSPConnectionManager
 	cameraMonitor         camera.CameraMonitor
+
+	// Race-free initialization using sync.Once
+	pathManagerOnce      sync.Once
+	streamManagerOnce    sync.Once
+	recordingManagerOnce sync.Once
+	rtspManagerOnce      sync.Once
+	cameraMonitorOnce    sync.Once
 }
 
 // EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
@@ -297,33 +304,36 @@ func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 
 // GetPathManager returns a shared path manager instance
 func (h *MediaMTXTestHelper) GetPathManager() PathManager {
-	if h.pathManager == nil {
+	h.pathManagerOnce.Do(func() {
 		// Convert test config to MediaMTX config
 		mediaMTXConfig := &MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
 		h.pathManager = NewPathManager(h.client, mediaMTXConfig, h.logger)
-	}
+	})
 	return h.pathManager
 }
 
 // GetStreamManager returns a shared stream manager instance
 func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
-	if h.streamManager == nil {
+	h.streamManagerOnce.Do(func() {
+		// Ensure PathManager is initialized first to prevent nil pointer dereference
+		pathManager := h.GetPathManager() // This will initialize h.pathManager if nil
+
 		// Convert test config to MediaMTX config
 		mediaMTXConfig := &MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
-		h.streamManager = NewStreamManager(h.client, h.pathManager, mediaMTXConfig, h.logger)
-	}
+		h.streamManager = NewStreamManager(h.client, pathManager, mediaMTXConfig, h.logger)
+	})
 	return h.streamManager
 }
 
 // GetRecordingManager returns a shared recording manager instance
 func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
-	if h.recordingManager == nil {
+	h.recordingManagerOnce.Do(func() {
 		// Convert test config to MediaMTX config
 		mediaMTXConfig := &MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
@@ -333,13 +343,13 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		streamManager := h.GetStreamManager()
 		configIntegration := NewConfigIntegration(h.configManager, h.logger)
 		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, configIntegration, h.logger)
-	}
+	})
 	return h.recordingManager
 }
 
 // GetCameraMonitor returns a shared camera monitor instance using REAL hardware
 func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
-	if h.cameraMonitor == nil {
+	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
 		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
@@ -359,8 +369,43 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 			panic(fmt.Sprintf("Camera monitor creation failed: %v", err))
 		}
 		h.cameraMonitor = realMonitor
-	}
+	})
 	return h.cameraMonitor
+}
+
+// HasHardwareCamera checks if a real camera is available for testing
+func (h *MediaMTXTestHelper) HasHardwareCamera(ctx context.Context) bool {
+	pathManager := h.GetPathManager()
+	// Check if camera0 device exists
+	devicePath, exists := pathManager.GetDevicePathForCamera("camera0")
+	if !exists {
+		return false
+	}
+	// Validate the device is actually accessible
+	valid, err := pathManager.ValidateCameraDevice(ctx, devicePath)
+	return valid && err == nil
+}
+
+// GetTestCameraDevice returns a test camera device from fixtures
+func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
+	// TODO: Load test camera devices from fixture file
+	// fixturePath := filepath.Join("tests", "fixtures", "test_camera_devices.yaml")
+	
+	// For now, return appropriate test devices based on scenario
+	switch scenario {
+	case "hardware_available":
+		return "/dev/video0" // Local V4L2 device
+	case "network_failure":
+		return "rtsp://test-source.example.com:554/stream" // External RTSP (expected to fail)
+	case "mixed_scenario":
+		// Check if hardware is available, otherwise use external source
+		if h.HasHardwareCamera(context.Background()) {
+			return "/dev/video0"
+		}
+		return "rtsp://test-source.example.com:554/stream"
+	default:
+		return "/dev/video0" // Default to local device
+	}
 }
 
 // GetController creates a MediaMTX controller with proper dependencies

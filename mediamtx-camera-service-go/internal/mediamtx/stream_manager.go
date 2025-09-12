@@ -40,6 +40,19 @@ type streamManager struct {
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
 func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *MediaMTXConfig, logger *logging.Logger) StreamManager {
+	// Fail fast if required dependencies are nil
+	if client == nil {
+		panic("MediaMTXClient cannot be nil")
+	}
+	if pathManager == nil {
+		panic("PathManager cannot be nil")
+	}
+	if config == nil {
+		panic("MediaMTXConfig cannot be nil")
+	}
+	if logger == nil {
+		panic("Logger cannot be nil")
+	}
 
 	// SIMPLIFIED: Single use case configuration for all operations
 	// All operations use the same stable path with consistent settings
@@ -64,6 +77,14 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *Me
 
 // StartStream starts a stream for a device (simplified - single path for all operations)
 func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*Stream, error) {
+	// Validate dependencies are initialized
+	if sm.pathManager == nil {
+		return nil, fmt.Errorf("PathManager not initialized")
+	}
+	if sm.client == nil {
+		return nil, fmt.Errorf("MediaMTXClient not initialized")
+	}
+	
 	return sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
 }
 

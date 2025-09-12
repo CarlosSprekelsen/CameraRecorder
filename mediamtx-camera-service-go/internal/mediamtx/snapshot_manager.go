@@ -366,7 +366,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		return nil, NewFFmpegErrorWithErr(0, "snapshot", "get_file_info", "failed to get file info", err)
 	}
 
-	// Create snapshot object
+	// Create snapshot object with metadata
 	snapshot := &Snapshot{
 		ID:       generateSnapshotID(devicePath),
 		Device:   devicePath,
@@ -374,6 +374,14 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		FilePath: snapshotPath,
 		Size:     fileSize,
 		Created:  time.Now(),
+		Metadata: map[string]interface{}{
+			"tier_used":       1,
+			"capture_method":  "usb_direct",
+			"format":          sm.snapshotSettings.Format,
+			"width":           sm.snapshotSettings.MaxWidth,
+			"height":          sm.snapshotSettings.MaxHeight,
+			"quality":         sm.snapshotSettings.Quality,
+		},
 	}
 
 	sm.logger.WithFields(logging.Fields{
@@ -463,7 +471,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		return nil, NewFFmpegErrorWithErr(0, "snapshot", "get_file_info", "failed to get file info", err)
 	}
 
-	// Create snapshot object
+	// Create snapshot object with metadata
 	snapshot := &Snapshot{
 		ID:       generateSnapshotID(devicePath),
 		Device:   devicePath,
@@ -471,6 +479,15 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		FilePath: snapshotPath,
 		Size:     fileSize,
 		Created:  time.Now(),
+		Metadata: map[string]interface{}{
+			"tier_used":       2, // Will be updated to 3 if stream activation was used
+			"capture_method":  "rtsp_immediate",
+			"format":          sm.snapshotSettings.Format,
+			"width":           sm.snapshotSettings.MaxWidth,
+			"height":          sm.snapshotSettings.MaxHeight,
+			"quality":         sm.snapshotSettings.Quality,
+			"stream_name":     streamName,
+		},
 	}
 
 	sm.logger.WithFields(logging.Fields{
@@ -494,13 +511,16 @@ func (sm *SnapshotManager) getStreamNameFromDevice(devicePath string) string {
 
 // createSnapshotResult creates a snapshot result with tier information
 func (sm *SnapshotManager) createSnapshotResult(snapshot *Snapshot, tier int, captureTime time.Duration, methodsTried []string) *Snapshot {
-	// Add tier information to snapshot
-	snapshot.Metadata = map[string]interface{}{
-		"tier_used":       tier,
-		"capture_time_ms": captureTime.Milliseconds(),
-		"methods_tried":   methodsTried,
-		"user_experience": sm.determineUserExperience(captureTime),
+	// Initialize metadata if nil
+	if snapshot.Metadata == nil {
+		snapshot.Metadata = make(map[string]interface{})
 	}
+	
+	// Add tier information to existing metadata (don't overwrite)
+	snapshot.Metadata["tier_used"] = tier
+	snapshot.Metadata["capture_time_ms"] = captureTime.Milliseconds()
+	snapshot.Metadata["methods_tried"] = methodsTried
+	snapshot.Metadata["user_experience"] = sm.determineUserExperience(captureTime)
 
 	return snapshot
 }

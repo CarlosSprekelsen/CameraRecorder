@@ -1,0 +1,60 @@
+# Test Camera Device Fixtures
+# This file provides test camera device configurations for unit testing
+# These are NOT real cameras - they are test fixtures for validation
+
+# Local V4L2 devices (for hardware-aware testing)
+local_devices:
+  - id: "camera0"
+    device_path: "/dev/video0"
+    type: "v4l2"
+    description: "Primary test camera device"
+    
+  - id: "camera1" 
+    device_path: "/dev/video1"
+    type: "v4l2"
+    description: "Secondary test camera device"
+
+# External RTSP sources (for network testing - these should fail gracefully)
+external_sources:
+  - id: "external_rtsp_1"
+    device_path: "rtsp://test-source.example.com:554/stream"
+    type: "rtsp"
+    description: "External RTSP test source (expected to fail)"
+    
+  - id: "external_rtsp_2"
+    device_path: "rtsp://external.example.com:554/stream" 
+    type: "rtsp"
+    description: "External RTSP test source (expected to fail)"
+
+# HTTP MJPEG sources (for network testing - these should fail gracefully)
+http_sources:
+  - id: "external_http_1"
+    device_path: "http://192.168.1.100:8080/mjpeg"
+    type: "http"
+    description: "External HTTP MJPEG test source (expected to fail)"
+
+# UDP multicast sources (for network testing - these should fail gracefully)  
+udp_sources:
+  - id: "external_udp_1"
+    device_path: "udp://239.0.0.1:1234"
+    type: "udp"
+    description: "External UDP multicast test source (expected to fail)"
+
+# Test scenarios
+test_scenarios:
+  # Hardware-aware testing (should succeed if hardware available)
+  hardware_available:
+    - "camera0"
+    - "camera1"
+    
+  # Network testing (should fail gracefully)
+  network_failure:
+    - "external_rtsp_1"
+    - "external_rtsp_2" 
+    - "external_http_1"
+    - "external_udp_1"
+    
+  # Mixed testing (some succeed, some fail)
+  mixed_scenario:
+    - "camera0"
+    - "external_rtsp_1"
