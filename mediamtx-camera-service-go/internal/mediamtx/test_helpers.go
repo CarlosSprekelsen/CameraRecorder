@@ -103,7 +103,7 @@ func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTe
 
 	// Create MediaMTX client
 	client := NewClient(config.BaseURL, clientConfig, logger)
-	
+
 	// Create config manager for centralized configuration
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
@@ -316,7 +316,7 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
-		h.streamManager = NewStreamManager(h.client, mediaMTXConfig, h.logger)
+		h.streamManager = NewStreamManager(h.client, h.pathManager, mediaMTXConfig, h.logger)
 	}
 	return h.streamManager
 }
@@ -350,16 +350,15 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		commandExecutor := &camera.RealV4L2CommandExecutor{}
 		infoParser := &camera.RealDeviceInfoParser{}
 
-		// Create real camera monitor
+		// Create real camera monitor - NO MOCKS, real hardware only
 		realMonitor, err := camera.NewHybridCameraMonitor(
 			configManager, logger, deviceChecker, commandExecutor, infoParser)
 		if err != nil {
-			// Fallback to test monitor if real monitor creation fails
-			h.logger.WithError(err).Warn("Failed to create real camera monitor, using test monitor")
-			h.cameraMonitor = NewTestCameraMonitor()
-		} else {
-			h.cameraMonitor = realMonitor
+			// Real system - if camera monitor fails, test should fail
+			h.logger.WithError(err).Error("Failed to create real camera monitor - test requires real hardware")
+			panic(fmt.Sprintf("Camera monitor creation failed: %v", err))
 		}
+		h.cameraMonitor = realMonitor
 	}
 	return h.cameraMonitor
 }

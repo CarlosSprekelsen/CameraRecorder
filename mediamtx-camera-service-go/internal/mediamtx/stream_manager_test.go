@@ -158,7 +158,7 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	devicePath := "/dev/video0"
 
 	// Start recording stream
-	stream, err := streamManager.StartRecordingStream(ctx, devicePath)
+	stream, err := streamManager.StartStream(ctx, devicePath)
 	require.NoError(t, err, "Recording stream creation should succeed")
 	require.NotNil(t, stream, "Created recording stream should not be nil")
 	assert.Equal(t, "camera0", stream.Name, "Recording stream should have base camera name without suffix")
@@ -168,8 +168,8 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 
-// TestStreamManager_StartViewingStream_ReqMTX002 tests viewing stream creation
-func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
+// TestStreamManager_StartStream_Viewing_ReqMTX002 tests stream creation for viewing
+func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -195,8 +195,8 @@ func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 
-// TestStreamManager_StartSnapshotStream_ReqMTX002 tests snapshot stream creation
-func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
+// TestStreamManager_StartStream_Snapshot_ReqMTX002 tests stream creation for snapshots
+func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)

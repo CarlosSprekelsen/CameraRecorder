@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -641,10 +642,13 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// Test concurrent snapshot operations
 	const numOperations = 5
 	errors := make([]error, numOperations)
+	var wg sync.WaitGroup
 
 	// Start concurrent operations
 	for i := 0; i < numOperations; i++ {
+		wg.Add(1)
 		go func(index int) {
+			defer wg.Done()
 			// Create test file
 			filename := fmt.Sprintf("concurrent_test_%d.jpg", index)
 			filePath := filepath.Join(mediaMTXConfig.SnapshotsPath, filename)
@@ -663,8 +667,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	}
 
 	// Wait for all operations to complete using proper synchronization
-	// All operations are synchronous, so no waiting needed
-	// The errors slice will be populated when goroutines complete
+	wg.Wait()
 
 	// Verify all operations completed successfully
 	for i, err := range errors {
@@ -1021,7 +1024,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 
 	// Create snapshot manager with proper configuration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), mediaMTXConfig, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, helper.GetLogger())
 	// Create real hardware camera monitor for testing
 	cameraMonitor := NewRealHardwareCameraMonitor(t)
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
@@ -1117,7 +1120,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 	// Create snapshot manager with configuration integration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), mediaMTXConfig, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, helper.GetLogger())
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
