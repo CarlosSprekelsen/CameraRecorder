@@ -551,6 +551,7 @@ type MediaMTXClient interface {
 	Get(ctx context.Context, path string) ([]byte, error)
 	Post(ctx context.Context, path string, data []byte) ([]byte, error)
 	Put(ctx context.Context, path string, data []byte) ([]byte, error)
+	Patch(ctx context.Context, path string, data []byte) error
 	Delete(ctx context.Context, path string) error
 
 	// Health check
@@ -587,6 +588,7 @@ type HealthMonitor interface {
 type PathManager interface {
 	// Path operations
 	CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error
+	PatchPath(ctx context.Context, name string, config map[string]interface{}) error
 	DeletePath(ctx context.Context, name string) error
 	GetPath(ctx context.Context, name string) (*Path, error)
 	ListPaths(ctx context.Context) ([]*Path, error)
