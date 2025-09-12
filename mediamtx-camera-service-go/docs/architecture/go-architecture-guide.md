@@ -75,6 +75,11 @@ end note
 - **Authentication:** JWT Bearer tokens
 - **Clients:** Web browsers, mobile apps, desktop applications
 
+**Recording Architecture Notes:**
+- **Path Reuse:** Single MediaMTX path ("camera0") handles both streaming AND recording simultaneously
+- **File Management:** Recording filenames are independent of path names (configured via recordPath)
+- **Pattern Support:** MediaMTX handles timestamp patterns in filenames (e.g., camera0_%Y-%m-%d_%H-%M-%S.mp4)
+
 ```plantuml
 @startuml ExposedInterface
 title Exposed Interface - JSON-RPC 2.0 API
@@ -193,7 +198,16 @@ end note
 - Camera operations coordination
 - Stream lifecycle management
 - API abstraction (camera0 ↔ /dev/video0)
+- Recording session management
+- Path reuse optimization
 - **Pattern:** Single Source of Truth for all operations
+
+**Recording Manager (Sub-component of MediaMTX Controller)**
+- Recording session lifecycle
+- Path configuration via PATCH operations
+- File management and rotation
+- **Key Insight:** Uses same MediaMTX path for streaming and recording
+- **Pattern:** Path reuse instead of unique path per recording
 
 **Camera Monitor (Hardware Abstraction Layer)**
 - USB camera detection via V4L2
@@ -206,6 +220,50 @@ end note
 - Role-based access control (viewer/operator/admin)
 - Session management
 - **Pattern:** Middleware integration with existing configuration
+
+**MediaMTX Controller - SINGLE SOURCE OF TRUTH**
+
+```plantuml
+@startuml ControllerAuthority
+title Controller as Single Source of Truth
+
+rectangle "NEVER Direct Access" #ffcccc {
+    component "WebSocket" as WS1
+    component "HTTP API" as H1
+    component "External Client" as E1
+}
+
+rectangle "ALWAYS Through Controller" #ccffcc {
+    component "Controller" as C
+}
+
+rectangle "Internal Components" {
+    component "RecordingManager" as RM
+    component "StreamManager" as SM
+    component "SnapshotManager" as SN
+    component "PathManager" as PM
+}
+
+WS1 --> C: ALL operations
+H1 --> C: ALL operations
+E1 --> C: ALL operations
+
+C --> RM
+C --> SM
+C --> SN
+C --> PM
+
+note right of C
+Controller Rules:
+1. ALL business logic here
+2. NO business logic in WebSocket
+3. NO direct manager access
+4. Manages abstraction layer
+5. Coordinates all operations
+end note
+
+@enduml
+```
 
 ### 3.3 Internal Interface Contracts
 
@@ -233,6 +291,143 @@ interface SecurityAPI {
     +CheckPermission(role : string, method : string) : bool
     +CreateSession(userID : string) : Session
 }
+
+@enduml
+```
+
+### 3.4 Configuration Integration Pattern
+
+```plantuml
+@startuml ConfigIntegration
+title ConfigIntegration Pattern - Centralized Configuration Access
+
+class ConfigManager {
+    -config: Config
+    +LoadConfig(path: string)
+    +GetConfig(): Config
+}
+
+class ConfigIntegration {
+    -configManager: ConfigManager
+    -logger: Logger
+    +GetMediaMTXConfig(): MediaMTXConfig
+    +GetRecordingConfig(): RecordingConfig
+    +GetSnapshotConfig(): SnapshotConfig
+}
+
+class Controller {
+    -configIntegration: ConfigIntegration
+}
+
+class RecordingManager {
+    -configIntegration: ConfigIntegration
+}
+
+ConfigManager --> ConfigIntegration: provides config
+ConfigIntegration --> Controller: injected
+ConfigIntegration --> RecordingManager: injected
+
+note bottom of ConfigIntegration
+Pattern Rules:
+1. ALL components receive ConfigIntegration
+2. NO direct ConfigManager access
+3. Type-safe configuration access
+4. Centralized defaults and validation
+end note
+
+@enduml
+```
+
+**Developer Note:** Every manager component MUST receive ConfigIntegration in its constructor
+
+### 3.5 Abstraction Layer Architecture
+
+```plantuml
+@startuml AbstractionLayer
+title API Abstraction Layer - Critical Mapping
+
+package "External API Layer" #lightblue {
+    component "Client sees: camera0" as API
+}
+
+package "Controller Abstraction" #lightgreen {
+    component "Mapping Logic" as MAP
+    note right of MAP
+    camera0 ↔ /dev/video0
+    camera1 ↔ /dev/video1
+    camera2 ↔ /dev/video2
+    end note
+}
+
+package "Internal Implementation" #lightyellow {
+    component "Hardware: /dev/video0" as HW
+}
+
+API --> MAP: camera0 (abstract)
+MAP --> HW: /dev/video0 (concrete)
+
+note bottom
+CRITICAL Rules:
+1. External APIs ONLY use camera identifiers (camera0, camera1)
+2. Internal operations use device paths (/dev/video0)
+3. Controller manages ALL mapping
+4. NEVER expose device paths to clients
+5. Mapping is centralized in PathManager
+end note
+
+@enduml
+```
+
+### 3.6 Component Dependency Hierarchy
+
+```plantuml
+@startuml DependencyHierarchy
+title Component Dependency Hierarchy - Build Order
+
+package "Layer 1: Foundation" #lightgray {
+    [ConfigManager]
+    [Logger]
+}
+
+package "Layer 2: Core Services" #lightblue {
+    [MediaMTXClient]
+    [CameraMonitor]
+    [ConfigIntegration]
+}
+
+package "Layer 3: Managers" #lightgreen {
+    [PathManager]
+    [StreamManager]
+    [FFmpegManager]
+}
+
+package "Layer 4: Business Logic" #lightyellow {
+    [RecordingManager]
+    [SnapshotManager]
+}
+
+package "Layer 5: Orchestration" #lightcoral {
+    [Controller]
+}
+
+package "Layer 6: API" #lavender {
+    [WebSocketServer]
+}
+
+[ConfigManager] --> [ConfigIntegration]
+[ConfigIntegration] --> [PathManager]
+[PathManager] --> [StreamManager]
+[StreamManager] --> [RecordingManager]
+[RecordingManager] --> [Controller]
+[Controller] --> [WebSocketServer]
+
+note right
+Build Order:
+1. Foundation first
+2. Each layer depends on previous
+3. Controller orchestrates all
+4. WebSocket has NO business logic
+end note
 
 @enduml
 ```
@@ -271,39 +466,61 @@ end note
 @enduml
 ```
 
-### 4.2 Snapshot Capture Flow
+### 4.2 Multi-Tier Snapshot Architecture
 
 ```plantuml
-@startuml SnapshotFlow
-title Snapshot Capture Flow (Multi-Tier)
+@startuml SnapshotTiers
+title Multi-Tier Snapshot Architecture - Performance Optimization
 
-participant "Client" as C
-participant "WebSocket Server" as WS
-participant "MediaMTX Controller" as MC
-participant "Camera Monitor" as CM
-participant "Hardware" as H
+start
+:Snapshot Request;
 
-C -> WS : take_snapshot(camera0)
-WS -> MC : TakeSnapshot(camera0)
+partition "Tier 0: V4L2 Direct (NEW - FASTEST)" {
+    :Direct V4L2 capture;
+    if (USB device?) then (yes)
+        :Capture frame directly;
+        :~100ms latency;
+        stop
+    else (no)
+    endif
+}
 
-alt Tier 1: Direct V4L2 Capture
-    MC -> CM : CaptureDirectV4L2(/dev/video0)
-    CM -> H : Direct hardware access
-    H --> CM : Frame data
-    CM --> MC : Snapshot created
-else Tier 2: RTSP Stream Reuse
-    MC -> MC : Check existing RTSP stream
-    MC -> MC : Capture from stream
-else Tier 3: On-Demand Activation
-    MC -> MC : Activate MediaMTX path
-    MC -> MC : Capture from activated stream
-end
+partition "Tier 1: FFmpeg Direct" {
+    :FFmpeg from device;
+    if (Device accessible?) then (yes)
+        :FFmpeg capture;
+        :~200ms latency;
+        stop
+    else (no)
+    endif
+}
 
-MC --> WS : SnapshotResponse
-WS --> C : Snapshot result
+partition "Tier 2: RTSP Reuse" {
+    :Check existing stream;
+    if (Stream active?) then (yes)
+        :Capture from RTSP;
+        :~300ms latency;
+        stop
+    else (no)
+    endif
+}
+
+partition "Tier 3: Stream Activation" {
+    :Create MediaMTX path;
+    :Start FFmpeg;
+    :Capture from stream;
+    :~500ms latency;
+    stop
+}
 
 @enduml
 ```
+
+**Performance Targets:**
+- Tier 0: <100ms (USB only)
+- Tier 1: <200ms (direct capture)
+- Tier 2: <300ms (stream reuse)
+- Tier 3: <500ms (stream creation)
 
 ### 4.3 System Startup Coordination
 
@@ -330,6 +547,262 @@ Progressive Readiness Pattern:
 end note
 
 stop
+
+@enduml
+```
+
+### 4.4 Recording Flow
+
+```plantuml
+@startuml RecordingFlow
+title Recording Flow - Stream and File Management
+
+participant "Client" as C
+participant "WebSocket Server" as WS
+participant "MediaMTX Controller" as MC
+participant "Recording Manager" as RM
+participant "Stream Manager" as SM
+participant "Path Manager" as PM
+participant "MediaMTX Server" as MS
+
+== Recording Initiation ==
+C -> WS : start_recording(camera0, options)
+WS -> MC : StartRecording(camera0, options)
+MC -> MC : Map camera0 → /dev/video0
+
+== Stream Setup (Step 1) ==
+MC -> RM : StartRecording(/dev/video0, outputPath)
+RM -> SM : StartRecordingStream(/dev/video0)
+SM -> PM : CreatePath("camera0", runOnDemand)
+
+note over PM, MS
+  Path Configuration:
+  name: "camera0"
+  runOnDemand: "ffmpeg -f v4l2 -i /dev/video0 
+                -f rtsp rtsp://127.0.0.1:8554/camera0"
+  runOnDemandCloseAfter: "0s" (never close for recording)
+end note
+
+PM -> MS : POST /v3/config/paths/add/camera0
+MS --> PM : Path created (or already exists)
+PM --> SM : Success
+SM --> RM : Stream ready
+
+== Recording Configuration (Step 2) ==
+RM -> RM : createRecordingPathConfig(outputPath)
+
+note over RM
+  Recording Config:
+  record: true
+  recordPath: "/opt/recordings/camera0_%Y-%m-%d_%H-%M-%S.mp4"
+  recordFormat: "fmp4" (STANAG 4609 compatible)
+  recordSegmentDuration: "3600s"
+end note
+
+RM -> PM : PatchPath("camera0", recordingConfig)
+PM -> MS : PATCH /v3/config/paths/patch/camera0
+MS --> PM : Path updated with recording enabled
+PM --> RM : Configuration applied
+
+== Stream Activation (Step 3) ==
+note over MS
+  On first access to path:
+  1. MediaMTX starts FFmpeg via runOnDemand
+  2. FFmpeg captures from /dev/video0
+  3. FFmpeg streams to rtsp://127.0.0.1:8554/camera0
+  4. MediaMTX records stream to file
+end note
+
+MS -> MS : Start FFmpeg process (on-demand)
+MS -> MS : Begin recording to file
+
+== Response ==
+RM --> MC : RecordingSession
+MC --> WS : RecordingResponse
+WS --> C : Recording started
+
+== Simultaneous Operations ==
+note over MS
+  Single path "camera0" now provides:
+  • Live streaming at rtsp://localhost:8554/camera0
+  • File recording to /opt/recordings/camera0_2024-01-15_14-30-00.mp4
+  • Both operate simultaneously on the same path
+end note
+
+@enduml
+```
+
+### 4.5 Path Management Architecture
+
+```plantuml
+@startuml PathManagement
+title MediaMTX Path Management - Recording vs Streaming
+
+rectangle "Single Camera Device\n/dev/video0" as device
+
+rectangle "MediaMTX Paths" {
+    component "Path: camera0" as path1 {
+        note right
+        Purpose: Recording + Streaming
+        runOnDemand: FFmpeg command
+        record: true
+        recordPath: /opt/recordings/camera0_%Y-%m-%d.mp4
+        runOnDemandCloseAfter: 0s (never)
+        end note
+    }
+    
+    component "Path: camera0_viewing" as path2 {
+        note right
+        Purpose: Live viewing only
+        runOnDemand: FFmpeg command
+        record: false
+        runOnDemandCloseAfter: 300s (5 min)
+        end note
+    }
+    
+    component "Path: camera0_snapshot" as path3 {
+        note right
+        Purpose: Snapshot capture
+        runOnDemand: FFmpeg command
+        record: false
+        runOnDemandCloseAfter: 60s (1 min)
+        end note
+    }
+}
+
+device --> path1 : Primary use
+device --> path2 : Optional
+device --> path3 : Optional
+
+note bottom of device
+Key Insights:
+• One device can have multiple paths
+• Each path has independent configuration
+• Path names are simple identifiers (not filenames)
+• Recording filenames are configured separately
+• Paths can be reused across sessions
+end note
+
+@enduml
+```
+
+### 4.6 On-Demand FFmpeg Process Management
+
+```plantuml
+@startuml OnDemandProcesses
+title On-Demand Process Management - Power Efficiency Architecture
+
+participant "Client Request" as C
+participant "MediaMTX" as M
+participant "FFmpeg Process" as F
+participant "Camera Hardware" as H
+
+== Initial State (No Processes Running) ==
+note over F: NO FFmpeg processes running\nZero CPU/Memory usage
+
+== First Access Triggers Process Start ==
+C -> M: Access stream (recording/viewing/snapshot)
+M -> M: Check runOnDemand configuration
+M -> F: Start FFmpeg process
+F -> H: Open camera device
+F -> M: Stream RTSP to MediaMTX
+M -> C: Stream/Recording ready
+
+== Process Lifecycle ==
+note over F
+Recording paths: Never auto-close (runOnDemandCloseAfter: 0s)
+Viewing paths: Close after 5 min idle (runOnDemandCloseAfter: 300s)
+Snapshot paths: Close after 1 min idle (runOnDemandCloseAfter: 60s)
+end note
+
+== Idle Timeout (except recording) ==
+M -> F: Terminate after idle timeout
+F -> H: Release camera device
+note over F: Process terminated\nResources freed
+
+@enduml
+```
+
+**CRITICAL UNDERSTANDING:**
+- **FFmpeg processes are NOT always running** - they start on-demand
+- **Zero resource usage when idle** - no CPU/memory consumption
+- **Automatic cleanup** - processes terminate after configured idle time
+- **Recording exception** - recording processes never auto-terminate
+
+### 4.7 FFmpeg Stream Direction Clarification
+
+```plantuml
+@startuml FFmpegDirection
+title FFmpeg Stream Direction - Critical Understanding
+
+component "Camera\n/dev/video0" as CAM
+component "FFmpeg Process" as FF
+component "MediaMTX Server" as MTX
+database "Recording File\ncamera0_2024.mp4" as FILE
+component "RTSP Clients" as CLIENTS
+
+CAM --> FF: Raw video frames
+FF --> MTX: RTSP stream\nrtsp://127.0.0.1:8554/camera0
+MTX --> FILE: Records stream to file
+MTX --> CLIENTS: Distributes stream
+
+note over FF
+FFmpeg does NOT write to file!
+FFmpeg ONLY streams to MediaMTX
+MediaMTX handles file writing
+end note
+
+note bottom of MTX
+MediaMTX Responsibilities:
+1. Receives RTSP from FFmpeg
+2. Records to file (if record=true)
+3. Distributes to clients
+4. Handles file rotation
+5. Manages segmentation
+end note
+
+@enduml
+```
+
+### 4.8 Path Lifecycle Management
+
+```plantuml
+@startuml PathLifecycle
+title MediaMTX Path Lifecycle - Persistence Pattern
+
+participant "First Recording" as R1
+participant "Path Manager" as PM
+participant "MediaMTX" as M
+participant "Second Recording" as R2
+
+== First Recording Session ==
+R1 -> PM: CreatePath("camera0")
+PM -> M: Check if exists
+M --> PM: Not found
+PM -> M: POST /v3/config/paths/add/camera0
+M --> PM: Created
+PM -> M: PATCH (enable recording)
+R1 -> R1: Recording...
+R1 -> PM: StopRecording()
+note over M: Path "camera0" PERSISTS\nNo deletion!
+
+== Second Recording Session (Reuse) ==
+R2 -> PM: CreatePath("camera0")
+PM -> M: Check if exists
+M --> PM: Already exists
+PM -> PM: Skip creation
+PM -> M: PATCH (update recording config)
+R2 -> R2: Recording...
+note over M: Same path reused\nNo recreation overhead
+
+note bottom
+Key Insights:
+1. Paths persist across sessions
+2. Creation is idempotent
+3. No cleanup between recordings
+4. Faster subsequent recordings
+5. Resource efficient
+end note
 
 @enduml
 ```
@@ -444,8 +917,35 @@ class SnapshotResult {
     +CaptureTime : float64
 }
 
+class RecordingSession {
+    +ID : string
+    +DevicePath : string
+    +Path : string  // MediaMTX path name (e.g., "camera0")
+    +FilePath : string  // Actual file location
+    +StartTime : time
+    +Status : string
+    +State : SessionState
+}
+
+class MediaMTXPath {
+    +Name : string  // Simple identifier (e.g., "camera0")
+    +RunOnDemand : string  // FFmpeg command
+    +Record : bool  // Recording enabled
+    +RecordPath : string  // File pattern with timestamps
+    +RecordFormat : string  // fmp4 for STANAG 4609
+}
+
 CameraDevice *-- V4L2Capabilities
 Session ||--o{ SnapshotResult
+Session ||--o{ RecordingSession
+RecordingSession *-- MediaMTXPath
+
+note right of RecordingSession
+Important: Path name ("camera0") is NOT
+the recording filename. The filename is
+configured separately in recordPath with
+timestamp patterns.
+end note
 
 @enduml
 ```
@@ -602,6 +1102,40 @@ stop
 - **Recovery Mechanisms:** Automatic retry with exponential backoff
 - **Failure Isolation:** Component failures don't cascade
 
+#### Circuit Breaker Implementation
+
+```plantuml
+@startuml CircuitBreaker
+title Circuit Breaker Pattern - MediaMTX Communication
+
+state "Closed\n(Normal)" as Closed
+state "Open\n(Failing)" as Open
+state "Half-Open\n(Testing)" as HalfOpen
+
+Closed --> Open : Failure threshold reached\n(5 failures in 10s)
+Open --> HalfOpen : After timeout\n(30 seconds)
+HalfOpen --> Closed : Test succeeds
+HalfOpen --> Open : Test fails
+
+note right of Open
+When Open:
+- Fail fast (no MediaMTX calls)
+- Return cached data if available
+- Log circuit breaker state
+- Alert monitoring system
+end note
+
+note bottom of HalfOpen
+Half-Open Testing:
+- Allow one test request
+- If success, close circuit
+- If failure, reopen circuit
+- Exponential backoff on reopens
+end note
+
+@enduml
+```
+
 ### 8.3 Scalability Architecture
 
 **Horizontal Scaling Readiness:**
@@ -615,6 +1149,12 @@ stop
 ## 9. Design Principles
 
 ### 9.1 Architectural Principles Applied
+
+**Path Reuse Principle:**
+- MediaMTX paths are reusable resources, not per-session entities
+- One path can handle multiple functions (streaming + recording)
+- Path names are simple identifiers, not complex unique strings
+- Recording filenames are managed independently via MediaMTX patterns
 
 **Single Responsibility Principle:**
 - Each component has one clear responsibility
@@ -665,6 +1205,79 @@ stop
 **Low Priority:**
 - Plugin architecture full implementation
 - Advanced analytics integration points
+
+### 10.3 Recording Architecture Decisions
+
+**Decision: Single Path for Recording and Streaming**
+- **Rationale:** MediaMTX supports simultaneous streaming and recording on one path
+- **Benefits:** Simpler architecture, resource efficiency, fewer FFmpeg processes
+- **Implementation:** Use PATCH to add recording configuration to existing paths
+
+**Decision: Simple Path Naming Convention**
+- **Rationale:** Path names are identifiers, not filenames
+- **Convention:** camera0, camera1 (no timestamps or complex identifiers)
+- **File Naming:** Handled by MediaMTX recordPath patterns (%Y-%m-%d_%H-%M-%S)
+
+**Decision: Path Reuse Strategy**
+- **Rationale:** Paths persist across recording sessions
+- **Benefits:** Faster recording start, no path creation overhead
+- **Implementation:** Check for existing path before creation, reuse when possible
+
+**Decision: STANAG 4609 Compliance via fmp4**
+- **Rationale:** MediaMTX natively supports STANAG 4609 with fmp4 format
+- **Implementation:** Set recordFormat: "fmp4" in path configuration
+- **Benefits:** Military-grade video standard compliance without custom code
+
+---
+
+## 11. Testing Architecture
+
+### 11.1 Test Hierarchy
+
+```plantuml
+@startuml TestArchitecture
+title Testing Architecture - Real vs Mocked
+
+package "Unit Tests" {
+    component "Mocked MediaMTX" as MM
+    component "Mocked Hardware" as MH
+    note right
+    Fast execution (<30s)
+    No real dependencies
+    100% deterministic
+    end note
+}
+
+package "Integration Tests" {
+    component "Real MediaMTX" as RM
+    component "Real Hardware" as RH
+    note right
+    Requires MediaMTX server
+    Requires /dev/video0
+    Validates real APIs
+    end note
+}
+
+package "Test Helpers" {
+    component "MediaMTXTestHelper" as TH
+    component "EnsureSequentialExecution" as SE
+    note bottom
+    Shared test infrastructure
+    Prevents concurrent MediaMTX access
+    Manages test isolation
+    end note
+}
+
+@enduml
+```
+
+### 11.2 Test Environment Requirements
+
+| Test Type | MediaMTX | Hardware | Duration | Purpose |
+|-----------|----------|----------|----------|---------|
+| Unit | Mocked | Mocked | <30s | Logic validation |
+| Integration | Real server | Real camera | <5min | API validation |
+| E2E | Real server | Real camera | <10min | Full flow validation |
 
 ---
 
