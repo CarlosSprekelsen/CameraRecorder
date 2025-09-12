@@ -11,11 +11,11 @@ Test Categories: Unit (using real MediaMTX server)
 API Documentation Reference: docs/api/swagger.json
 
 TESTING GUIDELINES COMPLIANCE:
-✅ REAL MediaMTX server (http://localhost:9997)
-✅ REAL filesystem operations (tempfile)
-✅ REAL config loading (config.CreateConfigManager)
-❌ NO MOCKS for internal components
-❌ NO import cycles (avoiding camera package dependency)
+REAL MediaMTX server (http://localhost:9997)
+REAL filesystem operations (tempfile)
+REAL config loading (config.CreateConfigManager)
+NO MOCKS for internal components
+NO import cycles (avoiding camera package dependency)
 */
 
 package mediamtx
@@ -56,9 +56,9 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	require.NoError(t, err, "Path listing should succeed")
 	assert.NotNil(t, paths, "Paths should not be nil")
 
-	t.Log("✅ Path manager successfully created with real MediaMTX server")
-	t.Log("✅ Configuration loaded from real config manager")
-	t.Log("✅ No mocks used - all real components")
+	t.Log("Path manager successfully created with real MediaMTX server")
+	t.Log("Configuration loaded from real config manager")
+	t.Log("No mocks used - all real components")
 }
 
 // TestPathManager_StreamManagement_ReqMTX002 tests stream management capabilities
@@ -104,7 +104,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	exists = pathManager.PathExists(ctx, testPathName)
 	assert.False(t, exists, "Path should not exist after deletion")
 
-	t.Log("✅ Path creation and deletion successful with real MediaMTX server")
+	t.Log("Path creation and deletion successful with real MediaMTX server")
 }
 
 // TestPathManager_ConfigIntegration_ReqMTX003 tests real config integration
@@ -141,7 +141,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	require.NoError(t, err, "ListPaths should succeed")
 	assert.NotNil(t, paths, "Paths list should not be nil")
 
-	t.Log("✅ Path manager successfully integrated with real config")
+	t.Log("Path manager successfully integrated with real config")
 }
 
 // TestPathManager_HealthMonitoring_ReqMTX004 tests real health monitoring
@@ -180,7 +180,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	t.Log("✅ Health monitoring working correctly with real MediaMTX server")
+	t.Log("Health monitoring working correctly with real MediaMTX server")
 }
 
 // TestPathManager_RealMediaMTXServer tests integration with real MediaMTX server
@@ -207,8 +207,8 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	require.NoError(t, err, "ListPaths should succeed with real MediaMTX server")
 	assert.NotNil(t, paths, "Paths list should not be nil")
 
-	t.Log("✅ Path manager successfully connected to real MediaMTX server")
-	t.Log("✅ All components are using real implementations (no mocks)")
-	t.Log("✅ Configuration is loaded from real config manager")
-	t.Log("✅ No import cycles - clean architecture")
+	t.Log("Path manager successfully connected to real MediaMTX server")
+	t.Log("All components are using real implementations (no mocks)")
+	t.Log("Configuration is loaded from real config manager")
+	t.Log("No import cycles - clean architecture")
 }

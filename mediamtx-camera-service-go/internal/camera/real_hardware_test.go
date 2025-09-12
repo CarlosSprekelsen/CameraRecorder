@@ -172,7 +172,7 @@ func TestRealHardware_DeviceCapabilities(t *testing.T) {
 		assert.True(t, hasVideoCapture,
 			"Device %s MUST report video capture capability - if this fails, capability parsing is broken", devicePath)
 
-		t.Logf("✅ Device %s correctly reports video capture capability", devicePath)
+		t.Logf("Device %s correctly reports video capture capability", devicePath)
 
 		return nil
 	})

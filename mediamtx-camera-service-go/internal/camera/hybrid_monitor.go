@@ -335,6 +335,19 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 			atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 		}()
 
+		// Perform initial discovery to seed knownDevices and ensure IsReady() becomes true
+		// This must be done AFTER releasing the stateLock to avoid deadlock
+		m.logger.WithFields(logging.Fields{
+			"action": "initial_discovery_started",
+		}).Debug("Performing initial device discovery")
+
+		m.discoverCameras(ctx)
+
+		m.logger.WithFields(logging.Fields{
+			"action":        "initial_discovery_completed",
+			"devices_found": len(m.knownDevices),
+		}).Debug("Initial device discovery completed")
+
 		if m.discoveryMode == "event-first" {
 			// Start event-first monitoring
 			m.startEventFirstMonitoring(ctx)

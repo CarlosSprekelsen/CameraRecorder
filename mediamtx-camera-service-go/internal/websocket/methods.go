@@ -470,10 +470,8 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		// Get base performance metrics
 		baseMetrics := s.GetMetrics()
 
-		// Get active connections count
-		s.clientsMutex.RLock()
-		activeConnections := len(s.clients)
-		s.clientsMutex.RUnlock()
+		// Get active connections count using atomic operation
+		activeConnections := s.GetClientCount()
 
 		// Calculate average response time
 		var averageResponseTime float64

@@ -75,8 +75,8 @@ func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice)
 
 	// Event payload matching JSON-RPC API specification
 	eventData := logging.Fields{
-		"device":      cameraID,    // ✅ API spec: "device" field with camera identifier
-		"device_path": device.Path, // ✅ Internal metadata only
+		"device":      cameraID,    // API spec: "device" field with camera identifier
+		"device_path": device.Path, // Internal metadata only
 		"name":        device.Name,
 		"status":      string(device.Status),
 		"driver":      device.Capabilities.DriverName,
@@ -106,8 +106,8 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 
 	// Event payload matching JSON-RPC API specification
 	eventData := logging.Fields{
-		"device":      cameraID,   // ✅ API spec: "device" field with camera identifier
-		"device_path": devicePath, // ✅ Internal metadata only
+		"device":      cameraID,   // API spec: "device" field with camera identifier
+		"device_path": devicePath, // Internal metadata only
 		"status":      "disconnected",
 		"timestamp":   time.Now().Format(time.RFC3339),
 	}
@@ -246,7 +246,7 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filena
 
 	// Event payload with proper abstraction: camera_id primary
 	eventData := logging.Fields{
-		"device":     device, // ✅ API spec: "device" field with camera identifier
+		"device":     device, // API spec: "device" field with camera identifier
 		"session_id": sessionID,
 		"filename":   filename,
 		"timestamp":  time.Now().Format(time.RFC3339),
@@ -268,7 +268,7 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filena
 func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, sessionID, filename string, duration time.Duration) {
 	// Event payload with proper abstraction: camera_id primary
 	eventData := logging.Fields{
-		"device":     device, // ✅ API spec: "device" field with camera identifier
+		"device":     device, // API spec: "device" field with camera identifier
 		"session_id": sessionID,
 		"filename":   filename,
 		"duration":   duration.Seconds(),

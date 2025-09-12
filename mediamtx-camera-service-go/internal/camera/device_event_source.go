@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -29,13 +29,11 @@ import (
 // FsnotifyDeviceEventSource implements DeviceEventSource using fsnotify
 // This is the default implementation that works in containers without CGO
 type FsnotifyDeviceEventSource struct {
-	logger    *logging.Logger
-	watcher   *fsnotify.Watcher
-	events    chan DeviceEvent
-	stopChan  chan struct{}
-	running   bool
-	mu        sync.RWMutex
-	eventChan chan DeviceEvent
+	logger   *logging.Logger
+	watcher  *fsnotify.Watcher
+	events   chan DeviceEvent
+	stopChan chan struct{}
+	running  int32 // Using atomic operations instead of mutex
 }
 
 // NewFsnotifyDeviceEventSource creates a new fsnotify-based device event source
@@ -50,30 +48,49 @@ func NewFsnotifyDeviceEventSource(logger *logging.Logger) (*FsnotifyDeviceEventS
 	}
 
 	return &FsnotifyDeviceEventSource{
-		logger:    logger,
-		watcher:   watcher,
-		events:    make(chan DeviceEvent, 100), // Buffered to prevent blocking
-		stopChan:  make(chan struct{}),
-		eventChan: make(chan DeviceEvent, 100),
+		logger:   logger,
+		watcher:  watcher,
+		events:   make(chan DeviceEvent, 100), // Buffered to prevent blocking
+		stopChan: make(chan struct{}),
 	}, nil
 }
 
 // Start begins monitoring for device events
 func (f *FsnotifyDeviceEventSource) Start(ctx context.Context) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	// Check if context is already cancelled
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
-	if f.running {
+	// Use atomic compare-and-swap to set running state atomically
+	if !atomic.CompareAndSwapInt32(&f.running, 0, 1) {
 		return fmt.Errorf("device event source is already running")
 	}
 
-	// Watch /dev directory for device changes
-	err := f.watcher.Add("/dev")
+	// Create a new watcher for each start (fsnotify watchers can't be reused)
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
+		// Reset running state if watcher creation fails
+		atomic.StoreInt32(&f.running, 0)
+		return fmt.Errorf("failed to create fsnotify watcher: %w", err)
+	}
+	f.watcher = watcher
+
+	// Recreate channels for each start
+	f.events = make(chan DeviceEvent, 100)
+	f.stopChan = make(chan struct{})
+
+	// Watch /dev directory for device changes
+	err = f.watcher.Add("/dev")
+	if err != nil {
+		// Reset running state if watcher setup fails
+		atomic.StoreInt32(&f.running, 0)
+		f.watcher.Close()
 		return fmt.Errorf("failed to watch /dev directory: %w", err)
 	}
 
-	f.running = true
 	f.logger.WithFields(logging.Fields{
 		"action": "device_event_source_started",
 		"type":   "fsnotify",
@@ -92,15 +109,18 @@ func (f *FsnotifyDeviceEventSource) Events() <-chan DeviceEvent {
 
 // Close stops the device event source
 func (f *FsnotifyDeviceEventSource) Close() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if !f.running {
-		return nil
+	// Use atomic compare-and-swap to set running state atomically
+	if !atomic.CompareAndSwapInt32(&f.running, 1, 0) {
+		return nil // Already stopped
 	}
 
-	f.running = false
-	close(f.stopChan)
+	// Safely close stop channel
+	select {
+	case <-f.stopChan:
+		// Already closed
+	default:
+		close(f.stopChan)
+	}
 
 	if f.watcher != nil {
 		err := f.watcher.Close()
@@ -109,8 +129,13 @@ func (f *FsnotifyDeviceEventSource) Close() error {
 		}
 	}
 
-	close(f.events)
-	close(f.eventChan)
+	// Safely close events channel
+	select {
+	case <-f.events:
+		// Already closed
+	default:
+		close(f.events)
+	}
 
 	f.logger.WithFields(logging.Fields{
 		"action": "device_event_source_stopped",
@@ -215,8 +240,7 @@ type UdevDeviceEventSource struct {
 	logger   *logging.Logger
 	events   chan DeviceEvent
 	stopChan chan struct{}
-	running  bool
-	mu       sync.RWMutex
+	running  int32 // Using atomic operations instead of mutex
 }
 
 // NewUdevDeviceEventSource creates a new udev-based device event source
@@ -235,14 +259,18 @@ func NewUdevDeviceEventSource(logger *logging.Logger) (*UdevDeviceEventSource, e
 
 // Start begins monitoring for device events using udev
 func (u *UdevDeviceEventSource) Start(ctx context.Context) error {
-	u.mu.Lock()
-	defer u.mu.Unlock()
+	// Check if context is already cancelled
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 
-	if u.running {
+	// Use atomic compare-and-swap to set running state atomically
+	if !atomic.CompareAndSwapInt32(&u.running, 0, 1) {
 		return fmt.Errorf("device event source is already running")
 	}
 
-	u.running = true
 	u.logger.WithFields(logging.Fields{
 		"action": "device_event_source_started",
 		"type":   "udev",
@@ -265,16 +293,25 @@ func (u *UdevDeviceEventSource) Events() <-chan DeviceEvent {
 
 // Close stops the device event source
 func (u *UdevDeviceEventSource) Close() error {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-
-	if !u.running {
-		return nil
+	// Use atomic compare-and-swap to set running state atomically
+	if !atomic.CompareAndSwapInt32(&u.running, 1, 0) {
+		return nil // Already stopped
 	}
 
-	u.running = false
-	close(u.stopChan)
-	close(u.events)
+	// Safely close channels
+	select {
+	case <-u.stopChan:
+		// Already closed
+	default:
+		close(u.stopChan)
+	}
+
+	select {
+	case <-u.events:
+		// Already closed
+	default:
+		close(u.events)
+	}
 
 	u.logger.WithFields(logging.Fields{
 		"action": "device_event_source_stopped",

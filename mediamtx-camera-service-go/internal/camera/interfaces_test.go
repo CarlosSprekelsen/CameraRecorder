@@ -66,9 +66,9 @@ func TestDeviceChecker_RealImplementation(t *testing.T) {
 		for _, path := range cameraPaths {
 			exists := checker.Exists(path)
 			if exists {
-				t.Logf("✅ Found real camera device: %s", path)
+				t.Logf("Found real camera device: %s", path)
 			} else {
-				t.Logf("❌ No camera at: %s", path)
+				t.Logf("No camera at: %s", path)
 			}
 		}
 	})
@@ -106,7 +106,7 @@ func TestV4L2CommandExecutor_RealImplementation(t *testing.T) {
 				// Try to get device info
 				output, err := executor.ExecuteCommand(ctx, path, "v4l2-ctl --device-info")
 				if err == nil && output != "" {
-					t.Logf("✅ Successfully queried %s: %s", path, output[:100])
+					t.Logf("Successfully queried %s: %s", path, output[:100])
 					break
 				} else {
 					t.Logf("⚠️  Could not query %s: %v", path, err)

@@ -938,15 +938,65 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 		assert.Empty(t, devices, "Should return empty map when no devices connected")
 	})
 
-	// Test 5: Monitor stats when not running
-	t.Run("monitor_stats_not_running", func(t *testing.T) {
-		stats := monitor.GetMonitorStats()
+	// Test 5: Monitor stats when never started (fresh monitor)
+	t.Run("monitor_stats_never_started", func(t *testing.T) {
+		// Create a fresh monitor to ensure it has never been started
+		freshLogger := logging.CreateTestLogger(t, nil)
+		freshDeviceEventSource := createTestDeviceEventSource(t, freshLogger)
+		freshMonitor, err := NewHybridCameraMonitor(
+			configManager,
+			freshLogger,
+			&RealDeviceChecker{},
+			&RealV4L2CommandExecutor{},
+			&RealDeviceInfoParser{},
+			freshDeviceEventSource,
+		)
+		require.NoError(t, err, "Fresh monitor creation should succeed")
+
+		stats := freshMonitor.GetMonitorStats()
 		assert.False(t, stats.Running, "Stats should show not running")
 		assert.Equal(t, int64(0), stats.ActiveTasks, "Should have no active tasks")
-		assert.Equal(t, int64(0), stats.PollingCycles, "Should have no polling cycles")
+		assert.Equal(t, int64(0), stats.PollingCycles, "Should have zero polling cycles when never started")
 	})
 
-	// Test 6: Add event handler when monitor is running
+	// Test 6: Monitor stats when stopped after being started
+	t.Run("monitor_stats_after_stop", func(t *testing.T) {
+		// Create a fresh monitor and start/stop it
+		freshLogger := logging.CreateTestLogger(t, nil)
+		freshDeviceEventSource := createTestDeviceEventSource(t, freshLogger)
+		freshMonitor, err := NewHybridCameraMonitor(
+			configManager,
+			freshLogger,
+			&RealDeviceChecker{},
+			&RealV4L2CommandExecutor{},
+			&RealDeviceInfoParser{},
+			freshDeviceEventSource,
+		)
+		require.NoError(t, err, "Fresh monitor creation should succeed")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Start and wait for initial discovery to complete
+		err = freshMonitor.Start(ctx)
+		require.NoError(t, err, "Start should succeed")
+
+		// Wait for initial discovery to complete (proper synchronization)
+		require.Eventually(t, func() bool {
+			return freshMonitor.IsReady()
+		}, 5*time.Second, 10*time.Millisecond, "Monitor should become ready after initial discovery")
+
+		err = freshMonitor.Stop()
+		require.NoError(t, err, "Stop should succeed")
+
+		// Check stats after stop
+		stats := freshMonitor.GetMonitorStats()
+		assert.False(t, stats.Running, "Stats should show not running")
+		assert.Equal(t, int64(0), stats.ActiveTasks, "Should have no active tasks")
+		assert.GreaterOrEqual(t, stats.PollingCycles, int64(1), "Should have at least one polling cycle from initial discovery")
+	})
+
+	// Test 7: Add event handler when monitor is running
 	t.Run("add_event_handler_while_running", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()

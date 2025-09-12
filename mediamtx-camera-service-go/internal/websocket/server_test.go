@@ -142,10 +142,8 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	defer helper.CleanupTestClient(t, conn)
 
 	// Test client connection
-	server.clientsMutex.RLock()
-	connectionCount := len(server.clients)
-	server.clientsMutex.RUnlock()
-	assert.Equal(t, 1, connectionCount, "Should have one client connection")
+	connectionCount := server.GetClientCount()
+	assert.Equal(t, int64(1), connectionCount, "Should have one client connection")
 
 	// Close client connection
 	err := conn.Close()
@@ -154,15 +152,13 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	// Wait for connection cleanup with proper verification
 	deadline := time.Now().Add(1 * time.Second)
 	for time.Now().Before(deadline) {
-		server.clientsMutex.RLock()
-		connectionCount = len(server.clients)
-		server.clientsMutex.RUnlock()
+		connectionCount = server.GetClientCount()
 		if connectionCount == 0 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	assert.Equal(t, 0, connectionCount, "Should have no client connections after cleanup")
+	assert.Equal(t, int64(0), connectionCount, "Should have no client connections after cleanup")
 }
 
 // TestWebSocketServer_MultipleClients tests multiple client connections
@@ -185,10 +181,8 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	defer helper.CleanupTestClient(t, conn3)
 
 	// Test multiple client connections
-	server.clientsMutex.RLock()
-	connectionCount := len(server.clients)
-	server.clientsMutex.RUnlock()
-	assert.Equal(t, 3, connectionCount, "Should have three client connections")
+	connectionCount := server.GetClientCount()
+	assert.Equal(t, int64(3), connectionCount, "Should have three client connections")
 
 	// Close one client
 	err := conn1.Close()
@@ -197,15 +191,13 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	// Wait for connection cleanup with proper verification
 	deadline := time.Now().Add(1 * time.Second)
 	for time.Now().Before(deadline) {
-		server.clientsMutex.RLock()
-		connectionCount = len(server.clients)
-		server.clientsMutex.RUnlock()
+		connectionCount = server.GetClientCount()
 		if connectionCount == 2 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	assert.Equal(t, 2, connectionCount, "Should have two client connections after cleanup")
+	assert.Equal(t, int64(2), connectionCount, "Should have two client connections after cleanup")
 }
 
 // TestWebSocketServer_MethodRegistration tests method registration
@@ -377,10 +369,8 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 	}
 
 	// Test all connections are established
-	server.clientsMutex.RLock()
-	connectionCount := len(server.clients)
-	server.clientsMutex.RUnlock()
-	assert.Equal(t, numClients, connectionCount, "Should have correct number of client connections")
+	connectionCount := server.GetClientCount()
+	assert.Equal(t, int64(numClients), connectionCount, "Should have correct number of client connections")
 
 	// Create a test JWT token for authentication
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))

@@ -105,7 +105,7 @@ func logTestProgress(t *testing.T, logger *logging.Logger, message string, field
 	fields["timestamp"] = time.Now().Format(time.RFC3339)
 
 	logger.WithFields(fields).Info(message)
-	t.Logf("✅ %s", message)
+	t.Logf("%s", message)
 }
 
 // TestNewRTSPConnectionManager_ReqMTX001 tests RTSP connection manager creation
@@ -196,7 +196,7 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	assert.NotNil(t, sessions, "Sessions list should not be nil")
 	assert.NotNil(t, sessions.Items, "Sessions items should not be nil")
 
-	t.Logf("✅ Found %d RTSP sessions", len(sessions.Items))
+	t.Logf("Found %d RTSP sessions", len(sessions.Items))
 }
 
 // TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004 tests RTSP connection health monitoring
@@ -231,7 +231,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	assert.NotEmpty(t, health.Status, "Health status should not be empty")
 	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
 
-	t.Logf("✅ RTSP connection health: %s - %s", health.Status, health.Details)
+	t.Logf("RTSP connection health: %s - %s", health.Status, health.Details)
 }
 
 // TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004 tests RTSP connection metrics
@@ -265,7 +265,7 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 		}
 	}
 
-	t.Logf("✅ RTSP connection metrics collected: %+v", metrics)
+	t.Logf("RTSP connection metrics collected: %+v", metrics)
 }
 
 // TestRTSPConnectionManager_Configuration_ReqMTX003 tests RTSP monitoring configuration
@@ -311,7 +311,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	assert.Equal(t, 25, metrics["max_connections"], "Max connections should match config")
 	assert.Equal(t, int64(2000000), metrics["bandwidth_threshold"], "Bandwidth threshold should match config")
 
-	t.Log("✅ RTSP connection manager configuration applied successfully")
+	t.Log("RTSP connection manager configuration applied successfully")
 }
 
 // TestRTSPConnectionManager_ErrorHandling_ReqMTX004 tests error handling
@@ -345,7 +345,7 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "KickSession should fail for non-existent session")
 	assert.Contains(t, err.Error(), "non-existent-session", "Error should contain session ID")
 
-	t.Log("✅ RTSP connection manager error handling working correctly")
+	t.Log("RTSP connection manager error handling working correctly")
 }
 
 // TestRTSPConnectionManager_Performance_ReqMTX002 tests performance characteristics
@@ -381,7 +381,7 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// Performance should be reasonable (less than 5 seconds for 5 iterations)
 	assert.Less(t, duration, 5*time.Second, "Performance should be reasonable")
 
-	t.Logf("✅ RTSP connection manager performance test completed in %v", duration)
+	t.Logf("RTSP connection manager performance test completed in %v", duration)
 }
 
 // TestRTSPConnectionManager_RealMediaMTXServer tests integration with real MediaMTX server
@@ -414,9 +414,9 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	metrics := rtspManager.GetConnectionMetrics(ctx)
 	assert.NotNil(t, metrics, "Metrics should not be nil")
 
-	t.Log("✅ RTSP connection manager successfully connected to real MediaMTX server")
-	t.Log("✅ All RTSP connection management operations working correctly")
-	t.Log("✅ No mocks used - real MediaMTX server integration")
+	t.Log("RTSP connection manager successfully connected to real MediaMTX server")
+	t.Log("All RTSP connection management operations working correctly")
+	t.Log("No mocks used - real MediaMTX server integration")
 }
 
 // TestRTSPConnectionManager_ConfigurationScenarios tests various configuration scenarios
@@ -804,7 +804,7 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 			t.Errorf("🚨 BUG DETECTED: Negative page number (-1) should be rejected but was accepted")
 			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
-			t.Logf("✅ Negative page number correctly rejected: %v", err)
+			t.Logf("Negative page number correctly rejected: %v", err)
 		}
 	})
 
@@ -818,7 +818,7 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 			t.Errorf("🚨 BUG DETECTED: Zero items per page should be rejected but was accepted")
 			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
-			t.Logf("✅ Zero items per page correctly rejected: %v", err)
+			t.Logf("Zero items per page correctly rejected: %v", err)
 		}
 	})
 
@@ -828,6 +828,6 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 
 		require.Error(t, err, "Negative items per page should produce an error")
 		assert.Contains(t, err.Error(), "invalid", "Error should indicate invalid input")
-		t.Logf("✅ Negative items per page correctly rejected: %v", err)
+		t.Logf("Negative items per page correctly rejected: %v", err)
 	})
 }

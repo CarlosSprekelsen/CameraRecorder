@@ -44,9 +44,8 @@ type SnapshotManager struct {
 	// Snapshot settings
 	snapshotSettings *SnapshotSettings
 
-	// Snapshot tracking
-	snapshots   map[string]*Snapshot
-	snapshotsMu sync.RWMutex
+	// Snapshot tracking - using sync.Map for lock-free operations
+	snapshots sync.Map // snapshotID -> *Snapshot
 }
 
 // SnapshotSettings defines snapshot behavior
@@ -68,7 +67,7 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 		config:        config,
 		configManager: configManager,
 		logger:        logger,
-		snapshots:     make(map[string]*Snapshot),
+		// snapshots: sync.Map is zero-initialized, no need to initialize
 		snapshotSettings: &SnapshotSettings{
 			Format:      "jpg",
 			Quality:     85,
@@ -124,10 +123,8 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 		return nil, fmt.Errorf("failed to execute multi-tier snapshot capture: %w", err)
 	}
 
-	// Store snapshot (existing logic)
-	sm.snapshotsMu.Lock()
-	sm.snapshots[snapshotID] = snapshot
-	sm.snapshotsMu.Unlock()
+	// Store snapshot - lock-free operation with sync.Map
+	sm.snapshots.Store(snapshotID, snapshot)
 
 	sm.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
@@ -560,22 +557,21 @@ func (sm *SnapshotManager) createMultiTierError(device string, methodsTried []st
 
 // GetSnapshot gets a snapshot by ID
 func (sm *SnapshotManager) GetSnapshot(snapshotID string) (*Snapshot, bool) {
-	sm.snapshotsMu.RLock()
-	defer sm.snapshotsMu.RUnlock()
-
-	snapshot, exists := sm.snapshots[snapshotID]
-	return snapshot, exists
+	if snapshot, exists := sm.snapshots.Load(snapshotID); exists {
+		return snapshot.(*Snapshot), true
+	}
+	return nil, false
 }
 
 // ListSnapshots lists all snapshots
 func (sm *SnapshotManager) ListSnapshots() []*Snapshot {
-	sm.snapshotsMu.RLock()
-	defer sm.snapshotsMu.RUnlock()
-
-	snapshots := make([]*Snapshot, 0, len(sm.snapshots))
-	for _, snapshot := range sm.snapshots {
-		snapshots = append(snapshots, snapshot)
-	}
+	var snapshots []*Snapshot
+	
+	// Iterate over sync.Map - lock-free operation
+	sm.snapshots.Range(func(key, value interface{}) bool {
+		snapshots = append(snapshots, value.(*Snapshot))
+		return true // Continue iteration
+	})
 
 	return snapshots
 }
@@ -584,16 +580,15 @@ func (sm *SnapshotManager) ListSnapshots() []*Snapshot {
 func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string) error {
 	sm.logger.WithField("snapshot_id", snapshotID).Debug("Deleting snapshot")
 
-	sm.snapshotsMu.Lock()
-	snapshot, exists := sm.snapshots[snapshotID]
+	// Get snapshot - lock-free read with sync.Map
+	snapshotInterface, exists := sm.snapshots.Load(snapshotID)
 	if !exists {
-		sm.snapshotsMu.Unlock()
 		return fmt.Errorf("snapshot %s not found", snapshotID)
 	}
+	snapshot := snapshotInterface.(*Snapshot)
 
-	// Remove from tracking
-	delete(sm.snapshots, snapshotID)
-	sm.snapshotsMu.Unlock()
+	// Remove from tracking - lock-free delete with sync.Map
+	sm.snapshots.Delete(snapshotID)
 
 	// Delete file
 	if err := os.Remove(snapshot.FilePath); err != nil {
@@ -615,8 +610,8 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		"max_count": maxCount,
 	}).Info("Cleaning up old snapshots")
 
-	sm.snapshotsMu.Lock()
-	defer sm.snapshotsMu.Unlock()
+	// Note: sync.Map doesn't need locking for individual operations
+	// but we need to collect all snapshots first for consistent cleanup
 
 	// Get snapshots directory path from configuration
 	snapshotsDir := sm.config.SnapshotsPath
@@ -698,34 +693,36 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 	}
 
 	// Clean up in-memory snapshots
-	// Get all snapshots sorted by creation time
-	snapshots := make([]*Snapshot, 0, len(sm.snapshots))
-	for _, snapshot := range sm.snapshots {
-		snapshots = append(snapshots, snapshot)
-	}
+	// Get all snapshots sorted by creation time - lock-free iteration with sync.Map
+	var snapshots []*Snapshot
+	sm.snapshots.Range(func(key, value interface{}) bool {
+		snapshots = append(snapshots, value.(*Snapshot))
+		return true // Continue iteration
+	})
 
 	// Sort by creation time (oldest first)
 	sort.Slice(snapshots, func(i, j int) bool {
 		return snapshots[i].Created.Before(snapshots[j].Created)
 	})
 
-	// Delete old snapshots from memory
+	// Delete old snapshots from memory - lock-free operations with sync.Map
 	deletedCount := 0
 
 	for _, snapshot := range snapshots {
 		// Check age
 		if time.Since(snapshot.Created) > maxAge {
-			delete(sm.snapshots, snapshot.ID)
+			sm.snapshots.Delete(snapshot.ID)
 			deletedCount++
 		}
 	}
 
 	// Delete excess snapshots from memory if we have too many
-	if len(sm.snapshots) > maxCount {
-		excessCount := len(sm.snapshots) - maxCount
+	// Note: sync.Map doesn't have len(), so we use the snapshots slice length
+	if len(snapshots) > maxCount {
+		excessCount := len(snapshots) - maxCount
 		for i := 0; i < excessCount && i < len(snapshots); i++ {
 			snapshot := snapshots[i]
-			delete(sm.snapshots, snapshot.ID)
+			sm.snapshots.Delete(snapshot.ID)
 			deletedCount++
 		}
 	}

@@ -343,7 +343,7 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	notifications = mockNotifier.GetNotifications()
 	assert.Equal(t, 1, len(notifications), "Should send notification after debounce period")
 
-	t.Log("✅ Health monitor debounce mechanism working correctly")
+	t.Log("Health monitor debounce mechanism working correctly")
 }
 
 // TestHealthMonitor_AtomicOperations_ReqMTX004 tests atomic operations for thread safety
@@ -404,7 +404,7 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	// Should not panic and should handle concurrent access gracefully
 	assert.True(t, true, "Should handle concurrent access without panicking")
 
-	t.Log("✅ Health monitor atomic operations working correctly")
+	t.Log("Health monitor atomic operations working correctly")
 }
 
 // TestHealthMonitor_StatusTransitions_ReqMTX004 tests status transitions with debounce
@@ -459,5 +459,5 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	// Should be healthy again
 	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy after recovery")
 
-	t.Log("✅ Health monitor status transitions working correctly")
+	t.Log("Health monitor status transitions working correctly")
 }

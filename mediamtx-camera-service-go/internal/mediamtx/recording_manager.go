@@ -34,13 +34,11 @@ type RecordingManager struct {
 	pathManager       PathManager
 	streamManager     StreamManager
 
-	// Recording sessions
-	sessions   map[string]*RecordingSession
-	sessionsMu sync.RWMutex
+	// Recording sessions - using sync.Map for lock-free operations
+	sessions sync.Map // sessionID -> *RecordingSession
 
-	// Device to session mapping for efficient lookup
-	deviceToSession map[string]string // device path -> session ID
-	deviceMu        sync.RWMutex
+	// Device to session mapping for efficient lookup - using sync.Map for lock-free operations
+	deviceToSession sync.Map // device path -> session ID
 }
 
 // MediaMTXRecordingConfig defines MediaMTX-specific recording configuration
@@ -96,8 +94,7 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
-		sessions:          make(map[string]*RecordingSession),
-		deviceToSession:   make(map[string]string),
+		// sessions and deviceToSession: sync.Map is zero-initialized, no need to initialize
 		// recordingConfig is derived from config field - no separate initialization needed
 	}
 }
@@ -123,13 +120,10 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 		"options":     options,
 	}).Info("Starting MediaMTX recording session")
 
-	// Check if device is already recording
-	rm.deviceMu.RLock()
-	if existingSessionID, exists := rm.deviceToSession[devicePath]; exists {
-		rm.deviceMu.RUnlock()
+	// Check if device is already recording - lock-free read with sync.Map
+	if existingSessionID, exists := rm.deviceToSession.Load(devicePath); exists {
 		return nil, fmt.Errorf("device %s is already recording in session %s", devicePath, existingSessionID)
 	}
-	rm.deviceMu.RUnlock()
 
 	// Generate unique session ID
 	sessionID := fmt.Sprintf("rec_%d_%s", time.Now().Unix(), generateRandomString(8))
@@ -157,14 +151,9 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 		UseCase:    UseCaseRecording,
 	}
 
-	// Store session
-	rm.sessionsMu.Lock()
-	rm.sessions[sessionID] = session
-	rm.sessionsMu.Unlock()
-
-	rm.deviceMu.Lock()
-	rm.deviceToSession[devicePath] = sessionID
-	rm.deviceMu.Unlock()
+	// Store session - lock-free operations with sync.Map
+	rm.sessions.Store(sessionID, session)
+	rm.deviceToSession.Store(devicePath, sessionID)
 
 	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
@@ -177,11 +166,10 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 
 // GetRecordingSession retrieves a recording session by ID
 func (rm *RecordingManager) GetRecordingSession(sessionID string) (*RecordingSession, bool) {
-	rm.sessionsMu.RLock()
-	defer rm.sessionsMu.RUnlock()
-
-	session, exists := rm.sessions[sessionID]
-	return session, exists
+	if session, exists := rm.sessions.Load(sessionID); exists {
+		return session.(*RecordingSession), true
+	}
+	return nil, false
 }
 
 // RotateRecordingFile rotates a recording file (MediaMTX handles this automatically)
@@ -300,24 +288,22 @@ func (rm *RecordingManager) getRecordingByName(ctx context.Context, name string)
 
 // getSessionIDByDevice retrieves session ID by device path
 func (rm *RecordingManager) getSessionIDByDevice(device string) (string, bool) {
-	rm.deviceMu.RLock()
-	defer rm.deviceMu.RUnlock()
-
-	sessionID, exists := rm.deviceToSession[device]
-	return sessionID, exists
+	if sessionID, exists := rm.deviceToSession.Load(device); exists {
+		return sessionID.(string), true
+	}
+	return "", false
 }
 
 // StopRecording stops a recording session
 func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string) error {
 	rm.logger.WithField("session_id", sessionID).Info("Stopping MediaMTX recording session")
 
-	rm.sessionsMu.RLock()
-	session, exists := rm.sessions[sessionID]
+	// Get session - lock-free read with sync.Map
+	sessionInterface, exists := rm.sessions.Load(sessionID)
 	if !exists {
-		rm.sessionsMu.RUnlock()
 		return fmt.Errorf("recording session %s not found", sessionID)
 	}
-	rm.sessionsMu.RUnlock()
+	session := sessionInterface.(*RecordingSession)
 
 	// SIMPLIFIED: Disable recording but keep path alive for streaming
 	if session.DevicePath != "" {
@@ -332,15 +318,9 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 	endTime := time.Now()
 	session.EndTime = &endTime
 
-	// Remove from device mapping
-	rm.deviceMu.Lock()
-	delete(rm.deviceToSession, session.DevicePath)
-	rm.deviceMu.Unlock()
-
-	// Remove from sessions
-	rm.sessionsMu.Lock()
-	delete(rm.sessions, sessionID)
-	rm.sessionsMu.Unlock()
+	// Remove from device mapping and sessions - lock-free operations with sync.Map
+	rm.deviceToSession.Delete(session.DevicePath)
+	rm.sessions.Delete(sessionID)
 
 	rm.logger.WithFields(logging.Fields{
 		"session_id": sessionID,
@@ -353,13 +333,13 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 
 // ListRecordingSessions returns all active recording sessions
 func (rm *RecordingManager) ListRecordingSessions() []*RecordingSession {
-	rm.sessionsMu.RLock()
-	defer rm.sessionsMu.RUnlock()
-
-	sessions := make([]*RecordingSession, 0, len(rm.sessions))
-	for _, session := range rm.sessions {
-		sessions = append(sessions, session)
-	}
+	var sessions []*RecordingSession
+	
+	// Iterate over sync.Map - lock-free operation
+	rm.sessions.Range(func(key, value interface{}) bool {
+		sessions = append(sessions, value.(*RecordingSession))
+		return true // Continue iteration
+	})
 
 	return sessions
 }

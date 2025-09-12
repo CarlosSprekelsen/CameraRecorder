@@ -69,12 +69,14 @@ type WebSocketServer struct {
 	clients       map[string]*ClientConnection
 	clientsMutex  sync.RWMutex
 	clientCounter int64 // Atomic counter for thread-safe client ID generation
+	clientCount   int64 // Atomic counter for fast client count reads
 
 	// Method registration
 	methods             map[string]MethodHandler
 	methodsMutex        sync.RWMutex
 	methodVersions      map[string]string
 	methodVersionsMutex sync.RWMutex
+	builtinMethodsReady int32 // Atomic flag: 0 = not ready, 1 = ready
 
 	// Performance metrics
 	metrics      *PerformanceMetrics
@@ -84,6 +86,7 @@ type WebSocketServer struct {
 	eventManager       *EventManager
 	eventHandlers      []func(string, interface{})
 	eventHandlersMutex sync.RWMutex
+	eventHandlerCount  int64 // Atomic counter for event handler count
 
 	// Graceful shutdown
 	stopChan chan struct{}
@@ -426,6 +429,7 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 	defer s.eventHandlersMutex.Unlock()
 
 	s.eventHandlers = append(s.eventHandlers, handler)
+	atomic.AddInt64(&s.eventHandlerCount, 1)
 }
 
 // NewWebSocketServer creates a new WebSocket server with proper dependency injection
@@ -522,6 +526,9 @@ func NewWebSocketServer(
 
 	// Register built-in methods
 	server.registerBuiltinMethods()
+
+	// Mark builtin methods as ready
+	atomic.StoreInt32(&server.builtinMethodsReady, 1)
 
 	return server, nil
 }
@@ -663,7 +670,10 @@ func (s *WebSocketServer) closeAllClientConnections() {
 
 			// Remove client from map and update metrics atomically
 			s.clientsMutex.Lock()
-			delete(s.clients, client.ClientID)
+			if _, exists := s.clients[client.ClientID]; exists {
+				delete(s.clients, client.ClientID)
+				atomic.AddInt64(&s.clientCount, -1)
+			}
 			s.clientsMutex.Unlock()
 
 			// Remove event subscriptions
@@ -743,6 +753,7 @@ func (s *WebSocketServer) handleWebSocket(w http.ResponseWriter, r *http.Request
 	// Add client to connections and update metrics atomically
 	s.clientsMutex.Lock()
 	s.clients[clientID] = client
+	atomic.AddInt64(&s.clientCount, 1)
 	s.clientsMutex.Unlock()
 
 	// Update metrics with atomic operation
@@ -789,7 +800,10 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 
 		// Remove client from connections and update metrics atomically
 		s.clientsMutex.Lock()
-		delete(s.clients, client.ClientID)
+		if _, exists := s.clients[client.ClientID]; exists {
+			delete(s.clients, client.ClientID)
+			atomic.AddInt64(&s.clientCount, -1)
+		}
 		s.clientsMutex.Unlock()
 
 		// Remove event subscriptions
@@ -1129,6 +1143,21 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 // IsRunning returns whether the server is currently running
 func (s *WebSocketServer) IsRunning() bool {
 	return atomic.LoadInt32(&s.running) == 1
+}
+
+// GetClientCount returns the current number of connected clients using atomic operation
+func (s *WebSocketServer) GetClientCount() int64 {
+	return atomic.LoadInt64(&s.clientCount)
+}
+
+// IsBuiltinMethodsReady returns whether builtin methods are registered using atomic operation
+func (s *WebSocketServer) IsBuiltinMethodsReady() bool {
+	return atomic.LoadInt32(&s.builtinMethodsReady) == 1
+}
+
+// GetEventHandlerCount returns the current number of event handlers using atomic operation
+func (s *WebSocketServer) GetEventHandlerCount() int64 {
+	return atomic.LoadInt64(&s.eventHandlerCount)
 }
 
 // GetConfig returns the server configuration (for testing purposes)

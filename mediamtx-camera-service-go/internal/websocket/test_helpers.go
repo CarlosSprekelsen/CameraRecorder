@@ -417,7 +417,7 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 		require.NotEqual(t, -32002, pingResponse.Error.Code, "Should not get system not ready error")
 	}
 
-	t.Log("✅ Progressive Readiness Pattern validation passed")
+	t.Log("Progressive Readiness Pattern validation passed")
 }
 
 // TestProgressiveReadinessBehavior tests the Progressive Readiness Pattern behavior
@@ -443,7 +443,7 @@ func (h *WebSocketTestHelper) TestProgressiveReadinessBehavior(t *testing.T, ser
 	require.Contains(t, statusResult, "available_cameras", "Status response should contain available_cameras field")
 	require.Contains(t, statusResult, "discovery_active", "Status response should contain discovery_active field")
 
-	t.Log("✅ Progressive Readiness behavior test passed")
+	t.Log("Progressive Readiness behavior test passed")
 }
 
 // NewTestClient creates a test WebSocket client connection

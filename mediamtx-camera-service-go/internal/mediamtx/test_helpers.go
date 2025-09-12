@@ -778,7 +778,7 @@ func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager R
 					assert.Contains(t, err.Error(), scenario.ErrorMsg,
 						"Error message should contain expected text for scenario %s", scenario.Name)
 				}
-				t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+				t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 			} else {
 				// Should NOT get an error (graceful handling)
 				if err != nil {
@@ -786,7 +786,7 @@ func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager R
 					t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 					t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
 				} else {
-					t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+					t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 				}
 			}
 		})
@@ -815,7 +815,7 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 						assert.Contains(t, err.Error(), scenario.ErrorMsg,
 							"Controller error message should contain expected text for scenario %s", scenario.Name)
 					}
-					t.Logf("✅ Controller scenario %s correctly produced expected error: %v", scenario.Name, err)
+					t.Logf("Controller scenario %s correctly produced expected error: %v", scenario.Name, err)
 				} else {
 					// Should NOT get an error (graceful handling)
 					if err != nil {
@@ -823,7 +823,7 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 						t.Errorf("🚨 BUG DETECTED: Controller scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause controller failures instead of graceful handling")
 					} else {
-						t.Logf("✅ Controller scenario %s handled gracefully (no error)", scenario.Name)
+						t.Logf("Controller scenario %s handled gracefully (no error)", scenario.Name)
 					}
 				}
 			})
@@ -861,7 +861,7 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 					t.Errorf("🚨 BUG DETECTED: TakeAdvancedSnapshot should reject invalid device path '%s'", devicePath)
 				}
 
-				t.Logf("✅ Device path '%s' correctly rejected by controller methods", devicePath)
+				t.Logf("Device path '%s' correctly rejected by controller methods", devicePath)
 			})
 		}
 	})
@@ -906,7 +906,7 @@ func (h *MediaMTXTestHelper) TestInputValidationBoundaryConditions(t *testing.T,
 
 				_, err := controller.ListRTSPConnections(ctx, test.page, test.itemsPerPage)
 				// We don't care about the error here, just that it doesn't panic
-				t.Logf("✅ Boundary condition %s handled without panic (error: %v)", test.name, err)
+				t.Logf("Boundary condition %s handled without panic (error: %v)", test.name, err)
 			})
 		}
 	})
@@ -1403,7 +1403,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						assert.Contains(t, err.Error(), scenario.ErrorMsg,
 							"Error message should contain expected text for scenario %s", scenario.Name)
 					}
-					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 				} else {
 					// Should NOT get an error (graceful handling)
 					if err != nil {
@@ -1411,7 +1411,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
 					} else {
-						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 					}
 				}
 			})
@@ -1435,7 +1435,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						assert.Contains(t, err.Error(), scenario.ErrorMsg,
 							"Error message should contain expected text for scenario %s", scenario.Name)
 					}
-					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 				} else {
 					// Should NOT get an error (graceful handling)
 					if err != nil {
@@ -1443,7 +1443,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
 					} else {
-						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 					}
 				}
 			})
@@ -1467,7 +1467,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						assert.Contains(t, err.Error(), scenario.ErrorMsg,
 							"Error message should contain expected text for scenario %s", scenario.Name)
 					}
-					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 				} else {
 					// Should NOT get an error (graceful handling)
 					if err != nil {
@@ -1475,7 +1475,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
 					} else {
-						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 					}
 				}
 			})
@@ -1499,7 +1499,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						assert.Contains(t, err.Error(), scenario.ErrorMsg,
 							"Error message should contain expected text for scenario %s", scenario.Name)
 					}
-					t.Logf("✅ Scenario %s correctly produced expected error: %v", scenario.Name, err)
+					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 				} else {
 					// Should NOT get an error (graceful handling)
 					if err != nil {
@@ -1507,7 +1507,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
 					} else {
-						t.Logf("✅ Scenario %s handled gracefully (no error)", scenario.Name)
+						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 					}
 				}
 			})
@@ -1547,7 +1547,7 @@ func (h *MediaMTXTestHelper) TestJSONParsingPanicProtection(t *testing.T) {
 				_, err4 := parsePathsResponse(data)
 
 				// We don't care about errors here, just that no panic occurred
-				t.Logf("✅ No panic occurred (errors: %v, %v, %v, %v)", err1, err2, err3, err4)
+				t.Logf("No panic occurred (errors: %v, %v, %v, %v)", err1, err2, err3, err4)
 			})
 		}
 	})

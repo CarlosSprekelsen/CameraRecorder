@@ -745,7 +745,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	err = controller.StopAdvancedRecording(ctx, session.ID)
 	require.NoError(t, err, "Advanced recording should stop successfully")
 
-	t.Log("✅ Advanced recording functionality working correctly")
+	t.Log("Advanced recording functionality working correctly")
 }
 
 // TestController_StreamRecording_ReqMTX002 tests stream recording functionality
@@ -794,7 +794,7 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	// err = controller.StopStream(ctx, device)
 	require.NoError(t, err, "Stream should stop successfully")
 
-	t.Log("✅ Stream recording functionality working correctly")
+	t.Log("Stream recording functionality working correctly")
 }
 
 // TestController_HealthMonitoring_ReqMTX004 tests health monitoring functionality
@@ -828,7 +828,7 @@ func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Should be able to get system metrics")
 	require.NotNil(t, systemMetrics, "System metrics should not be nil")
 
-	t.Log("✅ Health monitoring functionality working correctly")
+	t.Log("Health monitoring functionality working correctly")
 }
 
 // TestController_PathManagement_ReqMTX003 tests path management functionality
@@ -876,7 +876,7 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 	err = controller.DeletePath(ctx, pathName)
 	require.NoError(t, err, "Should be able to delete path")
 
-	t.Log("✅ Path management functionality working correctly")
+	t.Log("Path management functionality working correctly")
 }
 
 // TestController_RTSPOperations_ReqMTX004 tests RTSP operations functionality
@@ -913,7 +913,7 @@ func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Should be able to list RTSP sessions")
 	require.NotNil(t, sessions, "Sessions list should not be nil")
 
-	t.Log("✅ RTSP operations functionality working correctly")
+	t.Log("RTSP operations functionality working correctly")
 }
 
 // TestController_AdvancedSnapshot_ReqMTX002 tests advanced snapshot functionality
@@ -954,7 +954,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 			"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
 		assert.Contains(t, snapshot.FilePath, "camera0", "File path should contain camera identifier")
 		assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
-		t.Log("✅ Advanced snapshot successful")
+		t.Log("Advanced snapshot successful")
 	}
 
 	// Test GetAdvancedSnapshot
@@ -980,7 +980,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	}
 	controller.UpdateSnapshotSettings(newSettings)
 
-	t.Log("✅ Advanced snapshot functionality working correctly")
+	t.Log("Advanced snapshot functionality working correctly")
 }
 
 // TestController_SetSystemEventNotifier_ReqMTX004 tests SetSystemEventNotifier integration
@@ -1012,7 +1012,7 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 		SetSystemEventNotifier(notifier SystemEventNotifier)
 	}); ok {
 		setter.SetSystemEventNotifier(mockNotifier)
-		t.Log("✅ SetSystemEventNotifier method called successfully")
+		t.Log("SetSystemEventNotifier method called successfully")
 	} else {
 		t.Log("⚠️ SetSystemEventNotifier method not available on controller interface")
 	}
@@ -1026,7 +1026,7 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 		t.Logf("GetStorageInfo failed (expected in test environment): %v", err)
 	} else {
 		require.NotNil(t, storageInfo, "Storage info should not be nil")
-		t.Log("✅ GetStorageInfo completed successfully")
+		t.Log("GetStorageInfo completed successfully")
 	}
 
 	// Get system metrics to trigger performance threshold checking
@@ -1035,10 +1035,10 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 		t.Logf("GetSystemMetrics failed (expected in test environment): %v", err)
 	} else {
 		require.NotNil(t, systemMetrics, "System metrics should not be nil")
-		t.Log("✅ GetSystemMetrics completed successfully")
+		t.Log("GetSystemMetrics completed successfully")
 	}
 
-	t.Log("✅ SetSystemEventNotifier integration test completed")
+	t.Log("SetSystemEventNotifier integration test completed")
 }
 
 // TestController_IsDeviceRecording_ReqMTX002 tests device recording status checking
@@ -1060,7 +1060,7 @@ func TestController_IsDeviceRecording_ReqMTX002(t *testing.T) {
 	isRecording = controller.IsDeviceRecording("invalid_device")
 	assert.False(t, isRecording, "Invalid device should not be recording")
 
-	t.Log("✅ Device recording status checking working correctly")
+	t.Log("Device recording status checking working correctly")
 }
 
 // TestController_GetActiveRecordings_ReqMTX002 tests active recordings retrieval
@@ -1079,7 +1079,7 @@ func TestController_GetActiveRecordings_ReqMTX002(t *testing.T) {
 	assert.NotNil(t, activeRecordings, "Active recordings map should not be nil")
 	assert.Empty(t, activeRecordings, "Should have no active recordings initially")
 
-	t.Log("✅ Active recordings retrieval working correctly")
+	t.Log("Active recordings retrieval working correctly")
 }
 
 // TestController_GetActiveRecording_ReqMTX002 tests individual active recording retrieval
@@ -1101,7 +1101,7 @@ func TestController_GetActiveRecording_ReqMTX002(t *testing.T) {
 	activeRecording = controller.GetActiveRecording("invalid_device")
 	assert.Nil(t, activeRecording, "Invalid device should have no active recording")
 
-	t.Log("✅ Individual active recording retrieval working correctly")
+	t.Log("Individual active recording retrieval working correctly")
 }
 
 // TestController_CreateStream_ReqMTX002 tests stream creation functionality
@@ -1141,7 +1141,7 @@ func TestController_CreateStream_ReqMTX002(t *testing.T) {
 		}
 	}()
 
-	t.Log("✅ Stream creation functionality working correctly")
+	t.Log("Stream creation functionality working correctly")
 }
 
 // TestController_DeleteStream_ReqMTX002 tests stream deletion functionality
@@ -1176,7 +1176,7 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 	err = controller.DeleteStream(ctx, "test_delete_stream")
 	require.NoError(t, err, "Stream deletion should succeed")
 
-	t.Log("✅ Stream deletion functionality working correctly")
+	t.Log("Stream deletion functionality working correctly")
 }
 
 // TestControllerWithConfigManagerFunction_ReqMTX001 tests ControllerWithConfigManager for 0% coverage
@@ -1323,7 +1323,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			<-done
 		}
 
-		t.Logf("✅ Concurrent start/stop operations completed without panic")
+		t.Logf("Concurrent start/stop operations completed without panic")
 	})
 
 	// Test state checking during operations
@@ -1349,7 +1349,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			}
 		}
 
-		t.Logf("✅ State checking during operations completed successfully")
+		t.Logf("State checking during operations completed successfully")
 
 		// Stop the controller
 		finalStopCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)

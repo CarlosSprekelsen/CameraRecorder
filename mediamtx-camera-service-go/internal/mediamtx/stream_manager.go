@@ -33,9 +33,8 @@ type streamManager struct {
 	logger         *logging.Logger
 	useCaseConfigs map[StreamUseCase]UseCaseConfig
 
-	// FFmpeg command caching for performance
-	ffmpegCommands map[string]string // device path -> cached FFmpeg command
-	commandMutex   sync.RWMutex
+	// FFmpeg command caching for performance - using sync.Map for lock-free reads
+	ffmpegCommands sync.Map // device path -> cached FFmpeg command
 }
 
 // NewStreamManager creates a new MediaMTX stream manager
@@ -72,7 +71,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *Me
 		config:         config,
 		logger:         logger,
 		useCaseConfigs: useCaseConfigs,
-		ffmpegCommands: make(map[string]string),
+		// ffmpegCommands: sync.Map is zero-initialized, no need to initialize
 	}
 }
 
@@ -214,14 +213,11 @@ func (sm *streamManager) GenerateStreamName(devicePath string, useCase StreamUse
 
 // buildFFmpegCommand builds FFmpeg command for camera stream with caching
 func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) string {
-	// Check cache first
-	sm.commandMutex.RLock()
-	if cachedCommand, exists := sm.ffmpegCommands[devicePath]; exists {
-		sm.commandMutex.RUnlock()
+	// Check cache first - lock-free read with sync.Map
+	if cachedCommand, exists := sm.ffmpegCommands.Load(devicePath); exists {
 		sm.logger.WithField("device_path", devicePath).Debug("Using cached FFmpeg command")
-		return cachedCommand
+		return cachedCommand.(string)
 	}
-	sm.commandMutex.RUnlock()
 
 	// Build new command
 	command := fmt.Sprintf(
@@ -229,10 +225,8 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 			"-f rtsp rtsp://%s:%d/%s",
 		devicePath, sm.config.Host, sm.config.RTSPPort, streamName)
 
-	// Cache the command
-	sm.commandMutex.Lock()
-	sm.ffmpegCommands[devicePath] = command
-	sm.commandMutex.Unlock()
+	// Cache the command - lock-free write with sync.Map
+	sm.ffmpegCommands.Store(devicePath, command)
 
 	sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
 	return command
@@ -241,9 +235,7 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 // invalidateFFmpegCommandCache clears cached FFmpeg command for a device
 // Call this when device format settings change
 func (sm *streamManager) invalidateFFmpegCommandCache(devicePath string) {
-	sm.commandMutex.Lock()
-	defer sm.commandMutex.Unlock()
-	delete(sm.ffmpegCommands, devicePath)
+	sm.ffmpegCommands.Delete(devicePath) // Lock-free delete with sync.Map
 	sm.logger.WithField("device_path", devicePath).Debug("Invalidated cached FFmpeg command")
 }
 

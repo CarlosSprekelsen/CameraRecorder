@@ -516,8 +516,8 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 			Created:  createdTime,
 		}
 
-		// Add to in-memory map
-		snapshotManager.snapshots[snapshot.ID] = snapshot
+		// Add to in-memory map - using sync.Map
+		snapshotManager.snapshots.Store(snapshot.ID, snapshot)
 	}
 
 	// Test 1: Cleanup old snapshots (older than 1 hour)
@@ -530,14 +530,14 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 		filePath := filepath.Join(mediaMTXConfig.SnapshotsPath, filename)
 
 		if i < 2 { // old snapshots should be removed from memory and files deleted
-			_, exists := snapshotManager.snapshots[snapshotID]
+			_, exists := snapshotManager.snapshots.Load(snapshotID)
 			assert.False(t, exists, "Old snapshot should be removed from memory")
 
 			_, err := os.Stat(filePath)
 			assert.Error(t, err, "Old file should be deleted")
 			assert.True(t, os.IsNotExist(err), "Old file should not exist")
 		} else { // new snapshots should still exist in memory and on disk
-			_, exists := snapshotManager.snapshots[snapshotID]
+			_, exists := snapshotManager.snapshots.Load(snapshotID)
 			assert.True(t, exists, "New snapshot should still exist in memory")
 
 			_, err := os.Stat(filePath)
@@ -1058,7 +1058,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
 			assert.Equal(t, path, snapshot.FilePath, "File path should match")
-			t.Log("✅ Tier 2 RTSP immediate capture successful")
+			t.Log("Tier 2 RTSP immediate capture successful")
 		}
 	})
 
@@ -1077,7 +1077,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
 			assert.Equal(t, path, snapshot.FilePath, "File path should match")
-			t.Log("✅ Tier 3 RTSP stream activation successful")
+			t.Log("Tier 3 RTSP stream activation successful")
 		}
 	})
 
@@ -1095,11 +1095,11 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 			assert.Contains(t, err.Error(), "tried", "Error should indicate which tiers were attempted")
 		} else {
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
-			t.Log("✅ Multi-tier snapshot successful")
+			t.Log("Multi-tier snapshot successful")
 		}
 	})
 
-	t.Log("✅ Snapshot tiers 2 and 3 functionality tested")
+	t.Log("Snapshot tiers 2 and 3 functionality tested")
 }
 
 // TestSnapshotManager_Tier0_V4L2Direct_RealHardware tests the new Tier 0 V4L2 direct capture with REAL hardware

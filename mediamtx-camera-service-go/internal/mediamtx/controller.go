@@ -435,16 +435,22 @@ func (c *controller) Stop(ctx context.Context) error {
 	c.logger.Info("Stopping MediaMTX controller")
 
 	// Stop all recording sessions
-	c.sessionsMu.Lock()
+	c.sessionsMu.RLock()
+	activeSessions := make([]string, 0)
 	for sessionID, session := range c.sessions {
 		if session.Status == "active" {
-			c.logger.WithField("session_id", sessionID).Info("Stopping recording session")
-			if err := c.stopRecordingInternal(ctx, sessionID); err != nil {
-				c.logger.WithError(err).WithField("session_id", sessionID).Error("Failed to stop recording session")
-			}
+			activeSessions = append(activeSessions, sessionID)
 		}
 	}
-	c.sessionsMu.Unlock()
+	c.sessionsMu.RUnlock()
+
+	// Stop each active session (stopRecordingInternal will acquire its own lock)
+	for _, sessionID := range activeSessions {
+		c.logger.WithField("session_id", sessionID).Info("Stopping recording session")
+		if err := c.stopRecordingInternal(ctx, sessionID); err != nil {
+			c.logger.WithError(err).WithField("session_id", sessionID).Error("Failed to stop recording session")
+		}
+	}
 
 	// Stop path integration first
 	if c.pathIntegration != nil {

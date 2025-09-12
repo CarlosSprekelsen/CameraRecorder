@@ -55,7 +55,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 
 		// This should produce an error for empty data
 		require.Error(t, err, "parseStreamResponse should error on empty data")
-		t.Logf("✅ parseStreamResponse correctly handled empty data: %v", err)
+		t.Logf("parseStreamResponse correctly handled empty data: %v", err)
 	})
 
 	t.Run("parseStreamResponse_NullData_Bug", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 
 		// This should produce an error for null data
 		require.Error(t, err, "parseStreamResponse should error on null data")
-		t.Logf("✅ parseStreamResponse correctly handled null data: %v", err)
+		t.Logf("parseStreamResponse correctly handled null data: %v", err)
 	})
 
 	t.Run("parseStreamResponse_MalformedJSON_Bug", func(t *testing.T) {
@@ -73,7 +73,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 
 		// This should produce an error for malformed JSON
 		require.Error(t, err, "parseStreamResponse should error on malformed JSON")
-		t.Logf("✅ parseStreamResponse correctly handled malformed JSON: %v", err)
+		t.Logf("parseStreamResponse correctly handled malformed JSON: %v", err)
 	})
 
 	t.Run("determineStatus_Function_Bug", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		status = determineStatus(false)
 		require.Equal(t, "PENDING", status, "determineStatus(false) should return PENDING")
 
-		t.Logf("✅ determineStatus function works correctly")
+		t.Logf("determineStatus function works correctly")
 	})
 
 	t.Run("parseMetricsResponse_Function_Bug", func(t *testing.T) {
@@ -109,7 +109,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		require.NoError(t, err, "parseMetricsResponse should handle valid JSON")
 		require.NotNil(t, metrics, "parseMetricsResponse should return metrics")
 
-		t.Logf("✅ parseMetricsResponse function works correctly")
+		t.Logf("parseMetricsResponse function works correctly")
 	})
 
 	t.Run("marshalCreateStreamRequest_Function_Bug", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		require.Contains(t, string(data), "test_stream", "marshaled data should contain stream name")
 		require.Contains(t, string(data), "rtsp://localhost:8554/test", "marshaled data should contain source")
 
-		t.Logf("✅ marshalCreateStreamRequest function works correctly")
+		t.Logf("marshalCreateStreamRequest function works correctly")
 	})
 
 	t.Run("marshalUpdatePathRequest_Function_Bug", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		require.NotNil(t, data, "marshalUpdatePathRequest should return data")
 		require.Contains(t, string(data), "rtsp://localhost:8554/updated", "marshaled data should contain updated source")
 
-		t.Logf("✅ marshalUpdatePathRequest function works correctly")
+		t.Logf("marshalUpdatePathRequest function works correctly")
 	})
 }
 
@@ -193,7 +193,7 @@ func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 				_, err4 := parsePathsResponse(testCase.data)
 
 				// We don't care about errors here, just that no panic occurred
-				t.Logf("✅ Edge case %s handled without panic (errors: %v, %v, %v, %v)",
+				t.Logf("Edge case %s handled without panic (errors: %v, %v, %v, %v)",
 					testCase.name, err1, err2, err3, err4)
 			})
 		}

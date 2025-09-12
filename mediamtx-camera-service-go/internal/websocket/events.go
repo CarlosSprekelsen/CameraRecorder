@@ -73,7 +73,7 @@ type EventSubscription struct {
 
 // SupportedFilters documents the supported subscription filter keys and their types
 //
-// ✅ **Supported Client-Facing Filters (per JSON-RPC API specification):**
+// **Supported Client-Facing Filters (per JSON-RPC API specification):**
 // - "device" (string): Filter by camera identifier (e.g., "camera0", "camera1") - **PRIMARY FILTER**
 // - "topic" (string): Filter by specific event topic
 // - "timestamp_after" (string): Filter events after RFC3339 timestamp (optional)
