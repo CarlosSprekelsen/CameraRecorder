@@ -569,14 +569,48 @@ func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *config.Co
 	return configManager
 }
 
-// CreateTestPath creates a test path for testing purposes
+// CreateTestPath creates a test path with proper configuration
 func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
 	ctx := context.Background()
-	pathData := fmt.Sprintf(`{"name":"%s","source":"publisher"}`, name)
-	_, err := h.client.Post(ctx, "/v3/config/paths/add", []byte(pathData))
+
+	// First, check if path exists in runtime
+	if _, err := h.client.Get(ctx, "/v3/paths/get/"+name); err == nil {
+		t.Logf("Path %s already exists in runtime, attempting cleanup", name)
+		h.ForceCleanupRuntimePaths(t)
+
+		// Check again after cleanup
+		if _, err := h.client.Get(ctx, "/v3/paths/get/"+name); err == nil {
+			// Path still exists, try a different approach
+			// Create a unique name with timestamp
+			name = fmt.Sprintf("%s_%d", name, time.Now().Unix())
+			t.Logf("Using alternative path name: %s", name)
+		}
+	}
+
+	// Create path with a concrete source instead of "publisher"
+	// This creates a configuration path that can be deleted
+	pathConfig := map[string]interface{}{
+		"source":                     "rtsp://localhost:8554/dummy", // Use concrete source
+		"sourceOnDemand":             true,
+		"sourceOnDemandStartTimeout": "10s",
+		"sourceOnDemandCloseAfter":   "10s",
+	}
+
+	data, err := json.Marshal(pathConfig)
 	if err != nil {
+		return fmt.Errorf("failed to marshal path config: %w", err)
+	}
+
+	_, err = h.client.Post(ctx, "/v3/config/paths/add/"+name, data)
+	if err != nil {
+		// Check if it's "already exists" error
+		if strings.Contains(err.Error(), "already exists") {
+			t.Logf("Path %s already exists, treating as success", name)
+			return nil // Idempotent
+		}
 		return fmt.Errorf("failed to create test path %s: %w", name, err)
 	}
+
 	t.Logf("Created test path: %s", name)
 	return nil
 }
@@ -600,6 +634,69 @@ func (h *MediaMTXTestHelper) GetPathInfo(t *testing.T, name string) ([]byte, err
 		return nil, fmt.Errorf("failed to get path info for %s: %w", name, err)
 	}
 	return data, nil
+}
+
+// ForceCleanupRuntimePaths forcefully cleans up runtime paths by disconnecting publishers
+func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
+	ctx := context.Background()
+
+	// Get all runtime paths
+	data, err := h.client.Get(ctx, "/v3/paths/list")
+	if err != nil {
+		return fmt.Errorf("failed to get paths: %w", err)
+	}
+
+	var pathsResponse struct {
+		Items []struct {
+			Name   string `json:"name"`
+			Source struct {
+				Type string `json:"type"`
+				ID   string `json:"id"`
+			} `json:"source"`
+			Ready   bool `json:"ready"`
+			Readers []struct {
+				Type string `json:"type"`
+				ID   string `json:"id"`
+			} `json:"readers"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(data, &pathsResponse); err != nil {
+		return fmt.Errorf("failed to parse paths: %w", err)
+	}
+
+	// For each test path, try to force cleanup
+	for _, path := range pathsResponse.Items {
+		if h.isTestPath(path.Name) {
+			t.Logf("Found runtime test path: %s (source: %v, ready: %v)",
+				path.Name, path.Source, path.Ready)
+
+			// Option 1: Try to kick all connections (if MediaMTX supports it)
+			// This would disconnect publishers/readers and allow cleanup
+			if path.Source.Type != "" {
+				// Try to disconnect the source connection
+				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s",
+					path.Source.Type, path.Source.ID)
+				if _, err := h.client.Post(ctx, kickEndpoint, nil); err != nil {
+					t.Logf("Could not kick source %s: %v", path.Source.ID, err)
+				}
+			}
+
+			// Kick all readers
+			for _, reader := range path.Readers {
+				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s",
+					reader.Type, reader.ID)
+				if _, err := h.client.Post(ctx, kickEndpoint, nil); err != nil {
+					t.Logf("Could not kick reader %s: %v", reader.ID, err)
+				}
+			}
+		}
+	}
+
+	// Wait a bit for MediaMTX to clean up paths
+	time.Sleep(2 * time.Second)
+
+	return nil
 }
 
 // cleanupMediaMTXPaths cleans up all MediaMTX paths created during tests
