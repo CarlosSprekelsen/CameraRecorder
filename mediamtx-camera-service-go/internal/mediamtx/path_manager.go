@@ -165,6 +165,31 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	return nil
 }
 
+// PatchPath patches a path configuration
+func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[string]interface{}) error {
+	pm.logger.WithFields(logging.Fields{
+		"name":   name,
+		"config": config,
+	}).Debug("Patching MediaMTX path configuration")
+
+	if err := pm.validatePathName(name); err != nil {
+		return fmt.Errorf("invalid path name: %w", err)
+	}
+
+	data, err := json.Marshal(config)
+	if err != nil {
+		return NewPathErrorWithErr(name, "patch_path", "failed to marshal config", err)
+	}
+
+	err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
+	if err != nil {
+		return NewPathErrorWithErr(name, "patch_path", "failed to patch path", err)
+	}
+
+	pm.logger.WithField("name", name).Info("MediaMTX path configuration patched successfully")
+	return nil
+}
+
 // DeletePath deletes a path
 func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 	pm.logger.WithField("name", name).Debug("Deleting MediaMTX path")

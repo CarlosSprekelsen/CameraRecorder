@@ -96,8 +96,8 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
-		sessions:        make(map[string]*RecordingSession),
-		deviceToSession: make(map[string]string),
+		sessions:          make(map[string]*RecordingSession),
+		deviceToSession:   make(map[string]string),
 		// recordingConfig is derived from config field - no separate initialization needed
 	}
 }

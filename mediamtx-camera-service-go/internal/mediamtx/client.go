@@ -68,6 +68,15 @@ func (c *client) Put(ctx context.Context, path string, data []byte) ([]byte, err
 	return c.doRequest(ctx, http.MethodPut, path, data)
 }
 
+// Patch performs an HTTP PATCH request
+func (c *client) Patch(ctx context.Context, path string, data []byte) error {
+	_, err := c.doRequest(ctx, http.MethodPatch, path, data)
+	if err != nil {
+		return fmt.Errorf("failed to perform PATCH request to %s: %w", path, err)
+	}
+	return nil
+}
+
 // Delete performs an HTTP DELETE request
 func (c *client) Delete(ctx context.Context, path string) error {
 	_, err := c.doRequest(ctx, http.MethodDelete, path, nil)
