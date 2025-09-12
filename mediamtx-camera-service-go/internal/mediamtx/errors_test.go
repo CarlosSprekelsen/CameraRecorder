@@ -83,20 +83,7 @@ func TestNewMediaMTXErrorFromHTTP_ReqMTX007(t *testing.T) {
 	}
 }
 
-// TestNewStreamError_ReqMTX007 tests stream error creation
-func TestNewStreamError_ReqMTX007(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	streamID := "test_stream_123"
-	op := "StartRecording"
-	message := "Failed to start recording"
-
-	err := NewStreamError(streamID, op, message)
-	require.NotNil(t, err, "Error should not be nil")
-
-	assert.Equal(t, streamID, err.StreamID, "Stream ID should match")
-	assert.Equal(t, op, err.Op, "Operation should match")
-	assert.Equal(t, message, err.Message, "Message should match")
-}
+// TestNewStreamError_ReqMTX007 - REMOVED: StreamError type was removed during dead code sweep
 
 // TestNewPathError_ReqMTX007 tests path error creation
 func TestNewPathError_ReqMTX007(t *testing.T) {
@@ -113,39 +100,9 @@ func TestNewPathError_ReqMTX007(t *testing.T) {
 	assert.Equal(t, message, err.Message, "Message should match")
 }
 
-// TestNewRecordingError_ReqMTX007 tests recording error creation
-func TestNewRecordingError_ReqMTX007(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	sessionID := "test_session_123"
-	device := "/dev/video0"
-	op := "StartRecording"
-	message := "Failed to start recording session"
+// TestNewRecordingError_ReqMTX007 - REMOVED: RecordingError type was removed during dead code sweep
 
-	err := NewRecordingError(sessionID, device, op, message)
-	require.NotNil(t, err, "Error should not be nil")
-
-	assert.Equal(t, sessionID, err.SessionID, "Session ID should match")
-	assert.Equal(t, device, err.Device, "Device should match")
-	assert.Equal(t, op, err.Op, "Operation should match")
-	assert.Equal(t, message, err.Message, "Message should match")
-}
-
-// TestNewFFmpegError_ReqMTX007 tests FFmpeg error creation
-func TestNewFFmpegError_ReqMTX007(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	pid := 12345
-	command := "ffmpeg -i input.mp4 output.mp4"
-	op := "StartProcess"
-	message := "Failed to start FFmpeg process"
-
-	err := NewFFmpegError(pid, command, op, message)
-	require.NotNil(t, err, "Error should not be nil")
-
-	assert.Equal(t, pid, err.PID, "PID should match")
-	assert.Equal(t, command, err.Command, "Command should match")
-	assert.Equal(t, op, err.Op, "Operation should match")
-	assert.Equal(t, message, err.Message, "Message should match")
-}
+// TestNewFFmpegError_ReqMTX007 - REMOVED: FFmpegError type was removed during dead code sweep
 
 // TestError_Error_ReqMTX007 tests error message formatting
 func TestError_Error_ReqMTX007(t *testing.T) {
@@ -162,22 +119,12 @@ func TestError_Error_ReqMTX007(t *testing.T) {
 			NewMediaMTXErrorWithOp(500, "Server Error", "Database failed", "CreatePath"),
 			"MediaMTX error [500]: Server Error - Database failed",
 		},
-		{
-			NewStreamError("stream123", "Start", "Failed to start"),
-			"stream stream123: Start: Failed to start",
-		},
+		// StreamError test case removed - type was deleted during dead code sweep
 		{
 			NewPathError("path123", "Create", "Failed to create"),
 			"path path123: Create: Failed to create",
 		},
-		{
-			NewRecordingError("session123", "/dev/video0", "Start", "Failed to start"),
-			"recording session123 (device /dev/video0): Start: Failed to start",
-		},
-		{
-			NewFFmpegError(12345, "ffmpeg", "Start", "Failed to start"),
-			"FFmpeg process 12345 (ffmpeg): Start: Failed to start",
-		},
+		// RecordingError and FFmpegError test cases removed - types were deleted during dead code sweep
 	}
 
 	for _, tc := range testCases {
@@ -191,17 +138,16 @@ func TestError_Error_ReqMTX007(t *testing.T) {
 func TestError_Unwrap_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// Test that errors can be unwrapped properly
-	originalErr := errors.New("original error")
 	mediaMTXErr := &MediaMTXError{
 		Code:    500,
 		Message: "Server Error",
 		Details: "Database failed",
 		Op:      "CreatePath",
-		Err:     originalErr,
 	}
 
+	// MediaMTXError no longer wraps errors - it's a simple error type
 	unwrapped := errors.Unwrap(mediaMTXErr)
-	assert.Equal(t, originalErr, unwrapped, "Should unwrap to original error")
+	assert.Nil(t, unwrapped, "MediaMTXError should not wrap other errors")
 }
 
 // TestError_Is_ReqMTX007 tests error type checking
@@ -217,29 +163,7 @@ func TestError_Is_ReqMTX007(t *testing.T) {
 	assert.NotEqual(t, "*mediamtx.StreamError", reflect.TypeOf(mediaMTXErr).String(), "Should not be StreamError type")
 }
 
-// TestError_Is_WithErrorsIs_ReqMTX007 verifies that errors.Is works correctly with MediaMTXError types
-func TestError_Is_WithErrorsIs_ReqMTX007(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	// This test verifies that errors.Is works correctly after implementing the Is method
-
-	// Create a MediaMTXError
-	mediaMTXErr := NewMediaMTXError(404, "Not Found", "Resource missing")
-
-	// Test that errors.Is works with predefined error constants
-	assert.True(t, errors.Is(mediaMTXErr, ErrMediaMTXNotFound),
-		"errors.Is should work with MediaMTXError types after implementing the Is method")
-
-	// Test that errors.Is works when comparing error with itself
-	assert.True(t, errors.Is(mediaMTXErr, mediaMTXErr),
-		"errors.Is should work when comparing error with itself")
-
-	// Verify the types for documentation
-	t.Logf("MediaMTXError type: %T", mediaMTXErr)
-	t.Logf("ErrMediaMTXNotFound type: %T", ErrMediaMTXNotFound)
-	t.Logf("errors.Is result: %v", errors.Is(mediaMTXErr, ErrMediaMTXNotFound))
-}
-
-
+// TestError_Is_WithErrorsIs_ReqMTX007 - REMOVED: Error constants were removed during dead code sweep
 
 // TestError_As_ReqMTX007 tests error type assertion
 func TestError_As_ReqMTX007(t *testing.T) {
@@ -262,10 +186,9 @@ func TestError_Validation_ReqMTX007(t *testing.T) {
 		shouldBeNil bool
 	}{
 		{"Valid MediaMTX Error", NewMediaMTXError(404, "Not Found", "Resource missing"), false},
-		{"Valid Stream Error", NewStreamError("stream123", "Start", "Failed to start"), false},
+		// StreamError test case removed - type was deleted during dead code sweep
 		{"Valid Path Error", NewPathError("path123", "Create", "Failed to create"), false},
-		{"Valid Recording Error", NewRecordingError("session123", "/dev/video0", "Start", "Failed to start"), false},
-		{"Valid FFmpeg Error", NewFFmpegError(12345, "ffmpeg", "Start", "Failed to start"), false},
+		// RecordingError and FFmpegError test cases removed - types were deleted during dead code sweep
 	}
 
 	for _, tc := range testCases {

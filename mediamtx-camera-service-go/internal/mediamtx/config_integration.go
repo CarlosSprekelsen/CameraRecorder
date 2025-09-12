@@ -102,19 +102,19 @@ func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *MediaMTXConf
 
 	// Additional validation specific to integration
 	if mediaMTXConfig.Host == "" {
-		return NewConfigurationError("host", "", "MediaMTX host is required")
+		return fmt.Errorf("MediaMTX host is required")
 	}
 
 	if mediaMTXConfig.APIPort <= 0 {
-		return NewConfigurationError("api_port", fmt.Sprintf("%d", mediaMTXConfig.APIPort), "MediaMTX API port must be positive")
+		return fmt.Errorf("MediaMTX API port must be positive")
 	}
 
 	if mediaMTXConfig.RecordingsPath == "" {
-		return NewConfigurationError("recordings_path", "", "MediaMTX recordings path is required")
+		return fmt.Errorf("MediaMTX recordings path is required")
 	}
 
 	if mediaMTXConfig.SnapshotsPath == "" {
-		return NewConfigurationError("snapshots_path", "", "MediaMTX snapshots path is required")
+		return fmt.Errorf("MediaMTX snapshots path is required")
 	}
 
 	ci.logger.Debug("MediaMTX configuration validation passed")

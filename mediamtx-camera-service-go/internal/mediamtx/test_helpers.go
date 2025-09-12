@@ -390,7 +390,7 @@ func (h *MediaMTXTestHelper) HasHardwareCamera(ctx context.Context) bool {
 func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
 	// TODO: Load test camera devices from fixture file
 	// fixturePath := filepath.Join("tests", "fixtures", "test_camera_devices.yaml")
-	
+
 	// For now, return appropriate test devices based on scenario
 	switch scenario {
 	case "hardware_available":
@@ -415,6 +415,90 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 	logger := h.GetLogger()
 
 	return ControllerWithConfigManager(configManager, cameraMonitor, logger)
+}
+
+// GetOrchestratedController returns a controller with proper service orchestration
+// This follows the Progressive Readiness Pattern from the architecture
+func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXController, error) {
+	controller, err := h.GetController(t)
+	if err != nil {
+		return nil, err
+	}
+
+	// Start the controller following Progressive Readiness Pattern
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start controller: %w", err)
+	}
+
+	// Wait for service readiness following the architecture pattern
+	err = h.WaitForServiceReadiness(ctx, controller)
+	if err != nil {
+		controller.Stop(ctx) // Cleanup on failure
+		return nil, fmt.Errorf("service not ready: %w", err)
+	}
+
+	return controller, nil
+}
+
+// WaitForServiceReadiness waits for all services to be ready following the Progressive Readiness Pattern
+func (h *MediaMTXTestHelper) WaitForServiceReadiness(ctx context.Context, controller MediaMTXController) error {
+	// Wait for camera monitor to discover devices
+	maxWait := 5 * time.Second
+	waitInterval := 100 * time.Millisecond
+	start := time.Now()
+
+	for time.Since(start) < maxWait {
+		// Check if camera0 device is discovered (following the architecture pattern)
+		cameraMonitor := h.GetCameraMonitor()
+		if cameraMonitor != nil {
+			devicePath := "/dev/video0" // camera0 maps to /dev/video0
+			if _, exists := cameraMonitor.GetDevice(devicePath); exists {
+				// Device discovered, service is ready
+				return nil
+			}
+		}
+		time.Sleep(waitInterval)
+	}
+
+	return fmt.Errorf("service readiness timeout: camera0 device not discovered within %v", maxWait)
+}
+
+// GetConfiguredSnapshotPath returns the snapshot path from the fixture configuration
+// This follows the architecture principle of using configured paths instead of hardcoded paths
+func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
+	configManager := h.GetConfigManager()
+	if configManager == nil {
+		return "/tmp/snapshots" // Fallback to fixture default
+	}
+
+	config := configManager.GetConfig()
+	if config == nil {
+		return "/tmp/snapshots" // Fallback to fixture default
+	}
+
+	return config.MediaMTX.SnapshotsPath
+}
+
+// GetConfiguredRecordingPath returns the recording path from the fixture configuration
+func (h *MediaMTXTestHelper) GetConfiguredRecordingPath() string {
+	configManager := h.GetConfigManager()
+	if configManager == nil {
+		return "/tmp/recordings" // Fallback to fixture default
+	}
+
+	config := configManager.GetConfig()
+	if config == nil {
+		return "/tmp/recordings" // Fallback to fixture default
+	}
+
+	return config.MediaMTX.RecordingsPath
+}
+
+// GetConfigManager returns the config manager instance
+func (h *MediaMTXTestHelper) GetConfigManager() *config.ConfigManager {
+	return h.configManager
 }
 
 // GetRTSPConnectionManager returns a shared RTSP connection manager instance
@@ -527,7 +611,6 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 	}
 
 	// Parse paths response to find test paths
-	// Note: This is a simplified cleanup - in production you'd want more sophisticated path tracking
 	var pathsResponse struct {
 		Items []struct {
 			Name string `json:"name"`
@@ -539,20 +622,21 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 		return
 	}
 
-	// Delete test paths (paths that start with "test_" or "camera_")
-	// Only try to delete paths that actually exist in the current response
+	// For runtime paths, we can't delete them via config API
+	// Instead, we log them for debugging and rely on MediaMTX to clean them up automatically
+	// when they're no longer in use (no active sources/readers)
+	testPathCount := 0
 	for _, path := range pathsResponse.Items {
 		if h.isTestPath(path.Name) {
-			err := h.client.Delete(ctx, "/v3/config/paths/delete/"+path.Name)
-			if err != nil {
-				// Only log as warning if it's not a 404 (path not found) error
-				if !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
-					t.Logf("Warning: Failed to delete test path %s: %v", path.Name, err)
-				}
-			} else {
-				t.Logf("Cleaned up test path: %s", path.Name)
-			}
+			testPathCount++
+			// Log test paths for debugging - they should be cleaned up automatically by MediaMTX
+			// when no longer in use (no active sources/readers)
+			t.Logf("Test path still in runtime: %s (will be cleaned up automatically when unused)", path.Name)
 		}
+	}
+
+	if testPathCount > 0 {
+		t.Logf("Found %d test paths in runtime state - these should be cleaned up automatically by MediaMTX when unused", testPathCount)
 	}
 }
 

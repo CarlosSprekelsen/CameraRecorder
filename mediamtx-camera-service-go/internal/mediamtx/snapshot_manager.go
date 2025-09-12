@@ -297,13 +297,13 @@ func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, device
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(snapshotPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, NewFFmpegErrorWithErr(0, "v4l2_direct", "create_output_dir", "failed to create output directory", err)
+		return nil, fmt.Errorf("failed to create output directory for V4L2 direct capture: %w", err)
 	}
 
 	// Use camera monitor's direct snapshot capability
 	directSnapshot, err := sm.cameraMonitor.TakeDirectSnapshot(ctx, devicePath, snapshotPath, options)
 	if err != nil {
-		return nil, NewFFmpegErrorWithErr(0, "v4l2_direct", "take_direct_snapshot", "V4L2 direct capture failed", err)
+		return nil, fmt.Errorf("V4L2 direct capture failed: %w", err)
 	}
 
 	// Convert DirectSnapshot to Snapshot for compatibility
@@ -349,7 +349,7 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(snapshotPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "create_output_dir", "failed to create output directory", err)
+		return nil, fmt.Errorf("failed to create output directory for FFmpeg snapshot: %w", err)
 	}
 
 	// Create command with timeout
@@ -357,13 +357,13 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 
 	// Execute command
 	if err := cmd.Run(); err != nil {
-		return nil, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "take_snapshot", "failed to take snapshot", err)
+		return nil, fmt.Errorf("failed to take FFmpeg snapshot: %w", err)
 	}
 
 	// Get file info using existing FFmpeg manager
 	fileSize, _, err := sm.ffmpegManager.GetFileInfo(ctx, snapshotPath)
 	if err != nil {
-		return nil, NewFFmpegErrorWithErr(0, "snapshot", "get_file_info", "failed to get file info", err)
+		return nil, fmt.Errorf("failed to get snapshot file info: %w", err)
 	}
 
 	// Create snapshot object with metadata
@@ -375,12 +375,12 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		Size:     fileSize,
 		Created:  time.Now(),
 		Metadata: map[string]interface{}{
-			"tier_used":       1,
-			"capture_method":  "usb_direct",
-			"format":          sm.snapshotSettings.Format,
-			"width":           sm.snapshotSettings.MaxWidth,
-			"height":          sm.snapshotSettings.MaxHeight,
-			"quality":         sm.snapshotSettings.Quality,
+			"tier_used":      1,
+			"capture_method": "usb_direct",
+			"format":         sm.snapshotSettings.Format,
+			"width":          sm.snapshotSettings.MaxWidth,
+			"height":         sm.snapshotSettings.MaxHeight,
+			"quality":        sm.snapshotSettings.Quality,
 		},
 	}
 
@@ -454,7 +454,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(snapshotPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return nil, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "create_output_dir", "failed to create output directory", err)
+		return nil, fmt.Errorf("failed to create output directory for FFmpeg snapshot: %w", err)
 	}
 
 	// Create command with timeout
@@ -462,13 +462,13 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 
 	// Execute command
 	if err := cmd.Run(); err != nil {
-		return nil, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "take_snapshot", "failed to take snapshot from RTSP", err)
+		return nil, fmt.Errorf("failed to take snapshot from RTSP: %w", err)
 	}
 
 	// Get file info using existing FFmpeg manager
 	fileSize, _, err := sm.ffmpegManager.GetFileInfo(ctx, snapshotPath)
 	if err != nil {
-		return nil, NewFFmpegErrorWithErr(0, "snapshot", "get_file_info", "failed to get file info", err)
+		return nil, fmt.Errorf("failed to get snapshot file info: %w", err)
 	}
 
 	// Create snapshot object with metadata
@@ -480,13 +480,13 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		Size:     fileSize,
 		Created:  time.Now(),
 		Metadata: map[string]interface{}{
-			"tier_used":       2, // Will be updated to 3 if stream activation was used
-			"capture_method":  "rtsp_immediate",
-			"format":          sm.snapshotSettings.Format,
-			"width":           sm.snapshotSettings.MaxWidth,
-			"height":          sm.snapshotSettings.MaxHeight,
-			"quality":         sm.snapshotSettings.Quality,
-			"stream_name":     streamName,
+			"tier_used":      2, // Will be updated to 3 if stream activation was used
+			"capture_method": "rtsp_immediate",
+			"format":         sm.snapshotSettings.Format,
+			"width":          sm.snapshotSettings.MaxWidth,
+			"height":         sm.snapshotSettings.MaxHeight,
+			"quality":        sm.snapshotSettings.Quality,
+			"stream_name":    streamName,
 		},
 	}
 
@@ -515,7 +515,7 @@ func (sm *SnapshotManager) createSnapshotResult(snapshot *Snapshot, tier int, ca
 	if snapshot.Metadata == nil {
 		snapshot.Metadata = make(map[string]interface{})
 	}
-	
+
 	// Add tier information to existing metadata (don't overwrite)
 	snapshot.Metadata["tier_used"] = tier
 	snapshot.Metadata["capture_time_ms"] = captureTime.Milliseconds()
@@ -597,7 +597,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 
 	// Delete file
 	if err := os.Remove(snapshot.FilePath); err != nil {
-		return NewFFmpegErrorWithErr(0, "delete_snapshot", "remove_file", "failed to delete snapshot file", err)
+		return fmt.Errorf("failed to delete snapshot file: %w", err)
 	}
 
 	sm.logger.WithFields(logging.Fields{

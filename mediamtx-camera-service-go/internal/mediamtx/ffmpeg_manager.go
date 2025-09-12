@@ -106,17 +106,17 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 
 	// Validate inputs (following Python implementation pattern)
 	if len(command) == 0 {
-		return 0, NewFFmpegError(0, "start_process", "start_process", "command cannot be empty")
+		return 0, fmt.Errorf("FFmpeg command cannot be empty")
 	}
 
 	if strings.TrimSpace(outputPath) == "" {
-		return 0, NewFFmpegError(0, strings.Join(command, " "), "start_process", "output path cannot be empty")
+		return 0, fmt.Errorf("FFmpeg output path cannot be empty")
 	}
 
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return 0, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "create_output_dir", "failed to create output directory", err)
+		return 0, fmt.Errorf("failed to create FFmpeg output directory: %w", err)
 	}
 
 	// Create command
@@ -133,7 +133,7 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 
 	// Start process
 	if err := cmd.Start(); err != nil {
-		return 0, NewFFmpegErrorWithErr(0, strings.Join(command, " "), "start_process", "failed to start FFmpeg process", err)
+		return 0, fmt.Errorf("failed to start FFmpeg process: %w", err)
 	}
 
 	// Get PID
@@ -165,7 +165,7 @@ func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
 	process, exists := fm.processes[pid]
 	if !exists {
 		fm.processMu.Unlock()
-		return NewFFmpegError(pid, "stop_process", "stop_process", "process not found")
+		return fmt.Errorf("FFmpeg process %d not found", pid)
 	}
 	fm.processMu.Unlock()
 
@@ -351,7 +351,7 @@ func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath st
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(outputPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return NewFFmpegErrorWithErr(0, strings.Join(command, " "), "create_output_dir", "failed to create output directory", err)
+		return fmt.Errorf("failed to create FFmpeg output directory: %w", err)
 	}
 
 	// Execute with retry logic (Python parity)
@@ -401,7 +401,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 		// Start process with timeout
 		if err := cmd.Start(); err != nil {
 			cancel()
-			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
+			lastErr = fmt.Errorf("%s (attempt %d): %w", errorMsg, attempt+1, err)
 			fm.logger.WithError(err).WithFields(logging.Fields{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
@@ -439,7 +439,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 				}).Info("FFmpeg operation completed successfully")
 				return nil
 			}
-			lastErr = NewFFmpegErrorWithErr(0, strings.Join(command, " "), operation, fmt.Sprintf("%s (attempt %d)", errorMsg, attempt+1), err)
+			lastErr = fmt.Errorf("%s (attempt %d): %w", errorMsg, attempt+1, err)
 			fm.logger.WithError(err).WithFields(logging.Fields{
 				"attempt":        attempt,
 				"correlation_id": correlationID,
@@ -449,7 +449,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 			cancel()
 			// Cleanup the process
 			fm.cleanupFFmpegProcess(&FFmpegProcess{cmd: cmd}, 0, operation)
-			lastErr = NewFFmpegError(0, operation, operation, fmt.Sprintf("execution timeout after %v", executionTimeout))
+			lastErr = fmt.Errorf("execution timeout after %v", executionTimeout)
 			fm.logger.WithFields(logging.Fields{
 				"attempt":        attempt,
 				"timeout":        executionTimeout,
@@ -544,12 +544,12 @@ func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string
 	// Create new directory if it doesn't exist
 	newDir := filepath.Dir(newPath)
 	if err := os.MkdirAll(newDir, 0755); err != nil {
-		return NewFFmpegErrorWithErr(0, "rotate_file", "create_new_dir", "failed to create new directory", err)
+		return fmt.Errorf("failed to create new directory for file rotation: %w", err)
 	}
 
 	// Rename file
 	if err := os.Rename(oldPath, newPath); err != nil {
-		return NewFFmpegErrorWithErr(0, "rotate_file", "rename_file", "failed to rename file", err)
+		return fmt.Errorf("failed to rename file for rotation: %w", err)
 	}
 
 	fm.logger.WithFields(logging.Fields{
@@ -567,7 +567,7 @@ func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, t
 	// Get file info
 	info, err := os.Stat(path)
 	if err != nil {
-		return 0, time.Time{}, NewFFmpegErrorWithErr(0, "get_file_info", "stat_file", "failed to get file info", err)
+		return 0, time.Time{}, fmt.Errorf("failed to get file info: %w", err)
 	}
 
 	return info.Size(), info.ModTime(), nil
@@ -593,7 +593,7 @@ func (fm *ffmpegManager) executeFFmpeg(args []string) error {
 			"stderr": stderr.String(),
 		}).Error("FFmpeg command failed")
 
-		return NewFFmpegErrorWithErr(0, strings.Join(args, " "), "execute_ffmpeg", "FFmpeg command failed", err)
+		return fmt.Errorf("FFmpeg command failed: %w", err)
 	}
 
 	fm.logger.WithFields(logging.Fields{

@@ -461,17 +461,18 @@ func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRe
 
 // getRecordingOutputPath processes the output path for MediaMTX recording
 func (rm *RecordingManager) getRecordingOutputPath(pathName, outputPath string) string {
-	// MediaMTX supports timestamp patterns in recordPath
-	// Use the actual path name (e.g., "camera0") with timestamp pattern for unique filenames
+	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
-		// Use path name with timestamp pattern: camera0_2024-01-15_14-30-00.mp4
-		return filepath.Join(dir, fmt.Sprintf("%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName))
+		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
+		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
 	}
 	if rm.config.RecordingsPath != "" {
-		return filepath.Join(rm.config.RecordingsPath, fmt.Sprintf("%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName))
+		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
+		return filepath.Join(rm.config.RecordingsPath, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
 	}
-	return fmt.Sprintf("/tmp/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName)
+	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
+	return "/tmp/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4"
 }
 
 // CleanupOldRecordings removes old recording files based on age and count limits

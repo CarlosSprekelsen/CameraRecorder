@@ -1,16 +1,18 @@
 /*
-WebSocket Test Helpers
+WebSocket Test Helpers - Progressive Readiness Pattern Support
 
 Provides focused test utilities for WebSocket module testing,
-following the project testing standards and Go coding standards.
+following the Progressive Readiness Pattern from the architecture.
 
 Requirements Coverage:
 - REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
 - REQ-API-003: Request/response message handling
+- REQ-ARCH-001: Progressive Readiness Pattern compliance
 
 Test Categories: Unit/Integration
 API Documentation Reference: docs/api/json_rpc_methods.md
+Architecture Reference: docs/architecture/go-architecture-guide.md
 */
 
 package websocket
@@ -21,7 +23,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +35,74 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Global mutex to prevent parallel test execution
+// WebSocket tests must run sequentially because they share the same server resources
+var testMutex sync.Mutex
+
+// WebSocketTestConfig provides configuration for WebSocket server testing
+type WebSocketTestConfig struct {
+	Host                 string
+	Port                 int
+	WebSocketPath        string
+	MaxConnections       int
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	PingInterval         time.Duration
+	PongWait             time.Duration
+	MaxMessageSize       int64
+	ReadBufferSize       int
+	WriteBufferSize      int
+	ShutdownTimeout      time.Duration
+	ClientCleanupTimeout time.Duration
+	TestDataDir          string
+	CleanupAfter         bool
+}
+
+// DefaultWebSocketTestConfig returns default configuration for WebSocket server testing
+func DefaultWebSocketTestConfig() *WebSocketTestConfig {
+	return &WebSocketTestConfig{
+		Host:                 "localhost",
+		Port:                 0, // Will be assigned dynamically
+		WebSocketPath:        "/ws",
+		MaxConnections:       100,
+		ReadTimeout:          30 * time.Second,
+		WriteTimeout:         30 * time.Second,
+		PingInterval:         30 * time.Second,
+		PongWait:             60 * time.Second,
+		MaxMessageSize:       1024 * 1024, // 1MB
+		ReadBufferSize:       4096,
+		WriteBufferSize:      4096,
+		ShutdownTimeout:      30 * time.Second,
+		ClientCleanupTimeout: 5 * time.Second,
+		TestDataDir:          "/tmp/websocket_test_data",
+		CleanupAfter:         true,
+	}
+}
+
+// WebSocketTestHelper provides utilities for WebSocket server testing
+type WebSocketTestHelper struct {
+	config             *WebSocketTestConfig
+	configManager      *config.ConfigManager
+	logger             *logging.Logger
+	server             *WebSocketServer
+	mediaMTXController mediamtx.MediaMTXController
+	jwtHandler         *security.JWTHandler
+
+	// Race-free initialization using sync.Once
+	serverOnce     sync.Once
+	controllerOnce sync.Once
+	jwtHandlerOnce sync.Once
+}
+
+// EnsureSequentialExecution ensures tests run sequentially to avoid WebSocket server conflicts
+// Call this at the beginning of each test that uses WebSocket server
+func EnsureSequentialExecution(t *testing.T) {
+	testMutex.Lock()
+	t.Cleanup(func() {
+		testMutex.Unlock()
+	})
+}
+
 // setupTestLogging configures logging for all tests
 func setupTestLogging() {
 	// Configure the global logger factory for tests
@@ -43,6 +113,130 @@ func setupTestLogging() {
 		FileEnabled:    false,
 		ConsoleEnabled: false,
 	})
+}
+
+// NewWebSocketTestHelper creates a new test helper for WebSocket server testing
+func NewWebSocketTestHelper(t *testing.T, config *WebSocketTestConfig) *WebSocketTestHelper {
+	if config == nil {
+		config = DefaultWebSocketTestConfig()
+	}
+
+	// Create logger for testing
+	logger := logging.GetLogger("test-websocket-server")
+
+	// Create test data directory
+	err := os.MkdirAll(config.TestDataDir, 0755)
+	require.NoError(t, err, "Failed to create test data directory")
+
+	// Create config manager using existing fixtures
+	configManager := createTestConfigManager(t)
+
+	// Get free port automatically
+	if config.Port == 0 {
+		config.Port = GetFreePort()
+	}
+
+	return &WebSocketTestHelper{
+		config:        config,
+		configManager: configManager,
+		logger:        logger,
+	}
+}
+
+// Cleanup cleans up the test helper resources
+func (h *WebSocketTestHelper) Cleanup(t *testing.T) {
+	if h.server != nil && h.server.IsRunning() {
+		err := h.server.Stop()
+		if err != nil {
+			t.Logf("Warning: Failed to stop WebSocket server: %v", err)
+		}
+	}
+
+	if h.config.CleanupAfter && h.config.TestDataDir != "" {
+		err := os.RemoveAll(h.config.TestDataDir)
+		if err != nil {
+			t.Logf("Warning: Failed to clean up test data directory: %v", err)
+		}
+	}
+}
+
+// GetServer returns the WebSocket server instance (lazy initialization)
+func (h *WebSocketTestHelper) GetServer(t *testing.T) *WebSocketServer {
+	h.serverOnce.Do(func() {
+		// Create server configuration
+		cfg := h.configManager.GetConfig()
+		serverConfig := &ServerConfig{
+			Host:                 h.config.Host,
+			Port:                 h.config.Port,
+			WebSocketPath:        h.config.WebSocketPath,
+			MaxConnections:       h.config.MaxConnections,
+			ReadTimeout:          h.config.ReadTimeout,
+			WriteTimeout:         h.config.WriteTimeout,
+			PingInterval:         h.config.PingInterval,
+			PongWait:             h.config.PongWait,
+			MaxMessageSize:       h.config.MaxMessageSize,
+			ReadBufferSize:       h.config.ReadBufferSize,
+			WriteBufferSize:      h.config.WriteBufferSize,
+			ShutdownTimeout:      h.config.ShutdownTimeout,
+			ClientCleanupTimeout: h.config.ClientCleanupTimeout,
+		}
+
+		// Create JWT handler
+		jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, h.logger)
+		require.NoError(t, err, "Failed to create JWT handler")
+
+		// Create MediaMTX controller
+		mediaMTXController := h.GetMediaMTXController(t)
+
+		// Create WebSocket server using production constructor
+		server, err := NewWebSocketServer(
+			h.configManager,
+			h.logger,
+			jwtHandler,
+			mediaMTXController,
+		)
+		require.NoError(t, err, "Failed to create WebSocket server")
+
+		// Override config with test-specific settings
+		server.config = serverConfig
+		h.server = server
+	})
+
+	return h.server
+}
+
+// GetMediaMTXController returns the MediaMTX controller instance (lazy initialization)
+func (h *WebSocketTestHelper) GetMediaMTXController(t *testing.T) mediamtx.MediaMTXController {
+	h.controllerOnce.Do(func() {
+		// Use MediaMTX test helper to create controller
+		helper := mediamtx.NewMediaMTXTestHelper(t, nil)
+		controller, err := helper.GetController(t)
+		require.NoError(t, err, "Failed to create MediaMTX controller")
+
+		// Start the controller (following MediaMTX test pattern)
+		ctx := context.Background()
+		if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
+			err := concreteController.Start(ctx)
+			require.NoError(t, err, "Failed to start MediaMTX controller")
+		}
+
+		h.mediaMTXController = controller
+	})
+
+	return h.mediaMTXController
+}
+
+// StartServer starts the WebSocket server following Progressive Readiness Pattern
+// FIXED: No longer waits for camera monitor readiness - follows architecture pattern
+func (h *WebSocketTestHelper) StartServer(t *testing.T) *WebSocketServer {
+	server := h.GetServer(t)
+
+	// Start WebSocket server immediately - Progressive Readiness Pattern
+	// System accepts connections immediately, features become available as components initialize
+	err := server.Start()
+	require.NoError(t, err, "Failed to start WebSocket server")
+
+	return server
 }
 
 // getTestConfigPathForSetup gets the test config path for TestMain setup
@@ -176,60 +370,113 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	return server
 }
 
-// StartTestServerWithDependencies starts the WebSocket server following the same pattern as main()
-// FIXED: Use proper API instead of calling private Start method
+// StartTestServerWithDependencies starts the WebSocket server following Progressive Readiness Pattern
+// FIXED: No longer waits for camera monitor readiness - follows architecture pattern
 func StartTestServerWithDependencies(t *testing.T, server *WebSocketServer) {
 	t.Helper()
 
-	// FIXED: MediaMTX controller is already started by MediaMTXTestHelper
-	// No need to call private Start method - this violates architecture
-	// The MediaMTX controller should be ready to use via its public API
-
-	// Wait for camera monitor to be ready (our new readiness check)
-	// This ensures cameras are discovered before tests run
-	waitForCameraMonitorReady(t, server.mediaMTXController)
-
-	// Start WebSocket server (following main() pattern)
+	// Start WebSocket server immediately - Progressive Readiness Pattern
+	// System accepts connections immediately, features become available as components initialize
 	err := server.Start()
 	require.NoError(t, err, "Failed to start WebSocket server")
 }
 
-// REMOVED: createTestCameraMonitor - WebSocket tests should not create camera monitors directly
-// Camera monitor creation is MediaMTX controller's responsibility, not WebSocket layer's
-// This violates the architecture: WebSocket → MediaMTX Controller → Camera Monitor
+// REMOVED: waitForCameraMonitorReady - This function violated the Progressive Readiness Pattern
+// The architecture states: "System accepts connections immediately"
+// "Features become available as components initialize"
+// "No blocking startup dependencies"
 
-// waitForCameraMonitorReady waits for the camera monitor to complete initial discovery
-func waitForCameraMonitorReady(t *testing.T, controller mediamtx.MediaMTXControllerAPI) {
+// ValidateProgressiveReadiness validates that the system follows the Progressive Readiness Pattern
+func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server *WebSocketServer) {
 	t.Helper()
 
-	const maxWaitTime = 2 * time.Second         // Reasonable timeout
-	const checkInterval = 50 * time.Millisecond // Check every 50ms
+	// Test 1: System should accept connections immediately
+	conn := h.NewTestClient(t, server)
+	defer h.CleanupTestClient(t, conn)
 
-	timeout := time.After(maxWaitTime)
-	ticker := time.NewTicker(checkInterval)
-	defer ticker.Stop()
+	// Test 2: System should return readiness status instead of blocking
+	message := CreateTestMessage("get_system_status", nil)
+	response := SendTestMessage(t, conn, message)
 
-	for {
-		select {
-		case <-timeout:
-			t.Logf("Timeout waiting for camera monitor to be ready (waited %v)", maxWaitTime)
-			return // Don't fail the test, just log and continue
-		case <-ticker.C:
-			// Check if the camera monitor is ready by trying to get camera list
-			// If it returns cameras or completes without error, it's ready
-			ctx := context.Background()
-			cameraList, err := controller.GetCameraList(ctx)
-			if err == nil {
-				// Camera monitor is ready - it can successfully query cameras
-				t.Logf("Camera monitor is ready, found %d cameras", cameraList.Total)
-				return
+	require.NotNil(t, response, "System should respond to status requests immediately")
+	require.Nil(t, response.Error, "System should not error on status requests")
+	require.NotNil(t, response.Result, "System should return readiness status")
+
+	// Test 3: System should handle requests even when not fully ready
+	// This validates the Progressive Readiness Pattern behavior
+	pingMessage := CreateTestMessage("ping", nil)
+	pingResponse := SendTestMessage(t, conn, pingMessage)
+
+	// System should either respond with pong or readiness status
+	require.NotNil(t, pingResponse, "System should respond to ping requests")
+	if pingResponse.Error == nil {
+		// If no error, should get pong response
+		require.Equal(t, "pong", pingResponse.Result, "Should get pong response when system is ready")
+	} else {
+		// If error, should be authentication error, not system not ready error
+		require.NotEqual(t, -32002, pingResponse.Error.Code, "Should not get system not ready error")
+	}
+
+	t.Log("✅ Progressive Readiness Pattern validation passed")
+}
+
+// TestProgressiveReadinessBehavior tests the Progressive Readiness Pattern behavior
+func (h *WebSocketTestHelper) TestProgressiveReadinessBehavior(t *testing.T, server *WebSocketServer) {
+	t.Helper()
+
+	// Test immediate connection acceptance
+	conn := h.NewTestClient(t, server)
+	defer h.CleanupTestClient(t, conn)
+
+	// Test that system returns proper readiness status
+	statusMessage := CreateTestMessage("get_system_status", nil)
+	statusResponse := SendTestMessage(t, conn, statusMessage)
+
+	require.NotNil(t, statusResponse, "System should respond to status requests immediately")
+	require.Nil(t, statusResponse.Error, "Status request should not error")
+
+	// Validate response structure
+	statusResult, ok := statusResponse.Result.(map[string]interface{})
+	require.True(t, ok, "Status response should be a map")
+	require.Contains(t, statusResult, "status", "Status response should contain status field")
+	require.Contains(t, statusResult, "message", "Status response should contain message field")
+	require.Contains(t, statusResult, "available_cameras", "Status response should contain available_cameras field")
+	require.Contains(t, statusResult, "discovery_active", "Status response should contain discovery_active field")
+
+	t.Log("✅ Progressive Readiness behavior test passed")
+}
+
+// NewTestClient creates a test WebSocket client connection
+func (h *WebSocketTestHelper) NewTestClient(t *testing.T, server *WebSocketServer) *websocket.Conn {
+	// Start server if not running
+	if !server.IsRunning() {
+		err := server.Start()
+		require.NoError(t, err, "Failed to start test server")
+
+		// Wait for server to be ready with proper verification
+		deadline := time.Now().Add(1 * time.Second)
+		for time.Now().Before(deadline) {
+			if server.IsRunning() {
+				break
 			}
-			// If error is "controller not running", keep waiting
-			if !strings.Contains(err.Error(), "controller not running") {
-				// Other errors might indicate readiness (e.g., no cameras found)
-				t.Logf("Camera monitor appears ready (error: %v)", err)
-				return
-			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	// Connect to server
+	url := fmt.Sprintf("ws://localhost:%d/ws", server.config.Port)
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	require.NoError(t, err, "Failed to connect to test server")
+
+	return conn
+}
+
+// CleanupTestClient closes a test client connection
+func (h *WebSocketTestHelper) CleanupTestClient(t *testing.T, conn *websocket.Conn) {
+	if conn != nil {
+		err := conn.Close()
+		if err != nil {
+			t.Logf("Warning: Failed to close test client: %v", err)
 		}
 	}
 }

@@ -630,16 +630,22 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 			device, err := m.createCameraDeviceInfoFromSource(ctx, src)
 			if err != nil {
 				m.logger.WithFields(logging.Fields{
-					"source": src.Identifier,
-					"error":  err.Error(),
-					"action": "device_check_error",
+					"source":      src.Identifier,
+					"source_type": src.Type,
+					"source_path": src.Source,
+					"error":       err.Error(),
+					"action":      "device_check_error",
 				}).Debug("Error checking device")
 
-				// Propagate device check errors
+				// Propagate device check errors with more context
 				select {
-				case errorChan <- fmt.Errorf("device check failed for source %s: %w", src.Identifier, err):
+				case errorChan <- fmt.Errorf("device check failed for source %s (type: %s, path: %s): %w", src.Identifier, src.Type, src.Source, err):
 				default:
-					m.logger.WithError(err).Warn("Error channel overflow, device check error dropped")
+					m.logger.WithError(err).WithFields(logging.Fields{
+						"source":      src.Identifier,
+						"source_type": src.Type,
+						"source_path": src.Source,
+					}).Warn("Error channel overflow, device check error dropped")
 				}
 				return
 			}
@@ -681,7 +687,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 
 	// Process any errors that occurred during device checking
 	for err := range errorChan {
-		m.logger.WithError(err).Warn("Device check error occurred")
+		m.logger.WithError(err).WithField("error_type", "device_check").Warn("Device check error occurred")
 		// Optionally increment error counters or trigger recovery mechanisms
 		atomic.AddInt64(&m.pollingFailureCount, 1)
 	}
@@ -719,7 +725,7 @@ func (m *HybridCameraMonitor) createUSBCameraDeviceInfo(ctx context.Context, sou
 func (m *HybridCameraMonitor) createCameraDeviceInfo(ctx context.Context, devicePath string, deviceNum int) (*CameraDevice, error) {
 	// Check if device file exists
 	if !m.deviceChecker.Exists(devicePath) {
-		return nil, fmt.Errorf("device does not exist")
+		return nil, fmt.Errorf("device does not exist: %s", devicePath)
 	}
 
 	device := &CameraDevice{

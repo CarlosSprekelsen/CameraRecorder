@@ -1011,7 +1011,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 	c.sessionsMu.Lock()
 	if _, exists := c.sessions[sessionID]; exists {
 		c.sessionsMu.Unlock()
-		return nil, NewRecordingError(sessionID, devicePath, "start_recording", "session already exists")
+		return nil, fmt.Errorf("recording session %s already exists", sessionID)
 	}
 	c.sessionsMu.Unlock()
 
@@ -1035,7 +1035,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 
 	recordingSession, err := c.recordingManager.StartRecording(ctx, devicePath, session.FilePath, options)
 	if err != nil {
-		return nil, NewRecordingErrorWithErr(sessionID, devicePath, "start_recording", "failed to start MediaMTX recording", err)
+		return nil, fmt.Errorf("failed to start MediaMTX recording for session %s: %w", sessionID, err)
 	}
 
 	// Update session with MediaMTX recording info
@@ -1084,12 +1084,12 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 	session, exists := c.sessions[sessionID]
 	if !exists {
 		c.sessionsMu.Unlock()
-		return NewRecordingError(sessionID, "", "stop_recording", "session not found")
+		return fmt.Errorf("recording session %s not found", sessionID)
 	}
 
 	if session.Status != "active" {
 		c.sessionsMu.Unlock()
-		return NewRecordingError(sessionID, session.Device, "stop_recording", "session is not recording")
+		return fmt.Errorf("recording session %s is not active (status: %s)", sessionID, session.Status)
 	}
 
 	// Update session status
@@ -1149,7 +1149,7 @@ func (c *controller) UpdateConfig(ctx context.Context, config *MediaMTXConfig) e
 
 	// Validate new configuration
 	if err := validateConfig(config); err != nil {
-		return NewConfigurationErrorWithErr("config", "validation", "invalid configuration", err)
+		return fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	// Update configuration
@@ -1174,49 +1174,49 @@ func (c *controller) GetSnapshotManager() *SnapshotManager {
 // validateConfig validates the MediaMTX configuration
 func validateConfig(config *MediaMTXConfig) error {
 	if config == nil {
-		return NewConfigurationError("config", "nil", "configuration cannot be nil")
+		return fmt.Errorf("configuration cannot be nil")
 	}
 
 	if config.BaseURL == "" {
-		return NewConfigurationError("base_url", "", "base URL is required")
+		return fmt.Errorf("base URL is required")
 	}
 
 	if config.Timeout <= 0 {
-		return NewConfigurationError("timeout", config.Timeout.String(), "timeout must be positive")
+		return fmt.Errorf("timeout must be positive")
 	}
 
 	if config.RetryAttempts < 0 {
-		return NewConfigurationError("retry_attempts", strconv.Itoa(config.RetryAttempts), "retry attempts cannot be negative")
+		return fmt.Errorf("retry attempts cannot be negative")
 	}
 
 	if config.RetryDelay <= 0 {
-		return NewConfigurationError("retry_delay", config.RetryDelay.String(), "retry delay must be positive")
+		return fmt.Errorf("retry delay must be positive")
 	}
 
 	// Validate circuit breaker configuration
 	if config.CircuitBreaker.FailureThreshold <= 0 {
-		return NewConfigurationError("circuit_breaker.failure_threshold", strconv.Itoa(config.CircuitBreaker.FailureThreshold), "failure threshold must be positive")
+		return fmt.Errorf("circuit breaker failure threshold must be positive")
 	}
 
 	if config.CircuitBreaker.RecoveryTimeout <= 0 {
-		return NewConfigurationError("circuit_breaker.recovery_timeout", config.CircuitBreaker.RecoveryTimeout.String(), "recovery timeout must be positive")
+		return fmt.Errorf("circuit breaker recovery timeout must be positive")
 	}
 
 	if config.CircuitBreaker.MaxFailures <= 0 {
-		return NewConfigurationError("circuit_breaker.max_failures", strconv.Itoa(config.CircuitBreaker.MaxFailures), "max failures must be positive")
+		return fmt.Errorf("circuit breaker max failures must be positive")
 	}
 
 	// Validate connection pool configuration
 	if config.ConnectionPool.MaxIdleConns <= 0 {
-		return NewConfigurationError("connection_pool.max_idle_conns", strconv.Itoa(config.ConnectionPool.MaxIdleConns), "max idle connections must be positive")
+		return fmt.Errorf("connection pool max idle connections must be positive")
 	}
 
 	if config.ConnectionPool.MaxIdleConnsPerHost <= 0 {
-		return NewConfigurationError("connection_pool.max_idle_conns_per_host", strconv.Itoa(config.ConnectionPool.MaxIdleConnsPerHost), "max idle connections per host must be positive")
+		return fmt.Errorf("connection pool max idle connections per host must be positive")
 	}
 
 	if config.ConnectionPool.IdleConnTimeout <= 0 {
-		return NewConfigurationError("connection_pool.idle_conn_timeout", config.ConnectionPool.IdleConnTimeout.String(), "idle connection timeout must be positive")
+		return fmt.Errorf("connection pool idle connection timeout must be positive")
 	}
 
 	return nil

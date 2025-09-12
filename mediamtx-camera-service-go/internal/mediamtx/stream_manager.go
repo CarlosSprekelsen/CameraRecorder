@@ -136,7 +136,19 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 		// Check if this is a "path already exists" error (idempotent success)
 		errorMsg := err.Error()
 		sm.logger.WithField("error_message", errorMsg).Error("CreatePath error message")
-		if strings.Contains(errorMsg, "path already exists") || strings.Contains(errorMsg, "already exists") {
+
+		// Check both the error message and details for the specific error text
+		isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
+			strings.Contains(errorMsg, "already exists")
+
+		// Also check the details field for MediaMTXError
+		if mediaMTXErr, ok := err.(*MediaMTXError); ok {
+			isAlreadyExists = isAlreadyExists ||
+				strings.Contains(mediaMTXErr.Details, "path already exists") ||
+				strings.Contains(mediaMTXErr.Details, "already exists")
+		}
+
+		if isAlreadyExists {
 			sm.logger.WithField("stream_name", streamName).Info("MediaMTX path already exists, treating as success")
 			// Return a mock stream response for idempotent success
 			stream := &Stream{
@@ -149,7 +161,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 			}
 			return stream, nil
 		}
-		return nil, NewStreamErrorWithErr(streamName, "create_stream", "failed to create stream", err)
+		return nil, fmt.Errorf(streamName, "create_stream", "failed to create stream", err)
 	}
 
 	// PathManager.CreatePath succeeded - create stream response
@@ -273,7 +285,18 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {
 			// Check if this is a "path already exists" error (idempotent success)
-			if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+			errorMsg := err.Error()
+			isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
+				strings.Contains(errorMsg, "already exists")
+
+			// Also check the details field for MediaMTXError
+			if mediaMTXErr, ok := err.(*MediaMTXError); ok {
+				isAlreadyExists = isAlreadyExists ||
+					strings.Contains(mediaMTXErr.Details, "path already exists") ||
+					strings.Contains(mediaMTXErr.Details, "already exists")
+			}
+
+			if isAlreadyExists {
 				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
 				// Return a mock stream response for idempotent success
 				stream := &Stream{
@@ -286,7 +309,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 				}
 				return stream, nil
 			}
-			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
+			return nil, fmt.Errorf(name, "create_stream", "failed to create stream", err)
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
@@ -311,7 +334,18 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {
 			// Check if this is a "path already exists" error (idempotent success)
-			if strings.Contains(err.Error(), "path already exists") || strings.Contains(err.Error(), "already exists") {
+			errorMsg := err.Error()
+			isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
+				strings.Contains(errorMsg, "already exists")
+
+			// Also check the details field for MediaMTXError
+			if mediaMTXErr, ok := err.(*MediaMTXError); ok {
+				isAlreadyExists = isAlreadyExists ||
+					strings.Contains(mediaMTXErr.Details, "path already exists") ||
+					strings.Contains(mediaMTXErr.Details, "already exists")
+			}
+
+			if isAlreadyExists {
 				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
 				// Return a mock stream response for idempotent success
 				stream := &Stream{
@@ -324,7 +358,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 				}
 				return stream, nil
 			}
-			return nil, NewStreamErrorWithErr(name, "create_stream", "failed to create stream", err)
+			return nil, fmt.Errorf(name, "create_stream", "failed to create stream", err)
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
@@ -348,7 +382,7 @@ func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 	// Use PathManager for proper architectural integration
 	err := sm.pathManager.DeletePath(ctx, id)
 	if err != nil {
-		return NewStreamErrorWithErr(id, "delete_stream", "failed to delete stream", err)
+		return fmt.Errorf(id, "delete_stream", "failed to delete stream", err)
 	}
 
 	sm.logger.WithField("stream_id", id).Info("MediaMTX stream deleted successfully")
@@ -362,7 +396,7 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, err
 	// Use PathManager for proper architectural integration
 	path, err := sm.pathManager.GetPath(ctx, id)
 	if err != nil {
-		return nil, NewStreamErrorWithErr(id, "get_stream", "failed to get stream", err)
+		return nil, fmt.Errorf(id, "get_stream", "failed to get stream", err)
 	}
 
 	// Convert Path to Stream
@@ -412,7 +446,7 @@ func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
 	// Get stream status
 	status, err := sm.GetStreamStatus(ctx, id)
 	if err != nil {
-		return NewStreamErrorWithErr(id, "monitor_stream", "failed to get stream status", err)
+		return fmt.Errorf(id, "monitor_stream", "failed to get stream status", err)
 	}
 
 	sm.logger.WithFields(logging.Fields{
@@ -429,7 +463,7 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, id string) (string
 
 	stream, err := sm.GetStream(ctx, id)
 	if err != nil {
-		return "", NewStreamErrorWithErr(id, "get_stream_status", "failed to get stream", err)
+		return "", fmt.Errorf(id, "get_stream_status", "failed to get stream", err)
 	}
 
 	// Convert MediaMTX ready status to our status format
@@ -538,8 +572,10 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 	// Get the stable path name
 	pathName := GetMediaMTXPathName(devicePath)
 
-	// Serialize create→ready→patch operations per path
-	// Note: We'll implement serialization at a higher level to avoid type assertion
+	// Serialize create→ready→patch operations per path using per-path mutex
+	pathMutex := sm.pathManager.(*pathManager).getPathMutex(pathName)
+	pathMutex.Lock()
+	defer pathMutex.Unlock()
 
 	// Ensure the path exists (idempotent)
 	stream, err := sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
@@ -554,7 +590,7 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 	}).Info("Path ensured, waiting for readiness")
 
 	// Wait for path to be ready in runtime (not config)
-	err = sm.pathManager.WaitForPathReady(ctx, pathName, 2*time.Second)
+	err = sm.pathManager.WaitForPathReady(ctx, pathName, 8*time.Second)
 	if err != nil {
 		return fmt.Errorf("failed to wait for path readiness: %w", err)
 	}
@@ -585,8 +621,10 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string) error {
 	pathName := GetMediaMTXPathName(devicePath)
 
-	// Serialize operations per path
-	// Note: We'll implement serialization at a higher level to avoid type assertion
+	// Serialize operations per path using per-path mutex
+	pathMutex := sm.pathManager.(*pathManager).getPathMutex(pathName)
+	pathMutex.Lock()
+	defer pathMutex.Unlock()
 
 	// PATCH to disable recording (keep path for streaming)
 	recordingConfig := map[string]interface{}{
@@ -624,7 +662,9 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) string {
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
-		return filepath.Join(dir, fmt.Sprintf("%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName))
+		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
+		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
 	}
-	return fmt.Sprintf("/opt/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName)
+	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
+	return "/opt/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4"
 }

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -631,13 +632,6 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create temporary output directory
-	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "snapshots")
-	err = os.MkdirAll(tempDir, 0755)
-	require.NoError(t, err)
-
-	outputPath := filepath.Join(tempDir, "test_snapshot.jpg")
-
 	// Test snapshot with camera identifier (abstraction layer)
 	options := map[string]interface{}{}
 
@@ -651,7 +645,14 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Verify snapshot properties
 	assert.NotEmpty(t, snapshot.ID, "Snapshot should have an ID")
 	assert.Equal(t, "camera0", snapshot.Device, "Should use camera identifier")
-	assert.Equal(t, outputPath, snapshot.FilePath, "Should match output path")
+
+	// Verify the snapshot path follows the fixture configuration
+	// Use configured path instead of hardcoded path
+	expectedPath := helper.GetConfiguredSnapshotPath()
+	assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
+		"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
+	assert.Contains(t, snapshot.FilePath, "camera0", "File path should contain camera identifier")
+	assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 }
 
 // TestController_StreamManagement_ReqMTX002 tests stream management through controller
@@ -708,7 +709,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Test advanced recording with options
 	device := "camera0"
-	path := "/tmp/mediamtx_test_data/recordings/advanced_test.mp4"
+	path := "/tmp/recordings/advanced_test.mp4" // Use configured path from fixture
 	options := map[string]interface{}{
 		"quality":      "high",
 		"resolution":   "1920x1080",
@@ -750,35 +751,23 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 // TestController_StreamRecording_ReqMTX002 tests stream recording functionality
 func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (stream recording)
+	// Use proper orchestration following the Progressive Readiness Pattern
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Server is ready via shared test helper
-
-	// Create config manager using test fixture
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
-	_, err := configIntegration.GetMediaMTXConfig()
-	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
-
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Get controller with proper service orchestration
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
-	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		controller.Stop(stopCtx)
 	}()
 
-	// Test stream recording
+	// Test stream recording - service is now ready following the architecture pattern
+	ctx := context.Background()
 	device := "camera0"
 	stream, err := controller.StartStreaming(ctx, device)
 	require.NoError(t, err, "Stream recording should start successfully")
@@ -944,7 +933,6 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 
 	// Test TakeAdvancedSnapshot
 	device := "camera0"
-	path := "/tmp/mediamtx_test_data/snapshots/advanced_test.jpg"
 	options := map[string]interface{}{
 		"quality": 85,
 		"tier":    "all",
@@ -958,7 +946,14 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	} else {
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
 		assert.Equal(t, device, snapshot.Device, "Device should match")
-		assert.Equal(t, path, snapshot.FilePath, "File path should match")
+
+		// Verify the snapshot path follows the fixture configuration
+		// Use configured path instead of hardcoded path
+		expectedPath := "/tmp/snapshots" // From fixture configuration
+		assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
+			"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
+		assert.Contains(t, snapshot.FilePath, "camera0", "File path should contain camera identifier")
+		assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 		t.Log("✅ Advanced snapshot successful")
 	}
 

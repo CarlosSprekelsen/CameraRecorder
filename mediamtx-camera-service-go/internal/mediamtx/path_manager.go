@@ -42,7 +42,7 @@ type pathManager struct {
 	// Idempotency protection for concurrent path creation
 	createGroup singleflight.Group
 
-	// Per-path mutex for serializing create→ready→patch operations
+	// Per-path mutexes for serializing create→ready→patch operations
 	pathMutexes map[string]*sync.Mutex
 	pathMutexMu sync.RWMutex
 }
@@ -211,8 +211,18 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		}).Error("CreatePath HTTP request failed")
 
 		// Check if this is a "path already exists" error (idempotent success)
-		if strings.Contains(errorMsg, "path already exists") ||
-			strings.Contains(errorMsg, "already exists") {
+		// Check both the error message and details for the specific error text
+		isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
+			strings.Contains(errorMsg, "already exists")
+
+		// Also check the details field for MediaMTXError
+		if mediaMTXErr, ok := err.(*MediaMTXError); ok {
+			isAlreadyExists = isAlreadyExists ||
+				strings.Contains(mediaMTXErr.Details, "path already exists") ||
+				strings.Contains(mediaMTXErr.Details, "already exists")
+		}
+
+		if isAlreadyExists {
 			pm.logger.WithFields(logging.Fields{
 				"name":  name,
 				"error": errorMsg,
@@ -406,16 +416,10 @@ func (pm *pathManager) ListPaths(ctx context.Context) ([]*Path, error) {
 func (pm *pathManager) ValidatePath(ctx context.Context, name string) error {
 	pm.logger.WithField("name", name).Debug("Validating MediaMTX path")
 
-	// Check if path exists
-	exists := pm.PathExists(ctx, name)
-	if !exists {
-		return NewPathError(name, "validate_path", "path does not exist")
-	}
-
-	// Get path details to validate configuration
+	// Get path details to validate configuration (this also checks existence)
 	_, err := pm.GetPath(ctx, name)
 	if err != nil {
-		return NewPathErrorWithErr(name, "validate_path", "failed to get path details", err)
+		return NewPathErrorWithErr(name, "validate_path", "path does not exist or failed to get path details", err)
 	}
 
 	pm.logger.WithField("name", name).Debug("MediaMTX path validated successfully")

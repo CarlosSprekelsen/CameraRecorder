@@ -30,20 +30,12 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// CRITICAL: Wait for controller to be ready (architecture requirement)
-	require.Eventually(t, func() bool {
-		return controller.IsReady()
-	}, 10*time.Second, 100*time.Millisecond, "Controller should become ready within 10 seconds")
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -102,15 +94,12 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -119,8 +108,8 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create test output directory
-	outputDir := "/tmp/test_stop_advanced_recordings"
+	// Create test output directory using configured path
+	outputDir := filepath.Join(helper.GetConfiguredRecordingPath(), "test_stop_advanced_recordings")
 	err = os.MkdirAll(outputDir, 0755)
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
@@ -162,15 +151,12 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -179,8 +165,8 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create test output directory
-	outputDir := "/tmp/test_get_advanced_recordings"
+	// Create test output directory using configured path
+	outputDir := filepath.Join(helper.GetConfiguredRecordingPath(), "test_get_advanced_recordings")
 	err = os.MkdirAll(outputDir, 0755)
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
@@ -221,15 +207,12 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -238,8 +221,8 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create test output directory
-	outputDir := "/tmp/test_list_advanced_recordings"
+	// Create test output directory using configured path
+	outputDir := filepath.Join(helper.GetConfiguredRecordingPath(), "test_list_advanced_recordings")
 	err = os.MkdirAll(outputDir, 0755)
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
@@ -291,15 +274,12 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// Start the controller
 	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -308,8 +288,8 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create test output directory
-	outputDir := "/tmp/test_rotate_advanced_recordings"
+	// Create test output directory using configured path
+	outputDir := filepath.Join(helper.GetConfiguredRecordingPath(), "test_rotate_advanced_recordings")
 	err = os.MkdirAll(outputDir, 0755)
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)

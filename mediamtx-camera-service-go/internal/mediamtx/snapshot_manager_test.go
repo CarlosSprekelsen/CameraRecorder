@@ -1042,7 +1042,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	// Test Tier 2: RTSP Immediate Capture
 	t.Run("Tier2_RTSPImmediate", func(t *testing.T) {
 		// Create a test stream first to enable RTSP capture
-		path := "/tmp/mediamtx_test_data/snapshots/tier2_test.jpg"
+		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "tier2_test.jpg")
 
 		// Take snapshot - this should attempt tier 2 if tier 1 fails
 		options := map[string]interface{}{"quality": 85}
@@ -1061,7 +1061,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	// Test Tier 3: RTSP Stream Activation
 	t.Run("Tier3_RTSPActivation", func(t *testing.T) {
 		// This tier requires an active RTSP stream, which might not be available in test environment
-		path := "/tmp/mediamtx_test_data/snapshots/tier3_test.jpg"
+		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "tier3_test.jpg")
 
 		// Take snapshot - this should attempt tier 3 if tiers 1 and 2 fail
 		options := map[string]interface{}{"quality": 85}
@@ -1079,7 +1079,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 
 	// Test Multi-tier fallback behavior
 	t.Run("MultiTierFallback", func(t *testing.T) {
-		path := "/tmp/mediamtx_test_data/snapshots/multitier_test.jpg"
+		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "multitier_test.jpg")
 
 		// This should try all tiers in sequence
 		options := map[string]interface{}{"quality": 85}

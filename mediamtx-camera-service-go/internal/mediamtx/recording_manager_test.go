@@ -207,7 +207,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	ctx := context.Background()
 
 	devicePath := "/dev/video0"
-	outputPath := "/tmp/test_recording_path.mp4"
+	outputPath := filepath.Join(helper.GetConfiguredRecordingPath(), "test_recording_path.mp4")
 
 	// Test: StartRecording should create a path in MediaMTX via API
 	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, map[string]interface{}{})

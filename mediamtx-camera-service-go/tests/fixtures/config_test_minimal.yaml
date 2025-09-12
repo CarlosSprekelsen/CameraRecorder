@@ -42,7 +42,7 @@ mediamtx:
 camera:
   poll_interval: 0.2
   detection_timeout: 2.0
-  device_range: [0, 9]
+  device_range: [0, 1]  # Only check devices that actually exist
   enable_capability_detection: true
   auto_start_streams: false
   capability_timeout: 2.0

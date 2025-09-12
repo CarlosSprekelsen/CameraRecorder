@@ -30,15 +30,16 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client using the helper
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -59,15 +60,16 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client using the helper (admin role for get_server_info)
 	AuthenticateTestClient(t, conn, "test_user", "admin")
@@ -88,15 +90,16 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client using the helper (admin role for get_status)
 	AuthenticateTestClient(t, conn, "test_user", "admin")
@@ -114,15 +117,16 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 
 // TestWebSocketMethods_InvalidJSON tests invalid JSON handling
 func TestWebSocketMethods_InvalidJSON(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Send invalid JSON
 	err := conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
@@ -142,15 +146,16 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 
 // TestWebSocketMethods_MissingMethod tests missing method handling
 func TestWebSocketMethods_MissingMethod(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Send message without method
 	message := &JsonRpcRequest{
@@ -171,15 +176,16 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 
 // TestWebSocketMethods_MissingJSONRPC tests missing JSON-RPC version
 func TestWebSocketMethods_MissingJSONRPC(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Send message without JSON-RPC version
 	message := &JsonRpcRequest{
@@ -201,15 +207,16 @@ func TestWebSocketMethods_MissingJSONRPC(t *testing.T) {
 // TestWebSocketMethods_SequentialRequests tests sequential request handling
 // This test properly tests the server's ability to handle multiple requests efficiently
 func TestWebSocketMethods_SequentialRequests(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Create a single connection for all requests
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate the client once using the helper
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -237,11 +244,12 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 // TestWebSocketMethods_MultipleConnections tests multiple connections handling
 // This test properly creates multiple connections with proper synchronization
 func TestWebSocketMethods_MultipleConnections(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Test multiple connections with proper synchronization
 	const numConnections = 5
@@ -262,8 +270,8 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 			defer func() { <-semaphore }()
 
 			// Create connection for this goroutine
-			conn := NewTestClient(t, server)
-			defer CleanupTestClient(t, conn)
+			conn := helper.NewTestClient(t, server)
+			defer helper.CleanupTestClient(t, conn)
 
 			// Authenticate the client using the helper
 			AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -300,15 +308,16 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 
 // TestWebSocketMethods_LargePayload tests large payload handling
 func TestWebSocketMethods_LargePayload(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Create large payload
 	largeData := make([]string, 1000)
@@ -332,8 +341,12 @@ func TestWebSocketMethods_LargePayload(t *testing.T) {
 
 // TestWebSocketMethods_Timeout tests request timeout handling
 func TestWebSocketMethods_Timeout(t *testing.T) {
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Register a method that takes time
 	server.registerMethod("slow_method", func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
@@ -341,12 +354,9 @@ func TestWebSocketMethods_Timeout(t *testing.T) {
 		return CreateTestResponse("test-id", "slow_result"), nil
 	}, "1.0")
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
-
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Set read timeout
 	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
@@ -368,15 +378,16 @@ func TestWebSocketMethods_Timeout(t *testing.T) {
 func TestWebSocketMethods_GetCameraList(t *testing.T) {
 	// REQ-API-004: Core method implementations (get_camera_list)
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client using the new helper (eliminates duplication)
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -411,15 +422,16 @@ func TestWebSocketMethods_GetCameraList(t *testing.T) {
 func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 	// REQ-API-004: Core method implementations (get_camera_status)
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -446,15 +458,16 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 	// REQ-API-004: Core method implementations (get_camera_capabilities)
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -481,15 +494,16 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 func TestWebSocketMethods_StartRecording(t *testing.T) {
 	// REQ-API-004: Core method implementations (start_recording)
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client with operator role for recording operations
 	AuthenticateTestClient(t, conn, "test_user", "operator")
@@ -512,15 +526,16 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 func TestWebSocketMethods_StopRecording(t *testing.T) {
 	// REQ-API-004: Core method implementations (stop_recording)
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client with operator role for recording operations
 	AuthenticateTestClient(t, conn, "test_user", "operator")
@@ -547,15 +562,16 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	// REQ-API-004: Core method implementations with authentication checks
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client WITHOUT authentication
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Test that unauthenticated access to protected methods fails
 	protectedMethods := []string{
@@ -582,15 +598,16 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 	// REQ-API-004: Core method implementations with parameter validation
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -627,15 +644,16 @@ func TestWebSocketMethods_InvalidCameraID(t *testing.T) {
 func TestWebSocketMethods_AbstractionLayerMapping_REMOVED(t *testing.T) {
 	// REQ-API-004: Core method implementations with abstraction layer validation
 
-	server := NewTestWebSocketServer(t)
-	defer CleanupTestServer(t, server)
+	EnsureSequentialExecution(t)
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Start server with proper dependencies (following main() pattern)
-	StartTestServerWithDependencies(t, server)
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
 
 	// Connect client
-	conn := NewTestClient(t, server)
-	defer CleanupTestClient(t, conn)
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
 
 	// Authenticate client
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
@@ -706,16 +724,9 @@ func TestWebSocketMethods_AbstractionLayerMapping_REMOVED(t *testing.T) {
 func TestWebSocketMethods_AbstractionLayerErrorHandling_REMOVED(t *testing.T) {
 	// Test removed - error handling in abstraction layer is now handled by MediaMTX Controller
 	t.Skip("Test removed - abstraction layer error handling moved to MediaMTX Controller")
-	return
 
-	// Start server with proper dependencies (following main() pattern) - REMOVED
-	// StartTestServerWithDependencies(t, server)
-
-	// Connect client - REMOVED
-	// conn := NewTestClient(t, server)
-	// defer CleanupTestClient(t, conn)
-
-	// Test methods that should reject device paths (internal implementation) - REMOVED
+	// This test validates that the system properly handles device path validation
+	// without requiring actual server setup (unit test approach)
 	/*t.Run("RejectDevicePaths", func(t *testing.T) {
 		methods := []string{
 			"get_camera_status",
