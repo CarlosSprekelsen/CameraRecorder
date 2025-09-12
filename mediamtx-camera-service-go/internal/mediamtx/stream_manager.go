@@ -16,6 +16,7 @@ package mediamtx
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -84,7 +85,7 @@ func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*S
 	if sm.client == nil {
 		return nil, fmt.Errorf("MediaMTXClient not initialized")
 	}
-	
+
 	return sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
 }
 
@@ -537,6 +538,9 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 	// Get the stable path name
 	pathName := GetMediaMTXPathName(devicePath)
 
+	// Serialize create→ready→patch operations per path
+	// Note: We'll implement serialization at a higher level to avoid type assertion
+
 	// Ensure the path exists (idempotent)
 	stream, err := sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
 	if err != nil {
@@ -547,12 +551,26 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 		"device_path": devicePath,
 		"path_name":   pathName,
 		"stream_name": stream.Name,
-	}).Info("Path ensured, enabling recording")
+	}).Info("Path ensured, waiting for readiness")
+
+	// Wait for path to be ready in runtime (not config)
+	err = sm.pathManager.WaitForPathReady(ctx, pathName, 2*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed to wait for path readiness: %w", err)
+	}
+
+	sm.logger.WithField("path_name", pathName).Info("Path is ready, enabling recording")
+
+	// Pre-create recording directory
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create recording directory: %w", err)
+	}
 
 	// Create recording configuration
 	recordingConfig := sm.createRecordingConfig(pathName, outputPath)
 
-	// PATCH the path to enable recording
+	// PATCH the path to enable recording (now with retry)
 	err = sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
 	if err != nil {
 		return fmt.Errorf("failed to enable recording: %w", err)
@@ -566,6 +584,9 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 // This keeps the path alive for streaming while stopping file recording
 func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string) error {
 	pathName := GetMediaMTXPathName(devicePath)
+
+	// Serialize operations per path
+	// Note: We'll implement serialization at a higher level to avoid type assertion
 
 	// PATCH to disable recording (keep path for streaming)
 	recordingConfig := map[string]interface{}{

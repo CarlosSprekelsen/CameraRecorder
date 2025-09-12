@@ -41,6 +41,10 @@ type pathManager struct {
 
 	// Idempotency protection for concurrent path creation
 	createGroup singleflight.Group
+
+	// Per-path mutex for serializing create→ready→patch operations
+	pathMutexes map[string]*sync.Mutex
+	pathMutexMu sync.RWMutex
 }
 
 // NewPathManager creates a new MediaMTX path manager
@@ -51,6 +55,7 @@ func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *loggi
 		logger:      logger,
 		cameraPaths: make(map[string]string),
 		pathCameras: make(map[string]string),
+		pathMutexes: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -63,7 +68,32 @@ func NewPathManagerWithCamera(client MediaMTXClient, config *MediaMTXConfig, cam
 		cameraMonitor: cameraMonitor,
 		cameraPaths:   make(map[string]string),
 		pathCameras:   make(map[string]string),
+		pathMutexes:   make(map[string]*sync.Mutex),
 	}
+}
+
+// getPathMutex gets or creates a mutex for the given path name
+func (pm *pathManager) getPathMutex(pathName string) *sync.Mutex {
+	pm.pathMutexMu.RLock()
+	mutex, exists := pm.pathMutexes[pathName]
+	pm.pathMutexMu.RUnlock()
+
+	if exists {
+		return mutex
+	}
+
+	pm.pathMutexMu.Lock()
+	defer pm.pathMutexMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if mutex, exists := pm.pathMutexes[pathName]; exists {
+		return mutex
+	}
+
+	// Create new mutex for this path
+	mutex = &sync.Mutex{}
+	pm.pathMutexes[pathName] = mutex
+	return mutex
 }
 
 // CreatePath creates a new path with idempotency protection
@@ -196,7 +226,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 	return nil
 }
 
-// PatchPath patches a path configuration
+// PatchPath patches a path configuration with retry and jitter
 func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[string]interface{}) error {
 	pm.logger.WithFields(logging.Fields{
 		"name":   name,
@@ -207,41 +237,121 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 		return fmt.Errorf("invalid path name: %w", err)
 	}
 
-	// Check if path exists before patching
-	pathExists := pm.PathExists(ctx, name)
-	pm.logger.WithFields(logging.Fields{
-		"path_name":   name,
-		"path_exists": pathExists,
-	}).Debug("Checking if path exists before patching")
-
-	if !pathExists {
-		return NewPathErrorWithErr(name, "patch_path", "path does not exist - cannot patch non-existent path", nil)
-	}
-
 	data, err := json.Marshal(config)
 	if err != nil {
 		return NewPathErrorWithErr(name, "patch_path", "failed to marshal config", err)
 	}
 
-	// Log the exact JSON being sent to MediaMTX
-	pm.logger.WithFields(logging.Fields{
-		"path_name":    name,
-		"url":          fmt.Sprintf("/v3/config/paths/patch/%s", name),
-		"json_payload": string(data),
-		"config":       config,
-	}).Debug("Sending PATCH request to MediaMTX")
+	// Retry with jitter: 100ms → 200ms → 400ms → 800ms (cap at ~2s total)
+	backoffs := []time.Duration{100 * time.Millisecond, 200 * time.Millisecond, 400 * time.Millisecond, 800 * time.Millisecond}
 
-	err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
-	if err != nil {
-		pm.logger.WithError(err).WithFields(logging.Fields{
+	for attempt, backoff := range backoffs {
+		pm.logger.WithFields(logging.Fields{
 			"path_name":    name,
+			"url":          fmt.Sprintf("/v3/config/paths/patch/%s", name),
 			"json_payload": string(data),
-		}).Error("MediaMTX PATCH request failed")
-		return NewPathErrorWithErr(name, "patch_path", "failed to patch path", err)
+			"config":       config,
+			"attempt":      attempt + 1,
+		}).Debug("Sending PATCH request to MediaMTX")
+
+		err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
+		if err == nil {
+			pm.logger.WithField("name", name).Info("MediaMTX path configuration patched successfully")
+			return nil
+		}
+
+		// Check if this is a retryable error
+		errorMsg := err.Error()
+		pm.logger.WithFields(logging.Fields{
+			"path_name": name,
+			"attempt":   attempt + 1,
+			"error_msg": errorMsg,
+		}).Debug("Checking if error is retryable")
+
+		isRetryable := strings.Contains(errorMsg, "404") ||
+			strings.Contains(errorMsg, "409") ||
+			strings.Contains(errorMsg, "path not found") ||
+			strings.Contains(errorMsg, "already exists") ||
+			strings.Contains(errorMsg, "busy")
+
+		pm.logger.WithFields(logging.Fields{
+			"path_name":    name,
+			"attempt":      attempt + 1,
+			"is_retryable": isRetryable,
+			"max_attempts": len(backoffs),
+		}).Debug("Retry decision")
+
+		if !isRetryable || attempt == len(backoffs)-1 {
+			pm.logger.WithError(err).WithFields(logging.Fields{
+				"path_name":    name,
+				"json_payload": string(data),
+				"attempt":      attempt + 1,
+			}).Error("MediaMTX PATCH request failed")
+			return NewPathErrorWithErr(name, "patch_path", "failed to patch path", err)
+		}
+
+		// Poll runtime path visibility between retries
+		pm.logger.WithFields(logging.Fields{
+			"path_name": name,
+			"attempt":   attempt + 1,
+			"backoff":   backoff,
+		}).Debug("PATCH failed, checking runtime path visibility before retry")
+
+		// Check runtime path visibility (not config)
+		if _, runtimeErr := pm.GetPath(ctx, name); runtimeErr == nil {
+			pm.logger.WithField("path_name", name).Debug("Path is visible in runtime, retrying PATCH")
+		}
+
+		pm.logger.WithFields(logging.Fields{
+			"path_name": name,
+			"attempt":   attempt + 1,
+			"backoff":   backoff,
+		}).Debug("Retrying PATCH after backoff")
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			// Continue to next attempt
+		}
 	}
 
-	pm.logger.WithField("name", name).Info("MediaMTX path configuration patched successfully")
-	return nil
+	return NewPathErrorWithErr(name, "patch_path", "failed to patch path after all retries", err)
+}
+
+// WaitForPathReady waits for a path to be ready in runtime (not config)
+func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeout time.Duration) error {
+	pm.logger.WithFields(logging.Fields{
+		"path_name": name,
+		"timeout":   timeout,
+	}).Debug("Waiting for path to be ready in runtime")
+
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if time.Now().After(deadline) {
+				return NewPathError(name, "wait_ready", fmt.Sprintf("path %s not ready within %v", name, timeout))
+			}
+
+			// Check runtime path visibility (not config)
+			_, err := pm.GetPath(ctx, name)
+			if err == nil {
+				pm.logger.WithField("path_name", name).Debug("Path is ready in runtime")
+				return nil
+			}
+
+			pm.logger.WithFields(logging.Fields{
+				"path_name": name,
+				"error":     err.Error(),
+			}).Debug("Path not ready yet, continuing to wait")
+		}
+	}
 }
 
 // DeletePath deletes a path
@@ -312,18 +422,12 @@ func (pm *pathManager) ValidatePath(ctx context.Context, name string) error {
 	return nil
 }
 
-// PathExists checks if a path exists in configuration
+// PathExists checks if a path exists in runtime (not config)
 func (pm *pathManager) PathExists(ctx context.Context, name string) bool {
-	pm.logger.WithField("name", name).Debug("Checking if MediaMTX path exists")
+	pm.logger.WithField("name", name).Debug("Checking if MediaMTX path exists in runtime")
 
-	// Check configuration paths, not runtime paths
-	data, err := pm.client.Get(ctx, fmt.Sprintf("/v3/config/paths/get/%s", name))
-	if err != nil {
-		return false
-	}
-
-	// Try to parse the response to verify it's valid
-	_, err = parsePathConfResponse(data)
+	// Use runtime endpoint to check path existence (not config)
+	_, err := pm.GetPath(ctx, name)
 	return err == nil
 }
 

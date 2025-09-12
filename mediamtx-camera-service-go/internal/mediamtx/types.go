@@ -597,6 +597,9 @@ type PathManager interface {
 	ValidatePath(ctx context.Context, name string) error
 	PathExists(ctx context.Context, name string) bool
 
+	// Path readiness
+	WaitForPathReady(ctx context.Context, name string, timeout time.Duration) error
+
 	// Camera operations (PathManager handles camera-path integration)
 	GetCameraList(ctx context.Context) (*CameraListResponse, error)
 	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
