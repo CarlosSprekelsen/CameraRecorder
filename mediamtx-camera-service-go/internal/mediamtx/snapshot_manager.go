@@ -405,8 +405,8 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 			"tier":   3,
 		}).Info("Tier 3: External RTSP source detected, creating MediaMTX path")
 
-		// Use StreamManager to create MediaMTX path for external RTSP source
-		stream, err := sm.streamManager.StartSnapshotStream(ctx, devicePath)
+		// Use StreamManager to create MediaMTX path for external RTSP source (single path)
+		stream, err := sm.streamManager.StartStream(ctx, devicePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create MediaMTX path for external RTSP source: %w", err)
 		}
@@ -487,7 +487,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 // DELEGATES TO PATHMANAGER - no duplicate abstraction logic
 func (sm *SnapshotManager) getStreamNameFromDevice(devicePath string) string {
 	if sm.streamManager != nil {
-		return sm.streamManager.GenerateStreamName(devicePath, UseCaseSnapshot)
+		return sm.streamManager.GenerateStreamName(devicePath, UseCaseRecording)
 	}
 	return ""
 }

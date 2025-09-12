@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -30,32 +31,24 @@ type streamManager struct {
 	config         *MediaMTXConfig
 	logger         *logging.Logger
 	useCaseConfigs map[StreamUseCase]UseCaseConfig
+
+	// FFmpeg command caching for performance
+	ffmpegCommands map[string]string // device path -> cached FFmpeg command
+	commandMutex   sync.RWMutex
 }
 
 // NewStreamManager creates a new MediaMTX stream manager
-func NewStreamManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) StreamManager {
-	// Create PathManager for proper architectural integration
-	pathManager := NewPathManager(client, config, logger)
+// OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *MediaMTXConfig, logger *logging.Logger) StreamManager {
 
-	// Initialize use case configurations based on Python implementation
+	// SIMPLIFIED: Single use case configuration for all operations
+	// All operations use the same stable path with consistent settings
 	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
 		UseCaseRecording: {
-			RunOnDemandCloseAfter:   "0s", // Never auto-close for recording
-			RunOnDemandRestart:      true,
-			RunOnDemandStartTimeout: "10s",
-			Suffix:                  "",
-		},
-		UseCaseViewing: {
-			RunOnDemandCloseAfter:   "300s", // 5 minutes after last viewer
-			RunOnDemandRestart:      true,
-			RunOnDemandStartTimeout: "10s",
-			Suffix:                  "_viewing",
-		},
-		UseCaseSnapshot: {
-			RunOnDemandCloseAfter:   "60s", // 1 minute after capture
-			RunOnDemandRestart:      false,
-			RunOnDemandStartTimeout: "5s",
-			Suffix:                  "_snapshot",
+			RunOnDemandCloseAfter:   "0s",  // Never auto-close (stable for recording)
+			RunOnDemandRestart:      true,  // Always restart FFmpeg if it crashes
+			RunOnDemandStartTimeout: "10s", // Standard startup timeout
+			Suffix:                  "",    // No suffix - simple path names
 		},
 	}
 
@@ -65,22 +58,13 @@ func NewStreamManager(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		config:         config,
 		logger:         logger,
 		useCaseConfigs: useCaseConfigs,
+		ffmpegCommands: make(map[string]string),
 	}
 }
 
-// StartRecordingStream starts a stream optimized for recording with file rotation
-func (sm *streamManager) StartRecordingStream(ctx context.Context, devicePath string) (*Stream, error) {
+// StartStream starts a stream for a device (simplified - single path for all operations)
+func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*Stream, error) {
 	return sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
-}
-
-// StartViewingStream starts a stream optimized for live viewing
-func (sm *streamManager) StartViewingStream(ctx context.Context, devicePath string) (*Stream, error) {
-	return sm.startStreamForUseCase(ctx, devicePath, UseCaseViewing)
-}
-
-// StartSnapshotStream starts a stream optimized for quick snapshot capture
-func (sm *streamManager) StartSnapshotStream(ctx context.Context, devicePath string) (*Stream, error) {
-	return sm.startStreamForUseCase(ctx, devicePath, UseCaseSnapshot)
 }
 
 // startStreamForUseCase starts a stream for the specified use case
@@ -194,22 +178,39 @@ func (sm *streamManager) GenerateStreamName(devicePath string, useCase StreamUse
 	return GetMediaMTXPathName(devicePath)
 }
 
-// addUseCaseSuffix adds the appropriate suffix to a base path name based on use case
-func (sm *streamManager) addUseCaseSuffix(basePathName string, useCase StreamUseCase) string {
-	useCaseConfig, exists := sm.useCaseConfigs[useCase]
-	if !exists {
-		// If use case config doesn't exist, return base name without suffix
-		return basePathName
-	}
-	return basePathName + useCaseConfig.Suffix
-}
-
-// buildFFmpegCommand builds FFmpeg command for camera stream
+// buildFFmpegCommand builds FFmpeg command for camera stream with caching
 func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) string {
-	return fmt.Sprintf(
+	// Check cache first
+	sm.commandMutex.RLock()
+	if cachedCommand, exists := sm.ffmpegCommands[devicePath]; exists {
+		sm.commandMutex.RUnlock()
+		sm.logger.WithField("device_path", devicePath).Debug("Using cached FFmpeg command")
+		return cachedCommand
+	}
+	sm.commandMutex.RUnlock()
+
+	// Build new command
+	command := fmt.Sprintf(
 		"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency "+
 			"-f rtsp rtsp://%s:%d/%s",
 		devicePath, sm.config.Host, sm.config.RTSPPort, streamName)
+
+	// Cache the command
+	sm.commandMutex.Lock()
+	sm.ffmpegCommands[devicePath] = command
+	sm.commandMutex.Unlock()
+
+	sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
+	return command
+}
+
+// invalidateFFmpegCommandCache clears cached FFmpeg command for a device
+// Call this when device format settings change
+func (sm *streamManager) invalidateFFmpegCommandCache(devicePath string) {
+	sm.commandMutex.Lock()
+	defer sm.commandMutex.Unlock()
+	delete(sm.ffmpegCommands, devicePath)
+	sm.logger.WithField("device_path", devicePath).Debug("Invalidated cached FFmpeg command")
 }
 
 // CreateStream creates a new stream with automatic USB device handling
@@ -475,16 +476,15 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 	}
 }
 
-// StopViewingStream stops a viewing stream for the specified device
-func (sm *streamManager) StopViewingStream(ctx context.Context, device string) error {
+// StopStream stops the stream for a device (simplified - single path)
+func (sm *streamManager) StopStream(ctx context.Context, device string) error {
 	sm.logger.WithFields(logging.Fields{
 		"device": device,
-		"action": "stop_viewing_stream",
-	}).Info("Stopping viewing stream")
+		"action": "stop_stream",
+	}).Info("Stopping stream for device")
 
-	// Generate stream name for viewing use case using unified function
-	basePathName := GetMediaMTXPathName(device)
-	streamName := sm.addUseCaseSuffix(basePathName, UseCaseViewing)
+	// Get the stable path name
+	streamName := GetMediaMTXPathName(device)
 
 	// Delete the stream from MediaMTX
 	err := sm.DeleteStream(ctx, streamName)
@@ -493,47 +493,14 @@ func (sm *streamManager) StopViewingStream(ctx context.Context, device string) e
 			"device":      device,
 			"stream_name": streamName,
 			"error":       err.Error(),
-		}).Error("Failed to stop viewing stream")
-		return fmt.Errorf("failed to stop viewing stream: %w", err)
+		}).Error("Failed to stop stream")
+		return fmt.Errorf("failed to stop stream: %w", err)
 	}
 
 	sm.logger.WithFields(logging.Fields{
 		"device":      device,
 		"stream_name": streamName,
-	}).Info("Viewing stream stopped successfully")
-
-	return nil
-}
-
-// StopStreaming stops any active stream for the specified device
-func (sm *streamManager) StopStreaming(ctx context.Context, device string) error {
-	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"action": "stop_streaming",
-	}).Info("Stopping any active stream")
-
-	// Try to stop viewing stream first
-	if err := sm.StopViewingStream(ctx, device); err == nil {
-		return nil
-	}
-
-	// If viewing stream doesn't exist, try to stop recording stream using unified function
-	basePathName := GetMediaMTXPathName(device)
-	streamName := sm.addUseCaseSuffix(basePathName, UseCaseRecording)
-	err := sm.DeleteStream(ctx, streamName)
-	if err != nil {
-		sm.logger.WithFields(logging.Fields{
-			"device":      device,
-			"stream_name": streamName,
-			"error":       err.Error(),
-		}).Error("Failed to stop recording stream")
-		return fmt.Errorf("failed to stop recording stream: %w", err)
-	}
-
-	sm.logger.WithFields(logging.Fields{
-		"device":      device,
-		"stream_name": streamName,
-	}).Info("Recording stream stopped successfully")
+	}).Info("Stream stopped successfully")
 
 	return nil
 }
@@ -548,28 +515,28 @@ func (sm *streamManager) GenerateStreamURL(streamName string) string {
 func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string, outputPath string) error {
 	// Get the stable path name
 	pathName := GetMediaMTXPathName(devicePath)
-	
+
 	// Ensure the path exists (idempotent)
 	stream, err := sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
 	if err != nil {
 		return fmt.Errorf("failed to ensure path exists: %w", err)
 	}
-	
+
 	sm.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
-		"path_name": pathName,
+		"path_name":   pathName,
 		"stream_name": stream.Name,
 	}).Info("Path ensured, enabling recording")
-	
+
 	// Create recording configuration
 	recordingConfig := sm.createRecordingConfig(pathName, outputPath)
-	
+
 	// PATCH the path to enable recording
 	err = sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
 	if err != nil {
 		return fmt.Errorf("failed to enable recording: %w", err)
 	}
-	
+
 	sm.logger.WithField("path_name", pathName).Info("Recording enabled successfully")
 	return nil
 }
@@ -578,17 +545,17 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 // This keeps the path alive for streaming while stopping file recording
 func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string) error {
 	pathName := GetMediaMTXPathName(devicePath)
-	
+
 	// PATCH to disable recording (keep path for streaming)
 	recordingConfig := map[string]interface{}{
 		"record": false,
 	}
-	
+
 	err := sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
 	if err != nil {
 		return fmt.Errorf("failed to disable recording: %w", err)
 	}
-	
+
 	sm.logger.WithField("path_name", pathName).Info("Recording disabled successfully")
 	return nil
 }
@@ -597,7 +564,7 @@ func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string
 func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[string]interface{} {
 	// Generate recordPath with timestamp pattern
 	recordPath := sm.getRecordingOutputPath(pathName, outputPath)
-	
+
 	config := map[string]interface{}{
 		"record":                true,
 		"recordPath":            recordPath,
@@ -607,7 +574,7 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 		"recordSegmentDuration": "3600s", // 1 hour segments
 		"recordDeleteAfter":     "0s",    // Never auto-delete
 	}
-	
+
 	return config
 }
 

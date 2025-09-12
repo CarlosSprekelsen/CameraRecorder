@@ -137,21 +137,6 @@ func (c *controller) getCameraIdentifierFromDevicePath(devicePath string) string
 	return cameraID
 }
 
-// extractDevicePathFromStreamName extracts the device path from an internal stream name
-// Example: camera0_viewing -> /dev/video0, camera1_snapshot -> /dev/video1
-func (c *controller) extractDevicePathFromStreamName(streamName string) string {
-	// Internal stream name format: camera{N}_{suffix}
-	// Extract the camera{N} part
-	parts := strings.Split(streamName, "_")
-	if len(parts) > 0 && strings.HasPrefix(parts[0], "camera") {
-		cameraID := parts[0]
-		// Convert camera identifier to device path
-		return c.getDevicePathFromCameraIdentifier(cameraID)
-	}
-	// Fallback: return the original stream name
-	return streamName
-}
-
 // getDevicePathFromCameraIdentifier converts a camera identifier to a device path
 // Example: camera0 -> /dev/video0
 // DELEGATES TO PATHMANAGER - no duplicate logic, forces proper architecture
@@ -354,8 +339,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create FFmpeg manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
 
-	// Create stream manager
-	streamManager := NewStreamManager(client, mediaMTXConfig, logger)
+	// Create stream manager with shared PathManager
+	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, logger)
 
 	// Create recording manager (using existing client and pathManager)
 	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, configIntegration, logger)
@@ -776,8 +761,8 @@ func (c *controller) GetStreams(ctx context.Context) ([]*Stream, error) {
 	abstractStreams := make([]*Stream, len(streams))
 	for i, stream := range streams {
 		// Extract device path from internal stream name
-		// Internal name format: camera0_viewing, camera1_snapshot, etc.
-		devicePath := c.extractDevicePathFromStreamName(stream.Name)
+		// Internal name format: camera0, camera1, etc. (single path for all operations)
+		devicePath := GetDevicePathFromCameraIdentifier(stream.Name)
 
 		// Convert device path to abstract camera identifier
 		abstractID := c.getCameraIdentifierFromDevicePath(devicePath)
@@ -1789,8 +1774,8 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Stream
 		devicePath = device
 	}
 
-	// Use StreamManager to start viewing stream
-	stream, err := c.streamManager.StartViewingStream(ctx, devicePath)
+	// Use StreamManager to start stream (single path for all operations)
+	stream, err := c.streamManager.StartStream(ctx, devicePath)
 	if err != nil {
 		c.logger.WithFields(logging.Fields{
 			"device": device,
@@ -1842,7 +1827,7 @@ func (c *controller) StopStreaming(ctx context.Context, device string) error {
 	}).Info("Stopping streaming session")
 
 	// Use StreamManager to stop viewing stream
-	err := c.streamManager.StopViewingStream(ctx, device)
+	err := c.streamManager.StopStream(ctx, device)
 	if err != nil {
 		c.logger.WithFields(logging.Fields{
 			"device": device,
@@ -1865,7 +1850,7 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (string, e
 	}
 
 	// Generate stream name and URL using unified path naming
-	streamName := c.streamManager.GenerateStreamName(device, UseCaseViewing)
+	streamName := c.streamManager.GenerateStreamName(device, UseCaseRecording)
 	streamURL := c.streamManager.GenerateStreamURL(streamName)
 
 	c.logger.WithFields(logging.Fields{
@@ -1896,8 +1881,8 @@ func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Strea
 		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
 	}
 
-	// Generate stream name for viewing use case
-	streamName := c.streamManager.GenerateStreamName(device, UseCaseViewing)
+	// Generate stream name using single path approach
+	streamName := c.streamManager.GenerateStreamName(device, UseCaseRecording)
 
 	// Try to get the stream from MediaMTX
 	stream, err := c.streamManager.GetStream(ctx, streamName)

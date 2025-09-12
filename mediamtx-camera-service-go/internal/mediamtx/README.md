@@ -68,11 +68,9 @@ TakeSnapshot(ctx, device, path) (*Snapshot, error)
 
 **Implemented Methods**:
 ```go
-StartRecordingStream(ctx, devicePath) (*Stream, error)
-StartViewingStream(ctx, devicePath) (*Stream, error) 
-StartSnapshotStream(ctx, devicePath) (*Stream, error)
-StopViewingStream(ctx, device) error
-StopStreaming(ctx, device) error
+StartStream(ctx, devicePath) (*Stream, error)  // Single path for all operations
+StopStream(ctx, device) error                  // Single stop method
+StopStreaming(ctx, device) error               // Legacy compatibility
 GenerateStreamName(devicePath, useCase) string
 GenerateStreamURL(streamName) string
 buildFFmpegCommand(devicePath, streamName) string
@@ -177,7 +175,7 @@ Controller.StartRecording()
 ### Streaming Flow
 ```
 Controller.StartStreaming()
-→ StreamManager.StartViewingStream()
+→ StreamManager.StartStream()
 → PathManager.CreatePath()
 → FFmpeg process starts
 → MediaMTX receives stream
@@ -234,19 +232,14 @@ All components use `*logging.Logger` for structured logging:
 - **Suffix**: "" (no suffix)
 - **Restart**: true
 
-### UseCaseViewing  
-- **Purpose**: Live viewing streams
-- **Auto-close**: 300s (5 minutes after last viewer)
-- **Suffix**: "_viewing"
+### Single Path Architecture (OPTIMIZED)
+- **Purpose**: Unified streaming for all operations (viewing, recording, snapshots)
+- **Auto-close**: 0s (never auto-close - stable for recording)
+- **Suffix**: "" (no suffix - simple path names like camera0, camera1)
 - **Restart**: true
-
-### UseCaseSnapshot
-- **Purpose**: Quick snapshot capture via MediaMTX streaming paths
-- **Auto-close**: 60s (1 minute after capture)
-- **Suffix**: "_snapshot" 
-- **Restart**: false
-- **Use Case**: External RTSP sources (STANAG 4609 UAVs) that cannot use direct FFmpeg
-- **Integration**: Used by SnapshotManager Tier 3 for external RTSP stream activation
+- **Use Case**: All operations use the same stable MediaMTX path
+- **Integration**: Single path handles streaming, recording, and snapshot operations
+- **Benefits**: Eliminates path duplication, reduces MediaMTX complexity, improves performance
 
 ## Integration Points
 
@@ -259,7 +252,7 @@ All components use `*logging.Logger` for structured logging:
 - **StreamManager** uses **PathManager** for MediaMTX paths
 - **RecordingManager** uses **StreamManager** for recording streams
 - **SnapshotManager** uses **FFmpegManager** for direct image processing
-- **SnapshotManager** uses **StreamManager.StartSnapshotStream()** for external RTSP sources (Tier 3)
+- **SnapshotManager** uses **StreamManager.StartStream()** for external RTSP sources (Tier 3)
 - **ExternalStreamDiscovery** uses **PathManager** for external stream integration
 - **HealthMonitor** monitors **MediaMTXClient** for service health
 - **Controller** orchestrates all components including health monitoring and external discovery
@@ -281,14 +274,15 @@ Controller.TakeSnapshot("rtsp://uav-stream", path)
 → SnapshotManager.TakeSnapshot()
 → Tier 1: Direct FFmpeg fails (not USB device)
 → Tier 2: RTSP immediate capture fails (no existing stream)
-→ Tier 3: StreamManager.StartSnapshotStream() creates MediaMTX path
+→ Tier 3: StreamManager.StartStream() creates MediaMTX path
 → FFmpeg captures from RTSP stream
 → Success (fallback path, ~500ms)
 ```
 
-### Why StreamManager.StartSnapshotStream() is Required
+### Why StreamManager.StartStream() is Required
 - **External RTSP sources** cannot use direct FFmpeg from `/dev/video*`
 - **MediaMTX paths must be created** to receive external RTSP streams
+- **Single path architecture** handles all operations (viewing, recording, snapshots)
 - **StreamManager handles MediaMTX path creation** for all stream types
 - **SnapshotManager uses StreamManager** in Tier 3 for external sources
 - **Architecture supports both current and future requirements**

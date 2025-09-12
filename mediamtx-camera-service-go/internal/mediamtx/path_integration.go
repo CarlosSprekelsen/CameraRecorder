@@ -36,9 +36,8 @@ type PathIntegration struct {
 	activePaths   map[string]*Path
 	activePathsMu sync.RWMutex
 
-	// Camera-path mapping
-	cameraPaths   map[string]string // device -> path name
-	cameraPathsMu sync.RWMutex
+	// Camera-path mapping removed - delegated to PathManager
+	// PathManager is the single source of truth for device->path mapping
 
 	// Goroutine management
 	ctx    context.Context
@@ -54,7 +53,7 @@ func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMoni
 		configManager: configManager,
 		logger:        logger,
 		activePaths:   make(map[string]*Path),
-		cameraPaths:   make(map[string]string),
+		// cameraPaths removed - delegated to PathManager
 	}
 }
 
@@ -115,17 +114,14 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	// Generate path name
 	pathName := pi.generatePathName(device)
 
-	// Check if path already exists in cache
-	pi.cameraPathsMu.Lock()
-	if existingPath, exists := pi.cameraPaths[device]; exists {
-		pi.cameraPathsMu.Unlock()
+	// Check if path already exists via PathManager (single source of truth)
+	if existingPath, exists := pi.pathManager.GetCameraForDevicePath(device); exists {
 		pi.logger.WithFields(logging.Fields{
 			"device": device,
 			"path":   existingPath,
-		}).Debug("Path already exists in cache for camera")
+		}).Debug("Path already exists for camera")
 		return nil // Idempotent success - path already exists
 	}
-	pi.cameraPathsMu.Unlock()
 
 	// Get configuration
 	cfg := pi.configManager.GetConfig()
@@ -162,9 +158,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	}
 	pi.activePathsMu.Unlock()
 
-	pi.cameraPathsMu.Lock()
-	pi.cameraPaths[device] = pathName
-	pi.cameraPathsMu.Unlock()
+	// Cache update removed - PathManager handles mapping internally
 
 	pi.logger.WithFields(logging.Fields{
 		"device": device,
@@ -179,15 +173,12 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device string) error {
 	pi.logger.WithField("device", device).Debug("Deleting MediaMTX path for camera")
 
-	// Get path name
-	pi.cameraPathsMu.Lock()
-	pathName, exists := pi.cameraPaths[device]
+	// Get path name via PathManager (single source of truth)
+	pathName, exists := pi.pathManager.GetCameraForDevicePath(device)
 	if !exists {
-		pi.cameraPathsMu.Unlock()
 		pi.logger.WithField("device", device).Debug("No path found for camera")
 		return nil // Idempotent operation - no error for non-existent paths
 	}
-	pi.cameraPathsMu.Unlock()
 
 	// Delete the path
 	if err := pi.pathManager.DeletePath(ctx, pathName); err != nil {
@@ -199,9 +190,7 @@ func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device strin
 	delete(pi.activePaths, pathName)
 	pi.activePathsMu.Unlock()
 
-	pi.cameraPathsMu.Lock()
-	delete(pi.cameraPaths, device)
-	pi.cameraPathsMu.Unlock()
+	// Cache deletion removed - PathManager handles mapping internally
 
 	pi.logger.WithFields(logging.Fields{
 		"device": device,
@@ -213,11 +202,9 @@ func (pi *PathIntegration) DeletePathForCamera(ctx context.Context, device strin
 
 // GetPathForCamera gets the MediaMTX path for a specific camera
 func (pi *PathIntegration) GetPathForCamera(device string) (string, bool) {
-	pi.cameraPathsMu.RLock()
-	defer pi.cameraPathsMu.RUnlock()
-
-	pathName, exists := pi.cameraPaths[device]
-	return pathName, exists
+	// DELEGATE TO PATHMANAGER - eliminate duplicate cache
+	// PathManager is the single source of truth for device->path mapping
+	return pi.pathManager.GetCameraForDevicePath(device)
 }
 
 // ListActivePaths lists all active MediaMTX paths
@@ -268,11 +255,9 @@ func (pi *PathIntegration) handleCameraChanges(ctx context.Context) {
 	for devicePath, camera := range cameras {
 		currentDevices[devicePath] = true
 
-		// Check if camera is connected and has no path
+		// Check if camera is connected and has no path via PathManager
 		if camera.Status == "CONNECTED" {
-			pi.cameraPathsMu.RLock()
-			_, hasPath := pi.cameraPaths[devicePath]
-			pi.cameraPathsMu.RUnlock()
+			_, hasPath := pi.pathManager.GetCameraForDevicePath(devicePath)
 
 			if !hasPath {
 				// Create path for new camera
@@ -283,17 +268,10 @@ func (pi *PathIntegration) handleCameraChanges(ctx context.Context) {
 		}
 	}
 
-	// Check for disconnected cameras
-	pi.cameraPathsMu.RLock()
-	for device := range pi.cameraPaths {
-		if !currentDevices[device] {
-			// Camera disconnected, delete path
-			if err := pi.DeletePathForCamera(ctx, device); err != nil {
-				pi.logger.WithError(err).WithField("device", device).Error("Failed to delete path for disconnected camera")
-			}
-		}
-	}
-	pi.cameraPathsMu.RUnlock()
+	// Note: Disconnected camera cleanup is now handled by PathManager internally
+	// when it detects stale paths during operations
+	// We no longer need to iterate over cached devices since PathManager
+	// is the single source of truth for device->path mapping
 }
 
 // createPathsForExistingCameras creates paths for cameras that already exist

@@ -40,10 +40,11 @@ type rtspConnectionManager struct {
 	// Keep mutex only for complex data structures
 	mu sync.RWMutex
 
-	// Metrics cache
+	// Metrics cache with TTL
 	lastConnections *RTSPConnectionList
 	lastSessions    *RTSPConnectionSessionList
 	metricsCache    map[string]interface{}
+	cacheExpiry     int64 // TTL cache expiry timestamp (nanoseconds)
 }
 
 // NewRTSPConnectionManager creates a new RTSP connection manager
@@ -252,15 +253,32 @@ func (rcm *rtspConnectionManager) GetConnectionHealth(ctx context.Context) (*Hea
 	}, nil
 }
 
-// GetConnectionMetrics returns metrics about RTSP connections
+// GetConnectionMetrics returns metrics about RTSP connections with TTL caching
 func (rcm *rtspConnectionManager) GetConnectionMetrics(ctx context.Context) map[string]interface{} {
+	now := time.Now().UnixNano()
+
+	rcm.mu.RLock()
+	// Check if cache is still valid (5 second TTL)
+	if rcm.cacheExpiry > now && rcm.metricsCache != nil && len(rcm.metricsCache) > 0 {
+		defer rcm.mu.RUnlock()
+		rcm.logger.Debug("Returning cached RTSP connection metrics")
+		return rcm.metricsCache
+	}
+	rcm.mu.RUnlock()
+
+	// Cache expired, rebuild metrics
+	rcm.mu.Lock()
+	defer rcm.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if rcm.cacheExpiry > now && rcm.metricsCache != nil && len(rcm.metricsCache) > 0 {
+		return rcm.metricsCache
+	}
+
 	// Read atomic values
 	isHealthy := atomic.LoadInt32(&rcm.isHealthy) == 1
 	lastCheckNano := atomic.LoadInt64(&rcm.lastCheck)
 	lastCheckTime := time.Unix(0, lastCheckNano)
-
-	rcm.mu.RLock()
-	defer rcm.mu.RUnlock()
 
 	metrics := make(map[string]interface{})
 	metrics["is_healthy"] = isHealthy
@@ -324,6 +342,10 @@ func (rcm *rtspConnectionManager) GetConnectionMetrics(ctx context.Context) map[
 	metrics["bandwidth_threshold"] = rcm.config.RTSPMonitoring.BandwidthThreshold
 	metrics["packet_loss_threshold"] = rcm.config.RTSPMonitoring.PacketLossThreshold
 	metrics["jitter_threshold"] = rcm.config.RTSPMonitoring.JitterThreshold
+
+	// Cache the results with 5-second TTL
+	rcm.metricsCache = metrics
+	rcm.cacheExpiry = now + (5 * time.Second).Nanoseconds()
 
 	return metrics
 }

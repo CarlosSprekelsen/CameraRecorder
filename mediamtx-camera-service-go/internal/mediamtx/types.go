@@ -613,14 +613,11 @@ type PathManager interface {
 
 // StreamManager interface defines stream management operations
 type StreamManager interface {
-	// Use case-specific stream operations (matches Python implementation)
-	StartRecordingStream(ctx context.Context, devicePath string) (*Stream, error)
-	StartViewingStream(ctx context.Context, devicePath string) (*Stream, error)
-	StartSnapshotStream(ctx context.Context, devicePath string) (*Stream, error)
+	// Stream operations (simplified - single path for all operations)
+	StartStream(ctx context.Context, devicePath string) (*Stream, error)
 
 	// Stream lifecycle management
-	StopViewingStream(ctx context.Context, device string) error
-	StopStreaming(ctx context.Context, device string) error
+	StopStream(ctx context.Context, device string) error
 
 	// Stream utilities
 	GenerateStreamURL(streamName string) string
@@ -649,8 +646,7 @@ type StreamUseCase string
 
 const (
 	UseCaseRecording StreamUseCase = "recording"
-	UseCaseViewing   StreamUseCase = "viewing"
-	UseCaseSnapshot  StreamUseCase = "snapshot"
+	// UseCaseViewing and UseCaseSnapshot removed - single path handles all operations
 )
 
 // UseCaseConfig represents configuration for different stream use cases

@@ -108,8 +108,13 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 	if strings.TrimSpace(devicePath) == "" {
 		return nil, fmt.Errorf("device path cannot be empty")
 	}
+
+	// Make outputPath optional - use default pattern from config when empty
 	if strings.TrimSpace(outputPath) == "" {
-		return nil, fmt.Errorf("output path cannot be empty")
+		// Generate default output path using path name and timestamp pattern
+		pathName := GetMediaMTXPathName(devicePath)
+		outputPath = fmt.Sprintf("/opt/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName)
+		rm.logger.WithField("default_output_path", outputPath).Debug("Using default output path pattern")
 	}
 
 	rm.logger.WithFields(logging.Fields{

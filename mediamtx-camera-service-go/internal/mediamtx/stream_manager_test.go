@@ -184,11 +184,11 @@ func TestStreamManager_StartViewingStream_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 	devicePath := "/dev/video0"
 
-	// Start viewing stream
-	stream, err := streamManager.StartViewingStream(ctx, devicePath)
-	require.NoError(t, err, "Viewing stream creation should succeed")
-	require.NotNil(t, stream, "Created viewing stream should not be nil")
-	assert.Contains(t, stream.Name, "viewing", "Stream name should contain 'viewing'")
+	// Start stream using single path approach (no separate viewing stream)
+	stream, err := streamManager.StartStream(ctx, devicePath)
+	require.NoError(t, err, "Stream creation should succeed")
+	require.NotNil(t, stream, "Created stream should not be nil")
+	assert.NotEmpty(t, stream.Name, "Stream name should not be empty")
 
 	// Clean up
 	err = streamManager.DeleteStream(ctx, stream.Name)
@@ -212,11 +212,11 @@ func TestStreamManager_StartSnapshotStream_ReqMTX002(t *testing.T) {
 	// Use external RTSP source for snapshot stream testing (Tier 3 scenario)
 	devicePath := "rtsp://test-source.example.com:554/stream"
 
-	// Start snapshot stream
-	stream, err := streamManager.StartSnapshotStream(ctx, devicePath)
-	require.NoError(t, err, "Snapshot stream creation should succeed")
-	require.NotNil(t, stream, "Created snapshot stream should not be nil")
-	assert.Contains(t, stream.Name, "snapshot", "Stream name should contain 'snapshot'")
+	// Start stream using single path approach (no separate snapshot stream)
+	stream, err := streamManager.StartStream(ctx, devicePath)
+	require.NoError(t, err, "Stream creation should succeed")
+	require.NotNil(t, stream, "Created stream should not be nil")
+	assert.NotEmpty(t, stream.Name, "Stream name should not be empty")
 
 	// Clean up
 	err = streamManager.DeleteStream(ctx, stream.Name)

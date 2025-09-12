@@ -24,6 +24,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"golang.org/x/sync/singleflight"
 )
 
 // pathManager represents the MediaMTX path manager
@@ -37,6 +38,9 @@ type pathManager struct {
 	cameraPaths  map[string]string // device path -> path name
 	pathCameras  map[string]string // path name -> device path
 	mappingMutex sync.RWMutex
+
+	// Idempotency protection for concurrent path creation
+	createGroup singleflight.Group
 }
 
 // NewPathManager creates a new MediaMTX path manager
@@ -62,7 +66,7 @@ func NewPathManagerWithCamera(client MediaMTXClient, config *MediaMTXConfig, cam
 	}
 }
 
-// CreatePath creates a new path
+// CreatePath creates a new path with idempotency protection
 func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error {
 	pm.logger.WithFields(logging.Fields{
 		"name":    name,
@@ -79,6 +83,22 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		return fmt.Errorf("invalid source: %w", err)
 	}
 
+	// Use singleflight to prevent concurrent creation attempts for the same path
+	result, err, _ := pm.createGroup.Do(name, func() (interface{}, error) {
+		return nil, pm.createPathInternal(ctx, name, source, options)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Result is always nil for this operation, but we need to handle it
+	_ = result
+	return nil
+}
+
+// createPathInternal performs the actual path creation logic
+func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options map[string]interface{}) error {
 	// Create path request
 	path := &Path{
 		Name:   name,
@@ -149,7 +169,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		"name": name,
 		"data": string(data),
 		"url":  fmt.Sprintf("/v3/config/paths/add/%s", name),
-	}).Info("Sending CreatePath request to MediaMTX")
+	}).Debug("Sending CreatePath request to MediaMTX")
 
 	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
 	if err != nil {
@@ -192,7 +212,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 	pm.logger.WithFields(logging.Fields{
 		"path_name":   name,
 		"path_exists": pathExists,
-	}).Info("Checking if path exists before patching")
+	}).Debug("Checking if path exists before patching")
 
 	if !pathExists {
 		return NewPathErrorWithErr(name, "patch_path", "path does not exist - cannot patch non-existent path", nil)
@@ -209,7 +229,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 		"url":          fmt.Sprintf("/v3/config/paths/patch/%s", name),
 		"json_payload": string(data),
 		"config":       config,
-	}).Info("Sending PATCH request to MediaMTX")
+	}).Debug("Sending PATCH request to MediaMTX")
 
 	err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
 	if err != nil {
