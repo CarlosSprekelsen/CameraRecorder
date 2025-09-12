@@ -36,7 +36,6 @@ Ensure all project documentation is consistent, discoverable, reviewable for IV&
 ### Naming Conventions
 - Use **snake_case** (lowercase with underscores) for all documentation and code filenames
   - Examples: `camera_discovery_overview.md`, `capability_detection_validation.md`, `integration_acceptance_tests.md`
-- **Exception:** Python test modules use standard `test_` prefix in snake_case (e.g., `test_capability_detection.py`, `test_udev_processing.py`) to align with pytest conventions
 
 ### Directory Structure Rules
 - Each topic folder should only exist if it contains **two or more** related documents
@@ -274,23 +273,6 @@ For any document claiming implementation completion:
 ```markdown
 See [Architecture Overview](../architecture/overview.md) for system design details.
 Refer to [Coding Standards](./coding_standards.md) for implementation requirements.
-```
-
-### Code References
-```markdown
-Implementation in `src/camera_discovery/hybrid_monitor.py` lines 45-67.
-Test coverage in `tests/unit/test_camera_discovery/test_hybrid_monitor.py`.
-Configuration schema in `config/camera_service.yaml` section `discovery.monitors`.
-```
-
-### Evidence Examples
-```markdown
-**Evidence:**
-- Feature implemented: `src/websocket_server/notification_handler.py:23-45`
-- Tests passing: `tests/unit/test_websocket_server/test_notifications.py`
-- API documented: `docs/api/json_rpc_methods.md#camera-status-notification`
-- Config example: `config/examples/basic_setup.yaml`
-```
 
 ---
 
