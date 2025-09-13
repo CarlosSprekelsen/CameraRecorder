@@ -543,13 +543,18 @@ func (c *controller) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start health monitor: %w", err)
 	}
 
-	// Start camera monitor
+	// Start camera monitor (only if not already running)
 	if c.cameraMonitor != nil {
-		if err := c.cameraMonitor.Start(ctx); err != nil {
-			c.logger.WithError(err).Error("Failed to start camera monitor")
-			return fmt.Errorf("failed to start camera monitor: %w", err)
+		// Check if camera monitor is already running
+		if cameraMonitor, ok := c.cameraMonitor.(interface{ IsRunning() bool }); ok && cameraMonitor.IsRunning() {
+			c.logger.Info("Camera monitor already running, skipping start")
+		} else {
+			if err := c.cameraMonitor.Start(ctx); err != nil {
+				c.logger.WithError(err).Error("Failed to start camera monitor")
+				return fmt.Errorf("failed to start camera monitor: %w", err)
+			}
+			c.logger.Info("Camera monitor started successfully")
 		}
-		c.logger.Info("Camera monitor started successfully")
 	}
 
 	// Start path integration (connects cameras to MediaMTX paths)
