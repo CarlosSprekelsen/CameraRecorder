@@ -150,6 +150,9 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 		}
 	}
 
+	// Force reset device event source factory for test isolation
+	camera.GetDeviceEventSourceFactory().ResetForTests()
+
 	// Stop config manager to prevent file watcher goroutine leaks
 	if h.configManager != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -379,12 +382,8 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		commandExecutor := &camera.RealV4L2CommandExecutor{}
 		infoParser := &camera.RealDeviceInfoParser{}
 
-		// Create device event source for testing
-		deviceEventSource, err := camera.NewFsnotifyDeviceEventSource(logger)
-		if err != nil {
-			h.logger.WithError(err).Error("Failed to create device event source - test requires real hardware")
-			panic(fmt.Sprintf("Device event source creation failed: %v", err))
-		}
+		// Acquire device event source from factory (singleton + ref counting)
+		deviceEventSource := camera.GetDeviceEventSourceFactory().Acquire()
 
 		// Create real camera monitor - NO MOCKS, real hardware only
 		realMonitor, err := camera.NewHybridCameraMonitor(

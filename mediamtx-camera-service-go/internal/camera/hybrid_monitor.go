@@ -383,15 +383,15 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 		close(m.stopChan)
 	}
 
-	// Close device event source with timeout
+	// Release device event source via factory (ref counting)
 	if m.deviceEventSource != nil {
-		closeDone := make(chan error, 1)
+		releaseDone := make(chan error, 1)
 		go func() {
-			closeDone <- m.deviceEventSource.Close()
+			releaseDone <- GetDeviceEventSourceFactory().Release()
 		}()
-		
+
 		select {
-		case err := <-closeDone:
+		case err := <-releaseDone:
 			if err != nil {
 				m.logger.WithError(err).Warn("Error closing device event source")
 			}

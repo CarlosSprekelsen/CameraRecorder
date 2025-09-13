@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,25 +34,23 @@ type FsnotifyDeviceEventSource struct {
 	watcher  *fsnotify.Watcher
 	events   chan DeviceEvent
 	stopChan chan struct{}
-	running  int32 // Using atomic operations instead of mutex
+	running  int32          // Using atomic operations instead of mutex
+	done     sync.WaitGroup // Wait for event loop to exit
 }
 
 // NewFsnotifyDeviceEventSource creates a new fsnotify-based device event source
+// Note: Watcher is created lazily in Start() to prevent resource leaks
 func NewFsnotifyDeviceEventSource(logger *logging.Logger) (*FsnotifyDeviceEventSource, error) {
 	if logger == nil {
 		logger = logging.GetLogger("device-event-source")
 	}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fsnotify watcher: %w", err)
-	}
-
 	return &FsnotifyDeviceEventSource{
 		logger:   logger,
-		watcher:  watcher,
+		watcher:  nil,                         // Will be created in Start()
 		events:   make(chan DeviceEvent, 100), // Buffered to prevent blocking
 		stopChan: make(chan struct{}),
+		done:     sync.WaitGroup{},
 	}, nil
 }
 
@@ -97,6 +96,7 @@ func (f *FsnotifyDeviceEventSource) Start(ctx context.Context) error {
 	}).Info("Started fsnotify device event source")
 
 	// Start event processing goroutine
+	f.done.Add(1)
 	go f.eventLoop(ctx)
 
 	return nil
@@ -114,7 +114,7 @@ func (f *FsnotifyDeviceEventSource) Close() error {
 		return nil // Already stopped
 	}
 
-	// Safely close stop channel
+	// Safely close stop channel to signal event loop to exit
 	select {
 	case <-f.stopChan:
 		// Already closed
@@ -122,19 +122,14 @@ func (f *FsnotifyDeviceEventSource) Close() error {
 		close(f.stopChan)
 	}
 
+	// Wait for event loop to exit (it will close the events channel)
+	f.done.Wait()
+
 	if f.watcher != nil {
 		err := f.watcher.Close()
 		if err != nil {
 			f.logger.WithError(err).Warn("Error closing fsnotify watcher")
 		}
-	}
-
-	// Safely close events channel
-	select {
-	case <-f.events:
-		// Already closed
-	default:
-		close(f.events)
 	}
 
 	f.logger.WithFields(logging.Fields{
@@ -154,6 +149,10 @@ func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 				"action": "panic_recovered",
 			}).Error("Recovered from panic in fsnotify event loop")
 		}
+		// Close events channel when loop exits (producer owns channel)
+		close(f.events)
+		// Signal that the loop has exited
+		f.done.Done()
 	}()
 
 	for {
@@ -319,4 +318,89 @@ func (u *UdevDeviceEventSource) Close() error {
 	}).Info("Stopped udev device event source")
 
 	return nil
+}
+
+// DeviceEventSourceFactory manages singleton device event sources with ref counting
+// This prevents resource leaks by ensuring only one fsnotify watcher per process
+type DeviceEventSourceFactory struct {
+	mu       sync.RWMutex
+	instance *FsnotifyDeviceEventSource
+	refCount int
+	logger   *logging.Logger
+}
+
+var (
+	globalFactory *DeviceEventSourceFactory
+	factoryOnce   sync.Once
+)
+
+// GetDeviceEventSourceFactory returns the global singleton factory
+func GetDeviceEventSourceFactory() *DeviceEventSourceFactory {
+	factoryOnce.Do(func() {
+		globalFactory = &DeviceEventSourceFactory{
+			logger: logging.GetLogger("device-event-source-factory"),
+		}
+	})
+	return globalFactory
+}
+
+// Acquire returns a device event source instance, creating it if needed
+// Increments the reference count
+func (f *DeviceEventSourceFactory) Acquire() DeviceEventSource {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.instance == nil {
+		// Create new instance without allocating watcher yet
+		f.instance = &FsnotifyDeviceEventSource{
+			logger:   f.logger,
+			watcher:  nil, // Will be created in Start()
+			events:   make(chan DeviceEvent, 100),
+			stopChan: make(chan struct{}),
+			running:  0,
+			done:     sync.WaitGroup{},
+		}
+		f.logger.Info("Created new device event source instance")
+	}
+
+	f.refCount++
+	f.logger.WithField("ref_count", fmt.Sprintf("%d", f.refCount)).Debug("Acquired device event source")
+	return f.instance
+}
+
+// Release decrements the reference count and closes the instance when count reaches zero
+func (f *DeviceEventSourceFactory) Release() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.refCount <= 0 {
+		f.logger.Warn("Release called with zero or negative ref count")
+		return nil
+	}
+
+	f.refCount--
+	f.logger.WithField("ref_count", fmt.Sprintf("%d", f.refCount)).Debug("Released device event source")
+
+	if f.refCount == 0 && f.instance != nil {
+		f.logger.Info("Closing device event source - final reference released")
+		err := f.instance.Close()
+		f.instance = nil
+		return err
+	}
+
+	return nil
+}
+
+// ResetForTests forces cleanup of the singleton for test isolation
+// This should only be called in test cleanup to ensure no resource leaks
+func (f *DeviceEventSourceFactory) ResetForTests() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.instance != nil {
+		f.logger.Info("Force closing device event source for test cleanup")
+		f.instance.Close()
+		f.instance = nil
+	}
+	f.refCount = 0
 }
