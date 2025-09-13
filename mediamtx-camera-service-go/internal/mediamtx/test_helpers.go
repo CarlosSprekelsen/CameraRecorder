@@ -680,20 +680,8 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 		return fmt.Errorf("failed to get paths: %w", err)
 	}
 
-	var pathsResponse struct {
-		Items []struct {
-			Name   string `json:"name"`
-			Source struct {
-				Type string `json:"type"`
-				ID   string `json:"id"`
-			} `json:"source"`
-			Ready   bool `json:"ready"`
-			Readers []struct {
-				Type string `json:"type"`
-				ID   string `json:"id"`
-			} `json:"readers"`
-		} `json:"items"`
-	}
+	// Use PathList from api_types.go instead of inline struct
+	var pathsResponse PathList
 
 	if err := json.Unmarshal(data, &pathsResponse); err != nil {
 		return fmt.Errorf("failed to parse paths: %w", err)
@@ -707,10 +695,9 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 
 			// Option 1: Try to kick all connections (if MediaMTX supports it)
 			// This would disconnect publishers/readers and allow cleanup
-			if path.Source.Type != "" {
+			if path.Source != nil {
 				// Try to disconnect the source connection
-				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s",
-					path.Source.Type, path.Source.ID)
+				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s", path.Source.Type, path.Source.ID)
 				if _, err := h.client.Post(ctx, kickEndpoint, nil); err != nil {
 					t.Logf("Could not kick source %s: %v", path.Source.ID, err)
 				}
@@ -718,8 +705,7 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 
 			// Kick all readers
 			for _, reader := range path.Readers {
-				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s",
-					reader.Type, reader.ID)
+				kickEndpoint := fmt.Sprintf("/v3/%s/kick/%s", reader.Type, reader.ID)
 				if _, err := h.client.Post(ctx, kickEndpoint, nil); err != nil {
 					t.Logf("Could not kick reader %s: %v", reader.ID, err)
 				}

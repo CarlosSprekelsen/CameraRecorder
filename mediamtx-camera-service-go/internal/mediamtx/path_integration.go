@@ -166,7 +166,10 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	pi.activePathsMu.Lock()
 	pi.activePaths[pathName] = &Path{
 		Name:   pathName,
-		Source: device,
+		Source: &PathSource{
+			Type: "rtspSource",
+			ID:   device,
+		},
 	}
 	pi.activePathsMu.Unlock()
 

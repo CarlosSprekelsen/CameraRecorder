@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -238,8 +239,8 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 
 // createPathInternal performs the actual path creation logic
 func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options map[string]interface{}, devicePath string) error {
-	// Create path request
-	path := &Path{
+	// Create path request using PathConf for configuration
+	path := &PathConf{
 		Name:   name,
 		Source: source,
 	}
@@ -249,26 +250,10 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		path.SourceOnDemand = sourceOnDemand
 	}
 	if startTimeout, ok := options["sourceOnDemandStartTimeout"].(string); ok {
-		if duration, err := parseDuration(startTimeout); err == nil {
-			path.SourceOnDemandStartTimeout = duration
-		}
+		path.SourceOnDemandStartTimeout = startTimeout
 	}
 	if closeAfter, ok := options["sourceOnDemandCloseAfter"].(string); ok {
-		if duration, err := parseDuration(closeAfter); err == nil {
-			path.SourceOnDemandCloseAfter = duration
-		}
-	}
-	if publishUser, ok := options["publishUser"].(string); ok {
-		path.PublishUser = publishUser
-	}
-	if publishPass, ok := options["publishPass"].(string); ok {
-		path.PublishPass = publishPass
-	}
-	if readUser, ok := options["readUser"].(string); ok {
-		path.ReadUser = readUser
-	}
-	if readPass, ok := options["readPass"].(string); ok {
-		path.ReadPass = readPass
+		path.SourceOnDemandCloseAfter = closeAfter
 	}
 	if runOnDemand, ok := options["runOnDemand"].(string); ok {
 		path.RunOnDemand = runOnDemand
@@ -277,14 +262,10 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		path.RunOnDemandRestart = runOnDemandRestart
 	}
 	if runOnDemandCloseAfter, ok := options["runOnDemandCloseAfter"].(string); ok {
-		if duration, err := parseDuration(runOnDemandCloseAfter); err == nil {
-			path.RunOnDemandCloseAfter = duration
-		}
+		path.RunOnDemandCloseAfter = runOnDemandCloseAfter
 	}
 	if runOnDemandStartTimeout, ok := options["runOnDemandStartTimeout"].(string); ok {
-		if duration, err := parseDuration(runOnDemandStartTimeout); err == nil {
-			path.RunOnDemandStartTimeout = duration
-		}
+		path.RunOnDemandStartTimeout = runOnDemandStartTimeout
 	}
 
 	// Marshal request - choose correct marshaling function based on path type
@@ -296,7 +277,12 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		data, err = marshalCreateUSBPathRequest(name, path.RunOnDemand)
 	} else {
 		// For direct sources (external RTSP), use standard marshaling
-		data, err = marshalCreatePathRequest(path)
+		// Convert PathConf to Path for marshaling
+		pathForMarshaling := &Path{
+			Name:   path.Name,
+			Source: nil, // Will be set by MediaMTX
+		}
+		data, err = marshalCreatePathRequest(pathForMarshaling)
 	}
 
 	if err != nil {
@@ -495,6 +481,48 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 	return NewPathErrorWithErr(name, "patch_path", "failed to patch path after all retries", err)
 }
 
+// ActivatePathPublisher performs deterministic RTSP activation to trigger MediaMTX publisher
+// This is a protocol-based activation, not time-based waiting
+func (pm *pathManager) ActivatePathPublisher(ctx context.Context, name string) error {
+	pm.logger.WithFields(logging.Fields{
+		"path_name": name,
+	}).Debug("Activating MediaMTX publisher via RTSP handshake")
+
+	// Generate RTSP URL for the path
+	rtspURL := fmt.Sprintf("rtsp://%s:%d/%s", pm.config.Host, pm.config.RTSPPort, name)
+
+	// Create a short-lived context for the RTSP handshake
+	handshakeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Perform one-shot RTSP handshake to activate the publisher
+	// This triggers MediaMTX to start the on-demand source
+
+	// Use ffprobe for a quick RTSP connectivity check (one packet)
+	// This is deterministic - either the handshake succeeds or fails
+	cmd := exec.CommandContext(handshakeCtx, "ffprobe",
+		"-v", "quiet",
+		"-rtsp_transport", "tcp",
+		"-timeout", "2000000", // 2 second timeout in microseconds
+		"-show_entries", "format=duration",
+		rtspURL)
+
+	if err := cmd.Run(); err != nil {
+		pm.logger.WithFields(logging.Fields{
+			"path_name": name,
+			"rtsp_url":  rtspURL,
+			"error":     err.Error(),
+		}).Debug("RTSP activation failed - publisher may not be ready yet")
+		return NewPathError(name, "rtsp_activation", fmt.Sprintf("failed to activate publisher via RTSP: %v", err))
+	}
+
+	pm.logger.WithFields(logging.Fields{
+		"path_name": name,
+		"rtsp_url":  rtspURL,
+	}).Debug("RTSP activation successful - publisher should be active")
+	return nil
+}
+
 // WaitForPathReady waits for a path to be ready in runtime (not config)
 func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeout time.Duration) error {
 	startTime := time.Now()
@@ -585,7 +613,7 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 }
 
 // GetPath gets a specific path (runtime status)
-func (pm *pathManager) GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error) {
+func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) {
 	pm.logger.WithField("name", name).Debug("Getting MediaMTX path")
 
 	data, err := pm.client.Get(ctx, fmt.Sprintf("/v3/paths/get/%s", name))
@@ -602,7 +630,7 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*MediaMTXPathR
 }
 
 // ListPaths lists all paths
-func (pm *pathManager) ListPaths(ctx context.Context) ([]*MediaMTXPathConfig, error) {
+func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
 	pm.logger.Debug("Listing MediaMTX paths")
 
 	data, err := pm.client.Get(ctx, "/v3/paths/list")

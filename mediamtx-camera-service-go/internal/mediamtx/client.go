@@ -191,16 +191,18 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 }
 
 // getStreamsResponse represents the MediaMTX streams response
+// DEPRECATED: Use MediaMTXPathsListResponse from api_types.go instead
 type getStreamsResponse struct {
-	ItemCount int      `json:"itemCount"`
-	PageCount int      `json:"pageCount"`
-	Items     []Stream `json:"items"`
+	ItemCount int    `json:"itemCount"`
+	PageCount int    `json:"pageCount"`
+	Items     []Path `json:"items"`
 }
 
 // Note: MediaMTX API response types are now defined in api_types.go for single source of truth
 
 // parseStreamsResponse parses the streams response
-func parseStreamsResponse(data []byte) ([]*Stream, error) {
+// DEPRECATED: Use parsePathsResponse which returns MediaMTXPathResponse
+func parseStreamsResponse(data []byte) ([]*Path, error) {
 	// Handle empty response
 	if len(data) == 0 {
 		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_streams")
@@ -221,7 +223,7 @@ func parseStreamsResponse(data []byte) ([]*Stream, error) {
 		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_streams")
 	}
 
-	streams := make([]*Stream, len(response.Items))
+	streams := make([]*Path, len(response.Items))
 	for i, stream := range response.Items {
 		streams[i] = &stream
 	}
@@ -230,7 +232,7 @@ func parseStreamsResponse(data []byte) ([]*Stream, error) {
 }
 
 // parsePathsResponse parses the paths response
-func parsePathsResponse(data []byte) ([]*MediaMTXPathConfig, error) {
+func parsePathsResponse(data []byte) ([]*PathConf, error) {
 	// Handle empty response
 	if len(data) == 0 {
 		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_paths")
@@ -241,7 +243,7 @@ func parsePathsResponse(data []byte) ([]*MediaMTXPathConfig, error) {
 		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_paths")
 	}
 
-	var response MediaMTXPathsListResponse
+	var response PathList
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse paths response", err.Error(), "parse_paths")
 	}
@@ -251,11 +253,10 @@ func parsePathsResponse(data []byte) ([]*MediaMTXPathConfig, error) {
 		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_paths")
 	}
 
-	paths := make([]*MediaMTXPathConfig, len(response.Items))
+	paths := make([]*PathConf, len(response.Items))
 	for i, item := range response.Items {
-		// Convert MediaMTXPathResponse to MediaMTXPathConfig
-		path := &MediaMTXPathConfig{
-			ID:   item.Name, // Use name as ID
+		// Convert Path to PathConf
+		path := &PathConf{
 			Name: item.Name,
 			// Extract source string from complex object
 			Source: extractSourceString(item.Source),
@@ -302,7 +303,7 @@ func parseHealthResponse(data []byte) (*HealthStatus, error) {
 }
 
 // parseStreamResponse parses a single stream response from MediaMTX API
-func parseStreamResponse(data []byte) (*Stream, error) {
+func parseStreamResponse(data []byte) (*Path, error) {
 	// Handle empty response (successful path creation returns empty body)
 	if len(data) == 0 {
 		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_stream")
@@ -313,8 +314,8 @@ func parseStreamResponse(data []byte) (*Stream, error) {
 		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_stream")
 	}
 
-	// Parse directly into Stream struct (matches MediaMTX API)
-	var stream Stream
+	// Parse directly into Path struct (matches MediaMTX API)
+	var stream Path
 	if err := json.Unmarshal(data, &stream); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse stream response", err.Error(), "parse_stream")
 	}
@@ -354,8 +355,8 @@ func determineStatus(ready bool) string {
 }
 
 // parsePathResponse parses a single path response (runtime status)
-func parsePathResponse(data []byte) (*MediaMTXPathResponse, error) {
-	var path MediaMTXPathResponse
+func parsePathResponse(data []byte) (*Path, error) {
+	var path Path
 	if err := json.Unmarshal(data, &path); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse path response", err.Error(), "parse_path")
 	}

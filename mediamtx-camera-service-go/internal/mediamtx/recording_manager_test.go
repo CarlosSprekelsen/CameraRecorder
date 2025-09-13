@@ -339,15 +339,8 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/paths/list API should respond")
 
-	var pathListResponse struct {
-		PageCount int `json:"pageCount"`
-		ItemCount int `json:"itemCount"`
-		Items     []struct {
-			Name     string `json:"name"`
-			ConfName string `json:"confName"`
-			Ready    bool   `json:"ready"`
-		} `json:"items"`
-	}
+	// Use MediaMTXPathsListResponse from api_types.go instead of inline struct
+	var pathListResponse MediaMTXPathsListResponse
 
 	err = json.Unmarshal(pathData, &pathListResponse)
 	require.NoError(t, err, "Response should match PathList schema from swagger.json")
@@ -379,10 +372,7 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Non-existent recording should return 200 with empty segments per swagger.json")
 
 	// Verify the response structure matches Recording schema
-	var recording struct {
-		Name     string     `json:"name"`
-		Segments []struct{} `json:"segments"`
-	}
+	var recording MediaMTXRecording
 	err = json.Unmarshal(data, &recording)
 	require.NoError(t, err, "Response should be valid JSON")
 	assert.Equal(t, "test_nonexistent_recording", recording.Name, "Recording name should match")

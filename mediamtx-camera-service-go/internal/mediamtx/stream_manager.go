@@ -77,7 +77,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 }
 
 // StartStream starts a stream for a device (simplified - single path for all operations)
-func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*Stream, error) {
+func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*Path, error) {
 	// Validate dependencies are initialized
 	if sm.pathManager == nil {
 		return nil, fmt.Errorf("PathManager not initialized")
@@ -90,7 +90,7 @@ func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*S
 }
 
 // startStreamForUseCase starts a stream for the specified use case
-func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath string, useCase StreamUseCase) (*Stream, error) {
+func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath string, useCase StreamUseCase) (*Path, error) {
 	// Validate device path
 	if err := sm.validateDevicePath(devicePath); err != nil {
 		return nil, fmt.Errorf("failed to validate device path %s: %w", devicePath, err)
@@ -151,9 +151,8 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 		if isAlreadyExists {
 			sm.logger.WithField("stream_name", streamName).Info("MediaMTX path already exists, treating as success")
 			// Return a mock stream response for idempotent success
-			stream := &Stream{
+			stream := &Path{
 				Name:     streamName,
-				URL:      sm.GenerateStreamURL(streamName),
 				ConfName: streamName,
 				Ready:    false,
 				Tracks:   []string{},
@@ -167,9 +166,8 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 	// PathManager.CreatePath succeeded - create stream response
 	sm.logger.WithField("stream_name", streamName).Info("MediaMTX path created successfully")
 
-	stream := &Stream{
+	stream := &Path{
 		Name:     streamName,
-		URL:      sm.GenerateStreamURL(streamName),
 		ConfName: streamName,
 		Ready:    false,
 		Tracks:   []string{},
@@ -241,7 +239,7 @@ func (sm *streamManager) invalidateFFmpegCommandCache(devicePath string) {
 }
 
 // CreateStream creates a new stream with automatic USB device handling
-func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Stream, error) {
+func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Path, error) {
 	sm.logger.WithFields(logging.Fields{
 		"name":   name,
 		"source": source,
@@ -292,9 +290,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			if isAlreadyExists {
 				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
 				// Return a mock stream response for idempotent success
-				stream := &Stream{
+				stream := &Path{
 					Name:     name,
-					URL:      sm.GenerateStreamURL(name),
 					ConfName: name,
 					Ready:    false,
 					Tracks:   []string{},
@@ -306,9 +303,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
-		stream := &Stream{
+		stream := &Path{
 			Name:     name,
-			URL:      sm.GenerateStreamURL(name),
 			ConfName: name,
 			Ready:    false,
 			Tracks:   []string{},
@@ -349,9 +345,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			if isAlreadyExists {
 				sm.logger.WithField("stream_name", name).Info("MediaMTX path already exists, treating as success")
 				// Return a mock stream response for idempotent success
-				stream := &Stream{
+				stream := &Path{
 					Name:     name,
-					URL:      sm.GenerateStreamURL(name),
 					ConfName: name,
 					Ready:    false,
 					Tracks:   []string{},
@@ -363,9 +358,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
-		stream := &Stream{
+		stream := &Path{
 			Name:     name,
-			URL:      sm.GenerateStreamURL(name),
 			ConfName: name,
 			Ready:    false,
 			Tracks:   []string{},
@@ -391,7 +385,7 @@ func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 }
 
 // GetStream gets a specific stream
-func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, error) {
+func (sm *streamManager) GetStream(ctx context.Context, id string) (*Path, error) {
 	sm.logger.WithField("stream_id", id).Debug("Getting MediaMTX stream")
 
 	// Use PathManager for proper architectural integration
@@ -401,9 +395,8 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, err
 	}
 
 	// Convert Path to Stream
-	stream := &Stream{
+	stream := &Path{
 		Name:     path.Name,
-		URL:      sm.GenerateStreamURL(path.Name),
 		ConfName: path.Name,      // Use name as confName since Path doesn't have ConfName
 		Ready:    false,          // Path doesn't have Ready field, default to false
 		Tracks:   []string{},     // Path doesn't have Tracks field, default to empty
@@ -414,30 +407,31 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Stream, err
 }
 
 // ListStreams lists all streams
-func (sm *streamManager) ListStreams(ctx context.Context) ([]*Stream, error) {
+func (sm *streamManager) ListStreams(ctx context.Context) ([]*Path, error) {
 	sm.logger.Debug("Listing MediaMTX streams")
 
 	// Use PathManager for proper architectural integration
-	paths, err := sm.pathManager.ListPaths(ctx)
+	pathConfigs, err := sm.pathManager.ListPaths(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list streams: %w", err)
 	}
 
-	// Convert Paths to Streams
-	streams := make([]*Stream, len(paths))
-	for i, path := range paths {
-		streams[i] = &Stream{
-			Name:     path.Name,
-			URL:      sm.GenerateStreamURL(path.Name),
-			ConfName: path.Name,      // Use name as confName since Path doesn't have ConfName
-			Ready:    false,          // Path doesn't have Ready field, default to false
-			Tracks:   []string{},     // Path doesn't have Tracks field, default to empty
-			Readers:  []PathReader{}, // Path doesn't have Readers field, default to empty
+	// Convert PathConf to Path for runtime response
+	paths := make([]*Path, len(pathConfigs))
+	for i, config := range pathConfigs {
+		paths[i] = &Path{
+			Name:      config.Name,
+			ConfName:  config.Name,
+			Source:    nil, // Source is populated by MediaMTX runtime
+			Ready:     false, // Will be updated by runtime status
+			ReadyTime: nil,
+			Tracks:    []string{},
+			Readers:   []PathReader{},
 		}
 	}
 
-	sm.logger.WithField("count", fmt.Sprintf("%d", len(streams))).Debug("MediaMTX streams listed successfully")
-	return streams, nil
+	sm.logger.WithField("count", fmt.Sprintf("%d", len(paths))).Debug("MediaMTX streams listed successfully")
+	return paths, nil
 }
 
 // MonitorStream monitors a stream
@@ -588,7 +582,15 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 		"device_path": devicePath,
 		"path_name":   pathName,
 		"stream_name": stream.Name,
-	}).Info("Path ensured, waiting for readiness")
+	}).Info("Path ensured, activating publisher and waiting for readiness")
+
+	// DETERMINISTIC ACTIVATION: Trigger MediaMTX publisher via RTSP handshake
+	// This is protocol-based activation, not time-based waiting
+	err = sm.pathManager.ActivatePathPublisher(ctx, pathName)
+	if err != nil {
+		sm.logger.WithField("path_name", pathName).Warn("RTSP activation failed, proceeding with readiness check")
+		// Don't fail here - some paths may not need activation
+	}
 
 	// Wait for path to be ready in runtime (not config)
 	// Use configurable timeout from MediaMTX config

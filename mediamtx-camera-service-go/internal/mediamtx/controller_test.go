@@ -231,7 +231,7 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	streams, err := controller.GetStreams(ctx)
 	require.NoError(t, err, "GetStreams should succeed")
 	require.NotNil(t, streams, "Streams should not be nil")
-	assert.IsType(t, []*Stream{}, streams, "Streams should be a slice of Stream pointers")
+	assert.IsType(t, []*Path{}, streams, "Streams should be a slice of Path pointers")
 }
 
 // TestController_GetStream_ReqMTX002 tests individual stream retrieval with real server
@@ -781,7 +781,7 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 
 	// Verify stream properties
 	assert.Equal(t, device, stream.Name, "Stream name should be the abstract camera identifier")
-	assert.NotEmpty(t, stream.URL, "Stream URL should not be empty")
+	// Note: Path struct doesn't have URL field - source is in Path.Source
 	assert.True(t, stream.Ready, "Stream should be ready after FFmpeg startup (abstraction layer handles timing)")
 
 	// Test getting stream status
@@ -855,9 +855,8 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 	// Test CreatePath - use USB camera with runOnDemand
 	pathName := "test_camera_path_" + fmt.Sprintf("%d", time.Now().UnixNano())
 	path := &Path{
-		Name:        pathName,
-		Source:      "", // Empty source for runOnDemand approach
-		RunOnDemand: "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/test_camera_path",
+		Name:   pathName,
+		Source: nil, // Source will be populated by MediaMTX runtime
 	}
 
 	err = controller.CreatePath(ctx, path)

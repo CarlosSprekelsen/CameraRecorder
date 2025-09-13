@@ -113,19 +113,8 @@ type ConnectionPoolConfig struct {
 	IdleConnTimeout     time.Duration `mapstructure:"idle_conn_timeout"`
 }
 
-// Stream represents a MediaMTX stream (matches actual MediaMTX API response)
-type Stream struct {
-	Name          string       `json:"name"`
-	URL           string       `json:"url"`
-	ConfName      string       `json:"confName"`
-	Source        *PathSource  `json:"source"`
-	Ready         bool         `json:"ready"`
-	ReadyTime     *string      `json:"readyTime"`
-	Tracks        []string     `json:"tracks"`
-	BytesReceived int64        `json:"bytesReceived"`
-	BytesSent     int64        `json:"bytesSent"`
-	Readers       []PathReader `json:"readers"`
-}
+// Stream type removed - use Path from api_types.go instead
+// This eliminates duplicate type definitions and schema drift issues
 
 // Note: MediaMTX API types are now defined in api_types.go for single source of truth
 // Legacy aliases are provided in api_types.go for backward compatibility
@@ -338,15 +327,15 @@ type MediaMTXController interface {
 	IsReady() bool
 	GetReadinessState() map[string]interface{}
 
-	// Stream management
-	GetStreams(ctx context.Context) ([]*Stream, error)
-	GetStream(ctx context.Context, id string) (*Stream, error)
-	CreateStream(ctx context.Context, name, source string) (*Stream, error)
+	// Stream management (DEPRECATED - use MediaMTXPathResponse from api_types.go)
+	GetStreams(ctx context.Context) ([]*Path, error)
+	GetStream(ctx context.Context, id string) (*Path, error)
+	CreateStream(ctx context.Context, name, source string) (*Path, error)
 	DeleteStream(ctx context.Context, id string) error
 
 	// Path management
 	GetPaths(ctx context.Context) ([]*Path, error)
-	GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error)
+	GetPath(ctx context.Context, name string) (*Path, error)
 	CreatePath(ctx context.Context, path *Path) error
 	DeletePath(ctx context.Context, name string) error
 
@@ -362,10 +351,10 @@ type MediaMTXController interface {
 	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
 
 	// Streaming operations
-	StartStreaming(ctx context.Context, device string) (*Stream, error)
+	StartStreaming(ctx context.Context, device string) (*Path, error)
 	StopStreaming(ctx context.Context, device string) error
 	GetStreamURL(ctx context.Context, device string) (string, error)
-	GetStreamStatus(ctx context.Context, device string) (*Stream, error)
+	GetStreamStatus(ctx context.Context, device string) (*Path, error)
 
 	// File listing operations
 	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
@@ -435,12 +424,12 @@ type MediaMTXControllerAPI interface {
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
 	GetHealthMonitor() HealthMonitor
 
-	// Streaming
-	GetStreams(ctx context.Context) ([]*Stream, error)
-	StartStreaming(ctx context.Context, device string) (*Stream, error)
+	// Streaming (DEPRECATED - use MediaMTXPathResponse from api_types.go)
+	GetStreams(ctx context.Context) ([]*Path, error)
+	StartStreaming(ctx context.Context, device string) (*Path, error)
 	StopStreaming(ctx context.Context, device string) error
 	GetStreamURL(ctx context.Context, device string) (string, error)
-	GetStreamStatus(ctx context.Context, device string) (*Stream, error)
+	GetStreamStatus(ctx context.Context, device string) (*Path, error)
 
 	// Recording and snapshots (identifier based)
 	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
@@ -513,8 +502,8 @@ type PathManager interface {
 	CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error
 	PatchPath(ctx context.Context, name string, config map[string]interface{}) error
 	DeletePath(ctx context.Context, name string) error
-	GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error)
-	ListPaths(ctx context.Context) ([]*MediaMTXPathConfig, error)
+	GetPath(ctx context.Context, name string) (*Path, error)
+	ListPaths(ctx context.Context) ([]*PathConf, error)
 
 	// Path validation
 	ValidatePath(ctx context.Context, name string) error
@@ -522,6 +511,7 @@ type PathManager interface {
 
 	// Path readiness
 	WaitForPathReady(ctx context.Context, name string, timeout time.Duration) error
+	ActivatePathPublisher(ctx context.Context, name string) error
 
 	// Camera operations (PathManager handles camera-path integration)
 	GetCameraList(ctx context.Context) (*CameraListResponse, error)
@@ -540,7 +530,7 @@ type PathManager interface {
 // StreamManager interface defines stream management operations
 type StreamManager interface {
 	// Stream operations (simplified - single path for all operations)
-	StartStream(ctx context.Context, devicePath string) (*Stream, error)
+	StartStream(ctx context.Context, devicePath string) (*Path, error)
 
 	// Stream lifecycle management
 	StopStream(ctx context.Context, device string) error
@@ -557,10 +547,10 @@ type StreamManager interface {
 	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)
 
 	// Generic stream operations
-	CreateStream(ctx context.Context, name, source string) (*Stream, error)
+	CreateStream(ctx context.Context, name, source string) (*Path, error)
 	DeleteStream(ctx context.Context, id string) error
-	GetStream(ctx context.Context, id string) (*Stream, error)
-	ListStreams(ctx context.Context) ([]*Stream, error)
+	GetStream(ctx context.Context, id string) (*Path, error)
+	ListStreams(ctx context.Context) ([]*Path, error)
 
 	// Stream monitoring
 	MonitorStream(ctx context.Context, id string) error

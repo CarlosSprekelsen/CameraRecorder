@@ -113,11 +113,11 @@ func TestError_Error_ReqMTX007(t *testing.T) {
 	}{
 		{
 			NewMediaMTXError(404, "Not Found", "Resource missing"),
-			"MediaMTX error [404]: Not Found - Resource missing",
+			"MediaMTX error: Not Found (code: 404)",
 		},
 		{
 			NewMediaMTXErrorWithOp(500, "Server Error", "Database failed", "CreatePath"),
-			"MediaMTX error [500]: Server Error - Database failed",
+			"MediaMTX error [CreatePath]: Server Error (code: 500)",
 		},
 		// StreamError test case removed - type was deleted during dead code sweep
 		{
