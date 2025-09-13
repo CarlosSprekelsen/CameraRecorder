@@ -105,7 +105,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 		require.NotNil(t, freshEventSource)
 
 		// Close without starting should succeed
-		err = freshEventSource.Close()
+		err := freshEventSource.Close()
 		require.NoError(t, err, "Should close event source without starting")
 	})
 
@@ -115,7 +115,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 		require.NotNil(t, freshEventSource)
 
 		// First close
-		err = freshEventSource.Close()
+		err := freshEventSource.Close()
 		require.NoError(t, err, "Should close event source successfully")
 
 		// Second close should also succeed (idempotent)
@@ -297,7 +297,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 	t.Run("watcher_creation_failure", func(t *testing.T) {
 		// This is hard to test directly since fsnotify.NewWatcher() rarely fails
 		// But we can test the error handling path exists
-		logger := logging.CreateTestLogger(t, nil)
+		_ = logging.CreateTestLogger(t, nil)
 
 		// Normal creation should work
 		eventSource := GetDeviceEventSourceFactory().Acquire()
@@ -386,7 +386,7 @@ func TestUdevDeviceEventSource_StartStop(t *testing.T) {
 		assert.Contains(t, err.Error(), "already running", "Error should indicate already running")
 
 		// Cleanup
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should close udev event source successfully")
 	})
 
@@ -444,7 +444,7 @@ func TestUdevDeviceEventSource_Events(t *testing.T) {
 		}
 
 		// Cleanup
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should close udev event source successfully")
 	})
 }
