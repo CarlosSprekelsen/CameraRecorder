@@ -32,7 +32,7 @@ import (
 func TestFsnotifyDeviceEventSource_Basic(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		// Test successful creation
-		eventSource := GetDeviceEventSourceFactory().Acquire()
+		eventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, eventSource, "Should acquire fsnotify device event source from factory")
 		require.NotNil(t, eventSource, "Event source should not be nil")
 
@@ -43,7 +43,7 @@ func TestFsnotifyDeviceEventSource_Basic(t *testing.T) {
 
 	t.Run("creation_with_nil_logger", func(t *testing.T) {
 		// Test creation with nil logger (should use default)
-		eventSource := GetDeviceEventSourceFactory().Acquire()
+		eventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, eventSource, "Should acquire event source from factory")
 		require.NotNil(t, eventSource, "Event source should not be nil")
 
@@ -54,7 +54,7 @@ func TestFsnotifyDeviceEventSource_Basic(t *testing.T) {
 
 // TestFsnotifyDeviceEventSource_StartStop tests start/stop functionality
 func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
-	eventSource := GetDeviceEventSourceFactory().Acquire()
+	eventSource := GetDeviceEventSourceFactory().Create()
 	require.NotNil(t, eventSource)
 	defer eventSource.Close()
 
@@ -101,7 +101,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 
 	t.Run("close_without_start", func(t *testing.T) {
 		// Create a fresh event source
-		freshEventSource := GetDeviceEventSourceFactory().Acquire()
+		freshEventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, freshEventSource)
 
 		// Close without starting should succeed
@@ -111,7 +111,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 
 	t.Run("multiple_close_calls", func(t *testing.T) {
 		// Create a fresh event source
-		freshEventSource := GetDeviceEventSourceFactory().Acquire()
+		freshEventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, freshEventSource)
 
 		// First close
@@ -126,7 +126,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 
 // TestFsnotifyDeviceEventSource_Events tests event channel functionality
 func TestFsnotifyDeviceEventSource_Events(t *testing.T) {
-	eventSource := GetDeviceEventSourceFactory().Acquire()
+	eventSource := GetDeviceEventSourceFactory().Create()
 	require.NotNil(t, eventSource)
 	defer eventSource.Close()
 
@@ -174,7 +174,7 @@ func TestFsnotifyDeviceEventSource_Events(t *testing.T) {
 
 // TestFsnotifyDeviceEventSource_EventProcessing tests event processing logic
 func TestFsnotifyDeviceEventSource_EventProcessing(t *testing.T) {
-	eventSource := GetDeviceEventSourceFactory().Acquire()
+	eventSource := GetDeviceEventSourceFactory().Create()
 	require.NotNil(t, eventSource)
 	defer eventSource.Close()
 
@@ -300,7 +300,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 		_ = logging.CreateTestLogger(t, nil)
 
 		// Normal creation should work
-		eventSource := GetDeviceEventSourceFactory().Acquire()
+		eventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, eventSource, "Should acquire event source from factory")
 		require.NotNil(t, eventSource, "Event source should not be nil")
 
@@ -333,7 +333,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 func TestUdevDeviceEventSource_Basic(t *testing.T) {
 	t.Run("creation", func(t *testing.T) {
 		// Test successful creation
-		eventSource := GetDeviceEventSourceFactory().Acquire()
+		eventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, eventSource, "Should acquire device event source from factory")
 		require.NotNil(t, eventSource, "Event source should not be nil")
 
@@ -344,7 +344,7 @@ func TestUdevDeviceEventSource_Basic(t *testing.T) {
 
 	t.Run("creation_with_nil_logger", func(t *testing.T) {
 		// Test creation with nil logger (should use default)
-		eventSource := GetDeviceEventSourceFactory().Acquire()
+		eventSource := GetDeviceEventSourceFactory().Create()
 		require.NotNil(t, eventSource, "Should acquire event source from factory")
 		require.NotNil(t, eventSource, "Event source should not be nil")
 
@@ -355,7 +355,7 @@ func TestUdevDeviceEventSource_Basic(t *testing.T) {
 
 // TestUdevDeviceEventSource_StartStop tests udev start/stop functionality
 func TestUdevDeviceEventSource_StartStop(t *testing.T) {
-	eventSource := GetDeviceEventSourceFactory().Acquire()
+	eventSource := GetDeviceEventSourceFactory().Create()
 	require.NotNil(t, eventSource)
 	defer eventSource.Close()
 
@@ -403,7 +403,7 @@ func TestUdevDeviceEventSource_StartStop(t *testing.T) {
 
 // TestUdevDeviceEventSource_Events tests udev events channel functionality
 func TestUdevDeviceEventSource_Events(t *testing.T) {
-	eventSource := GetDeviceEventSourceFactory().Acquire()
+	eventSource := GetDeviceEventSourceFactory().Create()
 	require.NotNil(t, eventSource)
 	defer eventSource.Close()
 

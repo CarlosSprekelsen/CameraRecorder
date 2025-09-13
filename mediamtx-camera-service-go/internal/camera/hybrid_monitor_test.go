@@ -45,10 +45,7 @@ func TestHybridCameraMonitor_Basic(t *testing.T) {
 
 // TestHybridCameraMonitor_StartStop tests actual start/stop behavior
 func TestHybridCameraMonitor_StartStop(t *testing.T) {
-	// Reset device event source factory for test isolation
-	t.Cleanup(func() {
-		GetDeviceEventSourceFactory().ResetForTests()
-	})
+	// No factory cleanup needed - each test gets fresh instances
 
 	// Create test config and logger directly
 	configManager := config.CreateConfigManager()
@@ -87,8 +84,7 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 		// Allow monitoring loop to run for a short time to ensure it starts properly
 		time.Sleep(100 * time.Millisecond)
 
-		// Clean up device event source for next subtest
-		GetDeviceEventSourceFactory().ResetForTests()
+		// Clean up handled automatically by fresh instances
 	})
 
 	// Test stop functionality
@@ -111,8 +107,7 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 		require.NoError(t, err, "Monitor should stop successfully")
 		assert.False(t, monitor.IsRunning(), "Monitor should not be running after stop")
 
-		// Clean up device event source for next subtest
-		GetDeviceEventSourceFactory().ResetForTests()
+		// Clean up handled automatically by fresh instances
 	})
 
 	// Test readiness state
@@ -313,10 +308,7 @@ func TestHybridCameraMonitor_UtilityFunctions(t *testing.T) {
 
 // TestHybridCameraMonitor_Integration tests integration with MediaMTX environment
 func TestHybridCameraMonitor_Integration(t *testing.T) {
-	// Reset device event source factory for test isolation
-	t.Cleanup(func() {
-		GetDeviceEventSourceFactory().ResetForTests()
-	})
+	// No factory cleanup needed - each test gets fresh instances
 
 	// Create test config and logger directly for MediaMTX integration
 	configManager := config.CreateConfigManager()
@@ -878,10 +870,7 @@ func (n *testEventNotifier) NotifyCapabilityError(devicePath string, error strin
 
 // TestHybridCameraMonitor_EdgeCases tests edge cases and error scenarios
 func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
-	// Reset device event source factory for test isolation
-	t.Cleanup(func() {
-		GetDeviceEventSourceFactory().ResetForTests()
-	})
+	// No factory cleanup needed - each test gets fresh instances
 
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
@@ -1112,10 +1101,7 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 
 // TestHybridCameraMonitor_ErrorRecovery tests error recovery scenarios
 func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
-	// Reset device event source factory for test isolation
-	t.Cleanup(func() {
-		GetDeviceEventSourceFactory().ResetForTests()
-	})
+	// No factory cleanup needed - each test gets fresh instances
 
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
@@ -1423,10 +1409,7 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 
 // TestHybridCameraMonitor_ContextAwareShutdown tests the context-aware shutdown functionality
 func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
-	// Reset device event source factory for test isolation
-	t.Cleanup(func() {
-		GetDeviceEventSourceFactory().ResetForTests()
-	})
+	// No factory cleanup needed - each test gets fresh instances
 
 	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
 		// Create test config and logger directly

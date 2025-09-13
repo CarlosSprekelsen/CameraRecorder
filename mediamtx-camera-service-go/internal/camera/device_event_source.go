@@ -133,6 +133,10 @@ func (f *FsnotifyDeviceEventSource) Close() error {
 		return nil // Already stopped
 	}
 
+	// Reset all state for reuse (following factory pattern)
+	atomic.StoreInt32(&f.started, 0)
+	atomic.StoreInt32(&f.eventsSupported, 0)
+
 	// Safely close stop channel to signal event loop to exit
 	select {
 	case <-f.stopChan:
@@ -370,13 +374,10 @@ func (u *UdevDeviceEventSource) Started() bool {
 	return atomic.LoadInt32(&u.running) == 1
 }
 
-// DeviceEventSourceFactory manages singleton device event sources with ref counting
-// This prevents resource leaks by ensuring only one fsnotify watcher per process
+// DeviceEventSourceFactory creates fresh device event source instances
+// Each component gets its own instance for proper isolation and error recovery
 type DeviceEventSourceFactory struct {
-	mu       sync.RWMutex
-	instance *FsnotifyDeviceEventSource
-	refCount int
-	logger   *logging.Logger
+	logger *logging.Logger
 }
 
 var (
@@ -384,7 +385,7 @@ var (
 	factoryOnce   sync.Once
 )
 
-// GetDeviceEventSourceFactory returns the global singleton factory
+// GetDeviceEventSourceFactory returns the global factory
 func GetDeviceEventSourceFactory() *DeviceEventSourceFactory {
 	factoryOnce.Do(func() {
 		globalFactory = &DeviceEventSourceFactory{
@@ -394,76 +395,22 @@ func GetDeviceEventSourceFactory() *DeviceEventSourceFactory {
 	return globalFactory
 }
 
-// Acquire returns a device event source instance, creating it if needed
-// Increments the reference count
-func (f *DeviceEventSourceFactory) Acquire() DeviceEventSource {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.instance == nil {
-		// Create new instance without allocating watcher yet
-		f.instance = &FsnotifyDeviceEventSource{
-			logger:          f.logger,
-			watcher:         nil, // Will be created in Start()
-			events:          make(chan DeviceEvent, 100),
-			stopChan:        make(chan struct{}),
-			running:         0,
-			done:            sync.WaitGroup{},
-			eventsSupported: 0, // Will be set in Start()
-			started:         0, // Will be set in Start()
-		}
-		f.logger.Info("Created new device event source instance")
-	} else {
-		// Reset existing instance state for reuse
-		atomic.StoreInt32(&f.instance.running, 0)
-		atomic.StoreInt32(&f.instance.eventsSupported, 0)
-		atomic.StoreInt32(&f.instance.started, 0)
-		f.instance.watcher = nil
-		f.instance.events = make(chan DeviceEvent, 100)
-		f.instance.stopChan = make(chan struct{})
-		f.instance.done = sync.WaitGroup{}
-		f.logger.Info("Reset existing device event source instance for reuse")
+// Create returns a fresh device event source instance
+// Each call creates a new instance for proper isolation and error recovery
+func (f *DeviceEventSourceFactory) Create() DeviceEventSource {
+	instance := &FsnotifyDeviceEventSource{
+		logger:          f.logger,
+		watcher:         nil, // Will be created in Start()
+		events:          make(chan DeviceEvent, 100),
+		stopChan:        make(chan struct{}),
+		running:         0,
+		done:            sync.WaitGroup{},
+		eventsSupported: 0, // Will be set in Start()
+		started:         0, // Will be set in Start()
 	}
-
-	f.refCount++
-	f.logger.WithField("ref_count", fmt.Sprintf("%d", f.refCount)).Debug("Acquired device event source")
-	return f.instance
+	f.logger.Info("Created fresh device event source instance")
+	return instance
 }
 
-// Release decrements the reference count and closes the instance when count reaches zero
-func (f *DeviceEventSourceFactory) Release() error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.refCount <= 0 {
-		f.logger.Error("Release called with zero or negative ref count - this indicates a bug")
-		return fmt.Errorf("release underflow: refCount=%d", f.refCount)
-	}
-
-	f.refCount--
-	f.logger.WithField("ref_count", fmt.Sprintf("%d", f.refCount)).Debug("Released device event source")
-
-	if f.refCount == 0 && f.instance != nil {
-		f.logger.Info("Closing device event source - final reference released")
-		err := f.instance.Close()
-		// Don't set instance to nil - keep it for reuse
-		// The instance will be reset when next acquired
-		return err
-	}
-
-	return nil
-}
-
-// ResetForTests forces cleanup of the singleton for test isolation
-// This should only be called in test cleanup to ensure no resource leaks
-func (f *DeviceEventSourceFactory) ResetForTests() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	if f.instance != nil {
-		f.logger.Info("Force closing device event source for test cleanup")
-		f.instance.Close()
-		f.instance = nil
-	}
-	f.refCount = 0
-}
+// No Release() method needed - each component manages its own instance lifecycle
+// No ResetForTests() method needed - fresh instances provide natural test isolation

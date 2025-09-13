@@ -28,7 +28,7 @@ func Test_MonitorStart_Smoke(t *testing.T) {
 
 	// Create a minimal camera monitor with real implementations
 	// We need to create the required dependencies
-	configManager := &config.ConfigManager{} // Minimal config manager
+	configManager := config.CreateConfigManager() // Use centralized config creation
 	deviceChecker := &RealDeviceChecker{}
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
@@ -82,7 +82,7 @@ func Test_MonitorStart_SingleStartInvariant(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 
 	// Create monitor
-	configManager := &config.ConfigManager{} // Minimal config manager
+	configManager := config.CreateConfigManager() // Use centralized config creation
 	deviceChecker := &RealDeviceChecker{}
 	commandExecutor := &RealV4L2CommandExecutor{}
 	infoParser := &RealDeviceInfoParser{}
