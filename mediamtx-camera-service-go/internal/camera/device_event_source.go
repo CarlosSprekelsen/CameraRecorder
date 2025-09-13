@@ -393,12 +393,14 @@ func (f *DeviceEventSourceFactory) Acquire() DeviceEventSource {
 	if f.instance == nil {
 		// Create new instance without allocating watcher yet
 		f.instance = &FsnotifyDeviceEventSource{
-			logger:   f.logger,
-			watcher:  nil, // Will be created in Start()
-			events:   make(chan DeviceEvent, 100),
-			stopChan: make(chan struct{}),
-			running:  0,
-			done:     sync.WaitGroup{},
+			logger:          f.logger,
+			watcher:         nil, // Will be created in Start()
+			events:          make(chan DeviceEvent, 100),
+			stopChan:        make(chan struct{}),
+			running:         0,
+			done:            sync.WaitGroup{},
+			eventsSupported: 0, // Will be set in Start()
+			started:         0, // Will be set in Start()
 		}
 		f.logger.Info("Created new device event source instance")
 	}

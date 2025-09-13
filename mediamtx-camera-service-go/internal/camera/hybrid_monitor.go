@@ -321,16 +321,10 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":                 "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
-	// Start device event source and wait for it to be ready
+	// Start device event source - trust its return value
 	if err := m.deviceEventSource.Start(ctx); err != nil {
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
 		return fmt.Errorf("failed to start device event source: %w", err)
-	}
-
-	// Wait for event source to be started (non-blocking check)
-	if !m.deviceEventSource.Started() {
-		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
-		return fmt.Errorf("device event source failed to start")
 	}
 
 	// Log the mode we're running in
