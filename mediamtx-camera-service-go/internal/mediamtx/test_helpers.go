@@ -141,10 +141,17 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 
 	t.Log("Starting MediaMTX test cleanup...")
 
-	// ARCHITECTURE COMPLIANCE: Don't manage camera monitor lifecycle directly
-	// The camera monitor follows Progressive Readiness Pattern - it manages its own lifecycle
-	// Tests should not interfere with the monitor's internal state management
-	// The monitor will clean up its own resources when the test process exits
+	// Stop camera monitor to prevent goroutine leaks
+	if h.cameraMonitor != nil {
+		if err := h.cameraMonitor.Stop(); err != nil {
+			t.Logf("Warning: Failed to stop camera monitor during cleanup: %v", err)
+		}
+	}
+
+	// Stop config manager to prevent file watcher goroutine leaks
+	if h.configManager != nil {
+		h.configManager.Stop()
+	}
 
 	// Clean up MediaMTX paths created during tests
 	h.cleanupMediaMTXPaths(t)
@@ -437,7 +444,8 @@ func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
 
 // GetController creates a MediaMTX controller with proper dependencies
 func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, error) {
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	// Use shared config manager to prevent multiple instances
+	configManager := h.GetConfigManager()
 	cameraMonitor := h.GetCameraMonitor()
 	logger := h.GetLogger()
 
