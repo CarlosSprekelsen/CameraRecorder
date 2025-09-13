@@ -73,7 +73,6 @@ type MediaMTXTestHelper struct {
 	pathManagerOnce      sync.Once
 	streamManagerOnce    sync.Once
 	recordingManagerOnce sync.Once
-	rtspManagerOnce      sync.Once
 	cameraMonitorOnce    sync.Once
 }
 
@@ -454,7 +453,7 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 }
 
 // GetOrchestratedController returns a controller with proper service orchestration
-// This follows the Progressive Readiness Pattern from the architecture
+// This follows the Event-Driven Readiness Pattern from the architecture
 func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXController, error) {
 	// PRE-CLEANUP: Clean up any existing test paths before starting
 	h.ForceCleanupRuntimePaths(t)
@@ -470,40 +469,56 @@ func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXCo
 		return nil, err
 	}
 
-	// Start the controller following Progressive Readiness Pattern
+	// Subscribe to readiness events BEFORE starting the controller
+	readinessChan := controller.SubscribeToReadiness()
+
+	// Start the controller following Event-Driven Readiness Pattern
 	ctx := context.Background()
 	err = controller.Start(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start controller: %w", err)
 	}
 
-	// Wait for service readiness following the architecture pattern
+	// Wait for service readiness using event-driven approach
 	err = h.WaitForServiceReadiness(ctx, controller)
 	if err != nil {
 		controller.Stop(ctx) // Cleanup on failure
 		return nil, fmt.Errorf("service not ready: %w", err)
 	}
 
+	// Ensure we received the readiness event
+	select {
+	case <-readinessChan:
+		// Ready event received
+	default:
+		// No event received, but controller reports ready - this is fine
+	}
+
 	return controller, nil
 }
 
-// WaitForServiceReadiness waits for all services to be ready following the Progressive Readiness Pattern
+// WaitForServiceReadiness waits for all services to be ready using event-driven approach
 func (h *MediaMTXTestHelper) WaitForServiceReadiness(ctx context.Context, controller MediaMTXController) error {
-	// Use controller.IsReady() as the single source of truth for service readiness
-	// This aligns with the Progressive Readiness Pattern and handles both event-first and poll-only modes
-	maxWait := 30 * time.Second
-	waitInterval := 100 * time.Millisecond
-	start := time.Now()
-
-	for time.Since(start) < maxWait {
-		if controller.IsReady() {
-			// Service is ready
-			return nil
-		}
-		time.Sleep(waitInterval)
+	// Check if already ready
+	if controller.IsReady() {
+		return nil
 	}
 
-	return fmt.Errorf("service readiness timeout: controller not ready within %v", maxWait)
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Subscribe to readiness events
+	readinessChan := controller.SubscribeToReadiness()
+
+	// Wait for readiness event or timeout
+	select {
+	case <-readinessChan:
+		// Service is ready
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("service readiness timeout: controller not ready within 30s")
+	}
 }
 
 // GetConfiguredSnapshotPath returns the snapshot path from the fixture configuration
@@ -1136,9 +1151,9 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 	}
 }
 
-// GetStreamsResponseScenarios returns test scenarios specific to parseStreamsResponse
+// GetPathListResponseScenarios returns test scenarios specific to parsePathListResponse
 // Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
-func GetStreamsResponseScenarios() []JSONMalformationTestScenario {
+func GetPathListResponseScenarios() []JSONMalformationTestScenario {
 	return []JSONMalformationTestScenario{
 		{
 			Name:        "empty_json",
@@ -1318,7 +1333,7 @@ func GetStreamResponseScenarios() []JSONMalformationTestScenario {
 	}
 }
 
-// GetPathsResponseScenarios returns test scenarios specific to parsePathsResponse
+// GetPathsResponseScenarios returns test scenarios specific to parsePathConfListResponse
 // Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
 func GetPathsResponseScenarios() []JSONMalformationTestScenario {
 	return []JSONMalformationTestScenario{
@@ -1503,15 +1518,15 @@ func GetHealthResponseScenarios() []JSONMalformationTestScenario {
 // TestJSONParsingErrors tests JSON parsing functions with malformed data
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
-	// Test parseStreamsResponse function with schema-specific scenarios
-	t.Run("parseStreamsResponse_JSON_Errors", func(t *testing.T) {
-		scenarios := GetStreamsResponseScenarios()
+	// Test parsePathListResponse function with schema-specific scenarios
+	t.Run("parsePathListResponse_JSON_Errors", func(t *testing.T) {
+		scenarios := GetPathListResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parseStreamsResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+				t.Logf("Testing parsePathListResponse with scenario: %s - %s", scenario.Name, scenario.Description)
 
 				// Test the JSON parsing function
-				_, err := parseStreamsResponse(scenario.JSONData)
+				_, err := parsePathListResponse(scenario.JSONData)
 
 				if scenario.ExpectError {
 					// Should get an error
@@ -1599,15 +1614,15 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 		}
 	})
 
-	// Test parsePathsResponse function with schema-specific scenarios
-	t.Run("parsePathsResponse_JSON_Errors", func(t *testing.T) {
+	// Test parsePathConfListResponse function with schema-specific scenarios
+	t.Run("parsePathConfListResponse_JSON_Errors", func(t *testing.T) {
 		scenarios := GetPathsResponseScenarios()
 		for _, scenario := range scenarios {
 			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parsePathsResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+				t.Logf("Testing parsePathConfListResponse with scenario: %s - %s", scenario.Name, scenario.Description)
 
 				// Test the JSON parsing function
-				_, err := parsePathsResponse(scenario.JSONData)
+				_, err := parsePathConfListResponse(scenario.JSONData)
 
 				if scenario.ExpectError {
 					// Should get an error
@@ -1658,10 +1673,10 @@ func (h *MediaMTXTestHelper) TestJSONParsingPanicProtection(t *testing.T) {
 				}()
 
 				// Test all parsing functions
-				_, err1 := parseStreamsResponse(data)
+				_, err1 := parsePathListResponse(data)
 				_, err2 := parseStreamResponse(data)
 				_, err3 := parseHealthResponse(data)
-				_, err4 := parsePathsResponse(data)
+				_, err4 := parsePathConfListResponse(data)
 
 				// We don't care about errors here, just that no panic occurred
 				t.Logf("No panic occurred (errors: %v, %v, %v, %v)", err1, err2, err3, err4)

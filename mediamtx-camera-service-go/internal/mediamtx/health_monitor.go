@@ -225,6 +225,33 @@ func (h *SimpleHealthMonitor) IsHealthy() bool {
 	return atomic.LoadInt32(&h.isHealthy) == 1
 }
 
+// WaitForHealthy waits for the health monitor to become healthy using event-driven approach
+func (h *SimpleHealthMonitor) WaitForHealthy(ctx context.Context) error {
+	// Return immediately if already healthy
+	if h.IsHealthy() {
+		return nil
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Poll with short intervals until healthy or timeout
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			return fmt.Errorf("health monitor not healthy within timeout")
+		case <-ticker.C:
+			if h.IsHealthy() {
+				return nil
+			}
+		}
+	}
+}
+
 // IsCircuitOpen returns true if the circuit breaker is open (unhealthy)
 func (h *SimpleHealthMonitor) IsCircuitOpen() bool {
 	return !h.IsHealthy()

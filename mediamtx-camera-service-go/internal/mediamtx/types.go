@@ -15,7 +15,6 @@ package mediamtx
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
@@ -179,8 +178,6 @@ type RecordingSession struct {
 	MaxDuration   time.Duration `json:"max_duration"`   // Maximum recording duration
 	AutoRotate    bool          `json:"auto_rotate"`    // Auto-rotate files
 	RotationSize  int64         `json:"rotation_size"`  // Size threshold for rotation
-
-	mu sync.RWMutex `json:"-"` // Mutex for thread-safe access
 }
 
 // Snapshot represents a camera snapshot
@@ -326,8 +323,9 @@ type MediaMTXController interface {
 	// System readiness
 	IsReady() bool
 	GetReadinessState() map[string]interface{}
+	SubscribeToReadiness() <-chan struct{}
 
-	// Stream management (DEPRECATED - use MediaMTXPathResponse from api_types.go)
+	// Stream management (uses Path from api_types.go)
 	GetStreams(ctx context.Context) ([]*Path, error)
 	GetStream(ctx context.Context, id string) (*Path, error)
 	CreateStream(ctx context.Context, name, source string) (*Path, error)
@@ -424,7 +422,7 @@ type MediaMTXControllerAPI interface {
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
 	GetHealthMonitor() HealthMonitor
 
-	// Streaming (DEPRECATED - use MediaMTXPathResponse from api_types.go)
+	// Streaming (uses Path from api_types.go)
 	GetStreams(ctx context.Context) ([]*Path, error)
 	StartStreaming(ctx context.Context, device string) (*Path, error)
 	StopStreaming(ctx context.Context, device string) error
@@ -504,6 +502,7 @@ type PathManager interface {
 	DeletePath(ctx context.Context, name string) error
 	GetPath(ctx context.Context, name string) (*Path, error)
 	ListPaths(ctx context.Context) ([]*PathConf, error)
+	GetRuntimePaths(ctx context.Context) ([]*Path, error)
 
 	// Path validation
 	ValidatePath(ctx context.Context, name string) error

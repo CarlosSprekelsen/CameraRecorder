@@ -63,6 +63,10 @@ type controller struct {
 	// Active recording tracking (Phase 2 enhancement)
 	activeRecordings map[string]*ActiveRecording
 	recordingMutex   sync.RWMutex
+
+	// Event-driven readiness system
+	readinessEventChan chan struct{}
+	readinessMutex     sync.RWMutex
 }
 
 // Race condition protection helper
@@ -92,12 +96,72 @@ func (c *controller) IsReady() bool {
 		return false
 	}
 
-	// Check if health monitor is operational
+	// Health monitor is optional - if nil, consider healthy by default
+	// If present, check if it's healthy
 	if c.healthMonitor != nil && !c.healthMonitor.IsHealthy() {
 		return false
 	}
 
 	return true
+}
+
+// SubscribeToReadiness returns a channel that receives notifications when the controller becomes ready
+func (c *controller) SubscribeToReadiness() <-chan struct{} {
+	c.readinessMutex.RLock()
+	defer c.readinessMutex.RUnlock()
+
+	// Create a new channel for this subscriber
+	subscriberChan := make(chan struct{}, 1)
+
+	// If already ready, send immediate notification
+	if c.IsReady() {
+		select {
+		case subscriberChan <- struct{}{}:
+		default:
+		}
+	}
+
+	return subscriberChan
+}
+
+// emitReadinessEvent emits a readiness event to all subscribers
+func (c *controller) emitReadinessEvent() {
+	c.readinessMutex.RLock()
+	defer c.readinessMutex.RUnlock()
+
+	// Send to the main readiness channel if it exists
+	if c.readinessEventChan != nil {
+		select {
+		case c.readinessEventChan <- struct{}{}:
+		default:
+			// Channel is full, skip this event
+		}
+	}
+}
+
+// monitorReadiness monitors controller readiness and emits events when ready
+func (c *controller) monitorReadiness(ctx context.Context) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	lastReadyState := false
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			currentReadyState := c.IsReady()
+
+			// Emit event when readiness state changes from false to true
+			if !lastReadyState && currentReadyState {
+				c.emitReadinessEvent()
+				c.logger.Info("Controller readiness event emitted")
+			}
+
+			lastReadyState = currentReadyState
+		}
+	}
 }
 
 // GetReadinessState returns detailed readiness information
@@ -395,7 +459,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		healthNotificationManager: healthNotificationManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
 		// sessions: sync.Map is zero-initialized, no need to initialize
-		activeRecordings: make(map[string]*ActiveRecording),
+		activeRecordings:   make(map[string]*ActiveRecording),
+		readinessEventChan: make(chan struct{}, 10), // Buffered channel for readiness events
 	}, nil
 }
 
@@ -435,6 +500,9 @@ func (c *controller) Start(ctx context.Context) error {
 
 	atomic.StoreInt32(&c.isRunning, 1)
 	c.startTime = time.Now()
+
+	// Start readiness monitoring goroutine
+	go c.monitorReadiness(ctx)
 
 	c.logger.Info("MediaMTX controller started successfully")
 	return nil
@@ -844,31 +912,16 @@ func (c *controller) DeleteStream(ctx context.Context, id string) error {
 	return c.streamManager.DeleteStream(ctx, id)
 }
 
-// GetPaths returns all paths
+// GetPaths returns all runtime paths
 func (c *controller) GetPaths(ctx context.Context) ([]*Path, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get paths from path manager and convert to legacy Path type
-	pathConfigs, err := c.pathManager.ListPaths(ctx)
+	// Get runtime paths from path manager
+	paths, err := c.pathManager.GetRuntimePaths(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	// Convert MediaMTXPathConfig to Path (legacy type)
-	paths := make([]*Path, len(pathConfigs))
-	for i, config := range pathConfigs {
-		// Convert PathConf to Path for runtime response
-		paths[i] = &Path{
-			Name:      config.Name,
-			ConfName:  config.Name,
-			Source:    nil,   // Source is populated by MediaMTX runtime
-			Ready:     false, // Will be updated by runtime status
-			ReadyTime: nil,
-			Tracks:    []string{},
-			Readers:   []PathReader{},
-		}
 	}
 
 	return paths, nil

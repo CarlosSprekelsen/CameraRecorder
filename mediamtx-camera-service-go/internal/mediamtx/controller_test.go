@@ -19,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -28,37 +27,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Performance optimization: Cache for frequently used resources
-var (
-	controllerCache = make(map[string]*controller)
-	cacheMutex      sync.RWMutex
-)
-
-// getCachedController returns a cached controller for performance optimization
-func getCachedController(t *testing.T, testName string) *controller {
-	cacheMutex.RLock()
-	if cached, exists := controllerCache[testName]; exists {
-		cacheMutex.RUnlock()
-		return cached
-	}
-	cacheMutex.RUnlock()
-
-	// Create new controller and cache it
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-
-	// Double-check after acquiring write lock
-	if cached, exists := controllerCache[testName]; exists {
-		return cached
-	}
-
+// getFreshController returns a fresh controller instance for each test
+// This ensures proper test isolation and prevents initialization issues
+func getFreshController(t *testing.T, testName string) *controller {
 	// Create controller using test fixture
 	helper := NewMediaMTXTestHelper(t, nil)
 	controllerInterface, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 
 	controller := controllerInterface.(*controller)
-	controllerCache[testName] = controller
 	return controller
 }
 
@@ -687,7 +664,7 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (advanced recording)
 	// Use cached controller for performance optimization
-	controller := getCachedController(t, "TestController_AdvancedRecording_ReqMTX002")
+	controller := getFreshController(t, "TestController_AdvancedRecording_ReqMTX002")
 
 	// Start the controller if not already started
 	ctx := context.Background()
@@ -806,7 +783,7 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 // TestController_HealthMonitoring_ReqMTX004 tests health monitoring functionality
 func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring capabilities
-	controller := getCachedController(t, "TestController_HealthMonitoring_ReqMTX004")
+	controller := getFreshController(t, "TestController_HealthMonitoring_ReqMTX004")
 
 	ctx := context.Background()
 	err := controller.Start(ctx)
@@ -840,7 +817,7 @@ func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
 // TestController_PathManagement_ReqMTX003 tests path management functionality
 func TestController_PathManagement_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	controller := getCachedController(t, "TestController_PathManagement_ReqMTX003")
+	controller := getFreshController(t, "TestController_PathManagement_ReqMTX003")
 
 	ctx := context.Background()
 	err := controller.Start(ctx)
@@ -887,7 +864,7 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 // TestController_RTSPOperations_ReqMTX004 tests RTSP operations functionality
 func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: RTSP connection management
-	controller := getCachedController(t, "TestController_RTSPOperations_ReqMTX004")
+	controller := getFreshController(t, "TestController_RTSPOperations_ReqMTX004")
 
 	ctx := context.Background()
 	err := controller.Start(ctx)
@@ -924,7 +901,7 @@ func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
 // TestController_AdvancedSnapshot_ReqMTX002 tests advanced snapshot functionality
 func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Advanced snapshot capabilities
-	controller := getCachedController(t, "TestController_AdvancedSnapshot_ReqMTX002")
+	controller := getFreshController(t, "TestController_AdvancedSnapshot_ReqMTX002")
 
 	ctx := context.Background()
 	err := controller.Start(ctx)
@@ -1055,7 +1032,7 @@ func TestController_IsDeviceRecording_ReqMTX002(t *testing.T) {
 	// Server is ready via shared test helper
 
 	// Use cached controller for performance
-	controller := getCachedController(t, "TestController_IsDeviceRecording_ReqMTX002")
+	controller := getFreshController(t, "TestController_IsDeviceRecording_ReqMTX002")
 
 	// Test IsDeviceRecording for non-existent device
 	isRecording := controller.IsDeviceRecording("camera0")
@@ -1077,7 +1054,7 @@ func TestController_GetActiveRecordings_ReqMTX002(t *testing.T) {
 	// Server is ready via shared test helper
 
 	// Use cached controller for performance
-	controller := getCachedController(t, "TestController_GetActiveRecordings_ReqMTX002")
+	controller := getFreshController(t, "TestController_GetActiveRecordings_ReqMTX002")
 
 	// Test GetActiveRecordings when no recordings are active
 	activeRecordings := controller.GetActiveRecordings()
@@ -1096,7 +1073,7 @@ func TestController_GetActiveRecording_ReqMTX002(t *testing.T) {
 	// Server is ready via shared test helper
 
 	// Use cached controller for performance
-	controller := getCachedController(t, "TestController_GetActiveRecording_ReqMTX002")
+	controller := getFreshController(t, "TestController_GetActiveRecording_ReqMTX002")
 
 	// Test GetActiveRecording for non-existent device
 	activeRecording := controller.GetActiveRecording("camera0")
