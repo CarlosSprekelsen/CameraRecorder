@@ -21,10 +21,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createTestDeviceEventSource creates a device event source for testing
+// createTestDeviceEventSource creates a device event source for testing using factory
 func createTestDeviceEventSource(t *testing.T, logger *logging.Logger) DeviceEventSource {
-	deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-	require.NoError(t, err, "Should create device event source for testing")
+	// Use factory to ensure consistent resource management
+	deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+	require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 	return deviceEventSource
 }
 

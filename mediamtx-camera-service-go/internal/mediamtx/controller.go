@@ -926,8 +926,8 @@ func (c *controller) AddExternalStream(ctx context.Context, stream *ExternalStre
 		return fmt.Errorf("controller is not running")
 	}
 
-	if c.externalDiscovery == nil {
-		return fmt.Errorf("external discovery not initialized")
+	if !c.hasExternalDiscovery() {
+		return fmt.Errorf("external stream discovery is not configured")
 	}
 
 	// Create MediaMTX path for the external stream

@@ -791,8 +791,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		logger := logging.CreateTestLogger(t, nil)
 
 		// Create monitor
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -831,8 +831,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -890,8 +890,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -930,8 +930,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1038,8 +1038,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1076,8 +1076,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,
@@ -1129,8 +1129,8 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 		configManager := config.CreateConfigManager()
 		logger := logging.CreateTestLogger(t, nil)
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,

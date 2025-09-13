@@ -30,12 +30,14 @@ import (
 // FsnotifyDeviceEventSource implements DeviceEventSource using fsnotify
 // This is the default implementation that works in containers without CGO
 type FsnotifyDeviceEventSource struct {
-	logger   *logging.Logger
-	watcher  *fsnotify.Watcher
-	events   chan DeviceEvent
-	stopChan chan struct{}
-	running  int32          // Using atomic operations instead of mutex
-	done     sync.WaitGroup // Wait for event loop to exit
+	logger          *logging.Logger
+	watcher         *fsnotify.Watcher
+	events          chan DeviceEvent
+	stopChan        chan struct{}
+	running         int32          // Using atomic operations instead of mutex
+	done            sync.WaitGroup // Wait for event loop to exit
+	eventsSupported int32          // Whether fsnotify events are supported
+	started         int32          // Whether the event source has started
 }
 
 // NewFsnotifyDeviceEventSource creates a new fsnotify-based device event source
@@ -84,11 +86,18 @@ func (f *FsnotifyDeviceEventSource) Start(ctx context.Context) error {
 	// Watch /dev directory for device changes
 	err = f.watcher.Add("/dev")
 	if err != nil {
-		// Reset running state if watcher setup fails
-		atomic.StoreInt32(&f.running, 0)
+		// fsnotify not available (container perms, etc.) - mark as poll-only mode
+		f.logger.WithError(err).Warn("fsnotify not available, falling back to poll-only mode")
+		atomic.StoreInt32(&f.eventsSupported, 0) // false
 		f.watcher.Close()
-		return fmt.Errorf("failed to watch /dev directory: %w", err)
+		f.watcher = nil
+	} else {
+		// fsnotify is working
+		atomic.StoreInt32(&f.eventsSupported, 1) // true
 	}
+
+	// Mark as started regardless of fsnotify availability
+	atomic.StoreInt32(&f.started, 1)
 
 	f.logger.WithFields(logging.Fields{
 		"action": "device_event_source_started",
@@ -140,6 +149,16 @@ func (f *FsnotifyDeviceEventSource) Close() error {
 	return nil
 }
 
+// EventsSupported returns whether fsnotify events are supported
+func (f *FsnotifyDeviceEventSource) EventsSupported() bool {
+	return atomic.LoadInt32(&f.eventsSupported) == 1
+}
+
+// Started returns whether the event source has started
+func (f *FsnotifyDeviceEventSource) Started() bool {
+	return atomic.LoadInt32(&f.started) == 1
+}
+
 // eventLoop processes fsnotify events and filters for video devices
 func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 	defer func() {
@@ -154,6 +173,17 @@ func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 		// Signal that the loop has exited
 		f.done.Done()
 	}()
+
+	// If fsnotify is not supported, just wait for stop signal
+	if f.watcher == nil {
+		f.logger.Debug("Running in poll-only mode (no fsnotify events)")
+		select {
+		case <-ctx.Done():
+			return
+		case <-f.stopChan:
+			return
+		}
+	}
 
 	for {
 		select {
@@ -318,6 +348,16 @@ func (u *UdevDeviceEventSource) Close() error {
 	}).Info("Stopped udev device event source")
 
 	return nil
+}
+
+// EventsSupported returns whether udev events are supported
+func (u *UdevDeviceEventSource) EventsSupported() bool {
+	return true // udev always supports events when available
+}
+
+// Started returns whether the event source has started
+func (u *UdevDeviceEventSource) Started() bool {
+	return atomic.LoadInt32(&u.running) == 1
 }
 
 // DeviceEventSourceFactory manages singleton device event sources with ref counting

@@ -58,6 +58,8 @@ type DeviceEventSource interface {
 	Start(ctx context.Context) error
 	Events() <-chan DeviceEvent
 	Close() error
+	EventsSupported() bool
+	Started() bool
 }
 
 // DeviceEvent represents a device event from udev/fsnotify

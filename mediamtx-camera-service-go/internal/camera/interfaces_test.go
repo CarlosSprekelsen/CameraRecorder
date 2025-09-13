@@ -299,8 +299,8 @@ func TestCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		commandExecutor := &RealV4L2CommandExecutor{}
 		infoParser := &RealDeviceInfoParser{}
 
-		deviceEventSource, err := NewFsnotifyDeviceEventSource(logger)
-		require.NoError(t, err, "Should create device event source")
+		deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+		require.NotNil(t, deviceEventSource, "Should acquire device event source from factory")
 
 		monitor, err := NewHybridCameraMonitor(
 			configManager,

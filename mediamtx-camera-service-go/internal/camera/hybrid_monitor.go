@@ -57,6 +57,7 @@ type HybridCameraMonitor struct {
 	knownDevices     map[string]*CameraDevice
 	capabilityStates map[string]*DeviceCapabilityState
 	stopChan         chan struct{}
+	ready            int32 // Atomic flag for readiness
 
 	// Caching
 	capabilityCache map[string]*V4L2Capabilities
@@ -320,6 +321,25 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":                 "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
+	// Start device event source and wait for it to be ready
+	if err := m.deviceEventSource.Start(ctx); err != nil {
+		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
+		return fmt.Errorf("failed to start device event source: %w", err)
+	}
+
+	// Wait for event source to be started (non-blocking check)
+	if !m.deviceEventSource.Started() {
+		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
+		return fmt.Errorf("device event source failed to start")
+	}
+
+	// Log the mode we're running in
+	if m.deviceEventSource.EventsSupported() {
+		m.logger.Info("Running in event-first mode with fsnotify support")
+	} else {
+		m.logger.Info("Running in poll-only mode (fsnotify not available)")
+	}
+
 	// Initialize state while holding lock
 	m.stateLock.Lock()
 	m.stats.Running = true
@@ -348,10 +368,13 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
 
 	m.discoverCameras(ctx)
 
+	// Set readiness flag after initial discovery completes
+	atomic.StoreInt32(&m.ready, 1)
+
 	m.logger.WithFields(logging.Fields{
 		"action":        "initial_discovery_completed",
 		"devices_found": len(m.knownDevices),
-	}).Debug("Initial device discovery completed")
+	}).Debug("Initial device discovery completed - monitor is now ready")
 
 	if m.discoveryMode == "event-first" {
 		// Start event-first monitoring
@@ -374,6 +397,9 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	m.stats.Running = false
 	atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 	m.stateLock.Unlock()
+
+	// Reset readiness flag
+	atomic.StoreInt32(&m.ready, 0)
 
 	// Only close the channel if it hasn't been closed already
 	select {
@@ -413,9 +439,9 @@ func (m *HybridCameraMonitor) IsRunning() bool {
 	return atomic.LoadInt32(&m.running) == 1
 }
 
-// IsReady returns whether the monitor has completed at least one discovery cycle
+// IsReady returns whether the monitor has completed initial discovery and is ready
 func (m *HybridCameraMonitor) IsReady() bool {
-	return atomic.LoadInt64(&m.stats.PollingCycles) > 0
+	return atomic.LoadInt32(&m.ready) == 1
 }
 
 // GetConnectedCameras returns all currently connected cameras

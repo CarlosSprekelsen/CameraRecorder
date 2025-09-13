@@ -397,7 +397,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		// ARCHITECTURE COMPLIANCE: Progressive Readiness Pattern
 		// Start the monitor in background - don't block on startup
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			if err := realMonitor.Start(ctx); err != nil {
@@ -484,25 +484,21 @@ func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXCo
 
 // WaitForServiceReadiness waits for all services to be ready following the Progressive Readiness Pattern
 func (h *MediaMTXTestHelper) WaitForServiceReadiness(ctx context.Context, controller MediaMTXController) error {
-	// Wait for camera monitor to discover devices
-	maxWait := 15 * time.Second
+	// Use controller.IsReady() as the single source of truth for service readiness
+	// This aligns with the Progressive Readiness Pattern and handles both event-first and poll-only modes
+	maxWait := 30 * time.Second
 	waitInterval := 100 * time.Millisecond
 	start := time.Now()
 
 	for time.Since(start) < maxWait {
-		// Check if camera0 device is discovered (following the architecture pattern)
-		cameraMonitor := h.GetCameraMonitor()
-		if cameraMonitor != nil {
-			devicePath := "/dev/video0" // camera0 maps to /dev/video0
-			if _, exists := cameraMonitor.GetDevice(devicePath); exists {
-				// Device discovered, service is ready
-				return nil
-			}
+		if controller.IsReady() {
+			// Service is ready
+			return nil
 		}
 		time.Sleep(waitInterval)
 	}
 
-	return fmt.Errorf("service readiness timeout: camera0 device not discovered within %v", maxWait)
+	return fmt.Errorf("service readiness timeout: controller not ready within %v", maxWait)
 }
 
 // GetConfiguredSnapshotPath returns the snapshot path from the fixture configuration
