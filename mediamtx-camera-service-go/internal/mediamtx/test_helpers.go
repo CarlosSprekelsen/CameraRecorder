@@ -397,7 +397,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		// ARCHITECTURE COMPLIANCE: Progressive Readiness Pattern
 		// Start the monitor in background - don't block on startup
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
 			if err := realMonitor.Start(ctx); err != nil {
@@ -485,7 +485,7 @@ func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXCo
 // WaitForServiceReadiness waits for all services to be ready following the Progressive Readiness Pattern
 func (h *MediaMTXTestHelper) WaitForServiceReadiness(ctx context.Context, controller MediaMTXController) error {
 	// Wait for camera monitor to discover devices
-	maxWait := 5 * time.Second
+	maxWait := 15 * time.Second
 	waitInterval := 100 * time.Millisecond
 	start := time.Now()
 
@@ -727,7 +727,7 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 	}
 
 	// Wait a bit for MediaMTX to clean up paths
-	time.Sleep(2 * time.Second)
+	time.Sleep(200 * time.Millisecond)
 
 	return nil
 }

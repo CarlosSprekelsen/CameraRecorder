@@ -48,6 +48,7 @@ camera:
   capability_timeout: 2.0
   capability_retry_interval: 0.5
   capability_max_retries: 3
+  fallback_poll_interval: 5.0  # 5 seconds for test performance (realistic but faster than 90s default)
 
 logging:
   level: "debug"
