@@ -84,7 +84,12 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 		// Allow monitoring loop to run for a short time to ensure it starts properly
 		time.Sleep(100 * time.Millisecond)
 
-		// Clean up handled automatically by fresh instances
+		// Stop the monitor to clean up for the next subtest
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer stopCancel()
+		err = monitor.Stop(stopCtx)
+		require.NoError(t, err, "Monitor should stop successfully after start test")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running after stop")
 	})
 
 	// Test stop functionality
@@ -1517,11 +1522,12 @@ func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
 		require.NoError(t, err, "Monitor should start successfully")
 
 		// Use very short timeout to test timeout handling
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		// Test with a very short timeout that should be hit
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 		defer cancel()
 
 		// Give context time to expire
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 
 		start := time.Now()
 		err = monitor.Stop(shutdownCtx)

@@ -338,6 +338,12 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	// Check context cancellation before starting
 	select {
 	case <-ctx.Done():
+		// Close device event source on cancellation
+		if m.deviceEventSource != nil {
+			if err := m.deviceEventSource.Close(); err != nil {
+				m.logger.WithError(err).Warn("Error closing device event source on cancellation")
+			}
+		}
 		atomic.StoreInt32(&m.running, 0) // Reset flag on cancellation
 		m.logger.WithFields(logging.Fields{
 			"mon_start_id": monStartID,
@@ -440,8 +446,7 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 	m.logger.Debug("Monitor loop started")
 	defer func() {
 		m.logger.Debug("Monitor loop exiting")
-		// Reset flag when loop exits
-		atomic.StoreInt32(&m.running, 0)
+		// Don't reset running flag here - let Stop() method handle it
 		m.stats.Running = false
 		atomic.StoreInt64(&m.stats.ActiveTasks, 0)
 	}()
@@ -513,8 +518,7 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 		return nil // Idempotent: safe to call Stop() on non-running monitor
 	}
 
-	// Set running flag to 0
-	atomic.StoreInt32(&m.running, 0)
+	// Don't set running flag to 0 yet - wait until after device event source is closed
 
 	// Cancel internal context first - this interrupts monitorLoop immediately!
 	if m.cancel != nil {
@@ -534,6 +538,8 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	case <-ctx.Done():
 		// Force shutdown after timeout
 		m.logger.Warn("Camera monitor shutdown timeout, forcing stop")
+		// Return the context error to indicate timeout
+		return ctx.Err()
 	}
 
 	// Close the device event source first - ensure it's properly stopped
@@ -554,6 +560,9 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	}
 
 	// Device event source is now properly closed and owned by this monitor
+
+	// Set running flag to 0 after device event source is closed
+	atomic.StoreInt32(&m.running, 0)
 
 	m.logger.Info("Hybrid camera monitor stopped")
 	return nil
