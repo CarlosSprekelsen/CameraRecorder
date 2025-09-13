@@ -300,16 +300,15 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 
 // Start begins camera discovery and monitoring
 func (m *HybridCameraMonitor) Start(ctx context.Context) error {
-	m.stateLock.Lock()
-	defer m.stateLock.Unlock()
-
-	if atomic.LoadInt32(&m.running) == 1 {
+	// Use atomic check instead of holding stateLock
+	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
 		return fmt.Errorf("monitor is already running")
 	}
 
 	// Check context cancellation before starting
 	select {
 	case <-ctx.Done():
+		atomic.StoreInt32(&m.running, 0) // Reset flag on cancellation
 		return ctx.Err()
 	default:
 	}
@@ -321,61 +320,60 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":                 "monitor_started",
 	}).Info("Starting hybrid camera monitor")
 
-	// Set running flag BEFORE starting goroutine to prevent race condition
-	atomic.StoreInt32(&m.running, 1)
+	// Initialize state while holding lock
+	m.stateLock.Lock()
 	m.stats.Running = true
 	atomic.StoreInt64(&m.stats.ActiveTasks, 1)
-
-	// CRITICAL: Release the lock before starting the goroutine to prevent deadlock
-	// The goroutine will call discoverCameras which needs to acquire stateLock
 	m.stateLock.Unlock()
 
-	// Start appropriate monitoring based on discovery mode
-	go func() {
-		defer func() {
-			// Reset flag when loop exits
-			atomic.StoreInt32(&m.running, 0)
-			m.stats.Running = false
-			atomic.StoreInt64(&m.stats.ActiveTasks, 0)
-		}()
-
-		// Perform initial discovery to seed knownDevices and ensure IsReady() becomes true
-		// This must be done AFTER releasing the stateLock to avoid deadlock
-		m.logger.WithFields(logging.Fields{
-			"action": "initial_discovery_started",
-		}).Debug("Performing initial device discovery")
-
-		m.discoverCameras(ctx)
-
-		m.logger.WithFields(logging.Fields{
-			"action":        "initial_discovery_completed",
-			"devices_found": len(m.knownDevices),
-		}).Debug("Initial device discovery completed")
-
-		if m.discoveryMode == "event-first" {
-			// Start event-first monitoring
-			m.startEventFirstMonitoring(ctx)
-		} else {
-			// Start poll-only monitoring
-			m.startPollOnlyMonitoring(ctx)
-		}
-	}()
+	// Start monitoring goroutine AFTER releasing lock
+	go m.monitorLoop(ctx)
 
 	return nil
 }
 
+// monitorLoop runs the main monitoring loop
+func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
+	defer func() {
+		// Reset flag when loop exits
+		atomic.StoreInt32(&m.running, 0)
+		m.stats.Running = false
+		atomic.StoreInt64(&m.stats.ActiveTasks, 0)
+	}()
+
+	// Perform initial discovery to seed knownDevices and ensure IsReady() becomes true
+	m.logger.WithFields(logging.Fields{
+		"action": "initial_discovery_started",
+	}).Debug("Performing initial device discovery")
+
+	m.discoverCameras(ctx)
+
+	m.logger.WithFields(logging.Fields{
+		"action":        "initial_discovery_completed",
+		"devices_found": len(m.knownDevices),
+	}).Debug("Initial device discovery completed")
+
+	if m.discoveryMode == "event-first" {
+		// Start event-first monitoring
+		m.startEventFirstMonitoring(ctx)
+	} else {
+		// Start poll-only monitoring
+		m.startPollOnlyMonitoring(ctx)
+	}
+}
+
 // Stop stops camera discovery and monitoring
 func (m *HybridCameraMonitor) Stop() error {
-	m.stateLock.Lock()
-	defer m.stateLock.Unlock()
-
-	if atomic.LoadInt32(&m.running) == 0 {
+	// Use atomic check instead of holding stateLock
+	if !atomic.CompareAndSwapInt32(&m.running, 1, 0) {
 		return fmt.Errorf("monitor is not running")
 	}
 
-	atomic.StoreInt32(&m.running, 0)
+	// Update stats while holding lock
+	m.stateLock.Lock()
 	m.stats.Running = false
 	atomic.StoreInt64(&m.stats.ActiveTasks, 0)
+	m.stateLock.Unlock()
 
 	// Only close the channel if it hasn't been closed already
 	select {

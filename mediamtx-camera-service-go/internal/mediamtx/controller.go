@@ -57,9 +57,8 @@ type controller struct {
 	isRunning int32 // Use int32 for atomic operations (0 = false, 1 = true)
 	startTime time.Time
 
-	// Recording sessions
-	sessions   map[string]*RecordingSession
-	sessionsMu sync.RWMutex
+	// Recording sessions - using sync.Map for lock-free operations
+	sessions sync.Map // sessionID -> *RecordingSession
 
 	// Active recording tracking (Phase 2 enhancement)
 	activeRecordings map[string]*ActiveRecording
@@ -377,8 +376,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		config:                    mediaMTXConfig,
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
-		sessions:                  make(map[string]*RecordingSession),
-		activeRecordings:          make(map[string]*ActiveRecording),
+		// sessions: sync.Map is zero-initialized, no need to initialize
+		activeRecordings: make(map[string]*ActiveRecording),
 	}, nil
 }
 
@@ -425,34 +424,31 @@ func (c *controller) Start(ctx context.Context) error {
 
 // Stop stops the MediaMTX controller
 func (c *controller) Stop(ctx context.Context) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if !c.checkRunningState() {
+	// Use atomic check instead of holding main lock
+	if !atomic.CompareAndSwapInt32(&c.isRunning, 1, 0) {
 		return fmt.Errorf("controller is not running")
 	}
 
 	c.logger.Info("Stopping MediaMTX controller")
 
-	// Stop all recording sessions
-	c.sessionsMu.RLock()
+	// Stop all recording sessions - use sync.Map for lock-free iteration
 	activeSessions := make([]string, 0)
-	for sessionID, session := range c.sessions {
+	c.sessions.Range(func(key, value interface{}) bool {
+		sessionID := key.(string)
+		session := value.(*RecordingSession)
 		if session.Status == "active" {
 			activeSessions = append(activeSessions, sessionID)
 		}
-	}
-	c.sessionsMu.RUnlock()
+		return true // Continue iteration
+	})
 
-	// Stop each active session - release main lock to avoid nested locking deadlock
-	c.mu.Unlock()
+	// Stop each active session without holding any locks
 	for _, sessionID := range activeSessions {
 		c.logger.WithField("session_id", sessionID).Info("Stopping recording session")
 		if err := c.stopRecordingInternal(ctx, sessionID); err != nil {
 			c.logger.WithError(err).WithField("session_id", sessionID).Error("Failed to stop recording session")
 		}
 	}
-	c.mu.Lock() // Re-acquire the lock for the rest of the method
 
 	// Stop path integration first
 	if c.pathIntegration != nil {
@@ -1015,13 +1011,10 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 	// Generate session ID
 	sessionID := generateSessionID(devicePath)
 
-	// Check if session already exists
-	c.sessionsMu.Lock()
-	if _, exists := c.sessions[sessionID]; exists {
-		c.sessionsMu.Unlock()
+	// Check if session already exists - lock-free check with sync.Map
+	if _, exists := c.sessions.Load(sessionID); exists {
 		return nil, fmt.Errorf("recording session %s already exists", sessionID)
 	}
-	c.sessionsMu.Unlock()
 
 	// Create recording session
 	session := &RecordingSession{
@@ -1051,10 +1044,8 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 	session.PID = recordingSession.PID       // MediaMTX session ID
 	session.Path = recordingSession.Path
 
-	// Store session
-	c.sessionsMu.Lock()
-	c.sessions[sessionID] = session
-	c.sessionsMu.Unlock()
+	// Store session - lock-free operation with sync.Map
+	c.sessions.Store(sessionID, session)
 
 	// Start tracking active recording for API consistency
 	if err := c.StartActiveRecording(cameraID, sessionID, ""); err != nil {
@@ -1088,21 +1079,18 @@ func (c *controller) StopRecording(ctx context.Context, sessionID string) error 
 
 // stopRecordingInternal stops a recording session (internal method)
 func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string) error {
-	c.sessionsMu.Lock()
-	session, exists := c.sessions[sessionID]
+	sessionInterface, exists := c.sessions.Load(sessionID)
 	if !exists {
-		c.sessionsMu.Unlock()
 		return fmt.Errorf("recording session %s not found", sessionID)
 	}
 
+	session := sessionInterface.(*RecordingSession)
 	if session.Status != "active" {
-		c.sessionsMu.Unlock()
 		return fmt.Errorf("recording session %s is not active (status: %s)", sessionID, session.Status)
 	}
 
 	// Update session status
 	session.Status = "STOPPING"
-	c.sessionsMu.Unlock()
 
 	// Stop MediaMTX recording using RecordingManager
 	if err := c.recordingManager.StopRecording(ctx, sessionID); err != nil {
@@ -1111,8 +1099,7 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 		}).Warning("Failed to stop MediaMTX recording")
 	}
 
-	// Update session status
-	c.sessionsMu.Lock()
+	// Update session status and remove from sessions
 	session.Status = "STOPPED"
 	endTime := time.Now()
 	session.EndTime = &endTime
@@ -1123,7 +1110,8 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 		session.FileSize = fileSize
 	}
 
-	c.sessionsMu.Unlock()
+	// Remove from sessions - lock-free operation with sync.Map
+	c.sessions.Delete(sessionID)
 
 	// Stop tracking active recording for API consistency
 	if err := c.StopActiveRecording(session.Device); err != nil {
@@ -1337,10 +1325,8 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device string, 
 		return nil, fmt.Errorf("failed to start advanced recording: %w", err)
 	}
 
-	// Store session in controller for state tracking
-	c.sessionsMu.Lock()
-	c.sessions[session.ID] = session
-	c.sessionsMu.Unlock()
+	// Store session in controller for state tracking - lock-free operation with sync.Map
+	c.sessions.Store(session.ID, session)
 
 	// Initialize session state tracking for Python equivalence
 	session.State = SessionStateRecording
@@ -1375,14 +1361,14 @@ func (c *controller) StopAdvancedRecording(ctx context.Context, sessionID string
 
 	c.logger.WithField("session_id", sessionID).Info("Stopping advanced recording with state persistence")
 
-	// Get session for state tracking
-	c.sessionsMu.RLock()
-	session, exists := c.sessions[sessionID]
-	c.sessionsMu.RUnlock()
+	// Get session for state tracking - lock-free read with sync.Map
+	sessionInterface, exists := c.sessions.Load(sessionID)
 
 	if !exists {
 		return fmt.Errorf("recording session not found: %s", sessionID)
 	}
+
+	session := sessionInterface.(*RecordingSession)
 
 	// Update session state for Python equivalence
 	session.State = SessionStateStopped
@@ -1424,10 +1410,8 @@ func (c *controller) persistSessionState(session *RecordingSession) {
 		"continuity_id": session.ContinuityID,
 	}).Debug("Persisting session state for Python equivalence")
 
-	// Store session in controller's session map for persistence
-	c.sessionsMu.Lock()
-	c.sessions[session.ID] = session
-	c.sessionsMu.Unlock()
+	// Store session in controller's session map for persistence - lock-free operation with sync.Map
+	c.sessions.Store(session.ID, session)
 
 	// Log session state for monitoring and debugging
 	c.logger.WithFields(logging.Fields{
@@ -1591,15 +1575,14 @@ func (c *controller) GetRecordingStatus(ctx context.Context, sessionID string) (
 
 	c.logger.WithField("session_id", sessionID).Debug("Getting recording status")
 
-	// Check if session exists
-	c.sessionsMu.RLock()
-	session, exists := c.sessions[sessionID]
-	c.sessionsMu.RUnlock()
+	// Check if session exists - lock-free read with sync.Map
+	sessionInterface, exists := c.sessions.Load(sessionID)
 
 	if !exists {
 		return nil, fmt.Errorf("recording session not found: %s", sessionID)
 	}
 
+	session := sessionInterface.(*RecordingSession)
 	return session, nil
 }
 
