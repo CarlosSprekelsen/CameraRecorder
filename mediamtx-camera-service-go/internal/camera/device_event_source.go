@@ -416,8 +416,8 @@ func (f *DeviceEventSourceFactory) Release() error {
 	defer f.mu.Unlock()
 
 	if f.refCount <= 0 {
-		f.logger.Warn("Release called with zero or negative ref count")
-		return nil
+		f.logger.Error("Release called with zero or negative ref count - this indicates a bug")
+		return fmt.Errorf("release underflow: refCount=%d", f.refCount)
 	}
 
 	f.refCount--

@@ -324,8 +324,11 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	// Start device event source - trust its return value
 	if err := m.deviceEventSource.Start(ctx); err != nil {
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
+		m.logger.WithError(err).Error("Device event source start failed")
 		return fmt.Errorf("failed to start device event source: %w", err)
 	}
+	
+	m.logger.Debug("Device event source started successfully")
 
 	// Log the mode we're running in
 	if m.deviceEventSource.EventsSupported() {
@@ -341,14 +344,19 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stateLock.Unlock()
 
 	// Start monitoring goroutine AFTER releasing lock
+	m.logger.Debug("About to start monitor loop goroutine")
 	go m.monitorLoop(ctx)
+	m.logger.Debug("Monitor loop goroutine started")
 
+	m.logger.Debug("Monitor start completed successfully")
 	return nil
 }
 
 // monitorLoop runs the main monitoring loop
 func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
+	m.logger.Debug("Monitor loop started")
 	defer func() {
+		m.logger.Debug("Monitor loop exiting")
 		// Reset flag when loop exits
 		atomic.StoreInt32(&m.running, 0)
 		m.stats.Running = false
@@ -360,7 +368,9 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
 		"action": "initial_discovery_started",
 	}).Debug("Performing initial device discovery")
 
+	m.logger.Debug("About to call discoverCameras")
 	m.discoverCameras(ctx)
+	m.logger.Debug("discoverCameras completed")
 
 	// Set readiness flag after initial discovery completes
 	atomic.StoreInt32(&m.ready, 1)
@@ -641,14 +651,17 @@ func (m *HybridCameraMonitor) SetEventNotifier(notifier EventNotifier) {
 }
 
 // startEventFirstMonitoring starts event-first monitoring with slow reconcile fallback
+// INVARIANT: Event source lifecycle is owned by HybridCameraMonitor.Start/Stop.
+// No other method starts it - the source is already started when this is called.
 func (m *HybridCameraMonitor) startEventFirstMonitoring(ctx context.Context) {
 	m.logger.WithFields(logging.Fields{
 		"action": "event_first_monitoring_started",
 	}).Info("Starting event-first camera monitoring")
 
-	// Start device event source
-	if err := m.deviceEventSource.Start(ctx); err != nil {
-		m.logger.WithError(err).Error("Failed to start device event source, falling back to poll-only")
+	// Device event source is already started in Start() method
+	// Just verify it's running and has event support
+	if !m.deviceEventSource.EventsSupported() {
+		m.logger.Warn("Device event source doesn't support events, falling back to poll-only")
 		m.startPollOnlyMonitoring(ctx)
 		return
 	}
