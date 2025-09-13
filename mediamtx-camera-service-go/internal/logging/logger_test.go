@@ -30,27 +30,30 @@ API Documentation Reference: Internal logging system (no external API)
 // CORE LOGGER TESTS
 // =============================================================================
 
-// TestNewLogger tests logger creation and basic functionality
-func TestNewLogger(t *testing.T) {
-	t.Parallel()
-	// REQ-LOG-001: Structured logging with logrus
-
-	logger := NewLogger("test-component")
-	AssertLoggerBasicProperties(t, logger, "test-component")
-	assert.Equal(t, logrus.InfoLevel, logger.GetLevel())
-}
-
-// TestGetLogger tests global logger singleton
+// TestGetLogger tests logger creation and basic functionality
 func TestGetLogger(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger1 := GetLogger()
-	logger2 := GetLogger()
+	logger := GetLogger("test-component")
+	AssertLoggerBasicProperties(t, logger, "test-component")
+	assert.Equal(t, logrus.InfoLevel, logger.GetLevel())
+}
+
+// TestGetLoggerFactory tests logger factory creates new instances
+func TestGetLoggerFactory(t *testing.T) {
+	t.Parallel()
+	// REQ-LOG-001: Structured logging with logrus
+
+	logger1 := GetLogger("test-component")
+	logger2 := GetLogger("test-component")
 
 	assert.NotNil(t, logger1)
 	assert.NotNil(t, logger2)
-	assert.Equal(t, logger1, logger2) // Should be the same instance
+	assert.NotEqual(t, logger1, logger2) // Should be different instances (factory pattern)
+	// Both loggers should be valid and functional
+	AssertLoggerBasicProperties(t, logger1, "test-component")
+	AssertLoggerBasicProperties(t, logger2, "test-component")
 }
 
 // =============================================================================
@@ -121,7 +124,7 @@ func TestLogger_WithMethods(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := CreateTestLogger(t, nil)
+	logger := GetLogger("test-component")
 
 	testCases := []struct {
 		name string
@@ -158,7 +161,7 @@ func TestLogger_ContextLogging(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := CreateTestLogger(t, nil)
+	logger := GetLogger("test-component")
 	fixtures := CreateTestFixtures()
 
 	for _, fixture := range fixtures {
@@ -182,7 +185,7 @@ func TestLogger_ContextLogging_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := CreateTestLogger(t, nil)
+	logger := GetLogger("test-component")
 
 	// Test with empty context
 	ctx := context.Background()
@@ -214,7 +217,7 @@ func TestLogger_LevelManagement(t *testing.T) {
 	for _, level := range testLevels {
 		t.Run(fmt.Sprintf("level_%s", level.String()), func(t *testing.T) {
 			// Create a fresh logger for each subtest to avoid interference
-			logger := CreateTestLogger(t, nil)
+			logger := GetLogger("test-component")
 
 			// Test SetLevel
 			logger.SetLevel(level)
@@ -251,7 +254,7 @@ func TestLogger_ComponentLevels(t *testing.T) {
 
 		t.Run(fmt.Sprintf("component_%s", component), func(t *testing.T) {
 			// Create a fresh logger for each subtest to avoid interference
-			logger := CreateTestLogger(t, nil)
+			logger := GetLogger("test-component")
 
 			logger.SetComponentLevel(component, level)
 			effectiveLevel := logger.GetEffectiveLevel(component)
@@ -394,7 +397,7 @@ func TestLogging_FileRotation(t *testing.T) {
 	err := SetupLogging(config)
 	require.NoError(t, err)
 
-	logger := GetLogger()
+	logger := GetLogger("test-component")
 
 	// Write enough logs to trigger rotation
 	for i := 0; i < 10; i++ {
@@ -413,7 +416,7 @@ func TestLogging_FileRotation(t *testing.T) {
 func TestLogging_Concurrency(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := CreateTestLogger(t, nil)
+	logger := GetLogger("test-component")
 	concurrency := 10
 	done := make(chan bool, concurrency)
 
@@ -437,7 +440,7 @@ func TestLogging_Concurrency(t *testing.T) {
 func TestLogging_Performance(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := CreateTestLogger(t, nil)
+	logger := GetLogger("test-component")
 	messageCount := 1000
 
 	// Performance test: log many messages quickly
@@ -518,25 +521,25 @@ func TestLogger_TableDriven(t *testing.T) {
 // PERFORMANCE BENCHMARKS
 // =============================================================================
 
-// BenchmarkNewLogger measures logger creation performance
-func BenchmarkNewLogger(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = NewLogger("test-component")
-	}
-}
-
-// BenchmarkGetLogger measures global logger retrieval performance
+// BenchmarkGetLogger measures logger creation performance
 func BenchmarkGetLogger(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = GetLogger()
+		_ = GetLogger("test-component")
+	}
+}
+
+// BenchmarkGetLoggerSingleton measures global logger retrieval performance
+func BenchmarkGetLoggerSingleton(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = GetLogger("test-component")
 	}
 }
 
 // BenchmarkLogger_WithField measures structured field logging performance
 func BenchmarkLogger_WithField(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -546,7 +549,7 @@ func BenchmarkLogger_WithField(b *testing.B) {
 
 // BenchmarkLogger_WithError measures error logging performance
 func BenchmarkLogger_WithError(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	testErr := assert.AnError
 	b.ResetTimer()
 
@@ -557,7 +560,7 @@ func BenchmarkLogger_WithError(b *testing.B) {
 
 // BenchmarkLogger_WithCorrelationID measures correlation ID logging performance
 func BenchmarkLogger_WithCorrelationID(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	correlationID := "test-correlation-id"
 	b.ResetTimer()
 
@@ -568,7 +571,7 @@ func BenchmarkLogger_WithCorrelationID(b *testing.B) {
 
 // BenchmarkLogger_Info measures basic info logging performance
 func BenchmarkLogger_Info(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -578,7 +581,7 @@ func BenchmarkLogger_Info(b *testing.B) {
 
 // BenchmarkLogger_InfoWithFields measures structured info logging performance
 func BenchmarkLogger_InfoWithFields(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	fields := map[string]interface{}{
 		"key1": "value1",
 		"key2": "value2",
@@ -593,7 +596,7 @@ func BenchmarkLogger_InfoWithFields(b *testing.B) {
 
 // BenchmarkLogger_LogWithContext measures context-based logging performance
 func BenchmarkLogger_LogWithContext(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	ctx := WithCorrelationID(context.Background(), "test-correlation-id")
 	b.ResetTimer()
 
@@ -604,7 +607,7 @@ func BenchmarkLogger_LogWithContext(b *testing.B) {
 
 // BenchmarkLogger_LevelManagement measures level management performance
 func BenchmarkLogger_LevelManagement(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -617,7 +620,7 @@ func BenchmarkLogger_LevelManagement(b *testing.B) {
 
 // BenchmarkLogger_ConcurrentLogging measures concurrent logging performance
 func BenchmarkLogger_ConcurrentLogging(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
@@ -629,7 +632,7 @@ func BenchmarkLogger_ConcurrentLogging(b *testing.B) {
 
 // BenchmarkLogger_StructuredLogging measures structured logging performance
 func BenchmarkLogger_StructuredLogging(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -697,7 +700,7 @@ func BenchmarkLogging_JSONFormat(b *testing.B) {
 	}
 	SetupLogging(config)
 
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -720,7 +723,7 @@ func BenchmarkLogging_TextFormat(b *testing.B) {
 	}
 	SetupLogging(config)
 
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -734,7 +737,7 @@ func BenchmarkLogging_TextFormat(b *testing.B) {
 
 // BenchmarkLogger_MultipleFields measures multiple field logging performance
 func BenchmarkLogger_MultipleFields(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -749,7 +752,7 @@ func BenchmarkLogger_MultipleFields(b *testing.B) {
 
 // BenchmarkLogger_ChainedOperations measures chained logging operations performance
 func BenchmarkLogger_ChainedOperations(b *testing.B) {
-	logger := NewLogger("test-component")
+	logger := GetLogger("test-component")
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

@@ -332,6 +332,8 @@ func TestConfigManager_FileWatching(t *testing.T) {
 
 // TestConfigManager_ContextAwareShutdown tests the context-aware shutdown functionality
 func TestConfigManager_ContextAwareShutdown(t *testing.T) {
+	helper := NewTestConfigHelper(t)
+
 	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
 		// Create config manager
 		cm := CreateConfigManager()
@@ -342,7 +344,8 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
 		// Test graceful shutdown with context
@@ -367,7 +370,8 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
 		// Cancel context immediately
@@ -379,7 +383,9 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		err = cm.Stop(ctx)
 		elapsed := time.Since(start)
 
-		require.NoError(t, err, "Config manager should stop even with cancelled context")
+		// When context is cancelled, Stop should return context error
+		require.Error(t, err, "Config manager should return context error when context is cancelled")
+		assert.Equal(t, context.Canceled, err, "Should return context.Canceled error")
 		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
 	})
 
@@ -393,7 +399,8 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
 		// Use very short timeout to test timeout handling
@@ -418,7 +425,8 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		cm := CreateConfigManager()
 
 		// Load config to start file watching
-		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
 		// Stop first time

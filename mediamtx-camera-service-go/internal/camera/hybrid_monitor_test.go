@@ -53,6 +53,11 @@ func TestHybridCameraMonitor_Basic(t *testing.T) {
 
 // TestHybridCameraMonitor_StartStop tests actual start/stop behavior
 func TestHybridCameraMonitor_StartStop(t *testing.T) {
+	// Reset device event source factory for test isolation
+	t.Cleanup(func() {
+		GetDeviceEventSourceFactory().ResetForTests()
+	})
+
 	// Create test config and logger directly
 	configManager := config.CreateConfigManager()
 	logger := logging.CreateTestLogger(t, nil)
@@ -318,6 +323,11 @@ func TestHybridCameraMonitor_UtilityFunctions(t *testing.T) {
 
 // TestHybridCameraMonitor_Integration tests integration with MediaMTX environment
 func TestHybridCameraMonitor_Integration(t *testing.T) {
+	// Reset device event source factory for test isolation
+	t.Cleanup(func() {
+		GetDeviceEventSourceFactory().ResetForTests()
+	})
+
 	// Create test config and logger directly for MediaMTX integration
 	configManager := config.CreateConfigManager()
 	logger := logging.CreateTestLogger(t, nil)
@@ -350,10 +360,10 @@ func TestHybridCameraMonitor_Integration(t *testing.T) {
 
 	// Clean up
 	err = func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			return monitor.Stop(ctx)
-		}()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return monitor.Stop(ctx)
+	}()
 	require.NoError(t, err, "Monitor should stop successfully")
 }
 
@@ -890,6 +900,11 @@ func (n *testEventNotifier) NotifyCapabilityError(devicePath string, error strin
 
 // TestHybridCameraMonitor_EdgeCases tests edge cases and error scenarios
 func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
+	// Reset device event source factory for test isolation
+	t.Cleanup(func() {
+		GetDeviceEventSourceFactory().ResetForTests()
+	})
+
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
 	logger := logging.CreateTestLogger(t, nil)
@@ -1125,6 +1140,11 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 
 // TestHybridCameraMonitor_ErrorRecovery tests error recovery scenarios
 func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
+	// Reset device event source factory for test isolation
+	t.Cleanup(func() {
+		GetDeviceEventSourceFactory().ResetForTests()
+	})
+
 	// Create test config and logger
 	configManager := config.CreateConfigManager()
 	logger := logging.CreateTestLogger(t, nil)
@@ -1212,10 +1232,10 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 
 			// Stop
 			err = func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			return monitor.Stop(ctx)
-		}()
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				return monitor.Stop(ctx)
+			}()
 			require.NoError(t, err, "Stop cycle %d should succeed", i+1)
 
 			// Monitor should be stopped immediately after Stop() returns
@@ -1254,10 +1274,10 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 
 				// Try to stop
 				err = func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			return monitor.Stop(ctx)
-		}()
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					return monitor.Stop(ctx)
+				}()
 				if err != nil {
 					errors <- err
 				}
@@ -1285,10 +1305,10 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 		// Ensure monitor is in clean state
 		if monitor.IsRunning() {
 			func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			return monitor.Stop(ctx)
-		}()
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				return monitor.Stop(ctx)
+			}()
 		}
 
 		// Try invalid operations
@@ -1437,6 +1457,11 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 
 // TestHybridCameraMonitor_ContextAwareShutdown tests the context-aware shutdown functionality
 func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
+	// Reset device event source factory for test isolation
+	t.Cleanup(func() {
+		GetDeviceEventSourceFactory().ResetForTests()
+	})
+
 	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
 		// Create test config and logger directly
 		configManager := config.CreateConfigManager()

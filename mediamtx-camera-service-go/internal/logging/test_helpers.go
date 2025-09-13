@@ -136,7 +136,14 @@ func CreateTempLogFile(t *testing.T) string {
 		os.RemoveAll(tempDir)
 	})
 
-	return filepath.Join(tempDir, "test.log")
+	logFilePath := filepath.Join(tempDir, "test.log")
+	
+	// Create the actual log file
+	file, err := os.Create(logFilePath)
+	require.NoError(t, err)
+	file.Close()
+
+	return logFilePath
 }
 
 // TestLogLevels returns all available log levels for testing

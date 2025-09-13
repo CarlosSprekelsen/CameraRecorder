@@ -102,6 +102,11 @@ type HybridCameraMonitor struct {
 	// Event-driven readiness system
 	readinessEventChan chan struct{}
 	readinessMutex     sync.RWMutex
+
+	// Internal context management (following health monitor pattern)
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // CameraSource represents a camera source configuration
@@ -331,6 +336,9 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	default:
 	}
 
+	// Create internal context for lifecycle management (following health monitor pattern)
+	m.ctx, m.cancel = context.WithCancel(ctx)
+
 	m.logger.WithFields(logging.Fields{
 		"mon_start_id": monStartID,
 		"mode_config":  m.discoveryMode,
@@ -343,7 +351,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":       "event_source_start_begin",
 	}).Info("Starting device event source")
 
-	if err := m.deviceEventSource.Start(ctx); err != nil {
+	if err := m.deviceEventSource.Start(m.ctx); err != nil {
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
 		m.logger.WithFields(logging.Fields{
 			"mon_start_id": monStartID,
@@ -379,7 +387,8 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":           "loops_spawn_begin",
 	}).Info("Spawning monitor loops")
 
-	go m.monitorLoop(ctx, monStartID)
+	m.wg.Add(1)
+	go m.monitorLoop(m.ctx, monStartID)
 
 	m.logger.WithFields(logging.Fields{
 		"mon_start_id": monStartID,
@@ -390,6 +399,8 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 
 // monitorLoop runs the main monitoring loop
 func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string) {
+	defer m.wg.Done() // Ensure WaitGroup is decremented when goroutine exits
+	
 	m.logger.Debug("Monitor loop started")
 	defer func() {
 		m.logger.Debug("Monitor loop exiting")
@@ -454,50 +465,36 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 
 // Stop stops camera discovery and monitoring with context-aware cancellation
 func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
-	// Use atomic check instead of holding stateLock
-	if !atomic.CompareAndSwapInt32(&m.running, 1, 0) {
-		return fmt.Errorf("monitor is not running")
+	m.logger.Info("Stopping hybrid camera monitor")
+
+	// Cancel internal context first - this interrupts monitorLoop immediately!
+	if m.cancel != nil {
+		m.cancel()
 	}
 
-	// Update stats while holding lock
-	m.stateLock.Lock()
-	m.stats.Running = false
-	atomic.StoreInt64(&m.stats.ActiveTasks, 0)
-	m.stateLock.Unlock()
+	// Wait with timeout (following health monitor pattern)
+	done := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(done)
+	}()
 
-	// Reset readiness flag
-	atomic.StoreInt32(&m.ready, 0)
-
-	// Only close the channel if it hasn't been closed already
 	select {
-	case <-m.stopChan:
-		// Channel already closed, do nothing
-	default:
-		close(m.stopChan)
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		// Force shutdown after timeout
+		m.logger.Warn("Camera monitor shutdown timeout, forcing stop")
 	}
 
 	// Release device event source via factory (ref counting)
 	if m.deviceEventSource != nil {
-		releaseDone := make(chan error, 1)
-		go func() {
-			releaseDone <- GetDeviceEventSourceFactory().Release()
-		}()
-
-		select {
-		case err := <-releaseDone:
-			if err != nil {
-				m.logger.WithError(err).Warn("Error closing device event source")
-			}
-		case <-ctx.Done():
-			m.logger.Warn("Device event source close timeout")
-			return ctx.Err()
+		if err := GetDeviceEventSourceFactory().Release(); err != nil {
+			m.logger.WithError(err).Warn("Error releasing device event source")
 		}
 	}
 
-	m.logger.WithFields(logging.Fields{
-		"action": "monitor_stopped",
-	}).Info("Hybrid camera monitor stopped")
-
+	m.logger.Info("Hybrid camera monitor stopped")
 	return nil
 }
 
