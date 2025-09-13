@@ -492,6 +492,9 @@ type HealthMonitor interface {
 
 	// Threshold-crossing notifications
 	SetSystemNotifier(notifier SystemEventNotifier)
+
+	// Event-driven health monitoring
+	SubscribeToHealthChanges() <-chan struct{}
 }
 
 // PathManager interface defines path management operations

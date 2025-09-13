@@ -98,6 +98,10 @@ type HybridCameraMonitor struct {
 
 	// Event system integration
 	eventNotifier EventNotifier
+
+	// Event-driven readiness system
+	readinessEventChan chan struct{}
+	readinessMutex     sync.RWMutex
 }
 
 // CameraSource represents a camera source configuration
@@ -192,6 +196,9 @@ func NewHybridCameraMonitor(
 		// Event handling
 		eventHandlers:  make([]CameraEventHandler, 0),
 		eventCallbacks: make([]func(CameraEventData), 0),
+
+		// Event-driven readiness system
+		readinessEventChan: make(chan struct{}, 10), // Buffered channel for readiness events
 
 		// Statistics
 		stats: &MonitorStats{
@@ -303,12 +310,12 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	// Generate unique startup correlation ID
 	monStartID := fmt.Sprintf("mon_%d", time.Now().UnixNano())
-	
+
 	// Use atomic check instead of holding stateLock
 	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
 		m.logger.WithFields(logging.Fields{
-			"mon_start_id": monStartID,
-			"err_type":     "BUG_DOUBLE_START",
+			"mon_start_id":  monStartID,
+			"err_type":      "BUG_DOUBLE_START",
 			"current_state": atomic.LoadInt32(&m.running),
 		}).Error("monitor_start_return_err - monitor is already running")
 		return fmt.Errorf("monitor is already running")
@@ -337,7 +344,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"mon_start_id": monStartID,
 		"action":       "event_source_start_begin",
 	}).Info("Starting device event source")
-	
+
 	if err := m.deviceEventSource.Start(ctx); err != nil {
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
 		m.logger.WithFields(logging.Fields{
@@ -347,11 +354,11 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		}).Error("monitor_start_return_err")
 		return fmt.Errorf("failed to start device event source: %w", err)
 	}
-	
+
 	m.logger.WithFields(logging.Fields{
-		"mon_start_id":      monStartID,
-		"events_supported":  m.deviceEventSource.EventsSupported(),
-		"action":            "event_source_start_ok",
+		"mon_start_id":     monStartID,
+		"events_supported": m.deviceEventSource.EventsSupported(),
+		"action":           "event_source_start_ok",
 	}).Info("Device event source started successfully")
 
 	// Log the mode we're running in
@@ -373,7 +380,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"events_supported": m.deviceEventSource.EventsSupported(),
 		"action":           "loops_spawn_begin",
 	}).Info("Spawning monitor loops")
-	
+
 	go m.monitorLoop(ctx, monStartID)
 
 	m.logger.WithFields(logging.Fields{
@@ -401,7 +408,7 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 	}).Info("Starting seed discovery")
 
 	m.logger.Debug("About to call discoverCameras")
-	
+
 	// Seed discovery is non-fatal - log any errors but continue
 	func() {
 		defer func() {
@@ -415,16 +422,19 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 		}()
 		m.discoverCameras(ctx)
 	}()
-	
+
 	m.logger.Debug("discoverCameras completed")
 
 	// Set readiness flag after initial discovery completes (regardless of errors)
 	atomic.StoreInt32(&m.ready, 1)
 
+	// Emit readiness event for event-driven systems
+	m.emitReadinessEvent()
+
 	m.logger.WithFields(logging.Fields{
-		"mon_start_id":   monStartID,
-		"found_devices":  len(m.knownDevices),
-		"action":         "seed_discovery_result",
+		"mon_start_id":  monStartID,
+		"found_devices": len(m.knownDevices),
+		"action":        "seed_discovery_result",
 	}).Info("Seed discovery completed")
 
 	m.logger.WithFields(logging.Fields{
@@ -693,6 +703,40 @@ func (m *HybridCameraMonitor) AddEventCallback(callback func(CameraEventData)) {
 	m.logger.WithFields(logging.Fields{
 		"action": "event_callback_added",
 	}).Debug("Added camera event callback")
+}
+
+// SubscribeToReadiness subscribes to camera monitor readiness events
+func (m *HybridCameraMonitor) SubscribeToReadiness() <-chan struct{} {
+	m.readinessMutex.RLock()
+	defer m.readinessMutex.RUnlock()
+
+	// Create a new channel for this subscriber
+	subscriberChan := make(chan struct{}, 1)
+
+	// If already ready, send immediate notification
+	if m.IsReady() {
+		select {
+		case subscriberChan <- struct{}{}:
+		default:
+		}
+	}
+
+	return subscriberChan
+}
+
+// emitReadinessEvent emits a readiness event to all subscribers
+func (m *HybridCameraMonitor) emitReadinessEvent() {
+	m.readinessMutex.RLock()
+	defer m.readinessMutex.RUnlock()
+
+	// Send to the main readiness channel if it exists
+	if m.readinessEventChan != nil {
+		select {
+		case m.readinessEventChan <- struct{}{}:
+		default:
+			// Channel is full, skip this event
+		}
+	}
 }
 
 // SetEventNotifier sets the event notifier for external event system integration

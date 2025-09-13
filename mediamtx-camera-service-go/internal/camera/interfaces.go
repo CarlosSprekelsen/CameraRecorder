@@ -12,6 +12,7 @@ const (
 	CameraEventConnected     CameraEvent = "CONNECTED"
 	CameraEventDisconnected  CameraEvent = "DISCONNECTED"
 	CameraEventStatusChanged CameraEvent = "STATUS_CHANGED"
+	CameraEventReady         CameraEvent = "READY"
 )
 
 // CameraEventData represents data structure for camera events
@@ -93,6 +94,9 @@ type CameraMonitor interface {
 	AddEventHandler(handler CameraEventHandler)
 	AddEventCallback(callback func(CameraEventData))
 	SetEventNotifier(notifier EventNotifier)
+
+	// Event-driven readiness system
+	SubscribeToReadiness() <-chan struct{}
 
 	// V4L2 Direct Snapshot Capture (Tier 0 - Fastest)
 	TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*DirectSnapshot, error)

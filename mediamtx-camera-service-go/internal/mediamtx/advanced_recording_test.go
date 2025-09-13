@@ -71,12 +71,23 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	assert.Equal(t, "active", session.Status, "Session should be active")
 	assert.NotZero(t, session.StartTime, "Start time should be set")
 
-	// CRITICAL: Wait for FFmpeg to actually start and create the file
-	// This gives FFmpeg time to start (config shows 10s process creation timeout)
+	// CRITICAL: Wait for FFmpeg to actually start and create the file using event-driven approach
+	// Use event-driven test helper for more efficient waiting
+	eventHelper := helper.CreateEventDrivenTestHelper(t)
+	defer eventHelper.Cleanup()
+
+	// Wait for recording session to become active using event-driven approach
+	recordingReadyCtx, recordingReadyCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer recordingReadyCancel()
+
+	err = eventHelper.WaitForReadiness(recordingReadyCtx, 10*time.Second)
+	require.NoError(t, err, "Recording session should become ready within timeout")
+
+	// Verify file creation with optimized timeout (TODO: Replace with event-driven file creation notifications)
 	require.Eventually(t, func() bool {
 		_, err := os.Stat(session.FilePath)
 		return err == nil
-	}, 15*time.Second, 500*time.Millisecond, "FFmpeg should create recording file within 15 seconds")
+	}, 3*time.Second, 50*time.Millisecond, "FFmpeg should create recording file within 3 seconds (optimized polling)")
 
 	// Stop the recording
 	err = controller.StopAdvancedRecording(ctx, session.ID)
@@ -367,4 +378,95 @@ func TestController_AdvancedRecording_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Test rotating non-existent recording
 	err = controller.RotateRecordingFile(ctx, "non-existent-session-id")
 	assert.Error(t, err, "Rotating non-existent recording should fail")
+}
+
+// TestController_EventDrivenAdvancedRecording_ReqMTX002 tests event-driven advanced recording
+func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities with event-driven approach
+	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use proper orchestration following the Progressive Readiness Pattern
+	controller, err := helper.GetOrchestratedController(t)
+	require.NoError(t, err, "Controller orchestration should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Create event-driven test helper
+	eventHelper := helper.CreateEventDrivenTestHelper(t)
+	defer eventHelper.Cleanup()
+
+	// Test event-driven recording with optimized timeouts
+	device := "camera0"
+	options := map[string]interface{}{
+		"quality":    "high",
+		"resolution": "1920x1080",
+		"framerate":  30,
+		"bitrate":    "5000k",
+		"codec":      "h264",
+		"audio":      true,
+		"duration":   5, // 5 seconds
+	}
+
+	// Start recording with event-driven readiness check
+	recordingCtx, recordingCancel := context.WithTimeout(ctx, 15*time.Second)
+	defer recordingCancel()
+
+	session, err := controller.StartAdvancedRecording(recordingCtx, device, options)
+	require.NoError(t, err, "Advanced recording should start successfully")
+	require.NotNil(t, session, "Recording session should not be nil")
+
+	// Use event-driven approach to wait for recording readiness
+	readinessCtx, readinessCancel := context.WithTimeout(ctx, 8*time.Second)
+	defer readinessCancel()
+
+	err = eventHelper.WaitForReadiness(readinessCtx, 8*time.Second)
+	require.NoError(t, err, "Recording should become ready within timeout")
+
+	// Verify session properties
+	assert.NotEmpty(t, session.ID, "Session should have an ID")
+	assert.Equal(t, device, session.DevicePath, "Device path should match")
+	assert.NotEmpty(t, session.FilePath, "File path should be generated")
+	assert.Equal(t, "active", session.Status, "Session should be active")
+	assert.NotZero(t, session.StartTime, "Start time should be set")
+
+	// Verify file creation with optimized timeout (TODO: Replace with event-driven file creation notifications)
+	require.Eventually(t, func() bool {
+		_, err := os.Stat(session.FilePath)
+		return err == nil
+	}, 3*time.Second, 50*time.Millisecond, "FFmpeg should create recording file within 3 seconds (optimized polling)")
+
+	// Test multiple event subscriptions for parallel monitoring
+	healthChan := eventHelper.SubscribeToHealthChanges()
+	readinessChan := eventHelper.SubscribeToReadiness()
+
+	// Wait for both events with timeout
+	eventCtx, eventCancel := context.WithTimeout(ctx, 2*time.Second)
+	defer eventCancel()
+
+	select {
+	case <-healthChan:
+		t.Log("Received health change event")
+	case <-readinessChan:
+		t.Log("Received readiness event")
+	case <-eventCtx.Done():
+		t.Log("Event timeout reached (this is expected in some cases)")
+	}
+
+	// Stop the recording
+	err = controller.StopAdvancedRecording(ctx, session.ID)
+	require.NoError(t, err, "Stopping advanced recording should succeed")
+
+	// Verify output file was created
+	_, err = os.Stat(session.FilePath)
+	assert.NoError(t, err, "Output file should be created")
 }

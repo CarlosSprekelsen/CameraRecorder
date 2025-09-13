@@ -54,6 +54,10 @@ type SimpleHealthMonitor struct {
 
 	// Control
 	wg sync.WaitGroup
+
+	// Event-driven health monitoring
+	healthEventChan chan struct{}
+	healthMutex     sync.RWMutex
 }
 
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
@@ -65,7 +69,8 @@ func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, logg
 		isHealthy:        1, // Assume healthy initially (1 = true)
 		failureCount:     0,
 		lastCheckTime:    time.Now().UnixNano(),
-		debounceDuration: 15 * time.Second, // 15s debounce for health notifications
+		debounceDuration: 15 * time.Second,        // 15s debounce for health notifications
+		healthEventChan:  make(chan struct{}, 10), // Buffered channel for health events
 	}
 }
 
@@ -74,6 +79,38 @@ func (h *SimpleHealthMonitor) SetSystemNotifier(notifier SystemEventNotifier) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.systemNotifier = notifier
+}
+
+// SubscribeToHealthChanges returns a channel that receives events when health status changes
+func (h *SimpleHealthMonitor) SubscribeToHealthChanges() <-chan struct{} {
+	h.healthMutex.RLock()
+	defer h.healthMutex.RUnlock()
+
+	subscriberChan := make(chan struct{}, 1)
+
+	// If already healthy, send immediate event
+	if h.IsHealthy() {
+		select {
+		case subscriberChan <- struct{}{}:
+		default:
+		}
+	}
+
+	return subscriberChan
+}
+
+// emitHealthEvent sends a health change event to subscribers
+func (h *SimpleHealthMonitor) emitHealthEvent() {
+	h.healthMutex.RLock()
+	defer h.healthMutex.RUnlock()
+
+	if h.healthEventChan != nil {
+		select {
+		case h.healthEventChan <- struct{}{}:
+		default:
+			// Channel is full, skip this event
+		}
+	}
 }
 
 // shouldNotifyWithDebounce checks if a notification should be sent based on debounce logic
@@ -150,7 +187,7 @@ func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 		h.logger.Warn("Health monitor shutdown timeout, forcing stop")
 	}
 
-	h.logger.Info("Simplified MediaMTX health monitor stopped")
+	h.logger.Info("simplified MediaMTX health monitor stopped")
 	return nil
 }
 
@@ -207,6 +244,8 @@ func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
 			// Use atomic compare-and-swap to set unhealthy
 			if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 				h.logger.Warn("MediaMTX service marked as unhealthy")
+				// Emit health change event
+				h.emitHealthEvent()
 			}
 		}
 	} else {
@@ -214,6 +253,8 @@ func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
 		currentHealthy := atomic.LoadInt32(&h.isHealthy)
 		if currentHealthy == 0 {
 			h.logger.Info("MediaMTX service recovered")
+			// Emit health change event for recovery
+			h.emitHealthEvent()
 		}
 		atomic.StoreInt32(&h.isHealthy, 1)
 		atomic.StoreInt64(&h.failureCount, 0)
@@ -236,7 +277,22 @@ func (h *SimpleHealthMonitor) WaitForHealthy(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Poll with short intervals until healthy or timeout
+	// Use event-driven approach instead of polling
+	healthChan := h.SubscribeToHealthChanges()
+
+	// Wait for health event or timeout
+	select {
+	case <-healthChan:
+		// Check if we're actually healthy now
+		if h.IsHealthy() {
+			return nil
+		}
+		// If not healthy, continue waiting with polling as fallback
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("health monitor not healthy within timeout")
+	}
+
+	// Fallback to polling with short intervals if event-driven approach doesn't work
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -303,6 +359,9 @@ func (h *SimpleHealthMonitor) RecordSuccess() {
 		h.logger.Info("Service recovered through success recording")
 		atomic.StoreInt32(&h.isHealthy, 1)
 
+		// Emit health change event for recovery
+		h.emitHealthEvent()
+
 		// Send recovery notification with debounce
 		if h.systemNotifier != nil && h.shouldNotifyWithDebounce("healthy") {
 			h.systemNotifier.NotifySystemHealth("healthy", map[string]interface{}{
@@ -332,6 +391,9 @@ func (h *SimpleHealthMonitor) RecordFailure() {
 		// Use atomic compare-and-swap to set unhealthy
 		if atomic.CompareAndSwapInt32(&h.isHealthy, 1, 0) {
 			h.logger.Warn("Service marked as unhealthy due to failure threshold")
+
+			// Emit health change event
+			h.emitHealthEvent()
 
 			// Send threshold-crossing notification with debounce
 			if h.systemNotifier != nil && h.shouldNotifyWithDebounce("unhealthy") {

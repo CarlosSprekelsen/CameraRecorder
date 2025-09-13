@@ -1519,8 +1519,11 @@ func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, cl
 			return nil, fmt.Errorf("failed to start streaming: %v", err)
 		}
 
-		// Use controller-provided stream URL (respects configuration)
-		streamURL := stream.URL
+		// Get stream URL from controller (respects configuration)
+		streamURL, err := s.mediaMTXController.GetStreamURL(context.Background(), device)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get stream URL: %v", err)
+		}
 
 		// Return streaming result
 		return map[string]interface{}{

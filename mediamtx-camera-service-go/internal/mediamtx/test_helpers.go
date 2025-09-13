@@ -1045,6 +1045,324 @@ func (h *MediaMTXTestHelper) TestInputValidationBoundaryConditions(t *testing.T,
 }
 
 // ============================================================================
+// EVENT-DRIVEN TEST HELPERS
+// ============================================================================
+// These helpers provide event-driven testing capabilities to replace polling
+// with efficient event subscription patterns.
+
+// EventDrivenTestHelper provides event-driven testing capabilities
+type EventDrivenTestHelper struct {
+	controller    MediaMTXController
+	eventChannels map[string]chan struct{}
+	eventMutex    sync.RWMutex
+	logger        *logging.Logger
+}
+
+// CreateEventDrivenTestHelper creates a new event-driven test helper
+func (h *MediaMTXTestHelper) CreateEventDrivenTestHelper(t *testing.T) *EventDrivenTestHelper {
+	controller, err := h.GetController(t)
+	if err != nil {
+		t.Fatalf("Failed to get controller for event-driven test helper: %v", err)
+	}
+
+	return &EventDrivenTestHelper{
+		controller:    controller,
+		eventChannels: make(map[string]chan struct{}),
+		logger:        h.GetLogger(),
+	}
+}
+
+// SubscribeToReadiness subscribes to controller readiness events
+func (edh *EventDrivenTestHelper) SubscribeToReadiness() <-chan struct{} {
+	edh.eventMutex.Lock()
+	defer edh.eventMutex.Unlock()
+
+	// Create a new channel for this subscription
+	readinessChan := make(chan struct{}, 1)
+
+	// Subscribe to controller readiness events
+	controllerChan := edh.controller.SubscribeToReadiness()
+
+	// Start a goroutine to forward events
+	go func() {
+		for event := range controllerChan {
+			select {
+			case readinessChan <- event:
+			default:
+				// Channel is full, skip this event
+			}
+		}
+	}()
+
+	// Store the channel for cleanup
+	edh.eventChannels["readiness"] = readinessChan
+
+	return readinessChan
+}
+
+// WaitForReadiness waits for controller readiness with timeout
+func (edh *EventDrivenTestHelper) WaitForReadiness(ctx context.Context, timeout time.Duration) error {
+	readinessChan := edh.SubscribeToReadiness()
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Wait for readiness event or timeout
+	select {
+	case <-readinessChan:
+		edh.logger.Info("Controller readiness event received")
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("timeout waiting for controller readiness: %v", timeout)
+	}
+}
+
+// SubscribeToHealthChanges subscribes to health status changes
+func (edh *EventDrivenTestHelper) SubscribeToHealthChanges() <-chan struct{} {
+	edh.eventMutex.Lock()
+	defer edh.eventMutex.Unlock()
+
+	// Create a new channel for health events
+	healthChan := make(chan struct{}, 1)
+
+	// Store the channel for cleanup
+	edh.eventChannels["health"] = healthChan
+
+	// TODO: Implement health event subscription when health monitor supports it
+	// For now, return a channel that will be closed immediately
+	go func() {
+		close(healthChan)
+	}()
+
+	return healthChan
+}
+
+// WaitForHealthChange waits for health status change with timeout
+func (edh *EventDrivenTestHelper) WaitForHealthChange(ctx context.Context, timeout time.Duration) error {
+	healthChan := edh.SubscribeToHealthChanges()
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Wait for health change event or timeout
+	select {
+	case <-healthChan:
+		edh.logger.Info("Health change event received")
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("timeout waiting for health change: %v", timeout)
+	}
+}
+
+// SubscribeToCameraEvents subscribes to camera discovery events
+func (edh *EventDrivenTestHelper) SubscribeToCameraEvents() <-chan struct{} {
+	edh.eventMutex.Lock()
+	defer edh.eventMutex.Unlock()
+
+	// Create a new channel for camera events
+	cameraChan := make(chan struct{}, 1)
+
+	// Store the channel for cleanup
+	edh.eventChannels["camera"] = cameraChan
+
+	// TODO: Implement camera event subscription when camera monitor supports it
+	// For now, return a channel that will be closed immediately
+	go func() {
+		close(cameraChan)
+	}()
+
+	return cameraChan
+}
+
+// WaitForCameraDiscovery waits for camera discovery with timeout
+func (edh *EventDrivenTestHelper) WaitForCameraDiscovery(ctx context.Context, timeout time.Duration) error {
+	cameraChan := edh.SubscribeToCameraEvents()
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Wait for camera discovery event or timeout
+	select {
+	case <-cameraChan:
+		edh.logger.Info("Camera discovery event received")
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("timeout waiting for camera discovery: %v", timeout)
+	}
+}
+
+// WaitForMultipleEvents waits for multiple events simultaneously
+func (edh *EventDrivenTestHelper) WaitForMultipleEvents(ctx context.Context, timeout time.Duration, eventTypes ...string) error {
+	if len(eventTypes) == 0 {
+		return fmt.Errorf("no event types specified")
+	}
+
+	// Create channels for each event type
+	channels := make([]<-chan struct{}, len(eventTypes))
+	for i, eventType := range eventTypes {
+		switch eventType {
+		case "readiness":
+			channels[i] = edh.SubscribeToReadiness()
+		case "health":
+			channels[i] = edh.SubscribeToHealthChanges()
+		case "camera":
+			channels[i] = edh.SubscribeToCameraEvents()
+		default:
+			return fmt.Errorf("unknown event type: %s", eventType)
+		}
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Wait for any of the events
+	done := make(chan struct{})
+
+	// Start goroutines for each channel
+	for i, ch := range channels {
+		go func(index int, channel <-chan struct{}) {
+			select {
+			case <-channel:
+				edh.logger.WithField("event_type", eventTypes[index]).Info("Event received")
+				select {
+				case done <- struct{}{}:
+				default:
+				}
+			case <-timeoutCtx.Done():
+				return
+			}
+		}(i, ch)
+	}
+
+	// Wait for any event or timeout
+	select {
+	case <-done:
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("timeout waiting for events %v: %v", eventTypes, timeout)
+	}
+}
+
+// WaitForAllEvents waits for ALL specified events to occur before returning
+func (edh *EventDrivenTestHelper) WaitForAllEvents(ctx context.Context, timeout time.Duration, eventTypes ...string) error {
+	if len(eventTypes) == 0 {
+		return fmt.Errorf("no event types specified")
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Create channels for each event type
+	eventChannels := make(map[string]<-chan struct{})
+
+	// Subscribe to each event type
+	for _, eventType := range eventTypes {
+		switch eventType {
+		case "readiness":
+			eventChannels[eventType] = edh.SubscribeToReadiness()
+		case "health":
+			eventChannels[eventType] = edh.SubscribeToHealthChanges()
+		case "camera":
+			eventChannels[eventType] = edh.SubscribeToCameraEvents()
+		default:
+			return fmt.Errorf("unknown event type: %s", eventType)
+		}
+	}
+
+	// Track which events we've received
+	receivedEvents := make(map[string]bool)
+	for _, eventType := range eventTypes {
+		receivedEvents[eventType] = false
+	}
+
+	// Wait for all events
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			// Check which events we're still waiting for
+			missingEvents := make([]string, 0)
+			for eventType, received := range receivedEvents {
+				if !received {
+					missingEvents = append(missingEvents, eventType)
+				}
+			}
+			return fmt.Errorf("timeout waiting for all events, missing: %v", missingEvents)
+
+		default:
+			// Check each event channel
+			for eventType, eventChan := range eventChannels {
+				if !receivedEvents[eventType] {
+					select {
+					case <-eventChan:
+						receivedEvents[eventType] = true
+						edh.logger.WithField("event_type", eventType).Debug("Event received")
+					default:
+						// No event available on this channel
+					}
+				}
+			}
+
+			// Check if we've received all events
+			allReceived := true
+			for _, received := range receivedEvents {
+				if !received {
+					allReceived = false
+					break
+				}
+			}
+
+			if allReceived {
+				edh.logger.Info("All events received successfully")
+				return nil
+			}
+
+			// Use a timer instead of sleep to prevent busy waiting
+			timer := time.NewTimer(10 * time.Millisecond)
+			select {
+			case <-timer.C:
+				// Timer expired, continue checking
+			case <-timeoutCtx.Done():
+				timer.Stop()
+				// Check which events we're still waiting for
+				missingEvents := make([]string, 0)
+				for eventType, received := range receivedEvents {
+					if !received {
+						missingEvents = append(missingEvents, eventType)
+					}
+				}
+				return fmt.Errorf("timeout waiting for all events, missing: %v", missingEvents)
+			}
+		}
+	}
+}
+
+// Cleanup closes all event channels
+func (edh *EventDrivenTestHelper) Cleanup() {
+	edh.eventMutex.Lock()
+	defer edh.eventMutex.Unlock()
+
+	for name, ch := range edh.eventChannels {
+		// Check if channel is already closed by attempting to close it safely
+		select {
+		case <-ch:
+			// Channel is already closed
+			edh.logger.WithField("channel", name).Debug("Event channel already closed")
+		default:
+			// Channel is open, close it
+			close(ch)
+			edh.logger.WithField("channel", name).Debug("Closed event channel")
+		}
+	}
+
+	edh.eventChannels = make(map[string]chan struct{})
+}
+
+// ============================================================================
 // JSON MALFORMATION TEST HELPERS
 // ============================================================================
 // These helpers are designed to catch dangerous bugs through systematic

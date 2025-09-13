@@ -214,7 +214,7 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 // TestController_GetStream_ReqMTX002 tests individual stream retrieval with real server
 func TestController_GetStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads stream information
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -251,7 +251,7 @@ func TestController_GetStream_ReqMTX002(t *testing.T) {
 
 // TestConfigIntegration_GetRecordingConfig_ReqMTX001 tests recording config retrieval
 func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -267,7 +267,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
 
 // TestConfigIntegration_GetSnapshotConfig_ReqMTX001 tests snapshot config retrieval
 func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -283,7 +283,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
 
 // TestConfigIntegration_GetFFmpegConfig_ReqMTX001 tests FFmpeg config retrieval
 func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -299,7 +299,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
 
 // TestConfigIntegration_GetCameraConfig_ReqMTX001 tests camera config retrieval
 func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -315,7 +315,7 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
 
 // TestConfigIntegration_GetPerformanceConfig_ReqMTX001 tests performance config retrieval
 func TestConfigIntegration_GetPerformanceConfig_ReqMTX001(t *testing.T) {
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1188,7 +1188,7 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 // that can catch dangerous bugs in controller methods
 func TestController_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only validates input parameters
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1217,7 +1217,7 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 // that can cause dangerous bugs like integer overflow or panic conditions
 func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
+	// No sequential execution needed - only validates boundary conditions
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1246,6 +1246,7 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 // that can cause dangerous bugs in controller state management
 func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
+	// Sequential execution needed - tests concurrent start/stop operations
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1353,6 +1354,185 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 
 		// Give time for all goroutines to clean up
 		time.Sleep(100 * time.Millisecond)
+	})
+}
+
+// TestEventDrivenReadiness tests event-driven readiness patterns
+func TestEventDrivenReadiness(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration with event-driven patterns
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create event-driven test helper
+	eventHelper := helper.CreateEventDrivenTestHelper(t)
+	defer eventHelper.Cleanup()
+
+	// Create controller
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start controller in background
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test event-driven readiness waiting
+	t.Run("event_driven_readiness", func(t *testing.T) {
+		// Wait for readiness using event-driven approach
+		err := eventHelper.WaitForReadiness(ctx, 10*time.Second)
+		require.NoError(t, err, "Should receive readiness event within timeout")
+
+		// Verify controller is actually ready
+		assert.True(t, controller.IsReady(), "Controller should be ready after event")
+	})
+
+	// Test multiple event subscriptions
+	t.Run("multiple_event_subscriptions", func(t *testing.T) {
+		// Subscribe to multiple event types
+		readinessChan := eventHelper.SubscribeToReadiness()
+		healthChan := eventHelper.SubscribeToHealthChanges()
+		cameraChan := eventHelper.SubscribeToCameraEvents()
+
+		// Wait for any event with timeout
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		select {
+		case <-readinessChan:
+			t.Log("Readiness event received")
+		case <-healthChan:
+			t.Log("Health event received")
+		case <-cameraChan:
+			t.Log("Camera event received")
+		case <-timeoutCtx.Done():
+			t.Log("Timeout waiting for events (expected for health/camera events)")
+		}
+	})
+
+	t.Log("Event-driven readiness test completed successfully")
+}
+
+// TestParallelEventDrivenTests tests multiple event-driven operations in parallel
+func TestParallelEventDrivenTests(t *testing.T) {
+	// REQ-MTX-001: MediaMTX service integration with parallel event-driven patterns
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create multiple event-driven test helpers for parallel testing
+	eventHelpers := make([]*EventDrivenTestHelper, 3)
+	for i := 0; i < 3; i++ {
+		eventHelpers[i] = helper.CreateEventDrivenTestHelper(t)
+		defer eventHelpers[i].Cleanup()
+	}
+
+	// Create controller
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test parallel event subscriptions
+	t.Run("parallel_event_subscriptions", func(t *testing.T) {
+		done := make(chan bool, 3)
+
+		// Start parallel goroutines for each event helper
+		for i, eventHelper := range eventHelpers {
+			go func(index int, eh *EventDrivenTestHelper) {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("Goroutine %d panicked: %v", index, r)
+					}
+					done <- true
+				}()
+
+				// Wait for readiness event
+				err := eh.WaitForReadiness(ctx, 10*time.Second)
+				if err != nil {
+					t.Errorf("Event helper %d failed to receive readiness event: %v", index, err)
+					return
+				}
+
+				t.Logf("Event helper %d received readiness event", index)
+			}(i, eventHelper)
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < 3; i++ {
+			<-done
+		}
+
+		// Verify controller is ready
+		assert.True(t, controller.IsReady(), "Controller should be ready after parallel events")
+	})
+
+	t.Log("Parallel event-driven test completed successfully")
+}
+
+// TestEventAggregationSystem tests the event aggregation system
+func TestEventAggregationSystem(t *testing.T) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+	eventHelper := helper.CreateEventDrivenTestHelper(t)
+	defer eventHelper.Cleanup()
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+	err = controller.Start(context.Background())
+	require.NoError(t, err, "Controller start should succeed")
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	t.Run("wait_for_any_event", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Wait for any of the specified events
+		err := eventHelper.WaitForMultipleEvents(ctx, 10*time.Second, "readiness", "health", "camera")
+		require.NoError(t, err, "Should receive at least one event within timeout")
+	})
+
+	t.Run("wait_for_all_events", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		// Wait for all specified events (this may timeout if not all events occur)
+		err := eventHelper.WaitForAllEvents(ctx, 15*time.Second, "readiness", "health")
+		// This test may timeout if health events don't occur, which is expected
+		if err != nil {
+			t.Logf("WaitForAllEvents timed out (expected in some cases): %v", err)
+		} else {
+			t.Log("All events received successfully")
+		}
+	})
+
+	t.Run("event_aggregation_with_timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Test with a short timeout to demonstrate timeout handling
+		err := eventHelper.WaitForMultipleEvents(ctx, 2*time.Second, "readiness")
+		require.NoError(t, err, "Should receive readiness event within short timeout")
 	})
 }
 

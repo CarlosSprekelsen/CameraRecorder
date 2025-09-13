@@ -117,18 +117,46 @@ func main() {
 		logger.Info("Connected SystemEventNotifier to controller for unified health notifications")
 	}
 
-	// Start camera monitor
+	// ARCHITECTURAL COMPLIANCE: Start MediaMTX Controller first (orchestrates all services)
 	ctx := context.Background()
-	if err := cameraMonitor.Start(ctx); err != nil {
-		logger.WithError(err).Fatal("Failed to start camera monitor")
+	logger.Info("Starting MediaMTX Controller orchestration...")
+	
+	// Start the MediaMTX controller (this orchestrates all other services)
+	if err := mediaMTXController.Start(ctx); err != nil {
+		logger.WithError(err).Fatal("Failed to start MediaMTX controller")
+	}
+	logger.Info("MediaMTX Controller started successfully")
+
+	// Wait for controller readiness using event-driven approach
+	logger.Info("Waiting for controller readiness...")
+	readinessChan := mediaMTXController.SubscribeToReadiness()
+	
+	// Wait for readiness event with timeout
+	readinessCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	
+	select {
+	case <-readinessChan:
+		logger.Info("Controller readiness event received - all services ready")
+	case <-readinessCtx.Done():
+		logger.Warn("Controller readiness timeout - proceeding anyway")
+	}
+	
+	// Verify controller is actually ready
+	if mediaMTXController.IsReady() {
+		logger.Info("Controller reports ready - all services operational")
+	} else {
+		logger.Warn("Controller not ready - some services may not be operational")
 	}
 
-	// Start WebSocket server
+	// Start WebSocket server (after controller is ready)
+	logger.Info("Starting WebSocket server...")
 	if err := wsServer.Start(); err != nil {
 		logger.WithError(err).Fatal("Failed to start WebSocket server")
 	}
+	logger.Info("WebSocket server started successfully")
 
-	logger.Info("Camera service started successfully")
+	logger.Info("Camera service started successfully - all components operational")
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
@@ -147,27 +175,46 @@ func main() {
 
 	logger.Info("Starting graceful shutdown...")
 
-	// Stop services concurrently with timeout enforcement
+	// ARCHITECTURAL COMPLIANCE: Stop services in reverse order of startup
 	var wg sync.WaitGroup
-	errorChan := make(chan error, 2)
+	errorChan := make(chan error, 3)
 
-	// Stop WebSocket server
+	// Stop WebSocket server first (stops accepting new connections)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		logger.Info("Stopping WebSocket server...")
 		if err := wsServer.Stop(shutdownCtx); err != nil {
 			logger.WithError(err).Error("Error stopping WebSocket server")
 			errorChan <- err
+		} else {
+			logger.Info("WebSocket server stopped successfully")
 		}
 	}()
 
-	// Stop camera monitor
+	// Stop MediaMTX controller (orchestrates shutdown of all managed services)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		logger.Info("Stopping MediaMTX controller...")
+		if err := mediaMTXController.Stop(shutdownCtx); err != nil {
+			logger.WithError(err).Error("Error stopping MediaMTX controller")
+			errorChan <- err
+		} else {
+			logger.Info("MediaMTX controller stopped successfully")
+		}
+	}()
+
+	// Stop camera monitor (managed by controller, but ensure cleanup)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		logger.Info("Stopping camera monitor...")
 		if err := cameraMonitor.Stop(shutdownCtx); err != nil {
 			logger.WithError(err).Error("Error stopping camera monitor")
 			errorChan <- err
+		} else {
+			logger.Info("Camera monitor stopped successfully")
 		}
 	}()
 

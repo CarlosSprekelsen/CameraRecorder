@@ -287,6 +287,165 @@ Controller.TakeSnapshot("rtsp://uav-stream", path)
 - **SnapshotManager uses StreamManager** in Tier 3 for external sources
 - **Architecture supports both current and future requirements**
 
+## Event-Driven Architecture
+
+### Overview
+
+The MediaMTX Controller implements event-driven patterns to replace polling-based approaches, providing improved performance, responsiveness, and test efficiency.
+
+### Event-Driven Readiness System
+
+The controller provides an event-driven readiness system that notifies subscribers when the controller becomes ready for operations.
+
+#### Key Features
+
+- **Event Subscription**: Subscribe to readiness events instead of polling
+- **Immediate Notification**: Receive events as soon as readiness state changes
+- **Multiple Subscribers**: Support for multiple concurrent subscribers
+- **Timeout Handling**: Built-in timeout support for all operations
+
+#### Usage Example
+
+```go
+// Subscribe to readiness events
+readinessChan := controller.SubscribeToReadiness()
+
+// Wait for readiness with timeout
+select {
+case <-readinessChan:
+    // Controller is ready
+case <-time.After(10 * time.Second):
+    // Handle timeout
+}
+```
+
+#### Readiness Conditions
+
+The controller is considered ready when:
+- Controller is running
+- Camera monitor has completed discovery
+- Health monitor is healthy (if present)
+
+### Event-Driven Test Orchestration
+
+The system includes comprehensive event-driven testing capabilities that replace polling with efficient event subscription.
+
+#### EventDrivenTestHelper
+
+The `EventDrivenTestHelper` provides testing utilities for event-driven patterns:
+
+```go
+// Create event-driven test helper
+eventHelper := helper.CreateEventDrivenTestHelper(t)
+defer eventHelper.Cleanup()
+
+// Wait for readiness using event-driven approach
+err := eventHelper.WaitForReadiness(ctx, 10*time.Second)
+require.NoError(t, err, "Should receive readiness event within timeout")
+
+// Wait for multiple events simultaneously
+err := eventHelper.WaitForMultipleEvents(ctx, timeout, "readiness", "health", "camera")
+```
+
+#### Parallel Test Execution
+
+Event-driven patterns enable parallel test execution by removing sequential execution bottlenecks:
+
+```go
+// Before: Sequential execution required
+func TestWithPolling(t *testing.T) {
+    EnsureSequentialExecution(t) // ❌ Unnecessary bottleneck
+    // ... polling logic
+}
+
+// After: Parallel execution enabled
+func TestWithEvents(t *testing.T) {
+    // No sequential execution needed - only reads information
+    eventHelper := helper.CreateEventDrivenTestHelper(t)
+    defer eventHelper.Cleanup()
+    // ... event-driven logic
+}
+```
+
+### Performance Benefits
+
+#### Reduced CPU Usage
+- **Before**: Continuous polling consumes CPU cycles
+- **After**: CPU only used when events occur
+
+#### Improved Test Performance
+- **Before**: Tests wait for fixed intervals
+- **After**: Tests respond immediately to events
+
+#### Better Responsiveness
+- **Before**: Maximum delay = polling interval
+- **After**: Immediate event notification
+
+### Event Types
+
+#### 1. Readiness Events
+- **Purpose**: Notify when controller becomes ready
+- **Trigger**: All readiness conditions met
+- **Usage**: `controller.SubscribeToReadiness()`
+
+#### 2. Health Events (Planned)
+- **Purpose**: Notify when health status changes
+- **Trigger**: Health status transitions
+- **Usage**: `eventHelper.SubscribeToHealthChanges()`
+
+#### 3. Camera Events (Planned)
+- **Purpose**: Notify when camera discovery events occur
+- **Trigger**: Camera connected/disconnected
+- **Usage**: `eventHelper.SubscribeToCameraEvents()`
+
+### Migration from Polling
+
+#### Step 1: Identify Polling Patterns
+```go
+// Polling pattern
+for {
+    if controller.IsReady() {
+        break
+    }
+    time.Sleep(100 * time.Millisecond)
+}
+```
+
+#### Step 2: Replace with Event Subscription
+```go
+// Event-driven pattern
+readinessChan := controller.SubscribeToReadiness()
+select {
+case <-readinessChan:
+    // Controller is ready
+case <-timeout:
+    // Handle timeout
+}
+```
+
+#### Step 3: Update Tests
+```go
+// Remove unnecessary sequential execution
+// Use event-driven test helpers
+// Enable parallel test execution
+```
+
+### Best Practices
+
+1. **Always Use Timeouts**: Prevent infinite waiting
+2. **Clean Up Resources**: Close channels and cancel contexts
+3. **Handle Errors Gracefully**: Don't let event failures crash tests
+4. **Use Buffered Channels**: Prevent blocking on slow consumers
+5. **Test Event Aggregation**: Verify multiple event handling works
+
+### Future Enhancements
+
+- **Health Event System**: Event-driven health monitoring
+- **Camera Event System**: Enhanced camera discovery events
+- **Event Persistence**: Event storage for debugging
+- **Event Filtering**: Selective event subscription
+- **Event Metrics**: Performance monitoring
+
 ## Architecture Benefits
 
 1. **Single Source of Truth**: MediaMTX Controller is the only business logic layer
@@ -299,3 +458,6 @@ Controller.TakeSnapshot("rtsp://uav-stream", path)
 8. **External Stream Support**: Comprehensive UAV and network-based stream discovery
 9. **Configurable Discovery**: Flexible network scanning with model-specific parameters
 10. **STANAG 4609 Compliance**: Military-grade UAV stream support
+11. **Event-Driven Architecture**: Efficient event subscription replacing polling patterns
+12. **Parallel Test Execution**: Improved test performance through event-driven testing
+13. **Enhanced Responsiveness**: Immediate event notification for better system behavior

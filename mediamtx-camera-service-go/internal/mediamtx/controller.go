@@ -88,20 +88,24 @@ func (c *controller) hasPathIntegration() bool {
 // IsReady returns whether the controller is fully operational
 func (c *controller) IsReady() bool {
 	if !c.checkRunningState() {
+		c.logger.Debug("Controller not ready: not running")
 		return false
 	}
 
 	// Check if camera monitor has completed at least one discovery cycle
 	if c.cameraMonitor != nil && !c.cameraMonitor.IsReady() {
+		c.logger.Debug("Controller not ready: camera monitor not ready")
 		return false
 	}
 
 	// Health monitor is optional - if nil, consider healthy by default
 	// If present, check if it's healthy
 	if c.healthMonitor != nil && !c.healthMonitor.IsHealthy() {
+		c.logger.Debug("Controller not ready: health monitor not healthy")
 		return false
 	}
 
+	c.logger.Debug("Controller is ready: all components ready")
 	return true
 }
 
@@ -141,6 +145,65 @@ func (c *controller) emitReadinessEvent() {
 
 // monitorReadiness monitors controller readiness and emits events when ready
 func (c *controller) monitorReadiness(ctx context.Context) {
+	// Use event-driven approach with fallback to polling for robustness
+	var cameraReadyChan <-chan struct{}
+	var healthReadyChan <-chan struct{}
+
+	// Subscribe to camera monitor readiness events
+	if c.cameraMonitor != nil {
+		cameraReadyChan = c.cameraMonitor.SubscribeToReadiness()
+	}
+
+	// Subscribe to health monitor readiness events
+	if c.healthMonitor != nil {
+		healthReadyChan = c.healthMonitor.SubscribeToHealthChanges()
+	}
+
+	// Fallback to polling if no event channels are available
+	if cameraReadyChan == nil && healthReadyChan == nil {
+		c.logger.Warn("No event channels available, falling back to polling for readiness monitoring")
+		c.monitorReadinessWithPolling(ctx)
+		return
+	}
+
+	lastReadyState := false
+
+	// Check initial readiness state
+	initialReadyState := c.IsReady()
+	if initialReadyState {
+		c.emitReadinessEvent()
+		c.logger.Info("Controller readiness event emitted (initially ready)")
+		lastReadyState = true
+	} else {
+		c.logger.Info("Controller not initially ready, waiting for components...")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-cameraReadyChan:
+			// Camera monitor became ready, check overall readiness
+			currentReadyState := c.IsReady()
+			if !lastReadyState && currentReadyState {
+				c.emitReadinessEvent()
+				c.logger.Info("Controller readiness event emitted (camera ready)")
+			}
+			lastReadyState = currentReadyState
+		case <-healthReadyChan:
+			// Health monitor state changed, check overall readiness
+			currentReadyState := c.IsReady()
+			if !lastReadyState && currentReadyState {
+				c.emitReadinessEvent()
+				c.logger.Info("Controller readiness event emitted (health ready)")
+			}
+			lastReadyState = currentReadyState
+		}
+	}
+}
+
+// monitorReadinessWithPolling provides fallback polling for readiness monitoring
+func (c *controller) monitorReadinessWithPolling(ctx context.Context) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -156,7 +219,7 @@ func (c *controller) monitorReadiness(ctx context.Context) {
 			// Emit event when readiness state changes from false to true
 			if !lastReadyState && currentReadyState {
 				c.emitReadinessEvent()
-				c.logger.Info("Controller readiness event emitted")
+				c.logger.Info("Controller readiness event emitted (polling fallback)")
 			}
 
 			lastReadyState = currentReadyState
