@@ -58,6 +58,10 @@ type HybridCameraMonitor struct {
 	capabilityStates map[string]*DeviceCapabilityState
 	stopChan         chan struct{}
 	ready            int32 // Atomic flag for readiness
+	hasAcquiredRef   int32 // Atomic flag to track if we've acquired device event source reference
+
+	// Concurrency control
+	startStopMutex sync.Mutex // Protects start/stop operations from concurrent access
 
 	// Caching
 	capabilityCache map[string]*V4L2Capabilities
@@ -127,7 +131,6 @@ func NewHybridCameraMonitor(
 	deviceChecker DeviceChecker,
 	commandExecutor V4L2CommandExecutor,
 	infoParser DeviceInfoParser,
-	deviceEventSource DeviceEventSource,
 ) (*HybridCameraMonitor, error) {
 	if configManager == nil {
 		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
@@ -145,16 +148,17 @@ func NewHybridCameraMonitor(
 		return nil, fmt.Errorf("infoParser cannot be nil")
 	}
 
-	if deviceEventSource == nil {
-		return nil, fmt.Errorf("deviceEventSource cannot be nil")
-	}
-
 	if logger == nil {
 		logger = logging.GetLogger("camera-monitor")
 	}
 
+	// Acquire device event source from factory (singleton + ref counting)
+	deviceEventSource := GetDeviceEventSourceFactory().Acquire()
+
 	cfg := configManager.GetConfig()
 	if cfg == nil {
+		// Release the device event source if config is not available
+		GetDeviceEventSourceFactory().Release()
 		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
 	}
 
@@ -311,11 +315,15 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 
 // Start begins camera discovery and monitoring
 func (m *HybridCameraMonitor) Start(ctx context.Context) error {
+	// Acquire mutex to prevent concurrent start/stop operations
+	m.startStopMutex.Lock()
+	defer m.startStopMutex.Unlock()
+
 	// Generate unique startup correlation ID
 	monStartID := fmt.Sprintf("mon_%d", time.Now().UnixNano())
 
-	// Use atomic check instead of holding stateLock
-	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
+	// Check if already running (now thread-safe with mutex)
+	if atomic.LoadInt32(&m.running) == 1 {
 		m.logger.WithFields(logging.Fields{
 			"mon_start_id":  monStartID,
 			"err_type":      "BUG_DOUBLE_START",
@@ -323,6 +331,9 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		}).Error("monitor_start_return_err - monitor is already running")
 		return fmt.Errorf("monitor is already running")
 	}
+
+	// Set running flag
+	atomic.StoreInt32(&m.running, 1)
 
 	// Check context cancellation before starting
 	select {
@@ -351,14 +362,42 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		"action":       "event_source_start_begin",
 	}).Info("Starting device event source")
 
+	// Release mutex before calling device event source operations to avoid deadlock
+	m.startStopMutex.Unlock()
+
 	if err := m.deviceEventSource.Start(m.ctx); err != nil {
+		// Re-acquire mutex for cleanup
+		m.startStopMutex.Lock()
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
+		// Release the device event source reference since we failed to start it
+		if err := GetDeviceEventSourceFactory().Release(); err != nil {
+			m.logger.WithError(err).Warn("Error releasing device event source after start failure")
+		}
 		m.logger.WithFields(logging.Fields{
 			"mon_start_id": monStartID,
 			"err_type":     "ES_START_FATAL",
 			"err_msg":      err.Error(),
 		}).Error("monitor_start_return_err")
 		return fmt.Errorf("failed to start device event source: %w", err)
+	}
+
+	// Re-acquire mutex for final setup
+	m.startStopMutex.Lock()
+
+	// Mark that we've successfully started and acquired a reference
+	atomic.StoreInt32(&m.hasAcquiredRef, 1)
+
+	// Set up cleanup function in case of failure after this point
+	// Note: This cleanup function is available for future use if needed
+	_ = func() {
+		atomic.StoreInt32(&m.running, 0)
+		atomic.StoreInt32(&m.hasAcquiredRef, 0)
+		if err := m.deviceEventSource.Close(); err != nil {
+			m.logger.WithError(err).Warn("Error closing device event source during cleanup")
+		}
+		if err := GetDeviceEventSourceFactory().Release(); err != nil {
+			m.logger.WithError(err).Warn("Error releasing device event source during cleanup")
+		}
 	}
 
 	m.logger.WithFields(logging.Fields{
@@ -400,7 +439,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 // monitorLoop runs the main monitoring loop
 func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string) {
 	defer m.wg.Done() // Ensure WaitGroup is decremented when goroutine exits
-	
+
 	m.logger.Debug("Monitor loop started")
 	defer func() {
 		m.logger.Debug("Monitor loop exiting")
@@ -465,7 +504,20 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 
 // Stop stops camera discovery and monitoring with context-aware cancellation
 func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
+	// Acquire mutex to prevent concurrent start/stop operations
+	m.startStopMutex.Lock()
+	defer m.startStopMutex.Unlock()
+
 	m.logger.Info("Stopping hybrid camera monitor")
+
+	// Check if monitor is actually running - make Stop() idempotent
+	if atomic.LoadInt32(&m.running) == 0 {
+		m.logger.Debug("Monitor is already stopped - Stop() is idempotent")
+		return nil // Idempotent: safe to call Stop() on non-running monitor
+	}
+
+	// Set running flag to 0
+	atomic.StoreInt32(&m.running, 0)
 
 	// Cancel internal context first - this interrupts monitorLoop immediately!
 	if m.cancel != nil {
@@ -487,11 +539,34 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 		m.logger.Warn("Camera monitor shutdown timeout, forcing stop")
 	}
 
-	// Release device event source via factory (ref counting)
+	// Close the device event source first - ensure it's properly stopped
 	if m.deviceEventSource != nil {
+		// Release mutex before calling device event source operations to avoid deadlock
+		m.startStopMutex.Unlock()
+
+		if err := m.deviceEventSource.Close(); err != nil {
+			m.logger.WithError(err).Warn("Error closing device event source")
+		}
+		// Verify the device event source is actually stopped
+		if m.deviceEventSource.Started() {
+			m.logger.Warn("Device event source is still started after Close() call")
+		}
+
+		// Re-acquire mutex for factory operations
+		m.startStopMutex.Lock()
+	}
+
+	// Then release the factory reference (only once per Start() call)
+	if m.deviceEventSource != nil && atomic.CompareAndSwapInt32(&m.hasAcquiredRef, 1, 0) {
+		// Release mutex before calling factory operations to avoid deadlock
+		m.startStopMutex.Unlock()
+
 		if err := GetDeviceEventSourceFactory().Release(); err != nil {
 			m.logger.WithError(err).Warn("Error releasing device event source")
 		}
+
+		// Re-acquire mutex for final cleanup
+		m.startStopMutex.Lock()
 	}
 
 	m.logger.Info("Hybrid camera monitor stopped")

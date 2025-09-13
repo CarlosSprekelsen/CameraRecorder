@@ -67,7 +67,7 @@ func (f *FsnotifyDeviceEventSource) Start(ctx context.Context) error {
 		"start_calls_total": callCount,
 		"action":            "es_start_called",
 	}).Info("Device event source Start() called")
-	
+
 	// Check if context is already cancelled
 	select {
 	case <-ctx.Done():
@@ -413,6 +413,16 @@ func (f *DeviceEventSourceFactory) Acquire() DeviceEventSource {
 			started:         0, // Will be set in Start()
 		}
 		f.logger.Info("Created new device event source instance")
+	} else {
+		// Reset existing instance state for reuse
+		atomic.StoreInt32(&f.instance.running, 0)
+		atomic.StoreInt32(&f.instance.eventsSupported, 0)
+		atomic.StoreInt32(&f.instance.started, 0)
+		f.instance.watcher = nil
+		f.instance.events = make(chan DeviceEvent, 100)
+		f.instance.stopChan = make(chan struct{})
+		f.instance.done = sync.WaitGroup{}
+		f.logger.Info("Reset existing device event source instance for reuse")
 	}
 
 	f.refCount++
@@ -436,7 +446,8 @@ func (f *DeviceEventSourceFactory) Release() error {
 	if f.refCount == 0 && f.instance != nil {
 		f.logger.Info("Closing device event source - final reference released")
 		err := f.instance.Close()
-		f.instance = nil
+		// Don't set instance to nil - keep it for reuse
+		// The instance will be reset when next acquired
 		return err
 	}
 

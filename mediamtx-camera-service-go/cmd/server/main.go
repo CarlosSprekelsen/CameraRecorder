@@ -47,17 +47,14 @@ func main() {
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Acquire device event source from factory (singleton + ref counting)
-	deviceEventSource := camera.GetDeviceEventSourceFactory().Acquire()
-
 	// Initialize camera monitor with real implementations
+	// Monitor will acquire its own device event source reference
 	cameraMonitor, err := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
 		deviceChecker,
 		commandExecutor,
 		infoParser,
-		deviceEventSource,
 	)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create camera monitor")
@@ -120,7 +117,7 @@ func main() {
 	// ARCHITECTURAL COMPLIANCE: Start MediaMTX Controller first (orchestrates all services)
 	ctx := context.Background()
 	logger.Info("Starting MediaMTX Controller orchestration...")
-	
+
 	// Start the MediaMTX controller (this orchestrates all other services)
 	if err := mediaMTXController.Start(ctx); err != nil {
 		logger.WithError(err).Fatal("Failed to start MediaMTX controller")
@@ -130,18 +127,18 @@ func main() {
 	// Wait for controller readiness using event-driven approach
 	logger.Info("Waiting for controller readiness...")
 	readinessChan := mediaMTXController.SubscribeToReadiness()
-	
+
 	// Wait for readiness event with timeout
 	readinessCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	select {
 	case <-readinessChan:
 		logger.Info("Controller readiness event received - all services ready")
 	case <-readinessCtx.Done():
 		logger.Warn("Controller readiness timeout - proceeding anyway")
 	}
-	
+
 	// Verify controller is actually ready
 	if mediaMTXController.IsReady() {
 		logger.Info("Controller reports ready - all services operational")
