@@ -395,14 +395,8 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		}
 
 		// ARCHITECTURE COMPLIANCE: Progressive Readiness Pattern
-		// Start the monitor in background - don't block on startup
-		// Use context.Background() - let the monitor own its own lifecycle
-		go func() {
-			if err := realMonitor.Start(context.Background()); err != nil {
-				h.logger.WithError(err).Error("Failed to start camera monitor")
-				// Don't panic - let the system continue with progressive readiness
-			}
-		}()
+		// Don't start the monitor here - let the controller start it
+		// The monitor will be started by the controller's Start() method
 
 		h.cameraMonitor = realMonitor
 	})

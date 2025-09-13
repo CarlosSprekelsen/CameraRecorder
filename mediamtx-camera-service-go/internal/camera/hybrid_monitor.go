@@ -309,7 +309,8 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 		m.logger.WithFields(logging.Fields{
 			"mon_start_id": monStartID,
 			"err_type":     "BUG_DOUBLE_START",
-		}).Error("monitor_start_return_err")
+			"current_state": atomic.LoadInt32(&m.running),
+		}).Error("monitor_start_return_err - monitor is already running")
 		return fmt.Errorf("monitor is already running")
 	}
 
