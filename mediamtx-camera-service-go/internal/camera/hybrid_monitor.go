@@ -301,8 +301,15 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 
 // Start begins camera discovery and monitoring
 func (m *HybridCameraMonitor) Start(ctx context.Context) error {
+	// Generate unique startup correlation ID
+	monStartID := fmt.Sprintf("mon_%d", time.Now().UnixNano())
+	
 	// Use atomic check instead of holding stateLock
 	if !atomic.CompareAndSwapInt32(&m.running, 0, 1) {
+		m.logger.WithFields(logging.Fields{
+			"mon_start_id": monStartID,
+			"err_type":     "BUG_DOUBLE_START",
+		}).Error("monitor_start_return_err")
 		return fmt.Errorf("monitor is already running")
 	}
 
@@ -310,25 +317,41 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		atomic.StoreInt32(&m.running, 0) // Reset flag on cancellation
+		m.logger.WithFields(logging.Fields{
+			"mon_start_id": monStartID,
+			"err_type":     "CTX_CANCELED",
+		}).Error("monitor_start_return_err")
 		return ctx.Err()
 	default:
 	}
 
 	m.logger.WithFields(logging.Fields{
-		"discovery_mode":         m.discoveryMode,
-		"fallback_poll_interval": m.fallbackPollInterval,
-		"device_range":           m.deviceRange,
-		"action":                 "monitor_started",
+		"mon_start_id": monStartID,
+		"mode_config":  m.discoveryMode,
+		"action":       "monitor_start_begin",
 	}).Info("Starting hybrid camera monitor")
 
 	// Start device event source - trust its return value
+	m.logger.WithFields(logging.Fields{
+		"mon_start_id": monStartID,
+		"action":       "event_source_start_begin",
+	}).Info("Starting device event source")
+	
 	if err := m.deviceEventSource.Start(ctx); err != nil {
 		atomic.StoreInt32(&m.running, 0) // Reset flag on failure
-		m.logger.WithError(err).Error("Device event source start failed")
+		m.logger.WithFields(logging.Fields{
+			"mon_start_id": monStartID,
+			"err_type":     "ES_START_FATAL",
+			"err_msg":      err.Error(),
+		}).Error("monitor_start_return_err")
 		return fmt.Errorf("failed to start device event source: %w", err)
 	}
 	
-	m.logger.Debug("Device event source started successfully")
+	m.logger.WithFields(logging.Fields{
+		"mon_start_id":      monStartID,
+		"events_supported":  m.deviceEventSource.EventsSupported(),
+		"action":            "event_source_start_ok",
+	}).Info("Device event source started successfully")
 
 	// Log the mode we're running in
 	if m.deviceEventSource.EventsSupported() {
@@ -344,16 +367,23 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	m.stateLock.Unlock()
 
 	// Start monitoring goroutine AFTER releasing lock
-	m.logger.Debug("About to start monitor loop goroutine")
-	go m.monitorLoop(ctx)
-	m.logger.Debug("Monitor loop goroutine started")
+	m.logger.WithFields(logging.Fields{
+		"mon_start_id":     monStartID,
+		"events_supported": m.deviceEventSource.EventsSupported(),
+		"action":           "loops_spawn_begin",
+	}).Info("Spawning monitor loops")
+	
+	go m.monitorLoop(ctx, monStartID)
 
-	m.logger.Debug("Monitor start completed successfully")
+	m.logger.WithFields(logging.Fields{
+		"mon_start_id": monStartID,
+		"action":       "monitor_start_return_ok",
+	}).Info("Monitor start completed successfully")
 	return nil
 }
 
 // monitorLoop runs the main monitoring loop
-func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
+func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string) {
 	m.logger.Debug("Monitor loop started")
 	defer func() {
 		m.logger.Debug("Monitor loop exiting")
@@ -365,20 +395,41 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
 
 	// Perform initial discovery to seed knownDevices and ensure IsReady() becomes true
 	m.logger.WithFields(logging.Fields{
-		"action": "initial_discovery_started",
-	}).Debug("Performing initial device discovery")
+		"mon_start_id": monStartID,
+		"action":       "seed_discovery_begin",
+	}).Info("Starting seed discovery")
 
 	m.logger.Debug("About to call discoverCameras")
-	m.discoverCameras(ctx)
+	
+	// Seed discovery is non-fatal - log any errors but continue
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				m.logger.WithFields(logging.Fields{
+					"mon_start_id": monStartID,
+					"panic":        r,
+					"err_summary":  "panic_in_discovery",
+				}).Warn("Seed discovery panic recovered")
+			}
+		}()
+		m.discoverCameras(ctx)
+	}()
+	
 	m.logger.Debug("discoverCameras completed")
 
-	// Set readiness flag after initial discovery completes
+	// Set readiness flag after initial discovery completes (regardless of errors)
 	atomic.StoreInt32(&m.ready, 1)
 
 	m.logger.WithFields(logging.Fields{
-		"action":        "initial_discovery_completed",
-		"devices_found": len(m.knownDevices),
-	}).Debug("Initial device discovery completed - monitor is now ready")
+		"mon_start_id":   monStartID,
+		"found_devices":  len(m.knownDevices),
+		"action":         "seed_discovery_result",
+	}).Info("Seed discovery completed")
+
+	m.logger.WithFields(logging.Fields{
+		"mon_start_id": monStartID,
+		"action":       "monitor_ready_true",
+	}).Info("Monitor is now ready")
 
 	if m.discoveryMode == "event-first" {
 		// Start event-first monitoring

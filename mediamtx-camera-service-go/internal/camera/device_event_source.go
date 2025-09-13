@@ -38,6 +38,7 @@ type FsnotifyDeviceEventSource struct {
 	done            sync.WaitGroup // Wait for event loop to exit
 	eventsSupported int32          // Whether fsnotify events are supported
 	started         int32          // Whether the event source has started
+	startCallsTotal int32          // Debug counter for Start() calls
 }
 
 // NewFsnotifyDeviceEventSource creates a new fsnotify-based device event source
@@ -58,6 +59,15 @@ func NewFsnotifyDeviceEventSource(logger *logging.Logger) (*FsnotifyDeviceEventS
 
 // Start begins monitoring for device events
 func (f *FsnotifyDeviceEventSource) Start(ctx context.Context) error {
+	// Increment debug counter and log
+	callCount := atomic.AddInt32(&f.startCallsTotal, 1)
+	esID := fmt.Sprintf("es_%d", time.Now().UnixNano())
+	f.logger.WithFields(logging.Fields{
+		"es_id":             esID,
+		"start_calls_total": callCount,
+		"action":            "es_start_called",
+	}).Info("Device event source Start() called")
+	
 	// Check if context is already cancelled
 	select {
 	case <-ctx.Done():
