@@ -71,6 +71,16 @@ func (c *controller) checkRunningState() bool {
 	return atomic.LoadInt32(&c.isRunning) == 1
 }
 
+// Optional component availability helpers
+// These methods provide consistent checking for optional components
+func (c *controller) hasExternalDiscovery() bool {
+	return c.externalDiscovery != nil
+}
+
+func (c *controller) hasPathIntegration() bool {
+	return c.pathIntegration != nil
+}
+
 // IsReady returns whether the controller is fully operational
 func (c *controller) IsReady() bool {
 	if !c.checkRunningState() {
@@ -177,7 +187,7 @@ func (c *controller) validateDiscoveredDevice(device string) (bool, error) {
 	}
 
 	// For external streams, check if they exist in the external discovery system
-	if c.externalDiscovery != nil {
+	if c.hasExternalDiscovery() {
 		streams := c.externalDiscovery.GetDiscoveredStreams()
 		for _, stream := range streams {
 			// Check if this is an external stream identifier
@@ -316,6 +326,13 @@ func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 }
 
 // ControllerWithConfigManager creates a new MediaMTX controller with configuration integration
+//
+// Optional Components Pattern:
+// Some components are optional based on configuration and may be nil:
+// - externalDiscovery: Only if external stream sources are configured
+// - pathIntegration: Only if auto-path creation is enabled
+//
+// All methods MUST check for nil before using optional components.
 func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor, logger *logging.Logger) (MediaMTXController, error) {
 	// Create configuration integration
 	configIntegration := NewConfigIntegration(configManager, logger)
@@ -376,6 +393,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		config:                    mediaMTXConfig,
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
+		// externalDiscovery: nil - intentionally not initialized (optional component)
 		// sessions: sync.Map is zero-initialized, no need to initialize
 		activeRecordings: make(map[string]*ActiveRecording),
 	}, nil
@@ -461,7 +479,7 @@ func (c *controller) Stop(ctx context.Context) error {
 
 	// Stop camera monitor
 	if c.cameraMonitor != nil {
-		if err := c.cameraMonitor.Stop(); err != nil {
+		if err := c.cameraMonitor.Stop(ctx); err != nil {
 			c.logger.WithError(err).Error("Failed to stop camera monitor")
 		} else {
 			c.logger.Info("Camera monitor stopped successfully")
@@ -474,8 +492,8 @@ func (c *controller) Stop(ctx context.Context) error {
 	}
 
 	// Stop external discovery
-	if c.externalDiscovery != nil {
-		if err := c.externalDiscovery.Stop(); err != nil {
+	if c.hasExternalDiscovery() {
+		if err := c.externalDiscovery.Stop(ctx); err != nil {
 			c.logger.WithError(err).Error("Failed to stop external discovery")
 		} else {
 			c.logger.Info("External discovery stopped successfully")
@@ -895,8 +913,8 @@ func (c *controller) DiscoverExternalStreams(ctx context.Context, options Discov
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	if c.externalDiscovery == nil {
-		return nil, fmt.Errorf("external discovery not initialized")
+	if !c.hasExternalDiscovery() {
+		return nil, fmt.Errorf("external stream discovery is not configured")
 	}
 
 	return c.externalDiscovery.DiscoverExternalStreams(ctx, options)
@@ -937,6 +955,12 @@ func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string)
 		return fmt.Errorf("controller is not running")
 	}
 
+	// CRITICAL: Check if external discovery is available (optional component)
+	if !c.hasExternalDiscovery() {
+		c.logger.WithField("stream_url", streamURL).Debug("External discovery not available, cannot remove stream")
+		return fmt.Errorf("external stream discovery is not configured")
+	}
+
 	// Find the stream by URL
 	streams := c.externalDiscovery.GetDiscoveredStreams()
 	stream, exists := streams[streamURL]
@@ -963,8 +987,8 @@ func (c *controller) GetExternalStreams(ctx context.Context) ([]*ExternalStream,
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	if c.externalDiscovery == nil {
-		return nil, fmt.Errorf("external discovery not initialized")
+	if !c.hasExternalDiscovery() {
+		return []*ExternalStream{}, nil // Return empty slice, not error
 	}
 
 	streams := c.externalDiscovery.GetDiscoveredStreams()

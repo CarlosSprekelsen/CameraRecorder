@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -261,22 +262,79 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test adding invalid stream (nil stream)
+	// Test behavior when external discovery is not configured (optional component)
 	err = controller.AddExternalStream(ctx, nil)
-	assert.Error(t, err, "Adding nil stream should fail")
+	assert.Error(t, err, "Adding stream should fail when external discovery not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
-	// Test adding stream with empty URL
+	// Test adding stream with empty URL (should also fail due to not configured)
 	invalidStream := &ExternalStream{
 		Name: "invalid_stream",
 		URL:  "", // Empty URL should fail
 		Type: "skydio",
 	}
 	err = controller.AddExternalStream(ctx, invalidStream)
-	assert.Error(t, err, "Adding stream with empty URL should fail")
+	assert.Error(t, err, "Adding stream should fail when external discovery not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
-	// Test removing non-existent stream
+	// Test removing non-existent stream (should fail due to not configured)
 	err = controller.RemoveExternalStream(ctx, "rtsp://nonexistent:6554/stream")
-	assert.Error(t, err, "Removing non-existent stream should fail")
+	assert.Error(t, err, "Removing stream should fail when external discovery not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
+}
+
+// TestExternalStreamDiscovery_OptionalComponent_ReqMTX004 tests optional component behavior
+func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring and error handling
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create controller (external discovery will be nil by default)
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+	require.NotNil(t, controller, "Controller should not be nil")
+
+	// Start the controller
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		controller.Stop(stopCtx)
+	}()
+
+	// Test GetExternalStreams returns empty slice when not configured
+	streams, err := controller.GetExternalStreams(ctx)
+	require.NoError(t, err, "GetExternalStreams should not error when not configured")
+	assert.Empty(t, streams, "Should return empty slice when external discovery not configured")
+
+	// Test DiscoverExternalStreams returns error when not configured
+	options := DiscoveryOptions{
+		SkydioEnabled:  true,
+		GenericEnabled: false,
+	}
+	result, err := controller.DiscoverExternalStreams(ctx, options)
+	assert.Error(t, err, "DiscoverExternalStreams should error when not configured")
+	assert.Nil(t, result, "Result should be nil when external discovery not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
+
+	// Test AddExternalStream returns error when not configured
+	stream := &ExternalStream{
+		Name: "test_stream",
+		URL:  "rtsp://192.168.42.10:6554/infrared",
+		Type: "skydio",
+	}
+	err = controller.AddExternalStream(ctx, stream)
+	assert.Error(t, err, "AddExternalStream should error when not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
+
+	// Test RemoveExternalStream returns error when not configured
+	err = controller.RemoveExternalStream(ctx, "rtsp://192.168.42.10:6554/infrared")
+	assert.Error(t, err, "RemoveExternalStream should error when not configured")
+	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 }
 
 // TestExternalStreamDiscovery_ContextAwareShutdown tests the context-aware shutdown functionality
@@ -286,9 +344,12 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		client := helper.GetClient()
+		config := &config.ExternalDiscoveryConfig{
+			Enabled:      true,
+			ScanInterval: 30,
+		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(client, logger)
+		discovery := NewExternalStreamDiscovery(config, logger)
 
 		// Start discovery
 		ctx := context.Background()
@@ -312,9 +373,12 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		client := helper.GetClient()
+		config := &config.ExternalDiscoveryConfig{
+			Enabled:      true,
+			ScanInterval: 30,
+		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(client, logger)
+		discovery := NewExternalStreamDiscovery(config, logger)
 
 		// Start discovery
 		ctx := context.Background()
@@ -339,9 +403,12 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		client := helper.GetClient()
+		config := &config.ExternalDiscoveryConfig{
+			Enabled:      true,
+			ScanInterval: 30,
+		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(client, logger)
+		discovery := NewExternalStreamDiscovery(config, logger)
 
 		// Start discovery
 		ctx := context.Background()
@@ -370,9 +437,12 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		client := helper.GetClient()
+		config := &config.ExternalDiscoveryConfig{
+			Enabled:      true,
+			ScanInterval: 30,
+		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(client, logger)
+		discovery := NewExternalStreamDiscovery(config, logger)
 
 		// Start discovery
 		ctx := context.Background()
@@ -397,9 +467,12 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		client := helper.GetClient()
+		config := &config.ExternalDiscoveryConfig{
+			Enabled:      true,
+			ScanInterval: 30,
+		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(client, logger)
+		discovery := NewExternalStreamDiscovery(config, logger)
 
 		// Stop without starting should not error
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -254,6 +254,40 @@ end note
 - Session management
 - **Pattern:** Middleware integration with existing configuration
 
+### 3.3 Optional Components Pattern
+
+Some components are optional based on configuration and may be nil:
+
+| Component | Required | Initialization Condition |
+|-----------|----------|-------------------------|
+| cameraMonitor | ✅ Yes | Always initialized |
+| healthMonitor | ✅ Yes | Always initialized |
+| recordingManager | ✅ Yes | Always initialized |
+| externalDiscovery | ❌ No | Only if external streams enabled |
+| pathIntegration | ❌ No | Only if auto-path creation enabled |
+
+**Pattern Rules:**
+1. Optional components may be nil
+2. ALL methods MUST check for nil before use
+3. Return graceful errors or empty results for nil components
+4. Document optional nature in constructor
+
+**Implementation Pattern:**
+```go
+// Helper methods for consistent checking
+func (c *controller) hasExternalDiscovery() bool {
+    return c.externalDiscovery != nil
+}
+
+// All methods must check before use
+func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string) error {
+    if !c.hasExternalDiscovery() {
+        return fmt.Errorf("external stream discovery is not configured")
+    }
+    // Safe to use c.externalDiscovery
+}
+```
+
 **MediaMTX Controller - SINGLE SOURCE OF TRUTH**
 
 ```plantuml
