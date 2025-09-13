@@ -247,6 +247,7 @@ end note
 - **Readiness Gate:** Poll `/v3/paths/get/{name}` (runtime) before PATCH
 - **Patch Resilience:** Exponential backoff on 404/409; include path/device context in errors
 - **Per-Path Mutex:** Serialize operations for a path across callers
+- **Map Parameter Contract:** All `map[string]interface{}` params are optional; `nil` means "no options". PathManager never mutates caller-supplied maps.
 
 **Security Framework (Cross-Cutting Layer)**
 - JWT token management

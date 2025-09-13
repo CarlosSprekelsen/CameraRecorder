@@ -115,6 +115,20 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	// Track path operation metrics
 	atomic.AddInt64(&pm.metrics.PathOperationsTotal, 1)
 
+	// DEFENSIVE NORMALIZATION: Handle nil options map
+	// Contract: All map[string]interface{} params are optional; nil means "no options"
+	// PathManager never mutates caller maps; always normalize before writes
+	var opts map[string]interface{}
+	if options == nil {
+		opts = make(map[string]interface{})
+	} else {
+		// Clone to avoid mutating caller's map
+		opts = make(map[string]interface{})
+		for k, v := range options {
+			opts[k] = v
+		}
+	}
+
 	// IMPORTANT: Avoid "publisher" source which creates runtime-only paths
 	// Convert "publisher" to a concrete on-demand source
 	if source == "publisher" {
@@ -129,23 +143,23 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 				"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/%s",
 				devicePath, name,
 			)
-			options["runOnDemand"] = source
-			options["runOnDemandRestart"] = true
-			options["runOnDemandStartTimeout"] = "10s"
-			options["runOnDemandCloseAfter"] = "10s"
+			opts["runOnDemand"] = source
+			opts["runOnDemandRestart"] = true
+			opts["runOnDemandStartTimeout"] = "10s"
+			opts["runOnDemandCloseAfter"] = "10s"
 			// Clear source since we're using runOnDemand
 			source = ""
 		} else {
 			// For non-camera paths, use a redirect or leave empty
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
-			if _, hasRunOnDemand := options["runOnDemand"]; !hasRunOnDemand {
+			if _, hasRunOnDemand := opts["runOnDemand"]; !hasRunOnDemand {
 				// Set a placeholder runOnDemand command that won't create runtime path
 				// This allows the validation to pass while creating a config path
-				options["runOnDemand"] = "echo 'Publisher source - waiting for connection'"
-				options["runOnDemandRestart"] = true
-				options["runOnDemandStartTimeout"] = "10s"
-				options["runOnDemandCloseAfter"] = "10s"
+				opts["runOnDemand"] = "echo 'Publisher source - waiting for connection'"
+				opts["runOnDemandRestart"] = true
+				opts["runOnDemandStartTimeout"] = "10s"
+				opts["runOnDemandCloseAfter"] = "10s"
 			}
 		}
 	}
@@ -171,13 +185,13 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		return fmt.Errorf("invalid path name: %w", err)
 	}
 
-	if err := pm.validateSource(source, options); err != nil {
+	if err := pm.validateSource(source, opts); err != nil {
 		return fmt.Errorf("invalid source: %w", err)
 	}
 
 	// Use singleflight to prevent concurrent creation attempts for the same path
 	result, err, _ := pm.createGroup.Do(name, func() (interface{}, error) {
-		return nil, pm.createPathInternal(ctx, name, source, options, devicePath)
+		return nil, pm.createPathInternal(ctx, name, source, opts, devicePath)
 	})
 
 	if err != nil {
@@ -349,6 +363,15 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 	// Track patch attempt metrics
 	atomic.AddInt64(&pm.metrics.PatchAttemptsTotal, 1)
 
+	// DEFENSIVE NORMALIZATION: Handle nil config map
+	// Treat nil as empty object {} to prevent "null" PATCH body
+	var patchConfig map[string]interface{}
+	if config == nil {
+		patchConfig = make(map[string]interface{})
+	} else {
+		patchConfig = config
+	}
+
 	// Get device path for logging context
 	devicePath := pm.getDevicePathFromCameraIdentifier(name)
 	if devicePath == "" {
@@ -361,14 +384,14 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[st
 		"path_name":   name,
 		"method":      "PATCH",
 		"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
-		"config":      config,
+		"config":      patchConfig,
 	}).Debug("Patching MediaMTX path configuration")
 
 	if err := pm.validatePathName(name); err != nil {
 		return fmt.Errorf("invalid path name: %w", err)
 	}
 
-	data, err := json.Marshal(config)
+	data, err := json.Marshal(patchConfig)
 	if err != nil {
 		return NewPathErrorWithErr(name, "patch_path", "failed to marshal config", err)
 	}
