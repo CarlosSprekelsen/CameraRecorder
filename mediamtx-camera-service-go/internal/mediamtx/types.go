@@ -127,48 +127,8 @@ type Stream struct {
 	Readers       []PathReader `json:"readers"`
 }
 
-// PathSource represents the source configuration for a MediaMTX path
-type PathSource struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
-}
-
-// PathReader represents a reader connected to a MediaMTX path
-type PathReader struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
-}
-
-// MediaMTXPathResponse represents the actual response from MediaMTX /v3/paths/get/{name} endpoint
-type MediaMTXPathResponse struct {
-	Name          string        `json:"name"`
-	ConfName      string        `json:"confName"`
-	Source        interface{}   `json:"source"` // Can be null, string, or object
-	Ready         bool          `json:"ready"`
-	ReadyTime     interface{}   `json:"readyTime"` // Can be null or timestamp
-	Tracks        []interface{} `json:"tracks"`
-	BytesReceived int64         `json:"bytesReceived"`
-	BytesSent     int64         `json:"bytesSent"`
-	Readers       []interface{} `json:"readers"`
-}
-
-// Path represents a MediaMTX path configuration
-type Path struct {
-	ID                         string        `json:"id"`
-	Name                       string        `json:"name"`
-	Source                     string        `json:"source"`
-	SourceOnDemand             bool          `json:"source_on_demand"`
-	SourceOnDemandStartTimeout time.Duration `json:"source_on_demand_start_timeout"`
-	SourceOnDemandCloseAfter   time.Duration `json:"source_on_demand_close_after"`
-	PublishUser                string        `json:"publish_user"`
-	PublishPass                string        `json:"publish_pass"`
-	ReadUser                   string        `json:"read_user"`
-	ReadPass                   string        `json:"read_pass"`
-	RunOnDemand                string        `json:"run_on_demand"`
-	RunOnDemandRestart         bool          `json:"run_on_demand_restart"`
-	RunOnDemandCloseAfter      time.Duration `json:"run_on_demand_close_after"`
-	RunOnDemandStartTimeout    time.Duration `json:"run_on_demand_start_timeout"`
-}
+// Note: MediaMTX API types are now defined in api_types.go for single source of truth
+// Legacy aliases are provided in api_types.go for backward compatibility
 
 // HealthStatus represents MediaMTX service health status
 type HealthStatus struct {
@@ -386,7 +346,7 @@ type MediaMTXController interface {
 
 	// Path management
 	GetPaths(ctx context.Context) ([]*Path, error)
-	GetPath(ctx context.Context, name string) (*Path, error)
+	GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error)
 	CreatePath(ctx context.Context, path *Path) error
 	DeletePath(ctx context.Context, name string) error
 
@@ -553,8 +513,8 @@ type PathManager interface {
 	CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error
 	PatchPath(ctx context.Context, name string, config map[string]interface{}) error
 	DeletePath(ctx context.Context, name string) error
-	GetPath(ctx context.Context, name string) (*Path, error)
-	ListPaths(ctx context.Context) ([]*Path, error)
+	GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error)
+	ListPaths(ctx context.Context) ([]*MediaMTXPathConfig, error)
 
 	// Path validation
 	ValidatePath(ctx context.Context, name string) error

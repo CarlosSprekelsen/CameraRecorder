@@ -844,7 +844,7 @@ func (c *controller) GetPaths(ctx context.Context) ([]*Path, error) {
 }
 
 // GetPath returns a specific path
-func (c *controller) GetPath(ctx context.Context, name string) (*Path, error) {
+func (c *controller) GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}

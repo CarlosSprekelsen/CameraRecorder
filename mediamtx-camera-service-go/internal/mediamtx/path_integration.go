@@ -352,7 +352,7 @@ func (pi *PathIntegration) generatePathName(device string) string {
 }
 
 // GetPathStatus gets the status of a specific path
-func (pi *PathIntegration) GetPathStatus(ctx context.Context, pathName string) (*Path, error) {
+func (pi *PathIntegration) GetPathStatus(ctx context.Context, pathName string) (*MediaMTXPathResponse, error) {
 	return pi.pathManager.GetPath(ctx, pathName)
 }
 

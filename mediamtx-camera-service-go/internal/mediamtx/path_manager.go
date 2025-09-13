@@ -517,9 +517,18 @@ func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeou
 				return NewPathError(name, "wait_ready", fmt.Sprintf("path %s not ready within %v", name, timeout))
 			}
 
-			// Check runtime path visibility (not config)
-			_, err := pm.GetPath(ctx, name)
-			if err == nil {
+			// Check runtime path status and actual readiness
+			pathResponse, err := pm.GetPath(ctx, name)
+			if err != nil {
+				pm.logger.WithFields(logging.Fields{
+					"path_name": name,
+					"error":     err.Error(),
+				}).Debug("Path not found yet, continuing to wait")
+				continue
+			}
+
+			// Check the actual ready field from MediaMTX response
+			if pathResponse.Ready {
 				// Track path ready latency
 				latencyMs := time.Since(startTime).Milliseconds()
 				atomic.AddInt64(&pm.metrics.PathReadyLatencyMs, latencyMs)
@@ -533,8 +542,8 @@ func (pm *pathManager) WaitForPathReady(ctx context.Context, name string, timeou
 
 			pm.logger.WithFields(logging.Fields{
 				"path_name": name,
-				"error":     err.Error(),
-			}).Debug("Path not ready yet, continuing to wait")
+				"ready":     pathResponse.Ready,
+			}).Debug("Path exists but not ready yet, continuing to wait")
 		}
 	}
 }
@@ -575,8 +584,8 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 	return nil
 }
 
-// GetPath gets a specific path
-func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) {
+// GetPath gets a specific path (runtime status)
+func (pm *pathManager) GetPath(ctx context.Context, name string) (*MediaMTXPathResponse, error) {
 	pm.logger.WithField("name", name).Debug("Getting MediaMTX path")
 
 	data, err := pm.client.Get(ctx, fmt.Sprintf("/v3/paths/get/%s", name))
@@ -593,7 +602,7 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) 
 }
 
 // ListPaths lists all paths
-func (pm *pathManager) ListPaths(ctx context.Context) ([]*Path, error) {
+func (pm *pathManager) ListPaths(ctx context.Context) ([]*MediaMTXPathConfig, error) {
 	pm.logger.Debug("Listing MediaMTX paths")
 
 	data, err := pm.client.Get(ctx, "/v3/paths/list")
