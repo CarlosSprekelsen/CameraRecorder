@@ -339,8 +339,8 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/paths/list API should respond")
 
-	// Use MediaMTXPathsListResponse from api_types.go instead of inline struct
-	var pathListResponse MediaMTXPathsListResponse
+	// Use PathList from api_types.go instead of inline struct
+	var pathListResponse PathList
 
 	err = json.Unmarshal(pathData, &pathListResponse)
 	require.NoError(t, err, "Response should match PathList schema from swagger.json")

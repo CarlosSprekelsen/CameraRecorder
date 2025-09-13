@@ -187,10 +187,10 @@ func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 				}()
 
 				// Test all parsing functions with edge case data
-				_, err1 := parseStreamsResponse(testCase.data)
+				_, err1 := parsePathListResponse(testCase.data)
 				_, err2 := parseStreamResponse(testCase.data)
 				_, err3 := parseHealthResponse(testCase.data)
-				_, err4 := parsePathsResponse(testCase.data)
+				_, err4 := parsePathConfListResponse(testCase.data)
 
 				// We don't care about errors here, just that no panic occurred
 				t.Logf("Edge case %s handled without panic (errors: %v, %v, %v, %v)",

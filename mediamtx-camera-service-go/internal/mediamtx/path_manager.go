@@ -629,21 +629,39 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) 
 	return path, nil
 }
 
-// ListPaths lists all paths
+// ListPaths lists all path configurations
 func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
-	pm.logger.Debug("Listing MediaMTX paths")
+	pm.logger.Debug("Listing MediaMTX path configurations")
+
+	data, err := pm.client.Get(ctx, "/v3/config/paths/list")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list path configurations: %w", err)
+	}
+
+	paths, err := parsePathConfListResponse(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse path configurations response: %w", err)
+	}
+
+	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX path configurations listed successfully")
+	return paths, nil
+}
+
+// GetRuntimePaths gets all runtime paths (active paths with status)
+func (pm *pathManager) GetRuntimePaths(ctx context.Context) ([]*Path, error) {
+	pm.logger.Debug("Getting MediaMTX runtime paths")
 
 	data, err := pm.client.Get(ctx, "/v3/paths/list")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list paths: %w", err)
+		return nil, fmt.Errorf("failed to get runtime paths: %w", err)
 	}
 
-	paths, err := parsePathsResponse(data)
+	paths, err := parsePathListResponse(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse paths response: %w", err)
+		return nil, fmt.Errorf("failed to parse runtime paths response: %w", err)
 	}
 
-	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX paths listed successfully")
+	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX runtime paths retrieved successfully")
 	return paths, nil
 }
 

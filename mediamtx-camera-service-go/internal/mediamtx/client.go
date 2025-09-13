@@ -190,78 +190,63 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	return bodyBytes, nil
 }
 
-// getStreamsResponse represents the MediaMTX streams response
-// DEPRECATED: Use MediaMTXPathsListResponse from api_types.go instead
-type getStreamsResponse struct {
-	ItemCount int    `json:"itemCount"`
-	PageCount int    `json:"pageCount"`
-	Items     []Path `json:"items"`
-}
-
-// Note: MediaMTX API response types are now defined in api_types.go for single source of truth
-
-// parseStreamsResponse parses the streams response
-// DEPRECATED: Use parsePathsResponse which returns MediaMTXPathResponse
-func parseStreamsResponse(data []byte) ([]*Path, error) {
+// parsePathListResponse parses the MediaMTX paths list response (runtime paths)
+// This function parses the response from /v3/paths/list endpoint and returns []*Path
+func parsePathListResponse(data []byte) ([]*Path, error) {
 	// Handle empty response
 	if len(data) == 0 {
-		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_streams")
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_path_list")
 	}
 
 	// Handle null JSON
 	if string(data) == "null" {
-		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_streams")
-	}
-
-	var response getStreamsResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, NewMediaMTXErrorWithOp(0, "failed to parse streams response", err.Error(), "parse_streams")
-	}
-
-	// Validate required fields
-	if response.Items == nil {
-		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_streams")
-	}
-
-	streams := make([]*Path, len(response.Items))
-	for i, stream := range response.Items {
-		streams[i] = &stream
-	}
-
-	return streams, nil
-}
-
-// parsePathsResponse parses the paths response
-func parsePathsResponse(data []byte) ([]*PathConf, error) {
-	// Handle empty response
-	if len(data) == 0 {
-		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_paths")
-	}
-
-	// Handle null JSON
-	if string(data) == "null" {
-		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_paths")
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_path_list")
 	}
 
 	var response PathList
 	if err := json.Unmarshal(data, &response); err != nil {
-		return nil, NewMediaMTXErrorWithOp(0, "failed to parse paths response", err.Error(), "parse_paths")
+		return nil, NewMediaMTXErrorWithOp(0, "failed to parse paths list response", err.Error(), "parse_path_list")
 	}
 
 	// Validate required fields
 	if response.Items == nil {
-		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_paths")
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_path_list")
+	}
+
+	paths := make([]*Path, len(response.Items))
+	for i, path := range response.Items {
+		paths[i] = &path
+	}
+
+	return paths, nil
+}
+
+// parsePathConfListResponse parses the MediaMTX path configuration list response
+// This function parses the response from /v3/config/paths/list endpoint and returns []*PathConf
+func parsePathConfListResponse(data []byte) ([]*PathConf, error) {
+	// Handle empty response
+	if len(data) == 0 {
+		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_path_conf_list")
+	}
+
+	// Handle null JSON
+	if string(data) == "null" {
+		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_path_conf_list")
+	}
+
+	var response PathConfList
+	if err := json.Unmarshal(data, &response); err != nil {
+		return nil, NewMediaMTXErrorWithOp(0, "failed to parse path configuration list response", err.Error(), "parse_path_conf_list")
+	}
+
+	// Validate required fields
+	if response.Items == nil {
+		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_path_conf_list")
 	}
 
 	paths := make([]*PathConf, len(response.Items))
-	for i, item := range response.Items {
-		// Convert Path to PathConf
-		path := &PathConf{
-			Name: item.Name,
-			// Extract source string from complex object
-			Source: extractSourceString(item.Source),
-		}
-		paths[i] = path
+	for i, path := range response.Items {
+		paths[i] = &path
 	}
 
 	return paths, nil

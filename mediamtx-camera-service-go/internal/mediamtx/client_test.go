@@ -243,20 +243,20 @@ func TestClient_PutMethod_ReqMTX001(t *testing.T) {
 	_ = response
 }
 
-// TestClient_ParseStreamsResponse_ReqMTX001 tests parseStreamsResponse for 0% coverage
-func TestClient_ParseStreamsResponse_ReqMTX001(t *testing.T) {
+// TestClient_ParsePathListResponse_ReqMTX001 tests parsePathListResponse for 0% coverage
+func TestClient_ParsePathListResponse_ReqMTX001(t *testing.T) {
 	// Test valid JSON response
-	validJSON := `{"items": [{"name": "test_stream", "ready": true}]}`
-	streams, err := parseStreamsResponse([]byte(validJSON))
-	require.NoError(t, err, "Should parse valid streams response")
-	require.Len(t, streams, 1, "Should return one stream")
-	assert.Equal(t, "test_stream", streams[0].Name, "Stream name should match")
+	validJSON := `{"items": [{"name": "test_stream", "ready": true}], "pageCount": 1, "itemCount": 1}`
+	paths, err := parsePathListResponse([]byte(validJSON))
+	require.NoError(t, err, "Should parse valid paths list response")
+	require.Len(t, paths, 1, "Should return one path")
+	assert.Equal(t, "test_stream", paths[0].Name, "Path name should match")
 
 	// Test invalid JSON response
 	invalidJSON := `{"invalid": json}`
-	_, err = parseStreamsResponse([]byte(invalidJSON))
+	_, err = parsePathListResponse([]byte(invalidJSON))
 	assert.Error(t, err, "Should return error for invalid JSON")
-	assert.Contains(t, err.Error(), "failed to parse streams response", "Error should mention parsing failure")
+	assert.Contains(t, err.Error(), "failed to parse paths list response", "Error should mention parsing failure")
 }
 
 // TestClient_ParseHealthResponse_ReqMTX001 tests parseHealthResponse for 0% coverage

@@ -328,27 +328,3 @@ type MediaMTXHealthResponse struct {
 	Timestamp string  `json:"timestamp"`
 	Metrics   Metrics `json:"metrics"`
 }
-
-// ============================================================================
-// LEGACY ALIASES (for backward compatibility)
-// ============================================================================
-
-// MediaMTXPathResponse is an alias for Path to maintain backward compatibility
-// DEPRECATED: Use Path directly for new code
-type MediaMTXPathResponse = Path
-
-// MediaMTXPathsListResponse is an alias for PathList to maintain backward compatibility
-// DEPRECATED: Use PathList directly for new code
-type MediaMTXPathsListResponse = PathList
-
-// MediaMTXPathConfig is an alias for PathConf to maintain backward compatibility
-// DEPRECATED: Use PathConf directly for new code
-type MediaMTXPathConfig = PathConf
-
-// MediaMTXPathSource is an alias for PathSource to maintain backward compatibility
-// DEPRECATED: Use PathSource directly for new code
-type MediaMTXPathSource = PathSource
-
-// MediaMTXPathReader is an alias for PathReader to maintain backward compatibility
-// DEPRECATED: Use PathReader directly for new code
-type MediaMTXPathReader = PathReader
