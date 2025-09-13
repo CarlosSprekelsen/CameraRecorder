@@ -143,14 +143,20 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 
 	// Stop camera monitor to prevent goroutine leaks
 	if h.cameraMonitor != nil {
-		if err := h.cameraMonitor.Stop(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := h.cameraMonitor.Stop(ctx); err != nil {
 			t.Logf("Warning: Failed to stop camera monitor during cleanup: %v", err)
 		}
 	}
 
 	// Stop config manager to prevent file watcher goroutine leaks
 	if h.configManager != nil {
-		h.configManager.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := h.configManager.Stop(ctx); err != nil {
+			t.Logf("Warning: Failed to stop config manager during cleanup: %v", err)
+		}
 	}
 
 	// Clean up MediaMTX paths created during tests

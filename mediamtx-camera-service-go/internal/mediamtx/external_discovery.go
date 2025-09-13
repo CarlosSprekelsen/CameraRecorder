@@ -75,10 +75,36 @@ func (esd *ExternalStreamDiscovery) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the external discovery system
-func (esd *ExternalStreamDiscovery) Stop() error {
+// Stop stops the external discovery system with context-aware cancellation
+func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 	esd.logger.Info("Stopping external stream discovery")
-	close(esd.stopChan)
+	
+	// Signal stop
+	select {
+	case <-esd.stopChan:
+		// Already closed
+	default:
+		close(esd.stopChan)
+	}
+	
+	// Wait for any ongoing discovery to complete with timeout
+	done := make(chan struct{})
+	go func() {
+		// Wait for scan to complete if in progress
+		for atomic.LoadInt32(&esd.scanInProgress) == 1 {
+			time.Sleep(10 * time.Millisecond)
+		}
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		esd.logger.Warn("External stream discovery shutdown timeout")
+		return ctx.Err()
+	}
+	
 	esd.logger.Info("External stream discovery stopped")
 	return nil
 }

@@ -1102,7 +1102,9 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 	// Ensure camera monitor is stopped after test
 	defer func() {
-		if err := cameraMonitor.Stop(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := cameraMonitor.Stop(ctx); err != nil {
 			t.Logf("Warning: Failed to stop camera monitor: %v", err)
 		}
 	}()

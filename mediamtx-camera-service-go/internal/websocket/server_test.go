@@ -73,7 +73,9 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	WaitForServerReady(t, server, 1*time.Second)
 
 	// Test server stop
-	err := server.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := server.Stop(ctx)
 	require.NoError(t, err, "Server should stop successfully")
 	assert.False(t, server.IsRunning(), "Server should not be running after stop")
 }
@@ -119,11 +121,15 @@ func TestWebSocketServer_DoubleStop(t *testing.T) {
 	server := helper.StartServer(t)
 
 	// Stop server first time
-	err := server.Stop()
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel1()
+	err := server.Stop(ctx1)
 	require.NoError(t, err, "First stop should succeed")
 
 	// Stop server second time should not error
-	err = server.Stop()
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+	err = server.Stop(ctx2)
 	assert.NoError(t, err, "Second stop should not error")
 	assert.False(t, server.IsRunning(), "Server should not be running")
 }
@@ -331,7 +337,9 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 	// Start server in goroutine with context
 	go func() {
 		<-ctx.Done()
-		server.Stop()
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		server.Stop(stopCtx)
 	}()
 
 	// Cancel context
@@ -1067,5 +1075,125 @@ func TestWebSocketServer_MessageSizeLimits(t *testing.T) {
 
 		// If we get a response, it should be valid JSON-RPC
 		assert.Equal(t, "2.0", response.JSONRPC, "Response should be valid JSON-RPC 2.0")
+	})
+}
+
+// TestWebSocketServer_ContextAwareShutdown tests the context-aware shutdown functionality
+func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
+	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
+		EnsureSequentialExecution(t)
+		helper := NewWebSocketTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		server := helper.GetServer(t)
+
+		// Start server
+		err := server.Start()
+		require.NoError(t, err, "Server should start successfully")
+		assert.True(t, server.IsRunning(), "Server should be running")
+
+		// Test graceful shutdown with context
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		err = server.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Server should stop gracefully")
+		assert.False(t, server.IsRunning(), "Server should not be running after stop")
+		assert.Less(t, elapsed, 1*time.Second, "Shutdown should be fast")
+	})
+
+	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
+		EnsureSequentialExecution(t)
+		helper := NewWebSocketTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		server := helper.GetServer(t)
+
+		// Start server
+		err := server.Start()
+		require.NoError(t, err, "Server should start successfully")
+
+		// Cancel context immediately
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		start := time.Now()
+		err = server.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Server should stop even with cancelled context")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
+	})
+
+	t.Run("shutdown_timeout_handling", func(t *testing.T) {
+		EnsureSequentialExecution(t)
+		helper := NewWebSocketTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		server := helper.GetServer(t)
+
+		// Start server
+		err := server.Start()
+		require.NoError(t, err, "Server should start successfully")
+
+		// Use very short timeout to test timeout handling
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		// Give context time to expire
+		time.Sleep(2 * time.Millisecond)
+
+		start := time.Now()
+		err = server.Stop(ctx)
+		elapsed := time.Since(start)
+
+		// Should timeout but not hang
+		require.Error(t, err, "Should timeout with very short timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Error should indicate timeout")
+		assert.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+	})
+
+	t.Run("double_stop_handling", func(t *testing.T) {
+		EnsureSequentialExecution(t)
+		helper := NewWebSocketTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		server := helper.GetServer(t)
+
+		// Start server
+		err := server.Start()
+		require.NoError(t, err, "Server should start successfully")
+
+		// Stop first time
+		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		err = server.Stop(ctx1)
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time should not error
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		err = server.Stop(ctx2)
+		assert.NoError(t, err, "Second stop should not error")
+		assert.False(t, server.IsRunning(), "Server should not be running")
+	})
+
+	t.Run("stop_without_start", func(t *testing.T) {
+		EnsureSequentialExecution(t)
+		helper := NewWebSocketTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		server := helper.GetServer(t)
+
+		// Stop without starting should not error
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := server.Stop(ctx)
+		assert.NoError(t, err, "Stop without start should not error")
+		assert.False(t, server.IsRunning(), "Server should not be running")
 	})
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -462,20 +463,38 @@ func (cm *ConfigManager) reloadConfiguration() {
 	cm.logger.Info("Configuration reloaded successfully")
 }
 
-// Stop stops the configuration manager and cleans up resources.
-func (cm *ConfigManager) Stop() {
+// Stop stops the configuration manager and cleans up resources with context-aware cancellation.
+func (cm *ConfigManager) Stop(ctx context.Context) error {
 	cm.logger.Info("Stopping configuration manager")
 
 	// Signal stop
-	close(cm.stopChan)
+	select {
+	case <-cm.stopChan:
+		// Already closed
+	default:
+		close(cm.stopChan)
+	}
 
 	// Stop file watching
 	cm.stopFileWatching()
 
-	// Wait for goroutines to finish
-	cm.wg.Wait()
+	// Wait for goroutines to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		cm.wg.Wait()
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		cm.logger.Warn("Configuration manager shutdown timeout")
+		return ctx.Err()
+	}
 
 	cm.logger.Info("Configuration manager stopped")
+	return nil
 }
 
 // GetConfig returns the current configuration.

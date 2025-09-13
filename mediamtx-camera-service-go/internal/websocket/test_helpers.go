@@ -146,7 +146,9 @@ func NewWebSocketTestHelper(t *testing.T, config *WebSocketTestConfig) *WebSocke
 // Cleanup cleans up the test helper resources
 func (h *WebSocketTestHelper) Cleanup(t *testing.T) {
 	if h.server != nil && h.server.IsRunning() {
-		err := h.server.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := h.server.Stop(ctx)
 		if err != nil {
 			t.Logf("Warning: Failed to stop WebSocket server: %v", err)
 		}
@@ -614,7 +616,9 @@ func WaitForServerReady(t *testing.T, server *WebSocketServer, timeout time.Dura
 // CleanupTestServer stops and cleans up a test server
 func CleanupTestServer(t *testing.T, server *WebSocketServer) {
 	if server != nil && server.IsRunning() {
-		err := server.Stop()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := server.Stop(ctx)
 		if err != nil {
 			t.Logf("Warning: Failed to stop test server: %v", err)
 		}

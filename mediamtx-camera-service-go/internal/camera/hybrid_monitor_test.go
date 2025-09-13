@@ -104,7 +104,11 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 			assert.True(t, monitor.IsRunning(), "Monitor should be running before stop test")
 		}
 
-		err := monitor.Stop()
+		err := func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Monitor should stop successfully")
 		assert.False(t, monitor.IsRunning(), "Monitor should not be running after stop")
 	})
@@ -139,7 +143,11 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 		}, 3*time.Second, 100*time.Millisecond, "Monitor should become ready after discovery cycle")
 
 		// Stop monitor
-		err = freshMonitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return freshMonitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Monitor should stop successfully")
 	})
 }
@@ -340,7 +348,11 @@ func TestHybridCameraMonitor_Integration(t *testing.T) {
 	assert.True(t, monitor.IsRunning(), "Monitor should be running")
 
 	// Clean up
-	err = monitor.Stop()
+	err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 	require.NoError(t, err, "Monitor should stop successfully")
 }
 
@@ -914,13 +926,21 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 		assert.Contains(t, err.Error(), "already running", "Error should mention already running")
 
 		// Clean up
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Stop should succeed")
 	})
 
 	// Test 2: Stop without start (should fail)
 	t.Run("stop_without_start", func(t *testing.T) {
-		err := monitor.Stop()
+		err := func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.Error(t, err, "Stop without start should fail")
 		assert.Contains(t, err.Error(), "not running", "Error should mention not running")
 	})
@@ -986,7 +1006,11 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 			return freshMonitor.IsReady()
 		}, 5*time.Second, 10*time.Millisecond, "Monitor should become ready after initial discovery")
 
-		err = freshMonitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return freshMonitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Stop should succeed")
 
 		// Check stats after stop
@@ -1013,7 +1037,11 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 		assert.True(t, monitor.IsRunning(), "Monitor should still be running")
 
 		// Clean up
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Stop should succeed")
 	})
 
@@ -1034,7 +1062,11 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 		assert.True(t, monitor.IsRunning(), "Monitor should still be running")
 
 		// Clean up
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Stop should succeed")
 	})
 
@@ -1072,11 +1104,19 @@ func TestHybridCameraMonitor_EdgeCases(t *testing.T) {
 		require.NoError(t, err, "Start should succeed")
 
 		// Stop first time
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "First stop should succeed")
 
 		// Stop second time (should fail)
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.Error(t, err, "Second stop should fail")
 		assert.Contains(t, err.Error(), "not running", "Error should mention not running")
 	})
@@ -1170,7 +1210,11 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 			assert.True(t, monitor.IsRunning(), "Monitor should be running in cycle %d", i+1)
 
 			// Stop
-			err = monitor.Stop()
+			err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 			require.NoError(t, err, "Stop cycle %d should succeed", i+1)
 
 			// Monitor should be stopped immediately after Stop() returns
@@ -1208,7 +1252,11 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 				}
 
 				// Try to stop
-				err = monitor.Stop()
+				err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 				if err != nil {
 					errors <- err
 				}
@@ -1235,11 +1283,19 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 	t.Run("state_consistency_after_errors", func(t *testing.T) {
 		// Ensure monitor is in clean state
 		if monitor.IsRunning() {
-			monitor.Stop()
+			func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		}
 
 		// Try invalid operations
-		err := monitor.Stop() // Stop when not running
+		err := func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}() // Stop when not running
 		require.Error(t, err, "Stop when not running should fail")
 
 		// State should still be consistent
@@ -1254,7 +1310,11 @@ func TestHybridCameraMonitor_ErrorRecovery(t *testing.T) {
 		assert.True(t, monitor.IsRunning(), "Monitor should be running")
 
 		// Clean up
-		err = monitor.Stop()
+		err = func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			return monitor.Stop(ctx)
+		}()
 		require.NoError(t, err, "Stop should succeed")
 	})
 }
@@ -1371,5 +1431,205 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		require.NotEqual(t, id1, id2, "IDs should be unique")
 		require.Contains(t, id1, "v4l2_direct")
 		require.Contains(t, id1, "video0")
+	})
+}
+
+// TestHybridCameraMonitor_ContextAwareShutdown tests the context-aware shutdown functionality
+func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
+	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
+		// Create test config and logger directly
+		configManager := config.CreateConfigManager()
+		logger := logging.CreateTestLogger(t, nil)
+
+		// Create real implementations
+		deviceChecker := &RealDeviceChecker{}
+		commandExecutor := &RealV4L2CommandExecutor{}
+		infoParser := &RealDeviceInfoParser{}
+
+		// Create monitor with test config
+		deviceEventSource := createTestDeviceEventSource(t, logger)
+		monitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+			deviceEventSource,
+		)
+		require.NoError(t, err, "Monitor creation should succeed")
+
+		// Start monitor
+		ctx := context.Background()
+		err = monitor.Start(ctx)
+		require.NoError(t, err, "Monitor should start successfully")
+		assert.True(t, monitor.IsRunning(), "Monitor should be running")
+
+		// Test graceful shutdown with context
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		err = monitor.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Monitor should stop gracefully")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running after stop")
+		assert.Less(t, elapsed, 1*time.Second, "Shutdown should be fast")
+	})
+
+	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
+		// Create test config and logger directly
+		configManager := config.CreateConfigManager()
+		logger := logging.CreateTestLogger(t, nil)
+
+		// Create real implementations
+		deviceChecker := &RealDeviceChecker{}
+		commandExecutor := &RealV4L2CommandExecutor{}
+		infoParser := &RealDeviceInfoParser{}
+
+		// Create monitor with test config
+		deviceEventSource := createTestDeviceEventSource(t, logger)
+		monitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+			deviceEventSource,
+		)
+		require.NoError(t, err, "Monitor creation should succeed")
+
+		// Start monitor
+		ctx := context.Background()
+		err = monitor.Start(ctx)
+		require.NoError(t, err, "Monitor should start successfully")
+
+		// Cancel context immediately
+		shutdownCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		start := time.Now()
+		err = monitor.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Monitor should stop even with cancelled context")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
+	})
+
+	t.Run("shutdown_timeout_handling", func(t *testing.T) {
+		// Create test config and logger directly
+		configManager := config.CreateConfigManager()
+		logger := logging.CreateTestLogger(t, nil)
+
+		// Create real implementations
+		deviceChecker := &RealDeviceChecker{}
+		commandExecutor := &RealV4L2CommandExecutor{}
+		infoParser := &RealDeviceInfoParser{}
+
+		// Create monitor with test config
+		deviceEventSource := createTestDeviceEventSource(t, logger)
+		monitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+			deviceEventSource,
+		)
+		require.NoError(t, err, "Monitor creation should succeed")
+
+		// Start monitor
+		ctx := context.Background()
+		err = monitor.Start(ctx)
+		require.NoError(t, err, "Monitor should start successfully")
+
+		// Use very short timeout to test timeout handling
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		// Give context time to expire
+		time.Sleep(2 * time.Millisecond)
+
+		start := time.Now()
+		err = monitor.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		// Should timeout but not hang
+		require.Error(t, err, "Should timeout with very short timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Error should indicate timeout")
+		assert.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+	})
+
+	t.Run("double_stop_handling", func(t *testing.T) {
+		// Create test config and logger directly
+		configManager := config.CreateConfigManager()
+		logger := logging.CreateTestLogger(t, nil)
+
+		// Create real implementations
+		deviceChecker := &RealDeviceChecker{}
+		commandExecutor := &RealV4L2CommandExecutor{}
+		infoParser := &RealDeviceInfoParser{}
+
+		// Create monitor with test config
+		deviceEventSource := createTestDeviceEventSource(t, logger)
+		monitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+			deviceEventSource,
+		)
+		require.NoError(t, err, "Monitor creation should succeed")
+
+		// Start monitor
+		ctx := context.Background()
+		err = monitor.Start(ctx)
+		require.NoError(t, err, "Monitor should start successfully")
+
+		// Stop first time
+		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		err = monitor.Stop(ctx1)
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time should not error
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		err = monitor.Stop(ctx2)
+		assert.NoError(t, err, "Second stop should not error")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
+	})
+
+	t.Run("stop_without_start", func(t *testing.T) {
+		// Create test config and logger directly
+		configManager := config.CreateConfigManager()
+		logger := logging.CreateTestLogger(t, nil)
+
+		// Create real implementations
+		deviceChecker := &RealDeviceChecker{}
+		commandExecutor := &RealV4L2CommandExecutor{}
+		infoParser := &RealDeviceInfoParser{}
+
+		// Create monitor with test config
+		deviceEventSource := createTestDeviceEventSource(t, logger)
+		monitor, err := NewHybridCameraMonitor(
+			configManager,
+			logger,
+			deviceChecker,
+			commandExecutor,
+			infoParser,
+			deviceEventSource,
+		)
+		require.NoError(t, err, "Monitor creation should succeed")
+
+		// Stop without starting should error
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err = monitor.Stop(ctx)
+		assert.Error(t, err, "Stop without start should error")
+		assert.Contains(t, err.Error(), "not running", "Error should mention not running")
+		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
 	})
 }

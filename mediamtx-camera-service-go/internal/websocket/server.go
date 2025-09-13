@@ -586,8 +586,8 @@ func (s *WebSocketServer) Start() error {
 	return nil
 }
 
-// Stop stops the WebSocket server gracefully
-func (s *WebSocketServer) Stop() error {
+// Stop stops the WebSocket server gracefully with context-aware cancellation
+func (s *WebSocketServer) Stop(ctx context.Context) error {
 	if atomic.LoadInt32(&s.running) == 0 {
 		s.logger.Warn("WebSocket server is not running")
 		return nil
@@ -603,18 +603,28 @@ func (s *WebSocketServer) Stop() error {
 	// Close all client connections with timeout
 	s.closeAllClientConnections()
 
-	// Shutdown HTTP server
+	// Shutdown HTTP server with context
 	if s.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), s.config.ShutdownTimeout)
-		defer cancel()
 		if err := s.server.Shutdown(ctx); err != nil {
 			s.logger.WithError(err).Error("Error shutting down HTTP server")
 			// Note: Error is logged but not returned as this is cleanup operation
 		}
 	}
 
-	// Wait for all goroutines to finish
-	s.wg.Wait()
+	// Wait for all goroutines to finish with context timeout
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		s.logger.Warn("WebSocket server shutdown timeout, forcing stop")
+		return ctx.Err()
+	}
 
 	atomic.StoreInt32(&s.running, 0)
 

@@ -278,3 +278,133 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	err = controller.RemoveExternalStream(ctx, "rtsp://nonexistent:6554/stream")
 	assert.Error(t, err, "Removing non-existent stream should fail")
 }
+
+// TestExternalStreamDiscovery_ContextAwareShutdown tests the context-aware shutdown functionality
+func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
+	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		// Create external discovery directly
+		client := helper.GetClient()
+		logger := helper.GetLogger()
+		discovery := NewExternalStreamDiscovery(client, logger)
+
+		// Start discovery
+		ctx := context.Background()
+		err := discovery.Start(ctx)
+		require.NoError(t, err, "Discovery should start successfully")
+
+		// Test graceful shutdown with context
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		err = discovery.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Discovery should stop gracefully")
+		assert.Less(t, elapsed, 1*time.Second, "Shutdown should be fast")
+	})
+
+	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		// Create external discovery directly
+		client := helper.GetClient()
+		logger := helper.GetLogger()
+		discovery := NewExternalStreamDiscovery(client, logger)
+
+		// Start discovery
+		ctx := context.Background()
+		err := discovery.Start(ctx)
+		require.NoError(t, err, "Discovery should start successfully")
+
+		// Cancel context immediately
+		shutdownCtx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		start := time.Now()
+		err = discovery.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Discovery should stop even with cancelled context")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
+	})
+
+	t.Run("shutdown_timeout_handling", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		// Create external discovery directly
+		client := helper.GetClient()
+		logger := helper.GetLogger()
+		discovery := NewExternalStreamDiscovery(client, logger)
+
+		// Start discovery
+		ctx := context.Background()
+		err := discovery.Start(ctx)
+		require.NoError(t, err, "Discovery should start successfully")
+
+		// Use very short timeout to test timeout handling
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		// Give context time to expire
+		time.Sleep(2 * time.Millisecond)
+
+		start := time.Now()
+		err = discovery.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		// Should timeout but not hang
+		require.Error(t, err, "Should timeout with very short timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Error should indicate timeout")
+		assert.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+	})
+
+	t.Run("double_stop_handling", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		// Create external discovery directly
+		client := helper.GetClient()
+		logger := helper.GetLogger()
+		discovery := NewExternalStreamDiscovery(client, logger)
+
+		// Start discovery
+		ctx := context.Background()
+		err := discovery.Start(ctx)
+		require.NoError(t, err, "Discovery should start successfully")
+
+		// Stop first time
+		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		err = discovery.Stop(ctx1)
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time should not error
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		err = discovery.Stop(ctx2)
+		assert.NoError(t, err, "Second stop should not error")
+	})
+
+	t.Run("stop_without_start", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
+		defer helper.Cleanup(t)
+
+		// Create external discovery directly
+		client := helper.GetClient()
+		logger := helper.GetLogger()
+		discovery := NewExternalStreamDiscovery(client, logger)
+
+		// Stop without starting should not error
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := discovery.Stop(ctx)
+		assert.NoError(t, err, "Stop without start should not error")
+	})
+}

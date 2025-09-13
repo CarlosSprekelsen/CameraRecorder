@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -318,8 +319,127 @@ func TestConfigManager_FileWatching(t *testing.T) {
 	// We can't directly test the goroutine, but we can verify the setup
 
 	// Test Stop method to ensure file watching stops cleanly
-	cm.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = cm.Stop(ctx)
+	require.NoError(t, err, "Config manager should stop gracefully")
 
 	// Verify Stop completes without hanging
 	// This tests the stopChan path in watchFileChanges
+}
+
+// TestConfigManager_ContextAwareShutdown tests the context-aware shutdown functionality
+func TestConfigManager_ContextAwareShutdown(t *testing.T) {
+	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
+		// Create config manager
+		cm := CreateConfigManager()
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cm.Stop(ctx)
+		}()
+
+		// Load config to start file watching
+		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		require.NoError(t, err, "Config should load successfully")
+
+		// Test graceful shutdown with context
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		err = cm.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Config manager should stop gracefully")
+		assert.Less(t, elapsed, 1*time.Second, "Shutdown should be fast")
+	})
+
+	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
+		// Create config manager
+		cm := CreateConfigManager()
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cm.Stop(ctx)
+		}()
+
+		// Load config to start file watching
+		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		require.NoError(t, err, "Config should load successfully")
+
+		// Cancel context immediately
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		start := time.Now()
+		err = cm.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Config manager should stop even with cancelled context")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
+	})
+
+	t.Run("shutdown_timeout_handling", func(t *testing.T) {
+		// Create config manager
+		cm := CreateConfigManager()
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cm.Stop(ctx)
+		}()
+
+		// Load config to start file watching
+		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		require.NoError(t, err, "Config should load successfully")
+
+		// Use very short timeout to test timeout handling
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		// Give context time to expire
+		time.Sleep(2 * time.Millisecond)
+
+		start := time.Now()
+		err = cm.Stop(ctx)
+		elapsed := time.Since(start)
+
+		// Should timeout but not hang
+		require.Error(t, err, "Should timeout with very short timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Error should indicate timeout")
+		assert.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+	})
+
+	t.Run("double_stop_handling", func(t *testing.T) {
+		// Create config manager
+		cm := CreateConfigManager()
+
+		// Load config to start file watching
+		err := cm.LoadConfig("config/config_test_minimal.yaml")
+		require.NoError(t, err, "Config should load successfully")
+
+		// Stop first time
+		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		err = cm.Stop(ctx1)
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time should not error
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		err = cm.Stop(ctx2)
+		assert.NoError(t, err, "Second stop should not error")
+	})
+
+	t.Run("stop_without_load", func(t *testing.T) {
+		// Create config manager
+		cm := CreateConfigManager()
+
+		// Stop without loading config should not error
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := cm.Stop(ctx)
+		assert.NoError(t, err, "Stop without load should not error")
+	})
 }

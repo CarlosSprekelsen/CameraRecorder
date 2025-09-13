@@ -82,7 +82,7 @@ const (
 // CameraMonitor interface for camera discovery and monitoring
 type CameraMonitor interface {
 	Start(ctx context.Context) error
-	Stop() error
+	Stop(ctx context.Context) error
 	IsRunning() bool
 	IsReady() bool // indicates first discovery cycle completed
 	GetConnectedCameras() map[string]*CameraDevice

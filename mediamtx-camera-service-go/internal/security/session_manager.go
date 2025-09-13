@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -202,16 +203,38 @@ func (sm *SessionManager) startCleanup() {
 	}()
 }
 
-// Stop stops the session manager and cleanup routine.
+// Stop stops the session manager and cleanup routine with context-aware cancellation.
 // This method should be called when shutting down the application.
-func (sm *SessionManager) Stop() {
+func (sm *SessionManager) Stop(ctx context.Context) error {
 	if sm.cleanupTicker != nil {
 		sm.cleanupTicker.Stop()
 	}
-	close(sm.stopChan)
-	sm.wg.Wait()
+	
+	// Signal stop
+	select {
+	case <-sm.stopChan:
+		// Already closed
+	default:
+		close(sm.stopChan)
+	}
+	
+	// Wait for cleanup goroutine to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		sm.wg.Wait()
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		sm.logger.Warn("Session manager shutdown timeout")
+		return ctx.Err()
+	}
 
 	sm.logger.Info("Session manager stopped")
+	return nil
 }
 
 // GetSessionCount returns the current number of active sessions.

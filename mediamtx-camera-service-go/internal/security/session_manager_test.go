@@ -11,6 +11,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package security
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -344,5 +345,83 @@ func BenchmarkSessionManager_ConcurrentOperations(b *testing.B) {
 
 			i++
 		}
+	})
+}
+
+// TestSessionManager_ContextAwareShutdown tests the context-aware shutdown functionality
+func TestSessionManager_ContextAwareShutdown(t *testing.T) {
+	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
+		// Use security test environment from test helpers
+		env := SetupTestSecurityEnvironment(t)
+		defer TeardownTestSecurityEnvironment(t, env)
+
+		// Test graceful shutdown with context
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		err := env.SessionManager.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Session manager should stop gracefully")
+		assert.Less(t, elapsed, 1*time.Second, "Shutdown should be fast")
+	})
+
+	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
+		// Use security test environment from test helpers
+		env := SetupTestSecurityEnvironment(t)
+		defer TeardownTestSecurityEnvironment(t, env)
+
+		// Cancel context immediately
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		start := time.Now()
+		err := env.SessionManager.Stop(ctx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Session manager should stop even with cancelled context")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be very fast with cancelled context")
+	})
+
+	t.Run("shutdown_timeout_handling", func(t *testing.T) {
+		// Use security test environment from test helpers
+		env := SetupTestSecurityEnvironment(t)
+		defer TeardownTestSecurityEnvironment(t, env)
+
+		// Use very short timeout to test timeout handling
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+		defer cancel()
+
+		// Give context time to expire
+		time.Sleep(2 * time.Millisecond)
+
+		start := time.Now()
+		err := env.SessionManager.Stop(ctx)
+		elapsed := time.Since(start)
+
+		// Should timeout but not hang
+		require.Error(t, err, "Should timeout with very short timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Error should indicate timeout")
+		assert.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+	})
+
+	t.Run("double_stop_handling", func(t *testing.T) {
+		// Use security test environment from test helpers
+		env := SetupTestSecurityEnvironment(t)
+		defer TeardownTestSecurityEnvironment(t, env)
+
+		// Stop first time
+		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel1()
+		err := env.SessionManager.Stop(ctx1)
+		require.NoError(t, err, "First stop should succeed")
+
+		// Stop second time should not error
+		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel2()
+		err = env.SessionManager.Stop(ctx2)
+		assert.NoError(t, err, "Second stop should not error")
 	})
 }

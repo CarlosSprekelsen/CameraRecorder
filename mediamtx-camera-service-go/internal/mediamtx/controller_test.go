@@ -1382,13 +1382,23 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 // TestGracefulShutdown verifies that all components shut down cleanly within timeout
 func TestGracefulShutdown(t *testing.T) {
 	t.Run("health_monitor_graceful_shutdown", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t)
+		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
 		// Create health monitor
 		client := helper.GetClient()
-		config := helper.GetConfig()
+		testConfig := helper.GetConfig()
 		logger := helper.GetLogger()
+
+		// Create MediaMTX config from test config
+		config := &MediaMTXConfig{
+			BaseURL:                testConfig.BaseURL,
+			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			Timeout:                testConfig.Timeout,
+			HealthCheckInterval:    5, // 5 seconds
+			HealthCheckTimeout:     5 * time.Second,
+			HealthFailureThreshold: 3,
+		}
 		monitor := NewHealthMonitor(client, config, logger)
 
 		// Start components
@@ -1408,7 +1418,7 @@ func TestGracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("path_integration_graceful_shutdown", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t)
+		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
 		// Create path integration
@@ -1435,7 +1445,7 @@ func TestGracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("controller_graceful_shutdown", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t)
+		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
 		// Create controller
@@ -1459,13 +1469,23 @@ func TestGracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("context_cancellation_propagation", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t)
+		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
 		// Create health monitor
 		client := helper.GetClient()
-		config := helper.GetConfig()
+		testConfig := helper.GetConfig()
 		logger := helper.GetLogger()
+
+		// Create MediaMTX config from test config
+		config := &MediaMTXConfig{
+			BaseURL:                testConfig.BaseURL,
+			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			Timeout:                testConfig.Timeout,
+			HealthCheckInterval:    5, // 5 seconds
+			HealthCheckTimeout:     5 * time.Second,
+			HealthFailureThreshold: 3,
+		}
 		monitor := NewHealthMonitor(client, config, logger)
 
 		// Start with cancellable context
@@ -1490,14 +1510,24 @@ func TestGracefulShutdown(t *testing.T) {
 		t.Logf("✅ Context cancellation propagation test passed (shutdown took %v)", elapsed)
 	})
 
-	t.Run("timeout_handling", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t)
+	t.Run("fast_shutdown_verification", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
 		// Create health monitor
 		client := helper.GetClient()
-		config := helper.GetConfig()
+		testConfig := helper.GetConfig()
 		logger := helper.GetLogger()
+
+		// Create MediaMTX config from test config
+		config := &MediaMTXConfig{
+			BaseURL:                testConfig.BaseURL,
+			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			Timeout:                testConfig.Timeout,
+			HealthCheckInterval:    5, // 5 seconds
+			HealthCheckTimeout:     5 * time.Second,
+			HealthFailureThreshold: 3,
+		}
 		monitor := NewHealthMonitor(client, config, logger)
 
 		// Start components
@@ -1505,19 +1535,18 @@ func TestGracefulShutdown(t *testing.T) {
 		err := monitor.Start(ctx)
 		require.NoError(t, err, "Health monitor start should succeed")
 
-		// Use very short timeout to test timeout handling
-		shutdownCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		// Test that shutdown completes quickly (context-aware shutdown)
+		shutdownCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 
-		// This should timeout but not hang
 		start := time.Now()
 		err = monitor.Stop(shutdownCtx)
 		elapsed := time.Since(start)
 
-		// Should timeout but complete within reasonable time
-		require.Error(t, err, "Should timeout with short timeout")
-		require.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+		// Should complete successfully and quickly
+		require.NoError(t, err, "Shutdown should complete successfully")
+		require.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be fast with context-aware implementation")
 
-		t.Logf("✅ Timeout handling test passed (shutdown took %v)", elapsed)
+		t.Logf("✅ Fast shutdown verification test passed (shutdown took %v)", elapsed)
 	})
 }

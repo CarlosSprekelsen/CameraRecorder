@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -143,15 +145,59 @@ func main() {
 	if cfg.ServerDefaults.ShutdownTimeout > 0 {
 		shutdownTimeout = time.Duration(cfg.ServerDefaults.ShutdownTimeout * float64(time.Second))
 	}
-	_, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	if err := wsServer.Stop(); err != nil {
-		logger.WithError(err).Error("Error stopping WebSocket server")
+	logger.Info("Starting graceful shutdown...")
+
+	// Stop services concurrently with timeout enforcement
+	var wg sync.WaitGroup
+	errorChan := make(chan error, 2)
+
+	// Stop WebSocket server
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := wsServer.Stop(shutdownCtx); err != nil {
+			logger.WithError(err).Error("Error stopping WebSocket server")
+			errorChan <- err
+		}
+	}()
+
+	// Stop camera monitor
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := cameraMonitor.Stop(shutdownCtx); err != nil {
+			logger.WithError(err).Error("Error stopping camera monitor")
+			errorChan <- err
+		}
+	}()
+
+	// Wait for all services to stop with overall timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("All services stopped cleanly")
+	case <-shutdownCtx.Done():
+		logger.Error("Shutdown timeout - forcing exit")
+		os.Exit(1) // Force exit on timeout
 	}
 
-	if err := cameraMonitor.Stop(); err != nil {
-		logger.WithError(err).Error("Error stopping camera monitor")
+	// Check for errors
+	close(errorChan)
+	var errors []error
+	for err := range errorChan {
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		logger.WithField("error_count", strconv.Itoa(len(errors))).Error("Some services failed to stop cleanly")
 	}
 
 	logger.Info("Camera service stopped")

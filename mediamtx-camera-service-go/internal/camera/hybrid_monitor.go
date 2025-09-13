@@ -362,8 +362,8 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context) {
 	}
 }
 
-// Stop stops camera discovery and monitoring
-func (m *HybridCameraMonitor) Stop() error {
+// Stop stops camera discovery and monitoring with context-aware cancellation
+func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	// Use atomic check instead of holding stateLock
 	if !atomic.CompareAndSwapInt32(&m.running, 1, 0) {
 		return fmt.Errorf("monitor is not running")
@@ -383,10 +383,21 @@ func (m *HybridCameraMonitor) Stop() error {
 		close(m.stopChan)
 	}
 
-	// Close device event source if it was started
+	// Close device event source with timeout
 	if m.deviceEventSource != nil {
-		if err := m.deviceEventSource.Close(); err != nil {
-			m.logger.WithError(err).Warn("Error closing device event source")
+		closeDone := make(chan error, 1)
+		go func() {
+			closeDone <- m.deviceEventSource.Close()
+		}()
+		
+		select {
+		case err := <-closeDone:
+			if err != nil {
+				m.logger.WithError(err).Warn("Error closing device event source")
+			}
+		case <-ctx.Done():
+			m.logger.Warn("Device event source close timeout")
+			return ctx.Err()
 		}
 	}
 

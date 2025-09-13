@@ -11,6 +11,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package security
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -211,7 +212,11 @@ func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 func TeardownTestSecurityEnvironment(t *testing.T, env *TestSecurityEnvironment) {
 	if env != nil {
 		if env.SessionManager != nil {
-			env.SessionManager.Stop()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := env.SessionManager.Stop(ctx); err != nil {
+				t.Logf("Warning: Failed to stop session manager: %v", err)
+			}
 		}
 	}
 }
