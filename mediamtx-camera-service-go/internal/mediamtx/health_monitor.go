@@ -22,13 +22,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // SimpleHealthMonitor represents the simplified MediaMTX health monitor
 type SimpleHealthMonitor struct {
 	client MediaMTXClient
-	config *MediaMTXConfig
+	config *config.MediaMTXConfig
 	logger *logging.Logger
 
 	// Context for lifecycle management
@@ -56,7 +57,7 @@ type SimpleHealthMonitor struct {
 }
 
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
-func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) HealthMonitor {
+func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
 		client:           client,
 		config:           config,

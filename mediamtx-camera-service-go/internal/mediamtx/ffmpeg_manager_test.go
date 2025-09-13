@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +33,7 @@ func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -49,7 +50,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -89,7 +90,7 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -129,7 +130,7 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -175,7 +176,7 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -225,7 +226,7 @@ func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -254,7 +255,7 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -295,7 +296,7 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()
@@ -349,7 +350,7 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 	}
 	logger := helper.GetLogger()

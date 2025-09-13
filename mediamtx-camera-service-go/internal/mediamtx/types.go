@@ -89,45 +89,8 @@ type OptimizationConfig struct {
 	ConnectionPoolSize      int           `mapstructure:"connection_pool_size"`      // Default: 10
 }
 
-// MediaMTXConfig represents MediaMTX service configuration
-type MediaMTXConfig struct {
-	BaseURL        string               `mapstructure:"base_url"`
-	HealthCheckURL string               `mapstructure:"health_check_url"`
-	Timeout        time.Duration        `mapstructure:"timeout"`
-	RetryAttempts  int                  `mapstructure:"retry_attempts"`
-	RetryDelay     time.Duration        `mapstructure:"retry_delay"`
-	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
-	ConnectionPool ConnectionPoolConfig `mapstructure:"connection_pool"`
-
-	// FFmpeg and Performance Configuration (Python parity)
-	FFmpeg      FFmpegConfig      `mapstructure:"ffmpeg"`
-	Performance PerformanceConfig `mapstructure:"performance"`
-
-	// Integration with existing config
-	Host                                string  `mapstructure:"host"`
-	APIPort                             int     `mapstructure:"api_port"`
-	RTSPPort                            int     `mapstructure:"rtsp_port"`
-	WebRTCPort                          int     `mapstructure:"webrtc_port"`
-	HLSPort                             int     `mapstructure:"hls_port"`
-	ConfigPath                          string  `mapstructure:"config_path"`
-	RecordingsPath                      string  `mapstructure:"recordings_path"`
-	SnapshotsPath                       string  `mapstructure:"snapshots_path"`
-	HealthCheckInterval                 int     `mapstructure:"health_check_interval"`
-	HealthFailureThreshold              int     `mapstructure:"health_failure_threshold"`
-	HealthCircuitBreakerTimeout         int     `mapstructure:"health_circuit_breaker_timeout"`
-	HealthMaxBackoffInterval            int     `mapstructure:"health_max_backoff_interval"`
-	HealthRecoveryConfirmationThreshold int     `mapstructure:"health_recovery_confirmation_threshold"`
-	BackoffBaseMultiplier               float64 `mapstructure:"backoff_base_multiplier"`
-
-	// RTSP Connection Monitoring Configuration
-	RTSPMonitoring            config.RTSPMonitoringConfig `mapstructure:"rtsp_monitoring"`
-	BackoffJitterRange        []float64                   `mapstructure:"backoff_jitter_range"`
-	ProcessTerminationTimeout float64                     `mapstructure:"process_termination_timeout"`
-	ProcessKillTimeout        float64                     `mapstructure:"process_kill_timeout"`
-	HealthCheckTimeout        time.Duration               `mapstructure:"health_check_timeout"` // Default: 5 seconds
-	// Health monitoring defaults
-	HealthMonitorDefaults HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
-}
+// MediaMTXConfig is now imported from internal/config package
+// This removes the duplicate struct definition
 
 // HealthMonitorDefaults represents health monitoring default values
 type HealthMonitorDefaults struct {
@@ -478,8 +441,8 @@ type MediaMTXController interface {
 	UpdateSnapshotSettings(settings *SnapshotSettings)
 
 	// Configuration
-	GetConfig(ctx context.Context) (*MediaMTXConfig, error)
-	UpdateConfig(ctx context.Context, config *MediaMTXConfig) error
+	GetConfig(ctx context.Context) (*config.MediaMTXConfig, error)
+	UpdateConfig(ctx context.Context, config *config.MediaMTXConfig) error
 
 	// Manager access for cleanup operations
 	GetRecordingManager() *RecordingManager

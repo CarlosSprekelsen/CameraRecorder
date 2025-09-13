@@ -134,7 +134,7 @@ func NewMediaMTXErrorFromHTTP(statusCode int, body []byte) *MediaMTXError {
 	case 504:
 		message = "gateway timeout"
 	default:
-		message = fmt.Sprintf("HTTP %d error", statusCode)
+		// Keep the default "unknown error" message for unknown status codes
 	}
 
 	return &MediaMTXError{

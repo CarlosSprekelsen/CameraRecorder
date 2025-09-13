@@ -22,13 +22,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // RecordingManager manages MediaMTX-based recording operations
 type RecordingManager struct {
 	client            MediaMTXClient
-	config            *MediaMTXConfig
+	config            *config.MediaMTXConfig
 	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	pathManager       PathManager
@@ -82,7 +83,7 @@ type MediaMTXRecordingSegment struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
@@ -334,7 +335,7 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string)
 // ListRecordingSessions returns all active recording sessions
 func (rm *RecordingManager) ListRecordingSessions() []*RecordingSession {
 	var sessions []*RecordingSession
-	
+
 	// Iterate over sync.Map - lock-free operation
 	rm.sessions.Range(func(key, value interface{}) bool {
 		sessions = append(sessions, value.(*RecordingSession))

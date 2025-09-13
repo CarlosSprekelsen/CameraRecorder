@@ -24,13 +24,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // rtspConnectionManager implements RTSPConnectionManager interface
 type rtspConnectionManager struct {
 	client MediaMTXClient
-	config *MediaMTXConfig
+	config *config.MediaMTXConfig
 	logger *logging.Logger
 
 	// Atomic state: optimized for high-frequency reads
@@ -48,7 +49,7 @@ type rtspConnectionManager struct {
 }
 
 // NewRTSPConnectionManager creates a new RTSP connection manager
-func NewRTSPConnectionManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) RTSPConnectionManager {
+func NewRTSPConnectionManager(client MediaMTXClient, config *config.MediaMTXConfig, logger *logging.Logger) RTSPConnectionManager {
 	return &rtspConnectionManager{
 		client:       client,
 		config:       config,

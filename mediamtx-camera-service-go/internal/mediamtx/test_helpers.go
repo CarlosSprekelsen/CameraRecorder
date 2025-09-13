@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	configpkg "github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -60,7 +60,7 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 // MediaMTXTestHelper provides utilities for MediaMTX server testing
 type MediaMTXTestHelper struct {
 	config                *MediaMTXTestConfig
-	configManager         *config.ConfigManager
+	configManager         *configpkg.ConfigManager
 	logger                *logging.Logger
 	client                MediaMTXClient
 	pathManager           PathManager
@@ -87,21 +87,25 @@ func EnsureSequentialExecution(t *testing.T) {
 }
 
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
-func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTestHelper {
-	if config == nil {
-		config = DefaultMediaMTXTestConfig()
+func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaMTXTestHelper {
+	if testConfig == nil {
+		testConfig = DefaultMediaMTXTestConfig()
 	}
 
 	// Create logger for testing
 	logger := logging.GetLogger("test-mediamtx-controller")
-	logger.SetLevel(logrus.ErrorLevel) // Reduce noise during tests
+	logger.SetLevel(logrus.InfoLevel) // Make logs visible for investigation
+
+	// GLOBAL FIX: Set all loggers to InfoLevel for debugging
+	// This ensures all components use the same log level
+	logging.GetGlobalLogger().SetLevel(logrus.InfoLevel)
 
 	// Create MediaMTX client configuration
-	clientConfig := &MediaMTXConfig{
-		BaseURL:        config.BaseURL,
-		HealthCheckURL: config.BaseURL + "/v3/paths/list", // Correct Go MediaMTX health check endpoint
-		Timeout:        config.Timeout,
-		ConnectionPool: ConnectionPoolConfig{
+	clientConfig := &configpkg.MediaMTXConfig{
+		BaseURL:        testConfig.BaseURL,
+		HealthCheckURL: testConfig.BaseURL + "/v3/paths/list", // Correct Go MediaMTX health check endpoint
+		Timeout:        testConfig.Timeout,
+		ConnectionPool: configpkg.ConnectionPoolConfig{
 			MaxIdleConns:        10,
 			MaxIdleConnsPerHost: 5,
 			IdleConnTimeout:     30 * time.Second,
@@ -109,13 +113,13 @@ func NewMediaMTXTestHelper(t *testing.T, config *MediaMTXTestConfig) *MediaMTXTe
 	}
 
 	// Create MediaMTX client
-	client := NewClient(config.BaseURL, clientConfig, logger)
+	client := NewClient(testConfig.BaseURL, clientConfig, logger)
 
 	// Create config manager for centralized configuration
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	helper := &MediaMTXTestHelper{
-		config:        config,
+		config:        testConfig,
 		configManager: configManager,
 		logger:        logger,
 		client:        client,
@@ -288,7 +292,7 @@ func (h *MediaMTXTestHelper) TestMediaMTXFailure(t *testing.T) error {
 // SimulateMediaMTXFailure simulates MediaMTX server failure for testing error handling
 func (h *MediaMTXTestHelper) SimulateMediaMTXFailure(t *testing.T) error {
 	// Create a client with invalid URL to simulate server failure
-	invalidConfig := &MediaMTXConfig{
+	invalidConfig := &configpkg.MediaMTXConfig{
 		BaseURL: "http://localhost:9999", // Invalid port
 		Timeout: 1 * time.Second,
 	}
@@ -327,7 +331,7 @@ func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 func (h *MediaMTXTestHelper) GetPathManager() PathManager {
 	h.pathManagerOnce.Do(func() {
 		// Convert test config to MediaMTX config
-		mediaMTXConfig := &MediaMTXConfig{
+		mediaMTXConfig := &configpkg.MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
@@ -343,7 +347,7 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 		pathManager := h.GetPathManager() // This will initialize h.pathManager if nil
 
 		// Convert test config to MediaMTX config
-		mediaMTXConfig := &MediaMTXConfig{
+		mediaMTXConfig := &configpkg.MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
@@ -356,7 +360,7 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	h.recordingManagerOnce.Do(func() {
 		// Convert test config to MediaMTX config
-		mediaMTXConfig := &MediaMTXConfig{
+		mediaMTXConfig := &configpkg.MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
@@ -452,6 +456,15 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 // GetOrchestratedController returns a controller with proper service orchestration
 // This follows the Progressive Readiness Pattern from the architecture
 func (h *MediaMTXTestHelper) GetOrchestratedController(t *testing.T) (MediaMTXController, error) {
+	// PRE-CLEANUP: Clean up any existing test paths before starting
+	h.ForceCleanupRuntimePaths(t)
+
+	// MANDATORY: MediaMTX health preflight before any controller operations
+	err := h.WaitForServerReady(t, 10*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("MediaMTX server not ready: %w", err)
+	}
+
 	controller, err := h.GetController(t)
 	if err != nil {
 		return nil, err
@@ -525,7 +538,7 @@ func (h *MediaMTXTestHelper) GetConfiguredRecordingPath() string {
 }
 
 // GetConfigManager returns the config manager instance
-func (h *MediaMTXTestHelper) GetConfigManager() *config.ConfigManager {
+func (h *MediaMTXTestHelper) GetConfigManager() *configpkg.ConfigManager {
 	return h.configManager
 }
 
@@ -533,7 +546,7 @@ func (h *MediaMTXTestHelper) GetConfigManager() *config.ConfigManager {
 func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 	if h.rtspConnectionManager == nil {
 		// Convert test config to MediaMTX config
-		mediaMTXConfig := &MediaMTXConfig{
+		mediaMTXConfig := &configpkg.MediaMTXConfig{
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
@@ -543,8 +556,8 @@ func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 }
 
 // CreateConfigManagerWithFixture creates a config manager that loads from test fixtures
-func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *config.ConfigManager {
-	configManager := config.CreateConfigManager()
+func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *configpkg.ConfigManager {
+	configManager := configpkg.CreateConfigManager()
 
 	// Use test fixture instead of creating config manually
 	fixturePath := filepath.Join("tests", "fixtures", fixtureName)

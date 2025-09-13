@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 5 * time.Second,
 	}
@@ -324,7 +325,7 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 5 * time.Second,
 	}

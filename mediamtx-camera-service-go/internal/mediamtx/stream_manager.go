@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
@@ -29,7 +30,7 @@ import (
 type streamManager struct {
 	client         MediaMTXClient
 	pathManager    PathManager
-	config         *MediaMTXConfig
+	config         *config.MediaMTXConfig
 	logger         *logging.Logger
 	useCaseConfigs map[StreamUseCase]UseCaseConfig
 
@@ -39,7 +40,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *MediaMTXConfig, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -590,7 +591,12 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 	}).Info("Path ensured, waiting for readiness")
 
 	// Wait for path to be ready in runtime (not config)
-	err = sm.pathManager.WaitForPathReady(ctx, pathName, 8*time.Second)
+	// Use configurable timeout from MediaMTX config
+	timeout := 15 * time.Second // Default timeout
+	if sm.config != nil && sm.config.StreamReadiness.Timeout > 0 {
+		timeout = time.Duration(sm.config.StreamReadiness.Timeout) * time.Second
+	}
+	err = sm.pathManager.WaitForPathReady(ctx, pathName, timeout)
 	if err != nil {
 		return fmt.Errorf("failed to wait for path readiness: %w", err)
 	}

@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -84,7 +85,7 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, originalConfig, "Original configuration should not be nil")
 
 	// Create updated configuration
-	updatedConfig := &MediaMTXConfig{
+	updatedConfig := &config.MediaMTXConfig{
 		BaseURL:             originalConfig.BaseURL,
 		Timeout:             originalConfig.Timeout,
 		HealthCheckInterval: originalConfig.HealthCheckInterval + 1, // Increment by 1
@@ -132,7 +133,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "Updating with nil configuration should fail")
 
 	// Test updating with invalid configuration (empty base URL)
-	invalidConfig := &MediaMTXConfig{
+	invalidConfig := &config.MediaMTXConfig{
 		BaseURL:             "", // Invalid empty URL
 		Timeout:             5 * time.Second,
 		HealthCheckInterval: 5,
@@ -141,7 +142,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "Updating with invalid configuration should fail")
 
 	// Test updating with invalid configuration (negative timeout)
-	invalidConfig2 := &MediaMTXConfig{
+	invalidConfig2 := &config.MediaMTXConfig{
 		BaseURL:             "http://localhost:9997",
 		Timeout:             -1 * time.Second, // Invalid negative timeout
 		HealthCheckInterval: 5,
@@ -150,7 +151,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "Updating with negative timeout should fail")
 
 	// Test updating with invalid configuration (zero health check interval)
-	invalidConfig3 := &MediaMTXConfig{
+	invalidConfig3 := &config.MediaMTXConfig{
 		BaseURL:             "http://localhost:9997",
 		Timeout:             5 * time.Second,
 		HealthCheckInterval: 0, // Invalid zero interval
@@ -191,7 +192,7 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a valid configuration
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:             "http://localhost:9997",
 		Timeout:             5 * time.Second,
 		HealthCheckInterval: 5,

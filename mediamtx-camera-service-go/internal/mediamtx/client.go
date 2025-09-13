@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
@@ -34,7 +35,7 @@ type client struct {
 }
 
 // NewClient creates a new MediaMTX HTTP client
-func NewClient(baseURL string, config *MediaMTXConfig, logger *logging.Logger) MediaMTXClient {
+func NewClient(baseURL string, config *config.MediaMTXConfig, logger *logging.Logger) MediaMTXClient {
 	// Create HTTP client with connection pooling
 	httpClient := &http.Client{
 		Timeout: config.Timeout,

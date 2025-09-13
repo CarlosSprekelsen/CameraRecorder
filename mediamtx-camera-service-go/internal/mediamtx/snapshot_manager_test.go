@@ -40,7 +40,7 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 	}
@@ -75,7 +75,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 		Host:          "localhost",
@@ -227,7 +227,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 	}
@@ -291,7 +291,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 	}
@@ -358,7 +358,7 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 	}
@@ -537,7 +537,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: "", // Empty path to test error handling
 	}
@@ -584,7 +584,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots"),
 	}
@@ -666,7 +666,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots_tier1"),
 		Host:          "localhost",
@@ -739,7 +739,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots_tier2"),
 		Host:          "localhost",
@@ -819,7 +819,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots_tier3"),
 		Host:          "localhost",
@@ -895,7 +895,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
 		SnapshotsPath: filepath.Join(helper.GetConfig().TestDataDir, "snapshots_integration"),
 		Host:          "localhost",

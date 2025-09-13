@@ -30,8 +30,8 @@ import (
 )
 
 // createTestMediaMTXConfig creates a test MediaMTX configuration
-func createTestMediaMTXConfig() *MediaMTXConfig {
-	return &MediaMTXConfig{
+func createTestMediaMTXConfig() *config.MediaMTXConfig {
+	return &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 10 * time.Second, // Add HTTP client timeout to prevent hanging
 		RTSPMonitoring: config.RTSPMonitoringConfig{
@@ -51,7 +51,7 @@ func createTestMediaMTXConfig() *MediaMTXConfig {
 func createTestRTSPManagerWithCustomConfig(t *testing.T, helper *MediaMTXTestHelper, customConfig *config.RTSPMonitoringConfig) RTSPConnectionManager {
 	// For custom config, we need to create a new instance with the custom configuration
 	// This is a legitimate use case that requires a new instance
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
 		Timeout: 10 * time.Second,
 		RTSPMonitoring: config.RTSPMonitoringConfig{

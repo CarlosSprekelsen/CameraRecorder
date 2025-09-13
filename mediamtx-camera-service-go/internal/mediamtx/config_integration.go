@@ -36,14 +36,14 @@ func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.L
 }
 
 // GetMediaMTXConfig retrieves MediaMTX configuration from the existing config system
-func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
+func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
 	}
 
 	// Convert existing config to MediaMTX config
-	mediaMTXConfig := &MediaMTXConfig{
+	mediaMTXConfig := &config.MediaMTXConfig{
 		// Core MediaMTX settings
 		BaseURL:        fmt.Sprintf("http://%s:%d", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
 		HealthCheckURL: fmt.Sprintf("http://%s:%d/v3/paths/list", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
@@ -52,14 +52,14 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
 		RetryDelay:     time.Duration(cfg.MediaMTX.HealthMaxBackoffInterval) * time.Second,
 
 		// Circuit breaker configuration
-		CircuitBreaker: CircuitBreakerConfig{
+		CircuitBreaker: config.CircuitBreakerConfig{
 			FailureThreshold: cfg.MediaMTX.HealthFailureThreshold,
 			RecoveryTimeout:  time.Duration(cfg.MediaMTX.HealthCircuitBreakerTimeout) * time.Second,
 			MaxFailures:      cfg.MediaMTX.HealthRecoveryConfirmationThreshold,
 		},
 
 		// Connection pool configuration
-		ConnectionPool: ConnectionPoolConfig{
+		ConnectionPool: config.ConnectionPoolConfig{
 			MaxIdleConns:        100,              // Default value
 			MaxIdleConnsPerHost: 10,               // Default value
 			IdleConnTimeout:     90 * time.Second, // Default value
@@ -95,7 +95,7 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
 }
 
 // ValidateMediaMTXConfig validates MediaMTX configuration
-func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *MediaMTXConfig) error {
+func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *config.MediaMTXConfig) error {
 	if err := validateConfig(mediaMTXConfig); err != nil {
 		return fmt.Errorf("MediaMTX config validation failed: %w", err)
 	}
@@ -172,7 +172,7 @@ func (ci *ConfigIntegration) GetPerformanceConfig() (*config.PerformanceConfig, 
 }
 
 // UpdateMediaMTXConfig updates MediaMTX configuration in the existing config system
-func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *MediaMTXConfig) error {
+func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *config.MediaMTXConfig) error {
 	// Validate the new configuration
 	if err := ci.ValidateMediaMTXConfig(mediaMTXConfig); err != nil {
 		return fmt.Errorf("invalid MediaMTX configuration: %w", err)

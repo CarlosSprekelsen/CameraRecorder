@@ -56,15 +56,24 @@ type StorageConfig struct {
 
 // MediaMTXConfig represents MediaMTX integration configuration.
 type MediaMTXConfig struct {
-	Host                                string                `mapstructure:"host"`
-	APIPort                             int                   `mapstructure:"api_port"`
-	RTSPPort                            int                   `mapstructure:"rtsp_port"`
-	WebRTCPort                          int                   `mapstructure:"webrtc_port"`
-	HLSPort                             int                   `mapstructure:"hls_port"`
-	ConfigPath                          string                `mapstructure:"config_path"`
-	RecordingsPath                      string                `mapstructure:"recordings_path"`
-	SnapshotsPath                       string                `mapstructure:"snapshots_path"`
-	Codec                               CodecConfig           `mapstructure:"codec"`
+	Host           string      `mapstructure:"host"`
+	APIPort        int         `mapstructure:"api_port"`
+	RTSPPort       int         `mapstructure:"rtsp_port"`
+	WebRTCPort     int         `mapstructure:"webrtc_port"`
+	HLSPort        int         `mapstructure:"hls_port"`
+	ConfigPath     string      `mapstructure:"config_path"`
+	RecordingsPath string      `mapstructure:"recordings_path"`
+	SnapshotsPath  string      `mapstructure:"snapshots_path"`
+	Codec          CodecConfig `mapstructure:"codec"`
+
+	// HTTP Client URLs (for backward compatibility)
+	BaseURL        string `mapstructure:"base_url"`
+	HealthCheckURL string `mapstructure:"health_check_url"`
+
+	// FFmpeg and Performance Configuration (for backward compatibility)
+	FFmpeg      FFmpegConfig      `mapstructure:"ffmpeg"`
+	Performance PerformanceConfig `mapstructure:"performance"`
+
 	HealthCheckInterval                 int                   `mapstructure:"health_check_interval"`
 	HealthFailureThreshold              int                   `mapstructure:"health_failure_threshold"`
 	HealthCircuitBreakerTimeout         int                   `mapstructure:"health_circuit_breaker_timeout"`
@@ -76,6 +85,14 @@ type MediaMTXConfig struct {
 	ProcessKillTimeout                  float64               `mapstructure:"process_kill_timeout"`
 	StreamReadiness                     StreamReadinessConfig `mapstructure:"stream_readiness"`
 	HealthCheckTimeout                  time.Duration         `mapstructure:"health_check_timeout"` // Default: 5 seconds
+
+	// HTTP Client Configuration (for backward compatibility)
+	Timeout        time.Duration        `mapstructure:"timeout"`
+	RetryAttempts  int                  `mapstructure:"retry_attempts"`
+	RetryDelay     time.Duration        `mapstructure:"retry_delay"`
+	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
+	ConnectionPool ConnectionPoolConfig `mapstructure:"connection_pool"`
+
 	// Health monitoring defaults
 	HealthMonitorDefaults HealthMonitorDefaults `mapstructure:"health_monitor_defaults"`
 
@@ -336,4 +353,18 @@ type Config struct {
 type ServerDefaults struct {
 	ShutdownTimeout     float64 `mapstructure:"shutdown_timeout"`      // Default: 30.0 seconds
 	CameraMonitorTicker float64 `mapstructure:"camera_monitor_ticker"` // Default: 5.0 seconds
+}
+
+// CircuitBreakerConfig represents circuit breaker configuration
+type CircuitBreakerConfig struct {
+	FailureThreshold int           `mapstructure:"failure_threshold"`
+	RecoveryTimeout  time.Duration `mapstructure:"recovery_timeout"`
+	MaxFailures      int           `mapstructure:"max_failures"`
+}
+
+// ConnectionPoolConfig represents HTTP connection pool configuration
+type ConnectionPoolConfig struct {
+	MaxIdleConns        int           `mapstructure:"max_idle_conns"`
+	MaxIdleConnsPerHost int           `mapstructure:"max_idle_conns_per_host"`
+	IdleConnTimeout     time.Duration `mapstructure:"idle_conn_timeout"`
 }

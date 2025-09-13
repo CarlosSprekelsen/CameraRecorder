@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1391,7 +1392,7 @@ func TestGracefulShutdown(t *testing.T) {
 		logger := helper.GetLogger()
 
 		// Create MediaMTX config from test config
-		config := &MediaMTXConfig{
+		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
 			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
 			Timeout:                testConfig.Timeout,
@@ -1478,7 +1479,7 @@ func TestGracefulShutdown(t *testing.T) {
 		logger := helper.GetLogger()
 
 		// Create MediaMTX config from test config
-		config := &MediaMTXConfig{
+		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
 			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
 			Timeout:                testConfig.Timeout,
@@ -1520,7 +1521,7 @@ func TestGracefulShutdown(t *testing.T) {
 		logger := helper.GetLogger()
 
 		// Create MediaMTX config from test config
-		config := &MediaMTXConfig{
+		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
 			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
 			Timeout:                testConfig.Timeout,

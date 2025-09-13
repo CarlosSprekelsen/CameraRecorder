@@ -35,7 +35,7 @@ type SnapshotManager struct {
 	ffmpegManager FFmpegManager
 	streamManager StreamManager        // Required for Tier 3: external RTSP source path creation
 	cameraMonitor camera.CameraMonitor // Required for Tier 0: V4L2 direct capture
-	config        *MediaMTXConfig
+	config        *config.MediaMTXConfig
 	logger        *logging.Logger
 
 	// Configuration integration for multi-tier support
@@ -59,7 +59,7 @@ type SnapshotSettings struct {
 }
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
-func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, config *MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
+func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, config *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		streamManager: streamManager,
@@ -566,7 +566,7 @@ func (sm *SnapshotManager) GetSnapshot(snapshotID string) (*Snapshot, bool) {
 // ListSnapshots lists all snapshots
 func (sm *SnapshotManager) ListSnapshots() []*Snapshot {
 	var snapshots []*Snapshot
-	
+
 	// Iterate over sync.Map - lock-free operation
 	sm.snapshots.Range(func(key, value interface{}) bool {
 		snapshots = append(snapshots, value.(*Snapshot))

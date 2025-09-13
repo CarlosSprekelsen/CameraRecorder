@@ -26,12 +26,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // ffmpegManager represents the MediaMTX FFmpeg manager
 type ffmpegManager struct {
-	config *MediaMTXConfig
+	config *config.MediaMTXConfig
 	logger *logging.Logger
 
 	// Process tracking
@@ -80,7 +81,7 @@ type FFmpegProcess struct {
 }
 
 // NewFFmpegManager creates a new MediaMTX FFmpeg manager
-func NewFFmpegManager(config *MediaMTXConfig, logger *logging.Logger) FFmpegManager {
+func NewFFmpegManager(config *config.MediaMTXConfig, logger *logging.Logger) FFmpegManager {
 	// Configuration defaults are handled by the centralized config system
 	// No need to set defaults here - they come from config_manager.go
 
@@ -482,7 +483,7 @@ func (fm *ffmpegManager) calculateBackoffDelay(baseDelay time.Duration, attempt 
 	delay += jitter
 
 	// Cap maximum delay at configured value
-	maxDelay := fm.config.FFmpeg.FallbackDefaults.MaxBackoffDelay
+	maxDelay := time.Duration(fm.config.FFmpeg.FallbackDefaults.MaxBackoffDelay) * time.Second
 	if delay > maxDelay {
 		delay = maxDelay
 	}
@@ -498,8 +499,13 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 	metrics, exists := fm.performanceMetrics[operationType]
 	if !exists {
 		metrics = &PerformanceMetrics{
-			OperationType:       operationType,
-			ResponseTimeTargets: fm.config.Performance.ResponseTimeTargets,
+			OperationType: operationType,
+			ResponseTimeTargets: map[string]float64{
+				"snapshot_capture": fm.config.Performance.ResponseTimeTargets.SnapshotCapture,
+				"recording_start":  fm.config.Performance.ResponseTimeTargets.RecordingStart,
+				"recording_stop":   fm.config.Performance.ResponseTimeTargets.RecordingStop,
+				"file_listing":     fm.config.Performance.ResponseTimeTargets.FileListing,
+			},
 		}
 		fm.performanceMetrics[operationType] = metrics
 	}

@@ -43,7 +43,7 @@ type controller struct {
 	snapshotManager  *SnapshotManager
 	rtspManager      RTSPConnectionManager
 	cameraMonitor    camera.CameraMonitor
-	config           *MediaMTXConfig
+	config           *config.MediaMTXConfig
 	logger           *logging.Logger
 
 	// Health notification management
@@ -1153,7 +1153,7 @@ func (c *controller) stopRecordingInternal(ctx context.Context, sessionID string
 }
 
 // GetConfig returns the current configuration
-func (c *controller) GetConfig(ctx context.Context) (*MediaMTXConfig, error) {
+func (c *controller) GetConfig(ctx context.Context) (*config.MediaMTXConfig, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
@@ -1162,7 +1162,7 @@ func (c *controller) GetConfig(ctx context.Context) (*MediaMTXConfig, error) {
 }
 
 // UpdateConfig updates the configuration
-func (c *controller) UpdateConfig(ctx context.Context, config *MediaMTXConfig) error {
+func (c *controller) UpdateConfig(ctx context.Context, config *config.MediaMTXConfig) error {
 	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
@@ -1192,7 +1192,7 @@ func (c *controller) GetSnapshotManager() *SnapshotManager {
 }
 
 // validateConfig validates the MediaMTX configuration
-func validateConfig(config *MediaMTXConfig) error {
+func validateConfig(config *config.MediaMTXConfig) error {
 	if config == nil {
 		return fmt.Errorf("configuration cannot be nil")
 	}

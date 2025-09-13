@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"golang.org/x/sync/singleflight"
 )
@@ -31,7 +32,7 @@ import (
 // pathManager represents the MediaMTX path manager
 type pathManager struct {
 	client        MediaMTXClient
-	config        *MediaMTXConfig
+	config        *config.MediaMTXConfig
 	logger        *logging.Logger
 	cameraMonitor camera.CameraMonitor
 
@@ -60,7 +61,7 @@ type PathManagerMetrics struct {
 }
 
 // NewPathManager creates a new MediaMTX path manager
-func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *logging.Logger) PathManager {
+func NewPathManager(client MediaMTXClient, config *config.MediaMTXConfig, logger *logging.Logger) PathManager {
 	return &pathManager{
 		client:      client,
 		config:      config,
@@ -73,7 +74,7 @@ func NewPathManager(client MediaMTXClient, config *MediaMTXConfig, logger *loggi
 }
 
 // NewPathManagerWithCamera creates a new MediaMTX path manager with camera monitor
-func NewPathManagerWithCamera(client MediaMTXClient, config *MediaMTXConfig, cameraMonitor camera.CameraMonitor, logger *logging.Logger) PathManager {
+func NewPathManagerWithCamera(client MediaMTXClient, config *config.MediaMTXConfig, cameraMonitor camera.CameraMonitor, logger *logging.Logger) PathManager {
 	return &pathManager{
 		client:        client,
 		config:        config,
@@ -307,9 +308,15 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		"name": name,
 		"data": string(data),
 		"url":  fmt.Sprintf("/v3/config/paths/add/%s", name),
-	}).Debug("Sending CreatePath request to MediaMTX")
+	}).Info("Sending CreatePath request to MediaMTX - FULL REQUEST")
 
-	_, err = pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
+	response, err := pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
+	pm.logger.WithFields(logging.Fields{
+		"path_name": name,
+		"error":     err,
+		"error_nil": err == nil,
+		"response":  response,
+	}).Info("CreatePath API call completed - FULL RESPONSE")
 	if err != nil {
 		// Log the actual error for debugging with full context
 		errorMsg := err.Error()

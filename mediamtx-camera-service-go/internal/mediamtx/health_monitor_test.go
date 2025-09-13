@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -56,7 +57,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -92,7 +93,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -134,7 +135,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -177,7 +178,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -211,7 +212,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
@@ -253,7 +254,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	// Server is ready via shared test helper
 
 	// Test different configurations
-	configs := []*MediaMTXConfig{
+	configs := []*config.MediaMTXConfig{
 		{
 			BaseURL:                helper.GetConfig().BaseURL,
 			Timeout:                30 * time.Second,
@@ -297,7 +298,7 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 
 	// Create health monitor
 	client := helper.GetClient()
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
 		HealthCheckTimeout:     5 * time.Second,
@@ -354,7 +355,7 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 
 	// Create health monitor
 	client := helper.GetClient()
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
 		HealthCheckTimeout:     5 * time.Second,
@@ -415,7 +416,7 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 
 	// Create health monitor
 	client := helper.GetClient()
-	config := &MediaMTXConfig{
+	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
 		HealthCheckTimeout:     5 * time.Second,
