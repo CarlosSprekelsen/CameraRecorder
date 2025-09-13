@@ -31,6 +31,10 @@ type SimpleHealthMonitor struct {
 	config *MediaMTXConfig
 	logger *logging.Logger
 
+	// Context for lifecycle management
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	// Threshold-crossing notifications
 	systemNotifier SystemEventNotifier
 
@@ -48,8 +52,7 @@ type SimpleHealthMonitor struct {
 	mu sync.RWMutex
 
 	// Control
-	stopChan chan struct{}
-	wg       sync.WaitGroup
+	wg sync.WaitGroup
 }
 
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
@@ -62,7 +65,6 @@ func NewHealthMonitor(client MediaMTXClient, config *MediaMTXConfig, logger *log
 		failureCount:     0,
 		lastCheckTime:    time.Now().UnixNano(),
 		debounceDuration: 15 * time.Second, // 15s debounce for health notifications
-		stopChan:         make(chan struct{}, 1),
 	}
 }
 
@@ -115,8 +117,11 @@ func (h *SimpleHealthMonitor) shouldNotifyWithDebounce(status string) bool {
 func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 	h.logger.Info("Starting simplified MediaMTX health monitor")
 
+	// Create cancellable context
+	h.ctx, h.cancel = context.WithCancel(ctx)
+
 	h.wg.Add(1)
-	go h.monitorLoop(ctx)
+	go h.monitorLoop(h.ctx) // Pass the cancellable context
 	return nil
 }
 
@@ -124,24 +129,24 @@ func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 	h.logger.Info("Stopping simplified MediaMTX health monitor")
 
-	// Signal stop - use atomic check to prevent double-close
-	select {
-	case h.stopChan <- struct{}{}:
-		// Successfully sent stop signal
-	default:
-		// Channel might be full or already closed, but that's okay
+	// Cancel context first - this interrupts checkHealth immediately!
+	if h.cancel != nil {
+		h.cancel()
 	}
 
-	// Wait for goroutine to finish
-	h.wg.Wait()
+	// Wait with timeout
+	done := make(chan struct{})
+	go func() {
+		h.wg.Wait()
+		close(done)
+	}()
 
-	// Close the channel safely
 	select {
-	case <-h.stopChan:
-		// Channel was still open, close it
-		close(h.stopChan)
-	default:
-		// Channel was already closed, do nothing
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		// Force shutdown after timeout
+		h.logger.Warn("Health monitor shutdown timeout, forcing stop")
 	}
 
 	h.logger.Info("Simplified MediaMTX health monitor stopped")
@@ -162,8 +167,6 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-h.stopChan:
-			return
 		case <-ticker.C:
 			h.checkHealth(ctx)
 		}
@@ -172,13 +175,18 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 
 // checkHealth performs a health check
 func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
-	// Use configured timeout from centralized config
+	// Create timeout context BUT inherit parent cancellation!
 	timeout := h.config.HealthCheckTimeout
-
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	checkCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err := h.client.HealthCheck(ctx)
+	// This will be cancelled immediately when Stop() is called!
+	err := h.client.HealthCheck(checkCtx)
+
+	// Check if cancelled
+	if ctx.Err() != nil {
+		return // Exit immediately on cancellation
+	}
 
 	// Update timestamp atomically
 	atomic.StoreInt64(&h.lastCheckTime, time.Now().UnixNano())

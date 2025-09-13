@@ -1378,3 +1378,146 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	})
 }
+
+// TestGracefulShutdown verifies that all components shut down cleanly within timeout
+func TestGracefulShutdown(t *testing.T) {
+	t.Run("health_monitor_graceful_shutdown", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t)
+		defer helper.Cleanup(t)
+
+		// Create health monitor
+		client := helper.GetClient()
+		config := helper.GetConfig()
+		logger := helper.GetLogger()
+		monitor := NewHealthMonitor(client, config, logger)
+
+		// Start components
+		ctx := context.Background()
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Health monitor start should succeed")
+
+		// Trigger shutdown with timeout
+		shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+
+		// Should complete within timeout
+		err = monitor.Stop(shutdownCtx)
+		require.NoError(t, err, "Health monitor should shut down gracefully")
+
+		t.Logf("✅ Health monitor graceful shutdown test passed")
+	})
+
+	t.Run("path_integration_graceful_shutdown", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t)
+		defer helper.Cleanup(t)
+
+		// Create path integration
+		pathManager := helper.GetPathManager()
+		cameraMonitor := helper.GetCameraMonitor()
+		configManager := helper.GetConfigManager()
+		logger := helper.GetLogger()
+		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configManager, logger)
+
+		// Start components
+		ctx := context.Background()
+		err := pathIntegration.Start(ctx)
+		require.NoError(t, err, "Path integration start should succeed")
+
+		// Trigger shutdown with timeout
+		shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+
+		// Should complete within timeout
+		err = pathIntegration.Stop(shutdownCtx)
+		require.NoError(t, err, "Path integration should shut down gracefully")
+
+		t.Logf("✅ Path integration graceful shutdown test passed")
+	})
+
+	t.Run("controller_graceful_shutdown", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t)
+		defer helper.Cleanup(t)
+
+		// Create controller
+		controller, err := helper.GetController(t)
+		require.NoError(t, err, "Controller creation should succeed")
+
+		// Start components
+		ctx := context.Background()
+		err = controller.Start(ctx)
+		require.NoError(t, err, "Controller start should succeed")
+
+		// Trigger shutdown with timeout
+		shutdownCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+
+		// Should complete within timeout
+		err = controller.Stop(shutdownCtx)
+		require.NoError(t, err, "Controller should shut down gracefully")
+
+		t.Logf("✅ Controller graceful shutdown test passed")
+	})
+
+	t.Run("context_cancellation_propagation", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t)
+		defer helper.Cleanup(t)
+
+		// Create health monitor
+		client := helper.GetClient()
+		config := helper.GetConfig()
+		logger := helper.GetLogger()
+		monitor := NewHealthMonitor(client, config, logger)
+
+		// Start with cancellable context
+		ctx, cancel := context.WithCancel(context.Background())
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Health monitor start should succeed")
+
+		// Cancel the context immediately
+		cancel()
+
+		// Stop should complete quickly since context is already cancelled
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer shutdownCancel()
+
+		start := time.Now()
+		err = monitor.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "Health monitor should shut down quickly after context cancellation")
+		require.Less(t, elapsed, 500*time.Millisecond, "Shutdown should be fast with cancelled context")
+
+		t.Logf("✅ Context cancellation propagation test passed (shutdown took %v)", elapsed)
+	})
+
+	t.Run("timeout_handling", func(t *testing.T) {
+		helper := NewMediaMTXTestHelper(t)
+		defer helper.Cleanup(t)
+
+		// Create health monitor
+		client := helper.GetClient()
+		config := helper.GetConfig()
+		logger := helper.GetLogger()
+		monitor := NewHealthMonitor(client, config, logger)
+
+		// Start components
+		ctx := context.Background()
+		err := monitor.Start(ctx)
+		require.NoError(t, err, "Health monitor start should succeed")
+
+		// Use very short timeout to test timeout handling
+		shutdownCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer cancel()
+
+		// This should timeout but not hang
+		start := time.Now()
+		err = monitor.Stop(shutdownCtx)
+		elapsed := time.Since(start)
+
+		// Should timeout but complete within reasonable time
+		require.Error(t, err, "Should timeout with short timeout")
+		require.Less(t, elapsed, 1*time.Second, "Should not hang indefinitely")
+
+		t.Logf("✅ Timeout handling test passed (shutdown took %v)", elapsed)
+	})
+}

@@ -80,13 +80,25 @@ func (pi *PathIntegration) Start(ctx context.Context) error {
 func (pi *PathIntegration) Stop(ctx context.Context) error {
 	pi.logger.Info("Stopping MediaMTX path integration")
 
-	// Cancel the background goroutine context
+	// Cancel first
 	if pi.cancel != nil {
 		pi.cancel()
 	}
 
-	// Wait for background goroutine to finish
-	pi.wg.Wait()
+	// Wait with timeout
+	done := make(chan struct{})
+	go func() {
+		pi.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-ctx.Done():
+		// Timeout - force cleanup
+		pi.logger.Warn("Path integration shutdown timeout")
+	}
 
 	// Clean up all active paths
 	pi.activePathsMu.Lock()
@@ -247,40 +259,66 @@ func (pi *PathIntegration) monitorCameraChanges(ctx context.Context) {
 
 // handleCameraChanges handles camera status changes
 func (pi *PathIntegration) handleCameraChanges(ctx context.Context) {
-	// Get all cameras
+	// Check context at start
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
 	cameras := pi.cameraMonitor.GetConnectedCameras()
 
-	// Track current cameras
-	currentDevices := make(map[string]bool)
 	for devicePath, camera := range cameras {
-		currentDevices[devicePath] = true
+		// Check context in loop!
+		select {
+		case <-ctx.Done():
+			pi.logger.Info("Camera changes handling cancelled")
+			return
+		default:
+		}
 
-		// Check if camera is connected and has no path via PathManager
 		if camera.Status == "CONNECTED" {
 			_, hasPath := pi.pathManager.GetCameraForDevicePath(devicePath)
-
 			if !hasPath {
-				// Create path for new camera
+				// Use context-aware creation
 				if err := pi.CreatePathForCamera(ctx, devicePath); err != nil {
-					pi.logger.WithError(err).WithField("device", devicePath).Error("Failed to create path for new camera")
+					// Check if error is due to cancellation
+					if ctx.Err() != nil {
+						return
+					}
+					pi.logger.WithError(err).Error("Failed to create path")
 				}
 			}
 		}
 	}
-
-	// Note: Disconnected camera cleanup is now handled by PathManager internally
-	// when it detects stale paths during operations
-	// We no longer need to iterate over cached devices since PathManager
-	// is the single source of truth for device->path mapping
 }
 
 // createPathsForExistingCameras creates paths for cameras that already exist
 func (pi *PathIntegration) createPathsForExistingCameras(ctx context.Context) error {
+	// Check context at start
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	cameras := pi.cameraMonitor.GetConnectedCameras()
 
 	for devicePath, camera := range cameras {
+		// Check context in loop!
+		select {
+		case <-ctx.Done():
+			pi.logger.Info("Creating paths for existing cameras cancelled")
+			return ctx.Err()
+		default:
+		}
+
 		if camera.Status == "CONNECTED" {
 			if err := pi.CreatePathForCamera(ctx, devicePath); err != nil {
+				// Check if error is due to cancellation
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 				pi.logger.WithError(err).WithField("device", devicePath).Error("Failed to create path for existing camera")
 			}
 		}

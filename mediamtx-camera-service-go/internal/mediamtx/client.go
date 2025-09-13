@@ -88,10 +88,28 @@ func (c *client) Delete(ctx context.Context, path string) error {
 
 // HealthCheck performs a health check request
 func (c *client) HealthCheck(ctx context.Context) error {
-	_, err := c.Get(ctx, "/v3/paths/list")
+	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/v3/paths/list", nil)
 	if err != nil {
-		return fmt.Errorf("health check failed: %w", err)
+		return err
 	}
+
+	// Client will cancel request when context is cancelled!
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		// Check if cancelled
+		if ctx.Err() != nil {
+			return ctx.Err() // Return context error
+		}
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check for HTTP errors
+	if resp.StatusCode >= 400 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return NewMediaMTXErrorFromHTTP(resp.StatusCode, bodyBytes)
+	}
+
 	return nil
 }
 
@@ -134,6 +152,10 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	// Execute request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		// Check if cancelled
+		if ctx.Err() != nil {
+			return nil, ctx.Err() // Return context error
+		}
 		return nil, NewMediaMTXErrorWithOp(0, "request failed", err.Error(), "http_do")
 	}
 	defer resp.Body.Close()
@@ -141,6 +163,10 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 	// Read response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		// Check if cancelled
+		if ctx.Err() != nil {
+			return nil, ctx.Err() // Return context error
+		}
 		return nil, NewMediaMTXErrorWithOp(0, "failed to read response", err.Error(), "read_body")
 	}
 
