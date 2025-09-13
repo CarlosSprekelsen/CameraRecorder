@@ -67,7 +67,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 		require.NoError(t, err, "Should start event source successfully")
 
 		// Test stop
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should stop event source successfully")
 	})
 
@@ -368,7 +368,7 @@ func TestUdevDeviceEventSource_StartStop(t *testing.T) {
 		require.NoError(t, err, "Should start udev event source successfully")
 
 		// Test stop
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should stop udev event source successfully")
 	})
 
@@ -515,7 +515,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 		eventsChan := eventSource.Events()
 		require.NotNil(t, eventsChan, "Should implement Events method")
 
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should implement Close method")
 	})
 
@@ -538,7 +538,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 		eventsChan := eventSource.Events()
 		require.NotNil(t, eventsChan, "Should implement Events method")
 
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should implement Close method")
 	})
 }
@@ -565,7 +565,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		// Stop
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should stop successfully")
 	})
 
@@ -589,7 +589,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		// Stop
-		err = eventSource.Close()
+		err := eventSource.Close()
 		require.NoError(t, err, "Should stop successfully")
 	})
 }
@@ -611,7 +611,7 @@ func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 
 			time.Sleep(50 * time.Millisecond)
 
-			err = eventSource.Close()
+			err := eventSource.Close()
 			require.NoError(t, err, "Should stop successfully on iteration %d", i)
 
 			cancel()
@@ -633,7 +633,7 @@ func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 
 			time.Sleep(50 * time.Millisecond)
 
-			err = eventSource.Close()
+			err := eventSource.Close()
 			require.NoError(t, err, "Should stop successfully on iteration %d", i)
 
 			cancel()

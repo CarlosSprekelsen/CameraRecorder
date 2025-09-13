@@ -186,9 +186,10 @@ func NewHybridCameraMonitor(
 		deviceEventSource: deviceEventSource,
 
 		// State
-		knownDevices:     make(map[string]*CameraDevice),
-		capabilityStates: make(map[string]*DeviceCapabilityState),
-		stopChan:         make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
+		knownDevices:       make(map[string]*CameraDevice),
+		capabilityStates:   make(map[string]*DeviceCapabilityState),
+		stopChan:           make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
+		readinessEventChan: make(chan struct{}, 1),  // Initialize readiness event channel
 
 		// Caching
 		capabilityCache: make(map[string]*V4L2Capabilities),
@@ -196,9 +197,6 @@ func NewHybridCameraMonitor(
 		// Event handling
 		eventHandlers:  make([]CameraEventHandler, 0),
 		eventCallbacks: make([]func(CameraEventData), 0),
-
-		// Event-driven readiness system
-		readinessEventChan: make(chan struct{}, 10), // Buffered channel for readiness events
 
 		// Statistics
 		stats: &MonitorStats{
@@ -441,6 +439,9 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 		"mon_start_id": monStartID,
 		"action":       "monitor_ready_true",
 	}).Info("Monitor is now ready")
+
+	// Emit readiness event when monitor becomes ready
+	m.emitReadinessEvent()
 
 	if m.discoveryMode == "event-first" {
 		// Start event-first monitoring
@@ -710,18 +711,8 @@ func (m *HybridCameraMonitor) SubscribeToReadiness() <-chan struct{} {
 	m.readinessMutex.RLock()
 	defer m.readinessMutex.RUnlock()
 
-	// Create a new channel for this subscriber
-	subscriberChan := make(chan struct{}, 1)
-
-	// If already ready, send immediate notification
-	if m.IsReady() {
-		select {
-		case subscriberChan <- struct{}{}:
-		default:
-		}
-	}
-
-	return subscriberChan
+	// Return the ACTUAL readiness channel, not a new one
+	return m.readinessEventChan
 }
 
 // emitReadinessEvent emits a readiness event to all subscribers
@@ -766,7 +757,7 @@ func (m *HybridCameraMonitor) startEventFirstMonitoring(ctx context.Context) {
 	go m.eventLoop(ctx)
 
 	// Start slow reconcile loop for drift correction
-	m.reconcileLoop(ctx)
+	go m.reconcileLoop(ctx)
 }
 
 // startPollOnlyMonitoring starts poll-only monitoring
@@ -778,7 +769,7 @@ func (m *HybridCameraMonitor) startPollOnlyMonitoring(ctx context.Context) {
 	}).Info("Starting poll-only camera monitoring")
 
 	// Use the configured poll interval for poll-only mode
-	m.reconcileLoop(ctx)
+	go m.reconcileLoop(ctx)
 }
 
 // eventLoop processes device events from the event source

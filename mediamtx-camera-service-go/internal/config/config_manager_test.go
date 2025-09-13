@@ -172,7 +172,8 @@ func TestConfigManager_HotReload(t *testing.T) {
 	assert.NotNil(t, cm.GetConfig())
 
 	// Test that Stop works
-	cm.Stop()
+	ctx := context.Background()
+	cm.Stop(ctx)
 }
 
 func TestConfigManager_UpdateCallbacks(t *testing.T) {
@@ -281,7 +282,8 @@ func TestConfigManager_Stop(t *testing.T) {
 	require.NotNil(t, config, "Config should be loaded")
 
 	// Test Stop method
-	cm.Stop()
+	ctx := context.Background()
+	cm.Stop(ctx)
 
 	// Verify Stop completes without hanging
 	// The Stop method should:
