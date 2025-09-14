@@ -1403,9 +1403,24 @@ func TestEventDrivenReadiness(t *testing.T) {
 
 	// Test event-driven readiness waiting
 	t.Run("event_driven_readiness", func(t *testing.T) {
-		// No waiting for readiness - Progressive Readiness Pattern
-		// Just verify controller started successfully
-		assert.True(t, controller.IsReady(), "Controller should be ready")
+		// Start observing readiness events (non-blocking)
+		eventHelper.ObserveReadiness()
+		
+		// Retry checking readiness instead of waiting
+		var isReady bool
+		for i := 0; i < 10; i++ {
+			if controller.IsReady() {
+				isReady = true
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		
+		// Verify controller became ready
+		assert.True(t, isReady, "Controller should become ready within reasonable time")
+		
+		// Verify readiness events were recorded
+		assert.True(t, eventHelper.DidEventOccur("readiness"), "Readiness events should be recorded")
 	})
 
 	// Test multiple non-blocking event observations

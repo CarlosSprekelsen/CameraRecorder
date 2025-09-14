@@ -1149,7 +1149,6 @@ func (edh *EventDrivenTestHelper) GetEventHistory(eventType string) []interface{
 	return []interface{}{}
 }
 
-// WaitForReadiness DELETED - violates Progressive Readiness Pattern
 // ObserveHealthChanges starts non-blocking observation of health events
 func (edh *EventDrivenTestHelper) ObserveHealthChanges() <-chan interface{} {
 	edh.eventMutex.Lock()
@@ -1168,7 +1167,6 @@ func (edh *EventDrivenTestHelper) ObserveHealthChanges() <-chan interface{} {
 	return observationChan
 }
 
-// WaitForHealthChange waits for health status change with timeout
 // ObserveCameraEvents starts non-blocking observation of camera events
 func (edh *EventDrivenTestHelper) ObserveCameraEvents() <-chan interface{} {
 	edh.eventMutex.Lock()
@@ -1187,7 +1185,30 @@ func (edh *EventDrivenTestHelper) ObserveCameraEvents() <-chan interface{} {
 	return observationChan
 }
 
-// WaitForCameraDiscovery waits for camera discovery with timeout
+// CollectEventsForDuration collects events over a specified duration
+func (edh *EventDrivenTestHelper) CollectEventsForDuration(duration time.Duration) map[string][]interface{} {
+	edh.eventMutex.Lock()
+	defer edh.eventMutex.Unlock()
+
+	// Start all observers
+	edh.ObserveReadiness()
+	edh.ObserveHealthChanges()
+	edh.ObserveCameraEvents()
+
+	// Wait for the specified duration
+	time.Sleep(duration)
+
+	// Return a copy of all collected events
+	result := make(map[string][]interface{})
+	for eventType, events := range edh.eventHistory {
+		result[eventType] = make([]interface{}, len(events))
+		copy(result[eventType], events)
+	}
+
+	return result
+}
+
+// Cleanup closes all event channels and cleans up resources
 func (edh *EventDrivenTestHelper) Cleanup() {
 	edh.eventMutex.Lock()
 	defer edh.eventMutex.Unlock()

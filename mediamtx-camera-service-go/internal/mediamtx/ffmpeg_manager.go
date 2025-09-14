@@ -43,9 +43,6 @@ type ffmpegManager struct {
 	performanceMetrics map[string]*PerformanceMetrics
 	metricsMu          sync.RWMutex
 
-	// Retry and timeout management (Python parity)
-	retryAttempts map[string]int
-	retryMu       sync.RWMutex
 
 	// Process cleanup tracking (Python parity)
 	cleanupActions map[int][]string
@@ -93,7 +90,6 @@ func NewFFmpegManager(config *config.MediaMTXConfig, logger *logging.Logger) FFm
 		logger:             logger,
 		processes:          make(map[int]*FFmpegProcess),
 		performanceMetrics: make(map[string]*PerformanceMetrics),
-		retryAttempts:      make(map[string]int),
 		cleanupActions:     make(map[int][]string),
 	}
 }

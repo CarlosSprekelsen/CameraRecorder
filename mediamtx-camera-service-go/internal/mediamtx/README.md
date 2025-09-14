@@ -339,12 +339,23 @@ The `EventDrivenTestHelper` provides testing utilities for event-driven patterns
 eventHelper := helper.CreateEventDrivenTestHelper(t)
 defer eventHelper.Cleanup()
 
-// Wait for readiness using event-driven approach
-err := eventHelper.WaitForReadiness(ctx, 10*time.Second)
-require.NoError(t, err, "Should receive readiness event within timeout")
+// Start observing events (non-blocking)
+eventHelper.ObserveReadiness()
+eventHelper.ObserveHealthChanges()
+eventHelper.ObserveCameraEvents()
 
-// Wait for multiple events simultaneously
-err := eventHelper.WaitForMultipleEvents(ctx, timeout, "readiness", "health", "camera")
+// Try operations immediately with retries instead of waiting
+var session *RecordingSession
+for i := 0; i < 3; i++ {
+    session, err = controller.StartRecording(...)
+    if err == nil {
+        break
+    }
+    time.Sleep(time.Second)
+}
+
+// Verify events occurred after operations complete
+assert.True(t, eventHelper.DidEventOccur("readiness"))
 ```
 
 #### Parallel Test Execution
@@ -391,12 +402,12 @@ func TestWithEvents(t *testing.T) {
 #### 2. Health Events (Planned)
 - **Purpose**: Notify when health status changes
 - **Trigger**: Health status transitions
-- **Usage**: `eventHelper.SubscribeToHealthChanges()`
+- **Usage**: `eventHelper.ObserveHealthChanges()`
 
 #### 3. Camera Events (Planned)
 - **Purpose**: Notify when camera discovery events occur
 - **Trigger**: Camera connected/disconnected
-- **Usage**: `eventHelper.SubscribeToCameraEvents()`
+- **Usage**: `eventHelper.ObserveCameraEvents()`
 
 ### Migration from Polling
 

@@ -370,11 +370,6 @@ type createPathRequest struct {
 	Config map[string]interface{} `json:"config,omitempty"`
 }
 
-// updatePathRequest represents a path update request
-type updatePathRequest struct {
-	Config map[string]interface{} `json:"config"`
-}
-
 // marshalCreateStreamRequest marshals a stream creation request
 func marshalCreateStreamRequest(name, source string) ([]byte, error) {
 	request := createStreamRequest{
@@ -394,10 +389,10 @@ func marshalCreatePathRequest(path *Path) ([]byte, error) {
 	return json.Marshal(request)
 }
 
-// marshalUpdatePathRequest marshals a path update request
-func marshalUpdatePathRequest(config map[string]interface{}) ([]byte, error) {
-	request := updatePathRequest{
-		Config: config,
+// marshalUpdatePathRequest marshals a path update request using proper API type
+func marshalUpdatePathRequest(config *PathConf) ([]byte, error) {
+	request := MediaMTXUpdatePathRequest{
+		Config: *config,
 	}
 	return json.Marshal(request)
 }

@@ -394,20 +394,6 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 	}, nil
 }
 
-// createRecordingPathConfig creates a MediaMTX path configuration for recording
-func (rm *RecordingManager) createRecordingPathConfig(pathName, outputPath string) map[string]interface{} {
-	config := map[string]interface{}{
-		"record":                true,
-		"recordPath":            rm.getRecordingOutputPath(pathName, outputPath),
-		"recordFormat":          rm.getRecordFormat(),
-		"recordPartDuration":    rm.getRecordPartDuration().String(),
-		"recordMaxPartSize":     rm.getRecordMaxPartSize(),
-		"recordSegmentDuration": rm.getRecordSegmentDuration().String(),
-		"recordDeleteAfter":     rm.getRecordDeleteAfter().String(),
-	}
-
-	return config
-}
 
 // convertRecordingToFileMetadata converts MediaMTX recording to our FileMetadata format
 func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRecording) []*FileMetadata {
@@ -520,38 +506,6 @@ func (rm *RecordingManager) getRecordFormat() string {
 	return recordingConfig.Format
 }
 
-func (rm *RecordingManager) getRecordPartDuration() time.Duration {
-	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
-	if err != nil {
-		rm.logger.WithError(err).Warn("Failed to get recording config, using default part duration")
-		return 1 * time.Hour // fallback
-	}
-	return recordingConfig.DefaultMaxDuration
-}
 
-func (rm *RecordingManager) getRecordMaxPartSize() string {
-	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
-	if err != nil {
-		rm.logger.WithError(err).Warn("Failed to get recording config, using default max part size")
-		return "100MB" // fallback
-	}
-	return fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024)
-}
 
-func (rm *RecordingManager) getRecordSegmentDuration() time.Duration {
-	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
-	if err != nil {
-		rm.logger.WithError(err).Warn("Failed to get recording config, using default segment duration")
-		return 10 * time.Second // fallback
-	}
-	return time.Duration(recordingConfig.SegmentDuration) * time.Second
-}
 
-func (rm *RecordingManager) getRecordDeleteAfter() time.Duration {
-	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
-	if err != nil {
-		rm.logger.WithError(err).Warn("Failed to get recording config, using default delete after duration")
-		return 7 * 24 * time.Hour // fallback: 7 days
-	}
-	return time.Duration(recordingConfig.DefaultRetentionDays) * 24 * time.Hour
-}

@@ -131,8 +131,8 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		// This could catch dangerous bugs in path update marshaling
 
 		// Test with valid parameters
-		config := map[string]interface{}{
-			"source": "rtsp://localhost:8554/updated",
+		config := &PathConf{
+			Source: "rtsp://localhost:8554/updated",
 		}
 		data, err := marshalUpdatePathRequest(config)
 		require.NoError(t, err, "marshalUpdatePathRequest should handle valid parameters")
