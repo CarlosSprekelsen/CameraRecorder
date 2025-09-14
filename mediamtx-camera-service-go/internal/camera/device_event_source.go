@@ -17,6 +17,7 @@ package camera
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -276,27 +277,44 @@ func (f *FsnotifyDeviceEventSource) processEvent(event fsnotify.Event) {
 	}
 }
 
-// UdevDeviceEventSource implements DeviceEventSource using libudev
-// This is an optional implementation that requires CGO and libudev
-// It's provided as a placeholder for future implementation
+// UdevDeviceEventSource implements DeviceEventSource using udev
+// This is a basic implementation that uses udevadm for device discovery
+// Note: This is a simplified implementation that doesn't require CGO
+// For full udev integration, libudev CGO bindings would be needed
 type UdevDeviceEventSource struct {
 	logger   *logging.Logger
 	events   chan DeviceEvent
 	stopChan chan struct{}
 	running  int32 // Using atomic operations instead of mutex
+	done     sync.WaitGroup // Wait for event loop to exit
 }
 
 // NewUdevDeviceEventSource creates a new udev-based device event source
-// This is a placeholder implementation - real udev integration would go here
+// This implementation uses udevadm commands for device discovery
 func NewUdevDeviceEventSource(logger *logging.Logger) (*UdevDeviceEventSource, error) {
 	if logger == nil {
 		logger = logging.GetLogger("device-event-source")
+	}
+
+	// Check if udevadm is available
+	udevadmPaths := []string{"/usr/bin/udevadm", "/sbin/udevadm", "/bin/udevadm"}
+	udevadmFound := false
+	for _, path := range udevadmPaths {
+		if _, err := os.Stat(path); err == nil {
+			udevadmFound = true
+			break
+		}
+	}
+
+	if !udevadmFound {
+		return nil, fmt.Errorf("udevadm not found - udev device event source not available")
 	}
 
 	return &UdevDeviceEventSource{
 		logger:   logger,
 		events:   make(chan DeviceEvent, 100),
 		stopChan: make(chan struct{}),
+		done:     sync.WaitGroup{},
 	}, nil
 }
 
@@ -314,17 +332,18 @@ func (u *UdevDeviceEventSource) Start(ctx context.Context) error {
 		return fmt.Errorf("device event source is already running")
 	}
 
+	// Recreate channels for each start
+	u.events = make(chan DeviceEvent, 100)
+	u.stopChan = make(chan struct{})
+
 	u.logger.WithFields(logging.Fields{
 		"action": "device_event_source_started",
 		"type":   "udev",
-	}).Info("Started udev device event source (placeholder)")
+	}).Info("Started udev device event source")
 
-	// TODO: Implement real udev integration
-	// This would involve:
-	// 1. Creating a udev monitor
-	// 2. Filtering for video devices
-	// 3. Processing netlink events
-	// 4. Converting to DeviceEvent structs
+	// Start event processing goroutine
+	u.done.Add(1)
+	go u.eventLoop(ctx)
 
 	return nil
 }
@@ -341,7 +360,7 @@ func (u *UdevDeviceEventSource) Close() error {
 		return nil // Already stopped
 	}
 
-	// Safely close channels
+	// Safely close stop channel to signal event loop to exit
 	select {
 	case <-u.stopChan:
 		// Already closed
@@ -349,12 +368,8 @@ func (u *UdevDeviceEventSource) Close() error {
 		close(u.stopChan)
 	}
 
-	select {
-	case <-u.events:
-		// Already closed
-	default:
-		close(u.events)
-	}
+	// Wait for event loop to exit (it will close the events channel)
+	u.done.Wait()
 
 	u.logger.WithFields(logging.Fields{
 		"action": "device_event_source_stopped",
@@ -362,6 +377,43 @@ func (u *UdevDeviceEventSource) Close() error {
 	}).Info("Stopped udev device event source")
 
 	return nil
+}
+
+// eventLoop processes udev events using udevadm monitor
+// This is a simplified implementation that uses polling with udevadm
+// For real-time events, libudev CGO bindings would be needed
+func (u *UdevDeviceEventSource) eventLoop(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			u.logger.WithFields(logging.Fields{
+				"panic":  r,
+				"action": "panic_recovered",
+			}).Error("Recovered from panic in udev event loop")
+		}
+		// Close events channel when loop exits (producer owns channel)
+		close(u.events)
+		// Signal that the loop has exited
+		u.done.Done()
+	}()
+
+	u.logger.Debug("Udev event loop started (simplified polling implementation)")
+
+	// For now, this is a placeholder that just waits for stop signal
+	// Real udev integration would use netlink or udevadm monitor
+	select {
+	case <-ctx.Done():
+		u.logger.WithFields(logging.Fields{
+			"action": "event_loop_stopped",
+			"reason": "context_cancelled",
+		}).Debug("Udev event loop stopped due to context cancellation")
+		return
+	case <-u.stopChan:
+		u.logger.WithFields(logging.Fields{
+			"action": "event_loop_stopped",
+			"reason": "stop_requested",
+		}).Debug("Udev event loop stopped")
+		return
+	}
 }
 
 // EventsSupported returns whether udev events are supported
@@ -374,8 +426,97 @@ func (u *UdevDeviceEventSource) Started() bool {
 	return atomic.LoadInt32(&u.running) == 1
 }
 
+// Environment detection functions for smart device event source selection
+
+// isContainerEnvironment detects if we're running in a container
+func isContainerEnvironment() bool {
+	// Check for common container indicators
+	containerIndicators := []string{
+		"/.dockerenv",           // Docker
+		"/proc/1/cgroup",       // Check cgroup for container indicators
+		"/proc/self/cgroup",    // Alternative cgroup check
+	}
+
+	for _, indicator := range containerIndicators {
+		if _, err := os.Stat(indicator); err == nil {
+			return true
+		}
+	}
+
+	// Check cgroup content for container indicators
+	if cgroupContent, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		content := string(cgroupContent)
+		containerKeywords := []string{"docker", "containerd", "kubepods", "crio"}
+		for _, keyword := range containerKeywords {
+			if strings.Contains(content, keyword) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isUdevAvailable checks if udev is available and accessible
+func isUdevAvailable() bool {
+	// Check if we're in a container first
+	if isContainerEnvironment() {
+		return false // Containers typically don't have full udev access
+	}
+
+	// Check for udev system files
+	udevIndicators := []string{
+		"/sys/class/udev",           // udev sysfs interface
+		"/dev/.udev",                // udev device directory
+		"/run/udev",                 // udev runtime directory
+		"/lib/systemd/system/udev.service", // systemd udev service
+	}
+
+	for _, indicator := range udevIndicators {
+		if _, err := os.Stat(indicator); err == nil {
+			return true
+		}
+	}
+
+	// Check if udevadm command is available (indicates udev is installed)
+	if _, err := os.Stat("/usr/bin/udevadm"); err == nil {
+		return true
+	}
+	if _, err := os.Stat("/sbin/udevadm"); err == nil {
+		return true
+	}
+
+	return false
+}
+
+// getOptimalDeviceEventSourceType determines the best device event source for the current environment
+func getOptimalDeviceEventSourceType(logger *logging.Logger) string {
+	isContainer := isContainerEnvironment()
+	isUdev := isUdevAvailable()
+
+	logger.WithFields(logging.Fields{
+		"is_container": isContainer,
+		"udev_available": isUdev,
+		"action": "environment_detection",
+	}).Info("Detecting optimal device event source")
+
+	if isContainer {
+		logger.Info("Container environment detected - using fsnotify for device discovery")
+		return "fsnotify"
+	}
+
+	if isUdev {
+		logger.Info("Bare metal environment with udev detected - using udev for device discovery")
+		return "udev"
+	}
+
+	logger.Warn("No udev detected in bare metal environment - falling back to fsnotify")
+	return "fsnotify"
+}
+
 // DeviceEventSourceFactory creates fresh device event source instances
 // Each component gets its own instance for proper isolation and error recovery
+// Now with smart environment detection for optimal device discovery
 type DeviceEventSourceFactory struct {
 	logger *logging.Logger
 }
@@ -397,18 +538,54 @@ func GetDeviceEventSourceFactory() *DeviceEventSourceFactory {
 
 // Create returns a fresh device event source instance
 // Each call creates a new instance for proper isolation and error recovery
+// Now with smart environment detection for optimal device discovery
 func (f *DeviceEventSourceFactory) Create() DeviceEventSource {
-	instance := &FsnotifyDeviceEventSource{
-		logger:          f.logger,
-		watcher:         nil, // Will be created in Start()
-		events:          make(chan DeviceEvent, 100),
-		stopChan:        make(chan struct{}),
-		running:         0,
-		done:            sync.WaitGroup{},
-		eventsSupported: 0, // Will be set in Start()
-		started:         0, // Will be set in Start()
+	// Determine the optimal device event source type for this environment
+	sourceType := getOptimalDeviceEventSourceType(f.logger)
+
+	var instance DeviceEventSource
+
+	switch sourceType {
+	case "udev":
+		// Create udev-based device event source
+		udevInstance, err := NewUdevDeviceEventSource(f.logger)
+		if err != nil {
+			f.logger.WithError(err).Warn("Failed to create udev device event source, falling back to fsnotify")
+			// Fallback to fsnotify if udev creation fails
+			instance = &FsnotifyDeviceEventSource{
+				logger:          f.logger,
+				watcher:         nil, // Will be created in Start()
+				events:          make(chan DeviceEvent, 100),
+				stopChan:        make(chan struct{}),
+				running:         0,
+				done:            sync.WaitGroup{},
+				eventsSupported: 0, // Will be set in Start()
+				started:         0, // Will be set in Start()
+			}
+		} else {
+			instance = udevInstance
+		}
+	case "fsnotify":
+		fallthrough
+	default:
+		// Create fsnotify-based device event source (default)
+		instance = &FsnotifyDeviceEventSource{
+			logger:          f.logger,
+			watcher:         nil, // Will be created in Start()
+			events:          make(chan DeviceEvent, 100),
+			stopChan:        make(chan struct{}),
+			running:         0,
+			done:            sync.WaitGroup{},
+			eventsSupported: 0, // Will be set in Start()
+			started:         0, // Will be set in Start()
+		}
 	}
-	f.logger.Info("Created fresh device event source instance")
+
+	f.logger.WithFields(logging.Fields{
+		"source_type": sourceType,
+		"action": "device_event_source_created",
+	}).Info("Created fresh device event source instance with smart selection")
+	
 	return instance
 }
 

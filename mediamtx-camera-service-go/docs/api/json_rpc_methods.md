@@ -356,7 +356,7 @@ Get status for a specific camera device.
 
 **Go Client Example:**
 ```go
-type CameraMetrics struct {
+type CameraPerformanceMetrics struct {
     BytesSent int64 `json:"bytes_sent"`
     Readers   int   `json:"readers"`
     Uptime    int64 `json:"uptime"`
@@ -374,7 +374,7 @@ type CameraStatus struct {
     Resolution   string             `json:"resolution"`
     FPS          int                `json:"fps"`
     Streams      map[string]string  `json:"streams"`
-    Metrics      *CameraMetrics     `json:"metrics,omitempty"`
+    Metrics      *CameraPerformanceMetrics     `json:"metrics,omitempty"`
     Capabilities *CameraCapabilities `json:"capabilities,omitempty"`
 }
 

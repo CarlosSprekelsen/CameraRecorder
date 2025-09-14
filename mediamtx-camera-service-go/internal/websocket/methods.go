@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -495,16 +494,10 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 			errorRate = float64(baseMetrics.ErrorCount) / float64(baseMetrics.RequestCount) * 100.0
 		}
 
-		// Get system resource usage
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
-
-		// Get goroutines count
-		goroutines := runtime.NumGoroutine()
-
-		// Get heap allocation in bytes
-		heapAlloc := m.HeapAlloc
+		// Initialize default values (will be overridden by controller metrics if available)
+		memoryUsage := 0.0
+		goroutines := 0
+		heapAlloc := int64(0)
 
 		// Build metrics result with health monitoring data
 		result := map[string]interface{}{
@@ -520,13 +513,18 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 		// Check performance thresholds and send notifications
 		// Performance threshold checking moved to controller layer
 
-		// Use system metrics from controller if available
+		// Use system metrics from controller if available (single source of truth)
 		if systemMetrics != nil {
 			// Use system metrics for response time and error rate, but keep WebSocket connection count
 			averageResponseTime = systemMetrics.ResponseTime
 			if systemMetrics.RequestCount > 0 {
 				errorRate = float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0
 			}
+
+			// Use system resource usage from controller (moved from WebSocket layer)
+			memoryUsage = systemMetrics.MemoryUsage
+			goroutines = systemMetrics.Goroutines
+			heapAlloc = systemMetrics.HeapAlloc
 
 			// Add enhanced health monitoring metrics (Phase 1 enhancement)
 			result["circuit_breaker_state"] = systemMetrics.CircuitBreakerState
@@ -537,12 +535,9 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 			// Update metrics with enhanced values (but preserve WebSocket connection count)
 			result["average_response_time"] = averageResponseTime
 			result["error_rate"] = errorRate
-
-			// Get system resource usage from controller metrics
-			memoryUsage = 0.0
-			if v, ok := systemMetrics.ComponentStatus["health_monitor"]; ok {
-				_ = v
-			}
+			result["memory_usage"] = memoryUsage
+			result["goroutines"] = goroutines
+			result["heap_alloc"] = heapAlloc
 		}
 
 		// Return enhanced metrics
@@ -671,16 +666,22 @@ func (s *WebSocketServer) MethodGetSystemStatus(params map[string]interface{}, c
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_server_info", func() (interface{}, error) {
-		// Return server info
+		// Delegate to Controller for server info (single source of truth)
+		serverInfo, err := s.mediaMTXController.GetServerInfo(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get server info: %v", err)
+		}
+
+		// Convert to map for JSON response
 		return map[string]interface{}{
-			"name":              "MediaMTX Camera Service",
-			"version":           "1.0.0",
-			"build_date":        time.Now().Format("2006-01-02"),
-			"go_version":        runtime.Version(),
-			"architecture":      runtime.GOARCH,
-			"capabilities":      []string{"snapshots", "recordings", "streaming"},
-			"supported_formats": []string{"mp4", "mkv", "jpg"},
-			"max_cameras":       10,
+			"name":              serverInfo.Name,
+			"version":           serverInfo.Version,
+			"build_date":        serverInfo.BuildDate,
+			"go_version":        serverInfo.GoVersion,
+			"architecture":      serverInfo.Architecture,
+			"capabilities":      serverInfo.Capabilities,
+			"supported_formats": serverInfo.SupportedFormats,
+			"max_cameras":       serverInfo.MaxCameras,
 		}, nil
 	})(params, client)
 }
@@ -836,75 +837,12 @@ func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, cl
 func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REFACTORED: 141 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("cleanup_old_files", func() (interface{}, error) {
-
-		// Get current configuration
-		cfg := s.configManager.GetConfig()
-		if cfg == nil {
-			return nil, fmt.Errorf("configuration not available")
+		// Delegate to Controller for cleanup logic (single source of truth)
+		result, err := s.mediaMTXController.CleanupOldFiles(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("failed to cleanup old files: %v", err)
 		}
-
-		// Check if retention policy is enabled
-		if !cfg.RetentionPolicy.Enabled {
-			return nil, fmt.Errorf("retention policy is not enabled")
-		}
-
-		// Perform cleanup based on retention policy - thin delegation
-		var deletedCount int
-		var totalSize int64
-		ctx := context.Background()
-
-		if cfg.RetentionPolicy.Type == "age" {
-			// Age-based cleanup using MediaMTX managers
-			maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
-			maxCount := 100 // Default max count
-
-			// Clean up old recordings
-			if err := s.mediaMTXController.GetRecordingManager().CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
-				return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
-			} else {
-				deletedCount += 1
-			}
-
-			// Clean up old snapshots
-			if err := s.mediaMTXController.GetSnapshotManager().CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
-				return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
-			} else {
-				deletedCount += 1
-			}
-
-			// For now, use placeholder values - in real implementation, we'd track actual deleted files
-			totalSize = 0 // Would calculate actual freed space
-		} else if cfg.RetentionPolicy.Type == "size" {
-			// Size-based cleanup - convert GB to bytes and use age-based as fallback
-			maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
-			maxCount := 100 // Default max count
-
-			// Clean up old recordings
-			if err := s.mediaMTXController.GetRecordingManager().CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
-				return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
-			} else {
-				deletedCount += 1
-			}
-
-			// Clean up old snapshots
-			if err := s.mediaMTXController.GetSnapshotManager().CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
-				return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
-			} else {
-				deletedCount += 1
-			}
-
-			totalSize = 0 // Would calculate actual freed space
-		} else {
-			return nil, fmt.Errorf("unsupported retention policy type for cleanup")
-		}
-
-		// Return cleanup results
-		return map[string]interface{}{
-			"cleanup_executed": true,
-			"files_deleted":    deletedCount,
-			"space_freed":      totalSize,
-			"message":          "File cleanup completed successfully",
-		}, nil
+		return result, nil
 	})(params, client)
 }
 
@@ -913,7 +851,6 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REFACTORED: 191 lines → 30 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("set_retention_policy", func() (interface{}, error) {
-
 		// Validate retention policy parameters
 		validationResult := s.validationHelper.ValidateRetentionPolicyParameters(params)
 		if !validationResult.Valid {
@@ -925,100 +862,11 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 		policyType := validationResult.Data["policy_type"].(string)
 		enabled := validationResult.Data["enabled"].(bool)
 
-		// Validate age-based policy parameters
-		if policyType == "age" {
-			maxAgeDays, exists := params["max_age_days"]
-			if !exists {
-				return nil, fmt.Errorf("max_age_days is required for age-based policy")
-			}
-
-			// Convert to float64 for validation (handles both int and float)
-			var maxAgeFloat float64
-			switch v := maxAgeDays.(type) {
-			case int:
-				maxAgeFloat = float64(v)
-			case float64:
-				maxAgeFloat = v
-			default:
-				return nil, fmt.Errorf("max_age_days must be a positive number for age-based policy")
-			}
-
-			if maxAgeFloat <= 0 {
-				return nil, fmt.Errorf("max_age_days must be a positive number for age-based policy")
-			}
+		// Delegate to Controller for retention policy logic (single source of truth)
+		result, err := s.mediaMTXController.SetRetentionPolicy(context.Background(), enabled, policyType, params)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set retention policy: %v", err)
 		}
-
-		// Validate size-based policy parameters
-		if policyType == "size" {
-			maxSizeGB, exists := params["max_size_gb"]
-			if !exists {
-				return nil, fmt.Errorf("max_size_gb is required for size-based policy")
-			}
-
-			// Convert to float64 for validation (handles both int and float)
-			var maxSizeFloat float64
-			switch v := maxSizeGB.(type) {
-			case int:
-				maxSizeFloat = float64(v)
-			case float64:
-				maxSizeFloat = v
-			default:
-				return nil, fmt.Errorf("max_size_gb must be a positive number for size-based policy")
-			}
-
-			if maxSizeFloat <= 0 {
-				return nil, fmt.Errorf("max_size_gb must be a positive number for size-based policy")
-			}
-		}
-
-		// Get current configuration
-		cfg := s.configManager.GetConfig()
-		if cfg == nil {
-			return nil, fmt.Errorf("configuration not available")
-		}
-
-		// Update retention policy configuration
-		cfg.RetentionPolicy.Enabled = enabled
-		cfg.RetentionPolicy.Type = policyType
-
-		// Update policy-specific parameters
-		if policyType == "age" {
-			if maxAgeDays, ok := params["max_age_days"].(float64); ok {
-				cfg.RetentionPolicy.MaxAgeDays = int(maxAgeDays)
-			} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
-				cfg.RetentionPolicy.MaxAgeDays = maxAgeDays
-			}
-		} else if policyType == "size" {
-			if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
-				cfg.RetentionPolicy.MaxSizeGB = int(maxSizeGB)
-			} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
-				cfg.RetentionPolicy.MaxSizeGB = maxSizeGB
-			}
-		}
-
-		// Build response result based on policy type
-		result := map[string]interface{}{
-			"policy_type": policyType,
-			"enabled":     enabled,
-			"message":     "Retention policy configuration updated successfully",
-		}
-
-		// Include policy-specific parameters in response
-		if policyType == "age" {
-			if maxAgeDays, ok := params["max_age_days"].(float64); ok {
-				result["max_age_days"] = int(maxAgeDays)
-			} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
-				result["max_age_days"] = maxAgeDays
-			}
-		} else if policyType == "size" {
-			if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
-				result["max_size_gb"] = int(maxSizeGB)
-			} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
-				result["max_size_gb"] = maxSizeGB
-			}
-		}
-
-		// Return policy configuration
 		return result, nil
 	})(params, client)
 }

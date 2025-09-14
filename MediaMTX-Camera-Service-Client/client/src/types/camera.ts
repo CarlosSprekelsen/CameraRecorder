@@ -15,7 +15,7 @@ export interface CameraDevice {
   resolution: string;
   fps: number;
   streams: CameraStreams;
-  metrics?: CameraMetrics;
+  metrics?: CameraPerformanceMetrics;
   capabilities?: CameraCapabilities;
   // Enhanced recording status (NEW)
   recording?: boolean;
@@ -44,7 +44,7 @@ export interface CameraStreams {
  * Camera metrics information
  * Aligned with server API metrics object
  */
-export interface CameraMetrics {
+export interface CameraPerformanceMetrics {
   bytes_sent: number;
   readers: number;
   uptime: number;

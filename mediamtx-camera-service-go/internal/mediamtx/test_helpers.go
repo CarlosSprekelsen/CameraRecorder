@@ -34,6 +34,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // Global mutex to prevent parallel test execution
@@ -64,6 +65,7 @@ type MediaMTXTestHelper struct {
 	configManager         *configpkg.ConfigManager
 	logger                *logging.Logger
 	client                MediaMTXClient
+	mediaMTXConfig        *configpkg.MediaMTXConfig // Centralized config for all managers
 	pathManager           PathManager
 	streamManager         StreamManager
 	recordingManager      *RecordingManager
@@ -118,11 +120,18 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	// Create config manager for centralized configuration
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
+	// Create centralized MediaMTX config for all managers
+	mediaMTXConfig := &configpkg.MediaMTXConfig{
+		BaseURL: testConfig.BaseURL,
+		Timeout: 10 * time.Second,
+	}
+
 	helper := &MediaMTXTestHelper{
-		config:        testConfig,
-		configManager: configManager,
-		logger:        logger,
-		client:        client,
+		config:         testConfig,
+		configManager:  configManager,
+		logger:         logger,
+		client:         client,
+		mediaMTXConfig: mediaMTXConfig,
 	}
 
 	// Ensure test data directory exists
@@ -182,44 +191,18 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 // WaitForServerReady waits for the MediaMTX server to be ready using health check
 func (h *MediaMTXTestHelper) WaitForServerReady(t *testing.T, timeout time.Duration) error {
 	// Performance optimization: Since MediaMTX is already running (systemd service),
-	// we can skip the polling and just do a quick health check
+	// we can do a quick health check. Event-driven readiness is handled by EventDrivenTestHelper
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	// Single health check instead of polling
+	// Single health check - polling removed in favor of event-driven approach
 	err := h.client.HealthCheck(ctx)
 	if err != nil {
-		// If health check fails, fall back to original polling behavior
-		t.Logf("Quick health check failed, falling back to polling: %v", err)
-		return h.waitForServerReadyWithPolling(t, timeout)
+		return fmt.Errorf("MediaMTX server not ready: %w", err)
 	}
 
 	t.Log("MediaMTX server is ready")
 	return nil
-}
-
-// waitForServerReadyWithPolling implements the original polling behavior
-func (h *MediaMTXTestHelper) waitForServerReadyWithPolling(t *testing.T, timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for MediaMTX server to be ready")
-		case <-ticker.C:
-			// Use MediaMTX health check via /v3/paths/list endpoint
-			err := h.client.HealthCheck(ctx)
-			if err != nil {
-				continue
-			}
-			t.Log("MediaMTX server is ready")
-			return nil
-		}
-	}
 }
 
 // TestMediaMTXHealth tests the MediaMTX health check
@@ -329,12 +312,8 @@ func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 // GetPathManager returns a shared path manager instance
 func (h *MediaMTXTestHelper) GetPathManager() PathManager {
 	h.pathManagerOnce.Do(func() {
-		// Convert test config to MediaMTX config
-		mediaMTXConfig := &configpkg.MediaMTXConfig{
-			BaseURL: h.config.BaseURL,
-			Timeout: 10 * time.Second,
-		}
-		h.pathManager = NewPathManager(h.client, mediaMTXConfig, h.logger)
+		// Use centralized MediaMTX config
+		h.pathManager = NewPathManager(h.client, h.mediaMTXConfig, h.logger)
 	})
 	return h.pathManager
 }
@@ -345,13 +324,9 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 		// Ensure PathManager is initialized first to prevent nil pointer dereference
 		pathManager := h.GetPathManager() // This will initialize h.pathManager if nil
 
-		// Convert test config to MediaMTX config
-		mediaMTXConfig := &configpkg.MediaMTXConfig{
-			BaseURL: h.config.BaseURL,
-			Timeout: 10 * time.Second,
-		}
+		// Use centralized MediaMTX config
 		configIntegration := NewConfigIntegration(h.configManager, h.logger)
-		h.streamManager = NewStreamManager(h.client, pathManager, mediaMTXConfig, configIntegration, h.logger)
+		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, configIntegration, h.logger)
 	})
 	return h.streamManager
 }
@@ -359,15 +334,11 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 // GetRecordingManager returns a shared recording manager instance
 func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	h.recordingManagerOnce.Do(func() {
-		// Convert test config to MediaMTX config
-		mediaMTXConfig := &configpkg.MediaMTXConfig{
-			BaseURL: h.config.BaseURL,
-			Timeout: 10 * time.Second,
-		}
+		// Use centralized MediaMTX config
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
 		configIntegration := NewConfigIntegration(h.configManager, h.logger)
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, mediaMTXConfig, configIntegration, h.logger)
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, configIntegration, h.logger)
 	})
 	return h.recordingManager
 }
@@ -494,10 +465,48 @@ func (h *MediaMTXTestHelper) GetAvailableCameraDevice(ctx context.Context) (stri
 
 // GetTestCameraDevice returns a test camera device from fixtures
 func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
-	// TODO: Load test camera devices from fixture file
-	// fixturePath := filepath.Join("tests", "fixtures", "test_camera_devices.yaml")
+	// Load test camera devices from fixture file
+	fixturePath := filepath.Join("tests", "fixtures", "test_camera_devices.yaml")
 
-	// For now, return appropriate test devices based on scenario
+	// Read fixture file
+	data, err := os.ReadFile(fixturePath)
+	if err != nil {
+		h.logger.WithError(err).Warn("Failed to read test camera devices fixture, using fallback")
+		return h.getFallbackDevice(scenario)
+	}
+
+	// Parse YAML
+	var fixtures struct {
+		TestScenarios map[string][]string `yaml:"test_scenarios"`
+	}
+
+	if err := yaml.Unmarshal(data, &fixtures); err != nil {
+		h.logger.WithError(err).Warn("Failed to parse test camera devices fixture, using fallback")
+		return h.getFallbackDevice(scenario)
+	}
+
+	// Get devices for scenario
+	devices, exists := fixtures.TestScenarios[scenario]
+	if !exists || len(devices) == 0 {
+		h.logger.WithField("scenario", scenario).Warn("Scenario not found in fixtures, using fallback")
+		return h.getFallbackDevice(scenario)
+	}
+
+	// Return first device for scenario
+	device := devices[0]
+
+	// For hardware_available scenario, try to use real device detection
+	if scenario == "hardware_available" {
+		if realDevice, err := h.GetAvailableCameraDevice(context.Background()); err == nil {
+			return realDevice
+		}
+	}
+
+	return device
+}
+
+// getFallbackDevice provides fallback devices when fixture loading fails
+func (h *MediaMTXTestHelper) getFallbackDevice(scenario string) string {
 	switch scenario {
 	case "hardware_available":
 		// Use real device detection instead of hardcoded /dev/video0
@@ -575,12 +584,8 @@ func (h *MediaMTXTestHelper) GetConfigManager() *configpkg.ConfigManager {
 // GetRTSPConnectionManager returns a shared RTSP connection manager instance
 func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 	if h.rtspConnectionManager == nil {
-		// Convert test config to MediaMTX config
-		mediaMTXConfig := &configpkg.MediaMTXConfig{
-			BaseURL: h.config.BaseURL,
-			Timeout: 10 * time.Second,
-		}
-		h.rtspConnectionManager = NewRTSPConnectionManager(h.client, mediaMTXConfig, h.logger)
+		// Use centralized MediaMTX config
+		h.rtspConnectionManager = NewRTSPConnectionManager(h.client, h.mediaMTXConfig, h.logger)
 	}
 	return h.rtspConnectionManager
 }
@@ -1126,9 +1131,12 @@ func (edh *EventDrivenTestHelper) ObserveHealthChanges() <-chan interface{} {
 
 	// Start background observer
 	go func() {
-		// TODO: Implement health event subscription when health monitor supports it
-		// For now, just record a placeholder event
-		edh.recordEvent("health", "health_monitor_not_implemented")
+		// Use controller's readiness subscription (includes health monitoring)
+		readinessChan := edh.controller.SubscribeToReadiness()
+		// Listen for readiness events and record them as health events
+		for range readinessChan {
+			edh.recordEvent("health", "controller_readiness_changed")
+		}
 	}()
 
 	return observationChan
@@ -1144,9 +1152,12 @@ func (edh *EventDrivenTestHelper) ObserveCameraEvents() <-chan interface{} {
 
 	// Start background observer
 	go func() {
-		// TODO: Implement camera event subscription when camera monitor supports it
-		// For now, just record a placeholder event
-		edh.recordEvent("camera", "camera_monitor_not_implemented")
+		// Use controller's readiness subscription (includes camera monitoring)
+		readinessChan := edh.controller.SubscribeToReadiness()
+		// Listen for readiness events and record them as camera events
+		for range readinessChan {
+			edh.recordEvent("camera", "controller_readiness_changed")
+		}
 	}()
 
 	return observationChan

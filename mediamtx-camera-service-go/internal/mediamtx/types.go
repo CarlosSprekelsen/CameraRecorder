@@ -136,10 +136,47 @@ type SystemMetrics struct {
 	ResponseTime        float64           `json:"response_time"`
 	ErrorCount          int64             `json:"error_count"`
 	ActiveConnections   int64             `json:"active_connections"`
+	MemoryUsage         float64           `json:"memory_usage"` // Memory usage in MB
+	Goroutines          int               `json:"goroutines"`   // Number of goroutines
+	HeapAlloc           int64             `json:"heap_alloc"`   // Heap allocation in bytes
 	ComponentStatus     map[string]string `json:"component_status,omitempty"`
 	ErrorCounts         map[string]int64  `json:"error_counts,omitempty"`
 	LastCheck           time.Time         `json:"last_check"`
 	CircuitBreakerState string            `json:"circuit_breaker_state"`
+	// Camera metrics from camera monitor
+	CameraPerformanceMetrics *CameraMonitorMetrics `json:"camera_metrics,omitempty"`
+}
+
+// CameraMonitorMetrics represents camera monitor statistics
+type CameraMonitorMetrics struct {
+	DevicesConnected           int64   `json:"devices_connected"`
+	DeviceEventsProcessed      int64   `json:"device_events_processed"`
+	DeviceEventsDropped        int64   `json:"device_events_dropped"`
+	UdevEventsProcessed        int64   `json:"udev_events_processed"`
+	UdevEventsFiltered         int64   `json:"udev_events_filtered"`
+	UdevEventsSkipped          int64   `json:"udev_events_skipped"`
+	PollingCycles              int64   `json:"polling_cycles"`
+	CapabilityProbesAttempted  int64   `json:"capability_probes_attempted"`
+	CapabilityProbesSuccessful int64   `json:"capability_probes_successful"`
+	CapabilityTimeouts         int64   `json:"capability_timeouts"`
+	CapabilityParseErrors      int64   `json:"capability_parse_errors"`
+	PollingFailureCount        int64   `json:"polling_failure_count"`
+	CurrentPollInterval        float64 `json:"current_poll_interval"`
+	KnownDevicesCount          int64   `json:"known_devices_count"`
+	ActiveTasks                int64   `json:"active_tasks"`
+	Running                    bool    `json:"running"`
+}
+
+// ServerInfo represents server information and capabilities
+type ServerInfo struct {
+	Name             string   `json:"name"`
+	Version          string   `json:"version"`
+	BuildDate        string   `json:"build_date"`
+	GoVersion        string   `json:"go_version"`
+	Architecture     string   `json:"architecture"`
+	Capabilities     []string `json:"capabilities"`
+	SupportedFormats []string `json:"supported_formats"`
+	MaxCameras       int      `json:"max_cameras"`
 }
 
 // Metrics represents MediaMTX service metrics
@@ -254,18 +291,18 @@ type CameraListResponse struct {
 
 // CameraStatusResponse represents the response for camera status operations
 type CameraStatusResponse struct {
-	Device       string                   `json:"device"`
-	Status       string                   `json:"status"`
-	Name         string                   `json:"name"`
-	Resolution   string                   `json:"resolution"`
-	FPS          int                      `json:"fps"`
-	Streams      map[string]string        `json:"streams"`
-	Metrics      *CameraMetrics           `json:"metrics,omitempty"`
-	Capabilities *camera.V4L2Capabilities `json:"capabilities,omitempty"`
+	Device       string                    `json:"device"`
+	Status       string                    `json:"status"`
+	Name         string                    `json:"name"`
+	Resolution   string                    `json:"resolution"`
+	FPS          int                       `json:"fps"`
+	Streams      map[string]string         `json:"streams"`
+	Metrics      *CameraPerformanceMetrics `json:"metrics,omitempty"`
+	Capabilities *camera.V4L2Capabilities  `json:"capabilities,omitempty"`
 }
 
-// CameraMetrics represents camera performance metrics
-type CameraMetrics struct {
+// CameraPerformanceMetrics represents camera performance metrics
+type CameraPerformanceMetrics struct {
 	BytesSent int64 `json:"bytes_sent"`
 	Readers   int   `json:"readers"`
 	Uptime    int64 `json:"uptime"`
@@ -318,12 +355,17 @@ type MediaMTXController interface {
 	GetMetrics(ctx context.Context) (*Metrics, error)
 	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
+	GetServerInfo(ctx context.Context) (*ServerInfo, error)
 	GetHealthMonitor() HealthMonitor
 
 	// System readiness
 	IsReady() bool
 	GetReadinessState() map[string]interface{}
 	SubscribeToReadiness() <-chan struct{}
+
+	// Configuration management
+	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)
+	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error)
 
 	// Stream management (uses Path from api_types.go)
 	GetStreams(ctx context.Context) ([]*Path, error)
@@ -420,6 +462,7 @@ type MediaMTXControllerAPI interface {
 	GetMetrics(ctx context.Context) (*Metrics, error)
 	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
 	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
+	GetServerInfo(ctx context.Context) (*ServerInfo, error)
 	GetHealthMonitor() HealthMonitor
 
 	// Streaming (uses Path from api_types.go)

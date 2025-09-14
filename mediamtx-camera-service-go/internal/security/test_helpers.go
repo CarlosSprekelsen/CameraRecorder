@@ -13,13 +13,16 @@ package security
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	configpkg "github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,12 +32,44 @@ import (
 
 // TestJWTHandler creates a JWT handler for testing with test secret
 func TestJWTHandler(t *testing.T) *JWTHandler {
-	// Use minimal logger to reduce test noise and improve performance
-	logger := logging.GetLogger("test-jwt-handler")
-	// TODO: Configure logger to ERROR level only for tests
+	// Use centralized configuration for test logging - ERROR level only
+	logger := getTestLogger(t)
 	handler, err := NewJWTHandler("test_secret_key_for_unit_testing_only", logger)
 	require.NoError(t, err, "Failed to create test JWT handler")
 	return handler
+}
+
+// getTestLogger creates a logger configured for testing using centralized configuration
+func getTestLogger(t *testing.T) *logging.Logger {
+	// Load test configuration with ERROR level logging
+	configPath := "tests/fixtures/config_test_logging_error.yaml"
+
+	// Check if test config exists, fallback to minimal config
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Fallback to minimal config if test-specific config doesn't exist
+		configPath = "tests/fixtures/config_test_minimal.yaml"
+	}
+
+	// Load configuration using centralized config manager
+	configManager := configpkg.CreateConfigManager()
+	err := configManager.LoadConfig(configPath)
+	if err != nil {
+		// If config loading fails, create a minimal logger with ERROR level
+		t.Logf("Failed to load test config from %s, using fallback logger: %v", configPath, err)
+		return logging.GetLogger("test-jwt-handler")
+	}
+
+	// Get logging configuration from centralized config
+	config := configManager.GetConfig()
+	logger := logging.GetLogger("test-jwt-handler")
+
+	// Apply logging level from configuration
+	if config.Logging.Level == "error" {
+		// Configure logger to ERROR level only for test performance
+		logger.SetLevel(logrus.ErrorLevel)
+	}
+
+	return logger
 }
 
 // GenerateTestToken creates a test JWT token for authentication testing

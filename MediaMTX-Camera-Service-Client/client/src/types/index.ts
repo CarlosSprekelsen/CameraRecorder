@@ -8,7 +8,7 @@ export type {
   CameraDevice,
   CameraStatus,
   CameraStreams,
-  CameraMetrics,
+  CameraPerformanceMetrics,
   CameraCapabilities,
   StreamInfo,
   StreamListResponse,

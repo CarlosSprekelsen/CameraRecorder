@@ -44,6 +44,7 @@ type controller struct {
 	rtspManager      RTSPConnectionManager
 	cameraMonitor    camera.CameraMonitor
 	config           *config.MediaMTXConfig
+	configManager    *config.ConfigManager
 	logger           *logging.Logger
 
 	// Health notification management
@@ -114,18 +115,9 @@ func (c *controller) SubscribeToReadiness() <-chan struct{} {
 	c.readinessMutex.RLock()
 	defer c.readinessMutex.RUnlock()
 
-	// Create a new channel for this subscriber
-	subscriberChan := make(chan struct{}, 1)
-
-	// If already ready, send immediate notification
-	if c.IsReady() {
-		select {
-		case subscriberChan <- struct{}{}:
-		default:
-		}
-	}
-
-	return subscriberChan
+	// Return the main readiness channel that all subscribers share
+	// This ensures all subscribers receive the same events
+	return c.readinessEventChan
 }
 
 // emitReadinessEvent emits a readiness event to all subscribers
@@ -518,6 +510,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		rtspManager:               rtspManager,
 		cameraMonitor:             cameraMonitor,
 		config:                    mediaMTXConfig,
+		configManager:             configManager,
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
@@ -741,15 +734,7 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 		metrics.Uptime = healthStatus.Metrics.Uptime
 	}
 
-	// Add camera monitor metrics
-	if c.cameraMonitor != nil {
-		stats := c.cameraMonitor.GetMonitorStats()
-		if stats != nil {
-			// Camera metrics are available in camera monitor stats but not currently exposed in Metrics struct
-			// TODO: Consider adding camera metrics to the main Metrics struct if needed
-		}
-	}
-
+	// Camera metrics are now included in GetSystemMetrics() method
 	return metrics, nil
 }
 
@@ -816,31 +801,201 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		errorCounts["rtsp_connection_limit"] = int64(rtspConnections - c.config.RTSPMonitoring.MaxConnections)
 	}
 
+	// Calculate system resource usage (moved from WebSocket layer)
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
+	goroutines := runtime.NumGoroutine()
+	heapAlloc := int64(m.HeapAlloc) // Convert uint64 to int64
+
 	systemMetrics := &SystemMetrics{
 		RequestCount:        0, // Will be populated by WebSocket server
 		ResponseTime:        responseTime,
 		ErrorCount:          errorCounts["health_check"],
 		ActiveConnections:   int64(activeConnections),
+		MemoryUsage:         memoryUsage,
+		Goroutines:          goroutines,
+		HeapAlloc:           heapAlloc,
 		ComponentStatus:     componentStatus,
 		ErrorCounts:         errorCounts,
 		LastCheck:           healthStatus.LastCheck,
 		CircuitBreakerState: circuitBreakerState,
 	}
 
+	// Add camera monitor metrics
+	if c.cameraMonitor != nil {
+		stats := c.cameraMonitor.GetMonitorStats()
+		if stats != nil {
+			// Convert camera monitor stats to CameraMonitorMetrics
+			cameraPerformanceMetrics := &CameraMonitorMetrics{
+				DevicesConnected:           stats.DevicesConnected,
+				DeviceEventsProcessed:      stats.DeviceEventsProcessed,
+				DeviceEventsDropped:        stats.DeviceEventsDropped,
+				UdevEventsProcessed:        stats.UdevEventsProcessed,
+				UdevEventsFiltered:         stats.UdevEventsFiltered,
+				UdevEventsSkipped:          stats.UdevEventsSkipped,
+				PollingCycles:              stats.PollingCycles,
+				CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
+				CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
+				CapabilityTimeouts:         stats.CapabilityTimeouts,
+				CapabilityParseErrors:      stats.CapabilityParseErrors,
+				PollingFailureCount:        stats.PollingFailureCount,
+				CurrentPollInterval:        stats.CurrentPollInterval,
+				KnownDevicesCount:          stats.KnownDevicesCount,
+				ActiveTasks:                stats.ActiveTasks,
+				Running:                    stats.Running,
+			}
+			systemMetrics.CameraPerformanceMetrics = cameraPerformanceMetrics
+		}
+	}
+
 	// Check performance thresholds and send notifications with debounce
 	if c.healthNotificationManager != nil {
 		// Convert SystemMetrics to map for threshold checking
 		metricsMap := map[string]interface{}{
-			"memory_usage":          0.0,                                          // TODO: Add memory usage calculation
+			"memory_usage":          memoryUsage,                                  // Use calculated memory usage
 			"error_rate":            float64(errorCounts["health_check"]) / 100.0, // Simplified error rate
 			"average_response_time": responseTime,
 			"active_connections":    activeConnections,
-			"goroutines":            runtime.NumGoroutine(),
+			"goroutines":            goroutines,
 		}
 		c.healthNotificationManager.CheckPerformanceThresholds(metricsMap)
 	}
 
 	return systemMetrics, nil
+}
+
+// GetServerInfo returns server information and capabilities
+func (c *controller) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Get system information (moved from WebSocket layer)
+	return &ServerInfo{
+		Name:             "MediaMTX Camera Service",
+		Version:          "1.0.0",
+		BuildDate:        time.Now().Format("2006-01-02"),
+		GoVersion:        runtime.Version(),
+		Architecture:     runtime.GOARCH,
+		Capabilities:     []string{"snapshots", "recordings", "streaming"},
+		SupportedFormats: []string{"mp4", "mkv", "jpg"},
+		MaxCameras:       10,
+	}, nil
+}
+
+// CleanupOldFiles performs cleanup of old files based on retention policy
+func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{}, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Get current configuration
+	cfg := c.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration not available")
+	}
+
+	// Check if retention policy is enabled
+	if !cfg.RetentionPolicy.Enabled {
+		return nil, fmt.Errorf("retention policy is not enabled")
+	}
+
+	// Perform cleanup based on retention policy
+	var deletedCount int
+	var totalSize int64
+
+	if cfg.RetentionPolicy.Type == "age" {
+		// Age-based cleanup using MediaMTX managers
+		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
+		maxCount := 100 // Default max count
+
+		// Clean up old recordings
+		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
+			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
+		} else {
+			deletedCount += 1
+		}
+
+		// Clean up old snapshots
+		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
+			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
+		} else {
+			deletedCount += 1
+		}
+	} else if cfg.RetentionPolicy.Type == "size" {
+		// Size-based cleanup - convert GB to bytes and use age-based as fallback
+		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
+		maxCount := 100 // Default max count
+
+		// Clean up old recordings
+		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
+			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
+		} else {
+			deletedCount += 1
+		}
+
+		// Clean up old snapshots
+		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
+			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
+		} else {
+			deletedCount += 1
+		}
+	}
+
+	return map[string]interface{}{
+		"deleted_count": deletedCount,
+		"total_size":    totalSize,
+		"message":       "File cleanup completed successfully",
+	}, nil
+}
+
+// SetRetentionPolicy updates the retention policy configuration
+func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Get current configuration
+	cfg := c.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("configuration not available")
+	}
+
+	// Update retention policy configuration
+	cfg.RetentionPolicy.Enabled = enabled
+	cfg.RetentionPolicy.Type = policyType
+
+	// Update policy-specific parameters
+	if policyType == "age" {
+		if maxAgeDays, ok := params["max_age_days"].(float64); ok {
+			cfg.RetentionPolicy.MaxAgeDays = int(maxAgeDays)
+		} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
+			cfg.RetentionPolicy.MaxAgeDays = maxAgeDays
+		}
+	} else if policyType == "size" {
+		if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
+			cfg.RetentionPolicy.MaxSizeGB = int(maxSizeGB)
+		} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
+			cfg.RetentionPolicy.MaxSizeGB = maxSizeGB
+		}
+	}
+
+	// Build response result based on policy type
+	result := map[string]interface{}{
+		"policy_type": policyType,
+		"enabled":     enabled,
+		"message":     "Retention policy configuration updated successfully",
+	}
+
+	// Add policy-specific parameters to response
+	if policyType == "age" {
+		result["max_age_days"] = cfg.RetentionPolicy.MaxAgeDays
+	} else if policyType == "size" {
+		result["max_size_gb"] = cfg.RetentionPolicy.MaxSizeGB
+	}
+
+	return result, nil
 }
 
 // SetSystemEventNotifier sets the system event notifier for health notifications
@@ -2174,3 +2329,4 @@ func (c *controller) GetDevicePathForCamera(cameraID string) (string, bool) {
 func (c *controller) GetHealthMonitor() HealthMonitor {
 	return c.healthMonitor
 }
+

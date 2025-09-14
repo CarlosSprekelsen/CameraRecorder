@@ -1,0 +1,44 @@
+# Test Configuration - ERROR Level Logging
+# This configuration sets logging to ERROR level only for test performance
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 100
+
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  config_path: "/tmp/mediamtx.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
+
+camera:
+  poll_interval: 0.2
+  detection_timeout: 2.0
+  device_range: [0, 1]
+  enable_capability_detection: true
+
+# Test-specific logging configuration - ERROR level only
+logging:
+  level: "error"  # Only ERROR level for test performance
+  format: "json"
+  file_enabled: false
+  console_enabled: true
+
+recording:
+  enabled: true
+  format: "mp4"
+  quality: "medium"
+
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 85
+
+# Minimal security settings for tests
+security:
+  jwt_secret_key: "test-secret-key"
+  jwt_expiry_hours: 24
