@@ -996,7 +996,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 
 	// Create snapshot manager with proper configuration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, configIntegration, helper.GetLogger())
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
@@ -1094,7 +1094,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 	// Create snapshot manager with configuration integration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, configIntegration, helper.GetLogger())
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 

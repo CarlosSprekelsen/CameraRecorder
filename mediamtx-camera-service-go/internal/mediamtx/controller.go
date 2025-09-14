@@ -483,7 +483,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
 
 	// Create stream manager with shared PathManager
-	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, logger)
+	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, configIntegration, logger)
 
 	// Create recording manager (using existing client and pathManager)
 	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, configIntegration, logger)

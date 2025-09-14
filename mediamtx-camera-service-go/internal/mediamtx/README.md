@@ -307,15 +307,22 @@ The controller provides an event-driven readiness system that notifies subscribe
 #### Usage Example
 
 ```go
-// Subscribe to readiness events
+// Start observing readiness events (non-blocking)
 readinessChan := controller.SubscribeToReadiness()
 
-// Wait for readiness with timeout
-select {
-case <-readinessChan:
-    // Controller is ready
-case <-time.After(10 * time.Second):
-    // Handle timeout
+// Try operations immediately with retries instead of waiting
+var success bool
+for i := 0; i < 10; i++ {
+    if controller.IsReady() {
+        success = true
+        break
+    }
+    time.Sleep(100 * time.Millisecond)
+}
+
+// Handle success/failure
+if !success {
+    // Handle not ready after retries
 }
 ```
 
@@ -422,15 +429,24 @@ for {
 }
 ```
 
-#### Step 2: Replace with Event Subscription
+#### Step 2: Replace with Observe/Retry Pattern
 ```go
-// Event-driven pattern
+// Non-blocking observation pattern
 readinessChan := controller.SubscribeToReadiness()
-select {
-case <-readinessChan:
-    // Controller is ready
-case <-timeout:
-    // Handle timeout
+
+// Try operations immediately with retries
+var session *RecordingSession
+for i := 0; i < 3; i++ {
+    session, err = controller.StartRecording(...)
+    if err == nil {
+        break
+    }
+    time.Sleep(time.Second)
+}
+
+// Events are for verification, not control flow
+if !controller.IsReady() {
+    // Handle not ready after retries
 }
 ```
 

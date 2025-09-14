@@ -350,7 +350,8 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 			BaseURL: h.config.BaseURL,
 			Timeout: 10 * time.Second,
 		}
-		h.streamManager = NewStreamManager(h.client, pathManager, mediaMTXConfig, h.logger)
+		configIntegration := NewConfigIntegration(h.configManager, h.logger)
+		h.streamManager = NewStreamManager(h.client, pathManager, mediaMTXConfig, configIntegration, h.logger)
 	})
 	return h.streamManager
 }
@@ -1115,40 +1116,6 @@ func (edh *EventDrivenTestHelper) ObserveReadiness() <-chan interface{} {
 	return observationChan
 }
 
-// recordEvent records an event in the history for later verification
-func (edh *EventDrivenTestHelper) recordEvent(eventType string, event interface{}) {
-	edh.eventMutex.Lock()
-	defer edh.eventMutex.Unlock()
-
-	if edh.eventHistory[eventType] == nil {
-		edh.eventHistory[eventType] = make([]interface{}, 0)
-	}
-	edh.eventHistory[eventType] = append(edh.eventHistory[eventType], event)
-}
-
-// DidEventOccur checks if an event of the specified type occurred
-func (edh *EventDrivenTestHelper) DidEventOccur(eventType string) bool {
-	edh.eventMutex.RLock()
-	defer edh.eventMutex.RUnlock()
-
-	events, exists := edh.eventHistory[eventType]
-	return exists && len(events) > 0
-}
-
-// GetEventHistory returns the history of events for a specific type
-func (edh *EventDrivenTestHelper) GetEventHistory(eventType string) []interface{} {
-	edh.eventMutex.RLock()
-	defer edh.eventMutex.RUnlock()
-
-	if events, exists := edh.eventHistory[eventType]; exists {
-		// Return a copy to avoid race conditions
-		result := make([]interface{}, len(events))
-		copy(result, events)
-		return result
-	}
-	return []interface{}{}
-}
-
 // ObserveHealthChanges starts non-blocking observation of health events
 func (edh *EventDrivenTestHelper) ObserveHealthChanges() <-chan interface{} {
 	edh.eventMutex.Lock()
@@ -1185,25 +1152,62 @@ func (edh *EventDrivenTestHelper) ObserveCameraEvents() <-chan interface{} {
 	return observationChan
 }
 
-// CollectEventsForDuration collects events over a specified duration
-func (edh *EventDrivenTestHelper) CollectEventsForDuration(duration time.Duration) map[string][]interface{} {
+// recordEvent records an event in the history for later verification
+func (edh *EventDrivenTestHelper) recordEvent(eventType string, event interface{}) {
 	edh.eventMutex.Lock()
 	defer edh.eventMutex.Unlock()
 
-	// Start all observers
+	if edh.eventHistory[eventType] == nil {
+		edh.eventHistory[eventType] = make([]interface{}, 0)
+	}
+	edh.eventHistory[eventType] = append(edh.eventHistory[eventType], event)
+}
+
+// DidEventOccur checks if an event of the specified type occurred
+func (edh *EventDrivenTestHelper) DidEventOccur(eventType string) bool {
+	edh.eventMutex.RLock()
+	defer edh.eventMutex.RUnlock()
+
+	events, exists := edh.eventHistory[eventType]
+	return exists && len(events) > 0
+}
+
+// GetEventHistory returns the history of events for a specific type
+func (edh *EventDrivenTestHelper) GetEventHistory(eventType string) []interface{} {
+	edh.eventMutex.RLock()
+	defer edh.eventMutex.RUnlock()
+
+	if events, exists := edh.eventHistory[eventType]; exists {
+		// Return a copy to avoid race conditions
+		result := make([]interface{}, len(events))
+		copy(result, events)
+		return result
+	}
+	return []interface{}{}
+}
+
+// CollectEventsForDuration collects events over a specified duration (non-blocking)
+func (edh *EventDrivenTestHelper) CollectEventsForDuration(duration time.Duration) map[string][]interface{} {
+	// Start all observers (non-blocking)
 	edh.ObserveReadiness()
 	edh.ObserveHealthChanges()
 	edh.ObserveCameraEvents()
 
-	// Wait for the specified duration
-	time.Sleep(duration)
+	// Use a timer instead of blocking sleep
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
 
-	// Return a copy of all collected events
+	// Wait for duration without blocking the entire method
+	<-timer.C
+
+	// Return a copy of all collected events using existing method
 	result := make(map[string][]interface{})
+	edh.eventMutex.RLock()
 	for eventType, events := range edh.eventHistory {
 		result[eventType] = make([]interface{}, len(events))
 		copy(result[eventType], events)
 	}
+	edh.eventMutex.RUnlock()
 
 	return result
 }

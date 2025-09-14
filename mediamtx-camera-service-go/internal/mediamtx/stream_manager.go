@@ -28,11 +28,12 @@ import (
 
 // streamManager represents the MediaMTX stream manager
 type streamManager struct {
-	client         MediaMTXClient
-	pathManager    PathManager
-	config         *config.MediaMTXConfig
-	logger         *logging.Logger
-	useCaseConfigs map[StreamUseCase]UseCaseConfig
+	client            MediaMTXClient
+	pathManager       PathManager
+	config            *config.MediaMTXConfig
+	configIntegration *ConfigIntegration
+	logger            *logging.Logger
+	useCaseConfigs    map[StreamUseCase]UseCaseConfig
 
 	// FFmpeg command caching for performance - using sync.Map for lock-free reads
 	ffmpegCommands sync.Map // device path -> cached FFmpeg command
@@ -40,7 +41,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -67,11 +68,12 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 	}
 
 	return &streamManager{
-		client:         client,
-		pathManager:    pathManager,
-		config:         config,
-		logger:         logger,
-		useCaseConfigs: useCaseConfigs,
+		client:            client,
+		pathManager:       pathManager,
+		config:            config,
+		configIntegration: configIntegration,
+		logger:            logger,
+		useCaseConfigs:    useCaseConfigs,
 		// ffmpegCommands: sync.Map is zero-initialized, no need to initialize
 	}
 }
@@ -653,14 +655,31 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 	// Generate recordPath with timestamp pattern
 	recordPath := sm.getRecordingOutputPath(pathName, outputPath)
 
+	// Get recording configuration from centralized config system
+	recordingConfig, err := sm.configIntegration.GetRecordingConfig()
+	if err != nil {
+		sm.logger.WithError(err).Warn("Failed to get recording config, using fallback values")
+		// Fallback to hardcoded values if config is unavailable
+		return map[string]interface{}{
+			"record":                true,
+			"recordPath":            recordPath,
+			"recordFormat":          "fmp4",  // STANAG 4609 compatible
+			"recordPartDuration":    "3600s", // 1 hour segments
+			"recordMaxPartSize":     "100MB",
+			"recordSegmentDuration": "3600s", // 1 hour segments
+			"recordDeleteAfter":     "0s",    // Never auto-delete
+		}
+	}
+
+	// Convert config values to MediaMTX format
 	config := map[string]interface{}{
 		"record":                true,
 		"recordPath":            recordPath,
-		"recordFormat":          "fmp4",  // STANAG 4609 compatible
-		"recordPartDuration":    "3600s", // 1 hour segments
-		"recordMaxPartSize":     "100MB",
-		"recordSegmentDuration": "3600s", // 1 hour segments
-		"recordDeleteAfter":     "0s",    // Never auto-delete
+		"recordFormat":          recordingConfig.Format,                    // Use configured format
+		"recordPartDuration":    recordingConfig.DefaultMaxDuration.String(), // Use configured duration
+		"recordMaxPartSize":     fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024), // Convert bytes to MB
+		"recordSegmentDuration": time.Duration(recordingConfig.SegmentDuration).String(), // Use configured segment duration
+		"recordDeleteAfter":     time.Duration(recordingConfig.DefaultRetentionDays*24).String() + "h", // Convert days to hours
 	}
 
 	return config
