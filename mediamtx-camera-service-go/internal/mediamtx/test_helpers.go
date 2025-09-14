@@ -95,13 +95,8 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		testConfig = DefaultMediaMTXTestConfig()
 	}
 
-	// Create logger for testing
+	// Create logger for testing - level will be set by configuration
 	logger := logging.GetLogger("test-mediamtx-controller")
-	logger.SetLevel(logrus.ErrorLevel) // Reduce verbosity for test performance
-
-	// GLOBAL FIX: Set all loggers to ErrorLevel for test performance
-	// This ensures all components use the same log level
-	logging.GetGlobalLogger().SetLevel(logrus.ErrorLevel)
 
 	// Create MediaMTX client configuration
 	clientConfig := &configpkg.MediaMTXConfig{
@@ -352,7 +347,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
+		configManager := CreateConfigManagerWithFixture(nil, "config_test_logging_error.yaml")
 		logger := logging.GetLogger("test-camera-monitor")
 
 		// Use real implementations for camera hardware
