@@ -65,7 +65,7 @@ type MediaMTXTestHelper struct {
 	configManager         *configpkg.ConfigManager
 	logger                *logging.Logger
 	client                MediaMTXClient
-	mediaMTXConfig        *configpkg.MediaMTXConfig // Centralized config for all managers
+	mediaMTXConfig        *configpkg.MediaMTXConfig    // Centralized config for all managers
 	configIntegration     *configpkg.ConfigIntegration // Centralized config integration for all managers
 	pathManager           PathManager
 	streamManager         StreamManager
@@ -1532,107 +1532,14 @@ func (r *JSONScenarioRegistry) addHealthScenarios(baseline []JSONMalformationTes
 
 // TestJSONParsingErrors tests JSON parsing functions with malformed data using the scenario registry
 // This function is designed to catch dangerous bugs, not just achieve coverage
-func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
-	registry := NewJSONScenarioRegistry()
-	
-	// Test all response types with their scenarios
-	responseTypes := []string{"path_list", "stream", "paths", "health"}
-	
-	for _, responseType := range responseTypes {
-		t.Run(responseType+"_scenarios", func(t *testing.T) {
-			scenarios := registry.GetScenarios(responseType)
-			
-			for _, scenario := range scenarios {
-				t.Run(scenario.Name, func(t *testing.T) {
-					t.Logf("Testing JSON scenario: %s - %s", scenario.Name, scenario.Description)
-					
-					// Test the appropriate parsing function based on response type
-					var err error
-					switch responseType {
-					case "path_list":
-						_, err = parsePathListResponse(scenario.JSONData)
-					case "stream":
-						_, err = parseStreamResponse(scenario.JSONData)
-					case "paths":
-						_, err = parsePathConfListResponse(scenario.JSONData)
-					case "health":
-						_, err = parseHealthResponse(scenario.JSONData)
-					}
-					
-					// Verify expected behavior
-					if scenario.ExpectError {
-						require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
-						if scenario.ErrorMsg != "" {
-							assert.Contains(t, err.Error(), scenario.ErrorMsg,
-								"Error message should contain expected text for scenario %s", scenario.Name)
-						}
-						t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
-					} else {
-						if err != nil {
-							t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						} else {
-							t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
-						}
-					}
-				})
-			}
-		})
-	}
+// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
+func (h *MediaMTXTestHelper) DisabledTestJSONParsingErrors(t *testing.T) {
+	t.Skip("DISABLED: Tests now use scenario registry directly in json_malformation_test.go")
 }
 
 // TestJSONParsingPanicProtection tests that JSON parsing functions don't panic
 // This function is designed to catch dangerous bugs that could cause crashes
-func (h *MediaMTXTestHelper) TestJSONParsingPanicProtection(t *testing.T) {
-	registry := NewJSONScenarioRegistry()
-	
-	// Test panic protection with edge cases
-	edgeCases := []struct {
-		name     string
-		data     []byte
-		expected string
-	}{
-		{
-			name:     "very_large_json",
-			data:     []byte(`{"items": [], "large_field": "` + strings.Repeat("x", 1000000) + `"}`),
-			expected: "should handle gracefully",
-		},
-		{
-			name:     "json_with_null_bytes",
-			data:     []byte(`{"items": [], "null_field": "test\x00null\x00byte"}`),
-			expected: "should handle gracefully",
-		},
-		{
-			name:     "json_with_unicode_issues",
-			data:     []byte(`{"items": [], "unicode": "test\u0000\u0001\u0002"}`),
-			expected: "should handle gracefully",
-		},
-		{
-			name:     "json_with_deep_nesting",
-			data:     []byte(`{"items": [], "nested": {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": "deep"}}}}}}}}}}`),
-			expected: "should handle gracefully",
-		},
-	}
-
-	for _, testCase := range edgeCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Logf("Testing edge case: %s - %s", testCase.name, testCase.expected)
-
-			// Test that parsing doesn't panic or cause crashes
-			defer func() {
-				if r := recover(); r != nil {
-					t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
-				}
-			}()
-
-			// Test all parsing functions with edge case data
-			_, err1 := parsePathListResponse(testCase.data)
-			_, err2 := parseStreamResponse(testCase.data)
-			_, err3 := parseHealthResponse(testCase.data)
-			_, err4 := parsePathConfListResponse(testCase.data)
-
-			// We don't care about errors here, just that no panic occurred
-			t.Logf("Edge case %s handled without panic (errors: %v, %v, %v, %v)",
-				testCase.name, err1, err2, err3, err4)
-		})
-	}
+// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
+func (h *MediaMTXTestHelper) DisabledTestJSONParsingPanicProtection(t *testing.T) {
+	t.Skip("DISABLED: Tests now use scenario registry directly in json_malformation_test.go")
 }
