@@ -145,28 +145,6 @@ type SystemMetrics struct {
 	ErrorCounts         map[string]int64  `json:"error_counts,omitempty"`
 	LastCheck           time.Time         `json:"last_check"`
 	CircuitBreakerState string            `json:"circuit_breaker_state"`
-	// Camera metrics from camera monitor
-	CameraMonitorMetrics *CameraMonitorMetrics `json:"camera_monitor_metrics,omitempty"`
-}
-
-// CameraMonitorMetrics represents camera monitor statistics
-type CameraMonitorMetrics struct {
-	DevicesConnected           int64   `json:"devices_connected"`
-	DeviceEventsProcessed      int64   `json:"device_events_processed"`
-	DeviceEventsDropped        int64   `json:"device_events_dropped"`
-	UdevEventsProcessed        int64   `json:"udev_events_processed"`
-	UdevEventsFiltered         int64   `json:"udev_events_filtered"`
-	UdevEventsSkipped          int64   `json:"udev_events_skipped"`
-	PollingCycles              int64   `json:"polling_cycles"`
-	CapabilityProbesAttempted  int64   `json:"capability_probes_attempted"`
-	CapabilityProbesSuccessful int64   `json:"capability_probes_successful"`
-	CapabilityTimeouts         int64   `json:"capability_timeouts"`
-	CapabilityParseErrors      int64   `json:"capability_parse_errors"`
-	PollingFailureCount        int64   `json:"polling_failure_count"`
-	CurrentPollInterval        float64 `json:"current_poll_interval"`
-	KnownDevicesCount          int64   `json:"known_devices_count"`
-	ActiveTasks                int64   `json:"active_tasks"`
-	Running                    bool    `json:"running"`
 }
 
 // ServerInfo represents server information and capabilities
@@ -363,7 +341,6 @@ type MediaMTXController interface {
 	// System readiness
 	IsReady() bool
 	GetReadinessState() map[string]interface{}
-	SubscribeToReadiness() <-chan struct{}
 
 	// Configuration management
 	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)

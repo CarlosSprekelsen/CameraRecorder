@@ -112,16 +112,6 @@ func (c *controller) IsReady() bool {
 	return true
 }
 
-// SubscribeToReadiness returns a channel that receives notifications when the controller becomes ready
-func (c *controller) SubscribeToReadiness() <-chan struct{} {
-	c.readinessMutex.RLock()
-	defer c.readinessMutex.RUnlock()
-
-	// Return the main readiness channel that all subscribers share
-	// This ensures all subscribers receive the same events
-	return c.readinessEventChan
-}
-
 // emitReadinessEvent emits a readiness event to all subscribers
 func (c *controller) emitReadinessEvent() {
 	c.readinessMutex.RLock()
@@ -133,90 +123,6 @@ func (c *controller) emitReadinessEvent() {
 		case c.readinessEventChan <- struct{}{}:
 		default:
 			// Channel is full, skip this event
-		}
-	}
-}
-
-// monitorReadiness monitors controller readiness and emits events when ready
-func (c *controller) monitorReadiness(ctx context.Context) {
-	// Use event-driven approach with fallback to polling for robustness
-	var cameraReadyChan <-chan struct{}
-	var healthReadyChan <-chan struct{}
-
-	// Subscribe to camera monitor readiness events
-	if c.cameraMonitor != nil {
-		cameraReadyChan = c.cameraMonitor.SubscribeToReadiness()
-	}
-
-	// Subscribe to health monitor readiness events
-	if c.healthMonitor != nil {
-		healthReadyChan = c.healthMonitor.SubscribeToHealthChanges()
-	}
-
-	// Fallback to polling if no event channels are available
-	if cameraReadyChan == nil && healthReadyChan == nil {
-		c.logger.Warn("No event channels available, falling back to polling for readiness monitoring")
-		c.monitorReadinessWithPolling(ctx)
-		return
-	}
-
-	lastReadyState := false
-
-	// Check initial readiness state
-	initialReadyState := c.IsReady()
-	if initialReadyState {
-		c.emitReadinessEvent()
-		c.logger.Info("Controller readiness event emitted (initially ready)")
-		lastReadyState = true
-	} else {
-		c.logger.Info("Controller not initially ready, waiting for components...")
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-cameraReadyChan:
-			// Camera monitor became ready, check overall readiness
-			currentReadyState := c.IsReady()
-			if !lastReadyState && currentReadyState {
-				c.emitReadinessEvent()
-				c.logger.Info("Controller readiness event emitted (camera ready)")
-			}
-			lastReadyState = currentReadyState
-		case <-healthReadyChan:
-			// Health monitor state changed, check overall readiness
-			currentReadyState := c.IsReady()
-			if !lastReadyState && currentReadyState {
-				c.emitReadinessEvent()
-				c.logger.Info("Controller readiness event emitted (health ready)")
-			}
-			lastReadyState = currentReadyState
-		}
-	}
-}
-
-// monitorReadinessWithPolling provides fallback polling for readiness monitoring
-func (c *controller) monitorReadinessWithPolling(ctx context.Context) {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	lastReadyState := false
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			currentReadyState := c.IsReady()
-
-			// Emit event when readiness state changes from false to true
-			if !lastReadyState && currentReadyState {
-				c.emitReadinessEvent()
-				c.logger.Info("Controller readiness event emitted (polling fallback)")
-			}
-
-			lastReadyState = currentReadyState
 		}
 	}
 }
@@ -564,9 +470,6 @@ func (c *controller) Start(ctx context.Context) error {
 	atomic.StoreInt32(&c.isRunning, 1)
 	c.startTime = time.Now()
 
-	// Start readiness monitoring goroutine
-	go c.monitorReadiness(ctx)
-
 	c.logger.Info("MediaMTX controller started successfully")
 	return nil
 }
@@ -826,33 +729,6 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		ErrorCounts:         errorCounts,
 		LastCheck:           healthStatus.LastCheck,
 		CircuitBreakerState: circuitBreakerState,
-	}
-
-	// Add camera monitor metrics
-	if c.cameraMonitor != nil {
-		stats := c.cameraMonitor.GetMonitorStats()
-		if stats != nil {
-			// Convert camera monitor stats to CameraMonitorMetrics
-			cameraMonitorMetrics := &CameraMonitorMetrics{
-				DevicesConnected:           stats.DevicesConnected,
-				DeviceEventsProcessed:      stats.DeviceEventsProcessed,
-				DeviceEventsDropped:        stats.DeviceEventsDropped,
-				UdevEventsProcessed:        stats.UdevEventsProcessed,
-				UdevEventsFiltered:         stats.UdevEventsFiltered,
-				UdevEventsSkipped:          stats.UdevEventsSkipped,
-				PollingCycles:              stats.PollingCycles,
-				CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
-				CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
-				CapabilityTimeouts:         stats.CapabilityTimeouts,
-				CapabilityParseErrors:      stats.CapabilityParseErrors,
-				PollingFailureCount:        stats.PollingFailureCount,
-				CurrentPollInterval:        stats.CurrentPollInterval,
-				KnownDevicesCount:          stats.KnownDevicesCount,
-				ActiveTasks:                stats.ActiveTasks,
-				Running:                    stats.Running,
-			}
-			systemMetrics.CameraMonitorMetrics = cameraMonitorMetrics
-		}
 	}
 
 	// Check performance thresholds and send notifications with debounce

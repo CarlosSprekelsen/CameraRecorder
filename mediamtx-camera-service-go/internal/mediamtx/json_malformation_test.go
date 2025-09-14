@@ -34,18 +34,18 @@ func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 
 	// Use the scenario registry directly for comprehensive testing
 	registry := NewJSONScenarioRegistry()
-	
+
 	// Test all response types with their scenarios
 	responseTypes := []string{"path_list", "stream", "paths", "health"}
-	
+
 	for _, responseType := range responseTypes {
 		t.Run(responseType+"_scenarios", func(t *testing.T) {
 			scenarios := registry.GetScenarios(responseType)
-			
+
 			for _, scenario := range scenarios {
 				t.Run(scenario.Name, func(t *testing.T) {
 					t.Logf("Testing JSON scenario: %s - %s", scenario.Name, scenario.Description)
-					
+
 					// Test the appropriate parsing function based on response type
 					var err error
 					switch responseType {
@@ -58,7 +58,7 @@ func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 					case "health":
 						_, err = parseHealthResponse(scenario.JSONData)
 					}
-					
+
 					// Verify expected behavior
 					if scenario.ExpectError {
 						require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
@@ -87,9 +87,8 @@ func TestJSONParsingPanicProtection_DangerousBugs(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Test panic protection with edge cases using scenario registry
-	registry := NewJSONScenarioRegistry()
-	
+	// Test panic protection with edge cases
+
 	// Test panic protection with edge cases
 	edgeCases := []struct {
 		name     string
@@ -146,7 +145,7 @@ func TestJSONParsingPanicProtection_DangerousBugs(t *testing.T) {
 // that have 0% coverage and could hide dangerous bugs using scenario registry
 func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 	registry := NewJSONScenarioRegistry()
-	
+
 	t.Run("determineStatus_Function_Bug", func(t *testing.T) {
 		// Test the determineStatus function that has 0% coverage
 		// This could catch dangerous bugs in status determination
@@ -216,11 +215,11 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 	// Test all parsing functions using scenario registry for comprehensive coverage
 	t.Run("comprehensive_parsing_coverage", func(t *testing.T) {
 		responseTypes := []string{"path_list", "stream", "paths", "health"}
-		
+
 		for _, responseType := range responseTypes {
 			t.Run(responseType+"_comprehensive", func(t *testing.T) {
 				scenarios := registry.GetScenarios(responseType)
-				
+
 				for _, scenario := range scenarios {
 					t.Run(scenario.Name, func(t *testing.T) {
 						// Test the appropriate parsing function based on response type
@@ -235,7 +234,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 						case "health":
 							_, err = parseHealthResponse(scenario.JSONData)
 						}
-						
+
 						// Verify expected behavior matches scenario
 						if scenario.ExpectError {
 							require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
@@ -255,7 +254,7 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 // dangerous bugs in JSON parsing using scenario registry
 func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 	registry := NewJSONScenarioRegistry()
-	
+
 	t.Run("JSON_Parsing_Edge_Cases", func(t *testing.T) {
 		// Test edge cases that could cause dangerous bugs
 		edgeCases := []struct {
@@ -312,19 +311,19 @@ func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 	// Test edge cases from scenario registry
 	t.Run("registry_edge_cases", func(t *testing.T) {
 		responseTypes := []string{"path_list", "stream", "paths", "health"}
-		
+
 		for _, responseType := range responseTypes {
 			t.Run(responseType+"_edge_cases", func(t *testing.T) {
 				scenarios := registry.GetScenarios(responseType)
-				
+
 				// Focus on edge case scenarios
 				edgeCaseNames := []string{
 					"json_with_very_large_strings",
-					"json_with_unicode_issues", 
+					"json_with_unicode_issues",
 					"json_with_special_characters",
 					"json_with_deep_nesting",
 				}
-				
+
 				for _, scenario := range scenarios {
 					for _, edgeCaseName := range edgeCaseNames {
 						if scenario.Name == edgeCaseName {

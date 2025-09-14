@@ -60,10 +60,10 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 	// All operations use the same stable path with consistent settings
 	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
 		UseCaseRecording: {
-			RunOnDemandCloseAfter:   "0s",                              // Never auto-close (stable for recording)
-			RunOnDemandRestart:      true,                              // Always restart FFmpeg if it crashes
-			RunOnDemandStartTimeout: sm.config.RunOnDemandStartTimeout, // Use configured timeout
-			Suffix:                  "",                                // No suffix - simple path names
+			RunOnDemandCloseAfter:   "0s",                           // Never auto-close (stable for recording)
+			RunOnDemandRestart:      true,                           // Always restart FFmpeg if it crashes
+			RunOnDemandStartTimeout: config.RunOnDemandStartTimeout, // Use configured timeout
+			Suffix:                  "",                             // No suffix - simple path names
 		},
 	}
 

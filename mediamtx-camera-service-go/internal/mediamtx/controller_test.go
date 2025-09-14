@@ -257,7 +257,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
 
 	// Test GetRecordingConfig
 	recordingConfig, err := configIntegration.GetRecordingConfig()
@@ -273,7 +273,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
 
 	// Test GetSnapshotConfig
 	snapshotConfig, err := configIntegration.GetSnapshotConfig()
@@ -289,7 +289,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
 
 	// Test GetFFmpegConfig
 	ffmpegConfig, err := configIntegration.GetFFmpegConfig()
@@ -305,7 +305,7 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
 
 	// Test GetCameraConfig
 	cameraConfig, err := configIntegration.GetCameraConfig()
@@ -321,7 +321,7 @@ func TestConfigIntegration_GetPerformanceConfig_ReqMTX001(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
 
 	// Test GetPerformanceConfig
 	performanceConfig, err := configIntegration.GetPerformanceConfig()
@@ -1594,7 +1594,8 @@ func TestGracefulShutdown(t *testing.T) {
 		cameraMonitor := helper.GetCameraMonitor()
 		configManager := helper.GetConfigManager()
 		logger := helper.GetLogger()
-		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configManager, logger)
+		configIntegration := config.NewConfigIntegration(configManager, logger)
+		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)
 
 		// Start components
 		ctx := context.Background()

@@ -338,4 +338,3 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 	err := client.Close()
 	require.NoError(t, err, "Client close should succeed")
 }
-
