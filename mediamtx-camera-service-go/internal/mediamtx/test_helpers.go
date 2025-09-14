@@ -66,6 +66,7 @@ type MediaMTXTestHelper struct {
 	logger                *logging.Logger
 	client                MediaMTXClient
 	mediaMTXConfig        *configpkg.MediaMTXConfig // Centralized config for all managers
+	configIntegration     *configpkg.ConfigIntegration // Centralized config integration for all managers
 	pathManager           PathManager
 	streamManager         StreamManager
 	recordingManager      *RecordingManager
@@ -126,12 +127,16 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		Timeout: 10 * time.Second,
 	}
 
+	// Create centralized ConfigIntegration for all managers
+	configIntegration := configpkg.NewConfigIntegration(configManager, logger)
+
 	helper := &MediaMTXTestHelper{
-		config:         testConfig,
-		configManager:  configManager,
-		logger:         logger,
-		client:         client,
-		mediaMTXConfig: mediaMTXConfig,
+		config:            testConfig,
+		configManager:     configManager,
+		logger:            logger,
+		client:            client,
+		mediaMTXConfig:    mediaMTXConfig,
+		configIntegration: configIntegration,
 	}
 
 	// Ensure test data directory exists
@@ -324,9 +329,8 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 		// Ensure PathManager is initialized first to prevent nil pointer dereference
 		pathManager := h.GetPathManager() // This will initialize h.pathManager if nil
 
-		// Use centralized MediaMTX config
-		configIntegration := NewConfigIntegration(h.configManager, h.logger)
-		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, configIntegration, h.logger)
+		// Use centralized MediaMTX config and ConfigIntegration
+		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, h.configIntegration, h.logger)
 	})
 	return h.streamManager
 }
@@ -334,11 +338,10 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 // GetRecordingManager returns a shared recording manager instance
 func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	h.recordingManagerOnce.Do(func() {
-		// Use centralized MediaMTX config
+		// Use centralized MediaMTX config and ConfigIntegration
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
-		configIntegration := NewConfigIntegration(h.configManager, h.logger)
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, configIntegration, h.logger)
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, h.configIntegration, h.logger)
 	})
 	return h.recordingManager
 }
@@ -1269,7 +1272,7 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 	registry := &JSONScenarioRegistry{
 		scenarios: make(map[string][]JSONMalformationTestScenario),
 	}
-	
+
 	// Initialize with baseline scenarios that apply to all response types
 	// These are the scenarios that were duplicated across all 5 original functions
 	baselineScenarios := []JSONMalformationTestScenario{
@@ -1318,7 +1321,7 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 		{
 			Name:        "json_with_extra_fields",
 			JSONData:    []byte(`{"extraField": "should be ignored"}`), // Extra fields vary by type
-			ExpectError: false, // Should handle gracefully by ignoring extra fields
+			ExpectError: false,                                         // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
@@ -1344,13 +1347,13 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 			Description: "JSON with special characters should be handled gracefully",
 		},
 	}
-	
+
 	// Add type-specific scenarios for each response type
 	registry.addPathListScenarios(baselineScenarios)
 	registry.addStreamScenarios(baselineScenarios)
 	registry.addPathsScenarios(baselineScenarios)
 	registry.addHealthScenarios(baselineScenarios)
-	
+
 	return registry
 }
 
@@ -1367,7 +1370,7 @@ func (r *JSONScenarioRegistry) GetScenarios(responseType string) []JSONMalformat
 func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationTestScenario) {
 	scenarios := make([]JSONMalformationTestScenario, len(baseline))
 	copy(scenarios, baseline)
-	
+
 	// Add path-list specific scenarios
 	typeSpecific := []JSONMalformationTestScenario{
 		{
@@ -1399,7 +1402,7 @@ func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationT
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 	}
-	
+
 	scenarios = append(scenarios, typeSpecific...)
 	r.scenarios["path_list"] = scenarios
 }
@@ -1408,7 +1411,7 @@ func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationT
 func (r *JSONScenarioRegistry) addStreamScenarios(baseline []JSONMalformationTestScenario) {
 	scenarios := make([]JSONMalformationTestScenario, len(baseline))
 	copy(scenarios, baseline)
-	
+
 	// Add stream-specific scenarios
 	typeSpecific := []JSONMalformationTestScenario{
 		{
@@ -1440,7 +1443,7 @@ func (r *JSONScenarioRegistry) addStreamScenarios(baseline []JSONMalformationTes
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 	}
-	
+
 	scenarios = append(scenarios, typeSpecific...)
 	r.scenarios["stream"] = scenarios
 }
@@ -1449,7 +1452,7 @@ func (r *JSONScenarioRegistry) addStreamScenarios(baseline []JSONMalformationTes
 func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTestScenario) {
 	scenarios := make([]JSONMalformationTestScenario, len(baseline))
 	copy(scenarios, baseline)
-	
+
 	// Add paths-specific scenarios (same as path_list)
 	typeSpecific := []JSONMalformationTestScenario{
 		{
@@ -1481,7 +1484,7 @@ func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTest
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 	}
-	
+
 	scenarios = append(scenarios, typeSpecific...)
 	r.scenarios["paths"] = scenarios
 }
@@ -1490,7 +1493,7 @@ func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTest
 func (r *JSONScenarioRegistry) addHealthScenarios(baseline []JSONMalformationTestScenario) {
 	scenarios := make([]JSONMalformationTestScenario, len(baseline))
 	copy(scenarios, baseline)
-	
+
 	// Add health-specific scenarios
 	typeSpecific := []JSONMalformationTestScenario{
 		{
@@ -1522,42 +1525,42 @@ func (r *JSONScenarioRegistry) addHealthScenarios(baseline []JSONMalformationTes
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 	}
-	
+
 	scenarios = append(scenarios, typeSpecific...)
 	r.scenarios["health"] = scenarios
 }
 
-
 // TestJSONParsingErrors tests JSON parsing functions with malformed data using the scenario registry
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
-	// Create scenario registry
 	registry := NewJSONScenarioRegistry()
 	
-	// Test all parsing functions with registry scenarios
-	parsingTests := []struct {
-		name         string
-		responseType string
-		parseFunc    func([]byte) (interface{}, error)
-	}{
-		{"parsePathListResponse", "path_list", func(data []byte) (interface{}, error) { return parsePathListResponse(data) }},
-		{"parseStreamResponse", "stream", func(data []byte) (interface{}, error) { return parseStreamResponse(data) }},
-		{"parseHealthResponse", "health", func(data []byte) (interface{}, error) { return parseHealthResponse(data) }},
-		{"parsePathConfListResponse", "paths", func(data []byte) (interface{}, error) { return parsePathConfListResponse(data) }},
-	}
+	// Test all response types with their scenarios
+	responseTypes := []string{"path_list", "stream", "paths", "health"}
 	
-	for _, test := range parsingTests {
-		t.Run(test.name+"_JSON_Errors", func(t *testing.T) {
-			scenarios := registry.GetScenarios(test.responseType)
+	for _, responseType := range responseTypes {
+		t.Run(responseType+"_scenarios", func(t *testing.T) {
+			scenarios := registry.GetScenarios(responseType)
+			
 			for _, scenario := range scenarios {
 				t.Run(scenario.Name, func(t *testing.T) {
-					t.Logf("Testing %s with scenario: %s - %s", test.name, scenario.Name, scenario.Description)
-
-					// Test the JSON parsing function
-					_, err := test.parseFunc(scenario.JSONData)
-
+					t.Logf("Testing JSON scenario: %s - %s", scenario.Name, scenario.Description)
+					
+					// Test the appropriate parsing function based on response type
+					var err error
+					switch responseType {
+					case "path_list":
+						_, err = parsePathListResponse(scenario.JSONData)
+					case "stream":
+						_, err = parseStreamResponse(scenario.JSONData)
+					case "paths":
+						_, err = parsePathConfListResponse(scenario.JSONData)
+					case "health":
+						_, err = parseHealthResponse(scenario.JSONData)
+					}
+					
+					// Verify expected behavior
 					if scenario.ExpectError {
-						// Should get an error
 						require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
 						if scenario.ErrorMsg != "" {
 							assert.Contains(t, err.Error(), scenario.ErrorMsg,
@@ -1565,17 +1568,14 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 						}
 						t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 					} else {
-						// Should NOT get an error (graceful handling)
 						if err != nil {
-							// This is a BUG - the JSON parsing should handle these inputs gracefully
 							t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-							t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
 						} else {
 							t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 						}
 					}
 				})
-			})
+			}
 		})
 	}
 }
@@ -1583,37 +1583,56 @@ func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
 // TestJSONParsingPanicProtection tests that JSON parsing functions don't panic
 // This function is designed to catch dangerous bugs that could cause crashes
 func (h *MediaMTXTestHelper) TestJSONParsingPanicProtection(t *testing.T) {
-	// Test data that could cause panics
-	panicTestData := [][]byte{
-		[]byte(`{"items": [{"name": null}]}`),             // Null values in arrays
-		[]byte(`{"items": [{"name": {"nested": null}}]}`), // Nested null values
-		[]byte(`{"items": [{"name": []}]}`),               // Arrays instead of strings
-		[]byte(`{"items": [{"name": {}}]}`),               // Objects instead of strings
-		[]byte(`{"items": [{"name": 123}]}`),              // Numbers instead of strings
-		[]byte(`{"items": [{"name": true}]}`),             // Booleans instead of strings
+	registry := NewJSONScenarioRegistry()
+	
+	// Test panic protection with edge cases
+	edgeCases := []struct {
+		name     string
+		data     []byte
+		expected string
+	}{
+		{
+			name:     "very_large_json",
+			data:     []byte(`{"items": [], "large_field": "` + strings.Repeat("x", 1000000) + `"}`),
+			expected: "should handle gracefully",
+		},
+		{
+			name:     "json_with_null_bytes",
+			data:     []byte(`{"items": [], "null_field": "test\x00null\x00byte"}`),
+			expected: "should handle gracefully",
+		},
+		{
+			name:     "json_with_unicode_issues",
+			data:     []byte(`{"items": [], "unicode": "test\u0000\u0001\u0002"}`),
+			expected: "should handle gracefully",
+		},
+		{
+			name:     "json_with_deep_nesting",
+			data:     []byte(`{"items": [], "nested": {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": "deep"}}}}}}}}}}`),
+			expected: "should handle gracefully",
+		},
 	}
 
-	t.Run("Panic_Protection_Tests", func(t *testing.T) {
-		for i, data := range panicTestData {
-			t.Run(fmt.Sprintf("panic_test_%d", i), func(t *testing.T) {
-				t.Logf("Testing panic protection with data: %s", string(data))
+	for _, testCase := range edgeCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Logf("Testing edge case: %s - %s", testCase.name, testCase.expected)
 
-				// Test that functions don't panic
-				defer func() {
-					if r := recover(); r != nil {
-						t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with data %s: %v", string(data), r)
-					}
-				}()
+			// Test that parsing doesn't panic or cause crashes
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
+				}
+			}()
 
-				// Test all parsing functions
-				_, err1 := parsePathListResponse(data)
-				_, err2 := parseStreamResponse(data)
-				_, err3 := parseHealthResponse(data)
-				_, err4 := parsePathConfListResponse(data)
+			// Test all parsing functions with edge case data
+			_, err1 := parsePathListResponse(testCase.data)
+			_, err2 := parseStreamResponse(testCase.data)
+			_, err3 := parseHealthResponse(testCase.data)
+			_, err4 := parsePathConfListResponse(testCase.data)
 
-				// We don't care about errors here, just that no panic occurred
-				t.Logf("No panic occurred (errors: %v, %v, %v, %v)", err1, err2, err3, err4)
-			})
-		}
-	})
+			// We don't care about errors here, just that no panic occurred
+			t.Logf("Edge case %s handled without panic (errors: %v, %v, %v, %v)",
+				testCase.name, err1, err2, err3, err4)
+		})
+	}
 }
