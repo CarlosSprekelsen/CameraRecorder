@@ -466,6 +466,26 @@ func (h *MediaMTXTestHelper) GetAvailableCameraDevice(ctx context.Context) (stri
 	return availableDevices[0], nil
 }
 
+// GetAvailableCameraIdentifier returns a camera identifier (camera0) for Controller API testing
+// This follows the architecture: External APIs use camera identifiers, not device paths
+func (h *MediaMTXTestHelper) GetAvailableCameraIdentifier(ctx context.Context) (string, error) {
+	// Get available device path first
+	devicePath, err := h.GetAvailableCameraDevice(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Convert device path to camera identifier using PathManager abstraction
+	// /dev/video0 -> camera0
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+		return fmt.Sprintf("camera%s", deviceNum), nil
+	}
+
+	// For other device types, return as-is (external streams, etc.)
+	return devicePath, nil
+}
+
 // GetTestCameraDevice returns a test camera device from fixtures
 func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
 	// Load test camera devices from fixture file

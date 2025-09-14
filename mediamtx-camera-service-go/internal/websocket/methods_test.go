@@ -29,35 +29,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Global shared MediaMTX instance for parallel test execution
-var (
-	sharedMediaMTXHelper *mediamtx.MediaMTXTestHelper
-	sharedMediaMTXOnce   sync.Once
-	sharedMediaMTXMutex  sync.Mutex
-)
+// createMediaMTXControllerForTest creates an individual MediaMTX controller for each test
+// This ensures true test isolation and enables parallel test execution
+func createMediaMTXControllerForTest(t *testing.T) mediamtx.MediaMTXController {
+	// Create individual MediaMTX helper per test for isolation
+	mediaMTXHelper := mediamtx.NewMediaMTXTestHelper(t, nil)
 
-// getSharedMediaMTXHelper returns a shared MediaMTX instance for parallel test execution
-func getSharedMediaMTXHelper(t *testing.T) *mediamtx.MediaMTXTestHelper {
-	sharedMediaMTXOnce.Do(func() {
-		sharedMediaMTXMutex.Lock()
-		defer sharedMediaMTXMutex.Unlock()
+	// Start MediaMTX controller following proper orchestration
+	controller, err := mediaMTXHelper.GetController(t)
+	require.NoError(t, err, "Failed to create MediaMTX controller")
 
-		// Create shared MediaMTX helper
-		sharedMediaMTXHelper = mediamtx.NewMediaMTXTestHelper(t, nil)
+	// Start the controller
+	ctx := context.Background()
+	if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
+		err := concreteController.Start(ctx)
+		require.NoError(t, err, "Failed to start MediaMTX controller")
+	}
 
-		// Start MediaMTX controller following proper orchestration
-		controller, err := sharedMediaMTXHelper.GetController(t)
-		require.NoError(t, err, "Failed to create shared MediaMTX controller")
-
-		// Start the controller
-		ctx := context.Background()
-		if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
-			err := concreteController.Start(ctx)
-			require.NoError(t, err, "Failed to start shared MediaMTX controller")
-		}
-	})
-
-	return sharedMediaMTXHelper
+	return controller
 }
 
 // TestWebSocketMethods_Ping tests ping method
@@ -65,14 +54,11 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance for proper orchestration
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	// Set the controller in WebSocket server
 	server := helper.GetServer(t)
@@ -101,14 +87,11 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 
 // TestWebSocketMethods_Authenticate tests authenticate method
 func TestWebSocketMethods_Authenticate(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -134,14 +117,11 @@ func TestWebSocketMethods_Authenticate(t *testing.T) {
 
 // TestWebSocketMethods_GetServerInfo tests get_server_info method
 func TestWebSocketMethods_GetServerInfo(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -167,14 +147,11 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 
 // TestWebSocketMethods_GetStatus tests get_status method
 func TestWebSocketMethods_GetStatus(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -200,14 +177,11 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 
 // TestWebSocketMethods_GetCameraList tests get_camera_list method (WebSocket → MediaMTX Controller)
 func TestWebSocketMethods_GetCameraList(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -233,14 +207,11 @@ func TestWebSocketMethods_GetCameraList(t *testing.T) {
 
 // TestWebSocketMethods_GetCameraStatus tests get_camera_status method (WebSocket → MediaMTX Controller)
 func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -268,14 +239,11 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 
 // TestWebSocketMethods_GetCameraCapabilities tests get_camera_capabilities method
 func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -302,14 +270,11 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 
 // TestWebSocketMethods_TakeSnapshot tests take_snapshot method
 func TestWebSocketMethods_TakeSnapshot(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -336,14 +301,11 @@ func TestWebSocketMethods_TakeSnapshot(t *testing.T) {
 
 // TestWebSocketMethods_StartRecording tests start_recording method
 func TestWebSocketMethods_StartRecording(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -370,14 +332,11 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 
 // TestWebSocketMethods_StopRecording tests stop_recording method
 func TestWebSocketMethods_StopRecording(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -404,14 +363,11 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 
 // TestWebSocketMethods_GetMetrics tests get_metrics method
 func TestWebSocketMethods_GetMetrics(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -437,14 +393,11 @@ func TestWebSocketMethods_GetMetrics(t *testing.T) {
 
 // TestWebSocketMethods_InvalidJSON tests invalid JSON handling
 func TestWebSocketMethods_InvalidJSON(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -455,7 +408,7 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 	defer helper.CleanupTestClient(t, conn)
 
 	// Send invalid JSON
-	err = conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
+	err := conn.WriteMessage(websocket.TextMessage, []byte("invalid json"))
 	require.NoError(t, err, "Should send invalid JSON")
 
 	// Read response
@@ -472,14 +425,11 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 
 // TestWebSocketMethods_MissingMethod tests missing method handling
 func TestWebSocketMethods_MissingMethod(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -508,14 +458,11 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 
 // TestWebSocketMethods_UnauthenticatedAccess tests that methods require authentication
 func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -552,14 +499,11 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 
 // TestWebSocketMethods_SequentialRequests tests sequential request handling
 func TestWebSocketMethods_SequentialRequests(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -594,14 +538,11 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 
 // TestWebSocketMethods_MultipleConnections tests multiple connections handling
 func TestWebSocketMethods_MultipleConnections(t *testing.T) {
-	EnsureSequentialExecution(t)
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Use shared MediaMTX instance
-	mediaMTXHelper := getSharedMediaMTXHelper(t)
-	controller, err := mediaMTXHelper.GetController(t)
-	require.NoError(t, err, "Failed to get shared MediaMTX controller")
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -660,4 +601,734 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 
 	assert.Equal(t, numConnections, receivedResponses, "Should receive all responses")
 	assert.Equal(t, 0, receivedErrors, "Should have no errors")
+}
+
+// ============================================================================
+// STREAMING METHODS TESTS (High Priority - Core Functionality)
+// ============================================================================
+
+// TestWebSocketMethods_StartStreaming tests start_streaming method
+func TestWebSocketMethods_StartStreaming(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for start_streaming)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send start_streaming message
+	message := CreateTestMessage("start_streaming", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_StopStreaming tests stop_streaming method
+func TestWebSocketMethods_StopStreaming(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for stop_streaming)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send stop_streaming message
+	message := CreateTestMessage("stop_streaming", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetStreamURL tests get_stream_url method
+func TestWebSocketMethods_GetStreamURL(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_stream_url)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_stream_url message
+	message := CreateTestMessage("get_stream_url", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetStreamStatus tests get_stream_status method
+func TestWebSocketMethods_GetStreamStatus(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_stream_status)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_stream_status message
+	message := CreateTestMessage("get_stream_status", map[string]interface{}{
+		"device": "camera0",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// ============================================================================
+// FILE MANAGEMENT METHODS TESTS (High Priority - Core Functionality)
+// ============================================================================
+
+// TestWebSocketMethods_ListRecordings tests list_recordings method
+func TestWebSocketMethods_ListRecordings(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for list_recordings)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send list_recordings message
+	message := CreateTestMessage("list_recordings", map[string]interface{}{
+		"limit":  10,
+		"offset": 0,
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_ListSnapshots tests list_snapshots method
+func TestWebSocketMethods_ListSnapshots(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for list_snapshots)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send list_snapshots message
+	message := CreateTestMessage("list_snapshots", map[string]interface{}{
+		"limit":  10,
+		"offset": 0,
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_DeleteRecording tests delete_recording method
+func TestWebSocketMethods_DeleteRecording(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for delete_recording)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send delete_recording message
+	message := CreateTestMessage("delete_recording", map[string]interface{}{
+		"filename": "test_recording.mp4",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_DeleteSnapshot tests delete_snapshot method
+func TestWebSocketMethods_DeleteSnapshot(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for delete_snapshot)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send delete_snapshot message
+	message := CreateTestMessage("delete_snapshot", map[string]interface{}{
+		"filename": "test_snapshot.jpg",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// ============================================================================
+// SYSTEM MANAGEMENT METHODS TESTS (Medium Priority - Admin Features)
+// ============================================================================
+
+// TestWebSocketMethods_GetStorageInfo tests get_storage_info method
+func TestWebSocketMethods_GetStorageInfo(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for get_storage_info)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Send get_storage_info message
+	message := CreateTestMessage("get_storage_info", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_SetRetentionPolicy tests set_retention_policy method
+func TestWebSocketMethods_SetRetentionPolicy(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for set_retention_policy)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Send set_retention_policy message
+	message := CreateTestMessage("set_retention_policy", map[string]interface{}{
+		"policy_type":  "age",
+		"max_age_days": 30,
+		"enabled":      true,
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_CleanupOldFiles tests cleanup_old_files method
+func TestWebSocketMethods_CleanupOldFiles(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for cleanup_old_files)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Send cleanup_old_files message
+	message := CreateTestMessage("cleanup_old_files", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// ============================================================================
+// EVENT SYSTEM METHODS TESTS (Advanced Features)
+// ============================================================================
+
+// TestWebSocketMethods_SubscribeEvents tests subscribe_events method
+func TestWebSocketMethods_SubscribeEvents(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for subscribe_events)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send subscribe_events message
+	message := CreateTestMessage("subscribe_events", map[string]interface{}{
+		"topics": []string{"camera.connected", "recording.start"},
+		"filters": map[string]interface{}{
+			"device": "camera0",
+		},
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_UnsubscribeEvents tests unsubscribe_events method
+func TestWebSocketMethods_UnsubscribeEvents(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for unsubscribe_events)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send unsubscribe_events message
+	message := CreateTestMessage("unsubscribe_events", map[string]interface{}{
+		"topics": []string{"camera.connected"},
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetSubscriptionStats tests get_subscription_stats method
+func TestWebSocketMethods_GetSubscriptionStats(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_subscription_stats)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_subscription_stats message
+	message := CreateTestMessage("get_subscription_stats", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// ============================================================================
+// EXTERNAL STREAM METHODS TESTS (Advanced Features)
+// ============================================================================
+
+// TestWebSocketMethods_DiscoverExternalStreams tests discover_external_streams method
+func TestWebSocketMethods_DiscoverExternalStreams(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for discover_external_streams)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send discover_external_streams message
+	message := CreateTestMessage("discover_external_streams", map[string]interface{}{
+		"skydio_enabled":  true,
+		"generic_enabled": false,
+		"force_rescan":    false,
+		"include_offline": false,
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_AddExternalStream tests add_external_stream method
+func TestWebSocketMethods_AddExternalStream(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for add_external_stream)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send add_external_stream message
+	message := CreateTestMessage("add_external_stream", map[string]interface{}{
+		"stream_url":  "rtsp://192.168.42.15:5554/subject",
+		"stream_name": "Test_UAV_15",
+		"stream_type": "skydio_stanag4609",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_RemoveExternalStream tests remove_external_stream method
+func TestWebSocketMethods_RemoveExternalStream(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (operator role for remove_external_stream)
+	AuthenticateTestClient(t, conn, "test_user", "operator")
+
+	// Send remove_external_stream message
+	message := CreateTestMessage("remove_external_stream", map[string]interface{}{
+		"stream_url": "rtsp://192.168.42.15:5554/subject",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetExternalStreams tests get_external_streams method
+func TestWebSocketMethods_GetExternalStreams(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_external_streams)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_external_streams message
+	message := CreateTestMessage("get_external_streams", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_SetDiscoveryInterval tests set_discovery_interval method
+func TestWebSocketMethods_SetDiscoveryInterval(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (admin role for set_discovery_interval)
+	AuthenticateTestClient(t, conn, "test_user", "admin")
+
+	// Send set_discovery_interval message
+	message := CreateTestMessage("set_discovery_interval", map[string]interface{}{
+		"scan_interval": 300,
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// ============================================================================
+// ADDITIONAL FILE INFO METHODS TESTS (Complete Coverage)
+// ============================================================================
+
+// TestWebSocketMethods_GetRecordingInfo tests get_recording_info method
+func TestWebSocketMethods_GetRecordingInfo(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_recording_info)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_recording_info message
+	message := CreateTestMessage("get_recording_info", map[string]interface{}{
+		"filename": "test_recording.mp4",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetSnapshotInfo tests get_snapshot_info method
+func TestWebSocketMethods_GetSnapshotInfo(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_snapshot_info)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_snapshot_info message
+	message := CreateTestMessage("get_snapshot_info", map[string]interface{}{
+		"filename": "test_snapshot.jpg",
+	})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// TestWebSocketMethods_GetStreams tests get_streams method
+func TestWebSocketMethods_GetStreams(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create individual MediaMTX controller for test isolation
+	controller := createMediaMTXControllerForTest(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = helper.StartServer(t)
+
+	// Connect client
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Authenticate client (viewer role for get_streams)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Send get_streams message
+	message := CreateTestMessage("get_streams", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// Test response
+	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
+	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Result, "Response should have result")
 }

@@ -71,6 +71,10 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_streams",
 		"get_stream_url",
 		"get_stream_status",
+		"subscribe_events",
+		"unsubscribe_events",
+		"get_subscription_stats",
+		"get_external_streams",
 	}
 
 	// Operator permissions (camera control operations)
@@ -82,6 +86,9 @@ func NewPermissionChecker() *PermissionChecker {
 		"delete_snapshot",
 		"start_streaming",
 		"stop_streaming",
+		"discover_external_streams",
+		"add_external_stream",
+		"remove_external_stream",
 	}
 
 	// Admin permissions (system management operations)
@@ -92,6 +99,7 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_storage_info",
 		"set_retention_policy",
 		"cleanup_old_files",
+		"set_discovery_interval",
 	}
 
 	// Set permissions for each method

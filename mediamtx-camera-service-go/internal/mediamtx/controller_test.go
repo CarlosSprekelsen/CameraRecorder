@@ -519,16 +519,17 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 
 	outputPath := filepath.Join(tempDir, "test_recording.mp4")
 
-	// Test recording with available camera device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
-	session, err := controller.StartRecording(ctx, device, outputPath)
+	// Test recording with available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+	session, err := controller.StartRecording(ctx, cameraID, outputPath)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
 	// Verify session properties
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
-	assert.Equal(t, device, session.DevicePath, "Should use available camera device")
+	assert.Equal(t, cameraID, session.DevicePath, "Should use available camera identifier")
 	assert.Equal(t, outputPath, session.FilePath, "Should match output path")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 
@@ -567,10 +568,11 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 
 	outputPath := filepath.Join(tempDir, "test_recording_stop.mp4")
 
-	// Start recording first - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
-	session, err := controller.StartRecording(ctx, device, outputPath)
+	// Start recording first - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+	session, err := controller.StartRecording(ctx, cameraID, outputPath)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
@@ -607,12 +609,13 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test snapshot with available camera device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Test snapshot with available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{}
 
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, device, options)
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
 	if err != nil {
 		t.Logf("Snapshot error details: %v", err)
 	}
@@ -621,14 +624,14 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Verify snapshot properties
 	assert.NotEmpty(t, snapshot.ID, "Snapshot should have an ID")
-	assert.Equal(t, device, snapshot.Device, "Should use available camera device")
+	assert.Equal(t, cameraID, snapshot.Device, "Should use available camera identifier")
 
 	// Verify the snapshot path follows the fixture configuration
 	// Use configured path instead of hardcoded path
 	expectedPath := helper.GetConfiguredSnapshotPath()
 	assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
 		"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
-	assert.Contains(t, snapshot.FilePath, device, "File path should contain camera device identifier")
+	assert.Contains(t, snapshot.FilePath, cameraID, "File path should contain camera identifier")
 	assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 }
 
@@ -686,9 +689,10 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test advanced recording with options - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Test advanced recording with options - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality":      "high",
 		"resolution":   "1920x1080",
@@ -697,22 +701,22 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		"segment_time": 60,
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, options)
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
 	// Verify session properties
-	assert.Equal(t, device, session.DevicePath, "Should use available camera device for API consistency")
+	assert.Equal(t, cameraID, session.DevicePath, "Should use available camera identifier for API consistency")
 
-	// Verify file path follows expected pattern: /tmp/recordings/{device}_YYYY-MM-DD_HH-MM-SS.mp4
-	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/"+device+"_"), "File path should start with expected prefix")
+	// Verify file path follows expected pattern: /tmp/recordings/{cameraID}_YYYY-MM-DD_HH-MM-SS.mp4
+	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/"+cameraID+"_"), "File path should start with expected prefix")
 	assert.True(t, strings.HasSuffix(session.FilePath, ".mp4"), "File path should end with .mp4 extension")
 
 	// Verify timestamp format in filename (YYYY-MM-DD_HH-MM-SS)
 	pathParts := strings.Split(session.FilePath, "/")
 	filename := pathParts[len(pathParts)-1]
 	filenameWithoutExt := strings.TrimSuffix(filename, ".mp4")
-	deviceAndTimestamp := strings.TrimPrefix(filenameWithoutExt, device+"_")
+	deviceAndTimestamp := strings.TrimPrefix(filenameWithoutExt, cameraID+"_")
 
 	// Parse timestamp to verify it's valid
 	_, err = time.Parse("2006-01-02_15-04-05", deviceAndTimestamp)
@@ -763,25 +767,26 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	}()
 
 	// Test stream recording - service is now ready following the architecture pattern
-	// Get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
-	stream, err := controller.StartStreaming(ctx, device)
+	// Get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+	stream, err := controller.StartStreaming(ctx, cameraID)
 	require.NoError(t, err, "Stream recording should start successfully")
 	require.NotNil(t, stream, "Stream should not be nil")
 
 	// Verify stream properties
-	assert.Equal(t, device, stream.Name, "Stream name should be the abstract camera identifier")
+	assert.Equal(t, cameraID, stream.Name, "Stream name should be the abstract camera identifier")
 	// Note: Path struct doesn't have URL field - source is in Path.Source
 	assert.True(t, stream.Ready, "Stream should be ready after FFmpeg startup (abstraction layer handles timing)")
 
 	// Test getting stream status
-	status, err := controller.GetStreamStatus(ctx, device)
+	status, err := controller.GetStreamStatus(ctx, cameraID)
 	require.NoError(t, err, "Should be able to get stream status")
 	require.NotNil(t, status, "Stream status should not be nil")
 
 	// Test getting stream URL
-	streamURL, err := controller.GetStreamURL(ctx, device)
+	streamURL, err := controller.GetStreamURL(ctx, cameraID)
 	require.NoError(t, err, "Should be able to get stream URL")
 	require.NotNil(t, streamURL, "Stream URL should not be nil")
 	assert.NotEmpty(t, streamURL, "Stream URL should not be empty")
@@ -929,29 +934,30 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test TakeAdvancedSnapshot - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Test TakeAdvancedSnapshot - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality": 85,
 		"tier":    "all",
 	}
 
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, device, options)
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
 	if err != nil {
 		t.Logf("Advanced snapshot failed (expected in test environment): %v", err)
 		// This is expected to fail in test environment without real camera
 		assert.Contains(t, err.Error(), "tried", "Error should indicate which tiers were attempted")
 	} else {
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, device, snapshot.Device, "Device should match")
+		assert.Equal(t, cameraID, snapshot.Device, "Device should match")
 
 		// Verify the snapshot path follows the fixture configuration
 		// Use configured path instead of hardcoded path
 		expectedPath := "/tmp/snapshots" // From fixture configuration
 		assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
 			"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
-		assert.Contains(t, snapshot.FilePath, device, "File path should contain camera device identifier")
+		assert.Contains(t, snapshot.FilePath, cameraID, "File path should contain camera identifier")
 		assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 		t.Log("Advanced snapshot successful")
 	}

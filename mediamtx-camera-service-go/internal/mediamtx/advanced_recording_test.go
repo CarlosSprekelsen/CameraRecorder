@@ -46,9 +46,10 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Setup test - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Setup test - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality":    "high",
 		"resolution": "1920x1080",
@@ -62,7 +63,7 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	// Try to record with simple retry
 	var session *RecordingSession
 	for i := 0; i < 3; i++ {
-		session, err = controller.StartAdvancedRecording(ctx, device, options)
+		session, err = controller.StartAdvancedRecording(ctx, cameraID, options)
 		if err == nil {
 			break
 		}
@@ -77,7 +78,7 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Verify it works
 	assert.NotEmpty(t, session.ID)
-	assert.Equal(t, device, session.DevicePath)
+	assert.Equal(t, cameraID, session.DevicePath)
 	assert.Equal(t, "active", session.Status)
 
 	// Stop recording
@@ -114,9 +115,10 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Start advanced recording - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality":    "medium",
 		"resolution": "1280x720",
@@ -124,7 +126,7 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 		"duration":   5, // 5 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, options)
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -174,9 +176,10 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Start advanced recording - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality":    "low",
 		"resolution": "640x480",
@@ -184,7 +187,7 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 		"duration":   3, // 3 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, options)
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -237,9 +240,10 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 	initialSessions := controller.ListAdvancedRecordingSessions()
 	initialCount := len(initialSessions)
 
-	// Start multiple advanced recordings - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Start multiple advanced recordings - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	sessionIDs := make([]string, 3)
 
 	for i := 0; i < 3; i++ {
@@ -250,7 +254,7 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 			"duration":   2, // 2 seconds
 		}
 
-		session, err := controller.StartAdvancedRecording(ctx, device, options)
+		session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 		require.NoError(t, err, "Advanced recording should start successfully")
 		require.NotNil(t, session, "Recording session should not be nil")
 		sessionIDs[i] = session.ID
@@ -303,9 +307,10 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Start advanced recording - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	outputPath := filepath.Join(outputDir, "rotate_test.mp4")
 	options := map[string]interface{}{
 		"quality":    "medium",
@@ -314,7 +319,7 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 		"duration":   10, // 10 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, device, options)
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -406,9 +411,10 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
 	defer eventHelper.Cleanup()
 
-	// Test event-driven recording with optimized timeouts - get available device using optimized helper method
-	device, err := helper.GetAvailableCameraDevice(ctx)
-	require.NoError(t, err, "Should be able to get available camera device")
+	// Test event-driven recording with optimized timeouts - get available camera identifier using optimized helper method
+	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := map[string]interface{}{
 		"quality":    "high",
 		"resolution": "1920x1080",
@@ -423,7 +429,7 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 	recordingCtx, recordingCancel := context.WithTimeout(ctx, 15*time.Second)
 	defer recordingCancel()
 
-	session, err := controller.StartAdvancedRecording(recordingCtx, device, options)
+	session, err := controller.StartAdvancedRecording(recordingCtx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -432,7 +438,7 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 
 	// Verify session properties
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
-	assert.Equal(t, device, session.DevicePath, "Device path should match")
+	assert.Equal(t, cameraID, session.DevicePath, "Device path should match")
 	assert.NotEmpty(t, session.FilePath, "File path should be generated")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 	assert.NotZero(t, session.StartTime, "Start time should be set")
