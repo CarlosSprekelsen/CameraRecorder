@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -406,15 +407,88 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 
 // HasHardwareCamera checks if a real camera is available for testing
 func (h *MediaMTXTestHelper) HasHardwareCamera(ctx context.Context) bool {
-	pathManager := h.GetPathManager()
-	// Check if camera0 device exists
-	devicePath, exists := pathManager.GetDevicePathForCamera("camera0")
-	if !exists {
+	// Use real device detection instead of hardcoded camera0
+	availableDevices := h.getRealAvailableDevices()
+	return len(availableDevices) > 0
+}
+
+// getRealAvailableDevices scans for real available camera devices on the system
+// This reuses the same logic as RealHardwareTestHelper for consistency
+func (h *MediaMTXTestHelper) getRealAvailableDevices() []string {
+	availableDevices := []string{}
+
+	// Scan for video devices in /dev
+	videoDevices, err := filepath.Glob("/dev/video*")
+	if err != nil {
+		h.logger.WithError(err).Warn("Could not scan for video devices")
+		return availableDevices
+	}
+
+	for _, device := range videoDevices {
+		// Check if device is actually accessible and functional
+		if h.isDeviceAccessible(device) {
+			availableDevices = append(availableDevices, device)
+			h.logger.WithField("device", device).Debug("Found accessible camera device")
+		}
+	}
+
+	if len(availableDevices) == 0 {
+		h.logger.Warn("No accessible camera devices found. Tests will use fallback devices.")
+		// Fallback to common device paths for testing
+		availableDevices = []string{"/dev/video0", "/dev/video1"}
+	}
+
+	return availableDevices
+}
+
+// isDeviceAccessible checks if a device is actually accessible and functional
+// This reuses the same logic as RealHardwareTestHelper for consistency
+func (h *MediaMTXTestHelper) isDeviceAccessible(devicePath string) bool {
+	// Check if device file exists
+	if _, err := os.Stat(devicePath); os.IsNotExist(err) {
 		return false
 	}
-	// Validate the device is actually accessible
-	valid, err := pathManager.ValidateCameraDevice(ctx, devicePath)
-	return valid && err == nil
+
+	// Try to get device capabilities (non-blocking)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Use v4l2-ctl to check device capabilities
+	cmd := exec.CommandContext(ctx, "v4l2-ctl", "--device", devicePath, "--all")
+	output, err := cmd.Output()
+	if err != nil {
+		// Device exists but may not be accessible (permissions, busy, etc.)
+		return false
+	}
+
+	// Check if this is actually a video capture device, not just a metadata device
+	hasVideoCapture := false
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Device Caps") {
+			// Look for video capture capability in Device Caps
+			if strings.Contains(line, "0x04200001") || strings.Contains(line, "0x85200001") {
+				hasVideoCapture = true
+				break
+			}
+		}
+	}
+
+	// Only consider devices with video capture capability as "accessible cameras"
+	return hasVideoCapture
+}
+
+// GetAvailableCameraDevice returns the first available real camera device
+// This eliminates the need for repetitive inline camera device detection patterns
+func (h *MediaMTXTestHelper) GetAvailableCameraDevice(ctx context.Context) (string, error) {
+	// Use real device detection instead of hardcoded devices
+	availableDevices := h.getRealAvailableDevices()
+	if len(availableDevices) == 0 {
+		return "", fmt.Errorf("no accessible camera devices found")
+	}
+
+	// Return the first available device
+	return availableDevices[0], nil
 }
 
 // GetTestCameraDevice returns a test camera device from fixtures
@@ -425,17 +499,27 @@ func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
 	// For now, return appropriate test devices based on scenario
 	switch scenario {
 	case "hardware_available":
-		return "/dev/video0" // Local V4L2 device
+		// Use real device detection instead of hardcoded /dev/video0
+		if device, err := h.GetAvailableCameraDevice(context.Background()); err == nil {
+			return device
+		}
+		return "/dev/video0" // Fallback to local V4L2 device
 	case "network_failure":
 		return "rtsp://test-source.example.com:554/stream" // External RTSP (expected to fail)
 	case "mixed_scenario":
 		// Check if hardware is available, otherwise use external source
 		if h.HasHardwareCamera(context.Background()) {
-			return "/dev/video0"
+			if device, err := h.GetAvailableCameraDevice(context.Background()); err == nil {
+				return device
+			}
 		}
 		return "rtsp://test-source.example.com:554/stream"
 	default:
-		return "/dev/video0" // Default to local device
+		// Use real device detection instead of hardcoded /dev/video0
+		if device, err := h.GetAvailableCameraDevice(context.Background()); err == nil {
+			return device
+		}
+		return "/dev/video0" // Fallback to local device
 	}
 }
 

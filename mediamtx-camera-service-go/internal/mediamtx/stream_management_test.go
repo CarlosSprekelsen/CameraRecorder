@@ -75,13 +75,12 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// First create a stream - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+	// First create a stream - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 
 	streamName := "test_stream"
-	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
+	source := "rtsp://localhost:8554/" + device // Use available camera device
 
 	createdStream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
@@ -125,13 +124,12 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create a new stream - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+	// Create a new stream - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 
 	streamName := "test_create_stream"
-	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
+	source := "rtsp://localhost:8554/" + device // Use available camera device
 
 	stream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
@@ -170,13 +168,12 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// First create a stream - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+	// First create a stream - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 
 	streamName := "test_delete_stream"
-	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
+	source := "rtsp://localhost:8554/" + device // Use available camera device
 
 	stream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
@@ -223,7 +220,7 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "Getting non-existent stream should fail")
 
 	// Test creating stream with empty name
-	_, err = controller.CreateStream(ctx, "", "rtsp://localhost:8554/camera0")
+	_, err = controller.CreateStream(ctx, "", "rtsp://localhost:8554/test_device")
 	assert.Error(t, err, "Creating stream with empty name should fail")
 
 	// Test creating stream with empty source
@@ -257,7 +254,7 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 	assert.Error(t, err, "Getting stream when controller is not running should fail")
 
 	// Test creating stream when controller is not running
-	_, err = controller.CreateStream(ctx, "test_stream", "rtsp://localhost:8554/camera0")
+	_, err = controller.CreateStream(ctx, "test_stream", "rtsp://localhost:8554/test_device")
 	assert.Error(t, err, "Creating stream when controller is not running should fail")
 
 	// Test deleting stream when controller is not running

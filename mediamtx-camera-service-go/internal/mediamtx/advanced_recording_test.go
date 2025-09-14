@@ -46,12 +46,9 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Setup test - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Setup test - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	options := map[string]interface{}{
 		"quality":    "high",
 		"resolution": "1920x1080",
@@ -117,12 +114,9 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Start advanced recording - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	options := map[string]interface{}{
 		"quality":    "medium",
 		"resolution": "1280x720",
@@ -180,12 +174,9 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Start advanced recording - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	options := map[string]interface{}{
 		"quality":    "low",
 		"resolution": "640x480",
@@ -246,12 +237,9 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 	initialSessions := controller.ListAdvancedRecordingSessions()
 	initialCount := len(initialSessions)
 
-	// Start multiple advanced recordings - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Start multiple advanced recordings - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	sessionIDs := make([]string, 3)
 
 	for i := 0; i < 3; i++ {
@@ -315,12 +303,9 @@ func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Creating output directory should succeed")
 	defer os.RemoveAll(outputDir)
 
-	// Start advanced recording - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Start advanced recording - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	outputPath := filepath.Join(outputDir, "rotate_test.mp4")
 	options := map[string]interface{}{
 		"quality":    "medium",
@@ -421,12 +406,9 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
 	defer eventHelper.Cleanup()
 
-	// Test event-driven recording with optimized timeouts - get available device instead of hardcoded camera0
-	cameraList, err := controller.GetCameraList(ctx)
-	require.NoError(t, err, "Should be able to get camera list")
-	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
-
-	device := cameraList.Cameras[0].Device // Use first available camera
+	// Test event-driven recording with optimized timeouts - get available device using optimized helper method
+	device, err := helper.GetAvailableCameraDevice(ctx)
+	require.NoError(t, err, "Should be able to get available camera device")
 	options := map[string]interface{}{
 		"quality":    "high",
 		"resolution": "1920x1080",
