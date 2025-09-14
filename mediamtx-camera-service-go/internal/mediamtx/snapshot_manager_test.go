@@ -473,7 +473,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 
 		snapshot := &Snapshot{
 			ID:       fmt.Sprintf("test_%d", i),
-			Device:   "camera0",
+			Device:   "camera0", // This is test data, not a real device call
 			FilePath: filePath,
 			Created:  createdTime,
 		}
@@ -1003,6 +1003,8 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
 	ctx := context.Background()
+	// Note: This test uses hardcoded device for testing snapshot manager functionality
+	// In real usage, device would come from GetCameraList()
 	device := "camera0"
 
 	// Test Tier 2: RTSP Immediate Capture

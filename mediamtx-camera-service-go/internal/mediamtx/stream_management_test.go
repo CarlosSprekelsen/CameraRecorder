@@ -75,9 +75,13 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// First create a stream
+	// First create a stream - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
 	streamName := "test_stream"
-	source := "rtsp://localhost:8554/camera0"
+	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
 
 	createdStream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
@@ -121,9 +125,13 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Create a new stream
+	// Create a new stream - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
 	streamName := "test_create_stream"
-	source := "rtsp://localhost:8554/camera0"
+	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
 
 	stream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")
@@ -162,9 +170,13 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// First create a stream
+	// First create a stream - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
 	streamName := "test_delete_stream"
-	source := "rtsp://localhost:8554/camera0"
+	source := "rtsp://localhost:8554/" + cameraList.Cameras[0].Device // Use first available camera
 
 	stream, err := controller.CreateStream(ctx, streamName, source)
 	require.NoError(t, err, "Creating stream should succeed")

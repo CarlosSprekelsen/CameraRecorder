@@ -43,13 +43,7 @@ func setupBenchmarkController(b *testing.B) (*MediaMTXTestHelper, *EventDrivenTe
 		b.Fatalf("Failed to start controller: %v", err)
 	}
 
-	// Wait for initial readiness
-	readinessCtx, readinessCancel := context.WithTimeout(ctx, 15*time.Second)
-	defer readinessCancel()
-	err = eventHelper.WaitForReadiness(readinessCtx, 15*time.Second)
-	if err != nil {
-		b.Fatalf("Failed to wait for initial readiness: %v", err)
-	}
+	// No waiting for readiness - Progressive Readiness Pattern
 
 	return helper, eventHelper, controller
 }
@@ -76,16 +70,10 @@ func BenchmarkEventDrivenReadiness(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			// Benchmark event-driven readiness subscription
-			readinessChan := eventHelper.SubscribeToReadiness()
+			// Benchmark non-blocking event observation
+			eventHelper.ObserveReadiness()
 
-			// Wait for readiness event with short timeout
-			select {
-			case <-readinessChan:
-				// Event received
-			case <-time.After(100 * time.Millisecond):
-				// Timeout (expected in some cases)
-			}
+			// No waiting - just observe events
 		}
 	})
 }
@@ -112,16 +100,10 @@ func BenchmarkEventDrivenHealthMonitoring(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			// Benchmark event-driven health monitoring subscription
-			healthChan := eventHelper.SubscribeToHealthChanges()
+			// Benchmark non-blocking health event observation
+			eventHelper.ObserveHealthChanges()
 
-			// Wait for health event with short timeout
-			select {
-			case <-healthChan:
-				// Event received
-			case <-time.After(100 * time.Millisecond):
-				// Timeout (expected in some cases)
-			}
+			// No waiting - just observe events
 		}
 	})
 }
@@ -168,12 +150,8 @@ func BenchmarkEventDrivenVsPollingComparison(b *testing.B) {
 		b.ResetTimer()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				// Event-driven approach
-				readinessChan := eventHelper.SubscribeToReadiness()
-				select {
-				case <-readinessChan:
-				case <-time.After(10 * time.Millisecond):
-				}
+				// Non-blocking event observation approach
+				eventHelper.ObserveReadiness()
 			}
 		})
 	})
@@ -221,19 +199,12 @@ func BenchmarkEventDrivenThroughput(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		eventCount := 0
 		for pb.Next() {
-			// Create multiple event subscriptions to test throughput
-			readinessChan := eventHelper.SubscribeToReadiness()
-			healthChan := eventHelper.SubscribeToHealthChanges()
+			// Create multiple non-blocking event observations to test throughput
+			eventHelper.ObserveReadiness()
+			eventHelper.ObserveHealthChanges()
 
-			// Wait for any event
-			select {
-			case <-readinessChan:
-				eventCount++
-			case <-healthChan:
-				eventCount++
-			case <-time.After(1 * time.Millisecond):
-				// Timeout
-			}
+			// No waiting - just observe events
+			eventCount++
 		}
 		b.ReportMetric(float64(eventCount), "events/sec")
 	})

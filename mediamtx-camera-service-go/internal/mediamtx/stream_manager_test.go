@@ -161,6 +161,8 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	stream, err := streamManager.StartStream(ctx, devicePath)
 	require.NoError(t, err, "Recording stream creation should succeed")
 	require.NotNil(t, stream, "Created recording stream should not be nil")
+	// Note: This test uses hardcoded device name for testing stream manager functionality
+	// In real usage, device would come from GetCameraList()
 	assert.Equal(t, "camera0", stream.Name, "Recording stream should have base camera name without suffix")
 
 	// Clean up

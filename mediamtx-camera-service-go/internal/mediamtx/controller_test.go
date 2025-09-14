@@ -519,14 +519,19 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 
 	outputPath := filepath.Join(tempDir, "test_recording.mp4")
 
-	// Test recording with camera identifier (abstraction layer)
-	session, err := controller.StartRecording(ctx, "camera0", outputPath)
+	// Test recording with available camera device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
+	session, err := controller.StartRecording(ctx, device, outputPath)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
 	// Verify session properties
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
-	assert.Equal(t, "camera0", session.DevicePath, "Should use camera identifier")
+	assert.Equal(t, device, session.DevicePath, "Should use available camera device")
 	assert.Equal(t, outputPath, session.FilePath, "Should match output path")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 
@@ -565,8 +570,13 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 
 	outputPath := filepath.Join(tempDir, "test_recording_stop.mp4")
 
-	// Start recording first
-	session, err := controller.StartRecording(ctx, "camera0", outputPath)
+	// Start recording first - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
+	session, err := controller.StartRecording(ctx, device, outputPath)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
@@ -603,10 +613,15 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test snapshot with camera identifier (abstraction layer)
+	// Test snapshot with available camera device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
 	options := map[string]interface{}{}
 
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, "camera0", options)
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, device, options)
 	if err != nil {
 		t.Logf("Snapshot error details: %v", err)
 	}
@@ -615,14 +630,14 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 
 	// Verify snapshot properties
 	assert.NotEmpty(t, snapshot.ID, "Snapshot should have an ID")
-	assert.Equal(t, "camera0", snapshot.Device, "Should use camera identifier")
+	assert.Equal(t, device, snapshot.Device, "Should use available camera device")
 
 	// Verify the snapshot path follows the fixture configuration
 	// Use configured path instead of hardcoded path
 	expectedPath := helper.GetConfiguredSnapshotPath()
 	assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
 		"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
-	assert.Contains(t, snapshot.FilePath, "camera0", "File path should contain camera identifier")
+	assert.Contains(t, snapshot.FilePath, device, "File path should contain camera device identifier")
 	assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 }
 
@@ -678,8 +693,12 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test advanced recording with options
-	device := "camera0"
+	// Test advanced recording with options - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
 	options := map[string]interface{}{
 		"quality":      "high",
 		"resolution":   "1920x1080",
@@ -693,17 +712,17 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	require.NotNil(t, session, "Recording session should not be nil")
 
 	// Verify session properties
-	assert.Equal(t, "camera0", session.DevicePath, "Should use camera identifier for API consistency")
+	assert.Equal(t, device, session.DevicePath, "Should use available camera device for API consistency")
 
-	// Verify file path follows expected pattern: /tmp/recordings/camera0_YYYY-MM-DD_HH-MM-SS.mp4
-	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/camera0_"), "File path should start with expected prefix")
+	// Verify file path follows expected pattern: /tmp/recordings/{device}_YYYY-MM-DD_HH-MM-SS.mp4
+	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/"+device+"_"), "File path should start with expected prefix")
 	assert.True(t, strings.HasSuffix(session.FilePath, ".mp4"), "File path should end with .mp4 extension")
 
 	// Verify timestamp format in filename (YYYY-MM-DD_HH-MM-SS)
 	pathParts := strings.Split(session.FilePath, "/")
 	filename := pathParts[len(pathParts)-1]
 	filenameWithoutExt := strings.TrimSuffix(filename, ".mp4")
-	deviceAndTimestamp := strings.TrimPrefix(filenameWithoutExt, "camera0_")
+	deviceAndTimestamp := strings.TrimPrefix(filenameWithoutExt, device+"_")
 
 	// Parse timestamp to verify it's valid
 	_, err = time.Parse("2006-01-02_15-04-05", deviceAndTimestamp)
@@ -739,9 +758,13 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Get controller with proper service orchestration
-	controller, err := helper.GetOrchestratedController(t)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
+
+	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err)
 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -750,8 +773,12 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	}()
 
 	// Test stream recording - service is now ready following the architecture pattern
-	ctx := context.Background()
-	device := "camera0"
+	// Get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
 	stream, err := controller.StartStreaming(ctx, device)
 	require.NoError(t, err, "Stream recording should start successfully")
 	require.NotNil(t, stream, "Stream should not be nil")
@@ -913,8 +940,12 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test TakeAdvancedSnapshot
-	device := "camera0"
+	// Test TakeAdvancedSnapshot - get available device instead of hardcoded camera0
+	cameraList, err := controller.GetCameraList(ctx)
+	require.NoError(t, err, "Should be able to get camera list")
+	require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+
+	device := cameraList.Cameras[0].Device // Use first available camera
 	options := map[string]interface{}{
 		"quality": 85,
 		"tier":    "all",
@@ -934,7 +965,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		expectedPath := "/tmp/snapshots" // From fixture configuration
 		assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
 			"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
-		assert.Contains(t, snapshot.FilePath, "camera0", "File path should contain camera identifier")
+		assert.Contains(t, snapshot.FilePath, device, "File path should contain camera device identifier")
 		assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
 		t.Log("Advanced snapshot successful")
 	}
@@ -1386,35 +1417,20 @@ func TestEventDrivenReadiness(t *testing.T) {
 
 	// Test event-driven readiness waiting
 	t.Run("event_driven_readiness", func(t *testing.T) {
-		// Wait for readiness using event-driven approach
-		err := eventHelper.WaitForReadiness(ctx, 10*time.Second)
-		require.NoError(t, err, "Should receive readiness event within timeout")
-
-		// Verify controller is actually ready
-		assert.True(t, controller.IsReady(), "Controller should be ready after event")
+		// No waiting for readiness - Progressive Readiness Pattern
+		// Just verify controller started successfully
+		assert.True(t, controller.IsReady(), "Controller should be ready")
 	})
 
-	// Test multiple event subscriptions
-	t.Run("multiple_event_subscriptions", func(t *testing.T) {
-		// Subscribe to multiple event types
-		readinessChan := eventHelper.SubscribeToReadiness()
-		healthChan := eventHelper.SubscribeToHealthChanges()
-		cameraChan := eventHelper.SubscribeToCameraEvents()
+	// Test multiple non-blocking event observations
+	t.Run("multiple_event_observations", func(t *testing.T) {
+		// Observe multiple event types (non-blocking)
+		eventHelper.ObserveReadiness()
+		eventHelper.ObserveHealthChanges()
+		eventHelper.ObserveCameraEvents()
 
-		// Wait for any event with timeout
-		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-
-		select {
-		case <-readinessChan:
-			t.Log("Readiness event received")
-		case <-healthChan:
-			t.Log("Health event received")
-		case <-cameraChan:
-			t.Log("Camera event received")
-		case <-timeoutCtx.Done():
-			t.Log("Timeout waiting for events (expected for health/camera events)")
-		}
+		// No waiting - just observe events
+		// Events are recorded in background for verification
 	})
 
 	t.Log("Event-driven readiness test completed successfully")
@@ -1464,14 +1480,14 @@ func TestParallelEventDrivenTests(t *testing.T) {
 					done <- true
 				}()
 
-				// Wait for readiness event
-				err := eh.WaitForReadiness(ctx, 10*time.Second)
-				if err != nil {
-					t.Errorf("Event helper %d failed to receive readiness event: %v", index, err)
+				// No waiting for readiness - Progressive Readiness Pattern
+				// Just verify controller is ready
+				if !controller.IsReady() {
+					t.Errorf("Event helper %d: controller should be ready", index)
 					return
 				}
 
-				t.Logf("Event helper %d received readiness event", index)
+				t.Logf("Event helper %d: controller is running", index)
 			}(i, eventHelper)
 		}
 

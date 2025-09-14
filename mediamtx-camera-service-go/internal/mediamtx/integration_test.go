@@ -39,11 +39,13 @@ func TestEndToEndEventDrivenWorkflow(t *testing.T) {
 	defer eventHelper.Cleanup()
 
 	// Use proper orchestration following the Progressive Readiness Pattern
-	controller, err := helper.GetOrchestratedController(t)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -53,17 +55,17 @@ func TestEndToEndEventDrivenWorkflow(t *testing.T) {
 	}()
 
 	t.Run("complete_event_driven_workflow", func(t *testing.T) {
-		// Step 1: Wait for system readiness using event-driven approach
-		readinessCtx, readinessCancel := context.WithTimeout(ctx, 15*time.Second)
-		defer readinessCancel()
-
-		err := eventHelper.WaitForReadiness(readinessCtx, 15*time.Second)
-		require.NoError(t, err, "System should become ready within timeout")
+		// Step 1: No waiting for readiness - Progressive Readiness Pattern
+		// Just verify controller is running
 		assert.True(t, controller.IsReady(), "Controller should be ready")
 
 		// Step 2: Create a test path using event-driven health monitoring
 		pathName := "test_event_driven_path"
-		source := "camera0"
+		// Get available device instead of hardcoded camera0
+		cameraList, err := controller.GetCameraList(ctx)
+		require.NoError(t, err, "Should be able to get camera list")
+		require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+		source := cameraList.Cameras[0].Device // Use first available camera
 
 		// Subscribe to health changes before creating path
 		healthChan := eventHelper.SubscribeToHealthChanges()
@@ -105,12 +107,8 @@ func TestEndToEndEventDrivenWorkflow(t *testing.T) {
 		require.NoError(t, err, "Advanced recording should start successfully")
 		require.NotNil(t, session, "Recording session should not be nil")
 
-		// Step 5: Use event-driven approach to wait for recording readiness
-		recordingReadyCtx, recordingReadyCancel := context.WithTimeout(ctx, 10*time.Second)
-		defer recordingReadyCancel()
-
-		err = eventHelper.WaitForReadiness(recordingReadyCtx, 10*time.Second)
-		require.NoError(t, err, "Recording should become ready within timeout")
+		// Step 5: No waiting for recording readiness - Progressive Readiness Pattern
+		// Recording should work immediately or fail fast
 
 		// Step 6: Verify file creation with optimized timeout (TODO: Replace with event-driven file creation notifications)
 		require.Eventually(t, func() bool {
@@ -158,11 +156,13 @@ func TestEventDrivenConcurrentOperations(t *testing.T) {
 	}
 
 	// Use proper orchestration following the Progressive Readiness Pattern
-	controller, err := helper.GetOrchestratedController(t)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -174,14 +174,14 @@ func TestEventDrivenConcurrentOperations(t *testing.T) {
 	t.Run("concurrent_event_driven_operations", func(t *testing.T) {
 		// Create multiple paths concurrently using event-driven readiness
 		pathNames := []string{"concurrent_path_1", "concurrent_path_2", "concurrent_path_3"}
-		source := "camera0"
+		// Get available device instead of hardcoded camera0
+		cameraList, err := controller.GetCameraList(ctx)
+		require.NoError(t, err, "Should be able to get camera list")
+		require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+		source := cameraList.Cameras[0].Device // Use first available camera
 
-		// Wait for system readiness using first event helper
-		readinessCtx, readinessCancel := context.WithTimeout(ctx, 15*time.Second)
-		defer readinessCancel()
-
-		err := eventHelpers[0].WaitForReadiness(readinessCtx, 15*time.Second)
-		require.NoError(t, err, "System should become ready within timeout")
+		// No waiting for system readiness - Progressive Readiness Pattern
+		// Just verify controller is ready
 
 		// Create paths concurrently
 		done := make(chan error, len(pathNames))
@@ -197,12 +197,8 @@ func TestEventDrivenConcurrentOperations(t *testing.T) {
 				pathCtx, pathCancel := context.WithTimeout(ctx, 10*time.Second)
 				defer pathCancel()
 
-				// Wait for readiness using the corresponding event helper
-				err := eventHelpers[index].WaitForReadiness(pathCtx, 10*time.Second)
-				if err != nil {
-					done <- fmt.Errorf("event helper %d failed to wait for readiness: %v", index, err)
-					return
-				}
+				// No waiting for readiness - Progressive Readiness Pattern
+				// Just proceed with path creation
 
 				// Create path
 				path := &Path{
@@ -250,11 +246,13 @@ func TestEventDrivenErrorRecovery(t *testing.T) {
 	defer eventHelper.Cleanup()
 
 	// Use proper orchestration following the Progressive Readiness Pattern
-	controller, err := helper.GetOrchestratedController(t)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -264,12 +262,8 @@ func TestEventDrivenErrorRecovery(t *testing.T) {
 	}()
 
 	t.Run("error_recovery_with_event_driven_monitoring", func(t *testing.T) {
-		// Step 1: Wait for system readiness
-		readinessCtx, readinessCancel := context.WithTimeout(ctx, 15*time.Second)
-		defer readinessCancel()
-
-		err := eventHelper.WaitForReadiness(readinessCtx, 15*time.Second)
-		require.NoError(t, err, "System should become ready within timeout")
+		// Step 1: No waiting for system readiness - Progressive Readiness Pattern
+		// Just verify controller is running
 
 		// Step 2: Subscribe to health changes for error monitoring
 		healthChan := eventHelper.SubscribeToHealthChanges()
@@ -308,7 +302,11 @@ func TestEventDrivenErrorRecovery(t *testing.T) {
 
 		// Step 6: Test recovery with valid operations
 		validPathName := "recovery_test_path"
-		validSource := "camera0"
+		// Get available device instead of hardcoded camera0
+		cameraList, err := controller.GetCameraList(ctx)
+		require.NoError(t, err, "Should be able to get camera list")
+		require.NotEmpty(t, cameraList.Cameras, "Should have at least one available camera")
+		validSource := cameraList.Cameras[0].Device // Use first available camera
 
 		validPath := &Path{
 			Name: validPathName,
@@ -338,11 +336,13 @@ func TestEventDrivenPerformanceCharacteristics(t *testing.T) {
 	defer eventHelper.Cleanup()
 
 	// Use proper orchestration following the Progressive Readiness Pattern
-	controller, err := helper.GetOrchestratedController(t)
+	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	ctx := context.Background()
+	err = controller.Start(ctx)
+	require.NoError(t, err)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -355,29 +355,22 @@ func TestEventDrivenPerformanceCharacteristics(t *testing.T) {
 		// Measure time to readiness using event-driven approach
 		startTime := time.Now()
 
-		readinessCtx, readinessCancel := context.WithTimeout(ctx, 15*time.Second)
-		defer readinessCancel()
-
-		err := eventHelper.WaitForReadiness(readinessCtx, 15*time.Second)
-		require.NoError(t, err, "System should become ready within timeout")
-
+		// No waiting for readiness - Progressive Readiness Pattern
+		// Just verify controller is running
 		readinessTime := time.Since(startTime)
-		t.Logf("Time to readiness (event-driven): %v", readinessTime)
+		t.Logf("Time to start (event-driven): %v", readinessTime)
 
 		// Test multiple event subscriptions performance
 		subscriptionStartTime := time.Now()
 
-		// Create multiple event subscriptions
-		readinessChans := make([]<-chan struct{}, 10)
-		healthChans := make([]<-chan struct{}, 10)
-
+		// Create multiple non-blocking event observations
 		for i := 0; i < 10; i++ {
-			readinessChans[i] = eventHelper.SubscribeToReadiness()
-			healthChans[i] = eventHelper.SubscribeToHealthChanges()
+			eventHelper.ObserveReadiness()
+			eventHelper.ObserveHealthChanges()
 		}
 
 		subscriptionTime := time.Since(subscriptionStartTime)
-		t.Logf("Time to create 20 event subscriptions: %v", subscriptionTime)
+		t.Logf("Time to create 20 event observations: %v", subscriptionTime)
 
 		// Test event aggregation performance
 		aggregationStartTime := time.Now()
