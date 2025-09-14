@@ -403,7 +403,10 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 	defer h.CleanupTestClient(t, conn)
 
 	// Test 2: System should return readiness status instead of blocking
-	message := CreateTestMessage("get_system_status", nil)
+	// FIXED: Use get_status (API-compliant) with admin role (API requirement)
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+	
+	message := CreateTestMessage("get_status", nil)
 	response := SendTestMessage(t, conn, message)
 
 	require.NotNil(t, response, "System should respond to status requests immediately")

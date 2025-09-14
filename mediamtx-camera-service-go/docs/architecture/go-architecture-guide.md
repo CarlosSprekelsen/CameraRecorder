@@ -227,7 +227,7 @@ end note
 - File management and rotation
 - **Key Insight:** Uses same MediaMTX path for streaming and recording
 - **Pattern:** Path reuse instead of unique path per recording
-- **Sequence (hard invariant):** Ensure path → **Wait runtime ready** → Enable recording (PATCH)
+- **Sequence (hard invariant):** Ensure path → **Skip readiness check for on-demand** → Enable recording (PATCH)
 
 **Camera Monitor (Hardware Abstraction Layer)**
 - **Mode:** Event-first, Polling-fallback
@@ -241,10 +241,10 @@ end note
   4. Provide lookups for abstraction mapping (cameraX ↔ /dev/videoN)
 - **Integration:** Interface-based design with dependency injection
 
-**Path Manager (Configuration & Readiness)**
-- **Contract:** Create → **Wait (runtime visibility)** → Patch (retry)
+**Path Manager (Configuration & Activation)**
+- **Contract:** Create → **Skip readiness check for on-demand paths** → Patch (retry)
 - **Idempotent Create:** Config add if missing; "already exists" = success
-- **Readiness Gate:** Poll `/v3/paths/get/{name}` (runtime) before PATCH
+- **On-Demand Paths:** Skip readiness checks - paths activate when accessed, not when created
 - **Patch Resilience:** Exponential backoff on 404/409; include path/device context in errors
 - **Per-Path Mutex:** Serialize operations for a path across callers
 - **Map Parameter Contract:** All `map[string]interface{}` params are optional; `nil` means "no options". PathManager never mutates caller-supplied maps.
@@ -687,8 +687,8 @@ end note
 
 PM -> MS : POST /v3/config/paths/add/camera0
 MS --> PM : Path created (or already exists)
-PM -> PM : WaitForPathReady (runtime: /v3/paths/get)
-PM --> SM : Ready
+PM -> PM : Skip readiness check for on-demand path
+PM --> SM : Path created
 SM --> RM : Stream ready
 
 == Recording Configuration (Step 2) ==
@@ -1213,7 +1213,7 @@ stop
 **Error Handling:**
 - **Structured Errors:** Consistent error response format
 - **Error Propagation:** Clean error context preservation
-- **Recovery Mechanisms:** Automatic retry with exponential backoff (PATCH), runtime readiness gates, per-path serialization
+- **Recovery Mechanisms:** Automatic retry with exponential backoff (PATCH), per-path serialization
 - **Failure Isolation:** Component failures don't cascade
 
 #### Circuit Breaker Implementation
@@ -1269,7 +1269,7 @@ end note
 - One path can handle multiple functions (streaming + recording)
 - Path names are simple identifiers, not complex unique strings
 - Recording filenames are managed independently via MediaMTX patterns
-- Readiness and patching are **decoupled** with an explicit runtime gate
+- On-demand paths skip readiness checks and activate when accessed
 
 **Single Responsibility Principle:**
 - Each component has one clear responsibility

@@ -999,15 +999,33 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}, nil
 	}
 
+	// Security extensions: Authentication check (Phase 1 enhancement) - FIRST GATE
+	// Authentication must happen before any other checks, including readiness
+	if request.Method != "authenticate" {
+		if !client.Authenticated {
+			s.logger.WithFields(logging.Fields{
+				"client_id": client.ClientID,
+				"method":    request.Method,
+				"action":    "auth_required",
+				"component": "security_middleware",
+			}).Warn("Authentication required for method")
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				ID:      request.ID,
+				Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
+			}, nil
+		}
+	}
+
 	// System readiness check - skip for authenticate, system status, and ping methods
-	// Ping should always return "pong" after authentication for basic connectivity
+	// Only check readiness for authenticated users
 	if request.Method != "authenticate" && request.Method != "get_system_status" && request.Method != "ping" {
 		if !s.isSystemReady() {
 			s.logger.WithFields(logging.Fields{
 				"client_id": client.ClientID,
 				"method":    request.Method,
 				"action":    "system_not_ready",
-			}).Debug("System not ready, returning status")
+			}).Debug("System not ready, returning status to authenticated user")
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
@@ -1032,15 +1050,6 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 				"error":     err.Error(),
 				"action":    "permission_denied",
 			}).Debug("Permission check failed")
-
-			// Check if client is not authenticated
-			if !client.Authenticated {
-				return &JsonRpcResponse{
-					JSONRPC: "2.0",
-					ID:      request.ID,
-					Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
-				}, nil
-			}
 
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",

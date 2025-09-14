@@ -171,7 +171,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 	stream := &Path{
 		Name:     streamName,
 		ConfName: streamName,
-		Ready:    false,
+		Ready:    false, // On-demand paths are never ready until accessed
 		Tracks:   []string{},
 		Readers:  []PathReader{},
 	}
@@ -180,7 +180,8 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 		"stream_name": streamName,
 		"use_case":    useCase,
 		"device_path": devicePath,
-	}).Info("MediaMTX stream created successfully with use case configuration")
+		"on_demand":   true,
+	}).Info("MediaMTX on-demand stream created successfully - will activate on first access")
 
 	return stream, nil
 }
@@ -586,24 +587,13 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 		"stream_name": stream.Name,
 	}).Info("Path ensured, activating publisher and waiting for readiness")
 
-	// DETERMINISTIC ACTIVATION: Trigger MediaMTX publisher via RTSP handshake
-	// This is protocol-based activation, not time-based waiting
-	err = sm.pathManager.ActivatePathPublisher(ctx, pathName)
-	if err != nil {
-		sm.logger.WithField("path_name", pathName).Warn("RTSP activation failed, proceeding with readiness check")
-		// Don't fail here - some paths may not need activation
-	}
-
-	// Wait for path to be ready in runtime (not config)
-	// Use configurable timeout from MediaMTX config
-	timeout := 15 * time.Second // Default timeout
-	if sm.config != nil && sm.config.StreamReadiness.Timeout > 0 {
-		timeout = time.Duration(sm.config.StreamReadiness.Timeout) * time.Second
-	}
-	err = sm.pathManager.WaitForPathReady(ctx, pathName, timeout)
-	if err != nil {
-		return fmt.Errorf("failed to wait for path readiness: %w", err)
-	}
+	// FIXED: Skip readiness check for on-demand paths
+	// On-demand paths only become ready when someone actually connects to the RTSP stream
+	// MediaMTX will start the FFmpeg process when recording begins, not when we create the path
+	sm.logger.WithFields(logging.Fields{
+		"path_name": pathName,
+		"reason":    "on_demand_paths_activate_on_access",
+	}).Info("Skipping readiness check for on-demand path - will activate when recording starts")
 
 	sm.logger.WithField("path_name", pathName).Info("Path is ready, enabling recording")
 
@@ -655,32 +645,22 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 	// Generate recordPath with timestamp pattern
 	recordPath := sm.getRecordingOutputPath(pathName, outputPath)
 
-	// Get recording configuration from centralized config system
-	recordingConfig, err := sm.configIntegration.GetRecordingConfig()
-	if err != nil {
-		sm.logger.WithError(err).Warn("Failed to get recording config, using fallback values")
-		// Fallback to hardcoded values if config is unavailable
-		return map[string]interface{}{
-			"record":                true,
-			"recordPath":            recordPath,
-			"recordFormat":          "fmp4",                       // STANAG 4609 compatible
-			"recordPartDuration":    sm.config.RecordPartDuration, // Use centralized config
-			"recordMaxPartSize":     "100MB",
-			"recordSegmentDuration": sm.config.RecordSegmentDuration, // Use centralized config
-			"recordDeleteAfter":     sm.config.RecordDeleteAfter,     // Use centralized config
-		}
-	}
-
-	// Convert config values to MediaMTX format
+	// Use centralized configuration instead of hardcoded values
 	config := map[string]interface{}{
 		"record":                true,
 		"recordPath":            recordPath,
-		"recordFormat":          recordingConfig.Format,                                                // Use configured format
-		"recordPartDuration":    recordingConfig.DefaultMaxDuration.String(),                           // Use configured duration
-		"recordMaxPartSize":     fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024),         // Convert bytes to MB
-		"recordSegmentDuration": time.Duration(recordingConfig.SegmentDuration).String(),               // Use configured segment duration
-		"recordDeleteAfter":     time.Duration(recordingConfig.DefaultRetentionDays*24).String() + "h", // Convert days to hours
+		"recordFormat":          "fmp4", // STANAG 4609 compatible
+		"recordPartDuration":    sm.config.RecordPartDuration,
+		"recordMaxPartSize":     "100MB",
+		"recordSegmentDuration": sm.config.RecordSegmentDuration,
+		"recordDeleteAfter":     sm.config.RecordDeleteAfter,
 	}
+
+	sm.logger.WithFields(logging.Fields{
+		"path_name": pathName,
+		"record_path": recordPath,
+		"config": config,
+	}).Debug("Created recording configuration for PATCH")
 
 	return config
 }
@@ -689,9 +669,10 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) string {
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
-		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
+		// MediaMTX requires %path in recordPath - single % not double %%
+		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S.mp4")
 	}
-	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-	return "/opt/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4"
+	// MediaMTX requires %path in recordPath - single % not double %%
+	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
 }
+

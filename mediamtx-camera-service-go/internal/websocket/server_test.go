@@ -67,10 +67,16 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
-	assert.True(t, server.IsRunning(), "Server should be running after start")
 
-	// Wait for server to be ready
-	WaitForServerReady(t, server, 1*time.Second)
+	// Wait for server to be ready (race condition fix)
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		if server.IsRunning() {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	assert.True(t, server.IsRunning(), "Server should be running after start")
 
 	// Test server stop
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -88,6 +94,15 @@ func TestWebSocketServer_ProgressiveReadinessPattern(t *testing.T) {
 
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
+
+	// Wait for server to be ready (race condition fix)
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		if server.IsRunning() {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	assert.True(t, server.IsRunning(), "Server should be running after start")
 
 	// Validate Progressive Readiness Pattern behavior
@@ -103,6 +118,15 @@ func TestWebSocketServer_DoubleStart(t *testing.T) {
 
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
+
+	// Wait for server to be ready (race condition fix)
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		if server.IsRunning() {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	assert.True(t, server.IsRunning(), "Server should be running after first start")
 
 	// Start server second time should fail

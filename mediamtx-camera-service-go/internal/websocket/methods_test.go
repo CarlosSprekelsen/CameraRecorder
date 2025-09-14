@@ -118,16 +118,17 @@ func TestWebSocketMethods_Authenticate(t *testing.T) {
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	// Test authentication
-	message := CreateTestMessage("authenticate", map[string]interface{}{
-		"auth_token": "test-jwt-token",
-	})
+	// Test authentication using proper test infrastructure
+	AuthenticateTestClient(t, conn, "test_user", "viewer")
+
+	// Verify authentication worked by testing a protected method
+	message := CreateTestMessage("ping", map[string]interface{}{})
 	response := SendTestMessage(t, conn, message)
 
-	// Test response
+	// Test response - ping should work after authentication
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.NotNil(t, response.Result, "Response should have result")
+	assert.Equal(t, "pong", response.Result, "Response should have correct result")
 	assert.Nil(t, response.Error, "Response should not have error")
 }
 
