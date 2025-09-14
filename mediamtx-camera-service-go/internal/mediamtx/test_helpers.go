@@ -1105,27 +1105,17 @@ func (edh *EventDrivenTestHelper) ObserveReadiness() <-chan interface{} {
 	// Create observation channel
 	observationChan := make(chan interface{}, 10)
 
-	// Start background observer using polling (since production doesn't emit events)
+	// Start background observer using real controller events (now that production emits events)
 	go func() {
-		ticker := time.NewTicker(100 * time.Millisecond)
-		defer ticker.Stop()
-
-		lastReadyState := false
-		for {
+		readinessChan := edh.controller.SubscribeToReadiness()
+		
+		// Listen for readiness events from the real controller
+		for range readinessChan {
+			edh.recordEvent("readiness", "controller_ready")
 			select {
-			case <-ticker.C:
-				currentReadyState := edh.controller.IsReady()
-
-				// Record event when readiness state changes from false to true
-				if !lastReadyState && currentReadyState {
-					edh.recordEvent("readiness", "controller_ready")
-					select {
-					case observationChan <- "controller_ready":
-					default:
-						// Don't block if channel full
-					}
-				}
-				lastReadyState = currentReadyState
+			case observationChan <- "controller_ready":
+			default:
+				// Don't block if channel full
 			}
 		}
 	}()
@@ -1553,30 +1543,21 @@ func (h *MediaMTXTestHelper) DisabledTestJSONParsingPanicProtection(t *testing.T
 	t.Skip("DISABLED: Tests now use scenario registry directly in json_malformation_test.go")
 }
 
-// SubscribeToReadiness provides a channel for readiness events (test infrastructure)
+// SubscribeToReadiness delegates to the real controller implementation
 func (h *MediaMTXTestHelper) SubscribeToReadiness() <-chan struct{} {
-	// Create a buffered channel for readiness events
-	readinessChan := make(chan struct{}, 1)
-
-	// For test purposes, we'll send a readiness event immediately
-	// In a real implementation, this would be connected to the actual readiness system
-	go func() {
-		readinessChan <- struct{}{}
-	}()
-
-	return readinessChan
+	controller, err := h.GetController(&testing.T{})
+	if err != nil || controller == nil {
+		// Fallback: create a mock channel if controller is not available
+		readinessChan := make(chan struct{}, 1)
+		go func() {
+			readinessChan <- struct{}{}
+		}()
+		return readinessChan
+	}
+	return controller.SubscribeToReadiness()
 }
 
-// SubscribeToReadiness provides a channel for readiness events (test infrastructure)
+// SubscribeToReadiness delegates to the real controller implementation
 func (edh *EventDrivenTestHelper) SubscribeToReadiness() <-chan struct{} {
-	// Create a buffered channel for readiness events
-	readinessChan := make(chan struct{}, 1)
-
-	// For test purposes, we'll send a readiness event immediately
-	// In a real implementation, this would be connected to the actual readiness system
-	go func() {
-		readinessChan <- struct{}{}
-	}()
-
-	return readinessChan
+	return edh.controller.SubscribeToReadiness()
 }
