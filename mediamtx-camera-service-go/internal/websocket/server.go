@@ -999,8 +999,9 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}, nil
 	}
 
-	// System readiness check - skip for authenticate and system status methods
-	if request.Method != "authenticate" && request.Method != "get_system_status" {
+	// System readiness check - skip for authenticate, system status, and ping methods
+	// Ping should always return "pong" after authentication for basic connectivity
+	if request.Method != "authenticate" && request.Method != "get_system_status" && request.Method != "ping" {
 		if !s.isSystemReady() {
 			s.logger.WithFields(logging.Fields{
 				"client_id": client.ClientID,

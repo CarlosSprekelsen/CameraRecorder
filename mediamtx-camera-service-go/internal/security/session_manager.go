@@ -229,7 +229,9 @@ func (sm *SessionManager) Stop(ctx context.Context) error {
 	case <-done:
 		// Clean shutdown
 	case <-ctx.Done():
-		sm.logger.Warn("Session manager shutdown timeout")
+		// Force shutdown after timeout or context cancellation
+		sm.logger.Warn("Session manager shutdown timeout or context cancelled, forcing stop")
+		// Return the context error to indicate timeout/cancellation (following camera monitor pattern)
 		return ctx.Err()
 	}
 

@@ -31,12 +31,14 @@ type CodecConfig struct {
 
 // StreamReadinessConfig represents stream readiness configuration.
 type StreamReadinessConfig struct {
-	Timeout                     float64 `mapstructure:"timeout"`
-	RetryAttempts               int     `mapstructure:"retry_attempts"`
-	RetryDelay                  float64 `mapstructure:"retry_delay"`
-	CheckInterval               float64 `mapstructure:"check_interval"`
-	EnableProgressNotifications bool    `mapstructure:"enable_progress_notifications"`
-	GracefulFallback            bool    `mapstructure:"graceful_fallback"`
+	Timeout                     float64 `mapstructure:"timeout"`                       // Default: 15.0 seconds
+	RetryAttempts               int     `mapstructure:"retry_attempts"`                // Default: 3
+	RetryDelay                  float64 `mapstructure:"retry_delay"`                   // Default: 1.0 second
+	CheckInterval               float64 `mapstructure:"check_interval"`                // Default: 0.5 seconds (500ms)
+	EnableProgressNotifications bool    `mapstructure:"enable_progress_notifications"` // Default: false
+	GracefulFallback            bool    `mapstructure:"graceful_fallback"`             // Default: true
+	MaxCheckInterval            float64 `mapstructure:"max_check_interval"`            // Default: 2.0 seconds (max polling interval)
+	InitialCheckInterval        float64 `mapstructure:"initial_check_interval"`        // Default: 0.2 seconds (200ms)
 }
 
 // SecurityConfig represents security configuration settings.

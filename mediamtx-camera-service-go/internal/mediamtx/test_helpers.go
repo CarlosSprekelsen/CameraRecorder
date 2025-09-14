@@ -1108,7 +1108,7 @@ func (edh *EventDrivenTestHelper) ObserveReadiness() <-chan interface{} {
 	// Start background observer using real controller events (now that production emits events)
 	go func() {
 		readinessChan := edh.controller.SubscribeToReadiness()
-		
+
 		// Listen for readiness events from the real controller
 		for range readinessChan {
 			edh.recordEvent("readiness", "controller_ready")
