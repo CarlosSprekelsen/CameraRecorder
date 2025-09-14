@@ -31,7 +31,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	configpkg "github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
