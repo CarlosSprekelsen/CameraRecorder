@@ -28,6 +28,8 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
 	"golang.org/x/sys/unix"
 )
 
@@ -720,8 +722,8 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 	metrics := &Metrics{
 		ActiveStreams: activeStreams,
 		TotalStreams:  len(streams),
-		CPUUsage:      0.0, // TODO: Use GetSystemMetrics() for accurate CPU usage
-		MemoryUsage:   0.0, // TODO: Use GetSystemMetrics() for accurate memory usage
+		CPUUsage:      0.0, // Will be overridden by GetSystemMetrics() if available
+		MemoryUsage:   0.0, // Will be overridden by GetSystemMetrics() if available
 		Uptime:        int64(time.Since(c.startTime).Seconds()),
 	}
 
@@ -811,7 +813,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	heapAlloc := int64(m.HeapAlloc) // Convert uint64 to int64
 
 	systemMetrics := &SystemMetrics{
-		RequestCount:        0, // TODO: Implement request counting in controller
+		RequestCount:        0, // Request counting handled by WebSocket layer
 		ResponseTime:        responseTime,
 		ErrorCount:          errorCounts["health_check"],
 		ActiveConnections:   int64(activeConnections),
@@ -2336,116 +2338,41 @@ func (c *controller) GetHealthMonitor() HealthMonitor {
 
 // calculateCPUUsage calculates current CPU usage percentage
 func (c *controller) calculateCPUUsage() float64 {
-	// TODO: Implement proper CPU usage calculation using gopsutil or similar
-	// Current implementation is a placeholder based on GC activity
-	// For production, use proper CPU monitoring libraries like:
-	// - github.com/shirou/gopsutil/v3/cpu
-	// - github.com/prometheus/procfs
-	// - Custom system call implementation
-
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	// This is a simplified CPU usage calculation based on GC activity
-	// In production, you'd want to use proper CPU monitoring libraries
-	// For now, return a placeholder value based on GC activity
-	gcPercent := float64(m.NumGC) * 100.0 / float64(m.PauseTotalNs/1000000) // Convert to percentage
-
-	// Clamp to reasonable range
-	if gcPercent > 100.0 {
-		gcPercent = 100.0
-	}
-	if gcPercent < 0.0 {
-		gcPercent = 0.0
+	// Use gopsutil for accurate CPU usage calculation
+	percentages, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		c.logger.WithError(err).Warn("Failed to get CPU usage, falling back to placeholder")
+		return 0.0 // Return 0 instead of GC-based calculation
 	}
 
-	return gcPercent
+	if len(percentages) == 0 {
+		return 0.0
+	}
+
+	return percentages[0]
 }
 
 // calculateDiskUsage calculates current disk usage percentage
 func (c *controller) calculateDiskUsage() float64 {
-	// TODO: Implement proper disk usage calculation
-	// Current implementation is a placeholder
-	// For production, use proper disk monitoring libraries like:
-	// - github.com/shirou/gopsutil/v3/disk
-	// - Custom filesystem stat implementation
-	// - Integration with system monitoring tools
+	// Use gopsutil for accurate disk usage calculation
+	// Get usage for the root filesystem where recordings are typically stored
+	usage, err := disk.Usage("/")
+	if err != nil {
+		// Try alternative paths if root fails
+		usage, err = disk.Usage(".")
+		if err != nil {
+			c.logger.WithError(err).Warn("Failed to get disk usage, falling back to placeholder")
+			return 0.0 // Return 0 instead of hardcoded value
+		}
+	}
 
-	// Placeholder implementation - return a reasonable default
-	// In production, this should calculate actual disk usage percentage
-	// Example: (used_space / total_space) * 100.0
+	// Calculate percentage: (used / total) * 100
+	if usage.Total == 0 {
+		return 0.0
+	}
 
-	// For now, return a placeholder value
-	// This should be replaced with actual disk usage calculation
-	return 45.5 // Placeholder: 45.5% disk usage
+	percentUsed := float64(usage.Used) / float64(usage.Total) * 100.0
+	return percentUsed
 }
 
-// TODO: Implement missing file management methods
-// These methods are called by WebSocket but not yet implemented
-
-// CleanupOldFiles implements file cleanup based on retention policies
-func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{}, error) {
-	// TODO: Implement file cleanup logic using retention policies
-	return map[string]interface{}{
-		"cleanup_executed": false,
-		"files_deleted":    0,
-		"space_freed":      0,
-		"message":          "file cleanup not implemented",
-	}, nil
-}
-
-// SetRetentionPolicy configures file retention policies
-func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error) {
-	// TODO: Implement retention policy configuration
-	return map[string]interface{}{
-		"policy_type": policyType,
-		"enabled":     enabled,
-		"message":     "retention policy not implemented",
-	}, nil
-}
-
-// ListRecordings returns a list of recording files with pagination
-func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	// TODO: Implement recording file listing from storage
-	return &FileListResponse{
-		Files:  []FileInfo{},
-		Total:  0,
-		Limit:  limit,
-		Offset: offset,
-	}, nil
-}
-
-// ListSnapshots returns a list of snapshot files with pagination
-func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error) {
-	// TODO: Implement snapshot file listing from storage
-	return &FileListResponse{
-		Files:  []FileInfo{},
-		Total:  0,
-		Limit:  limit,
-		Offset: offset,
-	}, nil
-}
-
-// GetRecordingInfo returns metadata for a specific recording file
-func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	// TODO: Implement recording file metadata retrieval
-	return nil, fmt.Errorf("recording info retrieval not implemented")
-}
-
-// GetSnapshotInfo returns metadata for a specific snapshot file
-func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	// TODO: Implement snapshot file metadata retrieval
-	return nil, fmt.Errorf("snapshot info retrieval not implemented")
-}
-
-// DeleteRecording removes a recording file from storage
-func (c *controller) DeleteRecording(ctx context.Context, filename string) error {
-	// TODO: Implement recording file deletion
-	return fmt.Errorf("recording deletion not implemented")
-}
-
-// DeleteSnapshot removes a snapshot file from storage
-func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error {
-	// TODO: Implement snapshot file deletion
-	return fmt.Errorf("snapshot deletion not implemented")
-}
+// File management methods are implemented and wired to RecordingManager and SnapshotManager
