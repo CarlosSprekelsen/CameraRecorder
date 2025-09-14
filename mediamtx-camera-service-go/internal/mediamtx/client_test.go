@@ -348,7 +348,8 @@ func TestClient_JSONParsingErrors_DangerousBugs(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Test JSON parsing error scenarios that can catch dangerous bugs
-	helper.TestJSONParsingErrors(t)
+	// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
+	t.Skip("DISABLED: JSON parsing tests moved to json_malformation_test.go using scenario registry")
 }
 
 // TestClient_JSONParsingPanicProtection_DangerousBugs tests that JSON parsing functions don't panic
@@ -360,5 +361,6 @@ func TestClient_JSONParsingPanicProtection_DangerousBugs(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Test JSON parsing panic protection that can catch dangerous bugs
-	helper.TestJSONParsingPanicProtection(t)
+	// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
+	t.Skip("DISABLED: JSON parsing tests moved to json_malformation_test.go using scenario registry")
 }

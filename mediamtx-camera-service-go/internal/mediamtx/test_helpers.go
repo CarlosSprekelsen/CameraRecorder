@@ -1105,18 +1105,27 @@ func (edh *EventDrivenTestHelper) ObserveReadiness() <-chan interface{} {
 	// Create observation channel
 	observationChan := make(chan interface{}, 10)
 
-	// Start background observer
+	// Start background observer using polling (since production doesn't emit events)
 	go func() {
-		// Get controller readiness channel
-		readinessChan := edh.controller.SubscribeToReadiness()
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
 
-		// Observe events in background
-		for event := range readinessChan {
-			edh.recordEvent("readiness", event)
+		lastReadyState := false
+		for {
 			select {
-			case observationChan <- event:
-			default:
-				// Don't block if channel full
+			case <-ticker.C:
+				currentReadyState := edh.controller.IsReady()
+				
+				// Record event when readiness state changes from false to true
+				if !lastReadyState && currentReadyState {
+					edh.recordEvent("readiness", "controller_ready")
+					select {
+					case observationChan <- "controller_ready":
+					default:
+						// Don't block if channel full
+					}
+				}
+				lastReadyState = currentReadyState
 			}
 		}
 	}()
