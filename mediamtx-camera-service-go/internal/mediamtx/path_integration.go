@@ -27,10 +27,10 @@ import (
 
 // PathIntegration provides integration between MediaMTX path management and camera discovery
 type PathIntegration struct {
-	pathManager   PathManager
-	cameraMonitor camera.CameraMonitor
-	configManager *config.ConfigManager
-	logger        *logging.Logger
+	pathManager       PathManager
+	cameraMonitor     camera.CameraMonitor
+	configIntegration *ConfigIntegration
+	logger            *logging.Logger
 
 	// Path tracking
 	activePaths   map[string]*Path
@@ -46,12 +46,12 @@ type PathIntegration struct {
 }
 
 // NewPathIntegration creates a new path integration
-func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configManager *config.ConfigManager, logger *logging.Logger) *PathIntegration {
+func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configIntegration *ConfigIntegration, logger *logging.Logger) *PathIntegration {
 	return &PathIntegration{
-		pathManager:   pathManager,
-		cameraMonitor: cameraMonitor,
-		configManager: configManager,
-		logger:        logger,
+		pathManager:       pathManager,
+		cameraMonitor:     cameraMonitor,
+		configIntegration: configIntegration,
+		logger:            logger,
 		activePaths:   make(map[string]*Path),
 		// cameraPaths removed - delegated to PathManager
 	}
@@ -136,9 +136,9 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	}
 
 	// Get configuration
-	cfg := pi.configManager.GetConfig()
-	if cfg == nil {
-		return fmt.Errorf("failed to get configuration from config manager")
+	cfg, err := pi.configIntegration.GetConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Create path options
@@ -241,9 +241,9 @@ func (pi *PathIntegration) monitorCameraChanges(ctx context.Context) {
 
 	// Use configurable ticker interval (default 5 seconds)
 	tickerInterval := 5 * time.Second // Default fallback
-	if pi.configManager != nil {
-		cfg := pi.configManager.GetConfig()
-		if cfg != nil && cfg.MediaMTX.HealthMonitorDefaults.CheckInterval > 0 {
+	if pi.configIntegration != nil {
+		cfg, err := pi.configIntegration.GetConfig()
+		if err == nil && cfg.MediaMTX.HealthMonitorDefaults.CheckInterval > 0 {
 			tickerInterval = time.Duration(cfg.MediaMTX.HealthMonitorDefaults.CheckInterval * float64(time.Second))
 		}
 	}

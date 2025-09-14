@@ -29,6 +29,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
 // HybridCameraMonitor provides hybrid camera discovery and monitoring
@@ -155,11 +156,13 @@ func NewHybridCameraMonitor(
 	// Create fresh device event source instance for this monitor
 	deviceEventSource := GetDeviceEventSourceFactory().Create()
 
-	cfg := configManager.GetConfig()
-	if cfg == nil {
+	// Create config integration for centralized config access
+	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
+	cfg, err := configIntegration.GetConfig()
+	if err != nil {
 		// Close the device event source if config is not available
 		deviceEventSource.Close()
-		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
+		return nil, fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Set default discovery mode if not configured

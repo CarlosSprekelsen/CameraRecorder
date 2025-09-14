@@ -49,7 +49,7 @@ type WebSocketServer struct {
 	config *ServerConfig
 
 	// Dependencies (proper dependency injection)
-	configManager      *config.ConfigManager
+	configIntegration  *mediamtx.ConfigIntegration
 	logger             *logging.Logger
 	jwtHandler         *security.JWTHandler
 	mediaMTXController mediamtx.MediaMTXControllerAPI
@@ -434,13 +434,13 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 
 // NewWebSocketServer creates a new WebSocket server with proper dependency injection
 func NewWebSocketServer(
-	configManager *config.ConfigManager,
+	configIntegration *mediamtx.ConfigIntegration,
 	logger *logging.Logger,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXControllerAPI,
 ) (*WebSocketServer, error) {
-	if configManager == nil {
-		return nil, fmt.Errorf("configManager cannot be nil - use existing internal/config/ConfigManager")
+	if configIntegration == nil {
+		return nil, fmt.Errorf("configIntegration cannot be nil - use existing mediamtx.ConfigIntegration")
 	}
 
 	if logger == nil {
@@ -455,10 +455,10 @@ func NewWebSocketServer(
 		return nil, fmt.Errorf("mediaMTXController cannot be nil - use existing internal/mediamtx/MediaMTXController")
 	}
 
-	// Get configuration from config manager
-	cfg := configManager.GetConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not available - ensure config is loaded")
+	// Get configuration from config integration
+	cfg, err := configIntegration.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Create server configuration
@@ -476,7 +476,7 @@ func NewWebSocketServer(
 
 	server := &WebSocketServer{
 		config:             serverConfig,
-		configManager:      configManager,
+		configIntegration:  configIntegration,
 		logger:             logger,
 		jwtHandler:         jwtHandler,
 		mediaMTXController: mediaMTXController,

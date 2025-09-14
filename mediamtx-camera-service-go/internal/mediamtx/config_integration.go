@@ -171,6 +171,16 @@ func (ci *ConfigIntegration) GetPerformanceConfig() (*config.PerformanceConfig, 
 	return &cfg.Performance, nil
 }
 
+// GetConfig retrieves the full configuration
+func (ci *ConfigIntegration) GetConfig() (*config.Config, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	return cfg, nil
+}
+
 // UpdateMediaMTXConfig updates MediaMTX configuration in the existing config system
 func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *config.MediaMTXConfig) error {
 	// Validate the new configuration

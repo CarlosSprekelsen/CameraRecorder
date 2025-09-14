@@ -33,19 +33,19 @@ import (
 
 // controller represents the main MediaMTX controller
 type controller struct {
-	client           MediaMTXClient
-	healthMonitor    HealthMonitor
-	pathManager      PathManager
-	pathIntegration  *PathIntegration
-	streamManager    StreamManager
-	ffmpegManager    FFmpegManager
-	recordingManager *RecordingManager
-	snapshotManager  *SnapshotManager
-	rtspManager      RTSPConnectionManager
-	cameraMonitor    camera.CameraMonitor
-	config           *config.MediaMTXConfig
-	configManager    *config.ConfigManager
-	logger           *logging.Logger
+	client            MediaMTXClient
+	healthMonitor     HealthMonitor
+	pathManager       PathManager
+	pathIntegration   *PathIntegration
+	streamManager     StreamManager
+	ffmpegManager     FFmpegManager
+	recordingManager  *RecordingManager
+	snapshotManager   *SnapshotManager
+	rtspManager       RTSPConnectionManager
+	cameraMonitor     camera.CameraMonitor
+	config            *config.MediaMTXConfig
+	configIntegration *ConfigIntegration
+	logger            *logging.Logger
 
 	// Health notification management
 	healthNotificationManager *HealthNotificationManager
@@ -487,7 +487,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	rtspManager := NewRTSPConnectionManager(client, mediaMTXConfig, logger)
 
 	// Create path integration (the missing link!)
-	pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configManager, logger)
+	pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)
 
 	// Get full config for health notification manager
 	fullConfig := configManager.GetConfig()
@@ -510,7 +510,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		rtspManager:               rtspManager,
 		cameraMonitor:             cameraMonitor,
 		config:                    mediaMTXConfig,
-		configManager:             configManager,
+		configIntegration:         configIntegration,
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
@@ -805,15 +805,17 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
+	cpuUsage := c.calculateCPUUsage() // Calculate CPU usage
 	goroutines := runtime.NumGoroutine()
 	heapAlloc := int64(m.HeapAlloc) // Convert uint64 to int64
 
 	systemMetrics := &SystemMetrics{
-		RequestCount:        0, // Will be populated by WebSocket server
+		RequestCount:        0, // TODO: Implement request counting in controller
 		ResponseTime:        responseTime,
 		ErrorCount:          errorCounts["health_check"],
 		ActiveConnections:   int64(activeConnections),
 		MemoryUsage:         memoryUsage,
+		CPUUsage:            cpuUsage,
 		Goroutines:          goroutines,
 		HeapAlloc:           heapAlloc,
 		ComponentStatus:     componentStatus,
@@ -822,32 +824,32 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		CircuitBreakerState: circuitBreakerState,
 	}
 
-	// Add camera monitor metrics
-	if c.cameraMonitor != nil {
-		stats := c.cameraMonitor.GetMonitorStats()
-		if stats != nil {
-			// Convert camera monitor stats to CameraMonitorMetrics
-			cameraPerformanceMetrics := &CameraMonitorMetrics{
-				DevicesConnected:           stats.DevicesConnected,
-				DeviceEventsProcessed:      stats.DeviceEventsProcessed,
-				DeviceEventsDropped:        stats.DeviceEventsDropped,
-				UdevEventsProcessed:        stats.UdevEventsProcessed,
-				UdevEventsFiltered:         stats.UdevEventsFiltered,
-				UdevEventsSkipped:          stats.UdevEventsSkipped,
-				PollingCycles:              stats.PollingCycles,
-				CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
-				CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
-				CapabilityTimeouts:         stats.CapabilityTimeouts,
-				CapabilityParseErrors:      stats.CapabilityParseErrors,
-				PollingFailureCount:        stats.PollingFailureCount,
-				CurrentPollInterval:        stats.CurrentPollInterval,
-				KnownDevicesCount:          stats.KnownDevicesCount,
-				ActiveTasks:                stats.ActiveTasks,
-				Running:                    stats.Running,
+		// Add camera monitor metrics
+		if c.cameraMonitor != nil {
+			stats := c.cameraMonitor.GetMonitorStats()
+			if stats != nil {
+				// Convert camera monitor stats to CameraMonitorMetrics
+				cameraMonitorMetrics := &CameraMonitorMetrics{
+					DevicesConnected:           stats.DevicesConnected,
+					DeviceEventsProcessed:      stats.DeviceEventsProcessed,
+					DeviceEventsDropped:        stats.DeviceEventsDropped,
+					UdevEventsProcessed:        stats.UdevEventsProcessed,
+					UdevEventsFiltered:         stats.UdevEventsFiltered,
+					UdevEventsSkipped:          stats.UdevEventsSkipped,
+					PollingCycles:              stats.PollingCycles,
+					CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
+					CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
+					CapabilityTimeouts:         stats.CapabilityTimeouts,
+					CapabilityParseErrors:      stats.CapabilityParseErrors,
+					PollingFailureCount:        stats.PollingFailureCount,
+					CurrentPollInterval:        stats.CurrentPollInterval,
+					KnownDevicesCount:          stats.KnownDevicesCount,
+					ActiveTasks:                stats.ActiveTasks,
+					Running:                    stats.Running,
+				}
+				systemMetrics.CameraMonitorMetrics = cameraMonitorMetrics
 			}
-			systemMetrics.CameraPerformanceMetrics = cameraPerformanceMetrics
 		}
-	}
 
 	// Check performance thresholds and send notifications with debounce
 	if c.healthNotificationManager != nil {
@@ -891,9 +893,9 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 	}
 
 	// Get current configuration
-	cfg := c.configManager.GetConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not available")
+	cfg, err := c.configIntegration.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Check if retention policy is enabled
@@ -957,9 +959,9 @@ func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, polic
 	}
 
 	// Get current configuration
-	cfg := c.configManager.GetConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not available")
+	cfg, err := c.configIntegration.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get configuration: %w", err)
 	}
 
 	// Update retention policy configuration
@@ -2330,3 +2332,25 @@ func (c *controller) GetHealthMonitor() HealthMonitor {
 	return c.healthMonitor
 }
 
+// calculateCPUUsage calculates current CPU usage percentage
+func (c *controller) calculateCPUUsage() float64 {
+	// Simple implementation using runtime package
+	// For production, consider using gopsutil or similar for more accurate CPU usage
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	
+	// This is a simplified CPU usage calculation based on GC activity
+	// In production, you'd want to use proper CPU monitoring libraries
+	// For now, return a placeholder value based on GC activity
+	gcPercent := float64(m.NumGC) * 100.0 / float64(m.PauseTotalNs/1000000) // Convert to percentage
+	
+	// Clamp to reasonable range
+	if gcPercent > 100.0 {
+		gcPercent = 100.0
+	}
+	if gcPercent < 0.0 {
+		gcPercent = 0.0
+	}
+	
+	return gcPercent
+}

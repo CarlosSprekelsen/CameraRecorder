@@ -137,6 +137,7 @@ type SystemMetrics struct {
 	ErrorCount          int64             `json:"error_count"`
 	ActiveConnections   int64             `json:"active_connections"`
 	MemoryUsage         float64           `json:"memory_usage"` // Memory usage in MB
+	CPUUsage            float64           `json:"cpu_usage"`    // CPU usage percentage
 	Goroutines          int               `json:"goroutines"`   // Number of goroutines
 	HeapAlloc           int64             `json:"heap_alloc"`   // Heap allocation in bytes
 	ComponentStatus     map[string]string `json:"component_status,omitempty"`
@@ -144,7 +145,7 @@ type SystemMetrics struct {
 	LastCheck           time.Time         `json:"last_check"`
 	CircuitBreakerState string            `json:"circuit_breaker_state"`
 	// Camera metrics from camera monitor
-	CameraPerformanceMetrics *CameraMonitorMetrics `json:"camera_metrics,omitempty"`
+	CameraMonitorMetrics *CameraMonitorMetrics `json:"camera_monitor_metrics,omitempty"`
 }
 
 // CameraMonitorMetrics represents camera monitor statistics

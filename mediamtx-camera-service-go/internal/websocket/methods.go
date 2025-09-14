@@ -455,92 +455,43 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 }
 
 // MethodGetMetrics implements the get_metrics method
-// Following Python _method_get_metrics implementation
+// Thin client - delegates all metrics calculation to MediaMTX controller
 func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_metrics", func() (interface{}, error) {
 
-		// Get system metrics from MediaMTX controller - thin delegation
+		// Get system metrics from MediaMTX controller - single source of truth
 		systemMetrics, err := s.mediaMTXController.GetSystemMetrics(context.Background())
 		if err != nil {
 			return nil, fmt.Errorf("failed to get system metrics: %v", err)
 		}
 
-		// Get base performance metrics
-		baseMetrics := s.GetMetrics()
-
-		// Get active connections count using atomic operation
+		// Get WebSocket-specific metrics (only what WebSocket layer should track)
 		activeConnections := s.GetClientCount()
 
-		// Calculate average response time
-		var averageResponseTime float64
-		var totalResponseTime float64
-		var responseCount int
-
-		for _, times := range baseMetrics.ResponseTimes {
-			for _, time := range times {
-				totalResponseTime += time
-				responseCount++
-			}
-		}
-
-		if responseCount > 0 {
-			averageResponseTime = totalResponseTime / float64(responseCount)
-		}
-
-		// Calculate error rate
-		var errorRate float64
-		if baseMetrics.RequestCount > 0 {
-			errorRate = float64(baseMetrics.ErrorCount) / float64(baseMetrics.RequestCount) * 100.0
-		}
-
-		// Initialize default values (will be overridden by controller metrics if available)
-		memoryUsage := 0.0
-		goroutines := 0
-		heapAlloc := int64(0)
-
-		// Build metrics result with health monitoring data
+		// Build API response from controller metrics (thin client pattern)
 		result := map[string]interface{}{
-			"active_connections":    activeConnections,
-			"total_requests":        baseMetrics.RequestCount,
-			"average_response_time": averageResponseTime,
-			"error_rate":            errorRate,
-			"memory_usage":          memoryUsage,
-			"goroutines":            goroutines,
-			"heap_alloc":            heapAlloc,
+			"active_connections":    activeConnections,                    // WebSocket-specific
+			"total_requests":        systemMetrics.RequestCount,          // From controller
+			"average_response_time": systemMetrics.ResponseTime,          // From controller
+			"error_rate":            float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0, // From controller
+			"memory_usage":          systemMetrics.MemoryUsage,           // From controller
+			"cpu_usage":             systemMetrics.CPUUsage,              // From controller
+			"goroutines":            systemMetrics.Goroutines,            // From controller
+			"heap_alloc":            systemMetrics.HeapAlloc,             // From controller
 		}
 
-		// Check performance thresholds and send notifications
-		// Performance threshold checking moved to controller layer
-
-		// Use system metrics from controller if available (single source of truth)
-		if systemMetrics != nil {
-			// Use system metrics for response time and error rate, but keep WebSocket connection count
-			averageResponseTime = systemMetrics.ResponseTime
-			if systemMetrics.RequestCount > 0 {
-				errorRate = float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0
-			}
-
-			// Use system resource usage from controller (moved from WebSocket layer)
-			memoryUsage = systemMetrics.MemoryUsage
-			goroutines = systemMetrics.Goroutines
-			heapAlloc = systemMetrics.HeapAlloc
-
-			// Add enhanced health monitoring metrics (Phase 1 enhancement)
-			result["circuit_breaker_state"] = systemMetrics.CircuitBreakerState
+		// Add enhanced health monitoring metrics from controller
+		if systemMetrics.ComponentStatus != nil {
 			result["component_status"] = systemMetrics.ComponentStatus
-			result["error_counts"] = systemMetrics.ErrorCounts
-			result["last_check"] = systemMetrics.LastCheck
-
-			// Update metrics with enhanced values (but preserve WebSocket connection count)
-			result["average_response_time"] = averageResponseTime
-			result["error_rate"] = errorRate
-			result["memory_usage"] = memoryUsage
-			result["goroutines"] = goroutines
-			result["heap_alloc"] = heapAlloc
 		}
+		if systemMetrics.ErrorCounts != nil {
+			result["error_counts"] = systemMetrics.ErrorCounts
+		}
+		result["circuit_breaker_state"] = systemMetrics.CircuitBreakerState
+		result["last_check"] = systemMetrics.LastCheck
 
-		// Return enhanced metrics
+		// Return metrics from controller (single source of truth)
 		return result, nil
 	})(params, client)
 }
