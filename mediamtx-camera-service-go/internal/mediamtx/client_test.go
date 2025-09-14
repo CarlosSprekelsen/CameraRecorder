@@ -339,28 +339,3 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 	require.NoError(t, err, "Client close should succeed")
 }
 
-// TestClient_JSONParsingErrors_DangerousBugs tests JSON parsing functions with malformed data
-// This function is designed to catch dangerous bugs, not just achieve coverage
-func TestClient_JSONParsingErrors_DangerousBugs(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Test JSON parsing error scenarios that can catch dangerous bugs
-	// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
-	t.Skip("DISABLED: JSON parsing tests moved to json_malformation_test.go using scenario registry")
-}
-
-// TestClient_JSONParsingPanicProtection_DangerousBugs tests that JSON parsing functions don't panic
-// This function is designed to catch dangerous bugs that could cause crashes
-func TestClient_JSONParsingPanicProtection_DangerousBugs(t *testing.T) {
-	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Test JSON parsing panic protection that can catch dangerous bugs
-	// DISABLED: Tests now use scenario registry directly in json_malformation_test.go
-	t.Skip("DISABLED: JSON parsing tests moved to json_malformation_test.go using scenario registry")
-}
