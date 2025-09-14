@@ -97,11 +97,11 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 	// Create logger for testing
 	logger := logging.GetLogger("test-mediamtx-controller")
-	logger.SetLevel(logrus.InfoLevel) // Make logs visible for investigation
+	logger.SetLevel(logrus.ErrorLevel) // Reduce verbosity for test performance
 
-	// GLOBAL FIX: Set all loggers to InfoLevel for debugging
+	// GLOBAL FIX: Set all loggers to ErrorLevel for test performance
 	// This ensures all components use the same log level
-	logging.GetGlobalLogger().SetLevel(logrus.InfoLevel)
+	logging.GetGlobalLogger().SetLevel(logrus.ErrorLevel)
 
 	// Create MediaMTX client configuration
 	clientConfig := &configpkg.MediaMTXConfig{
