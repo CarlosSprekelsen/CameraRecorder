@@ -17,6 +17,7 @@ type ServerConfig struct {
 	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
 	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`
 	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"`
+	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"` // Default: "300s"
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
@@ -101,6 +102,10 @@ type MediaMTXConfig struct {
 
 	// External Stream Discovery Configuration
 	ExternalDiscovery ExternalDiscoveryConfig `mapstructure:"external_discovery"`
+
+	// MediaMTX Path Configuration
+	RunOnDemandStartTimeout string `mapstructure:"run_on_demand_start_timeout"` // Default: "10s"
+	RunOnDemandCloseAfter   string `mapstructure:"run_on_demand_close_after"`   // Default: "10s"
 }
 
 // HealthMonitorDefaults represents health monitoring default values

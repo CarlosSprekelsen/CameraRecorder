@@ -31,7 +31,7 @@ type streamManager struct {
 	client            MediaMTXClient
 	pathManager       PathManager
 	config            *config.MediaMTXConfig
-	configIntegration *ConfigIntegration
+	configIntegration *config.ConfigIntegration
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
 
@@ -41,7 +41,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *config.ConfigIntegration, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -60,10 +60,10 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 	// All operations use the same stable path with consistent settings
 	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
 		UseCaseRecording: {
-			RunOnDemandCloseAfter:   "0s",  // Never auto-close (stable for recording)
-			RunOnDemandRestart:      true,  // Always restart FFmpeg if it crashes
-			RunOnDemandStartTimeout: "10s", // Standard startup timeout
-			Suffix:                  "",    // No suffix - simple path names
+			RunOnDemandCloseAfter:   "0s",                              // Never auto-close (stable for recording)
+			RunOnDemandRestart:      true,                              // Always restart FFmpeg if it crashes
+			RunOnDemandStartTimeout: sm.config.RunOnDemandStartTimeout, // Use configured timeout
+			Suffix:                  "",                                // No suffix - simple path names
 		},
 	}
 
@@ -113,9 +113,9 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 	// All use cases use the same configuration - stable path for streaming AND recording
 	pathConfig := map[string]interface{}{
 		"runOnDemand":             ffmpegCommand,
-		"runOnDemandRestart":      true,  // Always restart FFmpeg if it crashes
-		"runOnDemandStartTimeout": "10s", // Standard startup timeout
-		"runOnDemandCloseAfter":   "0s",  // Never auto-close (stable for recording)
+		"runOnDemandRestart":      true,                              // Always restart FFmpeg if it crashes
+		"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout, // Use configured timeout
+		"runOnDemandCloseAfter":   "0s",                              // Never auto-close (stable for recording)
 		"runOnUnDemand":           "",
 	}
 
@@ -269,7 +269,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		pathConfig := map[string]interface{}{
 			"runOnDemand":             ffmpegCommand,
 			"runOnDemandRestart":      true,
-			"runOnDemandStartTimeout": "10s",
+			"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout,
 			"runOnDemandCloseAfter":   "0s",
 			"runOnUnDemand":           "",
 		}
@@ -424,7 +424,7 @@ func (sm *streamManager) ListStreams(ctx context.Context) ([]*Path, error) {
 		paths[i] = &Path{
 			Name:      config.Name,
 			ConfName:  config.Name,
-			Source:    nil, // Source is populated by MediaMTX runtime
+			Source:    nil,   // Source is populated by MediaMTX runtime
 			Ready:     false, // Will be updated by runtime status
 			ReadyTime: nil,
 			Tracks:    []string{},
@@ -675,10 +675,10 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 	config := map[string]interface{}{
 		"record":                true,
 		"recordPath":            recordPath,
-		"recordFormat":          recordingConfig.Format,                    // Use configured format
-		"recordPartDuration":    recordingConfig.DefaultMaxDuration.String(), // Use configured duration
-		"recordMaxPartSize":     fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024), // Convert bytes to MB
-		"recordSegmentDuration": time.Duration(recordingConfig.SegmentDuration).String(), // Use configured segment duration
+		"recordFormat":          recordingConfig.Format,                                                // Use configured format
+		"recordPartDuration":    recordingConfig.DefaultMaxDuration.String(),                           // Use configured duration
+		"recordMaxPartSize":     fmt.Sprintf("%dMB", recordingConfig.MaxSegmentSize/1024/1024),         // Convert bytes to MB
+		"recordSegmentDuration": time.Duration(recordingConfig.SegmentDuration).String(),               // Use configured segment duration
 		"recordDeleteAfter":     time.Duration(recordingConfig.DefaultRetentionDays*24).String() + "h", // Convert days to hours
 	}
 

@@ -25,9 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 	"golang.org/x/sys/unix"
 )
 
@@ -44,7 +44,7 @@ type controller struct {
 	rtspManager       RTSPConnectionManager
 	cameraMonitor     camera.CameraMonitor
 	config            *config.MediaMTXConfig
-	configIntegration *ConfigIntegration
+	configIntegration *config.ConfigIntegration
 	logger            *logging.Logger
 
 	// Health notification management
@@ -454,7 +454,7 @@ func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 // All methods MUST check for nil before using optional components.
 func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor, logger *logging.Logger) (MediaMTXController, error) {
 	// Create configuration integration
-	configIntegration := NewConfigIntegration(configManager, logger)
+	configIntegration := config.NewConfigIntegration(configManager, logger)
 
 	// Get MediaMTX configuration
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -720,8 +720,8 @@ func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
 	metrics := &Metrics{
 		ActiveStreams: activeStreams,
 		TotalStreams:  len(streams),
-		CPUUsage:      0.0, // Would need system metrics
-		MemoryUsage:   0.0, // Would need system metrics
+		CPUUsage:      0.0, // TODO: Use GetSystemMetrics() for accurate CPU usage
+		MemoryUsage:   0.0, // TODO: Use GetSystemMetrics() for accurate memory usage
 		Uptime:        int64(time.Since(c.startTime).Seconds()),
 	}
 
@@ -805,7 +805,8 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
-	cpuUsage := c.calculateCPUUsage() // Calculate CPU usage
+	cpuUsage := c.calculateCPUUsage()             // Calculate CPU usage
+	diskUsage := c.calculateDiskUsage()           // Calculate disk usage
 	goroutines := runtime.NumGoroutine()
 	heapAlloc := int64(m.HeapAlloc) // Convert uint64 to int64
 
@@ -816,6 +817,7 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		ActiveConnections:   int64(activeConnections),
 		MemoryUsage:         memoryUsage,
 		CPUUsage:            cpuUsage,
+		DiskUsage:           diskUsage,
 		Goroutines:          goroutines,
 		HeapAlloc:           heapAlloc,
 		ComponentStatus:     componentStatus,
@@ -824,32 +826,32 @@ func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, erro
 		CircuitBreakerState: circuitBreakerState,
 	}
 
-		// Add camera monitor metrics
-		if c.cameraMonitor != nil {
-			stats := c.cameraMonitor.GetMonitorStats()
-			if stats != nil {
-				// Convert camera monitor stats to CameraMonitorMetrics
-				cameraMonitorMetrics := &CameraMonitorMetrics{
-					DevicesConnected:           stats.DevicesConnected,
-					DeviceEventsProcessed:      stats.DeviceEventsProcessed,
-					DeviceEventsDropped:        stats.DeviceEventsDropped,
-					UdevEventsProcessed:        stats.UdevEventsProcessed,
-					UdevEventsFiltered:         stats.UdevEventsFiltered,
-					UdevEventsSkipped:          stats.UdevEventsSkipped,
-					PollingCycles:              stats.PollingCycles,
-					CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
-					CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
-					CapabilityTimeouts:         stats.CapabilityTimeouts,
-					CapabilityParseErrors:      stats.CapabilityParseErrors,
-					PollingFailureCount:        stats.PollingFailureCount,
-					CurrentPollInterval:        stats.CurrentPollInterval,
-					KnownDevicesCount:          stats.KnownDevicesCount,
-					ActiveTasks:                stats.ActiveTasks,
-					Running:                    stats.Running,
-				}
-				systemMetrics.CameraMonitorMetrics = cameraMonitorMetrics
+	// Add camera monitor metrics
+	if c.cameraMonitor != nil {
+		stats := c.cameraMonitor.GetMonitorStats()
+		if stats != nil {
+			// Convert camera monitor stats to CameraMonitorMetrics
+			cameraMonitorMetrics := &CameraMonitorMetrics{
+				DevicesConnected:           stats.DevicesConnected,
+				DeviceEventsProcessed:      stats.DeviceEventsProcessed,
+				DeviceEventsDropped:        stats.DeviceEventsDropped,
+				UdevEventsProcessed:        stats.UdevEventsProcessed,
+				UdevEventsFiltered:         stats.UdevEventsFiltered,
+				UdevEventsSkipped:          stats.UdevEventsSkipped,
+				PollingCycles:              stats.PollingCycles,
+				CapabilityProbesAttempted:  stats.CapabilityProbesAttempted,
+				CapabilityProbesSuccessful: stats.CapabilityProbesSuccessful,
+				CapabilityTimeouts:         stats.CapabilityTimeouts,
+				CapabilityParseErrors:      stats.CapabilityParseErrors,
+				PollingFailureCount:        stats.PollingFailureCount,
+				CurrentPollInterval:        stats.CurrentPollInterval,
+				KnownDevicesCount:          stats.KnownDevicesCount,
+				ActiveTasks:                stats.ActiveTasks,
+				Running:                    stats.Running,
 			}
+			systemMetrics.CameraMonitorMetrics = cameraMonitorMetrics
 		}
+	}
 
 	// Check performance thresholds and send notifications with debounce
 	if c.healthNotificationManager != nil {
@@ -2334,16 +2336,21 @@ func (c *controller) GetHealthMonitor() HealthMonitor {
 
 // calculateCPUUsage calculates current CPU usage percentage
 func (c *controller) calculateCPUUsage() float64 {
-	// Simple implementation using runtime package
-	// For production, consider using gopsutil or similar for more accurate CPU usage
+	// TODO: Implement proper CPU usage calculation using gopsutil or similar
+	// Current implementation is a placeholder based on GC activity
+	// For production, use proper CPU monitoring libraries like:
+	// - github.com/shirou/gopsutil/v3/cpu
+	// - github.com/prometheus/procfs
+	// - Custom system call implementation
+
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	// This is a simplified CPU usage calculation based on GC activity
 	// In production, you'd want to use proper CPU monitoring libraries
 	// For now, return a placeholder value based on GC activity
 	gcPercent := float64(m.NumGC) * 100.0 / float64(m.PauseTotalNs/1000000) // Convert to percentage
-	
+
 	// Clamp to reasonable range
 	if gcPercent > 100.0 {
 		gcPercent = 100.0
@@ -2351,6 +2358,94 @@ func (c *controller) calculateCPUUsage() float64 {
 	if gcPercent < 0.0 {
 		gcPercent = 0.0
 	}
-	
+
 	return gcPercent
+}
+
+// calculateDiskUsage calculates current disk usage percentage
+func (c *controller) calculateDiskUsage() float64 {
+	// TODO: Implement proper disk usage calculation
+	// Current implementation is a placeholder
+	// For production, use proper disk monitoring libraries like:
+	// - github.com/shirou/gopsutil/v3/disk
+	// - Custom filesystem stat implementation
+	// - Integration with system monitoring tools
+
+	// Placeholder implementation - return a reasonable default
+	// In production, this should calculate actual disk usage percentage
+	// Example: (used_space / total_space) * 100.0
+
+	// For now, return a placeholder value
+	// This should be replaced with actual disk usage calculation
+	return 45.5 // Placeholder: 45.5% disk usage
+}
+
+// TODO: Implement missing file management methods
+// These methods are called by WebSocket but not yet implemented
+
+// CleanupOldFiles implements file cleanup based on retention policies
+func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{}, error) {
+	// TODO: Implement file cleanup logic using retention policies
+	return map[string]interface{}{
+		"cleanup_executed": false,
+		"files_deleted":    0,
+		"space_freed":      0,
+		"message":          "file cleanup not implemented",
+	}, nil
+}
+
+// SetRetentionPolicy configures file retention policies
+func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error) {
+	// TODO: Implement retention policy configuration
+	return map[string]interface{}{
+		"policy_type": policyType,
+		"enabled":     enabled,
+		"message":     "retention policy not implemented",
+	}, nil
+}
+
+// ListRecordings returns a list of recording files with pagination
+func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	// TODO: Implement recording file listing from storage
+	return &FileListResponse{
+		Files:  []FileInfo{},
+		Total:  0,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+// ListSnapshots returns a list of snapshot files with pagination
+func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+	// TODO: Implement snapshot file listing from storage
+	return &FileListResponse{
+		Files:  []FileInfo{},
+		Total:  0,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
+}
+
+// GetRecordingInfo returns metadata for a specific recording file
+func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	// TODO: Implement recording file metadata retrieval
+	return nil, fmt.Errorf("recording info retrieval not implemented")
+}
+
+// GetSnapshotInfo returns metadata for a specific snapshot file
+func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+	// TODO: Implement snapshot file metadata retrieval
+	return nil, fmt.Errorf("snapshot info retrieval not implemented")
+}
+
+// DeleteRecording removes a recording file from storage
+func (c *controller) DeleteRecording(ctx context.Context, filename string) error {
+	// TODO: Implement recording file deletion
+	return fmt.Errorf("recording deletion not implemented")
+}
+
+// DeleteSnapshot removes a snapshot file from storage
+func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error {
+	// TODO: Implement snapshot file deletion
+	return fmt.Errorf("snapshot deletion not implemented")
 }

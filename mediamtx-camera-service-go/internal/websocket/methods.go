@@ -471,14 +471,15 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 
 		// Build API response from controller metrics (thin client pattern)
 		result := map[string]interface{}{
-			"active_connections":    activeConnections,                    // WebSocket-specific
-			"total_requests":        systemMetrics.RequestCount,          // From controller
-			"average_response_time": systemMetrics.ResponseTime,          // From controller
+			"active_connections":    activeConnections,                                                               // WebSocket-specific
+			"total_requests":        systemMetrics.RequestCount,                                                      // From controller
+			"average_response_time": systemMetrics.ResponseTime,                                                      // From controller
 			"error_rate":            float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0, // From controller
-			"memory_usage":          systemMetrics.MemoryUsage,           // From controller
-			"cpu_usage":             systemMetrics.CPUUsage,              // From controller
-			"goroutines":            systemMetrics.Goroutines,            // From controller
-			"heap_alloc":            systemMetrics.HeapAlloc,             // From controller
+			"memory_usage":          systemMetrics.MemoryUsage,                                                       // From controller
+			"cpu_usage":             systemMetrics.CPUUsage,                                                          // From controller
+			"disk_usage":            systemMetrics.DiskUsage,                                                         // From controller
+			"goroutines":            systemMetrics.Goroutines,                                                        // From controller
+			"heap_alloc":            systemMetrics.HeapAlloc,                                                         // From controller
 		}
 
 		// Add enhanced health monitoring metrics from controller
@@ -1331,7 +1332,7 @@ func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, cl
 			"stream_url":       streamURL,
 			"status":           "STARTED",
 			"start_time":       time.Now().Format(time.RFC3339),
-			"auto_close_after": "300s",
+			"auto_close_after": s.config.AutoCloseAfter.String(),
 		}, nil
 	})(params, client)
 }

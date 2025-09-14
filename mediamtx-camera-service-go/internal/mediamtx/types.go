@@ -17,8 +17,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 )
 
 // EventNotifier interfaces for MediaMTX Controller event publishing
@@ -138,6 +138,7 @@ type SystemMetrics struct {
 	ActiveConnections   int64             `json:"active_connections"`
 	MemoryUsage         float64           `json:"memory_usage"` // Memory usage in MB
 	CPUUsage            float64           `json:"cpu_usage"`    // CPU usage percentage
+	DiskUsage           float64           `json:"disk_usage"`   // Disk usage percentage
 	Goroutines          int               `json:"goroutines"`   // Number of goroutines
 	HeapAlloc           int64             `json:"heap_alloc"`   // Heap allocation in bytes
 	ComponentStatus     map[string]string `json:"component_status,omitempty"`

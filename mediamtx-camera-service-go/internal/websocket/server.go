@@ -49,7 +49,7 @@ type WebSocketServer struct {
 	config *ServerConfig
 
 	// Dependencies (proper dependency injection)
-	configIntegration  *mediamtx.ConfigIntegration
+	configIntegration  *config.ConfigIntegration
 	logger             *logging.Logger
 	jwtHandler         *security.JWTHandler
 	mediaMTXController mediamtx.MediaMTXControllerAPI
@@ -434,13 +434,13 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 
 // NewWebSocketServer creates a new WebSocket server with proper dependency injection
 func NewWebSocketServer(
-	configIntegration *mediamtx.ConfigIntegration,
+	configIntegration *config.ConfigIntegration,
 	logger *logging.Logger,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXControllerAPI,
 ) (*WebSocketServer, error) {
 	if configIntegration == nil {
-		return nil, fmt.Errorf("configIntegration cannot be nil - use existing mediamtx.ConfigIntegration")
+		return nil, fmt.Errorf("configIntegration cannot be nil - use existing config.ConfigIntegration")
 	}
 
 	if logger == nil {

@@ -1,5 +1,5 @@
 /*
-MediaMTX Configuration Integration
+Configuration Integration
 
 Requirements Coverage:
 - REQ-MTX-001: MediaMTX service integration
@@ -11,24 +11,23 @@ Test Categories: Unit/Integration
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
-package mediamtx
+package config
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// ConfigIntegration provides integration between MediaMTX package and existing config system
+// ConfigIntegration provides integration between components and existing config system
 type ConfigIntegration struct {
-	configManager *config.ConfigManager
+	configManager *ConfigManager
 	logger        *logging.Logger
 }
 
 // NewConfigIntegration creates a new configuration integration
-func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.Logger) *ConfigIntegration {
+func NewConfigIntegration(configManager *ConfigManager, logger *logging.Logger) *ConfigIntegration {
 	return &ConfigIntegration{
 		configManager: configManager,
 		logger:        logger,
@@ -36,14 +35,14 @@ func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.L
 }
 
 // GetMediaMTXConfig retrieves MediaMTX configuration from the existing config system
-func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error) {
+func (ci *ConfigIntegration) GetMediaMTXConfig() (*MediaMTXConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
 	}
 
 	// Convert existing config to MediaMTX config
-	mediaMTXConfig := &config.MediaMTXConfig{
+	mediaMTXConfig := &MediaMTXConfig{
 		// Core MediaMTX settings
 		BaseURL:        fmt.Sprintf("http://%s:%d", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
 		HealthCheckURL: fmt.Sprintf("http://%s:%d/v3/paths/list", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
@@ -52,14 +51,14 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 		RetryDelay:     time.Duration(cfg.MediaMTX.HealthMaxBackoffInterval) * time.Second,
 
 		// Circuit breaker configuration
-		CircuitBreaker: config.CircuitBreakerConfig{
+		CircuitBreaker: CircuitBreakerConfig{
 			FailureThreshold: cfg.MediaMTX.HealthFailureThreshold,
 			RecoveryTimeout:  time.Duration(cfg.MediaMTX.HealthCircuitBreakerTimeout) * time.Second,
 			MaxFailures:      cfg.MediaMTX.HealthRecoveryConfirmationThreshold,
 		},
 
 		// Connection pool configuration
-		ConnectionPool: config.ConnectionPoolConfig{
+		ConnectionPool: ConnectionPoolConfig{
 			MaxIdleConns:        100,              // Default value
 			MaxIdleConnsPerHost: 10,               // Default value
 			IdleConnTimeout:     90 * time.Second, // Default value
@@ -83,6 +82,10 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 		BackoffJitterRange:                  cfg.MediaMTX.BackoffJitterRange,
 		ProcessTerminationTimeout:           cfg.MediaMTX.ProcessTerminationTimeout,
 		ProcessKillTimeout:                  cfg.MediaMTX.ProcessKillTimeout,
+
+		// MediaMTX Path Configuration
+		RunOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		RunOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 	}
 
 	ci.logger.WithFields(logging.Fields{
@@ -95,8 +98,8 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 }
 
 // ValidateMediaMTXConfig validates MediaMTX configuration
-func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *config.MediaMTXConfig) error {
-	if err := validateConfig(mediaMTXConfig); err != nil {
+func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *MediaMTXConfig) error {
+	if err := validateMediaMTXConfig(mediaMTXConfig); err != nil {
 		return fmt.Errorf("MediaMTX config validation failed: %w", err)
 	}
 
@@ -122,7 +125,7 @@ func (ci *ConfigIntegration) ValidateMediaMTXConfig(mediaMTXConfig *config.Media
 }
 
 // GetRecordingConfig retrieves recording configuration
-func (ci *ConfigIntegration) GetRecordingConfig() (*config.RecordingConfig, error) {
+func (ci *ConfigIntegration) GetRecordingConfig() (*RecordingConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -132,7 +135,7 @@ func (ci *ConfigIntegration) GetRecordingConfig() (*config.RecordingConfig, erro
 }
 
 // GetSnapshotConfig retrieves snapshot configuration
-func (ci *ConfigIntegration) GetSnapshotConfig() (*config.SnapshotConfig, error) {
+func (ci *ConfigIntegration) GetSnapshotConfig() (*SnapshotConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -142,7 +145,7 @@ func (ci *ConfigIntegration) GetSnapshotConfig() (*config.SnapshotConfig, error)
 }
 
 // GetFFmpegConfig retrieves FFmpeg configuration
-func (ci *ConfigIntegration) GetFFmpegConfig() (*config.FFmpegConfig, error) {
+func (ci *ConfigIntegration) GetFFmpegConfig() (*FFmpegConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -152,7 +155,7 @@ func (ci *ConfigIntegration) GetFFmpegConfig() (*config.FFmpegConfig, error) {
 }
 
 // GetCameraConfig retrieves camera configuration
-func (ci *ConfigIntegration) GetCameraConfig() (*config.CameraConfig, error) {
+func (ci *ConfigIntegration) GetCameraConfig() (*CameraConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -162,7 +165,7 @@ func (ci *ConfigIntegration) GetCameraConfig() (*config.CameraConfig, error) {
 }
 
 // GetPerformanceConfig retrieves performance configuration
-func (ci *ConfigIntegration) GetPerformanceConfig() (*config.PerformanceConfig, error) {
+func (ci *ConfigIntegration) GetPerformanceConfig() (*PerformanceConfig, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -171,8 +174,18 @@ func (ci *ConfigIntegration) GetPerformanceConfig() (*config.PerformanceConfig, 
 	return &cfg.Performance, nil
 }
 
+// GetServerConfig retrieves server configuration
+func (ci *ConfigIntegration) GetServerConfig() (*ServerConfig, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	return &cfg.Server, nil
+}
+
 // GetConfig retrieves the full configuration
-func (ci *ConfigIntegration) GetConfig() (*config.Config, error) {
+func (ci *ConfigIntegration) GetConfig() (*Config, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -182,7 +195,7 @@ func (ci *ConfigIntegration) GetConfig() (*config.Config, error) {
 }
 
 // UpdateMediaMTXConfig updates MediaMTX configuration in the existing config system
-func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *config.MediaMTXConfig) error {
+func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *MediaMTXConfig) error {
 	// Validate the new configuration
 	if err := ci.ValidateMediaMTXConfig(mediaMTXConfig); err != nil {
 		return fmt.Errorf("invalid MediaMTX configuration: %w", err)
@@ -224,7 +237,7 @@ func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *config.MediaMT
 }
 
 // WatchConfigChanges watches for configuration changes and notifies the MediaMTX controller
-func (ci *ConfigIntegration) WatchConfigChanges(controller MediaMTXController) error {
+func (ci *ConfigIntegration) WatchConfigChanges(controller interface{}) error {
 	// Note: SubscribeToChanges method doesn't exist in ConfigManager
 	// Configuration watching would need to be implemented through the existing config system
 	ci.logger.Debug("Configuration change watcher not implemented (requires ConfigManager enhancement)")

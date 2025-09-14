@@ -24,9 +24,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -147,8 +147,8 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			)
 			opts["runOnDemand"] = source
 			opts["runOnDemandRestart"] = true
-			opts["runOnDemandStartTimeout"] = "10s"
-			opts["runOnDemandCloseAfter"] = "10s"
+			opts["runOnDemandStartTimeout"] = pm.config.RunOnDemandStartTimeout
+			opts["runOnDemandCloseAfter"] = pm.config.RunOnDemandCloseAfter
 			// Clear source since we're using runOnDemand
 			source = ""
 		} else {
@@ -160,8 +160,8 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 				// This allows the validation to pass while creating a config path
 				opts["runOnDemand"] = "echo 'Publisher source - waiting for connection'"
 				opts["runOnDemandRestart"] = true
-				opts["runOnDemandStartTimeout"] = "10s"
-				opts["runOnDemandCloseAfter"] = "10s"
+				opts["runOnDemandStartTimeout"] = pm.config.RunOnDemandStartTimeout
+				opts["runOnDemandCloseAfter"] = pm.config.RunOnDemandCloseAfter
 			}
 		}
 	}

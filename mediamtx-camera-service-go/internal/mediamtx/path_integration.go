@@ -20,16 +20,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 )
 
 // PathIntegration provides integration between MediaMTX path management and camera discovery
 type PathIntegration struct {
 	pathManager       PathManager
 	cameraMonitor     camera.CameraMonitor
-	configIntegration *ConfigIntegration
+	configIntegration *config.ConfigIntegration
 	logger            *logging.Logger
 
 	// Path tracking
@@ -46,13 +46,13 @@ type PathIntegration struct {
 }
 
 // NewPathIntegration creates a new path integration
-func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configIntegration *ConfigIntegration, logger *logging.Logger) *PathIntegration {
+func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configIntegration *config.ConfigIntegration, logger *logging.Logger) *PathIntegration {
 	return &PathIntegration{
 		pathManager:       pathManager,
 		cameraMonitor:     cameraMonitor,
 		configIntegration: configIntegration,
 		logger:            logger,
-		activePaths:   make(map[string]*Path),
+		activePaths:       make(map[string]*Path),
 		// cameraPaths removed - delegated to PathManager
 	}
 }
@@ -141,11 +141,11 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 		return fmt.Errorf("failed to get configuration: %w", err)
 	}
 
-	// Create path options
+	// Create path options using config values
 	options := map[string]interface{}{
 		"sourceOnDemand":             true,
-		"sourceOnDemandStartTimeout": "10s",
-		"sourceOnDemandCloseAfter":   "30s",
+		"sourceOnDemandStartTimeout": cfg.MediaMTX.RunOnDemandStartTimeout,
+		"sourceOnDemandCloseAfter":   cfg.MediaMTX.RunOnDemandCloseAfter,
 	}
 
 	// Add camera-specific options
@@ -165,7 +165,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	// Track the path
 	pi.activePathsMu.Lock()
 	pi.activePaths[pathName] = &Path{
-		Name:   pathName,
+		Name: pathName,
 		Source: &PathSource{
 			Type: "rtspSource",
 			ID:   device,

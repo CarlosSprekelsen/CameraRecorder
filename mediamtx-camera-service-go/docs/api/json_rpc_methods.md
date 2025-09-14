@@ -94,41 +94,12 @@ Authenticate with the service using JWT token or API key.
 }
 ```
 
-**Go Client Example:**
-```go
-type AuthRequest struct {
-    AuthToken string `json:"auth_token"`
-}
-
-type AuthResponse struct {
-    Authenticated bool      `json:"authenticated"`
-    Role          string    `json:"role"`
-    Permissions   []string  `json:"permissions"`
-    ExpiresAt     time.Time `json:"expires_at"`
-    SessionID     string    `json:"session_id"`
-}
-
-func (c *Client) Authenticate(token string) (*AuthResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "authenticate",
-        Params:  AuthRequest{AuthToken: token},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var authResp AuthResponse
-    if err := json.Unmarshal(resp.Result, &authResp); err != nil {
-        return nil, err
-    }
-    
-    return &authResp, nil
-}
-```
+**Response Fields:**
+- `authenticated`: Whether authentication was successful (boolean)
+- `role`: User role ("admin", "operator", "viewer") (string)
+- `permissions`: List of granted permissions (array of strings)
+- `expires_at`: Token expiration timestamp (ISO 8601 string)
+- `session_id`: Unique session identifier (string)
 
 **Error Response (Invalid Token):**
 ```json
@@ -188,28 +159,8 @@ Health check method that returns "pong".
 }
 ```
 
-**Go Client Example:**
-```go
-func (c *Client) Ping() (string, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "ping",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return "", err
-    }
-    
-    var result string
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return "", err
-    }
-    
-    return result, nil
-}
-```
+**Response Fields:**
+- `pong`: Server response message (string)
 
 ### get_camera_list
 Get list of all discovered cameras with their current status.
@@ -258,43 +209,16 @@ Get list of all discovered cameras with their current status.
 }
 ```
 
-**Go Client Example:**
-```go
-type CameraInfo struct {
-    Device     string            `json:"device"`
-    Status     string            `json:"status"`
-    Name       string            `json:"name"`
-    Resolution string            `json:"resolution"`
-    FPS        int               `json:"fps"`
-    Streams    map[string]string `json:"streams"`
-}
-
-type CameraListResponse struct {
-    Cameras   []CameraInfo `json:"cameras"`
-    Total     int          `json:"total"`
-    Connected int          `json:"connected"`
-}
-
-func (c *Client) GetCameraList() (*CameraListResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_camera_list",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result CameraListResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `cameras`: Array of camera information objects (array)
+  - `device`: Camera device identifier (string)
+  - `status`: Camera status ("connected", "disconnected", "error") (string)
+  - `name`: Human-readable camera name (string)
+  - `resolution`: Current resolution setting (string)
+  - `fps`: Frames per second (integer)
+  - `streams`: Available stream URLs (object with string values)
+- `total`: Total number of discovered cameras (integer)
+- `connected`: Number of currently connected cameras (integer)
 
 ---
 
@@ -354,51 +278,20 @@ Get status for a specific camera device.
 }
 ```
 
-**Go Client Example:**
-```go
-type CameraPerformanceMetrics struct {
-    BytesSent int64 `json:"bytes_sent"`
-    Readers   int   `json:"readers"`
-    Uptime    int64 `json:"uptime"`
-}
-
-type CameraCapabilities struct {
-    Formats     []string `json:"formats"`
-    Resolutions []string `json:"resolutions"`
-}
-
-type CameraStatus struct {
-    Device       string             `json:"device"`
-    Status       string             `json:"status"`
-    Name         string             `json:"name"`
-    Resolution   string             `json:"resolution"`
-    FPS          int                `json:"fps"`
-    Streams      map[string]string  `json:"streams"`
-    Metrics      *CameraPerformanceMetrics     `json:"metrics,omitempty"`
-    Capabilities *CameraCapabilities `json:"capabilities,omitempty"`
-}
-
-func (c *Client) GetCameraStatus(device string) (*CameraStatus, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_camera_status",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result CameraStatus
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `device`: Camera device identifier (string)
+- `status`: Camera status ("connected", "disconnected", "error") (string)
+- `name`: Human-readable camera name (string)
+- `resolution`: Current resolution setting (string)
+- `fps`: Frames per second (integer)
+- `streams`: Available stream URLs (object with string values)
+- `metrics`: Performance metrics object (optional)
+  - `bytes_sent`: Total bytes sent (integer)
+  - `readers`: Number of active readers (integer)
+  - `uptime`: Uptime in seconds (integer)
+- `capabilities`: Camera capabilities object (optional)
+  - `formats`: Supported video formats (array of strings)
+  - `resolutions`: Supported resolutions (array of strings)
 
 ### get_camera_capabilities
 Get detailed capabilities and supported formats for a specific camera device.
@@ -445,39 +338,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 - `formats`: Array of supported pixel formats (array of strings)
 - `resolutions`: Array of supported resolutions (array of strings)
 - `fps_options`: Array of supported frame rates (array of integers)
-- `validation_status`: Capability validation status ("none", "disconnected", "confirmed")
-
-**Go Client Example:**
-```go
-type CameraCapabilitiesResponse struct {
-    Device            string        `json:"device"`
-    Formats           []string      `json:"formats"`
-    Resolutions       []string      `json:"resolutions"`
-    FPSOptions        []int         `json:"fps_options"`
-    ValidationStatus  string        `json:"validation_status"`
-}
-
-func (c *Client) GetCameraCapabilities(device string) (*CameraCapabilitiesResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_camera_capabilities",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result CameraCapabilitiesResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+- `validation_status`: Capability validation status ("none", "disconnected", "confirmed") (string)
 
 **Error Response (Camera Not Found):**
 ```json
@@ -539,43 +400,13 @@ Capture a snapshot from the specified camera.
 }
 ```
 
-**Go Client Example:**
-```go
-type SnapshotRequest struct {
-    Device   string `json:"device"`
-    Filename string `json:"filename,omitempty"`
-}
-
-type SnapshotResponse struct {
-    Device     string    `json:"device"`
-    Filename   string    `json:"filename"`
-    Status     string    `json:"status"`
-    Timestamp  time.Time `json:"timestamp"`
-    FileSize   int64     `json:"file_size"`
-    FilePath   string    `json:"file_path"`
-}
-
-func (c *Client) TakeSnapshot(device, filename string) (*SnapshotResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "take_snapshot",
-        Params:  SnapshotRequest{Device: device, Filename: filename},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SnapshotResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `device`: Camera device identifier (string)
+- `filename`: Generated snapshot filename (string)
+- `status`: Snapshot status ("success", "failed") (string)
+- `timestamp`: Snapshot capture timestamp (ISO 8601 string)
+- `file_size`: File size in bytes (integer)
+- `file_path`: Full file path to saved snapshot (string)
 
 ### start_recording
 Start recording video from the specified camera.
@@ -623,45 +454,14 @@ Start recording video from the specified camera.
 }
 ```
 
-**Go Client Example:**
-```go
-type StartRecordingRequest struct {
-    Device   string `json:"device"`
-    Duration int    `json:"duration,omitempty"`
-    Format   string `json:"format,omitempty"`
-}
-
-type StartRecordingResponse struct {
-    Device     string    `json:"device"`
-    SessionID  string    `json:"session_id"`
-    Filename   string    `json:"filename"`
-    Status     string    `json:"status"`
-    StartTime  time.Time `json:"start_time"`
-    Duration   int       `json:"duration"`
-    Format     string    `json:"format"`
-}
-
-func (c *Client) StartRecording(device string, duration int, format string) (*StartRecordingResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "start_recording",
-        Params:  StartRecordingRequest{Device: device, Duration: duration, Format: format},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result StartRecordingResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `device`: Camera device identifier (string)
+- `session_id`: Unique recording session identifier (string)
+- `filename`: Generated recording filename (string)
+- `status`: Recording status ("started", "failed") (string)
+- `start_time`: Recording start timestamp (ISO 8601 string)
+- `duration`: Recording duration in seconds (integer)
+- `format`: Recording format ("mp4", "mkv") (string)
 
 ### stop_recording
 Stop active recording for the specified camera.
@@ -706,40 +506,15 @@ Stop active recording for the specified camera.
 }
 ```
 
-**Go Client Example:**
-```go
-type StopRecordingResponse struct {
-    Device    string    `json:"device"`
-    SessionID string    `json:"session_id"`
-    Filename  string    `json:"filename"`
-    Status    string    `json:"status"`
-    StartTime time.Time `json:"start_time"`
-    EndTime   time.Time `json:"end_time"`
-    Duration  int       `json:"duration"`
-    FileSize  int64     `json:"file_size"`
-}
-
-func (c *Client) StopRecording(device string) (*StopRecordingResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "stop_recording",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result StopRecordingResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `device`: Camera device identifier (string)
+- `session_id`: Recording session identifier (string)
+- `filename`: Generated recording filename (string)
+- `status`: Recording status ("stopped", "failed") (string)
+- `start_time`: Recording start timestamp (ISO 8601 string)
+- `end_time`: Recording end timestamp (ISO 8601 string)
+- `duration`: Total recording duration in seconds (integer)
+- `file_size`: Final file size in bytes (integer)
 
 ---
 
@@ -787,43 +562,14 @@ Start a live streaming session for the specified camera device.
 }
 ```
 
-**Go Client Example:**
-```go
-type StartStreamingRequest struct {
-    Device string `json:"device"`
-}
-
-type StartStreamingResponse struct {
-    Device        string    `json:"device"`
-    StreamName    string    `json:"stream_name"`
-    StreamURL     string    `json:"stream_url"`
-    Status        string    `json:"status"`
-    StartTime     time.Time `json:"start_time"`
-    AutoCloseAfter string   `json:"auto_close_after"`
-    FFmpegCommand string    `json:"ffmpeg_command"`
-}
-
-func (c *Client) StartStreaming(device string) (*StartStreamingResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "start_streaming",
-        Params:  StartStreamingRequest{Device: device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result StartStreamingResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- `device`: Camera device identifier (string)
+- `stream_name`: Generated stream name (string)
+- `stream_url`: Stream URL for consumption (string)
+- `status`: Streaming status ("started", "failed") (string)
+- `start_time`: Streaming start timestamp (ISO 8601 string)
+- `auto_close_after`: Auto-close timeout setting (string)
+- `ffmpeg_command`: FFmpeg command used (string)
 
 ### stop_streaming
 Stop the active streaming session for the specified camera device.
@@ -867,39 +613,8 @@ Stop the active streaming session for the specified camera device.
 }
 ```
 
-**Go Client Example:**
-```go
-type StopStreamingResponse struct {
-    Device           string    `json:"device"`
-    StreamName       string    `json:"stream_name"`
-    Status           string    `json:"status"`
-    StartTime        time.Time `json:"start_time"`
-    EndTime          time.Time `json:"end_time"`
-    Duration         int       `json:"duration"`
-    StreamContinues  bool      `json:"stream_continues"`
-}
-
-func (c *Client) StopStreaming(device string) (*StopStreamingResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "stop_streaming",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result StopStreamingResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_stream_url
 Get the stream URL for a specific camera device without starting a new stream.
@@ -942,38 +657,8 @@ Get the stream URL for a specific camera device without starting a new stream.
 }
 ```
 
-**Go Client Example:**
-```go
-type GetStreamURLResponse struct {
-    Device           string `json:"device"`
-    StreamName       string `json:"stream_name"`
-    StreamURL        string `json:"stream_url"`
-    Available        bool   `json:"available"`
-    ActiveConsumers  int    `json:"active_consumers"`
-    StreamStatus     string `json:"stream_status"`
-}
-
-func (c *Client) GetStreamURL(device string) (*GetStreamURLResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_stream_url",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result GetStreamURLResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_stream_status
 Get detailed status information for a specific camera stream.
@@ -1031,59 +716,8 @@ Get detailed status information for a specific camera stream.
 }
 ```
 
-**Go Client Example:**
-```go
-type FFmpegProcessStatus struct {
-    Running bool `json:"running"`
-    PID     int  `json:"pid"`
-    Uptime  int  `json:"uptime"`
-}
-
-type MediaMTXPathStatus struct {
-    Exists  bool `json:"exists"`
-    Ready   bool `json:"ready"`
-    Readers int  `json:"readers"`
-}
-
-type StreamMetrics struct {
-    BytesSent  int64 `json:"bytes_sent"`
-    FramesSent int64 `json:"frames_sent"`
-    Bitrate    int   `json:"bitrate"`
-    FPS        int   `json:"fps"`
-}
-
-type GetStreamStatusResponse struct {
-    Device         string                `json:"device"`
-    StreamName     string                `json:"stream_name"`
-    Status         string                `json:"status"`
-    Ready          bool                  `json:"ready"`
-    FFmpegProcess  FFmpegProcessStatus   `json:"ffmpeg_process"`
-    MediaMTXPath   MediaMTXPathStatus    `json:"mediamtx_path"`
-    Metrics        StreamMetrics         `json:"metrics"`
-    StartTime      time.Time             `json:"start_time"`
-}
-
-func (c *Client) GetStreamStatus(device string) (*GetStreamStatusResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_stream_status",
-        Params:  map[string]string{"device": device},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result GetStreamStatusResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 **Error Response (Stream Not Found):**
 ```json
@@ -1153,48 +787,8 @@ List available recording files with metadata and pagination support.
 }
 ```
 
-**Go Client Example:**
-```go
-type FileInfo struct {
-    Filename     string    `json:"filename"`
-    FileSize     int64     `json:"file_size"`
-    ModifiedTime time.Time `json:"modified_time"`
-    DownloadURL  string    `json:"download_url"`
-}
-
-type ListRecordingsRequest struct {
-    Limit  int `json:"limit,omitempty"`
-    Offset int `json:"offset,omitempty"`
-}
-
-type ListRecordingsResponse struct {
-    Files  []FileInfo `json:"files"`
-    Total  int        `json:"total"`
-    Limit  int        `json:"limit"`
-    Offset int        `json:"offset"`
-}
-
-func (c *Client) ListRecordings(limit, offset int) (*ListRecordingsResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "list_recordings",
-        Params:  ListRecordingsRequest{Limit: limit, Offset: offset},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result ListRecordingsResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ---
 
@@ -1230,6 +824,7 @@ Get system performance metrics and statistics.
     "error_rate": 0.02,
     "memory_usage": 85.5,
     "cpu_usage": 23.1,
+    "disk_usage": 45.5,
     "goroutines": 150,
     "heap_alloc": 52428800
   },
@@ -1237,39 +832,8 @@ Get system performance metrics and statistics.
 }
 ```
 
-**Go Client Example:**
-```go
-type SystemMetrics struct {
-    ActiveConnections   int     `json:"active_connections"`
-    TotalRequests       int64   `json:"total_requests"`
-    AverageResponseTime float64 `json:"average_response_time"`
-    ErrorRate           float64 `json:"error_rate"`
-    MemoryUsage         float64 `json:"memory_usage"`
-    CPUUsage            float64 `json:"cpu_usage"`
-    Goroutines          int     `json:"goroutines"`
-    HeapAlloc           int64   `json:"heap_alloc"`
-}
-
-func (c *Client) GetMetrics() (*SystemMetrics, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_metrics",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SystemMetrics
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 }
 
@@ -1325,36 +889,8 @@ Get list of all active streams from MediaMTX.
 - `readers`: Number of active stream readers (integer)
 - `bytes_sent`: Total bytes sent for this stream (integer)
 
-**Go Client Example:**
-```go
-type StreamInfo struct {
-    Name      string `json:"name"`
-    Source    string `json:"source"`
-    Ready     bool   `json:"ready"`
-    Readers   int    `json:"readers"`
-    BytesSent int64  `json:"bytes_sent"`
-}
-
-func (c *Client) GetStreams() ([]StreamInfo, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_streams",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result []StreamInfo
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 **Error Response (MediaMTX Unavailable):**
 ```json
@@ -1408,62 +944,8 @@ The server sends real-time notifications for camera events.
 }
 ```
 
-**Go Client Example:**
-```go
-type CameraStatusNotification struct {
-    Device     string            `json:"device"`
-    Status     string            `json:"status"`
-    Name       string            `json:"name"`
-    Resolution string            `json:"resolution"`
-    FPS        int               `json:"fps"`
-    Streams    map[string]string `json:"streams"`
-}
-
-type RecordingStatusNotification struct {
-    Device    string `json:"device"`
-    Status    string `json:"status"`
-    Filename  string `json:"filename"`
-    Duration  int64  `json:"duration"`
-}
-
-type NotificationType interface {
-    CameraStatusNotification | RecordingStatusNotification
-}
-
-func (c *Client) ListenForNotifications() (<-chan NotificationType, error) {
-    notificationChan := make(chan NotificationType, 100)
-    
-    go func() {
-        for {
-            var notification JSONRPCNotification
-            if err := c.conn.ReadJSON(&notification); err != nil {
-                log.Printf("Error reading notification: %v", err)
-                continue
-            }
-            
-            switch notification.Method {
-            case "camera_status_update":
-                var cameraStatus CameraStatusNotification
-                if err := json.Unmarshal(notification.Params, &cameraStatus); err != nil {
-                    log.Printf("Error unmarshaling camera status: %v", err)
-                    continue
-                }
-                notificationChan <- cameraStatus
-                
-            case "recording_status_update":
-                var recordingStatus RecordingStatusNotification
-                if err := json.Unmarshal(notification.Params, &recordingStatus); err != nil {
-                    log.Printf("Error unmarshaling recording status: %v", err)
-                    continue
-                }
-                notificationChan <- recordingStatus
-            }
-        }
-    }()
-    
-    return notificationChan, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 **Note:** These are server-generated notifications, not client-callable methods. Clients should listen for these events rather than calling them.
 
@@ -1524,19 +1006,7 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
   - `suggestion`: Suggested action to resolve the error
 
 ### Go Error Response Types
-```go
-type ErrorData struct {
-    Reason     string `json:"reason,omitempty"`
-    Details    string `json:"details,omitempty"`
-    Suggestion string `json:"suggestion,omitempty"`
-}
 
-type JsonRpcError struct {
-    Code    int        `json:"code"`
-    Message string     `json:"message"`
-    Data    *ErrorData `json:"data,omitempty"`
-}
-```
 
 ## Error Codes
 
@@ -1568,102 +1038,6 @@ type JsonRpcError struct {
 
 ---
 
-## Go Client Implementation
-
-### Complete Go Client Example
-```go
-package main
-
-import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "log"
-    "time"
-    
-    "github.com/gorilla/websocket"
-)
-
-type Client struct {
-    conn    *websocket.Conn
-    nextID  int64
-    auth    *AuthResponse
-}
-
-func NewClient(url string) (*Client, error) {
-    conn, _, err := websocket.DefaultDialer.Dial(url, nil)
-    if err != nil {
-        return nil, fmt.Errorf("failed to connect: %w", err)
-    }
-    
-    return &Client{
-        conn:   conn,
-        nextID: 1,
-    }, nil
-}
-
-func (c *Client) Close() error {
-    return c.conn.Close()
-}
-
-func (c *Client) nextID() int64 {
-    id := c.nextID
-    c.nextID++
-    return id
-}
-
-func (c *Client) sendRequest(req JSONRPCRequest, resp *JSONRPCResponse) error {
-    if err := c.conn.WriteJSON(req); err != nil {
-        return fmt.Errorf("failed to send request: %w", err)
-    }
-    
-    if err := c.conn.ReadJSON(resp); err != nil {
-        return fmt.Errorf("failed to read response: %w", err)
-    }
-    
-    if resp.Error != nil {
-        return fmt.Errorf("RPC error: %s", resp.Error.Message)
-    }
-    
-    return nil
-}
-
-// Usage example
-func main() {
-    client, err := NewClient("ws://localhost:8002/ws")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer client.Close()
-    
-    // Authenticate
-    auth, err := client.Authenticate("your-jwt-token")
-    if err != nil {
-        log.Fatal(err)
-    }
-    client.auth = auth
-    
-    // Get camera list
-    cameras, err := client.GetCameraList()
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    fmt.Printf("Found %d cameras\n", len(cameras.Cameras))
-    
-    // Listen for notifications
-    notifications, err := client.ListenForNotifications()
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    for notification := range notifications {
-        fmt.Printf("Notification: %+v\n", notification)
-    }
-}
-```
-
----
 
 ## File Management Methods
 
@@ -1715,48 +1089,8 @@ List available snapshot files with metadata and pagination support.
 }
 ```
 
-**Go Client Example:**
-```go
-type SnapshotFileInfo struct {
-    Filename     string    `json:"filename"`
-    FileSize     int64     `json:"file_size"`
-    ModifiedTime time.Time `json:"modified_time"`
-    DownloadURL  string    `json:"download_url"`
-}
-
-type ListSnapshotsRequest struct {
-    Limit  int `json:"limit,omitempty"`
-    Offset int `json:"offset,omitempty"`
-}
-
-type ListSnapshotsResponse struct {
-    Files  []SnapshotFileInfo `json:"files"`
-    Total  int                `json:"total"`
-    Limit  int                `json:"limit"`
-    Offset int                `json:"offset"`
-}
-
-func (c *Client) ListSnapshots(limit, offset int) (*ListSnapshotsResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "list_snapshots",
-        Params:  ListSnapshotsRequest{Limit: limit, Offset: offset},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result ListSnapshotsResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_recording_info
 Get detailed information about a specific recording file.
@@ -1796,37 +1130,8 @@ Get detailed information about a specific recording file.
 }
 ```
 
-**Go Client Example:**
-```go
-type RecordingInfo struct {
-    Filename     string    `json:"filename"`
-    FileSize     int64     `json:"file_size"`
-    Duration     int64     `json:"duration"`
-    CreatedTime  time.Time `json:"created_time"`
-    DownloadURL  string    `json:"download_url"`
-}
-
-func (c *Client) GetRecordingInfo(filename string) (*RecordingInfo, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_recording_info",
-        Params:  map[string]string{"filename": filename},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result RecordingInfo
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_snapshot_info
 Get detailed information about a specific snapshot file.
@@ -1865,36 +1170,8 @@ Get detailed information about a specific snapshot file.
 }
 ```
 
-**Go Client Example:**
-```go
-type SnapshotInfo struct {
-    Filename     string    `json:"filename"`
-    FileSize     int64     `json:"file_size"`
-    CreatedTime  time.Time `json:"created_time"`
-    DownloadURL  string    `json:"download_url"`
-}
-
-func (c *Client) GetSnapshotInfo(filename string) (*SnapshotInfo, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_snapshot_info",
-        Params:  map[string]string{"filename": filename},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SnapshotInfo
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### delete_recording
 Delete a specific recording file.
@@ -1932,35 +1209,8 @@ Delete a specific recording file.
 }
 ```
 
-**Go Client Example:**
-```go
-type DeleteRecordingResponse struct {
-    Filename string `json:"filename"`
-    Deleted  bool   `json:"deleted"`
-    Message  string `json:"message"`
-}
-
-func (c *Client) DeleteRecording(filename string) (*DeleteRecordingResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "delete_recording",
-        Params:  map[string]string{"filename": filename},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result DeleteRecordingResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### delete_snapshot
 Delete a specific snapshot file.
@@ -1998,35 +1248,8 @@ Delete a specific snapshot file.
 }
 ```
 
-**Go Client Example:**
-```go
-type DeleteSnapshotResponse struct {
-    Filename string `json:"filename"`
-    Deleted  bool   `json:"deleted"`
-    Message  string `json:"message"`
-}
-
-func (c *Client) DeleteSnapshot(filename string) (*DeleteSnapshotResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "delete_snapshot",
-        Params:  map[string]string{"filename": filename},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result DeleteSnapshotResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_storage_info
 Get storage space information and usage statistics.
@@ -2064,38 +1287,8 @@ Get storage space information and usage statistics.
 }
 ```
 
-**Go Client Example:**
-```go
-type StorageInfo struct {
-    TotalSpace        int64   `json:"total_space"`
-    UsedSpace         int64   `json:"used_space"`
-    AvailableSpace    int64   `json:"available_space"`
-    UsagePercentage   float64 `json:"usage_percentage"`
-    RecordingsSize    int64   `json:"recordings_size"`
-    SnapshotsSize     int64   `json:"snapshots_size"`
-    LowSpaceWarning   bool    `json:"low_space_warning"`
-}
-
-func (c *Client) GetStorageInfo() (*StorageInfo, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_storage_info",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result StorageInfo
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### set_retention_policy
 Configure file retention policies for automatic cleanup.
@@ -2139,43 +1332,8 @@ Configure file retention policies for automatic cleanup.
 }
 ```
 
-**Go Client Example:**
-```go
-type RetentionPolicyRequest struct {
-    PolicyType  string  `json:"policy_type"`
-    MaxAgeDays  *int    `json:"max_age_days,omitempty"`
-    MaxSizeGB   *int    `json:"max_size_gb,omitempty"`
-    Enabled     bool    `json:"enabled"`
-}
-
-type RetentionPolicyResponse struct {
-    PolicyType  string `json:"policy_type"`
-    MaxAgeDays  *int   `json:"max_age_days,omitempty"`
-    Enabled     bool   `json:"enabled"`
-    Message     string `json:"message"`
-}
-
-func (c *Client) SetRetentionPolicy(req RetentionPolicyRequest) (*RetentionPolicyResponse, error) {
-    jsonReq := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "set_retention_policy",
-        Params:  req,
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(jsonReq, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result RetentionPolicyResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### cleanup_old_files
 Manually trigger cleanup of old files based on retention policies.
@@ -2210,35 +1368,8 @@ Manually trigger cleanup of old files based on retention policies.
 }
 ```
 
-**Go Client Example:**
-```go
-type CleanupResponse struct {
-    CleanupExecuted bool   `json:"cleanup_executed"`
-    FilesDeleted    int    `json:"files_deleted"`
-    SpaceFreed      int64  `json:"space_freed"`
-    Message         string `json:"message"`
-}
-
-func (c *Client) CleanupOldFiles() (*CleanupResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "cleanup_old_files",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result CleanupResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ---
 
@@ -2281,41 +1412,8 @@ Get system status and health information.
 }
 ```
 
-**Go Client Example:**
-```go
-type ComponentStatus struct {
-    WebSocketServer string `json:"websocket_server"`
-    CameraMonitor   string `json:"camera_monitor"`
-    MediaMTX        string `json:"mediamtx"`
-}
-
-type SystemStatus struct {
-    Status     string           `json:"status"`
-    Uptime     float64          `json:"uptime"`
-    Version    string           `json:"version"`
-    Components ComponentStatus  `json:"components"`
-}
-
-func (c *Client) GetStatus() (*SystemStatus, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_status",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SystemStatus
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_server_info
 Get server configuration and capability information.
@@ -2354,39 +1452,8 @@ Get server configuration and capability information.
 }
 ```
 
-**Go Client Example:**
-```go
-type ServerInfo struct {
-    Name              string   `json:"name"`
-    Version           string   `json:"version"`
-    BuildDate         string   `json:"build_date"`
-    GoVersion         string   `json:"go_version"`
-    Architecture      string   `json:"architecture"`
-    Capabilities      []string `json:"capabilities"`
-    SupportedFormats  []string `json:"supported_formats"`
-    MaxCameras        int      `json:"max_cameras"`
-}
-
-func (c *Client) GetServerInfo() (*ServerInfo, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_server_info",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result ServerInfo
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ---
 
@@ -2436,40 +1503,8 @@ Subscribe to real-time event notifications for specific topics.
 }
 ```
 
-**Go Client Example:**
-```go
-type SubscribeEventsRequest struct {
-    Topics  []string               `json:"topics"`
-    Filters map[string]interface{} `json:"filters,omitempty"`
-}
-
-type SubscribeEventsResponse struct {
-    Subscribed bool                   `json:"subscribed"`
-    Topics     []string               `json:"topics"`
-    Filters    map[string]interface{} `json:"filters,omitempty"`
-}
-
-func (c *Client) SubscribeEvents(topics []string, filters map[string]interface{}) (*SubscribeEventsResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "subscribe_events",
-        Params:  SubscribeEventsRequest{Topics: topics, Filters: filters},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SubscribeEventsResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### unsubscribe_events
 Unsubscribe from event notifications for specific topics or all topics.
@@ -2508,38 +1543,8 @@ Unsubscribe from event notifications for specific topics or all topics.
 }
 ```
 
-**Go Client Example:**
-```go
-type UnsubscribeEventsRequest struct {
-    Topics []string `json:"topics,omitempty"`
-}
-
-type UnsubscribeEventsResponse struct {
-    Unsubscribed bool     `json:"unsubscribed"`
-    Topics       []string `json:"topics"`
-}
-
-func (c *Client) UnsubscribeEvents(topics []string) (*UnsubscribeEventsResponse, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "unsubscribe_events",
-        Params:  UnsubscribeEventsRequest{Topics: topics},
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result UnsubscribeEventsResponse
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### get_subscription_stats
 Get statistics about event subscriptions including global stats and client-specific subscriptions.
@@ -2583,34 +1588,8 @@ Get statistics about event subscriptions including global stats and client-speci
 }
 ```
 
-**Go Client Example:**
-```go
-type SubscriptionStats struct {
-    GlobalStats  map[string]interface{} `json:"global_stats"`
-    ClientTopics []string               `json:"client_topics"`
-    ClientID     string                 `json:"client_id"`
-}
-
-func (c *Client) GetSubscriptionStats() (*SubscriptionStats, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "get_subscription_stats",
-        ID:      c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result SubscriptionStats
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 **Available Event Topics:**
 - `camera.connected` - Camera device connected
@@ -2719,55 +1698,8 @@ Discover external RTSP streams including UAVs and other network-based video sour
 }
 ```
 
-**Go Client Example:**
-```go
-type ExternalStream struct {
-    URL          string                 `json:"url"`
-    Type         string                 `json:"type"`
-    Name         string                 `json:"name"`
-    Status       string                 `json:"status"`
-    DiscoveredAt time.Time              `json:"discovered_at"`
-    LastSeen     time.Time              `json:"last_seen"`
-    Capabilities map[string]interface{} `json:"capabilities"`
-}
-
-type DiscoveryResult struct {
-    DiscoveredStreams []*ExternalStream `json:"discovered_streams"`
-    SkydioStreams     []*ExternalStream `json:"skydio_streams"`
-    GenericStreams    []*ExternalStream `json:"generic_streams"`
-    ScanTimestamp     int64             `json:"scan_timestamp"`
-    TotalFound        int               `json:"total_found"`
-    DiscoveryOptions  map[string]interface{} `json:"discovery_options"`
-    ScanDuration      string            `json:"scan_duration"`
-    Errors            []string          `json:"errors,omitempty"`
-}
-
-func (c *Client) DiscoverExternalStreams(skydioEnabled, genericEnabled, forceRescan, includeOffline bool) (*DiscoveryResult, error) {
-    req := JSONRPCRequest{
-        JSONRPC: "2.0",
-        Method:  "discover_external_streams",
-        Params: map[string]interface{}{
-            "skydio_enabled":  skydioEnabled,
-            "generic_enabled": genericEnabled,
-            "force_rescan":    forceRescan,
-            "include_offline": includeOffline,
-        },
-        ID: c.nextID(),
-    }
-    
-    var resp JSONRPCResponse
-    if err := c.sendRequest(req, &resp); err != nil {
-        return nil, err
-    }
-    
-    var result DiscoveryResult
-    if err := json.Unmarshal(resp.Result, &result); err != nil {
-        return nil, err
-    }
-    
-    return &result, nil
-}
-```
+**Response Fields:**
+- See the JSON response example above for field descriptions and types
 
 ### add_external_stream
 Add an external RTSP stream to the system for management and monitoring.

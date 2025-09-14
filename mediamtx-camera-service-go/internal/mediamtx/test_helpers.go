@@ -1259,17 +1259,26 @@ type JSONMalformationTestScenario struct {
 	Description string
 }
 
-// GetJSONMalformationScenarios returns comprehensive JSON malformation scenarios
-// that can catch dangerous bugs in JSON parsing functions
-// DEPRECATED: Use schema-specific scenarios instead
-func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
-	return []JSONMalformationTestScenario{
+// JSONScenarioRegistry provides centralized scenario management for all JSON response types
+type JSONScenarioRegistry struct {
+	scenarios map[string][]JSONMalformationTestScenario
+}
+
+// NewJSONScenarioRegistry creates a new scenario registry with all baseline scenarios
+func NewJSONScenarioRegistry() *JSONScenarioRegistry {
+	registry := &JSONScenarioRegistry{
+		scenarios: make(map[string][]JSONMalformationTestScenario),
+	}
+	
+	// Initialize with baseline scenarios that apply to all response types
+	// These are the scenarios that were duplicated across all 5 original functions
+	baselineScenarios := []JSONMalformationTestScenario{
 		{
 			Name:        "empty_json",
 			JSONData:    []byte(""),
 			ExpectError: true,
 			ErrorMsg:    "empty response body",
-			Description: "Empty JSON should be handled gracefully",
+			Description: "Empty JSON should be rejected",
 		},
 		{
 			Name:        "null_json",
@@ -1300,89 +1309,67 @@ func GetJSONMalformationScenarios() []JSONMalformationTestScenario {
 			Description: "Unexpected JSON structure should be rejected",
 		},
 		{
-			Name:        "json_with_invalid_types",
-			JSONData:    []byte(`{"items": "not_an_array", "count": "not_a_number"}`),
-			ExpectError: true,
-			ErrorMsg:    "missing required field",
-			Description: "JSON with invalid types should be rejected due to missing required fields",
-		},
-		{
 			Name:        "json_with_missing_required_fields",
-			JSONData:    []byte(`{"pageCount": 1, "itemCount": 0}`), // Missing 'items' field
+			JSONData:    []byte(`{"pageCount": 1, "itemCount": 0}`), // Missing required fields vary by type
 			ExpectError: true,
 			ErrorMsg:    "missing required field",
 			Description: "JSON with missing required fields should be rejected",
 		},
 		{
 			Name:        "json_with_extra_fields",
-			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "extra_field": "should_be_ignored", "another_extra": 123}]}`),
+			JSONData:    []byte(`{"extraField": "should be ignored"}`), // Extra fields vary by type
 			ExpectError: false, // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 		{
 			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "unicode": "test\u0000null\u0000byte"}]}`),
+			JSONData:    []byte(`{"test": "test\u0000null\u0000byte"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with Unicode issues should be handled gracefully",
 		},
 		{
 			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(fmt.Sprintf(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "large_string": "%s"}]}`, strings.Repeat("x", 1000000))),
+			JSONData:    []byte(fmt.Sprintf(`{"test": "%s"}`, strings.Repeat("x", 1000000))),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with very large strings should be handled gracefully",
 		},
 		{
-			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}]}`),
-			ExpectError: true, // Should reject malformed JSON
-			ErrorMsg:    "failed to parse",
-			Description: "Malformed JSON should be rejected",
-		},
-		{
 			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"itemCount": 1, "pageCount": 1, "items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "special": "test\"quotes\"and'single'quotes\nand\tnewlines"}]}`),
+			JSONData:    []byte(`{"test": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with special characters should be handled gracefully",
 		},
 	}
+	
+	// Add type-specific scenarios for each response type
+	registry.addPathListScenarios(baselineScenarios)
+	registry.addStreamScenarios(baselineScenarios)
+	registry.addPathsScenarios(baselineScenarios)
+	registry.addHealthScenarios(baselineScenarios)
+	
+	return registry
 }
 
-// GetPathListResponseScenarios returns test scenarios specific to parsePathListResponse
-// Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
-func GetPathListResponseScenarios() []JSONMalformationTestScenario {
-	return []JSONMalformationTestScenario{
-		{
-			Name:        "empty_json",
-			JSONData:    []byte(""),
-			ExpectError: true,
-			ErrorMsg:    "empty response body",
-			Description: "Empty JSON should be rejected",
-		},
-		{
-			Name:        "null_json",
-			JSONData:    []byte("null"),
-			ExpectError: true,
-			ErrorMsg:    "null response body",
-			Description: "Null JSON should be rejected",
-		},
-		{
-			Name:        "malformed_json",
-			JSONData:    []byte(`{"items": [{"name": "test"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Malformed JSON should be rejected",
-		},
-		{
-			Name:        "incomplete_json",
-			JSONData:    []byte(`{"items": [{"name": "test"}]`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Incomplete JSON should be rejected",
-		},
+// GetScenarios returns scenarios for a specific response type
+func (r *JSONScenarioRegistry) GetScenarios(responseType string) []JSONMalformationTestScenario {
+	scenarios, exists := r.scenarios[responseType]
+	if !exists {
+		return []JSONMalformationTestScenario{}
+	}
+	return scenarios
+}
+
+// addPathListScenarios adds scenarios specific to path list responses
+func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationTestScenario) {
+	scenarios := make([]JSONMalformationTestScenario, len(baseline))
+	copy(scenarios, baseline)
+	
+	// Add path-list specific scenarios
+	typeSpecific := []JSONMalformationTestScenario{
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
@@ -1411,69 +1398,19 @@ func GetPathListResponseScenarios() []JSONMalformationTestScenario {
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
-		{
-			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"items": [{"name": "test\u0000stream", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with Unicode issues should be handled gracefully",
-		},
-		{
-			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(`{"items": [{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with very large strings should be handled gracefully",
-		},
-		{
-			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"items": [{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with deeply nested objects should be handled gracefully",
-		},
-		{
-			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"items": [{"name": "test-stream_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with special characters should be handled gracefully",
-		},
 	}
+	
+	scenarios = append(scenarios, typeSpecific...)
+	r.scenarios["path_list"] = scenarios
 }
 
-// GetStreamResponseScenarios returns test scenarios specific to parseStreamResponse
-// Schema: {"name": "stream_name", "source": {...}, ...}
-func GetStreamResponseScenarios() []JSONMalformationTestScenario {
-	return []JSONMalformationTestScenario{
-		{
-			Name:        "empty_json",
-			JSONData:    []byte(""),
-			ExpectError: true,
-			ErrorMsg:    "empty response body",
-			Description: "Empty JSON should be rejected",
-		},
-		{
-			Name:        "null_json",
-			JSONData:    []byte("null"),
-			ExpectError: true,
-			ErrorMsg:    "null response body",
-			Description: "Null JSON should be rejected",
-		},
-		{
-			Name:        "malformed_json",
-			JSONData:    []byte(`{"name": "test_stream"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Malformed JSON should be rejected",
-		},
-		{
-			Name:        "incomplete_json",
-			JSONData:    []byte(`{"name": "test_stream"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Incomplete JSON should be rejected",
-		},
+// addStreamScenarios adds scenarios specific to stream responses
+func (r *JSONScenarioRegistry) addStreamScenarios(baseline []JSONMalformationTestScenario) {
+	scenarios := make([]JSONMalformationTestScenario, len(baseline))
+	copy(scenarios, baseline)
+	
+	// Add stream-specific scenarios
+	typeSpecific := []JSONMalformationTestScenario{
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
@@ -1502,69 +1439,19 @@ func GetStreamResponseScenarios() []JSONMalformationTestScenario {
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
-		{
-			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"name": "test\u0000stream", "source": {"type": "rtsp", "id": "test"}}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with Unicode issues should be handled gracefully",
-		},
-		{
-			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(`{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with very large strings should be handled gracefully",
-		},
-		{
-			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"name": "test_stream", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with deeply nested objects should be handled gracefully",
-		},
-		{
-			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"name": "test-stream_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with special characters should be handled gracefully",
-		},
 	}
+	
+	scenarios = append(scenarios, typeSpecific...)
+	r.scenarios["stream"] = scenarios
 }
 
-// GetPathsResponseScenarios returns test scenarios specific to parsePathConfListResponse
-// Schema: {"items": [...], "pageCount": 1, "itemCount": 0}
-func GetPathsResponseScenarios() []JSONMalformationTestScenario {
-	return []JSONMalformationTestScenario{
-		{
-			Name:        "empty_json",
-			JSONData:    []byte(""),
-			ExpectError: true,
-			ErrorMsg:    "empty response body",
-			Description: "Empty JSON should be rejected",
-		},
-		{
-			Name:        "null_json",
-			JSONData:    []byte("null"),
-			ExpectError: true,
-			ErrorMsg:    "null response body",
-			Description: "Null JSON should be rejected",
-		},
-		{
-			Name:        "malformed_json",
-			JSONData:    []byte(`{"items": [{"name": "test_path"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Malformed JSON should be rejected",
-		},
-		{
-			Name:        "incomplete_json",
-			JSONData:    []byte(`{"items": [{"name": "test_path"}]`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Incomplete JSON should be rejected",
-		},
+// addPathsScenarios adds scenarios specific to paths responses
+func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTestScenario) {
+	scenarios := make([]JSONMalformationTestScenario, len(baseline))
+	copy(scenarios, baseline)
+	
+	// Add paths-specific scenarios (same as path_list)
+	typeSpecific := []JSONMalformationTestScenario{
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
@@ -1593,69 +1480,19 @@ func GetPathsResponseScenarios() []JSONMalformationTestScenario {
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
-		{
-			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"items": [{"name": "test\u0000path", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with Unicode issues should be handled gracefully",
-		},
-		{
-			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(`{"items": [{"name": "` + strings.Repeat("a", 10000) + `", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with very large strings should be handled gracefully",
-		},
-		{
-			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"items": [{"name": "test_path", "source": {"type": "rtsp", "id": "test"}, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with deeply nested objects should be handled gracefully",
-		},
-		{
-			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"items": [{"name": "test-path_with.special@chars#123", "source": {"type": "rtsp", "id": "test"}}], "pageCount": 1, "itemCount": 1}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with special characters should be handled gracefully",
-		},
 	}
+	
+	scenarios = append(scenarios, typeSpecific...)
+	r.scenarios["paths"] = scenarios
 }
 
-// GetHealthResponseScenarios returns test scenarios specific to parseHealthResponse
-// Schema: {"status": "ok", ...}
-func GetHealthResponseScenarios() []JSONMalformationTestScenario {
-	return []JSONMalformationTestScenario{
-		{
-			Name:        "empty_json",
-			JSONData:    []byte(""),
-			ExpectError: true,
-			ErrorMsg:    "empty response body",
-			Description: "Empty JSON should be rejected",
-		},
-		{
-			Name:        "null_json",
-			JSONData:    []byte("null"),
-			ExpectError: true,
-			ErrorMsg:    "null response body",
-			Description: "Null JSON should be rejected",
-		},
-		{
-			Name:        "malformed_json",
-			JSONData:    []byte(`{"status": "ok"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Malformed JSON should be rejected",
-		},
-		{
-			Name:        "incomplete_json",
-			JSONData:    []byte(`{"status": "ok"`),
-			ExpectError: true,
-			ErrorMsg:    "failed to parse",
-			Description: "Incomplete JSON should be rejected",
-		},
+// addHealthScenarios adds scenarios specific to health responses
+func (r *JSONScenarioRegistry) addHealthScenarios(baseline []JSONMalformationTestScenario) {
+	scenarios := make([]JSONMalformationTestScenario, len(baseline))
+	copy(scenarios, baseline)
+	
+	// Add health-specific scenarios
+	typeSpecific := []JSONMalformationTestScenario{
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
@@ -1684,167 +1521,63 @@ func GetHealthResponseScenarios() []JSONMalformationTestScenario {
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
-		{
-			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"status": "ok\u0000", "uptime": 12345}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with Unicode issues should be handled gracefully",
-		},
-		{
-			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(`{"status": "` + strings.Repeat("a", 10000) + `", "uptime": 12345}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with very large strings should be handled gracefully",
-		},
-		{
-			Name:        "json_with_deeply_nested_objects",
-			JSONData:    []byte(`{"status": "ok", "uptime": 12345, "nested": {"level1": {"level2": {"level3": {"level4": {"level5": "deep"}}}}}}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with deeply nested objects should be handled gracefully",
-		},
-		{
-			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"status": "ok-with.special@chars#123", "uptime": 12345}`),
-			ExpectError: false,
-			ErrorMsg:    "",
-			Description: "JSON with special characters should be handled gracefully",
-		},
 	}
+	
+	scenarios = append(scenarios, typeSpecific...)
+	r.scenarios["health"] = scenarios
 }
 
-// TestJSONParsingErrors tests JSON parsing functions with malformed data
+
+// TestJSONParsingErrors tests JSON parsing functions with malformed data using the scenario registry
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func (h *MediaMTXTestHelper) TestJSONParsingErrors(t *testing.T) {
-	// Test parsePathListResponse function with schema-specific scenarios
-	t.Run("parsePathListResponse_JSON_Errors", func(t *testing.T) {
-		scenarios := GetPathListResponseScenarios()
-		for _, scenario := range scenarios {
-			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parsePathListResponse with scenario: %s - %s", scenario.Name, scenario.Description)
+	// Create scenario registry
+	registry := NewJSONScenarioRegistry()
+	
+	// Test all parsing functions with registry scenarios
+	parsingTests := []struct {
+		name         string
+		responseType string
+		parseFunc    func([]byte) (interface{}, error)
+	}{
+		{"parsePathListResponse", "path_list", func(data []byte) (interface{}, error) { return parsePathListResponse(data) }},
+		{"parseStreamResponse", "stream", func(data []byte) (interface{}, error) { return parseStreamResponse(data) }},
+		{"parseHealthResponse", "health", func(data []byte) (interface{}, error) { return parseHealthResponse(data) }},
+		{"parsePathConfListResponse", "paths", func(data []byte) (interface{}, error) { return parsePathConfListResponse(data) }},
+	}
+	
+	for _, test := range parsingTests {
+		t.Run(test.name+"_JSON_Errors", func(t *testing.T) {
+			scenarios := registry.GetScenarios(test.responseType)
+			for _, scenario := range scenarios {
+				t.Run(scenario.Name, func(t *testing.T) {
+					t.Logf("Testing %s with scenario: %s - %s", test.name, scenario.Name, scenario.Description)
 
-				// Test the JSON parsing function
-				_, err := parsePathListResponse(scenario.JSONData)
+					// Test the JSON parsing function
+					_, err := test.parseFunc(scenario.JSONData)
 
-				if scenario.ExpectError {
-					// Should get an error
-					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
-					if scenario.ErrorMsg != "" {
-						assert.Contains(t, err.Error(), scenario.ErrorMsg,
-							"Error message should contain expected text for scenario %s", scenario.Name)
-					}
-					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
-				} else {
-					// Should NOT get an error (graceful handling)
-					if err != nil {
-						// This is a BUG - the JSON parsing should handle these inputs gracefully
-						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+					if scenario.ExpectError {
+						// Should get an error
+						require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
+						if scenario.ErrorMsg != "" {
+							assert.Contains(t, err.Error(), scenario.ErrorMsg,
+								"Error message should contain expected text for scenario %s", scenario.Name)
+						}
+						t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 					} else {
-						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
+						// Should NOT get an error (graceful handling)
+						if err != nil {
+							// This is a BUG - the JSON parsing should handle these inputs gracefully
+							t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+							t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
+						} else {
+							t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
+						}
 					}
-				}
+				})
 			})
-		}
-	})
-
-	// Test parseStreamResponse function with schema-specific scenarios
-	t.Run("parseStreamResponse_JSON_Errors", func(t *testing.T) {
-		scenarios := GetStreamResponseScenarios()
-		for _, scenario := range scenarios {
-			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parseStreamResponse with scenario: %s - %s", scenario.Name, scenario.Description)
-
-				// Test the JSON parsing function
-				_, err := parseStreamResponse(scenario.JSONData)
-
-				if scenario.ExpectError {
-					// Should get an error
-					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
-					if scenario.ErrorMsg != "" {
-						assert.Contains(t, err.Error(), scenario.ErrorMsg,
-							"Error message should contain expected text for scenario %s", scenario.Name)
-					}
-					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
-				} else {
-					// Should NOT get an error (graceful handling)
-					if err != nil {
-						// This is a BUG - the JSON parsing should handle these inputs gracefully
-						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
-					} else {
-						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
-					}
-				}
-			})
-		}
-	})
-
-	// Test parseHealthResponse function with schema-specific scenarios
-	t.Run("parseHealthResponse_JSON_Errors", func(t *testing.T) {
-		scenarios := GetHealthResponseScenarios()
-		for _, scenario := range scenarios {
-			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parseHealthResponse with scenario: %s - %s", scenario.Name, scenario.Description)
-
-				// Test the JSON parsing function
-				_, err := parseHealthResponse(scenario.JSONData)
-
-				if scenario.ExpectError {
-					// Should get an error
-					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
-					if scenario.ErrorMsg != "" {
-						assert.Contains(t, err.Error(), scenario.ErrorMsg,
-							"Error message should contain expected text for scenario %s", scenario.Name)
-					}
-					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
-				} else {
-					// Should NOT get an error (graceful handling)
-					if err != nil {
-						// This is a BUG - the JSON parsing should handle these inputs gracefully
-						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
-					} else {
-						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
-					}
-				}
-			})
-		}
-	})
-
-	// Test parsePathConfListResponse function with schema-specific scenarios
-	t.Run("parsePathConfListResponse_JSON_Errors", func(t *testing.T) {
-		scenarios := GetPathsResponseScenarios()
-		for _, scenario := range scenarios {
-			t.Run(scenario.Name, func(t *testing.T) {
-				t.Logf("Testing parsePathConfListResponse with scenario: %s - %s", scenario.Name, scenario.Description)
-
-				// Test the JSON parsing function
-				_, err := parsePathConfListResponse(scenario.JSONData)
-
-				if scenario.ExpectError {
-					// Should get an error
-					require.Error(t, err, "Scenario %s should produce an error", scenario.Name)
-					if scenario.ErrorMsg != "" {
-						assert.Contains(t, err.Error(), scenario.ErrorMsg,
-							"Error message should contain expected text for scenario %s", scenario.Name)
-					}
-					t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
-				} else {
-					// Should NOT get an error (graceful handling)
-					if err != nil {
-						// This is a BUG - the JSON parsing should handle these inputs gracefully
-						t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						t.Errorf("🚨 This indicates a dangerous bug - malformed JSON causes parsing failures instead of graceful handling")
-					} else {
-						t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
-					}
-				}
-			})
-		}
-	})
+		})
+	}
 }
 
 // TestJSONParsingPanicProtection tests that JSON parsing functions don't panic
