@@ -20,16 +20,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 )
 
 // PathIntegration provides integration between MediaMTX path management and camera discovery
 type PathIntegration struct {
 	pathManager       PathManager
 	cameraMonitor     camera.CameraMonitor
-	configIntegration *config.ConfigIntegration
+	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 
 	// Path tracking
@@ -46,7 +45,7 @@ type PathIntegration struct {
 }
 
 // NewPathIntegration creates a new path integration
-func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configIntegration *config.ConfigIntegration, logger *logging.Logger) *PathIntegration {
+func NewPathIntegration(pathManager PathManager, cameraMonitor camera.CameraMonitor, configIntegration *ConfigIntegration, logger *logging.Logger) *PathIntegration {
 	return &PathIntegration{
 		pathManager:       pathManager,
 		cameraMonitor:     cameraMonitor,

@@ -49,7 +49,7 @@ type WebSocketServer struct {
 	config *ServerConfig
 
 	// Dependencies (proper dependency injection)
-	configIntegration  *config.ConfigIntegration
+	configManager      *config.ConfigManager
 	logger             *logging.Logger
 	jwtHandler         *security.JWTHandler
 	mediaMTXController mediamtx.MediaMTXControllerAPI
@@ -434,13 +434,13 @@ func (s *WebSocketServer) addEventHandler(handler func(string, interface{})) {
 
 // NewWebSocketServer creates a new WebSocket server with proper dependency injection
 func NewWebSocketServer(
-	configIntegration *config.ConfigIntegration,
+	configManager *config.ConfigManager,
 	logger *logging.Logger,
 	jwtHandler *security.JWTHandler,
 	mediaMTXController mediamtx.MediaMTXControllerAPI,
 ) (*WebSocketServer, error) {
-	if configIntegration == nil {
-		return nil, fmt.Errorf("configIntegration cannot be nil - use existing config.ConfigIntegration")
+	if configManager == nil {
+		return nil, fmt.Errorf("configManager cannot be nil")
 	}
 
 	if logger == nil {
@@ -455,10 +455,10 @@ func NewWebSocketServer(
 		return nil, fmt.Errorf("mediaMTXController cannot be nil - use existing internal/mediamtx/MediaMTXController")
 	}
 
-	// Get configuration from config integration
-	cfg, err := configIntegration.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get configuration: %w", err)
+	// Get configuration from config manager
+	cfg := configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("no configuration loaded")
 	}
 
 	// Create server configuration
@@ -472,11 +472,12 @@ func NewWebSocketServer(
 		PingInterval:   cfg.Server.PingInterval,
 		PongWait:       cfg.Server.PongWait,
 		MaxMessageSize: cfg.Server.MaxMessageSize,
+		AutoCloseAfter: cfg.Server.AutoCloseAfter,
 	}
 
 	server := &WebSocketServer{
 		config:             serverConfig,
-		configIntegration:  configIntegration,
+		configManager:      configManager,
 		logger:             logger,
 		jwtHandler:         jwtHandler,
 		mediaMTXController: mediaMTXController,

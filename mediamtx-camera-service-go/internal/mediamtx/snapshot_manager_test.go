@@ -154,7 +154,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 
 	// Use centralized configuration loading from test fixtures
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
@@ -422,7 +422,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 
 	// Use centralized configuration loading from test fixtures
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
@@ -990,7 +990,7 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
@@ -1084,7 +1084,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 

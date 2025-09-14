@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestSessionManagerBasics(t *testing.T) {
 	// Use very short timeouts for fast test execution
 	// 100ms session timeout, 50ms cleanup interval
 	manager := NewSessionManager(100*time.Millisecond, 50*time.Millisecond)
-	defer manager.Stop()
+	defer manager.Stop(context.Background())
 
 	// Test session creation
 	session, err := manager.CreateSession("test_user", RoleViewer)

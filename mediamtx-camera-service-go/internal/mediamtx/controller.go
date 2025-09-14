@@ -25,9 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"golang.org/x/sys/unix"
@@ -46,7 +46,7 @@ type controller struct {
 	rtspManager       RTSPConnectionManager
 	cameraMonitor     camera.CameraMonitor
 	config            *config.MediaMTXConfig
-	configIntegration *config.ConfigIntegration
+	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 
 	// Health notification management
@@ -59,6 +59,8 @@ type controller struct {
 	mu        sync.RWMutex
 	isRunning int32 // Use int32 for atomic operations (0 = false, 1 = true)
 	startTime time.Time
+	ctx       context.Context
+	cancel    context.CancelFunc
 
 	// Recording sessions - using sync.Map for lock-free operations
 	sessions sync.Map // sessionID -> *RecordingSession
@@ -125,6 +127,13 @@ func (c *controller) emitReadinessEvent() {
 			// Channel is full, skip this event
 		}
 	}
+}
+
+// SubscribeToReadiness subscribes to controller readiness events
+func (c *controller) SubscribeToReadiness() <-chan struct{} {
+	c.readinessMutex.RLock()
+	defer c.readinessMutex.RUnlock()
+	return c.readinessEventChan
 }
 
 // GetReadinessState returns detailed readiness information
@@ -362,7 +371,7 @@ func (c *controller) GetActiveRecording(devicePath string) *ActiveRecording {
 // All methods MUST check for nil before using optional components.
 func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor, logger *logging.Logger) (MediaMTXController, error) {
 	// Create configuration integration
-	configIntegration := config.NewConfigIntegration(configManager, logger)
+	configIntegration := NewConfigIntegration(configManager, logger)
 
 	// Get MediaMTX configuration
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -437,6 +446,9 @@ func (c *controller) Start(ctx context.Context) error {
 		return fmt.Errorf("controller is already running")
 	}
 
+	// Create cancellable context for controller lifecycle management
+	c.ctx, c.cancel = context.WithCancel(ctx)
+
 	c.logger.Info("Starting MediaMTX controller")
 
 	// Start health monitor
@@ -470,8 +482,51 @@ func (c *controller) Start(ctx context.Context) error {
 	atomic.StoreInt32(&c.isRunning, 1)
 	c.startTime = time.Now()
 
+	// Start readiness monitoring goroutine for Progressive Readiness pattern
+	go c.monitorReadiness()
+
 	c.logger.Info("MediaMTX controller started successfully")
 	return nil
+}
+
+// monitorReadiness monitors controller readiness and emits events when ready
+// This implements the Progressive Readiness pattern - components become ready as they initialize
+func (c *controller) monitorReadiness() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	
+	lastReadyState := false
+	readyEventEmitted := false // Prevent duplicate events
+	
+	for {
+		select {
+		case <-ticker.C:
+			if !c.checkRunningState() {
+				// Controller stopped, exit monitoring
+				return
+			}
+			
+			currentReadyState := c.IsReady()
+			
+			// Emit readiness event only once when controller becomes ready
+			if !lastReadyState && currentReadyState && !readyEventEmitted {
+				c.logger.Info("Controller became ready - emitting readiness event")
+				c.emitReadinessEvent()
+				readyEventEmitted = true
+			}
+			
+			// Reset if controller becomes unready (for recovery scenarios)
+			if lastReadyState && !currentReadyState {
+				readyEventEmitted = false
+			}
+			
+			lastReadyState = currentReadyState
+			
+		case <-c.ctx.Done():
+			// Context cancelled, exit gracefully
+			return
+		}
+	}
 }
 
 // Stop stops the MediaMTX controller
@@ -540,6 +595,11 @@ func (c *controller) Stop(ctx context.Context) error {
 	}
 
 	atomic.StoreInt32(&c.isRunning, 0)
+
+	// Cancel controller context to stop readiness monitoring
+	if c.cancel != nil {
+		c.cancel()
+	}
 
 	c.logger.Info("MediaMTX controller stopped successfully")
 	return nil

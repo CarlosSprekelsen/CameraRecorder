@@ -21,10 +21,10 @@ func NewTestConfigHelper(t *testing.T) *TestConfigHelper {
 	// Get the fixtures path relative to the project root
 	projectRoot := getProjectRoot()
 	fixturesPath := filepath.Join(projectRoot, "tests", "fixtures")
-	
+
 	// Create temporary directory for test files
 	tempDir := t.TempDir()
-	
+
 	return &TestConfigHelper{
 		t:            t,
 		fixturesPath: fixturesPath,
@@ -57,14 +57,14 @@ func (h *TestConfigHelper) CreateTestDirectories() {
 		"/tmp/snapshots",
 		"/tmp/camera-service.log",
 	}
-	
+
 	for _, dir := range dirs {
 		// For files, create the parent directory
 		if strings.HasSuffix(dir, ".yml") || strings.HasSuffix(dir, ".log") {
 			parentDir := filepath.Dir(dir)
 			err := os.MkdirAll(parentDir, 0755)
 			require.NoError(h.t, err, "Failed to create directory: %s", parentDir)
-			
+
 			// Create empty file
 			_, err = os.Create(dir)
 			require.NoError(h.t, err, "Failed to create file: %s", dir)
@@ -143,12 +143,12 @@ func getProjectRoot() string {
 	if err != nil {
 		panic("Failed to get current working directory")
 	}
-	
+
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir
 		}
-		
+
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			panic("Could not find go.mod file")

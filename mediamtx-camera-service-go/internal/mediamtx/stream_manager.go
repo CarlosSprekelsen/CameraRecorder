@@ -31,7 +31,7 @@ type streamManager struct {
 	client            MediaMTXClient
 	pathManager       PathManager
 	config            *config.MediaMTXConfig
-	configIntegration *config.ConfigIntegration
+	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
 
@@ -41,7 +41,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *config.ConfigIntegration, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -60,9 +60,9 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 	// All operations use the same stable path with consistent settings
 	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
 		UseCaseRecording: {
-			RunOnDemandCloseAfter:   "0s",                           // Never auto-close (stable for recording)
+			RunOnDemandCloseAfter:   config.RunOnDemandCloseAfter,   // Use centralized config
 			RunOnDemandRestart:      true,                           // Always restart FFmpeg if it crashes
-			RunOnDemandStartTimeout: config.RunOnDemandStartTimeout, // Use configured timeout
+			RunOnDemandStartTimeout: config.RunOnDemandStartTimeout, // Use centralized config
 			Suffix:                  "",                             // No suffix - simple path names
 		},
 	}
@@ -115,7 +115,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 		"runOnDemand":             ffmpegCommand,
 		"runOnDemandRestart":      true,                              // Always restart FFmpeg if it crashes
 		"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout, // Use configured timeout
-		"runOnDemandCloseAfter":   "0s",                              // Never auto-close (stable for recording)
+		"runOnDemandCloseAfter":   sm.config.RunOnDemandCloseAfter,   // Use configured timeout
 		"runOnUnDemand":           "",
 	}
 
@@ -270,7 +270,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			"runOnDemand":             ffmpegCommand,
 			"runOnDemandRestart":      true,
 			"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout,
-			"runOnDemandCloseAfter":   "0s",
+			"runOnDemandCloseAfter":   sm.config.RunOnDemandCloseAfter,
 			"runOnUnDemand":           "",
 		}
 
@@ -663,11 +663,11 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 		return map[string]interface{}{
 			"record":                true,
 			"recordPath":            recordPath,
-			"recordFormat":          "fmp4",  // STANAG 4609 compatible
-			"recordPartDuration":    "3600s", // 1 hour segments
+			"recordFormat":          "fmp4",                       // STANAG 4609 compatible
+			"recordPartDuration":    sm.config.RecordPartDuration, // Use centralized config
 			"recordMaxPartSize":     "100MB",
-			"recordSegmentDuration": "3600s", // 1 hour segments
-			"recordDeleteAfter":     "0s",    // Never auto-delete
+			"recordSegmentDuration": sm.config.RecordSegmentDuration, // Use centralized config
+			"recordDeleteAfter":     sm.config.RecordDeleteAfter,     // Use centralized config
 		}
 	}
 

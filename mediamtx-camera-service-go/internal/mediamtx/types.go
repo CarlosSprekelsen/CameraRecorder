@@ -17,8 +17,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 )
 
 // EventNotifier interfaces for MediaMTX Controller event publishing
@@ -341,6 +341,7 @@ type MediaMTXController interface {
 	// System readiness
 	IsReady() bool
 	GetReadinessState() map[string]interface{}
+	SubscribeToReadiness() <-chan struct{}
 
 	// Configuration management
 	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)
@@ -466,6 +467,10 @@ type MediaMTXControllerAPI interface {
 	// Cleanup and manager access (for file retention operations)
 	GetRecordingManager() *RecordingManager
 	GetSnapshotManager() *SnapshotManager
+
+	// File cleanup and retention policy operations
+	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)
+	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error)
 
 	// External stream discovery
 	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error)

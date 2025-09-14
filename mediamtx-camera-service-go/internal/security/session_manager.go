@@ -209,7 +209,7 @@ func (sm *SessionManager) Stop(ctx context.Context) error {
 	if sm.cleanupTicker != nil {
 		sm.cleanupTicker.Stop()
 	}
-	
+
 	// Signal stop
 	select {
 	case <-sm.stopChan:
@@ -217,14 +217,14 @@ func (sm *SessionManager) Stop(ctx context.Context) error {
 	default:
 		close(sm.stopChan)
 	}
-	
+
 	// Wait for cleanup goroutine to finish with timeout
 	done := make(chan struct{})
 	go func() {
 		sm.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		// Clean shutdown

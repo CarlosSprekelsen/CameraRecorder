@@ -43,7 +43,6 @@ type ffmpegManager struct {
 	performanceMetrics map[string]*PerformanceMetrics
 	metricsMu          sync.RWMutex
 
-
 	// Process cleanup tracking (Python parity)
 	cleanupActions map[int][]string
 	cleanupMu      sync.RWMutex

@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/shared/camera"
 )
 
 // SnapshotManager manages advanced snapshot operations

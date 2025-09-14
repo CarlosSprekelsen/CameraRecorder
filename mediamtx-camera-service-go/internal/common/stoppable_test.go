@@ -36,11 +36,11 @@ func newMockStoppable(stopFunc func(ctx context.Context) error) *mockStoppable {
 func (m *mockStoppable) Stop(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if !m.running {
 		return nil
 	}
-	
+
 	m.running = false
 	if m.stopFunc != nil {
 		return m.stopFunc(ctx)
@@ -57,7 +57,7 @@ func (m *mockStoppable) IsRunning() bool {
 // TestStoppable_InterfaceCompliance tests that our mock implements the Stoppable interface
 func TestStoppable_InterfaceCompliance(t *testing.T) {
 	var _ Stoppable = (*mockStoppable)(nil)
-	
+
 	// Test that the interface can be used
 	mock := newMockStoppable(nil)
 	ctx := context.Background()
@@ -71,34 +71,34 @@ func TestStoppable_GracefulShutdown(t *testing.T) {
 	t.Run("successful_shutdown", func(t *testing.T) {
 		mock := newMockStoppable(nil)
 		assert.True(t, mock.IsRunning())
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		
+
 		start := time.Now()
 		err := mock.Stop(ctx)
 		elapsed := time.Since(start)
-		
+
 		require.NoError(t, err, "Stop should succeed")
 		assert.False(t, mock.IsRunning(), "Should not be running after stop")
 		assert.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be fast")
 	})
-	
+
 	t.Run("shutdown_with_error", func(t *testing.T) {
 		expectedError := errors.New("stop failed")
 		mock := newMockStoppable(func(ctx context.Context) error {
 			return expectedError
 		})
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		
+
 		err := mock.Stop(ctx)
 		require.Error(t, err, "Stop should return error")
 		assert.Equal(t, expectedError, err, "Should return the expected error")
 		assert.False(t, mock.IsRunning(), "Should not be running even after error")
 	})
-	
+
 	t.Run("shutdown_with_context_cancellation", func(t *testing.T) {
 		mock := newMockStoppable(func(ctx context.Context) error {
 			// Simulate work that checks context
@@ -109,20 +109,20 @@ func TestStoppable_GracefulShutdown(t *testing.T) {
 				return nil
 			}
 		})
-		
+
 		// Cancel context immediately
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		
+
 		start := time.Now()
 		err := mock.Stop(ctx)
 		elapsed := time.Since(start)
-		
+
 		require.Error(t, err, "Stop should return context error")
 		assert.Contains(t, err.Error(), "context canceled", "Should indicate context cancellation")
 		assert.Less(t, elapsed, 50*time.Millisecond, "Should be fast with cancelled context")
 	})
-	
+
 	t.Run("shutdown_with_timeout", func(t *testing.T) {
 		mock := newMockStoppable(func(ctx context.Context) error {
 			// Simulate work that takes longer than timeout
@@ -133,34 +133,34 @@ func TestStoppable_GracefulShutdown(t *testing.T) {
 				return nil
 			}
 		})
-		
+
 		// Use very short timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
-		
+
 		start := time.Now()
 		err := mock.Stop(ctx)
 		elapsed := time.Since(start)
-		
+
 		require.Error(t, err, "Stop should timeout")
 		assert.Contains(t, err.Error(), "context deadline exceeded", "Should indicate timeout")
 		assert.Less(t, elapsed, 100*time.Millisecond, "Should timeout quickly")
 	})
-	
+
 	t.Run("double_stop_handling", func(t *testing.T) {
 		stopCount := 0
 		mock := newMockStoppable(func(ctx context.Context) error {
 			stopCount++
 			return nil
 		})
-		
+
 		// First stop
 		ctx1, cancel1 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel1()
 		err := mock.Stop(ctx1)
 		require.NoError(t, err, "First stop should succeed")
 		assert.Equal(t, 1, stopCount, "Stop function should be called once")
-		
+
 		// Second stop
 		ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel2()
@@ -179,11 +179,11 @@ func TestStoppable_ConcurrentAccess(t *testing.T) {
 			time.Sleep(10 * time.Millisecond) // Simulate some work
 			return nil
 		})
-		
+
 		// Start multiple goroutines calling Stop concurrently
 		var wg sync.WaitGroup
 		numGoroutines := 10
-		
+
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func() {
@@ -193,17 +193,17 @@ func TestStoppable_ConcurrentAccess(t *testing.T) {
 				mock.Stop(ctx)
 			}()
 		}
-		
+
 		wg.Wait()
-		
+
 		// Only one stop should have been executed
 		assert.Equal(t, 1, stopCount, "Stop function should be called only once")
 		assert.False(t, mock.IsRunning(), "Should not be running after concurrent stops")
 	})
-	
+
 	t.Run("concurrent_is_running_checks", func(t *testing.T) {
 		mock := newMockStoppable(nil)
-		
+
 		// Start goroutine that calls IsRunning repeatedly
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -214,14 +214,14 @@ func TestStoppable_ConcurrentAccess(t *testing.T) {
 				time.Sleep(1 * time.Millisecond)
 			}
 		}()
-		
+
 		// Stop the mock while IsRunning is being called
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		err := mock.Stop(ctx)
-		
+
 		wg.Wait()
-		
+
 		require.NoError(t, err, "Stop should succeed")
 		assert.False(t, mock.IsRunning(), "Should not be running after stop")
 	})
@@ -241,15 +241,15 @@ func TestStoppable_RealWorldScenarios(t *testing.T) {
 				return nil
 			}
 		})
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		
+
 		err := mock.Stop(ctx)
 		require.NoError(t, err, "Stop should succeed")
 		assert.True(t, cleanupDone, "Cleanup should be completed")
 	})
-	
+
 	t.Run("service_that_ignores_context", func(t *testing.T) {
 		mock := newMockStoppable(func(ctx context.Context) error {
 			// Simulate service that doesn't respect context (bad practice)
@@ -262,15 +262,15 @@ func TestStoppable_RealWorldScenarios(t *testing.T) {
 				return nil
 			}
 		})
-		
+
 		// Use very short timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
-		
+
 		start := time.Now()
 		err := mock.Stop(ctx)
 		elapsed := time.Since(start)
-		
+
 		// Should timeout but not hang indefinitely
 		require.Error(t, err, "Should timeout")
 		assert.Contains(t, err.Error(), "context deadline exceeded", "Should indicate timeout")

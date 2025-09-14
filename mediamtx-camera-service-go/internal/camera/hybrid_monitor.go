@@ -155,13 +155,12 @@ func NewHybridCameraMonitor(
 	// Create fresh device event source instance for this monitor
 	deviceEventSource := GetDeviceEventSourceFactory().Create()
 
-	// Create config integration for centralized config access
-	configIntegration := config.NewConfigIntegration(configManager, logger)
-	cfg, err := configIntegration.GetConfig()
-	if err != nil {
+	// Get configuration directly from config manager
+	cfg := configManager.GetConfig()
+	if cfg == nil {
 		// Close the device event source if config is not available
 		deviceEventSource.Close()
-		return nil, fmt.Errorf("failed to get configuration: %w", err)
+		return nil, fmt.Errorf("no configuration loaded")
 	}
 
 	// Set default discovery mode if not configured

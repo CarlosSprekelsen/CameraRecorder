@@ -137,7 +137,7 @@ func CreateTempLogFile(t *testing.T) string {
 	})
 
 	logFilePath := filepath.Join(tempDir, "test.log")
-	
+
 	// Create the actual log file
 	file, err := os.Create(logFilePath)
 	require.NoError(t, err)

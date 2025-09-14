@@ -82,7 +82,7 @@ func DefaultWebSocketTestConfig() *WebSocketTestConfig {
 // WebSocketTestHelper provides utilities for WebSocket server testing
 type WebSocketTestHelper struct {
 	config             *WebSocketTestConfig
-	configIntegration  *mediamtx.ConfigIntegration
+	configManager      *config.ConfigManager
 	logger             *logging.Logger
 	server             *WebSocketServer
 	mediaMTXController mediamtx.MediaMTXController
@@ -136,13 +136,10 @@ func NewWebSocketTestHelper(t *testing.T, config *WebSocketTestConfig) *WebSocke
 		config.Port = GetFreePort()
 	}
 
-	// Create config integration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
-
 	return &WebSocketTestHelper{
-		config:            config,
-		configIntegration: configIntegration,
-		logger:            logger,
+		config:        config,
+		configManager: configManager,
+		logger:        logger,
 	}
 }
 
@@ -169,9 +166,9 @@ func (h *WebSocketTestHelper) Cleanup(t *testing.T) {
 func (h *WebSocketTestHelper) GetServer(t *testing.T) *WebSocketServer {
 	h.serverOnce.Do(func() {
 		// Create server configuration
-		cfg, err := h.configIntegration.GetConfig()
-		if err != nil {
-			t.Fatalf("Failed to get configuration: %v", err)
+		cfg := h.configManager.GetConfig()
+		if cfg == nil {
+			t.Fatalf("No configuration loaded")
 		}
 		serverConfig := &ServerConfig{
 			Host:                 h.config.Host,
@@ -198,7 +195,7 @@ func (h *WebSocketTestHelper) GetServer(t *testing.T) *WebSocketServer {
 
 		// Create WebSocket server using production constructor
 		server, err := NewWebSocketServer(
-			h.configIntegration,
+			h.configManager,
 			h.logger,
 			jwtHandler,
 			mediaMTXController,
@@ -335,11 +332,10 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 	// Get free port automatically (port 0 = OS assigns next available)
 	port := GetFreePort()
 
-	// Create config integration and server configuration
-	configIntegration := mediamtx.NewConfigIntegration(configManager, logger)
-	cfg, err := configIntegration.GetConfig()
-	if err != nil {
-		t.Fatalf("Failed to get configuration: %v", err)
+	// Get server configuration
+	cfg := configManager.GetConfig()
+	if cfg == nil {
+		t.Fatalf("No configuration loaded")
 	}
 	serverConfig := &ServerConfig{
 		Host:                 cfg.Server.Host,
@@ -369,7 +365,7 @@ func NewTestWebSocketServer(t *testing.T) *WebSocketServer {
 
 	// Use the PRODUCTION constructor with proper dependency injection
 	server, err := NewWebSocketServer(
-		configIntegration,
+		configManager,
 		logger,
 		jwtHandler,
 		mediaMTXController, // Real MediaMTX controller

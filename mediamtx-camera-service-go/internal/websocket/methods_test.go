@@ -41,14 +41,14 @@ func getSharedMediaMTXHelper(t *testing.T) *mediamtx.MediaMTXTestHelper {
 	sharedMediaMTXOnce.Do(func() {
 		sharedMediaMTXMutex.Lock()
 		defer sharedMediaMTXMutex.Unlock()
-		
+
 		// Create shared MediaMTX helper
 		sharedMediaMTXHelper = mediamtx.NewMediaMTXTestHelper(t, nil)
-		
+
 		// Start MediaMTX controller following proper orchestration
 		controller, err := sharedMediaMTXHelper.GetController(t)
 		require.NoError(t, err, "Failed to create shared MediaMTX controller")
-		
+
 		// Start the controller
 		ctx := context.Background()
 		if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
@@ -56,7 +56,7 @@ func getSharedMediaMTXHelper(t *testing.T) *mediamtx.MediaMTXTestHelper {
 			require.NoError(t, err, "Failed to start shared MediaMTX controller")
 		}
 	})
-	
+
 	return sharedMediaMTXHelper
 }
 
@@ -73,7 +73,7 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	// Set the controller in WebSocket server
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -109,7 +109,7 @@ func TestWebSocketMethods_Authenticate(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -141,7 +141,7 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -174,7 +174,7 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -207,7 +207,7 @@ func TestWebSocketMethods_GetCameraList(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -240,7 +240,7 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -275,7 +275,7 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -309,7 +309,7 @@ func TestWebSocketMethods_TakeSnapshot(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -343,7 +343,7 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -377,7 +377,7 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -411,7 +411,7 @@ func TestWebSocketMethods_GetMetrics(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -444,7 +444,7 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -479,7 +479,7 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -515,7 +515,7 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -527,7 +527,7 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	// Test that unauthenticated access to protected methods fails
 	protectedMethods := []string{
 		"get_camera_list",
-		"get_camera_status", 
+		"get_camera_status",
 		"get_camera_capabilities",
 		"start_recording",
 		"stop_recording",
@@ -559,7 +559,7 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
@@ -601,7 +601,7 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	mediaMTXHelper := getSharedMediaMTXHelper(t)
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to get shared MediaMTX controller")
-	
+
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)

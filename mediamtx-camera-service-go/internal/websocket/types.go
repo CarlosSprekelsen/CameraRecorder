@@ -176,6 +176,7 @@ type ServerConfig struct {
 	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
 	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`       // Default: 30 seconds
 	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"` // Default: 10 seconds
+	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"`       // Default: 0 (never auto-close)
 }
 
 // DefaultServerConfig returns default WebSocket server configuration
@@ -195,5 +196,6 @@ func DefaultServerConfig() *ServerConfig {
 		WriteBufferSize:      1024,
 		ShutdownTimeout:      30 * time.Second, // Default shutdown timeout
 		ClientCleanupTimeout: 10 * time.Second, // Default client cleanup timeout
+		AutoCloseAfter:       0,                // Default: never auto-close
 	}
 }

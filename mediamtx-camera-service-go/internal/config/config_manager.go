@@ -659,7 +659,6 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("server.write_buffer_size", 1024)
 	v.SetDefault("server.shutdown_timeout", "30s")
 	v.SetDefault("server.client_cleanup_timeout", "10s")
-	v.SetDefault("server.auto_close_after", "300s")
 
 	// MediaMTX defaults
 	v.SetDefault("mediamtx.host", "127.0.0.1")
@@ -690,10 +689,6 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.backoff_jitter_range", []float64{0.8, 1.2})
 	v.SetDefault("mediamtx.process_termination_timeout", 3.0)
 	v.SetDefault("mediamtx.process_kill_timeout", 2.0)
-
-	// MediaMTX Path Configuration defaults
-	v.SetDefault("mediamtx.run_on_demand_start_timeout", "10s")
-	v.SetDefault("mediamtx.run_on_demand_close_after", "10s")
 
 	// RTSP Connection Monitoring defaults
 	v.SetDefault("mediamtx.rtsp_monitoring.enabled", true)

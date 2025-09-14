@@ -285,7 +285,7 @@ type UdevDeviceEventSource struct {
 	logger   *logging.Logger
 	events   chan DeviceEvent
 	stopChan chan struct{}
-	running  int32 // Using atomic operations instead of mutex
+	running  int32          // Using atomic operations instead of mutex
 	done     sync.WaitGroup // Wait for event loop to exit
 }
 
@@ -432,9 +432,9 @@ func (u *UdevDeviceEventSource) Started() bool {
 func isContainerEnvironment() bool {
 	// Check for common container indicators
 	containerIndicators := []string{
-		"/.dockerenv",           // Docker
-		"/proc/1/cgroup",       // Check cgroup for container indicators
-		"/proc/self/cgroup",    // Alternative cgroup check
+		"/.dockerenv",       // Docker
+		"/proc/1/cgroup",    // Check cgroup for container indicators
+		"/proc/self/cgroup", // Alternative cgroup check
 	}
 
 	for _, indicator := range containerIndicators {
@@ -466,9 +466,9 @@ func isUdevAvailable() bool {
 
 	// Check for udev system files
 	udevIndicators := []string{
-		"/sys/class/udev",           // udev sysfs interface
-		"/dev/.udev",                // udev device directory
-		"/run/udev",                 // udev runtime directory
+		"/sys/class/udev",                  // udev sysfs interface
+		"/dev/.udev",                       // udev device directory
+		"/run/udev",                        // udev runtime directory
 		"/lib/systemd/system/udev.service", // systemd udev service
 	}
 
@@ -495,9 +495,9 @@ func getOptimalDeviceEventSourceType(logger *logging.Logger) string {
 	isUdev := isUdevAvailable()
 
 	logger.WithFields(logging.Fields{
-		"is_container": isContainer,
+		"is_container":   isContainer,
 		"udev_available": isUdev,
-		"action": "environment_detection",
+		"action":         "environment_detection",
 	}).Info("Detecting optimal device event source")
 
 	if isContainer {
@@ -583,9 +583,9 @@ func (f *DeviceEventSourceFactory) Create() DeviceEventSource {
 
 	f.logger.WithFields(logging.Fields{
 		"source_type": sourceType,
-		"action": "device_event_source_created",
+		"action":      "device_event_source_created",
 	}).Info("Created fresh device event source instance with smart selection")
-	
+
 	return instance
 }
 

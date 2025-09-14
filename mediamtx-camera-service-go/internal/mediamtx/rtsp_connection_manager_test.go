@@ -212,7 +212,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
@@ -281,7 +281,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	configIntegration := config.NewConfigIntegration(configManager, helper.GetLogger())
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 

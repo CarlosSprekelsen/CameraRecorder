@@ -78,7 +78,7 @@ func (esd *ExternalStreamDiscovery) Start(ctx context.Context) error {
 // Stop stops the external discovery system with context-aware cancellation
 func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 	esd.logger.Info("Stopping external stream discovery")
-	
+
 	// Signal stop
 	select {
 	case <-esd.stopChan:
@@ -86,7 +86,7 @@ func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 	default:
 		close(esd.stopChan)
 	}
-	
+
 	// Wait for any ongoing discovery to complete with timeout
 	done := make(chan struct{})
 	go func() {
@@ -96,7 +96,7 @@ func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 		}
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		// Clean shutdown
@@ -104,7 +104,7 @@ func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 		esd.logger.Warn("External stream discovery shutdown timeout")
 		return ctx.Err()
 	}
-	
+
 	esd.logger.Info("External stream discovery stopped")
 	return nil
 }

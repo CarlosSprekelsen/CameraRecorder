@@ -97,7 +97,7 @@ func TestSessionManager_ExpiryHandling(t *testing.T) {
 
 	// Create a custom session manager with very short timeout for this test
 	shortTimeoutManager := NewSessionManager(1*time.Millisecond, 1*time.Millisecond) // 1ms timeout
-	defer shortTimeoutManager.Stop()
+	defer shortTimeoutManager.Stop(context.Background())
 
 	// Create session using the short timeout manager
 	session, err := shortTimeoutManager.CreateSession("test_user", RoleViewer)
@@ -270,7 +270,7 @@ func TestSessionManager_AdditionalEdgeCases(t *testing.T) {
 	t.Run("session_manager_with_very_short_timeout", func(t *testing.T) {
 		// Create a custom session manager with very short timeout for this specific test
 		shortTimeoutManager := NewSessionManager(1*time.Millisecond, 1*time.Millisecond)
-		defer shortTimeoutManager.Stop()
+		defer shortTimeoutManager.Stop(context.Background())
 
 		session, err := shortTimeoutManager.CreateSession("test_user", RoleViewer)
 		require.NoError(t, err)
@@ -291,7 +291,7 @@ func TestSessionManager_AdditionalEdgeCases(t *testing.T) {
 // Note: Benchmarks use individual managers for performance isolation
 func BenchmarkSessionManager_CreateSession(b *testing.B) {
 	manager := NewSessionManager(24*time.Hour, 5*time.Minute)
-	defer manager.Stop()
+	defer manager.Stop(context.Background())
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -304,7 +304,7 @@ func BenchmarkSessionManager_CreateSession(b *testing.B) {
 
 func BenchmarkSessionManager_ValidateSession(b *testing.B) {
 	manager := NewSessionManager(24*time.Hour, 5*time.Minute)
-	defer manager.Stop()
+	defer manager.Stop(context.Background())
 
 	session, err := manager.CreateSession("test_user", RoleAdmin)
 	if err != nil {
@@ -322,7 +322,7 @@ func BenchmarkSessionManager_ValidateSession(b *testing.B) {
 
 func BenchmarkSessionManager_ConcurrentOperations(b *testing.B) {
 	manager := NewSessionManager(24*time.Hour, 5*time.Minute)
-	defer manager.Stop()
+	defer manager.Stop(context.Background())
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {

@@ -51,10 +51,10 @@ func TestConfigAdapter_GetSecurityConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expectedConfig  *config.SecurityConfig
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expectedConfig *config.SecurityConfig
 	}{
 		{"Nil security config", nil, nil, nil},
 		{"Valid security config", &config.SecurityConfig{RateLimitRequests: 150}, nil, &config.SecurityConfig{RateLimitRequests: 150}},
@@ -73,10 +73,10 @@ func TestConfigAdapter_GetLoggingConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expectedConfig  *config.LoggingConfig
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expectedConfig *config.LoggingConfig
 	}{
 		{"Nil logging config", nil, nil, nil},
 		{"Valid logging config", nil, &config.LoggingConfig{Level: "warn"}, &config.LoggingConfig{Level: "warn"}},
@@ -95,10 +95,10 @@ func TestConfigAdapter_GetRateLimitRequests(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        int
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       int
 	}{
 		{"Nil config - use default", nil, nil, DefaultRateLimitRequests},
 		{"Valid config", &config.SecurityConfig{RateLimitRequests: 250}, nil, 250},
@@ -117,10 +117,10 @@ func TestConfigAdapter_GetRateLimitWindow(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        time.Duration
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       time.Duration
 	}{
 		{"Nil config - use default", nil, nil, DefaultRateLimitWindow},
 		{"Valid config", &config.SecurityConfig{RateLimitWindow: 5 * time.Minute}, nil, 5 * time.Minute},
@@ -139,10 +139,10 @@ func TestConfigAdapter_GetJWTSecretKey(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        string
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       string
 	}{
 		{"Nil config - empty string", nil, nil, ""},
 		{"Valid config", &config.SecurityConfig{JWTSecretKey: "my_secret_key"}, nil, "my_secret_key"},
@@ -161,10 +161,10 @@ func TestConfigAdapter_GetJWTExpiryHours(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        int
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       int
 	}{
 		{"Nil config - use default", nil, nil, DefaultJWTExpiryHours},
 		{"Valid config", &config.SecurityConfig{JWTExpiryHours: 72}, nil, 72},
@@ -183,10 +183,10 @@ func TestConfigAdapter_GetLogLevel(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        string
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       string
 	}{
 		{"Nil config - use default", nil, nil, DefaultLogLevel},
 		{"Valid config", nil, &config.LoggingConfig{Level: "error"}, "error"},
@@ -205,10 +205,10 @@ func TestConfigAdapter_GetLogFormat(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        string
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       string
 	}{
 		{"Nil config - use default", nil, nil, DefaultLogFormat},
 		{"Valid config", nil, &config.LoggingConfig{Format: "text"}, "text"},
@@ -227,10 +227,10 @@ func TestConfigAdapter_IsFileLoggingEnabled(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        bool
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       bool
 	}{
 		{"Nil config - use default", nil, nil, false},
 		{"Valid config - enabled", nil, &config.LoggingConfig{FileEnabled: true}, true},
@@ -250,10 +250,10 @@ func TestConfigAdapter_GetLogFilePath(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        string
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       string
 	}{
 		{"Nil config - use default", nil, nil, DefaultLogFilePath},
 		{"Valid config", nil, &config.LoggingConfig{FilePath: "/custom/log/path"}, "/custom/log/path"},
@@ -272,10 +272,10 @@ func TestConfigAdapter_GetMaxLogFileSize(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        int64
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       int64
 	}{
 		{"Nil config - use default", nil, nil, DefaultMaxFileSize},
 		{"Valid config", nil, &config.LoggingConfig{MaxFileSize: 500 * 1024 * 1024}, 500 * 1024 * 1024},
@@ -294,10 +294,10 @@ func TestConfigAdapter_GetLogBackupCount(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        int
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       int
 	}{
 		{"Nil config - use default", nil, nil, DefaultBackupCount},
 		{"Valid config", nil, &config.LoggingConfig{BackupCount: 15}, 15},
@@ -316,10 +316,10 @@ func TestConfigAdapter_IsConsoleLoggingEnabled(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expected        bool
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expected       bool
 	}{
 		{"Nil config - use default", nil, nil, true},
 		{"Valid config - enabled", nil, &config.LoggingConfig{ConsoleEnabled: true}, true},
@@ -339,10 +339,10 @@ func TestConfigAdapter_CreateAuditLoggerConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		securityConfig  *config.SecurityConfig
-		loggingConfig   *config.LoggingConfig
-		expectedKeys    []string
+		name           string
+		securityConfig *config.SecurityConfig
+		loggingConfig  *config.LoggingConfig
+		expectedKeys   []string
 	}{
 		{
 			name:           "Nil configs - use defaults",
@@ -396,9 +396,9 @@ func TestConfigAdapter_CreateRateLimiterConfig(t *testing.T) {
 		expectedMethods []string
 	}{
 		{
-			name:           "Nil configs - use defaults",
-			securityConfig: nil,
-			loggingConfig:  nil,
+			name:            "Nil configs - use defaults",
+			securityConfig:  nil,
+			loggingConfig:   nil,
 			expectedMethods: []string{"ping", "get_camera_list", "start_recording", "take_snapshot", "start_streaming", "stop_streaming", "get_stream_url", "get_stream_status", "authenticate"},
 		},
 		{

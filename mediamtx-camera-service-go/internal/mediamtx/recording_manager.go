@@ -30,7 +30,7 @@ import (
 type RecordingManager struct {
 	client            MediaMTXClient
 	config            *config.MediaMTXConfig
-	configIntegration *config.ConfigIntegration
+	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	pathManager       PathManager
 	streamManager     StreamManager
@@ -83,7 +83,7 @@ type MediaMTXRecordingSegment struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, configIntegration *config.ConfigIntegration, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig

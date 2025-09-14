@@ -17,7 +17,7 @@ type ServerConfig struct {
 	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
 	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`
 	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"`
-	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"` // Default: "300s"
+	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"`
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
@@ -87,6 +87,15 @@ type MediaMTXConfig struct {
 	StreamReadiness                     StreamReadinessConfig `mapstructure:"stream_readiness"`
 	HealthCheckTimeout                  time.Duration         `mapstructure:"health_check_timeout"` // Default: 5 seconds
 
+	// Run on demand configuration
+	RunOnDemandStartTimeout string `mapstructure:"run_on_demand_start_timeout"`
+	RunOnDemandCloseAfter   string `mapstructure:"run_on_demand_close_after"`
+
+	// Recording configuration
+	RecordPartDuration    string `mapstructure:"record_part_duration"`
+	RecordSegmentDuration string `mapstructure:"record_segment_duration"`
+	RecordDeleteAfter     string `mapstructure:"record_delete_after"`
+
 	// HTTP Client Configuration (for backward compatibility)
 	Timeout        time.Duration        `mapstructure:"timeout"`
 	RetryAttempts  int                  `mapstructure:"retry_attempts"`
@@ -102,10 +111,6 @@ type MediaMTXConfig struct {
 
 	// External Stream Discovery Configuration
 	ExternalDiscovery ExternalDiscoveryConfig `mapstructure:"external_discovery"`
-
-	// MediaMTX Path Configuration
-	RunOnDemandStartTimeout string `mapstructure:"run_on_demand_start_timeout"` // Default: "10s"
-	RunOnDemandCloseAfter   string `mapstructure:"run_on_demand_close_after"`   // Default: "10s"
 }
 
 // HealthMonitorDefaults represents health monitoring default values
