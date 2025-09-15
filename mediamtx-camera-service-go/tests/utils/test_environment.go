@@ -16,6 +16,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package testutils
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -135,7 +136,7 @@ func ResetTestEnvironment(t *testing.T) {
 	if envManager != nil && envManager.initialized {
 		// Stop the shared server
 		if envManager.environment.Server != nil {
-			err := envManager.environment.Server.Stop()
+			err := envManager.environment.Server.Stop(context.Background())
 			if err != nil {
 				t.Logf("Warning: Failed to stop test server during reset: %v", err)
 			}

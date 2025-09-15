@@ -405,7 +405,7 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 	// Test 2: System should return readiness status instead of blocking
 	// FIXED: Use get_status (API-compliant) with admin role (API requirement)
 	AuthenticateTestClient(t, conn, "test_user", "viewer")
-	
+
 	message := CreateTestMessage("get_status", nil)
 	response := SendTestMessage(t, conn, message)
 

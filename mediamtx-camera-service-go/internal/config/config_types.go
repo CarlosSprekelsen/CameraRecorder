@@ -69,6 +69,9 @@ type MediaMTXConfig struct {
 	SnapshotsPath  string      `mapstructure:"snapshots_path"`
 	Codec          CodecConfig `mapstructure:"codec"`
 
+	// MediaMTX override configuration
+	OverrideMediaMTXPaths bool `mapstructure:"override_mediamtx_paths"` // Force MediaMTX to use our paths
+
 	// HTTP Client URLs (for backward compatibility)
 	BaseURL        string `mapstructure:"base_url"`
 	HealthCheckURL string `mapstructure:"health_check_url"`
@@ -319,6 +322,11 @@ type RecordingConfig struct {
 	DefaultRotationSize  int64         `mapstructure:"default_rotation_size"`  // Default: 100MB
 	DefaultMaxDuration   time.Duration `mapstructure:"default_max_duration"`   // Default: 24 hours
 	DefaultRetentionDays int           `mapstructure:"default_retention_days"` // Default: 7 days
+
+	// File naming patterns (WITHOUT extension - MediaMTX adds it based on recordFormat)
+	FileNamePattern  string `mapstructure:"file_name_pattern"`  // e.g., "%device_%Y%m%d_%H%M%S"
+	UseDeviceSubdirs bool   `mapstructure:"use_device_subdirs"` // Create subdirs per device
+	RecordFormat     string `mapstructure:"record_format"`      // e.g., "fmp4" for STANAG 4609
 }
 
 // SnapshotConfig represents snapshot configuration.
@@ -332,6 +340,10 @@ type SnapshotConfig struct {
 	CleanupInterval int    `mapstructure:"cleanup_interval"`
 	MaxAge          int    `mapstructure:"max_age"`
 	MaxCount        int    `mapstructure:"max_count"`
+
+	// File naming patterns
+	FileNamePattern  string `mapstructure:"file_name_pattern"`  // e.g., "%device_%timestamp.jpg"
+	UseDeviceSubdirs bool   `mapstructure:"use_device_subdirs"` // Create subdirs per device
 }
 
 // RetentionPolicyConfig represents file retention policy configuration.

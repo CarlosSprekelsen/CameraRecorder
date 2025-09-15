@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"syscall"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // ValidationError represents a configuration validation error.
@@ -71,6 +75,11 @@ func ValidateConfig(config *Config) error {
 	}
 
 	if err := validateStorageConfig(&config.Storage); err != nil {
+		errors = append(errors, err)
+	}
+
+	// CRITICAL: Add comprehensive path validation
+	if err := ValidatePathConfiguration(config); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -932,6 +941,188 @@ func validateRTSPMonitoringConfig(config *RTSPMonitoringConfig) error {
 	}
 
 	return nil
+}
+
+// ValidatePathConfiguration validates all path-related configuration
+func ValidatePathConfiguration(config *Config) error {
+	// Validate MediaMTX paths
+	if err := validatePath("recordings_path", config.MediaMTX.RecordingsPath, true); err != nil {
+		return fmt.Errorf("invalid recordings path: %w", err)
+	}
+
+	if err := validatePath("snapshots_path", config.MediaMTX.SnapshotsPath, true); err != nil {
+		return fmt.Errorf("invalid snapshots path: %w", err)
+	}
+
+	// Validate storage paths
+	if err := validatePath("storage.default_path", config.Storage.DefaultPath, false); err != nil {
+		return fmt.Errorf("invalid storage default path: %w", err)
+	}
+
+	if err := validatePath("storage.fallback_path", config.Storage.FallbackPath, false); err != nil {
+		return fmt.Errorf("invalid storage fallback path: %w", err)
+	}
+
+	// Validate recording configuration
+	if err := validatePathPattern(config.Recording.FileNamePattern); err != nil {
+		return fmt.Errorf("invalid recording file pattern: %w", err)
+	}
+
+	if err := validateRecordFormat(config.Recording.RecordFormat); err != nil {
+		return fmt.Errorf("invalid recording format: %w", err)
+	}
+
+	// Validate snapshots configuration
+	if err := validatePathPattern(config.Snapshots.FileNamePattern); err != nil {
+		return fmt.Errorf("invalid snapshot file pattern: %w", err)
+	}
+
+	return nil
+}
+
+// validatePath validates a single path configuration
+func validatePath(name string, path string, createIfMissing bool) error {
+	// 1. Check if path is absolute
+	if !filepath.IsAbs(path) {
+		return fmt.Errorf("%s must be an absolute path, got: %s", name, path)
+	}
+
+	// 2. Check for path traversal attempts
+	cleanPath := filepath.Clean(path)
+	if strings.Contains(cleanPath, "..") {
+		return fmt.Errorf("%s contains path traversal: %s", name, path)
+	}
+
+	// 3. Check if path exists
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		if createIfMissing {
+			// Try to create the directory
+			if err := os.MkdirAll(path, 0755); err != nil {
+				return fmt.Errorf("%s does not exist and cannot be created: %w", name, err)
+			}
+			info, _ = os.Stat(path) // Re-stat after creation
+		} else {
+			return fmt.Errorf("%s does not exist: %s", name, path)
+		}
+	} else if err != nil {
+		return fmt.Errorf("cannot access %s: %w", name, err)
+	}
+
+	// 4. Check if it's a directory
+	if info != nil && !info.IsDir() {
+		return fmt.Errorf("%s is not a directory: %s", name, path)
+	}
+
+	// 5. Check write permissions
+	if err := checkWritePermission(path); err != nil {
+		return fmt.Errorf("%s is not writable: %w", name, err)
+	}
+
+	// 6. Check available space (warning only)
+	if err := checkDiskSpace(path); err != nil {
+		// Log warning but don't fail
+		logging.GetLogger("config").WithError(err).Warn("Low disk space warning")
+	}
+
+	return nil
+}
+
+// checkWritePermission tests if we can write to the directory
+func checkWritePermission(path string) error {
+	// Create a temporary test file
+	testFile := filepath.Join(path, fmt.Sprintf(".write_test_%d", os.Getpid()))
+
+	// Try to create and immediately delete the test file
+	file, err := os.Create(testFile)
+	if err != nil {
+		return fmt.Errorf("cannot write to directory: %w", err)
+	}
+	file.Close()
+
+	// Clean up test file
+	if err := os.Remove(testFile); err != nil {
+		// Log but don't fail - file was created successfully
+		logging.GetLogger("config").WithError(err).Debug("Could not remove test file")
+	}
+
+	return nil
+}
+
+// checkDiskSpace checks available disk space
+func checkDiskSpace(path string) error {
+	// Get disk usage statistics
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return fmt.Errorf("cannot check disk space: %w", err)
+	}
+
+	// Calculate available space in bytes
+	available := stat.Bavail * uint64(stat.Bsize)
+
+	// Warn if less than 1GB available
+	const minSpace = 1 << 30 // 1GB
+	if available < minSpace {
+		availableMB := available / (1 << 20)
+		return fmt.Errorf("low disk space: only %d MB available", availableMB)
+	}
+
+	return nil
+}
+
+// validatePathPattern validates file naming patterns for security
+func validatePathPattern(pattern string) error {
+	if pattern == "" {
+		return fmt.Errorf("pattern cannot be empty")
+	}
+
+	// Check for dangerous characters that could lead to path traversal
+	dangerous := []string{"..", "/", "\\", "\n", "\r", "\x00"}
+	for _, char := range dangerous {
+		if strings.Contains(pattern, char) {
+			return fmt.Errorf("pattern contains dangerous character: %q", char)
+		}
+	}
+
+	// Check pattern length
+	if len(pattern) > 255 {
+		return fmt.Errorf("pattern too long: %d characters (max 255)", len(pattern))
+	}
+
+	// Validate pattern variables for recording and snapshot patterns
+	validVars := []string{"%path", "%device", "%Y", "%m", "%d", "%H", "%M", "%S", "%timestamp"}
+
+	// Extract all % variables from pattern
+	re := regexp.MustCompile(`%[a-zA-Z_]+`)
+	matches := re.FindAllString(pattern, -1)
+
+	for _, match := range matches {
+		valid := false
+		for _, validVar := range validVars {
+			if match == validVar {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("pattern contains invalid variable: %s", match)
+		}
+	}
+
+	return nil
+}
+
+// validateRecordFormat validates recording format
+func validateRecordFormat(format string) error {
+	validFormats := []string{"fmp4", "mp4", "mpegts", "ts"}
+
+	for _, validFormat := range validFormats {
+		if format == validFormat {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("invalid record format: %s, must be one of: %s", format, strings.Join(validFormats, ", "))
 }
 
 // contains checks if a slice contains a specific value.

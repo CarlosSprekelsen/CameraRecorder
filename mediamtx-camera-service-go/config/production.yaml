@@ -1,0 +1,26 @@
+# Production Configuration with Validation
+mediamtx:
+  # Primary paths - must be absolute and writable
+  recordings_path: "/data/recordings"  # High-capacity storage
+  snapshots_path: "/data/snapshots"    # SSD for fast access
+  override_mediamtx_paths: true
+
+storage:
+  # Fallback paths for emergencies
+  default_path: "/data/recordings"
+  fallback_path: "/mnt/backup/recordings"  # Network storage fallback
+  
+  # Storage monitoring
+  warn_percent: 80
+  block_percent: 95  # Block new recordings at 95% full
+
+validation:
+  # Path validation settings
+  check_interval: "5m"
+  create_missing: true
+  min_free_space: "1GB"
+  
+recording:
+  # Paths validated at startup
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
+  use_device_subdirs: true

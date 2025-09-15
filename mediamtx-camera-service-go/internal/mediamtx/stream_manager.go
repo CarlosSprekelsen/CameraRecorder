@@ -31,6 +31,7 @@ type streamManager struct {
 	client            MediaMTXClient
 	pathManager       PathManager
 	config            *config.MediaMTXConfig
+	recordingConfig   *config.RecordingConfig
 	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
@@ -41,7 +42,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -71,6 +72,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 		client:            client,
 		pathManager:       pathManager,
 		config:            config,
+		recordingConfig:   recordingConfig,
 		configIntegration: configIntegration,
 		logger:            logger,
 		useCaseConfigs:    useCaseConfigs,
@@ -566,7 +568,7 @@ func (sm *streamManager) GenerateStreamURL(streamName string) string {
 
 // EnableRecording enables recording on the stable path for a device
 // This is the simplified approach - one path handles both streaming and recording
-func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string, outputPath string) error {
+func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string) error {
 	// Get the stable path name
 	pathName := GetMediaMTXPathName(devicePath)
 
@@ -597,14 +599,17 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string,
 
 	sm.logger.WithField("path_name", pathName).Info("Path is ready, enabling recording")
 
+	// Generate recording path from configuration
+	recordPath := GenerateRecordingPath(sm.config, sm.recordingConfig)
+
 	// Pre-create recording directory
-	outputDir := filepath.Dir(outputPath)
+	outputDir := sm.config.RecordingsPath
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create recording directory: %w", err)
 	}
 
 	// Create recording configuration
-	recordingConfig := sm.createRecordingConfig(pathName, outputPath)
+	recordingConfig := sm.createRecordingConfig(pathName, recordPath)
 
 	// PATCH the path to enable recording (now with retry)
 	err = sm.pathManager.PatchPath(ctx, pathName, recordingConfig)

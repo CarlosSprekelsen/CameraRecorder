@@ -25,11 +25,17 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Setup logging from validated config
 	cfg := configManager.GetConfig()
 	if cfg == nil {
 		log.Fatalf("Configuration not available")
 	}
+
+	// CRITICAL: Validate paths at startup
+	if err := config.ValidatePathConfiguration(cfg); err != nil {
+		log.Fatalf("Path configuration validation failed: %v", err)
+	}
+
+	// Setup logging from validated config
 	_ = logging.SetupLogging(&logging.LoggingConfig{
 		Level:          cfg.Logging.Level,
 		Format:         cfg.Logging.Format,
@@ -45,6 +51,13 @@ func main() {
 
 	logger := logging.GetLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
+
+	// Initialize path validator for runtime checks
+	pathValidator := mediamtx.NewPathValidator(cfg, logger)
+
+	// Start periodic validation
+	ctx := context.Background()
+	pathValidator.StartPeriodicValidation(ctx)
 
 	// Initialize real implementations for camera monitor dependencies
 	deviceChecker := &camera.RealDeviceChecker{}
@@ -119,7 +132,6 @@ func main() {
 	}
 
 	// ARCHITECTURAL COMPLIANCE: Start MediaMTX Controller first (orchestrates all services)
-	ctx := context.Background()
 	logger.Info("Starting MediaMTX Controller orchestration...")
 
 	// Start the MediaMTX controller (this orchestrates all other services)

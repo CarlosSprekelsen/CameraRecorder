@@ -105,8 +105,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
-	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "test_snapshot.jpg")
-
 	// Test snapshot options
 	options := map[string]interface{}{
 		"format":      "jpg",
@@ -120,7 +118,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	hasHardware := helper.HasHardwareCamera(ctx)
 
 	// Take snapshot (this will test the multi-tier approach)
-	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, outputPath, options)
+	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, options)
 
 	// Hardware-aware test validation
 	if hasHardware {
@@ -688,7 +686,6 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	// Test Tier 1: USB Direct Capture
 	ctx := context.Background()
 	devicePath := "/dev/video0" // USB device path
-	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier1_test.jpg")
 
 	// Create output directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -703,7 +700,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	}
 
 	// Take snapshot - this should attempt Tier 1 (USB Direct Capture)
-	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, outputPath, options)
+	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, options)
 
 	// Note: This test may fail if no camera is available, which is expected
 	// The test validates that Tier 1 is attempted first
@@ -719,7 +716,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
 		assert.Equal(t, "camera0", snapshot.Device)
-		assert.Equal(t, outputPath, snapshot.FilePath)
+		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
 		// Verify snapshot is tracked
@@ -761,7 +758,6 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	// Test Tier 2: RTSP Immediate Capture
 	ctx := context.Background()
 	devicePath := "/dev/video0" // USB device path (will be converted to stream name)
-	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier2_test.jpg")
 
 	// Create output directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -783,7 +779,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	t.Logf("Testing Tier 2: RTSP immediate capture from stream: %s", rtspURL)
 
 	// Take snapshot - this should attempt Tier 1 first, then Tier 2
-	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, outputPath, options)
+	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, options)
 
 	// Note: This test may fail if no camera is available, which is expected
 	// The test validates that Tier 2 is attempted after Tier 1 fails
@@ -799,7 +795,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
 		assert.Equal(t, "camera0", snapshot.Device)
-		assert.Equal(t, outputPath, snapshot.FilePath)
+		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
 		// Verify snapshot is tracked
@@ -842,7 +838,6 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 	// Use test fixture for external RTSP source (expected to fail gracefully)
 	devicePath := helper.GetTestCameraDevice("network_failure")
-	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier3_test.jpg")
 
 	// Create output directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -859,7 +854,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	t.Logf("Testing Tier 3: RTSP stream activation for external source: %s", devicePath)
 
 	// Take snapshot - this should attempt all tiers, with Tier 3 being the final attempt
-	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, outputPath, options)
+	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, options)
 
 	// Note: This test will likely fail because the external RTSP source doesn't exist
 	// The test validates that Tier 3 is attempted and StreamManager integration works
@@ -875,7 +870,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
 		assert.Equal(t, "camera0", snapshot.Device)
-		assert.Equal(t, outputPath, snapshot.FilePath)
+		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
 		// Verify snapshot is tracked
@@ -935,7 +930,6 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
-			outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, fmt.Sprintf("integration_%s.jpg", tc.name))
 
 			// Create output directory
 			err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -952,7 +946,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 			t.Logf("Testing multi-tier integration for: %s (expected tier: %d)", tc.devicePath, tc.expectedTier)
 
 			// Take snapshot - this should attempt the appropriate tier
-			snapshot, err := snapshotManager.TakeSnapshot(ctx, tc.devicePath, outputPath, options)
+			snapshot, err := snapshotManager.TakeSnapshot(ctx, tc.devicePath, options)
 
 			// Note: These tests may fail if no camera/external source is available
 			// The test validates that the multi-tier system works correctly
@@ -971,7 +965,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 					expectedDevice = "camera0"
 				}
 				assert.Equal(t, expectedDevice, snapshot.Device)
-				assert.Equal(t, outputPath, snapshot.FilePath)
+				assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 				assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
 				// Verify snapshot is tracked
@@ -1000,9 +994,13 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
+	// Get recording configuration
+	cfg := configManager.GetConfig()
+	recordingConfig := &cfg.Recording
+
 	// Create snapshot manager with proper configuration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, configIntegration, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
@@ -1015,19 +1013,16 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 
 	// Test Tier 2: RTSP Immediate Capture
 	t.Run("Tier2_RTSPImmediate", func(t *testing.T) {
-		// Create a test stream first to enable RTSP capture
-		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "tier2_test.jpg")
-
 		// Take snapshot - this should attempt tier 2 if tier 1 fails
 		options := map[string]interface{}{"quality": 85}
-		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)
+		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, options)
 		if err != nil {
 			// Tier 2 might fail if no RTSP stream is available, which is expected
 			t.Logf("Tier 2 RTSP immediate capture failed (expected if no stream): %v", err)
 		} else {
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
-			assert.Equal(t, path, snapshot.FilePath, "File path should match")
+			assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 			t.Log("Tier 2 RTSP immediate capture successful")
 		}
 	})
@@ -1035,29 +1030,27 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	// Test Tier 3: RTSP Stream Activation
 	t.Run("Tier3_RTSPActivation", func(t *testing.T) {
 		// This tier requires an active RTSP stream, which might not be available in test environment
-		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "tier3_test.jpg")
 
 		// Take snapshot - this should attempt tier 3 if tiers 1 and 2 fail
 		options := map[string]interface{}{"quality": 85}
-		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)
+		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, options)
 		if err != nil {
 			// Tier 3 might fail if no RTSP stream is available, which is expected
 			t.Logf("Tier 3 RTSP stream activation failed (expected if no stream): %v", err)
 		} else {
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
-			assert.Equal(t, path, snapshot.FilePath, "File path should match")
+			assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 			t.Log("Tier 3 RTSP stream activation successful")
 		}
 	})
 
 	// Test Multi-tier fallback behavior
 	t.Run("MultiTierFallback", func(t *testing.T) {
-		path := filepath.Join(helper.GetConfiguredSnapshotPath(), "multitier_test.jpg")
 
 		// This should try all tiers in sequence
 		options := map[string]interface{}{"quality": 85}
-		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, path, options)
+		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, options)
 		if err != nil {
 			// All tiers might fail in test environment, which is acceptable
 			t.Logf("Multi-tier snapshot failed (expected in test environment): %v", err)
@@ -1098,15 +1091,18 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	cameraMonitor := helper.GetCameraMonitor()
 	require.NotNil(t, cameraMonitor, "Camera monitor should be created successfully")
 
+	// Get recording configuration
+	cfg := configManager.GetConfig()
+	recordingConfig := &cfg.Recording
+
 	// Create snapshot manager with configuration integration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, configIntegration, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
 	ctx := context.Background()
 	device := availableDevices[0] // Use first available real device
-	outputPath := filepath.Join(helper.GetConfig().TestDataDir, "snapshots", "tier0_real_hw_test.jpg")
 
 	// Ensure camera monitor is stopped after test
 	defer func() {
@@ -1126,7 +1122,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 			"height": 480,
 		}
 
-		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, outputPath, options)
+		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, options)
 
 		// With Progressive Readiness, the test validates the multi-tier fallback system
 		// Tier 0 might fail if camera not connected yet, but system should fall back gracefully
@@ -1142,7 +1138,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 		// If we get here, snapshot succeeded - verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil if no error occurred")
 		assert.Equal(t, "camera0", snapshot.Device)
-		assert.Equal(t, outputPath, snapshot.FilePath)
+		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
 		// Verify metadata indicates which tier was used (could be 0, 1, 2, or 3)
@@ -1188,9 +1184,8 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				testOutputPath := filepath.Join(helper.GetConfig().TestDataDir, "snapshots", fmt.Sprintf("tier0_real_%s.jpg", tc.name))
 
-				snapshot, err := snapshotManager.TakeSnapshot(ctx, device, testOutputPath, tc.options)
+				snapshot, err := snapshotManager.TakeSnapshot(ctx, device, tc.options)
 				require.NoError(t, err, "Tier 0 capture should succeed with real hardware for %s", tc.name)
 				require.NotNil(t, snapshot, "Snapshot should not be nil")
 
@@ -1227,13 +1222,12 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	t.Run("Tier0_V4L2Direct_RealHardware_ErrorHandling", func(t *testing.T) {
 		// Test error handling with real hardware
 		// Test with non-existent device
-		_, err := snapshotManager.TakeSnapshot(ctx, "/dev/nonexistent", outputPath, map[string]interface{}{})
+		_, err := snapshotManager.TakeSnapshot(ctx, "/dev/nonexistent", map[string]interface{}{})
 		require.Error(t, err, "Should fail with non-existent device")
 		assert.Contains(t, err.Error(), "all snapshot capture methods failed", "Error should indicate all methods failed")
 
-		// Test with invalid output path
-		_, err = snapshotManager.TakeSnapshot(ctx, device, "/nonexistent/path/test.jpg", map[string]interface{}{})
-		require.Error(t, err, "Should fail with invalid output path")
-		assert.Contains(t, err.Error(), "all snapshot capture methods failed", "Error should indicate all methods failed")
+		// Test with invalid device
+		_, err = snapshotManager.TakeSnapshot(ctx, "", map[string]interface{}{})
+		require.Error(t, err, "Should fail with invalid device")
 	})
 }

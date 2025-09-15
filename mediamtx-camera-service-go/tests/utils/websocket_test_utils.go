@@ -18,6 +18,7 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package testutils
 
 import (
+	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -223,7 +224,7 @@ func CleanupSharedTestServer(t *testing.T) {
 	defer serverMutex.Unlock()
 
 	if sharedTestServer != nil {
-		err := sharedTestServer.Stop()
+		err := sharedTestServer.Stop(context.Background())
 		if err != nil {
 			t.Logf("Warning: Failed to stop shared test server: %v", err)
 		}

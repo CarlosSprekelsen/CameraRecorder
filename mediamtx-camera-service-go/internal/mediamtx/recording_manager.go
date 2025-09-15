@@ -30,10 +30,12 @@ import (
 type RecordingManager struct {
 	client            MediaMTXClient
 	config            *config.MediaMTXConfig
+	recordingConfig   *config.RecordingConfig
 	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	pathManager       PathManager
 	streamManager     StreamManager
+	pathValidator     *PathValidator
 
 	// Recording sessions - using sync.Map for lock-free operations
 	sessions sync.Map // sessionID -> *RecordingSession
@@ -83,7 +85,7 @@ type MediaMTXRecordingSegment struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
@@ -91,33 +93,42 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 	return &RecordingManager{
 		client:            client,
 		config:            config,
+		recordingConfig:   recordingConfig,
 		configIntegration: configIntegration,
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
 		// sessions and deviceToSession: sync.Map is zero-initialized, no need to initialize
-		// recordingConfig is derived from config field - no separate initialization needed
 	}
 }
 
 // StartRecording starts a new recording session for a camera device using MediaMTX
-func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*RecordingSession, error) {
+func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath string, options map[string]interface{}) (*RecordingSession, error) {
 	// Input validation
 	if strings.TrimSpace(devicePath) == "" {
 		return nil, fmt.Errorf("device path cannot be empty")
 	}
 
-	// Make outputPath optional - use default pattern from config when empty
-	if strings.TrimSpace(outputPath) == "" {
-		// Generate default output path using path name and timestamp pattern
-		pathName := GetMediaMTXPathName(devicePath)
-		outputPath = fmt.Sprintf("/opt/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S", pathName)
-		rm.logger.WithField("default_output_path", outputPath).Debug("Using default output path pattern")
+	// Validate path before starting
+	pathResult, err := rm.pathValidator.ValidateRecordingPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("recording path validation failed: %w", err)
 	}
+
+	if pathResult.FallbackPath != "" {
+		rm.logger.WithFields(logging.Fields{
+			"primary":  rm.config.RecordingsPath,
+			"fallback": pathResult.FallbackPath,
+		}).Info("Using fallback recording path")
+	}
+
+	// Use validated path
+	recordPath := GenerateRecordingPath(rm.config, rm.recordingConfig)
+	rm.logger.WithField("record_path", recordPath).Debug("Using configuration-based recording path")
 
 	rm.logger.WithFields(logging.Fields{
 		"device_path": devicePath,
-		"output_path": outputPath,
+		"record_path": recordPath,
 		"options":     options,
 	}).Info("Starting MediaMTX recording session")
 
@@ -135,7 +146,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 	// SIMPLIFIED: Use StreamManager's new EnableRecording method
 	// This handles path creation and recording configuration in one step
 	rm.logger.WithField("device_path", devicePath).Info("Enabling recording via StreamManager")
-	err := rm.streamManager.EnableRecording(ctx, devicePath, outputPath)
+	err = rm.streamManager.EnableRecording(ctx, devicePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enable recording: %w", err)
 	}
@@ -145,7 +156,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 		ID:         sessionID,
 		DevicePath: devicePath,
 		Path:       pathName, // Use the stable path name
-		FilePath:   outputPath,
+		FilePath:   recordPath,
 		StartTime:  time.Now(),
 		Status:     "active",
 		State:      SessionStateRecording,

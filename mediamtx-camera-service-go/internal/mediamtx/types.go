@@ -567,7 +567,7 @@ type StreamManager interface {
 	GenerateStreamName(devicePath string, useCase StreamUseCase) string
 
 	// Recording control (simplified - operates on stable paths)
-	EnableRecording(ctx context.Context, devicePath string, outputPath string) error
+	EnableRecording(ctx context.Context, devicePath string) error
 	DisableRecording(ctx context.Context, devicePath string) error
 
 	// Stream readiness management

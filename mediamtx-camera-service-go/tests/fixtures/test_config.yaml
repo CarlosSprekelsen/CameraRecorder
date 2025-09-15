@@ -34,9 +34,10 @@ mediamtx:
     host: localhost
     process_kill_timeout: 2
     process_termination_timeout: 5
-    recordings_path: /tmp/recordings
+    recordings_path: /tmp/test/recordings
+    snapshots_path: /tmp/test/snapshots
+    override_mediamtx_paths: true  # Always override for tests
     rtsp_port: 8554
-    snapshots_path: /tmp/snapshots
     webrtc_port: 8889
 recording:
     auto_cleanup: true
@@ -48,6 +49,10 @@ recording:
     max_size: 1073741824
     quality: high
     segment_duration: 300
+    # NO FILE EXTENSION - MediaMTX adds it
+    file_name_pattern: "test_%path_%Y%m%d_%H%M%S"
+    use_device_subdirs: false  # Flat structure for tests
+    record_format: "fmp4"
 retention_policy:
     auto_cleanup: true
     enabled: true
@@ -74,3 +79,5 @@ snapshots:
     max_height: 1080
     max_width: 1920
     quality: 90
+    file_name_pattern: "test_%device_%timestamp.jpg"  # Snapshots need extension
+    use_device_subdirs: false  # Flat structure for tests

@@ -16,7 +16,11 @@ package mediamtx
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
 // GetMediaMTXPathName generates consistent path names for MediaMTX
@@ -90,4 +94,83 @@ func GetDevicePathFromCameraIdentifier(cameraID string) string {
 
 	// For non-camera identifiers, assume it's already a device path
 	return cameraID
+}
+
+// GenerateRecordingPath generates the MediaMTX recordPath pattern
+// This returns the PATTERN for MediaMTX to use, not an actual file path
+// MediaMTX will replace %path, %Y, %m, %d, etc. and add the extension
+func GenerateRecordingPath(cfg *config.MediaMTXConfig, recordingCfg *config.RecordingConfig) string {
+	basePath := cfg.RecordingsPath
+	pattern := recordingCfg.FileNamePattern
+
+	if recordingCfg.UseDeviceSubdirs {
+		// MediaMTX will replace %path with the actual path name (e.g., camera0)
+		return filepath.Join(basePath, "%path", pattern)
+	}
+
+	return filepath.Join(basePath, pattern)
+}
+
+// GenerateSnapshotPath generates an actual file path for snapshots
+// Unlike recordings, snapshots are created directly by FFmpeg, not MediaMTX
+func GenerateSnapshotPath(cfg *config.MediaMTXConfig, snapshotCfg *config.SnapshotConfig, devicePath string) string {
+	basePath := cfg.SnapshotsPath
+	deviceName := GetMediaMTXPathName(devicePath) // e.g., "camera0"
+
+	// Create device subdirectory if configured
+	if snapshotCfg.UseDeviceSubdirs {
+		basePath = filepath.Join(basePath, deviceName)
+	}
+
+	// Generate filename from pattern
+	filename := expandSnapshotPattern(snapshotCfg.FileNamePattern, deviceName)
+
+	return filepath.Join(basePath, filename)
+}
+
+// expandSnapshotPattern expands pattern variables for snapshots
+func expandSnapshotPattern(pattern string, deviceName string) string {
+	now := time.Now()
+	result := pattern
+
+	// Replace device name
+	result = strings.ReplaceAll(result, "%device", deviceName)
+
+	// Replace timestamp
+	result = strings.ReplaceAll(result, "%timestamp", fmt.Sprintf("%d", now.Unix()))
+
+	// Replace date/time components if needed
+	result = strings.ReplaceAll(result, "%Y", fmt.Sprintf("%04d", now.Year()))
+	result = strings.ReplaceAll(result, "%m", fmt.Sprintf("%02d", now.Month()))
+	result = strings.ReplaceAll(result, "%d", fmt.Sprintf("%02d", now.Day()))
+	result = strings.ReplaceAll(result, "%H", fmt.Sprintf("%02d", now.Hour()))
+	result = strings.ReplaceAll(result, "%M", fmt.Sprintf("%02d", now.Minute()))
+	result = strings.ReplaceAll(result, "%S", fmt.Sprintf("%02d", now.Second()))
+
+	return result
+}
+
+// GetRecordingFilePath constructs the expected file path for a recording
+// This is used to verify where MediaMTX actually wrote the file
+func GetRecordingFilePath(cfg *config.MediaMTXConfig, recordingCfg *config.RecordingConfig, pathName string, startTime time.Time) string {
+	basePath := cfg.RecordingsPath
+
+	if recordingCfg.UseDeviceSubdirs {
+		basePath = filepath.Join(basePath, pathName)
+	}
+
+	// Construct filename as MediaMTX would create it
+	filename := fmt.Sprintf("%s_%04d-%02d-%02d_%02d-%02d-%02d",
+		pathName,
+		startTime.Year(), startTime.Month(), startTime.Day(),
+		startTime.Hour(), startTime.Minute(), startTime.Second())
+
+	// Add extension based on format
+	if recordingCfg.RecordFormat == "fmp4" {
+		filename += ".mp4"
+	} else if recordingCfg.RecordFormat == "mpegts" {
+		filename += ".ts"
+	}
+
+	return filepath.Join(basePath, filename)
 }

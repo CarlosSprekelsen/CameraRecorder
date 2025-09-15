@@ -61,15 +61,14 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
-	outputPath := filepath.Join(tempDir, "test_recording.mp4")
 
 	// Start recording
 	options := map[string]interface{}{}
-	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 	assert.Equal(t, "camera0", session.DevicePath)
-	assert.Equal(t, outputPath, session.FilePath)
+	assert.NotEmpty(t, session.FilePath, "File path should not be empty")
 
 	// Verify session is tracked
 	sessions := recordingManager.ListRecordingSessions()
@@ -101,11 +100,10 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
-	outputPath := filepath.Join(tempDir, "test_recording_stop.mp4")
 
 	// Start recording
 	options := map[string]interface{}{}
-	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording should start successfully")
 
 	// Verify session is active
@@ -146,10 +144,10 @@ func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
 
 	// Start multiple recordings
 	options := map[string]interface{}{}
-	session1, err := recordingManager.StartRecording(ctx, "/dev/video0", filepath.Join(tempDir, "test1.mp4"), options)
+	session1, err := recordingManager.StartRecording(ctx, "/dev/video0", options)
 	require.NoError(t, err)
 
-	session2, err := recordingManager.StartRecording(ctx, "/dev/video1", filepath.Join(tempDir, "test2.mp4"), options)
+	session2, err := recordingManager.StartRecording(ctx, "/dev/video1", options)
 	require.NoError(t, err)
 
 	// Verify both sessions are tracked
@@ -224,7 +222,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 		"recordFormat": "fmp4",
 	}
 
-	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 
 	if err != nil {
 		// If path already exists, try with a different approach
@@ -249,7 +247,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 					t.Logf("Could not patch existing path: %v", patchErr)
 					// Create a completely new path with unique name
 					cameraID = fmt.Sprintf("%s_alt", cameraID)
-					session, err = recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+					session, err = recordingManager.StartRecording(ctx, devicePath, options)
 				} else {
 					// Successfully patched, create a mock session
 					session = &RecordingSession{
@@ -415,7 +413,7 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 
 	// Start recording
 	options := map[string]interface{}{}
-	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording should start successfully")
 
 	// Verify session is tracked in the list
@@ -456,12 +454,8 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 
 	// Test invalid device path
 	options := map[string]interface{}{}
-	_, err = recordingManager.StartRecording(ctx, "", filepath.Join(tempDir, "test.mp4"), options)
+	_, err = recordingManager.StartRecording(ctx, "", options)
 	assert.Error(t, err, "Empty device path should fail")
-
-	// Test invalid output path
-	_, err = recordingManager.StartRecording(ctx, "/dev/video0", "", options)
-	assert.Error(t, err, "Empty output path should fail")
 
 	// Test stopping non-existent session
 	err = recordingManager.StopRecording(ctx, "non-existent-id")
@@ -495,9 +489,8 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	for i := 0; i < numRecordings; i++ {
 		go func(index int) {
 			devicePath := "/dev/video0" // Use same device for real server
-			outputPath := filepath.Join(tempDir, "concurrent_test.mp4")
 			options := map[string]interface{}{}
-			session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+			session, err := recordingManager.StartRecording(ctx, devicePath, options)
 			sessions[index] = session
 			errors[index] = err
 		}(i)
@@ -538,7 +531,6 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
-	outputPath := filepath.Join(tempDir, "segmented_test.mp4")
 
 	// Test MediaMTX recording configuration options
 	options := map[string]interface{}{
@@ -548,7 +540,7 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 		"recordDeleteAfter":     "24h",
 	}
 
-	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
+	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording with MediaMTX config should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 

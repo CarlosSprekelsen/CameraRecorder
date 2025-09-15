@@ -1,100 +1,13 @@
-# MediaMTX Camera Service - Development Configuration
-
-server:
-  host: "0.0.0.0"
-  port: 8080
-  websocket_path: "/ws"
-  max_connections: 100
-
+# Development Configuration
 mediamtx:
-  host: "127.0.0.1"
-  api_port: 9997
-  rtsp_port: 8554
-  webrtc_port: 8889
-  hls_port: 8888
-  config_path: "./config/mediamtx.yml"
-  recordings_path: "./recordings"
-  snapshots_path: "./snapshots"
+  recordings_path: "/tmp/dev/recordings"  # Local temp storage
+  snapshots_path: "/tmp/dev/snapshots"
+  override_mediamtx_paths: true
+
+storage:
+  default_path: "/tmp/dev/recordings"
+  fallback_path: "/tmp/fallback"  # Fallback to different temp location
   
-  # FFmpeg Configuration - Performance-based timeouts
-  ffmpeg:
-    snapshot:
-      process_creation_timeout: 10s  # Time to start FFmpeg process
-      execution_timeout: 30s         # Time for FFmpeg to complete snapshot
-      internal_timeout: 5000000      # Internal timeout in microseconds
-      retry_attempts: 2              # Number of retry attempts
-      retry_delay: 1s                # Delay between retries
-    recording:
-      process_creation_timeout: 15s  # Time to start FFmpeg process
-      execution_timeout: 60s         # Time for FFmpeg to complete recording
-      internal_timeout: 10000000     # Internal timeout in microseconds
-      retry_attempts: 3              # Number of retry attempts
-      retry_delay: 2s                # Delay between retries
-    # Fallback defaults for when configuration is missing
-    fallback_defaults:
-      retry_delay: 1.0               # 1 second
-      process_creation_timeout: 10.0 # 10 seconds
-      execution_timeout: 30.0        # 30 seconds
-      max_backoff_delay: 30.0        # 30 seconds
-  
-  # Health monitoring configuration
-  health_check_interval: 30
-  health_failure_threshold: 10
-  health_circuit_breaker_timeout: 60
-  health_max_backoff_interval: 120
-  health_recovery_confirmation_threshold: 3
-  backoff_base_multiplier: 2.0
-  backoff_jitter_range: [0.8, 1.2]
-  process_termination_timeout: 3.0
-  process_kill_timeout: 2.0
-  # Health monitoring defaults
-  health_monitor_defaults:
-    check_interval: 5.0              # 5 seconds
-    max_backoff_delay: 30.0          # 30 seconds
-    shutdown_timeout: 30.0           # 30 seconds
-
-camera:
-  poll_interval: 0.05  # Reduced from 0.1s to 0.05s (50ms) for faster detection
-  detection_timeout: 2.0
-  device_range: [0, 9]  # /dev/video0 to /dev/video9
-  enable_capability_detection: true
-  auto_start_streams: true
-  capability_timeout: 5.0
-  capability_retry_interval: 1.0
-  capability_max_retries: 3
-
-logging:
-  level: "DEBUG"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file_enabled: false  # Disable file logging for development
-  file_path: "./logs/camera-service.log"
-  max_file_size: 10485760
-  backup_count: 5
-  console_enabled: true
-
-recording:
-  enabled: false
-  format: "fmp4"
-  quality: "high"
-  segment_duration: 3600
-  max_segment_size: 524288000
-  auto_cleanup: true
-  cleanup_interval: 86400
-  max_age: 604800
-  max_size: 10737418240
-
-snapshots:
-  enabled: true
-  format: "jpeg"
-  quality: 90
-  max_width: 1920
-  max_height: 1080
-  auto_cleanup: true
-  cleanup_interval: 3600
-  max_age: 86400
-  max_count: 1000
-
-# Server operation defaults
-server_defaults:
-  shutdown_timeout: 30.0              # 30 seconds
-  camera_monitor_ticker: 5.0          # 5 seconds
+  # Relaxed limits for development
+  warn_percent: 90
+  block_percent: 99

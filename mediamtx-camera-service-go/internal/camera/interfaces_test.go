@@ -9,6 +9,7 @@ package camera
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 

@@ -37,6 +37,7 @@ type SnapshotManager struct {
 	cameraMonitor camera.CameraMonitor // Required for Tier 0: V4L2 direct capture
 	config        *config.MediaMTXConfig
 	logger        *logging.Logger
+	pathValidator *PathValidator
 
 	// Configuration integration for multi-tier support
 	configManager *config.ConfigManager
@@ -80,10 +81,26 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 }
 
 // TakeSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
-func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string, options map[string]interface{}) (*Snapshot, error) {
+func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
+	// Validate path before taking snapshot
+	pathResult, err := sm.pathValidator.ValidateSnapshotPath(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("snapshot path validation failed: %w", err)
+	}
+
+	if pathResult.FallbackPath != "" {
+		sm.logger.WithFields(logging.Fields{
+			"primary":  sm.config.SnapshotsPath,
+			"fallback": pathResult.FallbackPath,
+		}).Info("Using fallback snapshot path")
+	}
+
+	// Use validated path
+	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, device)
+
 	sm.logger.WithFields(logging.Fields{
 		"device":  device,
-		"path":    path,
+		"path":    snapshotPath,
 		"options": options,
 	}).Info("Taking multi-tier snapshot")
 
@@ -113,9 +130,8 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 		return nil, fmt.Errorf("failed to get tier configuration - config manager not properly initialized")
 	}
 
-	// Use the path provided by the controller
+	// Generate snapshot ID
 	snapshotID := generateSnapshotID(device)
-	snapshotPath := path
 
 	// Execute multi-tier snapshot capture
 	snapshot, err := sm.takeSnapshotMultiTier(ctx, device, snapshotPath, options, tierConfig)
@@ -129,7 +145,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device, path string
 	sm.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
 		"device":      device,
-		"path":        path,
+		"path":        snapshotPath,
 		"file_size":   snapshot.Size,
 		"format":      sm.snapshotSettings.Format,
 		"quality":     sm.snapshotSettings.Quality,

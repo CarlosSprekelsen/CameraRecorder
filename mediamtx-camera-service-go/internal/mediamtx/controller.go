@@ -198,7 +198,6 @@ func (c *controller) validateCameraIdentifier(cameraID string) bool {
 	return matched
 }
 
-
 // Active recording management methods (Phase 2 enhancement)
 
 // IsDeviceRecording checks if a device is currently recording
@@ -353,11 +352,15 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create FFmpeg manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
 
+	// Get recording configuration
+	cfg := configManager.GetConfig()
+	recordingConfig := &cfg.Recording
+
 	// Create stream manager with shared PathManager
-	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, configIntegration, logger)
+	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create recording manager (using existing client and pathManager)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, configIntegration, logger)
+	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create snapshot manager with configuration integration
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
@@ -1187,7 +1190,7 @@ func (c *controller) GetExternalStreams(ctx context.Context) ([]*ExternalStream,
 }
 
 // StartRecording starts a recording session
-func (c *controller) StartRecording(ctx context.Context, device, path string) (*RecordingSession, error) {
+func (c *controller) StartRecording(ctx context.Context, device string) (*RecordingSession, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
@@ -1195,9 +1198,6 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 	// Validate input parameters for security
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
-	}
-	if path == "" {
-		return nil, fmt.Errorf("recording path is required")
 	}
 
 	// Abstraction layer: Convert camera identifier to device path if needed
@@ -1231,10 +1231,10 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		ID:         sessionID,
 		Device:     cameraID, // Store camera identifier for API consistency
 		DevicePath: cameraID, // Store camera identifier for API consistency (test expectation)
-		Path:       path,
+		Path:       "",       // Path will be set by RecordingManager
 		Status:     "STARTING",
 		StartTime:  time.Now(),
-		FilePath:   path, // Use the provided output path
+		FilePath:   "", // FilePath will be set by RecordingManager
 	}
 
 	// Use MediaMTX RecordingManager for recording (no FFmpeg)
@@ -1244,7 +1244,7 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		"quality": "medium",
 	}
 
-	recordingSession, err := c.recordingManager.StartRecording(ctx, devicePath, session.FilePath, options)
+	recordingSession, err := c.recordingManager.StartRecording(ctx, devicePath, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start MediaMTX recording for session %s: %w", sessionID, err)
 	}
@@ -1266,7 +1266,6 @@ func (c *controller) StartRecording(ctx context.Context, device, path string) (*
 		"session_id":       sessionID,
 		"device":           cameraID,
 		"device_path":      devicePath,
-		"path":             path,
 		"mediamtx_session": recordingSession.ID,
 	}).Info("MediaMTX recording session started")
 
@@ -1438,21 +1437,6 @@ func generateSnapshotID(device string) string {
 	return "snap_" + device + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-// generateRecordingPath generates a recording file path
-func generateRecordingPath(device, sessionID string) string {
-	// Handle camera identifiers in file naming
-	if strings.HasPrefix(device, "camera") {
-		// Convert camera0 to camera0 for consistent naming
-		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", device, sessionID)
-	}
-	// Handle device paths by extracting the device name
-	if strings.HasPrefix(device, "/dev/video") {
-		deviceName := strings.TrimPrefix(device, "/dev/")
-		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", deviceName, sessionID)
-	}
-	return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", device, sessionID)
-}
-
 // generateSnapshotPath generates a snapshot file path
 func generateSnapshotPath(device, snapshotID string) string {
 	// Handle camera identifiers in file naming
@@ -1517,7 +1501,7 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device string, 
 	}
 
 	// Create advanced recording session with full state management
-	session, err := c.recordingManager.StartRecording(ctx, devicePath, fullPath, options)
+	session, err := c.recordingManager.StartRecording(ctx, devicePath, options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start advanced recording: %w", err)
 	}
@@ -1653,24 +1637,10 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 		return nil, fmt.Errorf("device path is required")
 	}
 
-	// Get default snapshot path from configuration
-	defaultPath := c.config.SnapshotsPath
-	if defaultPath == "" {
-		return nil, fmt.Errorf("default snapshot path not configured")
-	}
-
-	// Generate filename with timestamp
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("%s_%s.jpg", device, timestamp)
-	fullPath := filepath.Join(defaultPath, filename)
-
 	c.logger.WithFields(logging.Fields{
-		"device":       device,
-		"default_path": defaultPath,
-		"filename":     filename,
-		"full_path":    fullPath,
-		"options":      options,
-	}).Info("Taking multi-tier advanced snapshot with configured default path")
+		"device":  device,
+		"options": options,
+	}).Info("Taking multi-tier advanced snapshot with configuration-driven path")
 
 	// Abstraction layer: Convert camera identifier to device path if needed
 	var devicePath string
@@ -1691,11 +1661,10 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 	}
 
 	// Use enhanced snapshot manager with multi-tier capability
-	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, fullPath, options)
+	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, options)
 	if err != nil {
 		c.logger.WithError(err).WithFields(logging.Fields{
 			"device": device,
-			"path":   fullPath,
 		}).Error("Multi-tier snapshot failed")
 		return nil, fmt.Errorf("failed to take multi-tier snapshot for device %s: %w", device, err)
 	}

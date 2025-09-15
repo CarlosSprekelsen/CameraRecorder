@@ -154,9 +154,7 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 				// Extract size from "Size: Discrete 640x480"
 				size := r.extractValue(line)
 				// Remove "Discrete " prefix if present
-				if strings.HasPrefix(size, "Discrete ") {
-					size = strings.TrimPrefix(size, "Discrete ")
-				}
+				size = strings.TrimPrefix(size, "Discrete ")
 				width, height := r.parseSize(size)
 				currentFormat.Width = width
 				currentFormat.Height = height

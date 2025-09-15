@@ -1,0 +1,187 @@
+package mediamtx
+
+import (
+	"context"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+)
+
+func TestPathFallback(t *testing.T) {
+	// Setup primary path as read-only
+	primaryPath := "/tmp/primary"
+	fallbackPath := "/tmp/fallback"
+
+	// Create directories
+	os.MkdirAll(primaryPath, 0444)  // Read-only
+	os.MkdirAll(fallbackPath, 0755) // Writable
+	defer os.RemoveAll(primaryPath)
+	defer os.RemoveAll(fallbackPath)
+
+	// Create test config
+	cfg := &config.Config{
+		MediaMTX: config.MediaMTXConfig{
+			RecordingsPath: primaryPath,
+		},
+		Storage: config.StorageConfig{
+			FallbackPath: fallbackPath,
+		},
+	}
+
+	// Create logger
+	logger := logging.GetLogger("test")
+
+	// Create path validator
+	validator := NewPathValidator(cfg, logger)
+
+	// Test recording path validation
+	ctx := context.Background()
+	result, err := validator.ValidateRecordingPath(ctx)
+
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected result, got nil")
+	}
+
+	if result.Path != fallbackPath {
+		t.Errorf("Expected fallback path %s, got %s", fallbackPath, result.Path)
+	}
+
+	if result.FallbackPath == "" {
+		t.Error("Expected fallback path to be set")
+	}
+}
+
+func TestPathValidatorCaching(t *testing.T) {
+	// Create test directory
+	testDir := "/tmp/validator_test"
+	os.MkdirAll(testDir, 0755)
+	defer os.RemoveAll(testDir)
+
+	// Create test config
+	cfg := &config.Config{
+		MediaMTX: config.MediaMTXConfig{
+			RecordingsPath: testDir,
+		},
+		Storage: config.StorageConfig{
+			FallbackPath: "/tmp/fallback_test",
+		},
+	}
+
+	// Create logger
+	logger := logging.GetLogger("test")
+
+	// Create path validator with short validation period
+	validator := &PathValidator{
+		config:           cfg,
+		logger:           logger,
+		validationCache:  make(map[string]*PathValidationResult),
+		validationPeriod: 100 * time.Millisecond, // Very short for testing
+	}
+
+	ctx := context.Background()
+
+	// First validation
+	result1, err1 := validator.ValidateRecordingPath(ctx)
+	if err1 != nil {
+		t.Fatalf("First validation failed: %v", err1)
+	}
+
+	// Second validation (should use cache)
+	result2, err2 := validator.ValidateRecordingPath(ctx)
+	if err2 != nil {
+		t.Fatalf("Second validation failed: %v", err2)
+	}
+
+	// Results should be the same (cached)
+	if result1.ValidatedAt != result2.ValidatedAt {
+		t.Error("Expected cached result, but got different validation times")
+	}
+
+	// Wait for cache to expire
+	time.Sleep(150 * time.Millisecond)
+
+	// Third validation (should re-validate)
+	result3, err3 := validator.ValidateRecordingPath(ctx)
+	if err3 != nil {
+		t.Fatalf("Third validation failed: %v", err3)
+	}
+
+	// Results should be different (re-validated)
+	if result1.ValidatedAt == result3.ValidatedAt {
+		t.Error("Expected re-validated result, but got same validation time")
+	}
+}
+
+func TestPathValidatorErrorHandling(t *testing.T) {
+	// Create test config with non-existent paths
+	cfg := &config.Config{
+		MediaMTX: config.MediaMTXConfig{
+			RecordingsPath: "/nonexistent/primary",
+		},
+		Storage: config.StorageConfig{
+			FallbackPath: "/nonexistent/fallback",
+		},
+	}
+
+	// Create logger
+	logger := logging.GetLogger("test")
+
+	// Create path validator
+	validator := NewPathValidator(cfg, logger)
+
+	ctx := context.Background()
+
+	// Test recording path validation (should fail)
+	_, err := validator.ValidateRecordingPath(ctx)
+	if err == nil {
+		t.Error("Expected error for non-existent paths, got none")
+	}
+
+	// Test snapshot path validation (should fail)
+	_, err = validator.ValidateSnapshotPath(ctx)
+	if err == nil {
+		t.Error("Expected error for non-existent paths, got none")
+	}
+}
+
+func TestPathValidatorSinglePathValidation(t *testing.T) {
+	// Create test directory
+	testDir := "/tmp/single_path_test"
+	os.MkdirAll(testDir, 0755)
+	defer os.RemoveAll(testDir)
+
+	// Create logger
+	logger := logging.GetLogger("test")
+
+	// Create path validator
+	validator := &PathValidator{
+		logger: logger,
+	}
+
+	// Test valid path
+	result := validator.validateSinglePath(testDir)
+	if !result.IsValid {
+		t.Errorf("Expected valid path, got error: %v", result.Error)
+	}
+
+	if !result.IsWritable {
+		t.Error("Expected writable path")
+	}
+
+	// Test invalid path
+	result = validator.validateSinglePath("/nonexistent/path")
+	if result.IsValid {
+		t.Error("Expected invalid path")
+	}
+
+	if result.Error == nil {
+		t.Error("Expected error for invalid path")
+	}
+}

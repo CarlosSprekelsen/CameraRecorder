@@ -22,6 +22,7 @@ mediamtx:
   config_path: "/opt/mediamtx/config/mediamtx.yml"
   recordings_path: "/opt/camera-service/recordings"
   snapshots_path: "/opt/camera-service/snapshots"
+  override_mediamtx_paths: true  # Override MediaMTX defaults
   health_check_interval: 60  # Increased from 30 for power efficiency
   health_failure_threshold: 5  # Increased tolerance
   health_circuit_breaker_timeout: 120  # Increased from 60
@@ -83,6 +84,10 @@ recording:
   default_rotation_size: 52428800  # Reduced to 50MB from 100MB
   default_max_duration: 12h  # Reduced from 24h
   default_retention_days: 30  # Increased from 7 days
+  # NO FILE EXTENSION - MediaMTX adds .mp4 for fmp4 format (STANAG 4609)
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
+  use_device_subdirs: true  # Creates /recordings/camera0/, /recordings/camera1/, etc.
+  record_format: "fmp4"  # STANAG 4609 compliant format
 
 snapshots:
   enabled: true
@@ -94,6 +99,8 @@ snapshots:
   cleanup_interval: 7200  # Increased to 2 hours from 1 hour
   max_age: 2592000  # Increased to 30 days from 7 days
   max_count: 500  # Reduced from 1000
+  file_name_pattern: "%device_%timestamp.jpg"  # Snapshots need extension
+  use_device_subdirs: true  # Creates /snapshots/camera0/, /snapshots/camera1/, etc.
 
 ffmpeg:
   snapshot:

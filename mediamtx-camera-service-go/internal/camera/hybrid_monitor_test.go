@@ -11,6 +11,7 @@ package camera
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"

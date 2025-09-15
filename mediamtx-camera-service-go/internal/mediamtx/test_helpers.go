@@ -56,7 +56,7 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 		user = "testuser"
 	}
 	testDataDir := fmt.Sprintf("/tmp/mediamtx_test_data_%s", user)
-	
+
 	return &MediaMTXTestConfig{
 		BaseURL:      "http://localhost:9997", // MediaMTX API port (standard)
 		Timeout:      30 * time.Second,
@@ -346,8 +346,12 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 		// Ensure PathManager is initialized first to prevent nil pointer dereference
 		pathManager := h.GetPathManager() // This will initialize h.pathManager if nil
 
+		// Get recording configuration
+		cfg := h.configManager.GetConfig()
+		recordingConfig := &cfg.Recording
+
 		// Use centralized MediaMTX config and ConfigIntegration
-		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, h.configIntegration, h.logger)
+		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
 	})
 	return h.streamManager
 }
@@ -358,7 +362,12 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		// Use centralized MediaMTX config and ConfigIntegration
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, h.configIntegration, h.logger)
+
+		// Get recording configuration
+		cfg := h.configManager.GetConfig()
+		recordingConfig := &cfg.Recording
+
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
 	})
 	return h.recordingManager
 }
