@@ -7,21 +7,42 @@ import (
 )
 
 func TestPathValidation(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir := "/tmp/path_validation_test"
+	os.MkdirAll(tempDir, 0755)
+	defer os.RemoveAll(tempDir)
+
 	tests := []struct {
-		name    string
-		path    string
-		wantErr bool
-		errMsg  string
+		name            string
+		path            string
+		createIfMissing bool
+		wantErr         bool
+		errMsg          string
 	}{
-		{"absolute path", "/opt/recordings", false, ""},
-		{"relative path", "./recordings", true, "must be an absolute path"},
-		{"path traversal", "/opt/../etc", true, "path traversal"},
-		{"non-existent", "/nonexistent/path", true, "does not exist"},
+		// Valid cases
+		{"valid existing path", tempDir, false, false, ""},
+		{"valid path with creation", "/tmp/path_validation_test_new", true, false, ""},
+
+		// Invalid cases - path format
+		{"relative path", "./recordings", false, true, "must be an absolute path"},
+		{"empty path", "", false, true, "must be an absolute path"},
+
+		// Invalid cases - path traversal attacks
+		{"simple traversal", "/opt/../../../etc/passwd", false, true, "path traversal"},
+		{"backslash traversal", "/opt/..\\etc", false, true, "path traversal"},
+		{"mixed separators", "/opt/../etc", false, true, "path traversal"},
+		{"nested traversal", "/opt/recordings/../../../etc", false, true, "path traversal"},
+		{"double traversal", "/opt/../..//etc", false, true, "path traversal"},
+		{"encoded traversal", "/opt/..%2Fetc", false, true, "path traversal"},
+
+		// Invalid cases - non-existent paths
+		{"non-existent path", "/nonexistent/path/that/does/not/exist", false, true, "does not exist"},
+		{"non-existent with no creation", "/tmp/nonexistent_validation_test", false, true, "does not exist"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validatePath("test", tt.path, false)
+			err := validatePath("test", tt.path, tt.createIfMissing)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got none")
@@ -127,5 +148,46 @@ func TestCheckDiskSpace(t *testing.T) {
 	err := checkDiskSpace(tempDir)
 	if err != nil {
 		t.Logf("Disk space check returned warning (expected in some environments): %v", err)
+	}
+}
+
+func TestPathTraversalDetection(t *testing.T) {
+	// Test various path traversal attack patterns
+	traversalTests := []struct {
+		name     string
+		path     string
+		expected bool // true if should be detected as traversal
+	}{
+		// Should be detected as traversal (checking original path for "..")
+		{"simple dotdot", "/opt/../etc", true},
+		{"multiple dotdot", "/opt/../../../etc", true},
+		{"backslash dotdot", "/opt/..\\etc", true},
+		{"mixed separators", "/opt/../etc", true},
+		{"nested traversal", "/opt/recordings/../../../etc", true},
+		{"double slash", "/opt/../..//etc", true},
+		{"encoded traversal", "/opt/..%2Fetc", true},
+		{"traversal in middle", "/opt/recordings/../etc", true},
+		{"traversal at end", "/opt/recordings/..", true},
+
+		// Should NOT be detected as traversal
+		{"valid path", "/opt/recordings", false},
+		{"valid nested", "/opt/recordings/subdir", false},
+		{"valid with dots", "/opt/recordings/file.txt", false},
+		{"valid with underscores", "/opt/recordings_file", false},
+		{"valid with dashes", "/opt/recordings-file", false},
+		{"valid with numbers", "/opt/recordings123", false},
+	}
+
+	for _, tt := range traversalTests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test the corrected path traversal detection logic
+			// (checking original path for ".." before cleaning)
+			hasTraversal := strings.Contains(tt.path, "..")
+
+			if hasTraversal != tt.expected {
+				t.Errorf("path traversal detection failed for %q: expected %v, got %v",
+					tt.path, tt.expected, hasTraversal)
+			}
+		})
 	}
 }

@@ -101,16 +101,7 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		testConfig = DefaultMediaMTXTestConfig()
 	}
 
-	// CRITICAL: Configure the global logging factory FIRST with ERROR level
-	// This ensures ALL loggers created after this point use the ERROR level
-	logging.ConfigureGlobalLogging(&logging.LoggingConfig{
-		Level:          "error", // Force ERROR level for all tests
-		Format:         "json",
-		FileEnabled:    false,
-		ConsoleEnabled: true, // Always enable console for tests
-	})
-
-	// Create logger for testing AFTER configuring global logging
+	// Create logger for testing - will use configuration from test fixture
 	logger := logging.GetLogger("test-mediamtx-controller")
 
 	// Create MediaMTX client configuration
@@ -129,9 +120,19 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Load configuration
-	err := configManager.LoadConfig("../../tests/fixtures/config_test_minimal.yaml")
+	configPath := "../../tests/fixtures/config_test_minimal.yaml"
+	logger.Info("Loading test configuration", "config_path", configPath)
+	err := configManager.LoadConfig(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load test configuration: %v", err)
+	}
+
+	// Verify configuration was loaded correctly
+	cfg := configManager.GetConfig()
+	if cfg != nil {
+		logger.Info("Configuration loaded successfully", "override_mediamtx_paths", cfg.MediaMTX.OverrideMediaMTXPaths, "recordings_path", cfg.MediaMTX.RecordingsPath)
+	} else {
+		logger.Error("Configuration is nil after loading")
 	}
 
 	// Create MediaMTX client AFTER configuring logging

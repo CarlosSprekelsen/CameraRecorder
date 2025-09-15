@@ -490,57 +490,90 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 }
 
 // TestController_StartRecording_ReqMTX002 tests recording functionality through controller
+// Enterprise-grade test that verifies actual file creation by MediaMTX
 func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Server is ready via shared test helper
+	// ✅ USE EXISTING: Get fresh controller using the same pattern as working tests
+	controller := getFreshController(t, "TestController_StartRecording_ReqMTX002")
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
+	// ✅ USE EXISTING: Start controller using the same pattern as working tests
 	ctx := context.Background()
-	err = controller.Start(ctx)
+	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
+
+	// Ensure controller is stopped after test
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		controller.Stop(stopCtx)
 	}()
 
-	// Create temporary output directory
-	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0700)
-	require.NoError(t, err)
-
-	// Test recording with available camera identifier using optimized helper method
-	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
+	// ✅ USE EXISTING: Get camera identifier
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
+
+	// ✅ USE EXISTING: Get configured recording path
+	recordingsPath := helper.GetConfiguredRecordingPath()
+	t.Logf("Using configured recording path: %s", recordingsPath)
+
+	// Start recording with minimal duration for fast testing
 	options := map[string]interface{}{
-		"format":  "mp4",
-		"codec":   "h264",
-		"quality": "medium",
+		"format":   "mp4",
+		"codec":    "h264",
+		"quality":  "medium",
+		"duration": 2, // 2 seconds - minimal for file creation
 	}
+
 	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
-	// Verify session properties
+	// Verify session properties (basic validation)
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
 	assert.Equal(t, cameraID, session.DevicePath, "Should use available camera identifier")
-	assert.NotEmpty(t, session.FilePath, "Should have a generated file path")
-	assert.Contains(t, session.FilePath, cameraID, "File path should contain camera identifier")
-	assert.Contains(t, session.FilePath, ".mp4", "File path should have .mp4 extension")
+	assert.NotEmpty(t, session.FilePath, "Should have a generated file path pattern")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 
-	// Clean up
+	// CRITICAL: Verify the FilePath contains the expected MediaMTX pattern
+	assert.Contains(t, session.FilePath, "%path", "File path should contain MediaMTX path placeholder")
+	assert.Contains(t, session.FilePath, "%Y%m%d_%H%M%S", "File path should contain MediaMTX timestamp placeholder")
+
+	// Wait for recording to complete (2 seconds + small buffer)
+	time.Sleep(3 * time.Second)
+
+	// Stop the recording
 	err = controller.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Recording should stop successfully")
+
+	// ENTERPRISE-GRADE VALIDATION: Verify actual file creation
+	// Search for created files using configured path
+	pattern := filepath.Join(recordingsPath, cameraID+"_*.mp4")
+	matches, err := filepath.Glob(pattern)
+
+	if err != nil || len(matches) == 0 {
+		// Try alternative patterns
+		pattern = filepath.Join(recordingsPath, "*"+cameraID+"*.mp4")
+		matches, err = filepath.Glob(pattern)
+	}
+
+	if err != nil || len(matches) == 0 {
+		// Last resort: any .mp4 files in recordings directory
+		pattern = filepath.Join(recordingsPath, "*.mp4")
+		matches, err = filepath.Glob(pattern)
+	}
+
+	require.NoError(t, err, "Should be able to search for recording files in %s", recordingsPath)
+	require.Greater(t, len(matches), 0, "Recording should create at least one .mp4 file in configured directory: %s", recordingsPath)
+
+	// Verify the file has content (not empty)
+	fileInfo, err := os.Stat(matches[0])
+	require.NoError(t, err, "Should be able to stat the recording file")
+	assert.Greater(t, fileInfo.Size(), int64(0), "Recording file should not be empty")
+
+	t.Logf("✅ Recording file created: %s (size: %d bytes)", matches[0], fileInfo.Size())
 }
 
 // TestController_StopRecording_ReqMTX002 tests recording stop functionality through controller

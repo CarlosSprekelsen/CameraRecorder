@@ -90,6 +90,18 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
 
+	// Get full config for PathValidator
+	fullConfig, err := configIntegration.GetConfig()
+	if err != nil {
+		logger.WithError(err).Error("Failed to get full config for PathValidator")
+		// Continue without path validation - this will be handled at runtime
+	}
+
+	var pathValidator *PathValidator
+	if fullConfig != nil {
+		pathValidator = NewPathValidator(fullConfig, logger)
+	}
+
 	return &RecordingManager{
 		client:            client,
 		config:            config,
@@ -98,6 +110,7 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
+		pathValidator:     pathValidator,
 		// sessions and deviceToSession: sync.Map is zero-initialized, no need to initialize
 	}
 }
@@ -109,13 +122,17 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath strin
 		return nil, fmt.Errorf("device path cannot be empty")
 	}
 
-	// Validate path before starting
-	pathResult, err := rm.pathValidator.ValidateRecordingPath(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("recording path validation failed: %w", err)
+	// Validate path before starting (if pathValidator is available)
+	var pathResult *PathValidationResult
+	if rm.pathValidator != nil {
+		var err error
+		pathResult, err = rm.pathValidator.ValidateRecordingPath(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("recording path validation failed: %w", err)
+		}
 	}
 
-	if pathResult.FallbackPath != "" {
+	if pathResult != nil && pathResult.FallbackPath != "" {
 		rm.logger.WithFields(logging.Fields{
 			"primary":  rm.config.RecordingsPath,
 			"fallback": pathResult.FallbackPath,
@@ -146,7 +163,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath strin
 	// SIMPLIFIED: Use StreamManager's new EnableRecording method
 	// This handles path creation and recording configuration in one step
 	rm.logger.WithField("device_path", devicePath).Info("Enabling recording via StreamManager")
-	err = rm.streamManager.EnableRecording(ctx, devicePath)
+	err := rm.streamManager.EnableRecording(ctx, devicePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enable recording: %w", err)
 	}
@@ -434,22 +451,6 @@ func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRe
 	}
 
 	return files
-}
-
-// getRecordingOutputPath processes the output path for MediaMTX recording
-func (rm *RecordingManager) getRecordingOutputPath(pathName, outputPath string) string {
-	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-	if outputPath != "" {
-		dir := filepath.Dir(outputPath)
-		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S")
-	}
-	if rm.config.RecordingsPath != "" {
-		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-		return filepath.Join(rm.config.RecordingsPath, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S")
-	}
-	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-	return "/tmp/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S"
 }
 
 // CleanupOldRecordings removes old recording files based on age and count limits

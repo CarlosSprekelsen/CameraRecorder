@@ -74,15 +74,38 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 		ConfigPath:                          cfg.MediaMTX.ConfigPath,
 		RecordingsPath:                      cfg.MediaMTX.RecordingsPath,
 		SnapshotsPath:                       cfg.MediaMTX.SnapshotsPath,
+		OverrideMediaMTXPaths:               cfg.MediaMTX.OverrideMediaMTXPaths,
+		
+		// Codec configuration
+		Codec:                               cfg.MediaMTX.Codec,
+		
+		// FFmpeg and Performance Configuration
+		FFmpeg:                              cfg.MediaMTX.FFmpeg,
+		Performance:                         cfg.MediaMTX.Performance,
+		
+		// Health and Circuit Breaker Configuration
 		HealthCheckInterval:                 cfg.MediaMTX.HealthCheckInterval,
 		HealthFailureThreshold:              cfg.MediaMTX.HealthFailureThreshold,
 		HealthCircuitBreakerTimeout:         cfg.MediaMTX.HealthCircuitBreakerTimeout,
 		HealthMaxBackoffInterval:            cfg.MediaMTX.HealthMaxBackoffInterval,
 		HealthRecoveryConfirmationThreshold: cfg.MediaMTX.HealthRecoveryConfirmationThreshold,
+		HealthCheckTimeout:                  cfg.MediaMTX.HealthCheckTimeout,
 		BackoffBaseMultiplier:               cfg.MediaMTX.BackoffBaseMultiplier,
 		BackoffJitterRange:                  cfg.MediaMTX.BackoffJitterRange,
 		ProcessTerminationTimeout:           cfg.MediaMTX.ProcessTerminationTimeout,
 		ProcessKillTimeout:                  cfg.MediaMTX.ProcessKillTimeout,
+		
+		// Stream Readiness Configuration
+		StreamReadiness:                     cfg.MediaMTX.StreamReadiness,
+		
+		// Run on demand configuration
+		RunOnDemandStartTimeout:             cfg.MediaMTX.RunOnDemandStartTimeout,
+		RunOnDemandCloseAfter:               cfg.MediaMTX.RunOnDemandCloseAfter,
+		
+		// Recording configuration
+		RecordPartDuration:                  cfg.MediaMTX.RecordPartDuration,
+		RecordSegmentDuration:               cfg.MediaMTX.RecordSegmentDuration,
+		RecordDeleteAfter:                   cfg.MediaMTX.RecordDeleteAfter,
 	}
 
 	ci.logger.WithFields(logging.Fields{

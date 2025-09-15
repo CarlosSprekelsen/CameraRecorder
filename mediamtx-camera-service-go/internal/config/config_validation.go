@@ -987,23 +987,25 @@ func validatePath(name string, path string, createIfMissing bool) error {
 		return fmt.Errorf("%s must be an absolute path, got: %s", name, path)
 	}
 
-	// 2. Check for path traversal attempts
-	cleanPath := filepath.Clean(path)
-	if strings.Contains(cleanPath, "..") {
+	// 2. Check for path traversal attempts (check original path before cleaning)
+	if strings.Contains(path, "..") {
 		return fmt.Errorf("%s contains path traversal: %s", name, path)
 	}
 
+	// Clean the path for further processing
+	cleanPath := filepath.Clean(path)
+
 	// 3. Check if path exists
-	info, err := os.Stat(path)
+	info, err := os.Stat(cleanPath)
 	if os.IsNotExist(err) {
 		if createIfMissing {
 			// Try to create the directory
-			if err := os.MkdirAll(path, 0755); err != nil {
+			if err := os.MkdirAll(cleanPath, 0755); err != nil {
 				return fmt.Errorf("%s does not exist and cannot be created: %w", name, err)
 			}
-			info, _ = os.Stat(path) // Re-stat after creation
+			info, _ = os.Stat(cleanPath) // Re-stat after creation
 		} else {
-			return fmt.Errorf("%s does not exist: %s", name, path)
+			return fmt.Errorf("%s does not exist: %s", name, cleanPath)
 		}
 	} else if err != nil {
 		return fmt.Errorf("cannot access %s: %w", name, err)
@@ -1011,16 +1013,16 @@ func validatePath(name string, path string, createIfMissing bool) error {
 
 	// 4. Check if it's a directory
 	if info != nil && !info.IsDir() {
-		return fmt.Errorf("%s is not a directory: %s", name, path)
+		return fmt.Errorf("%s is not a directory: %s", name, cleanPath)
 	}
 
 	// 5. Check write permissions
-	if err := checkWritePermission(path); err != nil {
+	if err := checkWritePermission(cleanPath); err != nil {
 		return fmt.Errorf("%s is not writable: %w", name, err)
 	}
 
 	// 6. Check available space (warning only)
-	if err := checkDiskSpace(path); err != nil {
+	if err := checkDiskSpace(cleanPath); err != nil {
 		// Log warning but don't fail
 		logging.GetLogger("config").WithError(err).Warn("Low disk space warning")
 	}
@@ -1094,11 +1096,11 @@ func validatePathPattern(pattern string) error {
 	// Match only the exact valid variables to avoid false positives like %d_
 	validVarsPattern := `%(?:path|device|Y|m|d|H|M|S|timestamp)`
 	validVarsRe := regexp.MustCompile(validVarsPattern)
-	
+
 	// Find all % variables in the pattern
 	allVarsRe := regexp.MustCompile(`%[a-zA-Z_]+`)
 	allMatches := allVarsRe.FindAllString(pattern, -1)
-	
+
 	for _, match := range allMatches {
 		if !validVarsRe.MatchString(match) {
 			return fmt.Errorf("pattern contains invalid variable: %s", match)

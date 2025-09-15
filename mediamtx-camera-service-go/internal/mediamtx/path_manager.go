@@ -635,11 +635,6 @@ func (pm *pathManager) PathExists(ctx context.Context, name string) bool {
 	return err == nil
 }
 
-// parseDuration parses a duration string
-func parseDuration(durationStr string) (time.Duration, error) {
-	return time.ParseDuration(durationStr)
-}
-
 // validatePathName validates path name format and content
 func (pm *pathManager) validatePathName(name string) error {
 	if name == "" {

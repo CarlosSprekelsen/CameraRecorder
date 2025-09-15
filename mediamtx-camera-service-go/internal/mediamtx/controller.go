@@ -15,6 +15,7 @@ package mediamtx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -338,6 +339,42 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 
 	// Create HTTP client
 	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
+
+	// Configure MediaMTX paths if override is enabled
+	logger.Info("Checking MediaMTX override configuration", "override_enabled", mediaMTXConfig.OverrideMediaMTXPaths, "recordings_path", mediaMTXConfig.RecordingsPath, "config_source", "ControllerWithConfigManager")
+	if mediaMTXConfig.OverrideMediaMTXPaths {
+		// Get recording configuration for path generation
+		cfg := configManager.GetConfig()
+		if cfg != nil {
+			// Generate MediaMTX record path pattern
+			recordPath := GenerateRecordingPath(mediaMTXConfig, &cfg.Recording)
+
+			// Configure MediaMTX global settings via API
+			globalConfig := map[string]interface{}{
+				"recordPath":   recordPath,
+				"recordFormat": cfg.Recording.RecordFormat,
+			}
+
+			// Convert to JSON for API call
+			configData, err := json.Marshal(globalConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal MediaMTX global config: %w", err)
+			}
+
+			// Apply configuration to MediaMTX
+			ctx := context.Background()
+			err = client.Patch(ctx, "/v3/config/global/patch", configData)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to override MediaMTX paths - continuing with defaults")
+				// Don't fail completely - MediaMTX will use its defaults
+			} else {
+				logger.WithFields(logging.Fields{
+					"recordPath":   recordPath,
+					"recordFormat": cfg.Recording.RecordFormat,
+				}).Info("MediaMTX paths overridden successfully")
+			}
+		}
+	}
 
 	// Create health monitor
 	healthMonitor := NewHealthMonitor(client, mediaMTXConfig, logger)
