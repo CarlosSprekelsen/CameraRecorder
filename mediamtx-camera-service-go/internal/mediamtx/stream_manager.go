@@ -657,9 +657,9 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"path_name": pathName,
+		"path_name":   pathName,
 		"record_path": recordPath,
-		"config": config,
+		"config":      config,
 	}).Debug("Created recording configuration for PATCH")
 
 	return config
@@ -675,4 +675,3 @@ func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) str
 	// MediaMTX requires %path in recordPath - single % not double %%
 	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
 }
-

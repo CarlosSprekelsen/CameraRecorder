@@ -1321,6 +1321,7 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		ctx := context.Background()
 		devicePath := "/dev/video0"
 		outputPath := "/tmp/test_snapshot.jpg"
+		defer os.Remove(outputPath) // Clean up test file
 		options := map[string]interface{}{
 			"format": "jpg",
 			"width":  640,
@@ -1335,12 +1336,14 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		ctx := context.Background()
 
 		// Test with non-existent device
-		_, err := monitor.TakeDirectSnapshot(ctx, "/dev/nonexistent", "/tmp/test.jpg", map[string]interface{}{})
+		testFile := "/tmp/test.jpg"
+		defer os.Remove(testFile) // Clean up test file
+		_, err := monitor.TakeDirectSnapshot(ctx, "/dev/nonexistent", testFile, map[string]interface{}{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "does not exist")
 
 		// Test with device not found in monitor
-		_, err = monitor.TakeDirectSnapshot(ctx, "/dev/video0", "/tmp/test.jpg", map[string]interface{}{})
+		_, err = monitor.TakeDirectSnapshot(ctx, "/dev/video0", testFile, map[string]interface{}{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not found in monitor")
 	})
@@ -1382,8 +1385,10 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
+				testFile := "/tmp/test.jpg"
+				defer os.Remove(testFile) // Clean up test file
 				// Test that options are processed without error (even if device doesn't exist)
-				_, err := monitor.TakeDirectSnapshot(ctx, "/dev/video0", "/tmp/test.jpg", tc.options)
+				_, err := monitor.TakeDirectSnapshot(ctx, "/dev/video0", testFile, tc.options)
 				// We expect an error because device doesn't exist, but options should be processed
 				require.Error(t, err)
 				// Should fail on device check, not option processing
@@ -1393,8 +1398,10 @@ func TestHybridCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 	})
 
 	t.Run("helper_methods", func(t *testing.T) {
+		testFile := "/tmp/test.jpg"
+		defer os.Remove(testFile) // Clean up test file
 		// Test buildV4L2SnapshotArgs helper
-		args := monitor.buildV4L2SnapshotArgs("/tmp/test.jpg", "jpg", 640, 480)
+		args := monitor.buildV4L2SnapshotArgs(testFile, "jpg", 640, 480)
 		require.Contains(t, args, "--stream-mmap")
 		require.Contains(t, args, "--stream-to")
 		require.Contains(t, args, "/tmp/test.jpg")

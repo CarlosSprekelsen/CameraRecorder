@@ -57,7 +57,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -68,7 +68,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	session, err := recordingManager.StartRecording(ctx, devicePath, outputPath, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
-	assert.Equal(t, devicePath, session.DevicePath)
+	assert.Equal(t, "camera0", session.DevicePath)
 	assert.Equal(t, outputPath, session.FilePath)
 
 	// Verify session is tracked
@@ -97,7 +97,7 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -137,7 +137,7 @@ func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	// Initially no sessions
@@ -269,7 +269,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 	assert.Equal(t, "active", session.Status)
-	assert.Equal(t, devicePath, session.DevicePath)
+	assert.Equal(t, "camera0", session.DevicePath)
 
 	// Verify path was created in MediaMTX
 	pathManager := helper.GetPathManager()
@@ -407,7 +407,7 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -424,7 +424,7 @@ func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
 
 	retrievedSession := sessions[0]
 	assert.Equal(t, session.ID, retrievedSession.ID)
-	assert.Equal(t, devicePath, retrievedSession.DevicePath)
+	assert.Equal(t, "camera0", retrievedSession.DevicePath)
 	assert.Equal(t, outputPath, retrievedSession.FilePath)
 
 	// Test that session is properly managed
@@ -451,7 +451,7 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	// Test invalid device path
@@ -484,7 +484,7 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	// Start multiple recordings concurrently
@@ -534,7 +534,7 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -554,7 +554,7 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 
 	// Verify session is created with configuration
 	assert.NotEmpty(t, session.ID, "Session should have ID")
-	assert.Equal(t, devicePath, session.DevicePath)
+	assert.Equal(t, "camera0", session.DevicePath)
 
 	// Clean up
 	recordingManager.StopRecording(ctx, session.ID)

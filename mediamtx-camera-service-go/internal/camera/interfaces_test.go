@@ -313,6 +313,7 @@ func TestCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		ctx := context.Background()
 		devicePath := "/dev/video0"
 		outputPath := "/tmp/test_snapshot.jpg"
+		defer os.Remove(outputPath) // Clean up test file
 		options := map[string]interface{}{
 			"format": "jpg",
 			"width":  640,

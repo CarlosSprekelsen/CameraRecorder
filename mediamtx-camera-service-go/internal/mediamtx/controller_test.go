@@ -514,23 +514,28 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err = os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
-
-	outputPath := filepath.Join(tempDir, "test_recording.mp4")
 
 	// Test recording with available camera identifier using optimized helper method
 	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
-	session, err := controller.StartRecording(ctx, cameraID, outputPath)
+	options := map[string]interface{}{
+		"format":  "mp4",
+		"codec":   "h264",
+		"quality": "medium",
+	}
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
 	// Verify session properties
 	assert.NotEmpty(t, session.ID, "Session should have an ID")
 	assert.Equal(t, cameraID, session.DevicePath, "Should use available camera identifier")
-	assert.Equal(t, outputPath, session.FilePath, "Should match output path")
+	assert.NotEmpty(t, session.FilePath, "Should have a generated file path")
+	assert.Contains(t, session.FilePath, cameraID, "File path should contain camera identifier")
+	assert.Contains(t, session.FilePath, ".mp4", "File path should have .mp4 extension")
 	assert.Equal(t, "active", session.Status, "Session should be active")
 
 	// Clean up
@@ -563,16 +568,19 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err = os.MkdirAll(tempDir, 0755)
+	err = os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
-
-	outputPath := filepath.Join(tempDir, "test_recording_stop.mp4")
 
 	// Start recording first - get available camera identifier using optimized helper method
 	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
-	session, err := controller.StartRecording(ctx, cameraID, outputPath)
+	options := map[string]interface{}{
+		"format":  "mp4",
+		"codec":   "h264",
+		"quality": "medium",
+	}
+	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 

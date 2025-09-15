@@ -111,7 +111,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath, outp
 	if strings.TrimSpace(outputPath) == "" {
 		// Generate default output path using path name and timestamp pattern
 		pathName := GetMediaMTXPathName(devicePath)
-		outputPath = fmt.Sprintf("/opt/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S.mp4", pathName)
+		outputPath = fmt.Sprintf("/opt/recordings/%s_%%Y-%%m-%%d_%%H-%%M-%%S", pathName)
 		rm.logger.WithField("default_output_path", outputPath).Debug("Using default output path pattern")
 	}
 
@@ -431,14 +431,14 @@ func (rm *RecordingManager) getRecordingOutputPath(pathName, outputPath string) 
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
 		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
+		return filepath.Join(dir, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S")
 	}
 	if rm.config.RecordingsPath != "" {
 		// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-		return filepath.Join(rm.config.RecordingsPath, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4")
+		return filepath.Join(rm.config.RecordingsPath, "%%path_%%Y-%%m-%%d_%%H-%%M-%%S")
 	}
 	// MediaMTX requires %path in recordPath - it gets replaced with the actual path name
-	return "/tmp/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S.mp4"
+	return "/tmp/recordings/%%path_%%Y-%%m-%%d_%%H-%%M-%%S"
 }
 
 // CleanupOldRecordings removes old recording files based on age and count limits

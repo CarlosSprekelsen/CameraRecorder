@@ -50,10 +50,17 @@ type MediaMTXTestConfig struct {
 
 // DefaultMediaMTXTestConfig returns default configuration for MediaMTX server testing
 func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
+	// Use user-specific test data directory to avoid permission issues
+	user := os.Getenv("USER")
+	if user == "" {
+		user = "testuser"
+	}
+	testDataDir := fmt.Sprintf("/tmp/mediamtx_test_data_%s", user)
+	
 	return &MediaMTXTestConfig{
 		BaseURL:      "http://localhost:9997", // MediaMTX API port (standard)
 		Timeout:      30 * time.Second,
-		TestDataDir:  "/tmp/mediamtx_test_data",
+		TestDataDir:  testDataDir,
 		CleanupAfter: true,
 	}
 }
@@ -157,7 +164,8 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 // ensureTestDataDir creates the test data directory if it doesn't exist
 func (h *MediaMTXTestHelper) ensureTestDataDir() error {
-	return os.MkdirAll(h.config.TestDataDir, 0755)
+	// Create directory with user read/write/execute permissions
+	return os.MkdirAll(h.config.TestDataDir, 0700)
 }
 
 // Cleanup performs comprehensive cleanup of test resources

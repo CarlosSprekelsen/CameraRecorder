@@ -62,7 +62,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_snapshots")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -102,7 +102,7 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_processes")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	outputPath := filepath.Join(tempDir, "test_output.mp4")
@@ -142,7 +142,7 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_stop")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	outputPath := filepath.Join(tempDir, "test_stop.mp4")
@@ -188,7 +188,7 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_running")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	outputPath := filepath.Join(tempDir, "test_running.mp4")
@@ -267,7 +267,7 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_errors")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	// Test invalid device path for snapshot
@@ -308,7 +308,7 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_concurrent")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	// Start multiple processes concurrently
@@ -362,7 +362,7 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_metrics")
-	err := os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
 	outputPath := filepath.Join(tempDir, "test_metrics.mp4")

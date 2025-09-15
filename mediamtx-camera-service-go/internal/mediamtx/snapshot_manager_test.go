@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -100,7 +101,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	devicePath := "/dev/video0"
@@ -126,7 +127,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 		// Hardware is available - expect success
 		require.NoError(t, err, "Snapshot should succeed with real hardware")
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, devicePath, snapshot.Device)
+		assert.Equal(t, "camera0", snapshot.Device)
 	} else {
 		// No hardware available - expect failure but verify error handling works
 		require.Error(t, err, "Snapshot should fail without hardware")
@@ -179,7 +180,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	// Test 1: Get snapshots list from empty directory
@@ -250,7 +251,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	// Create test snapshot file
@@ -314,7 +315,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	// Create test snapshot file
@@ -447,7 +448,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	// Create test snapshot files with different timestamps
@@ -607,7 +608,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	ctx := context.Background()
 
 	// Create snapshots directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
 	// Test concurrent snapshot operations
@@ -690,7 +691,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier1_test.jpg")
 
 	// Create output directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -717,7 +718,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	} else {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, devicePath, snapshot.Device)
+		assert.Equal(t, "camera0", snapshot.Device)
 		assert.Equal(t, outputPath, snapshot.FilePath)
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
@@ -763,7 +764,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier2_test.jpg")
 
 	// Create output directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -797,7 +798,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	} else {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, devicePath, snapshot.Device)
+		assert.Equal(t, "camera0", snapshot.Device)
 		assert.Equal(t, outputPath, snapshot.FilePath)
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
@@ -844,7 +845,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, "tier3_test.jpg")
 
 	// Create output directory
-	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err, "Should create output directory")
 
 	options := map[string]interface{}{
@@ -873,7 +874,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	} else {
 		// If snapshot succeeds, verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, devicePath, snapshot.Device)
+		assert.Equal(t, "camera0", snapshot.Device)
 		assert.Equal(t, outputPath, snapshot.FilePath)
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
@@ -937,7 +938,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 			outputPath := filepath.Join(mediaMTXConfig.SnapshotsPath, fmt.Sprintf("integration_%s.jpg", tc.name))
 
 			// Create output directory
-			err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0755)
+			err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 			require.NoError(t, err, "Should create output directory")
 
 			options := map[string]interface{}{
@@ -964,7 +965,12 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 			} else {
 				// If snapshot succeeds, verify it was created properly
 				require.NotNil(t, snapshot, "Snapshot should not be nil")
-				assert.Equal(t, tc.devicePath, snapshot.Device)
+				// For local device paths, expect camera ID; for external sources, expect original path
+				expectedDevice := tc.devicePath
+				if strings.HasPrefix(tc.devicePath, "/dev/video") {
+					expectedDevice = "camera0"
+				}
+				assert.Equal(t, expectedDevice, snapshot.Device)
 				assert.Equal(t, outputPath, snapshot.FilePath)
 				assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 
@@ -1135,7 +1141,7 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 
 		// If we get here, snapshot succeeded - verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil if no error occurred")
-		assert.Equal(t, device, snapshot.Device)
+		assert.Equal(t, "camera0", snapshot.Device)
 		assert.Equal(t, outputPath, snapshot.FilePath)
 		assert.Greater(t, snapshot.Size, int64(0), "Snapshot should have size > 0")
 

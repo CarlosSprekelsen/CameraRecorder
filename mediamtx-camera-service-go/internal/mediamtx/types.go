@@ -366,7 +366,6 @@ type MediaMTXController interface {
 	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
 
 	// Recording operations
-	StartRecording(ctx context.Context, device, path string) (*RecordingSession, error)
 	StopRecording(ctx context.Context, sessionID string) error
 	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
 

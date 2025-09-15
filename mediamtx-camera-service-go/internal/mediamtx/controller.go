@@ -198,44 +198,6 @@ func (c *controller) validateCameraIdentifier(cameraID string) bool {
 	return matched
 }
 
-// validateDiscoveredDevice validates that a device identifier corresponds to an actually discovered device
-// This works for both USB cameras (camera0, camera1) and external streams (external_stream_1, etc.)
-func (c *controller) validateDiscoveredDevice(device string) (bool, error) {
-	if !c.checkRunningState() {
-		return false, fmt.Errorf("controller is not running")
-	}
-
-	// First check if it's a valid camera identifier format
-	if c.validateCameraIdentifier(device) {
-		// For camera identifiers, check if the corresponding device actually exists
-		devicePath := c.getDevicePathFromCameraIdentifier(device)
-		if devicePath == "" {
-			return false, fmt.Errorf("invalid camera identifier: %s", device)
-		}
-
-		// Check if the device actually exists in the camera monitor
-		_, exists := c.cameraMonitor.GetDevice(devicePath)
-		if !exists {
-			return false, fmt.Errorf("camera device not found: %s (device path: %s)", device, devicePath)
-		}
-
-		return true, nil
-	}
-
-	// For external streams, check if they exist in the external discovery system
-	if c.hasExternalDiscovery() {
-		streams := c.externalDiscovery.GetDiscoveredStreams()
-		for _, stream := range streams {
-			// Check if this is an external stream identifier
-			if stream.Name == device || stream.URL == device {
-				return true, nil
-			}
-		}
-	}
-
-	// If we get here, the device identifier is not recognized
-	return false, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
-}
 
 // Active recording management methods (Phase 2 enhancement)
 
@@ -494,10 +456,10 @@ func (c *controller) Start(ctx context.Context) error {
 func (c *controller) monitorReadiness() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	lastReadyState := false
 	readyEventEmitted := false // Prevent duplicate events
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -505,23 +467,23 @@ func (c *controller) monitorReadiness() {
 				// Controller stopped, exit monitoring
 				return
 			}
-			
+
 			currentReadyState := c.IsReady()
-			
+
 			// Emit readiness event only once when controller becomes ready
 			if !lastReadyState && currentReadyState && !readyEventEmitted {
 				c.logger.Info("Controller became ready - emitting readiness event")
 				c.emitReadinessEvent()
 				readyEventEmitted = true
 			}
-			
+
 			// Reset if controller becomes unready (for recovery scenarios)
 			if lastReadyState && !currentReadyState {
 				readyEventEmitted = false
 			}
-			
+
 			lastReadyState = currentReadyState
-			
+
 		case <-c.ctx.Done():
 			// Context cancelled, exit gracefully
 			return
@@ -1481,14 +1443,14 @@ func generateRecordingPath(device, sessionID string) string {
 	// Handle camera identifiers in file naming
 	if strings.HasPrefix(device, "camera") {
 		// Convert camera0 to camera0 for consistent naming
-		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s.mp4", device, sessionID)
+		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", device, sessionID)
 	}
 	// Handle device paths by extracting the device name
 	if strings.HasPrefix(device, "/dev/video") {
 		deviceName := strings.TrimPrefix(device, "/dev/")
-		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s.mp4", deviceName, sessionID)
+		return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", deviceName, sessionID)
 	}
-	return fmt.Sprintf("/opt/camera-service/recordings/%s_%s.mp4", device, sessionID)
+	return fmt.Sprintf("/opt/camera-service/recordings/%s_%s", device, sessionID)
 }
 
 // generateSnapshotPath generates a snapshot file path
@@ -1512,19 +1474,6 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device string, 
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Validate that the device is actually discovered (USB camera or external stream)
-	valid, err := c.validateDiscoveredDevice(device)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
-		}).Error("Device validation failed")
-		return nil, fmt.Errorf("device validation failed: %w", err)
-	}
-	if !valid {
-		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
-	}
-
 	// Validate device exists
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
@@ -1536,9 +1485,9 @@ func (c *controller) StartAdvancedRecording(ctx context.Context, device string, 
 		return nil, fmt.Errorf("default recording path not configured")
 	}
 
-	// Generate filename with timestamp
+	// Generate filename with timestamp (MediaMTX will add extension based on format)
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("%s_%s.mp4", device, timestamp)
+	filename := fmt.Sprintf("%s_%s", device, timestamp)
 	fullPath := filepath.Join(defaultPath, filename)
 
 	c.logger.WithFields(logging.Fields{
@@ -1702,19 +1651,6 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 	// Validate device exists
 	if device == "" {
 		return nil, fmt.Errorf("device path is required")
-	}
-
-	// Validate that the device is actually discovered (USB camera or external stream)
-	valid, err := c.validateDiscoveredDevice(device)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
-		}).Error("Device validation failed")
-		return nil, fmt.Errorf("device validation failed: %w", err)
-	}
-	if !valid {
-		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
 	}
 
 	// Get default snapshot path from configuration
@@ -2013,19 +1949,6 @@ func (c *controller) StartStreaming(ctx context.Context, device string) (*Path, 
 		"action": "start_streaming",
 	}).Info("Starting streaming session")
 
-	// Validate that the device is actually discovered (USB camera or external stream)
-	valid, err := c.validateDiscoveredDevice(device)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
-		}).Error("Device validation failed")
-		return nil, fmt.Errorf("device validation failed: %w", err)
-	}
-	if !valid {
-		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
-	}
-
 	// Map camera identifier to device path if needed (camera0 -> /dev/video0)
 	var devicePath string
 	if c.validateCameraIdentifier(device) {
@@ -2130,19 +2053,6 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (string, e
 func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Path, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
-	}
-
-	// Validate that the device is actually discovered (USB camera or external stream)
-	valid, err := c.validateDiscoveredDevice(device)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
-		}).Error("Device validation failed")
-		return nil, fmt.Errorf("device validation failed: %w", err)
-	}
-	if !valid {
-		return nil, fmt.Errorf("device not found: %s (must be a discovered camera or external stream)", device)
 	}
 
 	// Generate stream name using single path approach
