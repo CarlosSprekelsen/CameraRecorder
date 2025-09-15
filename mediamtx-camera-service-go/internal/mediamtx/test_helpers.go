@@ -94,7 +94,16 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		testConfig = DefaultMediaMTXTestConfig()
 	}
 
-	// Create logger for testing - level will be set by configuration
+	// CRITICAL: Configure the global logging factory FIRST with ERROR level
+	// This ensures ALL loggers created after this point use the ERROR level
+	logging.ConfigureGlobalLogging(&logging.LoggingConfig{
+		Level:          "error", // Force ERROR level for all tests
+		Format:         "json",
+		FileEnabled:    false,
+		ConsoleEnabled: true, // Always enable console for tests
+	})
+
+	// Create logger for testing AFTER configuring global logging
 	logger := logging.GetLogger("test-mediamtx-controller")
 
 	// Create MediaMTX client configuration
@@ -109,11 +118,17 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		},
 	}
 
-	// Create MediaMTX client
-	client := NewClient(testConfig.BaseURL, clientConfig, logger)
-
 	// Create config manager for centralized configuration
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+
+	// Load configuration
+	err := configManager.LoadConfig("../../tests/fixtures/config_test_minimal.yaml")
+	if err != nil {
+		t.Fatalf("Failed to load test configuration: %v", err)
+	}
+
+	// Create MediaMTX client AFTER configuring logging
+	client := NewClient(testConfig.BaseURL, clientConfig, logger)
 
 	// Create centralized MediaMTX config for all managers
 	mediaMTXConfig := &configpkg.MediaMTXConfig{
@@ -134,7 +149,7 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	}
 
 	// Ensure test data directory exists
-	err := helper.ensureTestDataDir()
+	err = helper.ensureTestDataDir()
 	require.NoError(t, err, "Failed to create test data directory")
 
 	return helper
@@ -346,7 +361,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		configManager := CreateConfigManagerWithFixture(nil, "config_test_logging_error.yaml")
+		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
 		logger := logging.GetLogger("test-camera-monitor")
 
 		// Use real implementations for camera hardware
@@ -609,6 +624,17 @@ func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 
 // CreateConfigManagerWithFixture creates a config manager that loads from test fixtures
 func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *configpkg.ConfigManager {
+	// Handle nil testing.T parameter (used in non-test contexts)
+	if t == nil {
+		// Create a dummy testing.T for non-test contexts
+		// This is used by GetCameraMonitor() which is called outside of test context
+		return createConfigManagerWithFixtureInternal(nil, fixtureName)
+	}
+	return createConfigManagerWithFixtureInternal(t, fixtureName)
+}
+
+// createConfigManagerWithFixtureInternal is the internal implementation
+func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *configpkg.ConfigManager {
 	configManager := configpkg.CreateConfigManager()
 
 	// Use test fixture instead of creating config manually
@@ -630,7 +656,11 @@ func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *configpkg
 
 	for _, dir := range requiredDirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			t.Fatalf("Failed to create required directory %s: %v", dir, err)
+			if t != nil {
+				t.Fatalf("Failed to create required directory %s: %v", dir, err)
+			} else {
+				panic(fmt.Sprintf("Failed to create required directory %s: %v", dir, err))
+			}
 		}
 	}
 
@@ -642,14 +672,22 @@ func CreateConfigManagerWithFixture(t *testing.T, fixtureName string) *configpkg
 	for _, file := range requiredFiles {
 		if _, err := os.Stat(file); os.IsNotExist(err) {
 			if err := os.WriteFile(file, []byte("# Test MediaMTX config file\n"), 0644); err != nil {
-				t.Fatalf("Failed to create required file %s: %v", file, err)
+				if t != nil {
+					t.Fatalf("Failed to create required file %s: %v", file, err)
+				} else {
+					panic(fmt.Sprintf("Failed to create required file %s: %v", file, err))
+				}
 			}
 		}
 	}
 
 	err := configManager.LoadConfig(fixturePath)
 	if err != nil {
-		t.Fatalf("Failed to load config from fixture %s: %v", fixtureName, err)
+		if t != nil {
+			t.Fatalf("Failed to load config from fixture %s: %v", fixtureName, err)
+		} else {
+			panic(fmt.Sprintf("Failed to load config from fixture %s: %v", fixtureName, err))
+		}
 	}
 
 	return configManager

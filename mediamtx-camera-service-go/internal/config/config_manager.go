@@ -508,6 +508,11 @@ func (cm *ConfigManager) GetConfig() *Config {
 	return cm.config
 }
 
+// GetLogger returns the config manager's logger for level configuration.
+func (cm *ConfigManager) GetLogger() *logging.Logger {
+	return cm.logger
+}
+
 // SaveConfig saves the current configuration to the configuration file.
 func (cm *ConfigManager) SaveConfig() error {
 	cm.lock.Lock()

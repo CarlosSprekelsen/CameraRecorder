@@ -51,7 +51,7 @@ camera:
   fallback_poll_interval: 5.0  # 5 seconds for test performance (realistic but faster than 90s default)
 
 logging:
-  level: "error"  # ERROR level for test performance - reduces verbosity
+  level: "debug"  # DEBUG level to see what's happening
   format: "json"
   file_enabled: false
   file_path: "/tmp/camera-service.log"
