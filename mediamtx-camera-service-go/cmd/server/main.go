@@ -39,6 +39,10 @@ func main() {
 		BackupCount:    cfg.Logging.BackupCount,
 		ConsoleEnabled: cfg.Logging.ConsoleEnabled,
 	})
+
+	// Register automatic logging configuration updates
+	configManager.RegisterLoggingConfigurationUpdates()
+
 	logger := logging.GetLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 

@@ -3,9 +3,12 @@ package config
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -205,6 +208,71 @@ func TestConfigManager_UpdateCallbacks(t *testing.T) {
 		assert.Equal(t, "0.0.0.0", callbackConfig.Server.Host)
 	case <-time.After(1 * time.Second):
 		t.Fatal("Update callback was not called within timeout")
+	}
+}
+
+func TestConfigManager_LoggingConfigurationUpdates(t *testing.T) {
+	t.Parallel()
+
+	// Create test config manager
+	cm := CreateConfigManager()
+
+	// Load initial configuration
+	helper := NewTestConfigHelper(t)
+	defer helper.CleanupEnvironment()
+	helper.CreateTestDirectories()
+	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+
+	err := cm.LoadConfig(configPath)
+	require.NoError(t, err)
+
+	// Register logging updates
+	cm.RegisterLoggingConfigurationUpdates()
+
+	// Get initial log level from a test logger
+	initialLogger := logging.GetLogger("test-initial")
+	initialLevel := initialLogger.GetLevel()
+
+	// Create a callback channel to wait for the logging update
+	callbackCalled := make(chan bool, 1)
+	cm.AddUpdateCallback(func(config *Config) {
+		callbackCalled <- true
+	})
+
+	// Create a new config file with debug level by copying the existing fixture
+	debugConfigPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+
+	// Read the existing config and modify just the logging level
+	configContent, err := os.ReadFile(debugConfigPath)
+	require.NoError(t, err)
+
+	// Replace the logging level from "debug" to "info" to test the change
+	modifiedContent := strings.Replace(string(configContent), "level: \"debug\"", "level: \"info\"", 1)
+
+	err = os.WriteFile(debugConfigPath, []byte(modifiedContent), 0644)
+	require.NoError(t, err)
+
+	// Reload configuration to trigger callbacks
+	err = cm.LoadConfig(debugConfigPath)
+	require.NoError(t, err)
+
+	// Wait for callback to be called
+	select {
+	case <-callbackCalled:
+		// Callback was called successfully
+	case <-time.After(1 * time.Second):
+		t.Fatal("Update callback was not called within timeout")
+	}
+
+	// Create a new logger after the update to verify it gets the new configuration
+	updatedLogger := logging.GetLogger("test-updated")
+
+	// Verify the logger was updated (this tests the factory pattern)
+	assert.Equal(t, logrus.InfoLevel, updatedLogger.GetLevel())
+
+	// Verify the level changed from initial (should be different from debug)
+	if initialLevel != logrus.InfoLevel {
+		assert.NotEqual(t, initialLevel, updatedLogger.GetLevel())
 	}
 }
 

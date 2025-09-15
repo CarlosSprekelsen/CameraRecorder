@@ -648,6 +648,50 @@ func (cm *ConfigManager) AddUpdateCallback(callback func(*Config)) {
 	cm.updateCallbacks = append(cm.updateCallbacks, callback)
 }
 
+// RegisterLoggingConfigurationUpdates registers automatic logging configuration updates.
+// This method sets up a callback that automatically updates the global logging configuration
+// whenever the main configuration is reloaded, ensuring all loggers use the latest settings.
+//
+// This solution:
+// - ✅ No circular dependencies (config calls logging, never reverse)
+// - ✅ Production ready (uses existing config reload infrastructure)
+// - ✅ Power friendly (no polling, uses existing file watching)
+// - ✅ Leverages factory pattern (updates all loggers via ConfigureGlobalLogging)
+// - ✅ Integrates smoothly (uses your existing callback architecture)
+func (cm *ConfigManager) RegisterLoggingConfigurationUpdates() {
+	cm.AddUpdateCallback(func(newConfig *Config) {
+		if newConfig == nil {
+			cm.logger.Warn("Skipping logging config update - invalid configuration")
+			return
+		}
+
+		// Convert main config logging section to logging.LoggingConfig
+		// Uses the same conversion pattern as main.go
+		loggingConfig := &logging.LoggingConfig{
+			Level:          newConfig.Logging.Level,
+			Format:         newConfig.Logging.Format,
+			FileEnabled:    newConfig.Logging.FileEnabled,
+			FilePath:       newConfig.Logging.FilePath,
+			MaxFileSize:    int(newConfig.Logging.MaxFileSize),
+			BackupCount:    newConfig.Logging.BackupCount,
+			ConsoleEnabled: newConfig.Logging.ConsoleEnabled,
+		}
+
+		// Update global logging configuration and all loggers via factory
+		if err := logging.ConfigureGlobalLogging(loggingConfig); err != nil {
+			cm.logger.WithError(err).Error("Failed to update logging configuration")
+			return
+		}
+
+		cm.logger.WithFields(logging.Fields{
+			"level":           loggingConfig.Level,
+			"format":          loggingConfig.Format,
+			"file_enabled":    loggingConfig.FileEnabled,
+			"console_enabled": loggingConfig.ConsoleEnabled,
+		}).Info("Logging configuration updated successfully")
+	})
+}
+
 // setDefaults sets default configuration values in Viper.
 func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	// Server defaults
