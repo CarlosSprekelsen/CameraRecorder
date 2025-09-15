@@ -295,40 +295,6 @@ func (pi *PathIntegration) handleCameraChanges(ctx context.Context) {
 	}
 }
 
-// createPathsForExistingCameras creates paths for cameras that already exist
-func (pi *PathIntegration) createPathsForExistingCameras(ctx context.Context) error {
-	// Check context at start
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
-	cameras := pi.cameraMonitor.GetConnectedCameras()
-
-	for devicePath, camera := range cameras {
-		// Check context in loop!
-		select {
-		case <-ctx.Done():
-			pi.logger.Info("Creating paths for existing cameras cancelled")
-			return ctx.Err()
-		default:
-		}
-
-		if camera.Status == "CONNECTED" {
-			if err := pi.CreatePathForCamera(ctx, devicePath); err != nil {
-				// Check if error is due to cancellation
-				if ctx.Err() != nil {
-					return ctx.Err()
-				}
-				pi.logger.WithError(err).WithField("device", devicePath).Error("Failed to create path for existing camera")
-			}
-		}
-	}
-
-	return nil
-}
-
 // generatePathName generates a unique path name for a camera device
 func (pi *PathIntegration) generatePathName(device string) string {
 	// Convert device path to MediaMTX path name

@@ -1224,11 +1224,11 @@ func (m *HybridCameraMonitor) createCameraDeviceInfoFromSource(ctx context.Conte
 	case "usb":
 		return m.createUSBCameraDeviceInfo(ctx, source)
 	case "rtsp", "http", "network":
-		return m.createNetworkCameraDeviceInfo(ctx, source)
+		return m.createNetworkCameraDeviceInfo(source)
 	case "file":
-		return m.createFileCameraDeviceInfo(ctx, source)
+		return m.createFileCameraDeviceInfo(source)
 	default:
-		return m.createGenericCameraDeviceInfo(ctx, source)
+		return m.createGenericCameraDeviceInfo(source)
 	}
 }
 
@@ -1287,7 +1287,7 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(ctx context.Context, device
 }
 
 // createNetworkCameraDeviceInfo creates device information for network cameras
-func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
 	// For network cameras, we assume they're connected if we can reach them
 	// In a real implementation, you might want to test connectivity
 
@@ -1315,7 +1315,7 @@ func (m *HybridCameraMonitor) createNetworkCameraDeviceInfo(ctx context.Context,
 }
 
 // createFileCameraDeviceInfo creates device information for file-based cameras
-func (m *HybridCameraMonitor) createFileCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createFileCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
 	// Check if file exists
 	if !m.deviceChecker.Exists(source.Source) {
 		return &CameraDevice{
@@ -1349,7 +1349,7 @@ func (m *HybridCameraMonitor) createFileCameraDeviceInfo(ctx context.Context, so
 }
 
 // createGenericCameraDeviceInfo creates device information for generic camera types
-func (m *HybridCameraMonitor) createGenericCameraDeviceInfo(ctx context.Context, source CameraSource) (*CameraDevice, error) {
+func (m *HybridCameraMonitor) createGenericCameraDeviceInfo(source CameraSource) (*CameraDevice, error) {
 	device := &CameraDevice{
 		Path:   source.Source,
 		Name:   source.Description,

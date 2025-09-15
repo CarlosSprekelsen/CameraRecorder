@@ -236,13 +236,6 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 	return command
 }
 
-// invalidateFFmpegCommandCache clears cached FFmpeg command for a device
-// Call this when device format settings change
-func (sm *streamManager) invalidateFFmpegCommandCache(devicePath string) {
-	sm.ffmpegCommands.Delete(devicePath) // Lock-free delete with sync.Map
-	sm.logger.WithField("device_path", devicePath).Debug("Invalidated cached FFmpeg command")
-}
-
 // CreateStream creates a new stream with automatic USB device handling
 func (sm *streamManager) CreateStream(ctx context.Context, name, source string) (*Path, error) {
 	sm.logger.WithFields(logging.Fields{

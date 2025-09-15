@@ -635,13 +635,6 @@ func (pm *pathManager) PathExists(ctx context.Context, name string) bool {
 	return err == nil
 }
 
-// parsePathConfResponse parses a path configuration response
-func parsePathConfResponse(data []byte) (map[string]interface{}, error) {
-	var config map[string]interface{}
-	err := json.Unmarshal(data, &config)
-	return config, err
-}
-
 // parseDuration parses a duration string
 func parseDuration(durationStr string) (time.Duration, error) {
 	return time.ParseDuration(durationStr)

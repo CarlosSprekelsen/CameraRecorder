@@ -1072,8 +1072,9 @@ func checkDiskSpace(path string) error {
 
 // validatePathPattern validates file naming patterns for security
 func validatePathPattern(pattern string) error {
+	// Allow empty patterns - they will use defaults
 	if pattern == "" {
-		return fmt.Errorf("pattern cannot be empty")
+		return nil
 	}
 
 	// Check for dangerous characters that could lead to path traversal
@@ -1089,22 +1090,17 @@ func validatePathPattern(pattern string) error {
 		return fmt.Errorf("pattern too long: %d characters (max 255)", len(pattern))
 	}
 
-	// Validate pattern variables for recording and snapshot patterns
-	validVars := []string{"%path", "%device", "%Y", "%m", "%d", "%H", "%M", "%S", "%timestamp"}
-
-	// Extract all % variables from pattern
-	re := regexp.MustCompile(`%[a-zA-Z_]+`)
-	matches := re.FindAllString(pattern, -1)
-
-	for _, match := range matches {
-		valid := false
-		for _, validVar := range validVars {
-			if match == validVar {
-				valid = true
-				break
-			}
-		}
-		if !valid {
+	// Check for any % variables that aren't in our valid list
+	// Match only the exact valid variables to avoid false positives like %d_
+	validVarsPattern := `%(?:path|device|Y|m|d|H|M|S|timestamp)`
+	validVarsRe := regexp.MustCompile(validVarsPattern)
+	
+	// Find all % variables in the pattern
+	allVarsRe := regexp.MustCompile(`%[a-zA-Z_]+`)
+	allMatches := allVarsRe.FindAllString(pattern, -1)
+	
+	for _, match := range allMatches {
+		if !validVarsRe.MatchString(match) {
 			return fmt.Errorf("pattern contains invalid variable: %s", match)
 		}
 	}

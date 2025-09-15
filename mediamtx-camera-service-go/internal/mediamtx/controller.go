@@ -86,10 +86,6 @@ func (c *controller) hasExternalDiscovery() bool {
 	return c.externalDiscovery != nil
 }
 
-func (c *controller) hasPathIntegration() bool {
-	return c.pathIntegration != nil
-}
-
 // IsReady returns whether the controller is fully operational
 func (c *controller) IsReady() bool {
 	if !c.checkRunningState() {
@@ -812,7 +808,8 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 	var deletedCount int
 	var totalSize int64
 
-	if cfg.RetentionPolicy.Type == "age" {
+	switch policyType {
+	case "age":
 		// Age-based cleanup using MediaMTX managers
 		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
 		maxCount := 100 // Default max count
@@ -830,7 +827,7 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 		} else {
 			deletedCount += 1
 		}
-	} else if cfg.RetentionPolicy.Type == "size" {
+	case "size":
 		// Size-based cleanup - convert GB to bytes and use age-based as fallback
 		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
 		maxCount := 100 // Default max count

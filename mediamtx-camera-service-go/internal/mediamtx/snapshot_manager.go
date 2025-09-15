@@ -787,24 +787,6 @@ func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath strin
 	return command
 }
 
-// generateSnapshotPath generates a snapshot file path
-func (sm *SnapshotManager) generateSnapshotPath(device, snapshotID string) string {
-	// Use configuration paths from centralized config
-	basePath := sm.config.SnapshotsPath
-	if basePath == "" {
-		// Fallback to centralized default
-		basePath = "/opt/camera-service/snapshots"
-	}
-
-	// Generate filename
-	filename := fmt.Sprintf("%s_%s.%s", device, snapshotID, sm.snapshotSettings.Format)
-
-	// Clean device path for filename
-	filename = strings.ReplaceAll(filename, "/", "_")
-
-	return filepath.Join(basePath, filename)
-}
-
 // deleteSnapshotFile deletes a snapshot file
 func (sm *SnapshotManager) deleteSnapshotFile(filePath string) error {
 	return os.Remove(filePath)

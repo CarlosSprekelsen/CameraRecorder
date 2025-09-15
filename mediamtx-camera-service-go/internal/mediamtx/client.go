@@ -313,24 +313,6 @@ func parseStreamResponse(data []byte) (*Path, error) {
 	return &stream, nil
 }
 
-// extractSourceString extracts source information from MediaMTX API response
-func extractSourceString(source interface{}) string {
-	if source == nil {
-		return ""
-	}
-
-	// Handle different source formats from MediaMTX API
-	switch v := source.(type) {
-	case string:
-		return v
-	case map[string]interface{}:
-		if sourceType, ok := v["type"].(string); ok {
-			return sourceType
-		}
-	}
-	return ""
-}
-
 // determineStatus converts MediaMTX ready status to our status format
 func determineStatus(ready bool) string {
 	if ready {

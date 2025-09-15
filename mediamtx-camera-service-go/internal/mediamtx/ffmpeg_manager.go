@@ -574,37 +574,6 @@ func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, t
 	return info.Size(), info.ModTime(), nil
 }
 
-// executeFFmpeg executes FFmpeg command with error handling (Phase 3 enhancement)
-func (fm *ffmpegManager) executeFFmpeg(args []string) error {
-	fm.logger.WithField("args", strings.Join(args, " ")).Debug("Executing FFmpeg command")
-
-	// Create command
-	cmd := exec.Command("ffmpeg", args...)
-
-	// Capture output
-	var stdout, stderr strings.Builder
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// Execute command
-	if err := cmd.Run(); err != nil {
-		fm.logger.WithFields(logging.Fields{
-			"error":  err,
-			"stdout": stdout.String(),
-			"stderr": stderr.String(),
-		}).Error("FFmpeg command failed")
-
-		return fmt.Errorf("FFmpeg command failed: %w", err)
-	}
-
-	fm.logger.WithFields(logging.Fields{
-		"stdout": stdout.String(),
-		"stderr": stderr.String(),
-	}).Debug("FFmpeg command executed successfully")
-
-	return nil
-}
-
 // buildSnapshotCommand builds an FFmpeg command for snapshot
 func (fm *ffmpegManager) buildSnapshotCommand(device, outputPath string) []string {
 	command := []string{"ffmpeg"}
