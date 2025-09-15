@@ -808,7 +808,7 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 	var deletedCount int
 	var totalSize int64
 
-	switch policyType {
+	switch cfg.RetentionPolicy.Type {
 	case "age":
 		// Age-based cleanup using MediaMTX managers
 		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
