@@ -1229,7 +1229,7 @@ func (c *controller) GetExternalStreams(ctx context.Context) ([]*ExternalStream,
 	return result, nil
 }
 
-// StartRecording starts a recording session
+// StartRecording starts recording for a camera device using path-based recording
 func (c *controller) StartRecording(ctx context.Context, device string) (*RecordingSession, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
@@ -1258,72 +1258,82 @@ func (c *controller) StartRecording(ctx context.Context, device string) (*Record
 		cameraID = c.getCameraIdentifierFromDevicePath(device)
 	}
 
-	// Generate session ID
-	sessionID := generateSessionID(devicePath)
-
-	// Check if session already exists - lock-free check with sync.Map
-	if _, exists := c.sessions.Load(sessionID); exists {
-		return nil, fmt.Errorf("recording session %s already exists", sessionID)
-	}
-
-	// Create recording session
-	session := &RecordingSession{
-		ID:         sessionID,
-		Device:     cameraID, // Store camera identifier for API consistency
-		DevicePath: cameraID, // Store camera identifier for API consistency (test expectation)
-		Path:       "",       // Path will be set by RecordingManager
-		Status:     "STARTING",
-		StartTime:  time.Now(),
-		FilePath:   "", // FilePath will be set by RecordingManager
-	}
-
-	// Use MediaMTX RecordingManager for recording (no FFmpeg)
+	// Use MediaMTX RecordingManager for path-based recording
 	options := map[string]interface{}{
-		"format":  "mp4",
+		"format":  "fmp4", // Use fmp4 as default format
 		"codec":   "h264",
 		"quality": "medium",
 	}
 
 	recordingSession, err := c.recordingManager.StartRecording(ctx, devicePath, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start MediaMTX recording for session %s: %w", sessionID, err)
+		return nil, fmt.Errorf("failed to start MediaMTX recording: %w", err)
 	}
 
-	// Update session with MediaMTX recording info
-	session.Status = recordingSession.Status // Preserve RecordingManager's status
-	session.PID = recordingSession.PID       // MediaMTX session ID
-	session.Path = recordingSession.Path
+	// Update session with camera identifier for API consistency
+	recordingSession.Device = cameraID
+	recordingSession.DevicePath = cameraID
 
-	// Store session - lock-free operation with sync.Map
-	c.sessions.Store(sessionID, session)
-
-	// Start tracking active recording for API consistency
-	if err := c.StartActiveRecording(cameraID, sessionID, ""); err != nil {
-		c.logger.WithError(err).WithField("session_id", sessionID).Warning("Failed to start active recording tracking")
+	// Start tracking active recording for API consistency (no session ID needed)
+	if err := c.StartActiveRecording(cameraID, "", ""); err != nil {
+		c.logger.WithError(err).WithField("camera_id", cameraID).Warning("Failed to start active recording tracking")
 	}
 
 	c.logger.WithFields(logging.Fields{
-		"session_id":       sessionID,
-		"device":           cameraID,
-		"device_path":      devicePath,
-		"mediamtx_session": recordingSession.ID,
-	}).Info("MediaMTX recording session started")
+		"device":      cameraID,
+		"device_path": devicePath,
+		"path":        recordingSession.Path,
+	}).Info("MediaMTX path-based recording started")
 
-	return session, nil
+	return recordingSession, nil
 }
 
-// StopRecording stops a recording session
-func (c *controller) StopRecording(ctx context.Context, sessionID string) error {
+// StopRecording stops recording for a camera device using path-based recording
+func (c *controller) StopRecording(ctx context.Context, device string) error {
 	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
 	// Validate input parameters for security
-	if sessionID == "" {
-		return fmt.Errorf("session ID is required")
+	if device == "" {
+		return fmt.Errorf("device is required")
 	}
 
-	return c.stopRecordingInternal(ctx, sessionID)
+	// Abstraction layer: Convert camera identifier to device path if needed
+	var devicePath string
+	var cameraID string
+
+	if c.validateCameraIdentifier(device) {
+		// Device is a camera identifier (e.g., "camera0")
+		cameraID = device
+		devicePath = c.getDevicePathFromCameraIdentifier(device)
+		c.logger.WithFields(logging.Fields{
+			"camera_id":   cameraID,
+			"device_path": devicePath,
+		}).Debug("Converted camera identifier to device path")
+	} else {
+		// Device is already a device path (e.g., "/dev/video0")
+		devicePath = device
+		cameraID = c.getCameraIdentifierFromDevicePath(device)
+	}
+
+	// Stop MediaMTX recording using RecordingManager
+	err := c.recordingManager.StopRecording(ctx, devicePath)
+	if err != nil {
+		return fmt.Errorf("failed to stop MediaMTX recording: %w", err)
+	}
+
+	// Stop tracking active recording for API consistency
+	if err := c.StopActiveRecording(cameraID); err != nil {
+		c.logger.WithError(err).WithField("camera_id", cameraID).Warning("Failed to stop active recording tracking")
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"device":      cameraID,
+		"device_path": devicePath,
+	}).Info("MediaMTX path-based recording stopped")
+
+	return nil
 }
 
 // stopRecordingInternal stops a recording session (internal method)

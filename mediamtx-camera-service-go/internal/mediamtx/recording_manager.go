@@ -115,7 +115,7 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 	}
 }
 
-// StartRecording starts a new recording session for a camera device using MediaMTX
+// StartRecording starts recording for a camera device using MediaMTX path-based recording
 func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath string, options map[string]interface{}) (*RecordingSession, error) {
 	// Input validation
 	if strings.TrimSpace(devicePath) == "" {
@@ -147,48 +147,42 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath strin
 		"device_path": devicePath,
 		"record_path": recordPath,
 		"options":     options,
-	}).Info("Starting MediaMTX recording session")
+	}).Info("Starting MediaMTX path-based recording")
 
 	// Check if device is already recording - lock-free read with sync.Map
-	if existingSessionID, exists := rm.deviceToSession.Load(devicePath); exists {
-		return nil, fmt.Errorf("device %s is already recording in session %s", devicePath, existingSessionID)
+	if _, exists := rm.deviceToSession.Load(devicePath); exists {
+		return nil, fmt.Errorf("device %s is already recording", devicePath)
 	}
-
-	// Generate unique session ID
-	sessionID := fmt.Sprintf("rec_%d_%s", time.Now().Unix(), generateRandomString(8))
 
 	// Create path name from device path using unified function
 	pathName := GetMediaMTXPathName(devicePath)
 
-	// SIMPLIFIED: Use StreamManager's new EnableRecording method
-	// This handles path creation and recording configuration in one step
+	// Use StreamManager's EnableRecording method for path-based recording
 	rm.logger.WithField("device_path", devicePath).Info("Enabling recording via StreamManager")
 	err := rm.streamManager.EnableRecording(ctx, devicePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enable recording: %w", err)
 	}
 
-	// Create recording session
+	// Create lightweight recording session (no session ID needed)
 	session := &RecordingSession{
-		ID:         sessionID,
+		ID:         "", // No session ID - path-based recording
 		DevicePath: devicePath,
 		Path:       pathName, // Use the stable path name
 		FilePath:   recordPath,
 		StartTime:  time.Now(),
-		Status:     "active",
+		Status:     "RECORDING", // Use API-compatible status
 		State:      SessionStateRecording,
 		UseCase:    UseCaseRecording,
 	}
 
-	// Store session - lock-free operations with sync.Map
-	rm.sessions.Store(sessionID, session)
-	rm.deviceToSession.Store(devicePath, sessionID)
+	// Store device mapping for stop recording lookup
+	rm.deviceToSession.Store(devicePath, devicePath) // Use devicePath as key and value
 
 	rm.logger.WithFields(logging.Fields{
-		"session_id": sessionID,
-		"path_name":  pathName,
-		"device":     devicePath,
-	}).Info("MediaMTX recording session started successfully")
+		"path_name": pathName,
+		"device":    devicePath,
+	}).Info("MediaMTX path-based recording started successfully")
 
 	return session, nil
 }
@@ -324,38 +318,27 @@ func (rm *RecordingManager) getSessionIDByDevice(device string) (string, bool) {
 }
 
 // StopRecording stops a recording session
-func (rm *RecordingManager) StopRecording(ctx context.Context, sessionID string) error {
-	rm.logger.WithField("session_id", sessionID).Info("Stopping MediaMTX recording session")
+func (rm *RecordingManager) StopRecording(ctx context.Context, devicePath string) error {
+	rm.logger.WithField("device_path", devicePath).Info("Stopping MediaMTX path-based recording")
 
-	// Get session - lock-free read with sync.Map
-	sessionInterface, exists := rm.sessions.Load(sessionID)
-	if !exists {
-		return fmt.Errorf("recording session %s not found", sessionID)
-	}
-	session := sessionInterface.(*RecordingSession)
-
-	// SIMPLIFIED: Disable recording but keep path alive for streaming
-	if session.DevicePath != "" {
-		err := rm.streamManager.DisableRecording(ctx, session.DevicePath)
-		if err != nil {
-			rm.logger.WithError(err).WithField("device_path", session.DevicePath).Warn("Failed to disable recording")
-		}
+	// Check if device is recording - lock-free read with sync.Map
+	if _, exists := rm.deviceToSession.Load(devicePath); !exists {
+		return fmt.Errorf("device %s is not currently recording", devicePath)
 	}
 
-	// Update session status
-	session.Status = "stopped"
-	endTime := time.Now()
-	session.EndTime = &endTime
+	// Disable recording but keep path alive for streaming
+	err := rm.streamManager.DisableRecording(ctx, devicePath)
+	if err != nil {
+		rm.logger.WithError(err).WithField("device_path", devicePath).Warn("Failed to disable recording")
+		return fmt.Errorf("failed to disable recording: %w", err)
+	}
 
-	// Remove from device mapping and sessions - lock-free operations with sync.Map
-	rm.deviceToSession.Delete(session.DevicePath)
-	rm.sessions.Delete(sessionID)
+	// Remove from device mapping - lock-free operation with sync.Map
+	rm.deviceToSession.Delete(devicePath)
 
 	rm.logger.WithFields(logging.Fields{
-		"session_id": sessionID,
-		"device":     session.DevicePath,
-		"duration":   session.EndTime.Sub(session.StartTime),
-	}).Info("MediaMTX recording session stopped successfully")
+		"device": devicePath,
+	}).Info("MediaMTX path-based recording stopped successfully")
 
 	return nil
 }

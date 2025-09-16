@@ -365,9 +365,9 @@ type MediaMTXController interface {
 	RemoveExternalStream(ctx context.Context, streamURL string) error
 	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
 
-	// Recording operations
-	StopRecording(ctx context.Context, sessionID string) error
-	GetRecordingStatus(ctx context.Context, sessionID string) (*RecordingSession, error)
+	// Recording operations (device-based, no session IDs)
+	StartRecording(ctx context.Context, device string) (*RecordingSession, error)
+	StopRecording(ctx context.Context, device string) error
 
 	// Streaming operations
 	StartStreaming(ctx context.Context, device string) (*Path, error)
@@ -451,11 +451,10 @@ type MediaMTXControllerAPI interface {
 	GetStreamURL(ctx context.Context, device string) (string, error)
 	GetStreamStatus(ctx context.Context, device string) (*Path, error)
 
-	// Recording and snapshots (identifier based)
+	// Recording and snapshots (device-based, no session IDs)
 	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
-	StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error)
-	StopAdvancedRecording(ctx context.Context, sessionID string) error
-	GetSessionIDByDevice(device string) (string, bool)
+	StartRecording(ctx context.Context, device string) (*RecordingSession, error)
+	StopRecording(ctx context.Context, device string) error
 	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
 	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
 	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)

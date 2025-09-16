@@ -702,10 +702,12 @@ func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) str
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
 		// MediaMTX requires %path in recordPath - single % not double %%
-		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S.mp4")
+		// No extension - MediaMTX adds it based on recordFormat
+		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S")
 	}
 	// MediaMTX requires %path in recordPath - single % not double %%
-	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
+	// No extension - MediaMTX adds it based on recordFormat
+	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S"
 }
 
 // Helper method to check device type and determine if keepalive is needed

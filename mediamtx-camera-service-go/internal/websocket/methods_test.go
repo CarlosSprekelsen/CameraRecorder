@@ -355,10 +355,11 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 	})
 	response := SendTestMessage(t, conn, message)
 
-	// Test response
+	// Test response - should have error since no recording is active
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.Equal(t, message.ID, response.ID, "Response should have correct ID")
-	assert.Nil(t, response.Error, "Response should not have error")
+	assert.NotNil(t, response.Error, "Response should have error when stopping non-existent recording")
+	assert.Contains(t, response.Error.Message, "not currently recording", "Error should indicate no active recording")
 }
 
 // TestWebSocketMethods_GetMetrics tests get_metrics method

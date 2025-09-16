@@ -994,30 +994,31 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 			return nil, fmt.Errorf("camera '%s' not found or not accessible", devicePath)
 		}
 
-		// Start recording using MediaMTX controller with default path
-		session, err := s.mediaMTXController.StartAdvancedRecording(context.Background(), devicePath, options)
+		// Start recording using MediaMTX controller with path-based recording
+		session, err := s.mediaMTXController.StartRecording(context.Background(), devicePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start recording: %v", err)
 		}
 
-		// Map to API-compliant fields
-		format := "mp4"
+		// Map to API-compliant fields (no session_id)
+		format := "fmp4" // Default to fmp4 format
 		if f, ok := options["format"].(string); ok && f != "" {
 			format = f
 		}
-		filename := session.Path
+		
+		// Generate filename without extension (MediaMTX adds it based on format)
+		filename := fmt.Sprintf("%s_%s", devicePath, session.StartTime.Format("2006-01-02_15-04-05"))
+		
 		response := map[string]interface{}{
 			"device":     session.Device,
-			"session_id": session.ID,
 			"filename":   filename,
 			"status":     session.Status,
 			"start_time": session.StartTime.Format(time.RFC3339),
-			"duration":   0,
 			"format":     format,
 		}
 
-		// Validate response fields
-		required := []string{"device", "session_id", "filename", "status", "start_time", "duration", "format"}
+		// Validate response fields (no session_id)
+		required := []string{"device", "filename", "status", "start_time", "format"}
 		if err := assertResponseFields("start_recording", response, required); err != nil {
 			return nil, err
 		}
@@ -1047,22 +1048,16 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 			return nil, fmt.Errorf("invalid device parameter: %v", val.Errors)
 		}
 
-		// Get session ID and stop recording - thin delegation (controller maps internally)
-		sessionID, exists := s.mediaMTXController.GetSessionIDByDevice(cameraID)
-		if !exists || sessionID == "" {
-			return nil, fmt.Errorf("no active recording session found for device %s", cameraID)
-		}
-
-		err := s.mediaMTXController.StopAdvancedRecording(context.Background(), sessionID)
+		// Stop recording using device-based approach (no session ID needed)
+		err := s.mediaMTXController.StopRecording(context.Background(), cameraID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to stop recording: %v", err)
 		}
 
-		// Return success response
+		// Return success response (no session_id)
 		return map[string]interface{}{
-			"session_id": sessionID,
-			"device":     cameraID,
-			"status":     "STOPPED",
+			"device": cameraID,
+			"status": "STOPPED",
 		}, nil
 	})(params, client)
 }

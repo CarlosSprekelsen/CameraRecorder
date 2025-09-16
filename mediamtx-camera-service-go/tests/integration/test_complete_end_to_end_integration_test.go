@@ -553,13 +553,18 @@ func testRecordingOperations(t *testing.T, client *testtestutils.WebSocketTestCl
 		require.NotNil(t, response.Result, "Recording start should return result")
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result should be an object")
-		require.Contains(t, result, "session_id", "Result should contain session_id field per API documentation")
+		require.Contains(t, result, "device", "Result should contain device field per API documentation")
+		require.Contains(t, result, "filename", "Result should contain filename field per API documentation")
 
-		sessionID, ok := result["session_id"].(string)
-		require.True(t, ok, "Session ID should be string")
-		require.NotEmpty(t, sessionID, "Session ID should not be empty")
+		device, ok := result["device"].(string)
+		require.True(t, ok, "Device should be string")
+		require.NotEmpty(t, device, "Device should not be empty")
 
-		t.Logf("Recording started successfully: session %s", sessionID)
+		filename, ok := result["filename"].(string)
+		require.True(t, ok, "Filename should be string")
+		require.NotEmpty(t, filename, "Filename should not be empty")
+
+		t.Logf("Recording started successfully: device %s, filename %s", device, filename)
 
 		// Wait for recording to progress
 		time.Sleep(2 * time.Second)
