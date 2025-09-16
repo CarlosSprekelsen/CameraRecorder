@@ -35,6 +35,7 @@ type streamManager struct {
 	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
+	keepaliveReader   *RTSPKeepaliveReader // ADD THIS
 
 	// FFmpeg command caching for performance - using sync.Map for lock-free reads
 	ffmpegCommands sync.Map // device path -> cached FFmpeg command
@@ -76,6 +77,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 		configIntegration: configIntegration,
 		logger:            logger,
 		useCaseConfigs:    useCaseConfigs,
+		keepaliveReader:   NewRTSPKeepaliveReader(config, logger), // ADD THIS
 		// ffmpegCommands: sync.Map is zero-initialized, no need to initialize
 	}
 }
@@ -580,17 +582,19 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 		"device_path": devicePath,
 		"path_name":   pathName,
 		"stream_name": stream.Name,
-	}).Info("Path ensured, activating publisher and waiting for readiness")
+	}).Info("Path ensured, starting keepalive reader for recording")
 
-	// FIXED: Skip readiness check for on-demand paths
-	// On-demand paths only become ready when someone actually connects to the RTSP stream
-	// MediaMTX will start the FFmpeg process when recording begins, not when we create the path
-	sm.logger.WithFields(logging.Fields{
-		"path_name": pathName,
-		"reason":    "on_demand_paths_activate_on_access",
-	}).Info("Skipping readiness check for on-demand path - will activate when recording starts")
+	// START KEEPALIVE READER - This is the KEY CHANGE
+	// This creates an RTSP connection that triggers runOnDemand
+	err = sm.keepaliveReader.StartKeepalive(ctx, pathName)
+	if err != nil {
+		return fmt.Errorf("failed to start keepalive reader: %w", err)
+	}
 
-	sm.logger.WithField("path_name", pathName).Info("Path is ready, enabling recording")
+	// Wait a moment for the FFmpeg publisher to start
+	time.Sleep(1 * time.Second)
+
+	sm.logger.WithField("path_name", pathName).Info("Keepalive reader active, enabling recording")
 
 	// Generate recording path from configuration
 	recordPath := GenerateRecordingPath(sm.config, sm.recordingConfig)
@@ -598,19 +602,28 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 	// Pre-create recording directory
 	outputDir := sm.config.RecordingsPath
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		// Stop keepalive on error
+		sm.keepaliveReader.StopKeepalive(pathName)
 		return fmt.Errorf("failed to create recording directory: %w", err)
 	}
 
 	// Create recording configuration
 	recordingConfig := sm.createRecordingConfig(pathName, recordPath)
 
-	// PATCH the path to enable recording (now with retry)
+	// PATCH the path to enable recording
 	err = sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
 	if err != nil {
+		// Stop keepalive on error
+		sm.keepaliveReader.StopKeepalive(pathName)
 		return fmt.Errorf("failed to enable recording: %w", err)
 	}
 
-	sm.logger.WithField("path_name", pathName).Info("Recording enabled successfully")
+	sm.logger.WithFields(logging.Fields{
+		"path_name":     pathName,
+		"record_path":   recordPath,
+		"has_keepalive": true,
+	}).Info("Recording enabled successfully with keepalive reader")
+
 	return nil
 }
 
@@ -624,17 +637,32 @@ func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string
 	pathMutex.Lock()
 	defer pathMutex.Unlock()
 
-	// PATCH to disable recording (keep path for streaming)
-	recordingConfig := map[string]interface{}{
+	sm.logger.WithField("path_name", pathName).Info("Disabling recording")
+
+	// Create disable configuration
+	disableConfig := map[string]interface{}{
 		"record": false,
 	}
 
-	err := sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
+	// PATCH the path to disable recording
+	err := sm.pathManager.PatchPath(ctx, pathName, disableConfig)
 	if err != nil {
-		return fmt.Errorf("failed to disable recording: %w", err)
+		sm.logger.WithError(err).Error("Failed to disable recording config")
+		// Continue to stop keepalive even if patch fails
 	}
 
-	sm.logger.WithField("path_name", pathName).Info("Recording disabled successfully")
+	// STOP KEEPALIVE READER - This is the KEY CHANGE
+	// This closes the RTSP connection, allowing runOnDemand to stop FFmpeg
+	err = sm.keepaliveReader.StopKeepalive(pathName)
+	if err != nil {
+		sm.logger.WithError(err).Warn("Failed to stop keepalive reader")
+	}
+
+	sm.logger.WithFields(logging.Fields{
+		"path_name":         pathName,
+		"keepalive_stopped": true,
+	}).Info("Recording disabled and keepalive reader stopped")
+
 	return nil
 }
 
@@ -672,4 +700,22 @@ func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) str
 	}
 	// MediaMTX requires %path in recordPath - single % not double %%
 	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S.mp4"
+}
+
+// Helper method to check device type and determine if keepalive is needed
+func (sm *streamManager) shouldUseKeepalive(devicePath string) bool {
+	// For V4L2 devices using runOnDemand, always need keepalive
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		return true
+	}
+
+	// For external RTSP sources, check if they're configured with sourceOnDemand
+	if strings.HasPrefix(devicePath, "rtsp://") {
+		// Could check path configuration here to determine if keepalive needed
+		// For now, assume external sources don't need keepalive (they're always pulling)
+		return false
+	}
+
+	// Default to using keepalive for safety
+	return true
 }

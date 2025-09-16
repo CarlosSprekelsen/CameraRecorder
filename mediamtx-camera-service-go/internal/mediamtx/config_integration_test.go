@@ -89,6 +89,10 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 		BaseURL:             originalConfig.BaseURL,
 		Timeout:             originalConfig.Timeout,
 		HealthCheckInterval: originalConfig.HealthCheckInterval + 1, // Increment by 1
+		RetryDelay:          originalConfig.RetryDelay,              // Include required field
+		RetryAttempts:       originalConfig.RetryAttempts,           // Include required field
+		CircuitBreaker:      originalConfig.CircuitBreaker,          // Include required field
+		ConnectionPool:      originalConfig.ConnectionPool,          // Include required field
 	}
 
 	// Update configuration

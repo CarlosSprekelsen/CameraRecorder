@@ -54,6 +54,7 @@ func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
 }
 
 // TestController_GetHealth_ReqMTX004 tests controller health with real server
+// ARCHITECTURE COMPLIANCE: Uses Progressive Readiness Pattern - event-driven readiness
 func TestController_GetHealth_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -78,11 +79,34 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Get health
-	health, err := controller.GetHealth(ctx)
-	require.NoError(t, err, "GetHealth should succeed")
-	require.NotNil(t, health, "Health should not be nil")
-	assert.Equal(t, "healthy", health.Status, "Health should be healthy")
+	// PROGRESSIVE READINESS PATTERN: Wait for controller readiness using event-driven approach
+	// System accepts connections immediately, features become available as components initialize
+	readinessChan := controller.SubscribeToReadiness()
+
+	// Wait for readiness event with timeout
+	select {
+	case <-readinessChan:
+		// Controller is ready, components have initialized
+		t.Log("Controller became ready - proceeding with health check")
+
+		// Now check health - should be healthy since all components are ready
+		health, err := controller.GetHealth(ctx)
+		require.NoError(t, err, "GetHealth should succeed")
+		require.NotNil(t, health, "Health should not be nil")
+		assert.Equal(t, "healthy", health.Status, "Health should be healthy after readiness")
+
+		// Verify component statuses are healthy
+		if health.ComponentStatus != nil {
+			if cameraStatus, exists := health.ComponentStatus["camera_monitor"]; exists {
+				assert.Equal(t, "healthy", cameraStatus, "Camera monitor should be healthy when controller is ready")
+			}
+		}
+
+		t.Log("Health check completed successfully with Progressive Readiness Pattern")
+
+	case <-time.After(10 * time.Second):
+		t.Fatal("Controller did not become ready within timeout - Progressive Readiness Pattern failed")
+	}
 }
 
 // TestController_GetMetrics_ReqMTX004 tests controller metrics with real server
@@ -749,8 +773,9 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	// Verify session properties
 	assert.Equal(t, cameraID, session.DevicePath, "Should use available camera identifier for API consistency")
 
-	// Verify file path follows expected pattern: /tmp/recordings/{cameraID}_YYYY-MM-DD_HH-MM-SS.mp4
-	assert.True(t, strings.HasPrefix(session.FilePath, "/tmp/recordings/"+cameraID+"_"), "File path should start with expected prefix")
+	// Verify file path follows expected pattern: {configured_path}/{cameraID}_YYYY-MM-DD_HH-MM-SS.mp4
+	expectedPath := helper.GetConfiguredRecordingPath()
+	assert.True(t, strings.HasPrefix(session.FilePath, expectedPath+"/"+cameraID+"_"), "File path should start with configured path prefix")
 	assert.True(t, strings.HasSuffix(session.FilePath, ".mp4"), "File path should end with .mp4 extension")
 
 	// Verify timestamp format in filename (YYYY-MM-DD_HH-MM-SS)
@@ -995,7 +1020,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 
 		// Verify the snapshot path follows the fixture configuration
 		// Use configured path instead of hardcoded path
-		expectedPath := "/tmp/snapshots" // From fixture configuration
+		expectedPath := helper.GetConfiguredSnapshotPath()
 		assert.True(t, strings.HasPrefix(snapshot.FilePath, expectedPath+"/"),
 			"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
 		assert.Contains(t, snapshot.FilePath, cameraID, "File path should contain camera identifier")

@@ -19,7 +19,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +40,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
@@ -65,7 +64,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor)
@@ -101,7 +100,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor)
@@ -143,7 +142,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor)
@@ -186,7 +185,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor)
@@ -220,7 +219,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 		HealthCheckTimeout:     5 * time.Second,
 	}
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 	require.NotNil(t, healthMonitor)
@@ -278,7 +277,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	for i, config := range configs {
 		t.Run(fmt.Sprintf("config_%d", i), func(t *testing.T) {
 			logger := logging.CreateTestLogger(t, nil)
-			logger.SetLevel(logrus.ErrorLevel)
+			// Use test fixture logging level instead of hardcoded logrus
 
 			healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
 			require.NotNil(t, healthMonitor, "Health monitor should be created")

@@ -55,7 +55,11 @@ func DefaultMediaMTXTestConfig() *MediaMTXTestConfig {
 	if user == "" {
 		user = "testuser"
 	}
-	testDataDir := fmt.Sprintf("/tmp/mediamtx_test_data_%s", user)
+	// Use environment variable or default to avoid hardcoded paths
+	testDataDir := os.Getenv("MEDIAMTX_TEST_DATA_DIR")
+	if testDataDir == "" {
+		testDataDir = fmt.Sprintf("/tmp/mediamtx_test_data_%s", user)
+	}
 
 	return &MediaMTXTestConfig{
 		BaseURL:      "http://localhost:9997", // MediaMTX API port (standard)
@@ -600,12 +604,20 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {
-		return "/tmp/snapshots" // Fallback to fixture default
+		fallback := os.Getenv("MEDIAMTX_SNAPSHOTS_PATH")
+		if fallback == "" {
+			fallback = "/tmp/snapshots" // Fallback to fixture default
+		}
+		return fallback
 	}
 
 	config := configManager.GetConfig()
 	if config == nil {
-		return "/tmp/snapshots" // Fallback to fixture default
+		fallback := os.Getenv("MEDIAMTX_SNAPSHOTS_PATH")
+		if fallback == "" {
+			fallback = "/tmp/snapshots" // Fallback to fixture default
+		}
+		return fallback
 	}
 
 	return config.MediaMTX.SnapshotsPath
@@ -615,12 +627,20 @@ func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 func (h *MediaMTXTestHelper) GetConfiguredRecordingPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {
-		return "/tmp/recordings" // Fallback to fixture default
+		fallback := os.Getenv("MEDIAMTX_RECORDINGS_PATH")
+		if fallback == "" {
+			fallback = "/tmp/recordings" // Fallback to fixture default
+		}
+		return fallback
 	}
 
 	config := configManager.GetConfig()
 	if config == nil {
-		return "/tmp/recordings" // Fallback to fixture default
+		fallback := os.Getenv("MEDIAMTX_RECORDINGS_PATH")
+		if fallback == "" {
+			fallback = "/tmp/recordings" // Fallback to fixture default
+		}
+		return fallback
 	}
 
 	return config.MediaMTX.RecordingsPath
@@ -665,11 +685,20 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 	}
 
 	// Create required directories and files for test fixtures that use /tmp paths
-	// This is needed because fixtures have hardcoded paths that need to exist
+	// This is needed because fixtures have configured paths that need to exist
+	recordingsPath := os.Getenv("MEDIAMTX_RECORDINGS_PATH")
+	if recordingsPath == "" {
+		recordingsPath = "/tmp/recordings"
+	}
+	snapshotsPath := os.Getenv("MEDIAMTX_SNAPSHOTS_PATH")
+	if snapshotsPath == "" {
+		snapshotsPath = "/tmp/snapshots"
+	}
+
 	requiredDirs := []string{
-		"/tmp/recordings",
-		"/tmp/snapshots",
-		"/tmp",
+		recordingsPath,
+		snapshotsPath,
+		"/tmp", // System temp directory
 	}
 
 	for _, dir := range requiredDirs {
@@ -683,8 +712,12 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 	}
 
 	// Create required files that fixtures expect to exist
+	mediamtxConfigPath := os.Getenv("MEDIAMTX_CONFIG_PATH")
+	if mediamtxConfigPath == "" {
+		mediamtxConfigPath = "/tmp/mediamtx.yml"
+	}
 	requiredFiles := []string{
-		"/tmp/mediamtx.yml",
+		mediamtxConfigPath,
 	}
 
 	for _, file := range requiredFiles {

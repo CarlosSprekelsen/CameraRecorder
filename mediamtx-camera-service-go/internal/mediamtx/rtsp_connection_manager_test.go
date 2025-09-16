@@ -24,7 +24,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -153,7 +152,7 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
@@ -187,7 +186,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 
 	// Create RTSP connection manager
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
@@ -213,7 +212,7 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
@@ -261,7 +260,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	mediaMTXConfig.RTSPMonitoring.BandwidthThreshold = 2000000
 
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
@@ -293,7 +292,7 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
@@ -327,7 +326,7 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	config := createTestMediaMTXConfig()
 	logger := logging.CreateTestLogger(t, nil)
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
@@ -696,9 +695,7 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Create controller using proper constructor
-	logger := helper.GetLogger()
-	logger.SetLevel(logrus.ErrorLevel)
+	// Use test fixture logging level instead of hardcoded logrus
 
 	// Create controller using test helper
 	controller, err := helper.GetController(t)
