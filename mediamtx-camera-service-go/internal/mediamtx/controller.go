@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -242,7 +241,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create snapshot manager with configuration integration
-	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, mediaMTXConfig, configManager, logger)
+	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Create RTSP connection manager
 	rtspManager := NewRTSPConnectionManager(client, mediaMTXConfig, logger)
@@ -1160,22 +1159,7 @@ func generateSnapshotID(device string) string {
 	return "snap_" + device + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-// generateSnapshotPath generates a snapshot file path
-func generateSnapshotPath(device, snapshotID string) string {
-	// Handle camera identifiers in file naming
-	if strings.HasPrefix(device, "camera") {
-		// Convert camera0 to camera0 for consistent naming
-		return fmt.Sprintf("/opt/camera-service/snapshots/%s_%s.jpg", device, snapshotID)
-	}
-	// Handle device paths by extracting the device name
-	if strings.HasPrefix(device, "/dev/video") {
-		deviceName := strings.TrimPrefix(device, "/dev/")
-		return fmt.Sprintf("/opt/camera-service/snapshots/%s_%s.jpg", deviceName, snapshotID)
-	}
-	return fmt.Sprintf("/opt/camera-service/snapshots/%s_%s.jpg", device, snapshotID)
-}
-
-// TakeAdvancedSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
+// TakeAdvancedSnapshot takes a snapshot with advanced options
 func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
@@ -1186,41 +1170,8 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, op
 		return nil, fmt.Errorf("device path is required")
 	}
 
-	c.logger.WithFields(logging.Fields{
-		"device":  device,
-		"options": options,
-	}).Info("Taking snapshot")
-
-	// Convert camera identifier to device path using PathManager
-	devicePath, exists := c.pathManager.GetDevicePathForCamera(device)
-	if !exists {
-		return nil, fmt.Errorf("camera '%s' not found or not accessible", device)
-	}
-
-	// Use snapshot manager
-	snapshot, err := c.snapshotManager.TakeSnapshot(ctx, devicePath, options)
-	if err != nil {
-		c.logger.WithError(err).WithFields(logging.Fields{
-			"device": device,
-		}).Error("Snapshot failed")
-		return nil, fmt.Errorf("failed to take snapshot for device %s: %w", device, err)
-	}
-
-	// Store the camera identifier in the snapshot for API consistency
-	snapshot.Device = device
-
-	// Log snapshot information for monitoring
-	if snapshot.Metadata != nil {
-		if tierUsed, ok := snapshot.Metadata["tier_used"]; ok {
-			c.logger.WithFields(logging.Fields{
-				"device":    device,
-				"tier_used": tierUsed,
-				"file_size": snapshot.Size,
-			}).Info("Snapshot completed successfully")
-		}
-	}
-
-	return snapshot, nil
+	// Pure delegation to SnapshotManager - no business logic
+	return c.snapshotManager.TakeSnapshot(ctx, device, options)
 }
 
 // GetAdvancedSnapshot gets a snapshot by ID

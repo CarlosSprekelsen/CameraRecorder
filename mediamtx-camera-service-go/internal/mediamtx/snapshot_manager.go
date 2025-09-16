@@ -35,9 +35,9 @@ type SnapshotManager struct {
 	ffmpegManager FFmpegManager
 	streamManager StreamManager        // Required for Tier 3: external RTSP source path creation
 	cameraMonitor camera.CameraMonitor // Required for Tier 0: V4L2 direct capture
+	pathManager   PathManager          // Required for camera identifier to device path conversion
 	config        *config.MediaMTXConfig
 	logger        *logging.Logger
-	pathValidator *PathValidator
 
 	// Configuration integration for multi-tier support
 	configManager *config.ConfigManager
@@ -60,22 +60,15 @@ type SnapshotSettings struct {
 }
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
-func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, config *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
-	// Get full config for PathValidator
-	fullConfig := configManager.GetConfig()
-	var pathValidator *PathValidator
-	if fullConfig != nil {
-		pathValidator = NewPathValidator(fullConfig, logger)
-	}
-
+func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, pathManager PathManager, config *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		streamManager: streamManager,
 		cameraMonitor: cameraMonitor,
+		pathManager:   pathManager,
 		config:        config,
 		configManager: configManager,
 		logger:        logger,
-		pathValidator: pathValidator,
 		// snapshots: sync.Map is zero-initialized, no need to initialize
 		snapshotSettings: &SnapshotSettings{
 			Format:      "jpg",
@@ -89,27 +82,22 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 }
 
 // TakeSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
+// device parameter is camera identifier (e.g., "camera0")
 func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
-	// Validate path before taking snapshot
-	pathResult, err := sm.pathValidator.ValidateSnapshotPath(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("snapshot path validation failed: %w", err)
+	// Convert camera identifier to device path using PathManager
+	devicePath, exists := sm.pathManager.GetDevicePathForCamera(device)
+	if !exists {
+		return nil, fmt.Errorf("camera '%s' not found or not accessible", device)
 	}
 
-	if pathResult.FallbackPath != "" {
-		sm.logger.WithFields(logging.Fields{
-			"primary":  sm.config.SnapshotsPath,
-			"fallback": pathResult.FallbackPath,
-		}).Info("Using fallback snapshot path")
-	}
-
-	// Use validated path
-	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, device)
+	// Generate snapshot path using device path for file naming
+	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
 
 	sm.logger.WithFields(logging.Fields{
-		"device":  device,
-		"path":    snapshotPath,
-		"options": options,
+		"device":     device,
+		"devicePath": devicePath,
+		"path":       snapshotPath,
+		"options":    options,
 	}).Info("Taking multi-tier snapshot")
 
 	// Apply snapshot settings from options (existing logic)
@@ -150,9 +138,13 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, opti
 	// Store snapshot - lock-free operation with sync.Map
 	sm.snapshots.Store(snapshotID, snapshot)
 
+	// Store the camera identifier in the snapshot for API consistency
+	snapshot.Device = device
+
 	sm.logger.WithFields(logging.Fields{
 		"snapshot_id": snapshotID,
 		"device":      device,
+		"devicePath":  devicePath,
 		"path":        snapshotPath,
 		"file_size":   snapshot.Size,
 		"format":      sm.snapshotSettings.Format,
