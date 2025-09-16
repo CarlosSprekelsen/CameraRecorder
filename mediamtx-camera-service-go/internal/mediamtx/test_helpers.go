@@ -1038,8 +1038,8 @@ func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager R
 				// Should NOT get an error (graceful handling)
 				if err != nil {
 					// This is a BUG - the API should handle these inputs gracefully
-					t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-					t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
+					t.Errorf("BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+					t.Errorf("This indicates a dangerous bug - invalid inputs cause API failures instead of graceful handling")
 				} else {
 					t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 				}
@@ -1075,8 +1075,8 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 					// Should NOT get an error (graceful handling)
 					if err != nil {
 						// This is a BUG - the controller should handle these inputs gracefully
-						t.Errorf("🚨 BUG DETECTED: Controller scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
-						t.Errorf("🚨 This indicates a dangerous bug - invalid inputs cause controller failures instead of graceful handling")
+						t.Errorf("BUG DETECTED: Controller scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+						t.Errorf("This indicates a dangerous bug - invalid inputs cause controller failures instead of graceful handling")
 					} else {
 						t.Logf("Controller scenario %s handled gracefully (no error)", scenario.Name)
 					}
@@ -1103,17 +1103,17 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 				// Test various controller methods with invalid device paths
 				_, err := controller.GetStreamStatus(ctx, devicePath)
 				if err == nil {
-					t.Errorf("🚨 BUG DETECTED: GetStreamStatus should reject invalid device path '%s'", devicePath)
+					t.Errorf("BUG DETECTED: GetStreamStatus should reject invalid device path '%s'", devicePath)
 				}
 
 				_, err = controller.StartStreaming(ctx, devicePath)
 				if err == nil {
-					t.Errorf("🚨 BUG DETECTED: StartStreaming should reject invalid device path '%s'", devicePath)
+					t.Errorf("BUG DETECTED: StartStreaming should reject invalid device path '%s'", devicePath)
 				}
 
 				_, err = controller.TakeAdvancedSnapshot(ctx, devicePath, map[string]interface{}{})
 				if err == nil {
-					t.Errorf("🚨 BUG DETECTED: TakeAdvancedSnapshot should reject invalid device path '%s'", devicePath)
+					t.Errorf("BUG DETECTED: TakeAdvancedSnapshot should reject invalid device path '%s'", devicePath)
 				}
 
 				t.Logf("Device path '%s' correctly rejected by controller methods", devicePath)
@@ -1155,7 +1155,7 @@ func (h *MediaMTXTestHelper) TestInputValidationBoundaryConditions(t *testing.T,
 				// Test that boundary conditions don't cause panics or crashes
 				defer func() {
 					if r := recover(); r != nil {
-						t.Errorf("🚨 BUG DETECTED: Boundary condition %s caused panic: %v", test.name, r)
+						t.Errorf("BUG DETECTED: Boundary condition %s caused panic: %v", test.name, r)
 					}
 				}()
 
