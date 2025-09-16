@@ -216,18 +216,19 @@ end note
 - Camera operations coordination
 - Stream lifecycle management
 - API abstraction (camera0 ↔ /dev/video0)
-- Recording session management
+- Recording orchestration (delegate to RecordingManager)
 - Path reuse optimization
 - **Mapping Rule:** External identifiers (`camera0`) map to **discovered devices only**; no synthetic indices
 - **Pattern:** Single Source of Truth for all operations
 
 **Recording Manager (Sub-component of MediaMTX Controller)**
-- Recording session lifecycle
+- Recording state management via MediaMTX API
 - Path configuration via PATCH operations
-- File management and rotation
+- Auto-stop timer management
+- RTSP keepalive coordination
 - **Key Insight:** Uses same MediaMTX path for streaming and recording
-- **Pattern:** Path reuse instead of unique path per recording
-- **Sequence (hard invariant):** Ensure path → **Skip readiness check for on-demand** → Enable recording (PATCH)
+- **Pattern:** Stateless recording - query MediaMTX for status
+- **Sequence (hard invariant):** PATCH record flag → Start RTSP keepalive → Set timer (if duration specified)
 
 **Camera Monitor (Hardware Abstraction Layer)**
 - **Mode:** Event-first, Polling-fallback
@@ -669,45 +670,32 @@ participant "MediaMTX Server" as MS
 == Recording Initiation ==
 C -> WS : start_recording(camera0, options)
 WS -> MC : StartRecording(camera0, options)
-MC -> MC : Map camera0 → /dev/video0
+MC -> RM : StartRecording(camera0, options)
 
-== Stream Setup (Step 1) ==
-MC -> RM : StartRecording(/dev/video0, outputPath)
-RM -> SM : StartRecordingStream(/dev/video0)
-SM -> PM : CreatePath("camera0", runOnDemand)
-PM -> PM : Per-path mutex (serialize ops)
+== Stateless Recording Setup ==
+RM -> RM : Validate camera0 → /dev/video0 mapping
+RM -> MS : PATCH /v3/config/paths/patch/camera0 { "record": true }
 
-note over PM, MS
-  Path Configuration:
-  name: "camera0"
-  runOnDemand: "ffmpeg -f v4l2 -i /dev/video0 
-                -f rtsp rtsp://127.0.0.1:8554/camera0"
-  runOnDemandCloseAfter: "0s" (never close for recording)
-end note
-
-PM -> MS : POST /v3/config/paths/add/camera0
-MS --> PM : Path created (or already exists)
-PM -> PM : Skip readiness check for on-demand path
-PM --> SM : Path created
-SM --> RM : Stream ready
-
-== Recording Configuration (Step 2) ==
-RM -> RM : createRecordingPathConfig(outputPath)
-
-note over RM
+note over RM, MS
   Recording Config:
   record: true
-  recordPath: "/opt/recordings/camera0_%Y-%m-%d_%H-%M-%S.mp4"
+  recordPath: "/opt/recordings/camera0_%Y-%m-%d_%H-%M-%S"
   recordFormat: "fmp4" (STANAG 4609 compatible)
   recordSegmentDuration: "3600s"
 end note
 
-RM -> PM : PatchPath("camera0", recordingConfig)  << retry 404/409 with backoff >>
-PM -> MS : PATCH /v3/config/paths/patch/camera0
-MS --> PM : Path updated with recording enabled
-PM --> RM : Configuration applied
+== RTSP Keepalive & Timer Setup ==
+RM -> RM : Start RTSP keepalive (if on-demand source)
+RM -> RM : Set auto-stop timer (if duration_s specified)
 
-== Stream Activation (Step 3) ==
+note over RM
+  Timer Management:
+  - timers[device] → *time.Timer
+  - Auto-stop after duration_s
+  - Cleanup on manual stop
+end note
+
+== Stream Activation (On-Demand) ==
 note over MS
   On first access to path:
   1. MediaMTX starts FFmpeg via runOnDemand
@@ -720,7 +708,7 @@ MS -> MS : Start FFmpeg process (on-demand)
 MS -> MS : Begin recording to file
 
 == Response ==
-RM --> MC : RecordingSession
+RM --> MC : Recording started (no session state)
 MC --> WS : RecordingResponse
 WS --> C : Recording started
 
@@ -875,7 +863,57 @@ end note
 @enduml
 ```
 
-### 4.8 Path Lifecycle Management
+### 4.8 Stateless Recording Architecture
+
+```plantuml
+@startuml StatelessRecording
+title Stateless Recording Architecture - No Session State
+
+participant "Client" as C
+participant "Recording Manager" as RM
+participant "MediaMTX" as M
+database "Timer Map" as T
+
+== Start Recording ==
+C -> RM: StartRecording(camera0, options)
+RM -> M: PATCH /v3/config/paths/patch/camera0 { "record": true }
+M --> RM: Recording enabled
+RM -> RM: Set auto-stop timer (if duration_s)
+RM -> T: Store timer[device] = *time.Timer
+RM --> C: Recording started
+
+== Check Status (Any Time) ==
+C -> RM: GetRecordingStatus(camera0)
+RM -> M: GET /v3/config/paths/get/camera0
+M --> RM: { "record": true, "recordPath": "..." }
+RM --> C: Status from MediaMTX
+
+== Auto-Stop Timer ==
+T -> RM: Timer expired
+RM -> M: PATCH /v3/config/paths/patch/camera0 { "record": false }
+RM -> T: Delete timer[device]
+note over M: Recording stopped by timer
+
+== Manual Stop ==
+C -> RM: StopRecording(camera0)
+RM -> M: PATCH /v3/config/paths/patch/camera0 { "record": false }
+RM -> T: Delete timer[device] (if exists)
+M --> RM: Recording disabled
+RM --> C: Recording stopped
+
+note bottom
+Key Principles:
+1. NO local session state
+2. MediaMTX is source of truth
+3. Timers only for auto-stop
+4. Status always from MediaMTX API
+5. Simple PATCH operations
+end note
+
+@enduml
+```
+
+### 4.9 Path Lifecycle Management
 
 ```plantuml
 @startuml PathLifecycle
@@ -1028,16 +1066,11 @@ class SnapshotResult {
     +CaptureTime : float64
 }
 
-class RecordingSession {
-    +ID : string
-    +DevicePath : string
-    +Path : string  // MediaMTX path name (e.g., "camera0")
-    +FilePath : string  // Actual file location
+class RecordingTimer {
+    +Device : string  // Camera identifier (e.g., "camera0")
+    +Duration : time.Duration
     +StartTime : time
-    +Status : string
-    +State : SessionState
-    +Attempts : int // PATCH retries used
-    +ReadyLatencyMs : int // time from create to runtime-visible
+    +AutoStop : bool
 }
 
 class MediaMTXPath {
@@ -1051,14 +1084,14 @@ class MediaMTXPath {
 
 CameraDevice *-- V4L2Capabilities
 Session ||--o{ SnapshotResult
-Session ||--o{ RecordingSession
-RecordingSession *-- MediaMTXPath
+RecordingTimer *-- MediaMTXPath
 
-note right of RecordingSession
-Important: Path name ("camera0") is NOT
-the recording filename. The filename is
-configured separately in recordPath with
-timestamp patterns.
+note right of RecordingTimer
+Stateless Recording:
+- No session state stored locally
+- Recording status from MediaMTX API
+- Timer only for auto-stop functionality
+- Path name ("camera0") is NOT the filename
 end note
 
 @enduml
@@ -1324,10 +1357,15 @@ end note
 
 ### 10.3 Recording Architecture Decisions
 
+**Decision: Stateless Recording Architecture**
+- **Rationale:** MediaMTX is the source of truth for recording state
+- **Benefits:** No local state management, simpler error handling, better scalability
+- **Implementation:** Query MediaMTX API for recording status, use timers only for auto-stop
+
 **Decision: Single Path for Recording and Streaming**
 - **Rationale:** MediaMTX supports simultaneous streaming and recording on one path
 - **Benefits:** Simpler architecture, resource efficiency, fewer FFmpeg processes
-- **Implementation:** Use PATCH to add recording configuration to existing paths
+- **Implementation:** Use PATCH to toggle recording flag on existing paths
 
 **Decision: Simple Path Naming Convention**
 - **Rationale:** Path names are identifiers, not filenames
@@ -1343,6 +1381,11 @@ end note
 - **Rationale:** MediaMTX natively supports STANAG 4609 with fmp4 format
 - **Implementation:** Set recordFormat: "fmp4" in path configuration
 - **Benefits:** Military-grade video standard compliance without custom code
+
+**Decision: Minimal State Management**
+- **Rationale:** Only store what's absolutely necessary for operation
+- **State:** timers[device] → *time.Timer for auto-stop functionality
+- **Benefits:** Reduced complexity, no session state synchronization issues
 
 ---
 
