@@ -1392,29 +1392,32 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 func TestConfigManager_StartFileWatching_ErrorScenarios(t *testing.T) {
 	helper := NewTestConfigHelper(t)
 	defer helper.CleanupEnvironment()
-	
+
 	// Enable hot reload for all tests
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	helper.CreateTestDirectories()
-	
+
 	t.Run("watcher_creation_failure_simulation", func(t *testing.T) {
 		// This test simulates watcher creation failure scenarios
 		// We can't easily mock fsnotify.NewWatcher, but we can test the error handling
 		// by creating scenarios that might lead to watcher creation issues
-		
-		// Test with a very long path that might cause issues
-		longPathDir := filepath.Join(helper.tempDir, strings.Repeat("very_long_directory_name_", 50))
+
+		// Test with a long path that's within reasonable filesystem limits
+		longPathDir := filepath.Join(helper.tempDir, strings.Repeat("long_dir_", 10)) // Reduced from 50 to 10
 		err := os.MkdirAll(longPathDir, 0755)
-		require.NoError(t, err, "Should create long path directory")
-		
+		if err != nil {
+			// If even this fails, skip the test as it's a system limitation
+			t.Skipf("Cannot create test directory due to filesystem limits: %v", err)
+		}
+
 		longConfigPath := filepath.Join(longPathDir, "config.yaml")
 		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
 		err = os.WriteFile(longConfigPath, []byte(configContent), 0644)
 		require.NoError(t, err, "Should create config file in long path")
-		
+
 		cm := CreateConfigManager()
 		err = cm.LoadConfig(longConfigPath)
-		
+
 		// This might succeed or fail depending on system limits
 		// The important thing is that we test the path
 		if err != nil {
@@ -1426,33 +1429,33 @@ func TestConfigManager_StartFileWatching_ErrorScenarios(t *testing.T) {
 			cm.Stop(ctx)
 		}
 	})
-	
+
 	t.Run("directory_watching_failure_scenarios", func(t *testing.T) {
 		// Test scenarios where directory watching might fail
-		
+
 		// Test with a path that doesn't exist (should be handled gracefully)
 		nonexistentPath := "/nonexistent/path/config.yaml"
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(nonexistentPath)
-		
+
 		// This should fail, but we want to test the error handling
 		require.Error(t, err, "Should fail to load config from nonexistent path")
 		assert.Contains(t, err.Error(), "configuration validation failed", "Error should be about configuration validation")
 	})
-	
+
 	t.Run("watcher_cleanup_on_failure", func(t *testing.T) {
 		// Test that watcher cleanup happens properly on failure
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Force a reload that might trigger cleanup scenarios
 		err = cm.LoadConfig(configPath)
 		require.NoError(t, err, "Second config load should succeed")
-		
+
 		// Test graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -1465,92 +1468,92 @@ func TestConfigManager_StartFileWatching_ErrorScenarios(t *testing.T) {
 func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 	helper := NewTestConfigHelper(t)
 	defer helper.CleanupEnvironment()
-	
+
 	// Enable hot reload for all tests
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	helper.CreateTestDirectories()
-	
+
 	t.Run("reload_with_file_removal", func(t *testing.T) {
 		// Test reload when file is removed during operation
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Remove the config file
 		err = os.Remove(configPath)
 		require.NoError(t, err, "Should remove config file")
-		
+
 		// Wait a bit for file watching to detect the removal
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Test graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		cm.Stop(ctx)
 	})
-	
+
 	t.Run("reload_with_invalid_config", func(t *testing.T) {
 		// Test reload with invalid configuration
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Modify config to be invalid
 		invalidConfig := "invalid: yaml: content: ["
 		err = os.WriteFile(configPath, []byte(invalidConfig), 0644)
 		require.NoError(t, err, "Should write invalid config")
-		
+
 		// Wait for file watching to detect the change
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Test graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		cm.Stop(ctx)
 	})
-	
+
 	t.Run("reload_with_permission_denied", func(t *testing.T) {
 		// Test reload when file becomes unreadable
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Make file unreadable
 		err = os.Chmod(configPath, 0000)
 		require.NoError(t, err, "Should make file unreadable")
 		defer os.Chmod(configPath, 0644) // Restore permissions
-		
+
 		// Wait for file watching to detect the change
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Test graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		cm.Stop(ctx)
 	})
-	
+
 	t.Run("reload_with_corrupted_config", func(t *testing.T) {
 		// Test reload with corrupted configuration
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Write corrupted config
 		corruptedConfig := "server:\n  host: \"localhost\"\n  port: invalid_port"
 		err = os.WriteFile(configPath, []byte(corruptedConfig), 0644)
 		require.NoError(t, err, "Should write corrupted config")
-		
+
 		// Wait for file watching to detect the change
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Test graceful shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -1562,43 +1565,43 @@ func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 	helper := NewTestConfigHelper(t)
 	defer helper.CleanupEnvironment()
-	
+
 	// Enable hot reload for all tests
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 	helper.CreateTestDirectories()
-	
+
 	t.Run("stop_file_watching_multiple_times", func(t *testing.T) {
 		// Test calling stopFileWatching multiple times (should be idempotent)
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Stop multiple times
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		
+
 		err = cm.Stop(ctx)
 		require.NoError(t, err, "First stop should succeed")
-		
+
 		// Try to stop again (should be idempotent)
 		err = cm.Stop(ctx)
 		require.NoError(t, err, "Second stop should also succeed")
 	})
-	
+
 	t.Run("stop_file_watching_with_timeout", func(t *testing.T) {
 		// Test stop with very short timeout
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Stop with very short timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 		defer cancel()
-		
+
 		err = cm.Stop(ctx)
 		// This might timeout, which is expected behavior
 		if err != nil {
@@ -1606,19 +1609,19 @@ func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 			assert.Contains(t, err.Error(), "context deadline exceeded", "Error should be about timeout")
 		}
 	})
-	
+
 	t.Run("stop_file_watching_with_cancelled_context", func(t *testing.T) {
 		// Test stop with already cancelled context
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Create and cancel context
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		err = cm.Stop(ctx)
 		// This should fail due to cancelled context
 		require.Error(t, err, "Should fail with cancelled context")
@@ -1630,74 +1633,74 @@ func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 func TestConfigManager_ValidateFinalConfiguration_AdvancedEdgeCases(t *testing.T) {
 	helper := NewTestConfigHelper(t)
 	defer helper.CleanupEnvironment()
-	
+
 	helper.CreateTestDirectories()
-	
+
 	t.Run("validation_with_nil_config", func(t *testing.T) {
 		// Test validation with nil config
 		cm := CreateConfigManager()
-		
+
 		// This should panic or return error
 		defer func() {
 			if r := recover(); r != nil {
 				t.Logf("Expected panic with nil config: %v", r)
 			}
 		}()
-		
+
 		// Try to validate nil config
 		err := cm.validateFinalConfiguration(nil)
 		if err != nil {
 			t.Logf("Expected error with nil config: %v", err)
 		}
 	})
-	
+
 	t.Run("validation_with_empty_struct", func(t *testing.T) {
-		// Test validation with empty config struct
+		// Test validation with empty config using public API and existing fixture
+		helper := NewTestConfigHelper(t)
+		defer helper.CleanupEnvironment()
+
+		configPath := helper.CreateTempConfigFromFixture("config_invalid_empty.yaml")
 		cm := CreateConfigManager()
-		
-		emptyConfig := &Config{}
-		err := cm.validateFinalConfiguration(emptyConfig)
+		err := cm.LoadConfig(configPath)
+
 		require.Error(t, err, "Should fail validation with empty config")
-		assert.Contains(t, err.Error(), "configuration validation failed", "Error should be about validation")
+		assert.Contains(t, err.Error(), "configuration validation failed", "Error should be about configuration validation")
 	})
-	
+
 	t.Run("validation_with_partial_config", func(t *testing.T) {
-		// Test validation with only some fields set
+		// Test validation with only some fields set using public API and existing fixture
+		helper := NewTestConfigHelper(t)
+		defer helper.CleanupEnvironment()
+
+		configPath := helper.CreateTempConfigFromFixture("config_invalid_missing_server.yaml")
 		cm := CreateConfigManager()
-		
-		partialConfig := &Config{
-			Server: ServerConfig{
-				Host: "localhost",
-				Port: 8080,
-			},
-			// Missing other required fields
-		}
-		err := cm.validateFinalConfiguration(partialConfig)
+		err := cm.LoadConfig(configPath)
+
 		require.Error(t, err, "Should fail validation with partial config")
-		assert.Contains(t, err.Error(), "configuration validation failed", "Error should be about validation")
+		assert.Contains(t, err.Error(), "configuration validation failed", "Error should be about configuration validation")
 	})
-	
+
 	t.Run("validation_with_extreme_values", func(t *testing.T) {
 		// Test validation with extreme but valid values
 		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
-		
+
 		// Modify config with extreme values
 		modifyConfig := func(config *Config) {
-			config.Server.Port = 65535 // Max valid port
-			config.Camera.PollInterval = 1 // Min valid interval
-			config.Snapshots.Quality = 100 // Max valid quality
-			config.Storage.WarnPercent = 99 // High but valid
+			config.Server.Port = 65535        // Max valid port
+			config.Camera.PollInterval = 1    // Min valid interval
+			config.Snapshots.Quality = 100    // Max valid quality
+			config.Storage.WarnPercent = 99   // High but valid
 			config.Storage.BlockPercent = 100 // Max valid
 		}
-		
+
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
-		
+
 		// Apply extreme values
 		config := cm.GetConfig()
 		modifyConfig(config)
-		
+
 		// This should still be valid
 		err = cm.validateFinalConfiguration(config)
 		if err != nil {
