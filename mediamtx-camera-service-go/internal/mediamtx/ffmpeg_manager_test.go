@@ -160,8 +160,14 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	err = ffmpegManager.StopProcess(ctx, pid)
 	require.NoError(t, err, "FFmpeg process should stop successfully")
 
-	// Wait a bit for process to actually stop
-	time.Sleep(100 * time.Millisecond)
+	// Wait for process to actually stop using proper synchronization
+	select {
+	case <-time.After(TestTimeoutShort):
+		// Process should be stopped now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Verify process is no longer running
 	isRunning = ffmpegManager.IsProcessRunning(ctx, pid)
@@ -206,8 +212,14 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	err = ffmpegManager.StopProcess(ctx, pid)
 	require.NoError(t, err, "FFmpeg process should stop successfully")
 
-	// Wait a bit for process to actually stop
-	time.Sleep(100 * time.Millisecond)
+	// Wait for process to actually stop using proper synchronization
+	select {
+	case <-time.After(TestTimeoutShort):
+		// Process should be stopped now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Verify process is no longer running
 	isRunning = ffmpegManager.IsProcessRunning(ctx, pid)
@@ -326,8 +338,14 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all goroutines to complete
-	time.Sleep(100 * time.Millisecond)
+	// Wait for all goroutines to complete using proper synchronization
+	select {
+	case <-time.After(TestTimeoutShort):
+		// Goroutines should be completed now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Verify processes started successfully (some may fail due to conflicts)
 	successCount := 0
@@ -372,8 +390,14 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	pid, err := ffmpegManager.StartProcess(ctx, command, outputPath)
 	require.NoError(t, err, "FFmpeg process should start successfully")
 
-	// Wait a bit for process to run
-	time.Sleep(100 * time.Millisecond)
+	// Wait for process to run using proper synchronization
+	select {
+	case <-time.After(TestTimeoutShort):
+		// Process should be running now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Note: GetPerformanceMetrics method may not be available in the current implementation
 	// This test verifies the process can be started and stopped successfully

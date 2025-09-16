@@ -90,9 +90,16 @@ func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 	// Wait for any ongoing discovery to complete with timeout
 	done := make(chan struct{})
 	go func() {
-		// Wait for scan to complete if in progress
+		// Wait for scan to complete if in progress using context-aware polling
 		for atomic.LoadInt32(&esd.scanInProgress) == 1 {
-			time.Sleep(10 * time.Millisecond)
+			select {
+			case <-time.After(10 * time.Millisecond):
+				// Continue polling
+			case <-ctx.Done():
+				// Context cancelled, exit early
+				close(done)
+				return
+			}
 		}
 		close(done)
 	}()

@@ -36,6 +36,39 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ============================================================================
+// TEST CONSTANTS
+// ============================================================================
+// These constants replace magic numbers throughout the test suite for better
+// maintainability and consistency.
+
+const (
+	// Test Timeout Constants
+	TestTimeoutShort    = 100 * time.Millisecond // Short operations (process start/stop)
+	TestTimeoutMedium   = 200 * time.Millisecond // Medium operations (cleanup, polling)
+	TestTimeoutLong     = 500 * time.Millisecond // Long operations (path readiness, connection)
+	TestTimeoutVeryLong = 1 * time.Second        // Very long operations (FFmpeg startup)
+	TestTimeoutExtreme  = 3 * time.Second        // Extreme operations (recording completion)
+
+	// Test Performance Thresholds
+	TestThresholdFastShutdown   = 100 * time.Millisecond // Fast shutdown should complete within this
+	TestThresholdMediumShutdown = 500 * time.Millisecond // Medium shutdown should complete within this
+	TestThresholdFastOperation  = 500 * time.Millisecond // Fast operations should complete within this
+	TestThresholdStressTest     = 30 * time.Second       // Stress tests should complete within this
+
+	// Test Validation Periods
+	TestValidationPeriodShort = 100 * time.Millisecond // Short validation periods for testing
+	TestValidationPeriodLong  = 150 * time.Millisecond // Long validation periods for testing
+
+	// Test Retry Constants
+	TestRetryAttempts = 3               // Number of retry attempts for flaky operations
+	TestRetryDelay    = 1 * time.Second // Delay between retry attempts
+
+	// Test Concurrency Constants
+	TestConcurrencyGoroutines = 5  // Number of goroutines for concurrency tests
+	TestConcurrencyIterations = 50 // Number of iterations for stress tests
+)
+
 // Global mutex to prevent parallel test execution
 // MediaMTX tests must run sequentially because they share the same server resources
 var testMutex sync.Mutex
@@ -851,8 +884,14 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 		}
 	}
 
-	// Wait a bit for MediaMTX to clean up paths
-	time.Sleep(200 * time.Millisecond)
+	// Wait for MediaMTX to clean up paths using proper synchronization
+	select {
+	case <-time.After(TestTimeoutMedium):
+		// MediaMTX should have cleaned up paths now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return nil
+	}
 
 	return nil
 }

@@ -591,8 +591,14 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 		return fmt.Errorf("failed to start keepalive reader: %w", err)
 	}
 
-	// Wait a moment for the FFmpeg publisher to start
-	time.Sleep(1 * time.Second)
+	// Wait for the FFmpeg publisher to start using context-aware timeout
+	select {
+	case <-time.After(TestTimeoutVeryLong):
+		// FFmpeg publisher should be started now
+	case <-ctx.Done():
+		// Context cancelled, return early
+		return fmt.Errorf("context cancelled while waiting for FFmpeg publisher to start")
+	}
 
 	sm.logger.WithField("path_name", pathName).Info("Keepalive reader active, enabling recording")
 

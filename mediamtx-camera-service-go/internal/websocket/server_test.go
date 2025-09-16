@@ -68,15 +68,11 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	// Wait for server to be ready (race condition fix)
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		if server.IsRunning() {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.True(t, server.IsRunning(), "Server should be running after start")
+	// Use Progressive Readiness Pattern - server should be ready quickly
+	// The server starts in a goroutine, so we use Eventually for proper synchronization
+	require.Eventually(t, func() bool {
+		return server.IsRunning()
+	}, 1*time.Second, 10*time.Millisecond, "Server should be running after start (Progressive Readiness Pattern)")
 
 	// Test server stop
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -95,15 +91,11 @@ func TestWebSocketServer_ProgressiveReadinessPattern(t *testing.T) {
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	// Wait for server to be ready (race condition fix)
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		if server.IsRunning() {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.True(t, server.IsRunning(), "Server should be running after start")
+	// Use Progressive Readiness Pattern - server should be ready quickly
+	// The server starts in a goroutine, so we use Eventually for proper synchronization
+	require.Eventually(t, func() bool {
+		return server.IsRunning()
+	}, 1*time.Second, 10*time.Millisecond, "Server should be running after start (Progressive Readiness Pattern)")
 
 	// Validate Progressive Readiness Pattern behavior
 	helper.ValidateProgressiveReadiness(t, server)
@@ -119,15 +111,10 @@ func TestWebSocketServer_DoubleStart(t *testing.T) {
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	// Wait for server to be ready (race condition fix)
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		if server.IsRunning() {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.True(t, server.IsRunning(), "Server should be running after first start")
+	// Use Progressive Readiness Pattern - server should be ready quickly
+	require.Eventually(t, func() bool {
+		return server.IsRunning()
+	}, 1*time.Second, 10*time.Millisecond, "Server should be running after first start (Progressive Readiness Pattern)")
 
 	// Start server second time should fail
 	err := server.Start()
@@ -180,15 +167,11 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	require.NoError(t, err, "Client should close successfully")
 
 	// Wait for connection cleanup with proper verification
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		connectionCount = server.GetClientCount()
-		if connectionCount == 0 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.Equal(t, int64(0), connectionCount, "Should have no client connections after cleanup")
+	// Use Progressive Readiness Pattern - connections should be cleaned up immediately
+	// The server implements proper connection lifecycle management
+	require.Eventually(t, func() bool {
+		return server.GetClientCount() == 0
+	}, 1*time.Second, 10*time.Millisecond, "Connections should be cleaned up (Progressive Readiness Pattern)")
 }
 
 // TestWebSocketServer_MultipleClients tests multiple client connections
@@ -219,15 +202,11 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	require.NoError(t, err, "Client should close successfully")
 
 	// Wait for connection cleanup with proper verification
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		connectionCount = server.GetClientCount()
-		if connectionCount == 2 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.Equal(t, int64(2), connectionCount, "Should have two client connections after cleanup")
+	// Use Progressive Readiness Pattern - connections should be established immediately
+	// The server implements proper connection lifecycle management
+	require.Eventually(t, func() bool {
+		return server.GetClientCount() == 2
+	}, 1*time.Second, 10*time.Millisecond, "Two client connections should be established (Progressive Readiness Pattern)")
 }
 
 // TestWebSocketServer_MethodRegistration tests method registration
@@ -369,15 +348,11 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 	// Cancel context
 	cancel()
 
-	// Wait for server to stop with proper verification
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		if !server.IsRunning() {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	assert.False(t, server.IsRunning(), "Server should be stopped after context cancellation")
+	// Use Progressive Readiness Pattern - server should stop immediately
+	// The server implements proper context-aware shutdown
+	require.Eventually(t, func() bool {
+		return !server.IsRunning()
+	}, 1*time.Second, 10*time.Millisecond, "Server should be stopped after context cancellation (Progressive Readiness Pattern)")
 }
 
 // TestWebSocketServer_ConcurrentConnections tests concurrent client connections
@@ -1168,8 +1143,7 @@ func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 		defer cancel()
 
-		// Give context time to expire
-		time.Sleep(2 * time.Millisecond)
+		// Context will expire immediately due to 1ms timeout
 
 		start := time.Now()
 		err = server.Stop(ctx)

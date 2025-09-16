@@ -50,15 +50,18 @@ func Test_MonitorStart_Smoke(t *testing.T) {
 
 	// Assert: It returns nil within 250ms on an empty system
 	assert.NoError(t, err, "Monitor should start successfully")
-	assert.Less(t, startDuration, 250*time.Millisecond, "Monitor should start within 250ms")
+	assert.Less(t, startDuration, MaxMonitorStartupTime, "Monitor should start within 250ms")
 
-	// Assert: monitor.IsReady() flips after seed
-	// Give it a moment for the seed discovery to complete
-	time.Sleep(100 * time.Millisecond)
+	// Assert: monitor.IsReady() flips after seed discovery using event-driven pattern
+	// This replaces time.Sleep() with proper event-driven synchronization
+	// Leverages the existing IsReady() method and emitReadinessEvent() mechanism
+	eventHelper := NewEventDrivenTestHelper(t)
+	err = eventHelper.WaitForMonitorReadiness(monitor, MonitorStartupTimeout)
+	require.NoError(t, err, "Monitor should become ready after seed discovery")
 	assert.True(t, monitor.IsReady(), "Monitor should be ready after seed discovery")
 
 	// Cleanup
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 	defer cancel()
 	err = monitor.Stop(ctx)
 	assert.NoError(t, err, "Monitor should stop cleanly")

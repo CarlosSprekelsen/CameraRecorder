@@ -21,6 +21,7 @@ import (
 
 // TestCameraEvent_Constants tests camera event constants
 func TestCameraEvent_Constants(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, CameraEvent("CONNECTED"), CameraEventConnected, "Connected event should match")
 	assert.Equal(t, CameraEvent("DISCONNECTED"), CameraEventDisconnected, "Disconnected event should match")
 	assert.Equal(t, CameraEvent("STATUS_CHANGED"), CameraEventStatusChanged, "Status changed event should match")
@@ -28,6 +29,7 @@ func TestCameraEvent_Constants(t *testing.T) {
 
 // TestCameraEventData_Structure tests camera event data structure
 func TestCameraEventData_Structure(t *testing.T) {
+	t.Parallel()
 	eventData := CameraEventData{
 		DevicePath: "/dev/video0",
 		EventType:  CameraEventConnected,
@@ -110,7 +112,7 @@ func TestV4L2CommandExecutor_RealImplementation(t *testing.T) {
 					t.Logf("Successfully queried %s: %s", path, output[:100])
 					break
 				} else {
-					t.Logf("⚠️  Could not query %s: %v", path, err)
+					t.Logf("Could not query %s: %v", path, err)
 				}
 			}
 		}
@@ -353,6 +355,7 @@ func TestCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 
 // TestMonitorStats_Structure tests monitor stats structure
 func TestMonitorStats_Structure(t *testing.T) {
+	t.Parallel()
 	stats := &MonitorStats{
 		Running:                    false,
 		ActiveTasks:                0,
@@ -378,6 +381,7 @@ func TestMonitorStats_Structure(t *testing.T) {
 
 // TestCapabilityDetectionResult_Structure tests capability detection result structure
 func TestCapabilityDetectionResult_Structure(t *testing.T) {
+	t.Parallel()
 	result := &CapabilityDetectionResult{
 		Detected:              true,
 		Accessible:            true,

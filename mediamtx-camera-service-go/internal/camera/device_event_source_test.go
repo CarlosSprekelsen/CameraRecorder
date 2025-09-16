@@ -59,7 +59,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 	defer eventSource.Close()
 
 	t.Run("start_stop_cycle", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// Test start
@@ -72,7 +72,7 @@ func TestFsnotifyDeviceEventSource_StartStop(t *testing.T) {
 	})
 
 	t.Run("double_start", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// First start
@@ -141,13 +141,13 @@ func TestFsnotifyDeviceEventSource_Events(t *testing.T) {
 			if ok {
 				t.Errorf("Expected no events before start, got event: %+v", event)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(QuickPollInterval):
 			// This is expected - no events before start
 		}
 	})
 
 	t.Run("events_channel_after_start", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// Start event source
@@ -162,7 +162,7 @@ func TestFsnotifyDeviceEventSource_Events(t *testing.T) {
 		select {
 		case <-eventsChan:
 			// This is expected - we might get events or the channel might be closed
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(QuickPollInterval):
 			// Also acceptable - no events in this timeframe
 		}
 
@@ -188,13 +188,13 @@ func TestFsnotifyDeviceEventSource_EventProcessing(t *testing.T) {
 
 		// Create a test file that should be filtered out
 		nonVideoFile := filepath.Join(testDir, "not_video_device")
-		err := os.WriteFile(nonVideoFile, []byte("test"), 0644)
+		err := os.WriteFile(nonVideoFile, []byte("test"), DefaultFileMode)
 		require.NoError(t, err)
 
 		// The filtering happens in processEvent method
 		// We can't directly test fsnotify events, but we can verify the method exists
 		// and the event source can be created and started
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 		defer cancel()
 
 		err = eventSource.Start(ctx)
@@ -215,14 +215,14 @@ func TestFsnotifyDeviceEventSource_Concurrency(t *testing.T) {
 		require.NoError(t, err)
 		defer eventSource.Close()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		var wg sync.WaitGroup
 		errors := make(chan error, 10)
 
 		// Start multiple goroutines trying to start/stop
-		for i := 0; i < 5; i++ {
+		for i := 0; i < StressTestIterations; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -235,8 +235,10 @@ func TestFsnotifyDeviceEventSource_Concurrency(t *testing.T) {
 			}()
 		}
 
-		// Wait a bit then stop
-		time.Sleep(100 * time.Millisecond)
+		// Wait for event source to start and stabilize using event-driven pattern
+		eventHelper := NewEventDrivenTestHelper(t)
+		err = eventHelper.WaitForEventSourceStarted(eventSource, EventSourceTimeout)
+		require.NoError(t, err, "Event source should start successfully for concurrent test")
 		err = eventSource.Close()
 		require.NoError(t, err, "Should close event source successfully")
 
@@ -261,7 +263,7 @@ func TestFsnotifyDeviceEventSource_Concurrency(t *testing.T) {
 		require.NoError(t, err)
 		defer eventSource.Close()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 		defer cancel()
 
 		err = eventSource.Start(ctx)
@@ -271,14 +273,14 @@ func TestFsnotifyDeviceEventSource_Concurrency(t *testing.T) {
 		var wg sync.WaitGroup
 		eventsChan := eventSource.Events()
 
-		for i := 0; i < 3; i++ {
+		for i := 0; i < DefaultTestIterations; i++ {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				select {
 				case <-eventsChan:
 					// Event received or channel closed
-				case <-time.After(100 * time.Millisecond):
+				case <-time.After(QuickPollInterval):
 					// Timeout - acceptable
 				}
 			}()
@@ -317,7 +319,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 		defer eventSource.Close()
 
 		// Start should work in normal test environment
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 		defer cancel()
 
 		err = eventSource.Start(ctx)
@@ -360,7 +362,7 @@ func TestUdevDeviceEventSource_StartStop(t *testing.T) {
 	defer eventSource.Close()
 
 	t.Run("start_stop_cycle", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// Test start (placeholder implementation)
@@ -373,7 +375,7 @@ func TestUdevDeviceEventSource_StartStop(t *testing.T) {
 	})
 
 	t.Run("double_start", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// First start
@@ -418,13 +420,13 @@ func TestUdevDeviceEventSource_Events(t *testing.T) {
 			if ok {
 				t.Errorf("Expected no events before start, got event: %+v", event)
 			}
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(QuickPollInterval):
 			// This is expected - no events before start
 		}
 	})
 
 	t.Run("events_channel_after_start", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultTestTimeout)
 		defer cancel()
 
 		// Start event source
@@ -439,7 +441,7 @@ func TestUdevDeviceEventSource_Events(t *testing.T) {
 		select {
 		case <-eventsChan:
 			// This is expected - we might get events or the channel might be closed
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(QuickPollInterval):
 			// Also acceptable - no events in this timeframe
 		}
 
@@ -451,16 +453,30 @@ func TestUdevDeviceEventSource_Events(t *testing.T) {
 
 // TestDeviceEventTypes tests the device event type constants and structures
 func TestDeviceEventTypes(t *testing.T) {
+	t.Parallel()
 	t.Run("event_type_constants", func(t *testing.T) {
-		assert.Equal(t, DeviceEventType("add"), DeviceEventAdd, "DeviceEventAdd should be 'add'")
-		assert.Equal(t, DeviceEventType("remove"), DeviceEventRemove, "DeviceEventRemove should be 'remove'")
-		assert.Equal(t, DeviceEventType("change"), DeviceEventChange, "DeviceEventChange should be 'change'")
+		tests := []struct {
+			name     string
+			constant DeviceEventType
+			expected string
+		}{
+			{"add_event", DeviceEventAdd, "add"},
+			{"remove_event", DeviceEventRemove, "remove"},
+			{"change_event", DeviceEventChange, "change"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				assert.Equal(t, DeviceEventType(tt.expected), tt.constant,
+					"%s should be '%s'", tt.name, tt.expected)
+			})
+		}
 	})
 
 	t.Run("device_event_creation", func(t *testing.T) {
 		event := DeviceEvent{
 			Type:       DeviceEventAdd,
-			DevicePath: "/dev/video0",
+			DevicePath: TestDevicePath1,
 			Vendor:     "TestVendor",
 			Product:    "TestProduct",
 			Serial:     "TestSerial",
@@ -468,7 +484,7 @@ func TestDeviceEventTypes(t *testing.T) {
 		}
 
 		assert.Equal(t, DeviceEventAdd, event.Type, "Event type should be DeviceEventAdd")
-		assert.Equal(t, "/dev/video0", event.DevicePath, "Device path should be correct")
+		assert.Equal(t, TestDevicePath1, event.DevicePath, "Device path should be correct")
 		assert.Equal(t, "TestVendor", event.Vendor, "Vendor should be correct")
 		assert.Equal(t, "TestProduct", event.Product, "Product should be correct")
 		assert.Equal(t, "TestSerial", event.Serial, "Serial should be correct")
@@ -496,6 +512,7 @@ func TestDeviceEventTypes(t *testing.T) {
 
 // TestDeviceEventSource_Interface tests the DeviceEventSource interface compliance
 func TestDeviceEventSource_Interface(t *testing.T) {
+	t.Parallel()
 	t.Run("fsnotify_interface_compliance", func(t *testing.T) {
 		logger := logging.CreateTestLogger(t, nil)
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
@@ -506,7 +523,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 		var _ DeviceEventSource = eventSource
 
 		// Test interface methods
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 		defer cancel()
 
 		err = eventSource.Start(ctx)
@@ -529,7 +546,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 		var _ DeviceEventSource = eventSource
 
 		// Test interface methods
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 		defer cancel()
 
 		err = eventSource.Start(ctx)
@@ -550,7 +567,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DeviceAccessTimeout)
 		defer cancel()
 
 		// Start
@@ -561,8 +578,11 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		eventsChan := eventSource.Events()
 		require.NotNil(t, eventsChan, "Should provide events channel")
 
-		// Let it run for a bit
-		time.Sleep(100 * time.Millisecond)
+		// Wait for event source to start using event-driven pattern
+		// This replaces time.Sleep() with proper event-driven synchronization
+		eventHelper := NewEventDrivenTestHelper(t)
+		err = eventHelper.WaitForEventSourceStarted(eventSource, EventSourceTimeout)
+		require.NoError(t, err, "Event source should start successfully")
 
 		// Stop
 		err = eventSource.Close()
@@ -574,7 +594,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		eventSource, err := NewUdevDeviceEventSource(logger)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), DeviceAccessTimeout)
 		defer cancel()
 
 		// Start
@@ -585,8 +605,11 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 		eventsChan := eventSource.Events()
 		require.NotNil(t, eventsChan, "Should provide events channel")
 
-		// Let it run for a bit
-		time.Sleep(100 * time.Millisecond)
+		// Wait for event source to start using event-driven pattern
+		// This replaces time.Sleep() with proper event-driven synchronization
+		eventHelper := NewEventDrivenTestHelper(t)
+		err = eventHelper.WaitForEventSourceStarted(eventSource, EventSourceTimeout)
+		require.NoError(t, err, "Event source should start successfully")
 
 		// Stop
 		err = eventSource.Close()
@@ -603,13 +626,16 @@ func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 		defer eventSource.Close()
 
 		// Start and stop multiple times to test recovery
-		for i := 0; i < 3; i++ {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		for i := 0; i < DefaultTestIterations; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 
 			err = eventSource.Start(ctx)
 			require.NoError(t, err, "Should start successfully on iteration %d", i)
 
-			time.Sleep(50 * time.Millisecond)
+			// Wait for event source to stabilize using event-driven pattern
+			eventHelper := NewEventDrivenTestHelper(t)
+			err = eventHelper.WaitForEventSourceStarted(eventSource, QuickTestTimeout)
+			require.NoError(t, err, "Event source should start successfully on iteration %d", i)
 
 			err = eventSource.Close()
 			require.NoError(t, err, "Should stop successfully on iteration %d", i)
@@ -625,13 +651,16 @@ func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 		defer eventSource.Close()
 
 		// Start and stop multiple times to test recovery
-		for i := 0; i < 3; i++ {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		for i := 0; i < DefaultTestIterations; i++ {
+			ctx, cancel := context.WithTimeout(context.Background(), ShortTestTimeout)
 
 			err = eventSource.Start(ctx)
 			require.NoError(t, err, "Should start successfully on iteration %d", i)
 
-			time.Sleep(50 * time.Millisecond)
+			// Wait for event source to stabilize using event-driven pattern
+			eventHelper := NewEventDrivenTestHelper(t)
+			err = eventHelper.WaitForEventSourceStarted(eventSource, QuickTestTimeout)
+			require.NoError(t, err, "Event source should start successfully on iteration %d", i)
 
 			err = eventSource.Close()
 			require.NoError(t, err, "Should stop successfully on iteration %d", i)

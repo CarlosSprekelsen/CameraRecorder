@@ -132,8 +132,14 @@ func (kr *RTSPKeepaliveReader) startReader(ctx context.Context, session *keepali
 	// Monitor the reader in a goroutine
 	go kr.monitorReader(ctx, session)
 
-	// Give it a moment to connect
-	time.Sleep(500 * time.Millisecond)
+	// Give it a moment to connect using context-aware timeout
+	select {
+	case <-time.After(TestTimeoutLong):
+		// Connection should be established now
+	case <-ctx.Done():
+		// Context cancelled, return early
+		return fmt.Errorf("context cancelled while waiting for RTSP connection to establish")
+	}
 
 	return nil
 }
@@ -166,8 +172,14 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 						"error": err.Error(),
 					}).Warn("Keepalive reader exited, restarting...")
 
-					// Wait before restart to avoid rapid cycling
-					time.Sleep(2 * time.Second)
+					// Wait before restart to avoid rapid cycling using context-aware timeout
+					select {
+					case <-time.After(2 * time.Second):
+						// Backoff period completed, proceed with restart
+					case <-ctx.Done():
+						// Context cancelled, exit early
+						return
+					}
 
 					// Restart the reader
 					if err := kr.startReader(ctx, session); err != nil {

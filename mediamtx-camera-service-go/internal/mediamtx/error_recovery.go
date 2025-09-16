@@ -74,7 +74,9 @@ func (per *PathErrorRecovery) monitorPath(path string) {
 		maxRetries := 5
 
 		for retries < maxRetries {
-			time.Sleep(time.Minute * time.Duration(retries+1))
+			// Use timeout for retry backoff
+			backoffDuration := time.Minute * time.Duration(retries+1)
+			time.Sleep(backoffDuration)
 
 			if err := checkPath(path); err == nil {
 				per.logger.WithField("path", path).Info("Path recovered")

@@ -10,6 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test correlation IDs for test fixtures
+const (
+	TestCorrelationID1 = "test-correlation-001"
+	TestCorrelationID2 = "test-correlation-002"
+	TestCorrelationID3 = "test-correlation-003"
+	TestCorrelationID4 = "test-correlation-004"
+)
+
 // TestLoggerConfig represents a test logger configuration
 type TestLoggerConfig struct {
 	Component     string

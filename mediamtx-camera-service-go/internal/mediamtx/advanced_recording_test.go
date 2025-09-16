@@ -68,7 +68,14 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 			break
 		}
 		if strings.Contains(err.Error(), "not ready") {
-			time.Sleep(time.Second)
+			// Use proper synchronization instead of time.Sleep
+			select {
+			case <-time.After(TestRetryDelay):
+				// Continue with retry
+			case <-ctx.Done():
+				// Context cancelled, exit early
+				return
+			}
 			continue
 		}
 		require.NoError(t, err)

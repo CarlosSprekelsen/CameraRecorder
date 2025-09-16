@@ -82,11 +82,14 @@ func TestHybridCameraMonitor_StartStop(t *testing.T) {
 		// Monitor should be running immediately after Start() returns
 		assert.True(t, monitor.IsRunning(), "Monitor should be running after start")
 
-		// Allow monitoring loop to run for a short time to ensure it starts properly
-		time.Sleep(100 * time.Millisecond)
+		// Wait for monitoring loop to start properly using event-driven pattern
+		// This replaces time.Sleep() with proper event-driven synchronization
+		eventHelper := NewEventDrivenTestHelper(t)
+		err = eventHelper.WaitForMonitorRunning(monitor, EventSourceTimeout)
+		require.NoError(t, err, "Monitor should start running properly")
 
 		// Stop the monitor to clean up for the next subtest
-		stopCtx, stopCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), DeviceAccessTimeout)
 		defer stopCancel()
 		err = monitor.Stop(stopCtx)
 		require.NoError(t, err, "Monitor should stop successfully after start test")
@@ -237,7 +240,7 @@ func TestHybridCameraMonitor_Performance(t *testing.T) {
 		duration := time.Since(start)
 
 		assert.True(t, exists, "Proc version should exist")
-		assert.Less(t, duration, 50*time.Millisecond, "Device existence check should be fast (<50ms)")
+		assert.Less(t, duration, MaxDeviceCheckTime, "Device existence check should be fast (<50ms)")
 	})
 }
 
@@ -1529,13 +1532,15 @@ func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
 		err = monitor.Start(ctx)
 		require.NoError(t, err, "Monitor should start successfully")
 
-		// Use very short timeout to test timeout handling
-		// Test with a very short timeout that should be hit
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
+		// JUSTIFIED time.Sleep(): This is a stress test with intentionally impossible timeout
+		// We test that the system doesn't hang when given an impossibly short timeout (1 microsecond)
+		// The time.Sleep(1 * time.Millisecond) ensures the context expires before we call Stop()
+		// This validates that timeout handling works correctly under extreme conditions
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), ExtremeShortTimeout)
 		defer cancel()
 
-		// Give context time to expire
-		time.Sleep(1 * time.Millisecond)
+		// Give context time to expire (ensures timeout is hit)
+		time.Sleep(ContextExpirationDelay)
 
 		start := time.Now()
 		err = monitor.Stop(shutdownCtx)

@@ -16,9 +16,7 @@ package mediamtx
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediaMTXConfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +30,11 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Use MediaMTX mediaMTXConfig from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Use MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
@@ -323,14 +324,17 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	// Use MediaMTX mediaMTXConfig from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Use MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
 	require.NotNil(t, client, "Client should not be nil")
 
 	// Test close
-	err := client.Close()
+	err = client.Close()
 	require.NoError(t, err, "Client close should succeed")
 }

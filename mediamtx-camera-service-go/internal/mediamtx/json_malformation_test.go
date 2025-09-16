@@ -69,7 +69,7 @@ func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 						t.Logf("Scenario %s correctly produced expected error: %v", scenario.Name, err)
 					} else {
 						if err != nil {
-							t.Errorf("🚨 BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
+							t.Errorf("BUG DETECTED: Scenario %s should be handled gracefully but got error: %v", scenario.Name, err)
 						} else {
 							t.Logf("Scenario %s handled gracefully (no error)", scenario.Name)
 						}
@@ -124,7 +124,7 @@ func TestJSONParsingPanicProtection_DangerousBugs(t *testing.T) {
 			// Test that parsing doesn't panic or cause crashes
 			defer func() {
 				if r := recover(); r != nil {
-					t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
+					t.Errorf("BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
 				}
 			}()
 
@@ -291,7 +291,7 @@ func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 				// Test that parsing doesn't panic or cause crashes
 				defer func() {
 					if r := recover(); r != nil {
-						t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
+						t.Errorf("BUG DETECTED: JSON parsing caused panic with edge case %s: %v", testCase.name, r)
 					}
 				}()
 
@@ -331,7 +331,7 @@ func TestJSONParsingEdgeCases_DangerousBugs(t *testing.T) {
 								// Test that parsing doesn't panic with edge case data
 								defer func() {
 									if r := recover(); r != nil {
-										t.Errorf("🚨 BUG DETECTED: JSON parsing caused panic with edge case %s: %v", scenario.Name, r)
+										t.Errorf("BUG DETECTED: JSON parsing caused panic with edge case %s: %v", scenario.Name, r)
 									}
 								}()
 

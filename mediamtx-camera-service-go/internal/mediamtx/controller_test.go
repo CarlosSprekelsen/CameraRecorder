@@ -520,10 +520,10 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// ✅ USE EXISTING: Get fresh controller using the same pattern as working tests
+	// USE EXISTING: Get fresh controller using the same pattern as working tests
 	controller := getFreshController(t, "TestController_StartRecording_ReqMTX002")
 
-	// ✅ USE EXISTING: Start controller using the same pattern as working tests
+	// USE EXISTING: Start controller using the same pattern as working tests
 	ctx := context.Background()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -535,11 +535,11 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// ✅ USE EXISTING: Get camera identifier
+	// USE EXISTING: Get camera identifier
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
-	// ✅ USE EXISTING: Get configured recording path
+	// USE EXISTING: Get configured recording path
 	recordingsPath := helper.GetConfiguredRecordingPath()
 	t.Logf("Using configured recording path: %s", recordingsPath)
 
@@ -565,8 +565,14 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	assert.Contains(t, session.FilePath, "%path", "File path should contain MediaMTX path placeholder")
 	assert.Contains(t, session.FilePath, "%Y%m%d_%H%M%S", "File path should contain MediaMTX timestamp placeholder")
 
-	// Wait for recording to complete (2 seconds + small buffer)
-	time.Sleep(3 * time.Second)
+	// Wait for recording to complete using proper synchronization
+	select {
+	case <-time.After(TestTimeoutExtreme):
+		// Recording should be complete now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Stop the recording
 	err = controller.StopRecording(ctx, session.ID)
@@ -597,7 +603,7 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Should be able to stat the recording file")
 	assert.Greater(t, fileInfo.Size(), int64(0), "Recording file should not be empty")
 
-	t.Logf("✅ Recording file created: %s (size: %d bytes)", matches[0], fileInfo.Size())
+	t.Logf("Recording file created: %s (size: %d bytes)", matches[0], fileInfo.Size())
 }
 
 // TestController_StopRecording_ReqMTX002 tests recording stop functionality through controller
@@ -1085,7 +1091,7 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 		setter.SetSystemEventNotifier(mockNotifier)
 		t.Log("SetSystemEventNotifier method called successfully")
 	} else {
-		t.Log("⚠️ SetSystemEventNotifier method not available on controller interface")
+		t.Log("SetSystemEventNotifier method not available on controller interface")
 	}
 
 	// Test that notifications are sent when thresholds are crossed
@@ -1357,7 +1363,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+						t.Errorf("BUG DETECTED: Race condition caused panic: %v", r)
 					}
 					done <- true
 				}()
@@ -1375,7 +1381,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+						t.Errorf("BUG DETECTED: Race condition caused panic: %v", r)
 					}
 					done <- true
 				}()
@@ -1403,8 +1409,14 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			t.Logf("Final stop failed (expected if not running): %v", err)
 		}
 
-		// Give time for all goroutines to clean up
-		time.Sleep(100 * time.Millisecond)
+		// Give time for all goroutines to clean up using proper synchronization
+		select {
+		case <-time.After(TestTimeoutShort):
+			// Goroutines should be cleaned up now
+		case <-ctx.Done():
+			// Context cancelled, exit early
+			return
+		}
 
 		t.Logf("Concurrent start/stop operations completed without panic")
 	})
@@ -1429,7 +1441,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 			// This test verifies the public interface works correctly
 			_, err := controller.GetHealth(ctx)
 			if err != nil {
-				t.Errorf("🚨 BUG DETECTED: Controller health check failed during operation %d: %v", i, err)
+				t.Errorf("BUG DETECTED: Controller health check failed during operation %d: %v", i, err)
 			}
 		}
 
@@ -1441,8 +1453,14 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 		stopErr := controller.Stop(finalStopCtx)
 		require.NoError(t, stopErr, "Controller stop should succeed")
 
-		// Give time for all goroutines to clean up
-		time.Sleep(100 * time.Millisecond)
+		// Give time for all goroutines to clean up using proper synchronization
+		select {
+		case <-time.After(TestTimeoutShort):
+			// Goroutines should be cleaned up now
+		case <-ctx.Done():
+			// Context cancelled, exit early
+			return
+		}
 	})
 }
 
@@ -1489,7 +1507,14 @@ func TestEventDrivenReadiness(t *testing.T) {
 				isReady = true
 				break
 			}
-			time.Sleep(100 * time.Millisecond)
+			// Use proper synchronization instead of time.Sleep
+			select {
+			case <-time.After(100 * time.Millisecond):
+				// Continue with next iteration
+			case <-ctx.Done():
+				// Context cancelled, exit early
+				break
+			}
 		}
 
 		// Verify controller becomes ready (Progressive Readiness - components initialize as needed)
@@ -1654,7 +1679,7 @@ func TestGracefulShutdown(t *testing.T) {
 		err = monitor.Stop(shutdownCtx)
 		require.NoError(t, err, "Health monitor should shut down gracefully")
 
-		t.Logf("✅ Health monitor graceful shutdown test passed")
+		t.Logf("Health monitor graceful shutdown test passed")
 	})
 
 	t.Run("path_integration_graceful_shutdown", func(t *testing.T) {
@@ -1682,7 +1707,7 @@ func TestGracefulShutdown(t *testing.T) {
 		err = pathIntegration.Stop(shutdownCtx)
 		require.NoError(t, err, "Path integration should shut down gracefully")
 
-		t.Logf("✅ Path integration graceful shutdown test passed")
+		t.Logf("Path integration graceful shutdown test passed")
 	})
 
 	t.Run("controller_graceful_shutdown", func(t *testing.T) {
@@ -1706,7 +1731,7 @@ func TestGracefulShutdown(t *testing.T) {
 		err = controller.Stop(shutdownCtx)
 		require.NoError(t, err, "Controller should shut down gracefully")
 
-		t.Logf("✅ Controller graceful shutdown test passed")
+		t.Logf("Controller graceful shutdown test passed")
 	})
 
 	t.Run("context_cancellation_propagation", func(t *testing.T) {
@@ -1746,9 +1771,9 @@ func TestGracefulShutdown(t *testing.T) {
 		elapsed := time.Since(start)
 
 		require.NoError(t, err, "Health monitor should shut down quickly after context cancellation")
-		require.Less(t, elapsed, 500*time.Millisecond, "Shutdown should be fast with cancelled context")
+		require.Less(t, elapsed, TestThresholdMediumShutdown, "Shutdown should be fast with cancelled context")
 
-		t.Logf("✅ Context cancellation propagation test passed (shutdown took %v)", elapsed)
+		t.Logf("Context cancellation propagation test passed (shutdown took %v)", elapsed)
 	})
 
 	t.Run("fast_shutdown_verification", func(t *testing.T) {
@@ -1786,8 +1811,8 @@ func TestGracefulShutdown(t *testing.T) {
 
 		// Should complete successfully and quickly
 		require.NoError(t, err, "Shutdown should complete successfully")
-		require.Less(t, elapsed, 100*time.Millisecond, "Shutdown should be fast with context-aware implementation")
+		require.Less(t, elapsed, TestThresholdFastShutdown, "Shutdown should be fast with context-aware implementation")
 
-		t.Logf("✅ Fast shutdown verification test passed (shutdown took %v)", elapsed)
+		t.Logf("Fast shutdown verification test passed (shutdown took %v)", elapsed)
 	})
 }

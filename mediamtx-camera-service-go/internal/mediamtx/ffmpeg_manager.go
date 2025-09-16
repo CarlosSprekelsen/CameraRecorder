@@ -410,7 +410,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 					"backoff_delay":  backoffDelay,
 					"correlation_id": correlationID,
 				}).Debug("Retrying FFmpeg operation after backoff")
-				time.Sleep(backoffDelay)
+				// Use context-aware timeout for backoff delay
+				select {
+				case <-time.After(backoffDelay):
+					// Backoff period completed, continue with retry
+				case <-ctx.Done():
+					// Context cancelled, return early
+					return lastErr
+				}
 				continue
 			}
 			return lastErr
@@ -460,7 +467,14 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 				"backoff_delay":  backoffDelay,
 				"correlation_id": correlationID,
 			}).Debug("Retrying FFmpeg operation after backoff")
-			time.Sleep(backoffDelay)
+			// Use context-aware timeout for backoff delay
+			select {
+			case <-time.After(backoffDelay):
+				// Backoff period completed, continue with retry
+			case <-ctx.Done():
+				// Context cancelled, return early
+				return lastErr
+			}
 		}
 	}
 

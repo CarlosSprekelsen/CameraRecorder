@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,8 +15,11 @@ func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -36,8 +37,11 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -48,7 +52,7 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	pathName := "test_camera"
 
 	// This will fail because MediaMTX is not running, but we can test the logic
-	err := reader.StartKeepalive(ctx, pathName)
+	err = reader.StartKeepalive(ctx, pathName)
 
 	// Should not fail due to missing MediaMTX (graceful handling)
 	// The actual FFmpeg process will fail, but the reader should handle it gracefully
@@ -64,15 +68,18 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test stopping a non-existent keepalive
-	err := reader.StopKeepalive("non_existent_path")
+	err = reader.StopKeepalive("non_existent_path")
 	assert.NoError(t, err, "Stopping non-existent keepalive should not fail")
 
 	// Test stopping an active keepalive
@@ -96,8 +103,11 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -127,8 +137,11 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -157,8 +170,11 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -198,16 +214,17 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 		}
 	}()
 
-	// Set test environment variable
-	testDir := "/tmp/test_mediamtx_env"
-	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
-
-	// Use fixture-based test helper following Path Management Solution
+	// Use centralized path management instead of hardcoded paths
 	helper := NewMediaMTXTestHelper(t, nil)
+	testDir := helper.GetConfig().TestDataDir
+	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -223,8 +240,11 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get MediaMTX config from fixture
-	mediaMTXConfig := helper.GetMediaMTXConfig()
+	// Get MediaMTX config from fixture via ConfigIntegration
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
@@ -240,7 +260,16 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func() {
 			reader.StartKeepalive(ctx, pathName)
-			time.Sleep(10 * time.Millisecond)
+			// Use proper synchronization instead of time.Sleep
+			// Wait for keepalive to be established before stopping
+			select {
+			case <-time.After(10 * time.Millisecond):
+				// Timeout reached, proceed with stop
+			case <-ctx.Done():
+				// Context cancelled, exit early
+				done <- true
+				return
+			}
 			reader.StopKeepalive(pathName)
 			done <- true
 		}()

@@ -611,8 +611,14 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 					return
 				}
 
-				// Small delay to simulate real usage
-				time.Sleep(10 * time.Millisecond)
+				// Small delay to simulate real usage using proper synchronization
+				select {
+				case <-time.After(10 * time.Millisecond):
+					// Continue with next iteration
+				case <-ctx.Done():
+					// Context cancelled, exit early
+					return
+				}
 			}
 		}(i)
 	}
@@ -676,8 +682,8 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	avgTimePerOp := duration / time.Duration(numOperations)
 
 	// Performance assertions
-	assert.Less(t, duration, 30*time.Second, "Stress test should complete within 30 seconds")
-	assert.Less(t, avgTimePerOp, 500*time.Millisecond, "Average time per operation should be less than 500ms")
+	assert.Less(t, duration, TestThresholdStressTest, "Stress test should complete within 30 seconds")
+	assert.Less(t, avgTimePerOp, TestThresholdFastOperation, "Average time per operation should be less than 500ms")
 
 	logTestProgress(t, helper.GetLogger(), "Stress test completed successfully", map[string]interface{}{
 		"total_operations":      numOperations,
@@ -768,8 +774,8 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 
 		if err == nil {
 			// This is a BUG - negative page numbers should be rejected
-			t.Errorf("🚨 BUG DETECTED: Negative page number (-1) should be rejected but was accepted")
-			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
+			t.Errorf("BUG DETECTED: Negative page number (-1) should be rejected but was accepted")
+			t.Errorf("This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
 			t.Logf("Negative page number correctly rejected: %v", err)
 		}
@@ -782,8 +788,8 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 
 		if err == nil {
 			// This is a BUG - zero items per page should be rejected
-			t.Errorf("🚨 BUG DETECTED: Zero items per page should be rejected but was accepted")
-			t.Errorf("🚨 This indicates a dangerous bug - invalid inputs are not being validated")
+			t.Errorf("BUG DETECTED: Zero items per page should be rejected but was accepted")
+			t.Errorf("This indicates a dangerous bug - invalid inputs are not being validated")
 		} else {
 			t.Logf("Zero items per page correctly rejected: %v", err)
 		}

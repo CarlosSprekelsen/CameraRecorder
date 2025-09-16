@@ -305,7 +305,7 @@ func TestHealthNotificationManager_AtomicOperations_ReqMTX004(t *testing.T) {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					t.Errorf("🚨 BUG DETECTED: Race condition caused panic: %v", r)
+					t.Errorf("BUG DETECTED: Race condition caused panic: %v", r)
 				}
 				done <- true
 			}()

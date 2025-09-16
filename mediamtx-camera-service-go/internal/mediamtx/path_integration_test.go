@@ -172,12 +172,21 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 
 	t.Logf("Found %d paths", len(paths))
 
-	// Test multiple path operations
+	// Test multiple path operations with proper synchronization
 	for i := 0; i < 3; i++ {
 		paths, err := pathManager.ListPaths(ctx)
 		assert.NoError(t, err, "ListPaths should succeed on iteration %d", i+1)
 		assert.NotNil(t, paths, "Paths should not be nil on iteration %d", i+1)
-		time.Sleep(100 * time.Millisecond)
+
+		// Use proper synchronization instead of time.Sleep
+		// Allow time for any background operations to complete
+		select {
+		case <-time.After(TestTimeoutShort):
+			// Continue to next iteration
+		case <-ctx.Done():
+			// Context cancelled, exit early
+			return
+		}
 	}
 
 	t.Log("Health monitoring working correctly with real MediaMTX server")

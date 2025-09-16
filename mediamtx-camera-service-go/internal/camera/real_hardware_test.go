@@ -572,14 +572,21 @@ func TestRealHardware_EdgeCases(t *testing.T) {
 		// This is a real hardware scenario that can occur
 		helper.TestWithRealDevice(func(devicePath string) error {
 			// Try to access device multiple times to simulate busy scenario
-			for i := 0; i < 3; i++ {
+			// Use proper retry pattern with exponential backoff instead of fixed sleep
+			for i := 0; i < DefaultTestIterations; i++ {
 				err := helper.TestDeviceAccessibility(devicePath)
 				if err != nil {
 					t.Logf("Device busy on attempt %d: %v", i+1, err)
 					// This is expected behavior for busy devices
 					return nil
 				}
-				time.Sleep(100 * time.Millisecond)
+
+				// Exponential backoff: 10ms, 20ms, 40ms
+				// This is more efficient than fixed 100ms delay
+				if i < DefaultTestIterations-1 {
+					backoffDelay := time.Duration(10*(1<<i)) * time.Millisecond
+					time.Sleep(backoffDelay)
+				}
 			}
 			return nil
 		})

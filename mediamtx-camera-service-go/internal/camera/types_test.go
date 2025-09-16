@@ -27,6 +27,7 @@ import (
 
 // TestCameraDevice tests the CameraDevice struct
 func TestCameraDevice(t *testing.T) {
+	t.Parallel()
 	t.Run("camera_device_creation", func(t *testing.T) {
 		device := &CameraDevice{
 			Path: "/dev/video0",
@@ -111,6 +112,7 @@ func TestCameraDevice(t *testing.T) {
 
 // TestDeviceStatus tests the DeviceStatus constants
 func TestDeviceStatus(t *testing.T) {
+	t.Parallel()
 	t.Run("device_status_constants", func(t *testing.T) {
 		assert.Equal(t, "CONNECTED", string(DeviceStatusConnected), "Connected status should be correct")
 		assert.Equal(t, "DISCONNECTED", string(DeviceStatusDisconnected), "Disconnected status should be correct")
@@ -141,6 +143,7 @@ func TestDeviceStatus(t *testing.T) {
 
 // TestV4L2Capabilities tests the V4L2Capabilities struct
 func TestV4L2Capabilities(t *testing.T) {
+	t.Parallel()
 	t.Run("v4l2_capabilities_creation", func(t *testing.T) {
 		capabilities := V4L2Capabilities{
 			DriverName:   "uvcvideo",
@@ -208,6 +211,7 @@ func TestV4L2Capabilities(t *testing.T) {
 
 // TestV4L2Format tests the V4L2Format struct
 func TestV4L2Format(t *testing.T) {
+	t.Parallel()
 	t.Run("v4l2_format_creation", func(t *testing.T) {
 		format := V4L2Format{
 			PixelFormat: "YUYV",
@@ -269,6 +273,7 @@ func TestV4L2Format(t *testing.T) {
 
 // TestDeviceCapabilityState tests the DeviceCapabilityState struct
 func TestDeviceCapabilityState(t *testing.T) {
+	t.Parallel()
 	t.Run("device_capability_state_creation", func(t *testing.T) {
 		probeTime := time.Now()
 		state := DeviceCapabilityState{

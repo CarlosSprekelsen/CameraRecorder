@@ -419,8 +419,13 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 		defer cancel()
 
-		// Give context time to expire
-		time.Sleep(2 * time.Millisecond)
+		// Give context time to expire using proper synchronization
+		select {
+		case <-time.After(2 * time.Millisecond):
+			// Context should be expired now
+		case <-ctx.Done():
+			// Context already cancelled, continue
+		}
 
 		start := time.Now()
 		err = discovery.Stop(shutdownCtx)

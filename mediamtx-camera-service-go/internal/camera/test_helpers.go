@@ -13,6 +13,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test constants for professional camera test suite
+const (
+	// Timeout constants for different test scenarios
+	DefaultTestTimeout    = 5 * time.Second
+	ShortTestTimeout      = 2 * time.Second
+	QuickTestTimeout      = 1 * time.Second
+	MonitorStartupTimeout = 5 * time.Second
+	EventSourceTimeout    = 2 * time.Second
+	DeviceAccessTimeout   = 3 * time.Second
+
+	// Polling intervals for event-driven testing
+	DefaultPollInterval = 10 * time.Millisecond
+	QuickPollInterval   = 100 * time.Millisecond
+
+	// Device testing constants
+	DefaultDevicePath = "/dev/video0"
+	TestDevicePath1   = "/dev/video0"
+	TestDevicePath2   = "/dev/video1"
+	TestDevicePath3   = "/dev/video2"
+
+	// Test iteration constants
+	DefaultTestIterations    = 3
+	StressTestIterations     = 5
+	ConcurrentTestGoroutines = 10
+
+	// Performance test constants
+	MaxDeviceCheckTime    = 50 * time.Millisecond
+	MaxMonitorStartupTime = 250 * time.Millisecond
+
+	// File permission constants
+	DefaultFileMode = 0644
+
+	// Context expiration test constants (stress test)
+	ExtremeShortTimeout    = 1 * time.Microsecond
+	ContextExpirationDelay = 1 * time.Millisecond
+
+	// Hardware timing constants (potentially justified)
+	DeviceBusyRetryDelay = 100 * time.Millisecond
+	DeviceAccessDelay    = 10 * time.Millisecond
+)
+
 // RealHardwareTestHelper provides utilities for testing with REAL camera hardware
 // This is MANDATORY - no fixtures, real devices are available and must be used
 type RealHardwareTestHelper struct {
@@ -21,6 +62,12 @@ type RealHardwareTestHelper struct {
 	deviceChecker    DeviceChecker
 	v4l2Executor     V4L2CommandExecutor
 	deviceParser     DeviceInfoParser
+}
+
+// EventDrivenTestHelper provides utilities for event-driven testing patterns
+// Leverages existing IsReady(), emitReadinessEvent() and other event-driven mechanisms
+type EventDrivenTestHelper struct {
+	t *testing.T
 }
 
 // NewRealHardwareTestHelper creates a new real hardware test helper
@@ -430,8 +477,12 @@ func (h *RealHardwareTestHelper) TestDeviceStressTest(devicePath string, iterati
 			return fmt.Errorf("stress test failed at iteration %d (frame rates): %w", i, err)
 		}
 
-		// Small delay to prevent overwhelming the device
-		time.Sleep(10 * time.Millisecond)
+		// JUSTIFIED time.Sleep(): Hardware timing constraint for real camera devices
+		// Real camera hardware can become overwhelmed during intensive stress testing
+		// This 10ms delay prevents device lockup and ensures reliable test execution
+		// Alternative approaches (event-driven) are not applicable here as we're testing
+		// the device's ability to handle rapid sequential operations
+		time.Sleep(DeviceAccessDelay)
 	}
 
 	return nil
@@ -690,5 +741,143 @@ func (h *RealHardwareTestHelper) TestDevicePerformanceBenchmarks() {
 			// Performance should be reasonable (less than 1 second for basic operations)
 			require.Less(h.t, avgDuration, time.Second, "Device performance should be reasonable")
 		})
+	}
+}
+
+// NewEventDrivenTestHelper creates a new event-driven test helper
+func NewEventDrivenTestHelper(t *testing.T) *EventDrivenTestHelper {
+	return &EventDrivenTestHelper{t: t}
+}
+
+// WaitForMonitorReadiness waits for a monitor to become ready using event-driven pattern
+// This replaces time.Sleep() with proper event-driven synchronization
+// Leverages the existing IsReady() method and emitReadinessEvent() mechanism
+func (h *EventDrivenTestHelper) WaitForMonitorReadiness(monitor CameraMonitor, timeout time.Duration) error {
+	h.t.Helper()
+
+	timeoutChan := time.After(timeout)
+	ticker := time.NewTicker(DefaultPollInterval) // Poll every 10ms for responsiveness
+	defer ticker.Stop()
+
+	h.t.Logf("Waiting for monitor readiness (timeout: %v)", timeout)
+
+	for {
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("monitor did not become ready within %v", timeout)
+		case <-ticker.C:
+			if monitor.IsReady() {
+				h.t.Log("Monitor became ready")
+				return nil // Success
+			}
+		}
+	}
+}
+
+// WaitForMonitorRunning waits for a monitor to start running using event-driven pattern
+// Leverages the existing IsRunning() method
+func (h *EventDrivenTestHelper) WaitForMonitorRunning(monitor CameraMonitor, timeout time.Duration) error {
+	h.t.Helper()
+
+	timeoutChan := time.After(timeout)
+	ticker := time.NewTicker(DefaultPollInterval)
+	defer ticker.Stop()
+
+	h.t.Logf("Waiting for monitor to start running (timeout: %v)", timeout)
+
+	for {
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("monitor did not start running within %v", timeout)
+		case <-ticker.C:
+			if monitor.IsRunning() {
+				h.t.Log("Monitor started running")
+				return nil // Success
+			}
+		}
+	}
+}
+
+// WaitForEventSourceReady waits for an event source to become ready
+// This is a generic pattern that can be extended for different event sources
+func (h *EventDrivenTestHelper) WaitForEventSourceReady(checkFunc func() bool, timeout time.Duration, description string) error {
+	h.t.Helper()
+
+	timeoutChan := time.After(timeout)
+	ticker := time.NewTicker(DefaultPollInterval)
+	defer ticker.Stop()
+
+	h.t.Logf("Waiting for %s (timeout: %v)", description, timeout)
+
+	for {
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("%s did not become ready within %v", description, timeout)
+		case <-ticker.C:
+			if checkFunc() {
+				h.t.Logf("%s became ready", description)
+				return nil // Success
+			}
+		}
+	}
+}
+
+// WaitForEventSourceStarted waits for an event source to start using the Started() method
+// This replaces time.Sleep() with proper event-driven synchronization
+// Leverages the existing Started() method from DeviceEventSource interface
+func (h *EventDrivenTestHelper) WaitForEventSourceStarted(eventSource DeviceEventSource, timeout time.Duration) error {
+	h.t.Helper()
+
+	timeoutChan := time.After(timeout)
+	ticker := time.NewTicker(DefaultPollInterval)
+	defer ticker.Stop()
+
+	h.t.Logf("Waiting for event source to start (timeout: %v)", timeout)
+
+	for {
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("event source did not start within %v", timeout)
+		case <-ticker.C:
+			if eventSource.Started() {
+				h.t.Log("Event source started")
+				return nil // Success
+			}
+		}
+	}
+}
+
+// WaitForEventSourceEvents waits for events from an event source with timeout
+// This provides proper synchronization for event-driven testing
+// Leverages the existing Events() channel from DeviceEventSource interface
+func (h *EventDrivenTestHelper) WaitForEventSourceEvents(eventSource DeviceEventSource, timeout time.Duration, minEvents int) ([]DeviceEvent, error) {
+	h.t.Helper()
+
+	eventsChan := eventSource.Events()
+	if eventsChan == nil {
+		return nil, fmt.Errorf("event source does not provide events channel")
+	}
+
+	var events []DeviceEvent
+	timeoutChan := time.After(timeout)
+
+	h.t.Logf("Waiting for %d events from event source (timeout: %v)", minEvents, timeout)
+
+	for {
+		select {
+		case <-timeoutChan:
+			return events, fmt.Errorf("did not receive %d events within %v (received %d)", minEvents, timeout, len(events))
+		case event, ok := <-eventsChan:
+			if !ok {
+				return events, fmt.Errorf("events channel closed (received %d events)", len(events))
+			}
+			events = append(events, event)
+			h.t.Logf("Received event: %s for device %s", event.Type, event.DevicePath)
+
+			if len(events) >= minEvents {
+				h.t.Logf("Received %d events as requested", len(events))
+				return events, nil // Success
+			}
+		}
 	}
 }

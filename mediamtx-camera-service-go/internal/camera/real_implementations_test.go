@@ -950,6 +950,7 @@ Size : invalid_size`
 
 // TestRealDeviceInfoParser_parseCapabilities tests the deprecated parseCapabilities function
 func TestRealDeviceInfoParser_parseCapabilities(t *testing.T) {
+	t.Parallel()
 	parser := &RealDeviceInfoParser{}
 
 	// Test 1: Valid capability line
@@ -997,145 +998,170 @@ func TestRealDeviceInfoParser_parseCapabilities(t *testing.T) {
 
 // TestRealDeviceInfoParser_parseSize tests the parseSize function
 func TestRealDeviceInfoParser_parseSize(t *testing.T) {
+	t.Parallel()
 	parser := &RealDeviceInfoParser{}
 
-	// Test 1: Valid size
-	t.Run("valid_size", func(t *testing.T) {
-		width, height := parser.parseSize("640x480")
+	tests := []struct {
+		name           string
+		input          string
+		expectedWidth  int
+		expectedHeight int
+		valid          bool
+	}{
+		{
+			name:           "valid_size",
+			input:          "640x480",
+			expectedWidth:  640,
+			expectedHeight: 480,
+			valid:          true,
+		},
+		{
+			name:           "invalid_size_format",
+			input:          "invalid",
+			expectedWidth:  0,
+			expectedHeight: 0,
+			valid:          false,
+		},
+		{
+			name:           "size_with_extra_characters",
+			input:          "1280x720p",
+			expectedWidth:  1280,
+			expectedHeight: 720,
+			valid:          true,
+		},
+		{
+			name:           "empty_string",
+			input:          "",
+			expectedWidth:  0,
+			expectedHeight: 0,
+			valid:          false,
+		},
+	}
 
-		// Should parse correctly
-		require.Equal(t, 640, width, "Width should be 640")
-		require.Equal(t, 480, height, "Height should be 480")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			width, height := parser.parseSize(tt.input)
 
-	// Test 2: Invalid size format
-	t.Run("invalid_size_format", func(t *testing.T) {
-		width, height := parser.parseSize("invalid")
-
-		// Should return zeros
-		require.Equal(t, 0, width, "Width should be 0")
-		require.Equal(t, 0, height, "Height should be 0")
-	})
-
-	// Test 3: Size with extra characters
-	t.Run("size_with_extra_characters", func(t *testing.T) {
-		width, height := parser.parseSize("1280x720p")
-
-		// Should parse correctly (ignores extra characters)
-		require.Equal(t, 1280, width, "Width should be 1280")
-		require.Equal(t, 720, height, "Height should be 720")
-	})
-
-	// Test 4: Empty string
-	t.Run("empty_string", func(t *testing.T) {
-		width, height := parser.parseSize("")
-
-		// Should return zeros
-		require.Equal(t, 0, width, "Width should be 0")
-		require.Equal(t, 0, height, "Height should be 0")
-	})
+			require.Equal(t, tt.expectedWidth, width, "Width should be %d for %s", tt.expectedWidth, tt.name)
+			require.Equal(t, tt.expectedHeight, height, "Height should be %d for %s", tt.expectedHeight, tt.name)
+		})
+	}
 }
 
 // TestRealDeviceInfoParser_extractValue tests the extractValue function
 func TestRealDeviceInfoParser_extractValue(t *testing.T) {
+	t.Parallel()
 	parser := &RealDeviceInfoParser{}
 
-	// Test 1: Valid key-value pair
-	t.Run("valid_key_value", func(t *testing.T) {
-		line := "Driver name      : uvcvideo"
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		empty    bool
+	}{
+		{
+			name:     "valid_key_value",
+			input:    "Driver name      : uvcvideo",
+			expected: "uvcvideo",
+			empty:    false,
+		},
+		{
+			name:     "line_without_colon",
+			input:    "Invalid line without colon",
+			expected: "",
+			empty:    true,
+		},
+		{
+			name:     "empty_line",
+			input:    "",
+			expected: "",
+			empty:    true,
+		},
+		{
+			name:     "value_with_spaces",
+			input:    "Card type        : USB 2.0 Camera: USB 2.0 Camera",
+			expected: "USB 2.0 Camera: USB 2.0 Camera",
+			empty:    false,
+		},
+	}
 
-		value := parser.extractValue(line)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := parser.extractValue(tt.input)
 
-		// Should extract value
-		require.Equal(t, "uvcvideo", value, "Should extract driver name")
-	})
-
-	// Test 2: Line without colon
-	t.Run("line_without_colon", func(t *testing.T) {
-		line := "Invalid line without colon"
-
-		value := parser.extractValue(line)
-
-		// Should return empty
-		require.Empty(t, value, "Should return empty value")
-	})
-
-	// Test 3: Empty line
-	t.Run("empty_line", func(t *testing.T) {
-		value := parser.extractValue("")
-
-		// Should return empty
-		require.Empty(t, value, "Should return empty value")
-	})
-
-	// Test 4: Value with spaces
-	t.Run("value_with_spaces", func(t *testing.T) {
-		line := "Card type        : USB 2.0 Camera: USB 2.0 Camera"
-
-		value := parser.extractValue(line)
-
-		// Should extract value with spaces
-		require.Equal(t, "USB 2.0 Camera: USB 2.0 Camera", value, "Should extract value with spaces")
-	})
+			if tt.empty {
+				require.Empty(t, value, "Should return empty value for %s", tt.name)
+			} else {
+				require.Equal(t, tt.expected, value, "Should extract correct value for %s", tt.name)
+			}
+		})
+	}
 }
 
 // TestRealDeviceInfoParser_normalizeFrameRate tests the normalizeFrameRate function
 func TestRealDeviceInfoParser_normalizeFrameRate(t *testing.T) {
+	t.Parallel()
 	parser := &RealDeviceInfoParser{}
 
-	// Test 1: Valid frame rate
-	t.Run("valid_frame_rate", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("30.000")
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		valid    bool
+	}{
+		{
+			name:     "valid_frame_rate",
+			input:    "30.000",
+			expected: "30.000",
+			valid:    true,
+		},
+		{
+			name:     "frame_rate_with_extra_text",
+			input:    "30.000 fps",
+			expected: "",
+			valid:    false,
+		},
+		{
+			name:     "invalid_frame_rate",
+			input:    "invalid",
+			expected: "",
+			valid:    false,
+		},
+		{
+			name:     "empty_string",
+			input:    "",
+			expected: "",
+			valid:    false,
+		},
+		{
+			name:     "out_of_range_frame_rate",
+			input:    "500.000",
+			expected: "",
+			valid:    false,
+		},
+		{
+			name:     "minimum_valid_rate",
+			input:    "1.000",
+			expected: "1.000",
+			valid:    true,
+		},
+		{
+			name:     "maximum_valid_rate",
+			input:    "300.000",
+			expected: "300.000",
+			valid:    true,
+		},
+	}
 
-		// Should normalize correctly
-		require.Equal(t, "30.000", rate, "Frame rate should be 30.000")
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rate := parser.normalizeFrameRate(tt.input)
 
-	// Test 2: Frame rate with extra text (should fail - function expects just number)
-	t.Run("frame_rate_with_extra_text", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("30.000 fps")
-
-		// Should return empty string because it can't parse "30.000 fps" as float
-		require.Equal(t, "", rate, "Frame rate with extra text should be filtered out")
-	})
-
-	// Test 3: Invalid frame rate
-	t.Run("invalid_frame_rate", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("invalid")
-
-		// Should return empty string
-		require.Equal(t, "", rate, "Frame rate should be empty string")
-	})
-
-	// Test 4: Empty string
-	t.Run("empty_string", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("")
-
-		// Should return empty string
-		require.Equal(t, "", rate, "Frame rate should be empty string")
-	})
-
-	// Test 5: Out of range frame rate
-	t.Run("out_of_range_frame_rate", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("500.000")
-
-		// Should return empty string (out of 1-300 range)
-		require.Equal(t, "", rate, "Out of range frame rate should be filtered out")
-	})
-
-	// Test 6: Edge case - minimum valid rate
-	t.Run("minimum_valid_rate", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("1.000")
-
-		// Should normalize correctly
-		require.Equal(t, "1.000", rate, "Minimum valid frame rate should be 1.000")
-	})
-
-	// Test 7: Edge case - maximum valid rate
-	t.Run("maximum_valid_rate", func(t *testing.T) {
-		rate := parser.normalizeFrameRate("300.000")
-
-		// Should normalize correctly
-		require.Equal(t, "300.000", rate, "Maximum valid frame rate should be 300.000")
-	})
+			if tt.valid {
+				require.Equal(t, tt.expected, rate, "Valid frame rate should be normalized correctly for %s", tt.name)
+			} else {
+				require.Equal(t, tt.expected, rate, "Invalid frame rate should be filtered out for %s", tt.name)
+			}
+		})
+	}
 }

@@ -17,7 +17,7 @@ func TestPathFallback(t *testing.T) {
 
 	// Get configured paths from fixture
 	recordingsPath := helper.GetConfiguredRecordingPath()
-	
+
 	// Create path validator using fixture configuration
 	configManager := helper.GetConfigManager()
 	cfg := configManager.GetConfig()
@@ -51,9 +51,6 @@ func TestPathValidatorCaching(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Get configured paths from fixture
-	recordingsPath := helper.GetConfiguredRecordingPath()
-	
 	// Create path validator using fixture configuration
 	configManager := helper.GetConfigManager()
 	cfg := configManager.GetConfig()
@@ -64,7 +61,7 @@ func TestPathValidatorCaching(t *testing.T) {
 		config:           cfg,
 		logger:           logger,
 		validationCache:  make(map[string]*PathValidationResult),
-		validationPeriod: 100 * time.Millisecond, // Very short for testing
+		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
 	ctx := context.Background()
@@ -86,8 +83,14 @@ func TestPathValidatorCaching(t *testing.T) {
 		t.Error("Expected cached result, but got different validation times")
 	}
 
-	// Wait for cache to expire
-	time.Sleep(150 * time.Millisecond)
+	// Wait for cache to expire using proper synchronization
+	select {
+	case <-time.After(TestValidationPeriodLong):
+		// Cache should be expired now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Third validation (should re-validate)
 	result3, err3 := validator.ValidateRecordingPath(ctx)
@@ -134,8 +137,12 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 }
 
 func TestPathValidatorSinglePathValidation(t *testing.T) {
-	// Create test directory
-	testDir := "/tmp/single_path_test"
+	// Use centralized path management instead of hardcoded paths
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create test directory using configured path
+	testDir := helper.GetConfig().TestDataDir
 	os.MkdirAll(testDir, 0755)
 	defer os.RemoveAll(testDir)
 

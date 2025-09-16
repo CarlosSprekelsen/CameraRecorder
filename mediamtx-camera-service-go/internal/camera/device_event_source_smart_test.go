@@ -21,6 +21,7 @@ import (
 
 // TestSmartDeviceEventSourceSelection tests the smart selection logic
 func TestSmartDeviceEventSourceSelection(t *testing.T) {
+	t.Parallel()
 	logger := logging.CreateTestLogger(t, nil)
 
 	t.Run("factory_creates_instance", func(t *testing.T) {
@@ -96,6 +97,7 @@ func TestSmartDeviceEventSourceSelection(t *testing.T) {
 
 // TestEnvironmentDetectionAccuracy tests the accuracy of environment detection
 func TestEnvironmentDetectionAccuracy(t *testing.T) {
+	t.Parallel()
 	t.Run("container_detection", func(t *testing.T) {
 		isContainer := isContainerEnvironment()
 

@@ -62,7 +62,7 @@ logging:
 
 recording:
   enabled: true
-  format: "mp4"
+  record_format: "mp4"
   quality: "medium"
   segment_duration: 300
   max_segment_size: 104857600

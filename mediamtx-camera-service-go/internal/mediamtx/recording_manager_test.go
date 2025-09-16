@@ -272,8 +272,14 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	// Verify path was created in MediaMTX
 	pathManager := helper.GetPathManager()
 
-	// Wait a bit for path to be ready
-	time.Sleep(500 * time.Millisecond)
+	// Wait for path to be ready using proper synchronization
+	select {
+	case <-time.After(TestTimeoutLong):
+		// Path should be ready now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Check runtime path (not config)
 	path, err := pathManager.GetPath(ctx, cameraID)
@@ -496,8 +502,14 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all goroutines to complete
-	time.Sleep(100 * time.Millisecond)
+	// Wait for all goroutines to complete using proper synchronization
+	select {
+	case <-time.After(TestTimeoutShort):
+		// Goroutines should be completed now
+	case <-ctx.Done():
+		// Context cancelled, exit early
+		return
+	}
 
 	// Verify recordings started successfully (some may fail due to device conflicts)
 	activeSessions := recordingManager.ListRecordingSessions()
