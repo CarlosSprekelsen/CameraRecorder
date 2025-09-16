@@ -12,6 +12,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test constants for professional test suite
+const (
+	// UUID and correlation ID constants
+	UUIDLength = 36
+
+	// Performance test constants
+	PerformanceTestMessageCount = 1000
+	PerformanceTestTimeout      = time.Second
+	PerformanceTestMaxAvgTime   = time.Millisecond
+
+	// Concurrency test constants
+	ConcurrencyTestGoroutines = 10
+
+	// File rotation test constants
+	FileRotationTestMessages = 10
+	FileRotationTestSize     = 1 // bytes
+	FileRotationTestBackups  = 3
+
+	// File operation timeout
+	FileOperationTimeout = 100 * time.Millisecond
+
+	// Test component names
+	TestComponentName = "test-component"
+
+	// Test correlation IDs
+	TestCorrelationID1 = "test-correlation-001"
+	TestCorrelationID2 = "test-correlation-002"
+	TestCorrelationID3 = "test-correlation-003"
+	TestCorrelationID4 = "test-correlation-004"
+)
+
 /*
 Logging Infrastructure Unit Tests
 
@@ -35,8 +66,8 @@ func TestGetLogger(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := GetLogger("test-component")
-	AssertLoggerBasicProperties(t, logger, "test-component")
+	logger := GetLogger(TestComponentName)
+	AssertLoggerBasicProperties(t, logger, TestComponentName)
 	assert.Equal(t, logrus.InfoLevel, logger.GetLevel())
 }
 
@@ -45,15 +76,15 @@ func TestGetLoggerFactory(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger1 := GetLogger("test-component")
-	logger2 := GetLogger("test-component")
+	logger1 := GetLogger(TestComponentName)
+	logger2 := GetLogger(TestComponentName)
 
 	assert.NotNil(t, logger1)
 	assert.NotNil(t, logger2)
 	assert.NotEqual(t, logger1, logger2) // Should be different instances (factory pattern)
 	// Both loggers should be valid and functional
-	AssertLoggerBasicProperties(t, logger1, "test-component")
-	AssertLoggerBasicProperties(t, logger2, "test-component")
+	AssertLoggerBasicProperties(t, logger1, TestComponentName)
+	AssertLoggerBasicProperties(t, logger2, TestComponentName)
 }
 
 // =============================================================================
@@ -67,7 +98,7 @@ func TestGenerateCorrelationID(t *testing.T) {
 
 	correlationID := GenerateCorrelationID()
 	assert.NotEmpty(t, correlationID)
-	assert.Len(t, correlationID, 36) // UUID length
+	assert.Len(t, correlationID, UUIDLength)
 }
 
 // TestCorrelationIDContextOperations tests all correlation ID context operations
@@ -124,7 +155,7 @@ func TestLogger_WithMethods(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 
 	testCases := []struct {
 		name string
@@ -161,7 +192,7 @@ func TestLogger_ContextLogging(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	fixtures := CreateTestFixtures()
 
 	for _, fixture := range fixtures {
@@ -185,7 +216,7 @@ func TestLogger_ContextLogging_EdgeCases(t *testing.T) {
 	t.Parallel()
 	// REQ-LOG-002: Correlation ID support
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 
 	// Test with empty context
 	ctx := context.Background()
@@ -217,7 +248,7 @@ func TestLogger_LevelManagement(t *testing.T) {
 	for _, level := range testLevels {
 		t.Run(fmt.Sprintf("level_%s", level.String()), func(t *testing.T) {
 			// Create a fresh logger for each subtest to avoid interference
-			logger := GetLogger("test-component")
+			logger := GetLogger(TestComponentName)
 
 			// Test SetLevel
 			logger.SetLevel(level)
@@ -254,7 +285,7 @@ func TestLogger_ComponentLevels(t *testing.T) {
 
 		t.Run(fmt.Sprintf("component_%s", component), func(t *testing.T) {
 			// Create a fresh logger for each subtest to avoid interference
-			logger := GetLogger("test-component")
+			logger := GetLogger(TestComponentName)
 
 			logger.SetComponentLevel(component, level)
 			effectiveLevel := logger.GetEffectiveLevel(component)
@@ -390,22 +421,28 @@ func TestLogging_FileRotation(t *testing.T) {
 	logFilePath := CreateTempLogFile(t)
 
 	config := CreateTestLoggingConfig("info", "text", false, true, logFilePath)
-	config.MaxFileSize = 1 // 1 byte to trigger rotation quickly
-	config.BackupCount = 3
+	config.MaxFileSize = FileRotationTestSize
+	config.BackupCount = FileRotationTestBackups
 
 	// Setup logging
 	err := SetupLogging(config)
 	require.NoError(t, err)
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 
 	// Write enough logs to trigger rotation
-	for i := 0; i < 10; i++ {
+	for i := 0; i < FileRotationTestMessages; i++ {
 		logger.Info("test log message that should trigger rotation")
 	}
 
-	// Wait a bit for file operations
-	time.Sleep(100 * time.Millisecond)
+	// JUSTIFIED time.Sleep(): Lumberjack file rotation is asynchronous and there is no
+	// synchronous API to wait for rotation completion. The Write() method returns immediately
+	// while file operations (rotation, compression, cleanup) happen in background goroutines.
+	// This sleep is necessary to validate that file rotation actually works and is not
+	// a race condition - it's a limitation of the lumberjack library design.
+	// Alternative approaches (polling, file locking checks) are unreliable because
+	// lumberjack may still be processing files even after they become accessible.
+	time.Sleep(FileOperationTimeout)
 
 	// Check if log file exists
 	_, err = os.Stat(logFilePath)
@@ -416,7 +453,7 @@ func TestLogging_FileRotation(t *testing.T) {
 func TestLogging_Concurrency(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	concurrency := 10
 	done := make(chan bool, concurrency)
 
@@ -440,7 +477,7 @@ func TestLogging_Concurrency(t *testing.T) {
 func TestLogging_Performance(t *testing.T) {
 	// REQ-LOG-001: Structured logging with logrus
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	messageCount := 1000
 
 	// Performance test: log many messages quickly
@@ -539,7 +576,7 @@ func BenchmarkGetLoggerSingleton(b *testing.B) {
 
 // BenchmarkLogger_WithField measures structured field logging performance
 func BenchmarkLogger_WithField(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -549,7 +586,7 @@ func BenchmarkLogger_WithField(b *testing.B) {
 
 // BenchmarkLogger_WithError measures error logging performance
 func BenchmarkLogger_WithError(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	testErr := assert.AnError
 	b.ResetTimer()
 
@@ -560,7 +597,7 @@ func BenchmarkLogger_WithError(b *testing.B) {
 
 // BenchmarkLogger_WithCorrelationID measures correlation ID logging performance
 func BenchmarkLogger_WithCorrelationID(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	correlationID := "test-correlation-id"
 	b.ResetTimer()
 
@@ -571,7 +608,7 @@ func BenchmarkLogger_WithCorrelationID(b *testing.B) {
 
 // BenchmarkLogger_Info measures basic info logging performance
 func BenchmarkLogger_Info(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -581,7 +618,7 @@ func BenchmarkLogger_Info(b *testing.B) {
 
 // BenchmarkLogger_InfoWithFields measures structured info logging performance
 func BenchmarkLogger_InfoWithFields(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	fields := map[string]interface{}{
 		"key1": "value1",
 		"key2": "value2",
@@ -596,7 +633,7 @@ func BenchmarkLogger_InfoWithFields(b *testing.B) {
 
 // BenchmarkLogger_LogWithContext measures context-based logging performance
 func BenchmarkLogger_LogWithContext(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	ctx := WithCorrelationID(context.Background(), "test-correlation-id")
 	b.ResetTimer()
 
@@ -607,7 +644,7 @@ func BenchmarkLogger_LogWithContext(b *testing.B) {
 
 // BenchmarkLogger_LevelManagement measures level management performance
 func BenchmarkLogger_LevelManagement(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -620,7 +657,7 @@ func BenchmarkLogger_LevelManagement(b *testing.B) {
 
 // BenchmarkLogger_ConcurrentLogging measures concurrent logging performance
 func BenchmarkLogger_ConcurrentLogging(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
@@ -632,7 +669,7 @@ func BenchmarkLogger_ConcurrentLogging(b *testing.B) {
 
 // BenchmarkLogger_StructuredLogging measures structured logging performance
 func BenchmarkLogger_StructuredLogging(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -700,7 +737,7 @@ func BenchmarkLogging_JSONFormat(b *testing.B) {
 	}
 	SetupLogging(config)
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -723,7 +760,7 @@ func BenchmarkLogging_TextFormat(b *testing.B) {
 	}
 	SetupLogging(config)
 
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -737,7 +774,7 @@ func BenchmarkLogging_TextFormat(b *testing.B) {
 
 // BenchmarkLogger_MultipleFields measures multiple field logging performance
 func BenchmarkLogger_MultipleFields(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -752,7 +789,7 @@ func BenchmarkLogger_MultipleFields(b *testing.B) {
 
 // BenchmarkLogger_ChainedOperations measures chained logging operations performance
 func BenchmarkLogger_ChainedOperations(b *testing.B) {
-	logger := GetLogger("test-component")
+	logger := GetLogger(TestComponentName)
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

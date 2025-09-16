@@ -68,7 +68,7 @@ func CreateTestContext(correlationID string) context.Context {
 func CreateTestFixtures() []TestFixture {
 	return []TestFixture{
 		{
-			CorrelationID: "test-correlation-001",
+			CorrelationID: TestCorrelationID1,
 			Component:     "auth",
 			Message:       "user authentication started",
 			Level:         logrus.InfoLevel,
@@ -78,7 +78,7 @@ func CreateTestFixtures() []TestFixture {
 			},
 		},
 		{
-			CorrelationID: "test-correlation-002",
+			CorrelationID: TestCorrelationID2,
 			Component:     "database",
 			Message:       "database query executed",
 			Level:         logrus.DebugLevel,
@@ -88,7 +88,7 @@ func CreateTestFixtures() []TestFixture {
 			},
 		},
 		{
-			CorrelationID: "test-correlation-003",
+			CorrelationID: TestCorrelationID3,
 			Component:     "api",
 			Message:       "API request processed",
 			Level:         logrus.InfoLevel,
@@ -99,7 +99,7 @@ func CreateTestFixtures() []TestFixture {
 			},
 		},
 		{
-			CorrelationID: "test-correlation-004",
+			CorrelationID: TestCorrelationID4,
 			Component:     "camera",
 			Message:       "camera stream started",
 			Level:         logrus.InfoLevel,
