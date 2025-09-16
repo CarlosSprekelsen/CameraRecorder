@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediaMTXConfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,13 +32,11 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &config.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 5 * time.Second,
-	}
+	// Use MediaMTX mediaMTXConfig from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
 	logger := helper.GetLogger()
 
-	client := NewClient("http://localhost:9997", config, logger)
+	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
 	require.NotNil(t, client, "Client should not be nil")
 }
 
@@ -79,12 +77,12 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 
 	// Test POST request to create path endpoint (from swagger.json)
 	pathData := `{"name":"test_path","source":"publisher"}`
-	data, err := client.Post(ctx, "/v3/config/paths/add/test_path", []byte(pathData))
+	data, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 
 	// Clean up - delete the test path
-	err = client.Delete(ctx, "/v3/config/paths/delete/test_path")
+	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_path")
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -101,17 +99,17 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 
 	// First create a path
 	pathData := `{"name":"test_put_path","source":"publisher"}`
-	_, err := client.Post(ctx, "/v3/config/paths/add/test_put_path", []byte(pathData))
+	_, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_put_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test POST request to replace path endpoint (from swagger.json)
 	updateData := `{"name":"test_put_path","source":"publisher","maxReaders":5}`
-	data, err := client.Post(ctx, "/v3/config/paths/replace/test_put_path", []byte(updateData))
+	data, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/replace/test_put_path", []byte(updateData))
 	require.NoError(t, err, "POST request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 
 	// Clean up - delete the test path
-	err = client.Delete(ctx, "/v3/config/paths/delete/test_put_path")
+	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_put_path")
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -128,11 +126,11 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 
 	// First create a path
 	pathData := `{"name":"test_delete_path","source":"publisher"}`
-	_, err := client.Post(ctx, "/v3/config/paths/add/test_delete_path", []byte(pathData))
+	_, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_delete_path", []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test DELETE request to delete path endpoint (from swagger.json)
-	err = client.Delete(ctx, "/v3/config/paths/delete/test_delete_path")
+	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_delete_path")
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -168,11 +166,11 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	assert.Error(t, err, "Invalid endpoint should return error")
 
 	// Test invalid path creation (missing required fields per swagger.json)
-	_, err = client.Post(ctx, "/v3/config/paths/add", []byte(`{"invalid": "data"}`))
+	_, err = client.Post(ctx, "/v3/mediaMTXConfig/paths/add", []byte(`{"invalid": "data"}`))
 	assert.Error(t, err, "Invalid path creation should return error")
 
 	// Test deleting non-existent path
-	err = client.Delete(ctx, "/v3/config/paths/delete/test_non_existent_path")
+	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_non_existent_path")
 	assert.Error(t, err, "Deleting non-existent path should return error")
 }
 
@@ -197,8 +195,8 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
-	// Test config paths list endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/config/paths/list")
+	// Test mediaMTXConfig paths list endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/mediaMTXConfig/paths/list")
 	require.NoError(t, err, "Config paths list should succeed")
 
 	// Validate response structure matches swagger.json PathConfList schema
@@ -207,9 +205,9 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
-	// Test global config endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/config/global/get")
-	require.NoError(t, err, "Global config get should succeed")
+	// Test global mediaMTXConfig endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/mediaMTXConfig/global/get")
+	require.NoError(t, err, "Global mediaMTXConfig get should succeed")
 
 	// Validate response structure matches swagger.json GlobalConf schema
 	responseStr = string(data)
@@ -230,7 +228,7 @@ func TestClient_PutMethod_ReqMTX001(t *testing.T) {
 
 	// Test PUT request with valid data
 	testData := []byte(`{"test": "data"}`)
-	response, err := client.Put(ctx, "/v3/config/paths/edit/test_path", testData)
+	response, err := client.Put(ctx, "/v3/mediaMTXConfig/paths/edit/test_path", testData)
 
 	// PUT may fail due to invalid path, but method should be called without panic
 	// This tests the Put method execution path
@@ -297,13 +295,13 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	}()
 
 	go func() {
-		_, err := client.Get(ctx, "/v3/config/paths/list")
+		_, err := client.Get(ctx, "/v3/mediaMTXConfig/paths/list")
 		assert.NoError(t, err, "Concurrent GET should succeed")
 		done <- true
 	}()
 
 	go func() {
-		_, err := client.Get(ctx, "/v3/config/global/get")
+		_, err := client.Get(ctx, "/v3/mediaMTXConfig/global/get")
 		assert.NoError(t, err, "Concurrent GET should succeed")
 		done <- true
 	}()
@@ -325,13 +323,11 @@ func TestClient_Close_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	config := &config.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 5 * time.Second,
-	}
+	// Use MediaMTX mediaMTXConfig from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
 	logger := helper.GetLogger()
 
-	client := NewClient("http://localhost:9997", config, logger)
+	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
 	require.NotNil(t, client, "Client should not be nil")
 
 	// Test close

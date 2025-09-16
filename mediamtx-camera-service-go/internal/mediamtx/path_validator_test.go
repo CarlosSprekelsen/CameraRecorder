@@ -11,30 +11,17 @@ import (
 )
 
 func TestPathFallback(t *testing.T) {
-	// Setup primary path as read-only
-	primaryPath := "/tmp/primary"
-	fallbackPath := "/tmp/fallback"
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create directories
-	os.MkdirAll(primaryPath, 0444)  // Read-only
-	os.MkdirAll(fallbackPath, 0755) // Writable
-	defer os.RemoveAll(primaryPath)
-	defer os.RemoveAll(fallbackPath)
-
-	// Create test config
-	cfg := &config.Config{
-		MediaMTX: config.MediaMTXConfig{
-			RecordingsPath: primaryPath,
-		},
-		Storage: config.StorageConfig{
-			FallbackPath: fallbackPath,
-		},
-	}
-
-	// Create logger
-	logger := logging.GetLogger("test")
-
-	// Create path validator
+	// Get configured paths from fixture
+	recordingsPath := helper.GetConfiguredRecordingPath()
+	
+	// Create path validator using fixture configuration
+	configManager := helper.GetConfigManager()
+	cfg := configManager.GetConfig()
+	logger := helper.GetLogger()
 	validator := NewPathValidator(cfg, logger)
 
 	// Test recording path validation
@@ -49,33 +36,28 @@ func TestPathFallback(t *testing.T) {
 		t.Fatal("Expected result, got nil")
 	}
 
-	if result.Path != fallbackPath {
-		t.Errorf("Expected fallback path %s, got %s", fallbackPath, result.Path)
+	if result.Path != recordingsPath {
+		t.Errorf("Expected recordings path %s, got %s", recordingsPath, result.Path)
 	}
 
-	if result.FallbackPath == "" {
-		t.Error("Expected fallback path to be set")
+	// With centralized path management, no fallback path is used
+	if result.FallbackPath != "" {
+		t.Error("Expected no fallback path with centralized path management")
 	}
 }
 
 func TestPathValidatorCaching(t *testing.T) {
-	// Create test directory
-	testDir := "/tmp/validator_test"
-	os.MkdirAll(testDir, 0755)
-	defer os.RemoveAll(testDir)
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create test config
-	cfg := &config.Config{
-		MediaMTX: config.MediaMTXConfig{
-			RecordingsPath: testDir,
-		},
-		Storage: config.StorageConfig{
-			FallbackPath: "/tmp/fallback_test",
-		},
-	}
-
-	// Create logger
-	logger := logging.GetLogger("test")
+	// Get configured paths from fixture
+	recordingsPath := helper.GetConfiguredRecordingPath()
+	
+	// Create path validator using fixture configuration
+	configManager := helper.GetConfigManager()
+	cfg := configManager.GetConfig()
+	logger := helper.GetLogger()
 
 	// Create path validator with short validation period
 	validator := &PathValidator{

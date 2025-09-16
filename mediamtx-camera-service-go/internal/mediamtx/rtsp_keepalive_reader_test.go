@@ -13,37 +13,35 @@ import (
 )
 
 func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Verify initialization
 	require.NotNil(t, reader)
-	assert.Equal(t, cfg, reader.config)
+	assert.Equal(t, mediaMTXConfig, reader.config)
 	assert.Equal(t, logger, reader.logger)
 	assert.Equal(t, 0, reader.GetActiveCount())
 }
 
 func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test starting keepalive for a path
 	ctx := context.Background()
@@ -62,17 +60,16 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 }
 
 func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test stopping a non-existent keepalive
 	err := reader.StopKeepalive("non_existent_path")
@@ -95,17 +92,16 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 }
 
 func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Start multiple keepalives
 	ctx := context.Background()
@@ -127,17 +123,16 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 }
 
 func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test inactive path
 	assert.False(t, reader.IsActive("inactive_path"), "Inactive path should return false")
@@ -158,17 +153,16 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 }
 
 func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test initial count
 	assert.Equal(t, 0, reader.GetActiveCount(), "Initial count should be 0")
@@ -208,35 +202,33 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 	testDir := "/tmp/test_mediamtx_env"
 	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
 
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Verify it was created successfully
 	require.NotNil(t, reader)
-	assert.Equal(t, cfg, reader.config)
+	assert.Equal(t, mediaMTXConfig, reader.config)
 }
 
 func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
-	// Create test config
-	cfg := &config.MediaMTXConfig{
-		Host:     "localhost",
-		RTSPPort: 8554,
-	}
+	// Use fixture-based test helper following Path Management Solution
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	// Create logger
-	logger := logging.CreateTestLogger(t, nil)
+	// Get MediaMTX config from fixture
+	mediaMTXConfig := helper.GetMediaMTXConfig()
+	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(cfg, logger)
+	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test concurrent start/stop operations
 	ctx := context.Background()
