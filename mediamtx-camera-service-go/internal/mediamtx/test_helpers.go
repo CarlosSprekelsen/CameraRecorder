@@ -142,11 +142,8 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	// Create MediaMTX client AFTER configuring logging
 	client := NewClient(testConfig.BaseURL, clientConfig, logger)
 
-	// Create centralized MediaMTX config for all managers
-	mediaMTXConfig := &configpkg.MediaMTXConfig{
-		BaseURL: testConfig.BaseURL,
-		Timeout: 10 * time.Second,
-	}
+	// Create centralized MediaMTX config for all managers - use full config from config manager
+	mediaMTXConfig := &cfg.MediaMTX // Use the full MediaMTX config from the fixture
 
 	// Create centralized ConfigIntegration for all managers
 	configIntegration := NewConfigIntegration(configManager, logger)
