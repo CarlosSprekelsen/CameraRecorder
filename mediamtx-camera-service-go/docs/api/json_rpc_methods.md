@@ -416,13 +416,13 @@ Start recording video from the specified camera.
 **Parameters:**
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 - duration: number - Recording duration in seconds (optional)
-- format: string - Recording format ("mp4", "mkv") (optional)
+- format: string - Recording format ("fmp4", "mp4", "mkv") (optional, defaults to "fmp4")
 
-**Returns:** Recording session information with filename, status, and metadata
+**Returns:** Recording information with filename, status, and metadata
 
 **Status:** ✅ Implemented
 
-**Implementation:** Manages recording sessions through MediaMTX controller with session tracking, duration management, and proper file organization.
+**Implementation:** Manages recording through MediaMTX path-based recording with RTSP keepalive triggering, duration management, and proper file organization. Uses STANAG 4609 compliant fmp4 format by default.
 
 **Example:**
 ```json
@@ -433,7 +433,7 @@ Start recording video from the specified camera.
   "params": {
     "device": "camera0",
     "duration": 3600,
-    "format": "mp4"
+    "format": "fmp4"
   },
   "id": 5
 }
@@ -443,12 +443,10 @@ Start recording video from the specified camera.
   "jsonrpc": "2.0",
   "result": {
     "device": "camera0",
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
-    "filename": "camera0_2025-01-15_14-30-00.mp4",
-    "status": "STARTED",
+    "filename": "camera0_2025-01-15_14-30-00",
+    "status": "RECORDING",
     "start_time": "2025-01-15T14:30:00Z",
-    "duration": 3600,
-    "format": "mp4"
+    "format": "fmp4"
   },
   "id": 5
 }
@@ -456,12 +454,10 @@ Start recording video from the specified camera.
 
 **Response Fields:**
 - `device`: Camera device identifier (string)
-- `session_id`: Unique recording session identifier (string)
 - `filename`: Generated recording filename (string)
-- `status`: Recording status ("started", "failed") (string)
+- `status`: Recording status ("RECORDING", "FAILED") (string)
 - `start_time`: Recording start timestamp (ISO 8601 string)
-- `duration`: Recording duration in seconds (integer)
-- `format`: Recording format ("mp4", "mkv") (string)
+- `format`: Recording format ("fmp4", "mp4", "mkv") (string)
 
 ### stop_recording
 Stop active recording for the specified camera.
@@ -475,7 +471,7 @@ Stop active recording for the specified camera.
 
 **Status:** ✅ Implemented
 
-**Implementation:** Properly terminates recording sessions with accurate duration calculation, file size reporting, and session cleanup.
+**Implementation:** Properly terminates recording through MediaMTX path-based recording with accurate duration calculation, file size reporting, and RTSP keepalive cleanup.
 
 **Example:**
 ```json
@@ -494,13 +490,13 @@ Stop active recording for the specified camera.
   "jsonrpc": "2.0",
   "result": {
     "device": "camera0",
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
-    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "filename": "camera0_2025-01-15_14-30-00",
     "status": "STOPPED",
     "start_time": "2025-01-15T14:30:00Z",
     "end_time": "2025-01-15T15:00:00Z",
     "duration": 1800,
-    "file_size": 1073741824
+    "file_size": 1073741824,
+    "format": "fmp4"
   },
   "id": 6
 }
@@ -508,13 +504,13 @@ Stop active recording for the specified camera.
 
 **Response Fields:**
 - `device`: Camera device identifier (string)
-- `session_id`: Recording session identifier (string)
 - `filename`: Generated recording filename (string)
-- `status`: Recording status ("stopped", "failed") (string)
+- `status`: Recording status ("STOPPED", "FAILED") (string)
 - `start_time`: Recording start timestamp (ISO 8601 string)
 - `end_time`: Recording end timestamp (ISO 8601 string)
 - `duration`: Total recording duration in seconds (integer)
 - `file_size`: Final file size in bytes (integer)
+- `format`: Recording format ("fmp4", "mp4", "mkv") (string)
 
 ---
 
@@ -773,10 +769,10 @@ List available recording files with metadata and pagination support.
   "result": {
     "files": [
       {
-        "filename": "camera0_2025-01-15_14-30-00.mp4",
+        "filename": "camera0_2025-01-15_14-30-00",
         "file_size": 1073741824,
         "modified_time": "2025-01-15T14:30:00Z",
-        "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+        "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.fmp4"
       }
     ],
     "total": 25,
@@ -968,7 +964,7 @@ The server sends real-time notifications for camera events.
   "params": {
     "device": "/dev/video0", 
     "status": "STARTED",
-    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "filename": "camera0_2025-01-15_14-30-00",
     "duration": 0
   }
 }
@@ -1111,7 +1107,7 @@ Get detailed information about a specific recording file.
   "jsonrpc": "2.0",
   "method": "get_recording_info",
   "params": {
-    "filename": "camera0_2025-01-15_14-30-00.mp4"
+    "filename": "camera0_2025-01-15_14-30-00"
   },
   "id": 12
 }
@@ -1120,11 +1116,11 @@ Get detailed information about a specific recording file.
 {
   "jsonrpc": "2.0",
   "result": {
-    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "filename": "camera0_2025-01-15_14-30-00",
     "file_size": 1073741824,
     "duration": 3600,
     "created_time": "2025-01-15T14:30:00Z",
-    "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.mp4"
+    "download_url": "/files/recordings/camera0_2025-01-15_14-30-00.fmp4"
   },
   "id": 12
 }
@@ -1192,7 +1188,7 @@ Delete a specific recording file.
   "jsonrpc": "2.0",
   "method": "delete_recording",
   "params": {
-    "filename": "camera0_2025-01-15_14-30-00.mp4"
+    "filename": "camera0_2025-01-15_14-30-00"
   },
   "id": 14
 }
@@ -1201,7 +1197,7 @@ Delete a specific recording file.
 {
   "jsonrpc": "2.0",
   "result": {
-    "filename": "camera0_2025-01-15_14-30-00.mp4",
+    "filename": "camera0_2025-01-15_14-30-00",
     "deleted": true,
     "message": "Recording file deleted successfully"
   },
@@ -1445,7 +1441,7 @@ Get server configuration and capability information.
     "go_version": "go1.24.6",
     "architecture": "amd64",
     "capabilities": ["snapshots", "recordings", "streaming"],
-    "supported_formats": ["mp4", "mkv", "jpg"],
+    "supported_formats": ["fmp4", "mp4", "mkv", "jpg"],
     "max_cameras": 10
   },
   "id": 11
@@ -1906,7 +1902,7 @@ Download a recording file via HTTP.
 **Example:**
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-     http://localhost:8002/files/recordings/camera0_2025-01-15_14-30-00.mp4
+     http://localhost:8002/files/recordings/camera0_2025-01-15_14-30-00.fmp4
 ```
 
 ### GET /files/snapshots/{filename}
