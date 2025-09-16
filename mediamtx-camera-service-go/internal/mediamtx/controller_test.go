@@ -551,7 +551,7 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 		"duration": 2, // 2 seconds - minimal for file creation
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+	session, err := controller.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
@@ -643,7 +643,7 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 		"codec":   "h264",
 		"quality": "medium",
 	}
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+	session, err := controller.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, session, "Session should not be nil")
 
@@ -772,7 +772,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		"segment_time": 60,
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+	session, err := controller.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -810,7 +810,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	assert.Len(t, sessions, 1, "Should have one active session")
 
 	// Stop the recording
-	err = controller.StopAdvancedRecording(ctx, session.ID)
+	err = controller.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Advanced recording should stop successfully")
 
 	t.Log("Advanced recording functionality working correctly")

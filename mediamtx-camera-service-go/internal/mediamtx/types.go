@@ -33,8 +33,8 @@ type DeviceToCameraIDMapper interface {
 
 // MediaMTXEventNotifier interface for MediaMTX-specific events
 type MediaMTXEventNotifier interface {
-	NotifyRecordingStarted(device, sessionID, filename string)
-	NotifyRecordingStopped(device, sessionID, filename string, duration time.Duration)
+	NotifyRecordingStarted(device, filename string)
+	NotifyRecordingStopped(device, filename string, duration time.Duration)
 	NotifyStreamStarted(device, streamID, streamType string)
 	NotifyStreamStopped(device, streamID, streamType string)
 }
@@ -168,35 +168,6 @@ type Metrics struct {
 	Uptime        int64   `json:"uptime"`
 }
 
-// RecordingSession represents a recording session
-type RecordingSession struct {
-	ID             string        `json:"id"`
-	Device         string        `json:"device"`
-	DevicePath     string        `json:"device_path"`
-	Path           string        `json:"path"`
-	Status         string        `json:"status"`
-	StartTime      time.Time     `json:"start_time"`
-	EndTime        *time.Time    `json:"end_time,omitempty"`
-	Duration       time.Duration `json:"duration"`
-	FileSize       int64         `json:"file_size"`
-	FilePath       string        `json:"file_path"`
-	ContinuityID   string        `json:"continuity_id,omitempty"`
-	State          SessionState  `json:"state"`
-	Segments       []string      `json:"segments,omitempty"`
-	CurrentSegment string        `json:"current_segment,omitempty"`
-	PID            int           `json:"pid,omitempty"` // FFmpeg process ID for proper process management
-
-	// Enhanced use case management (Phase 2 enhancement)
-	UseCase       StreamUseCase `json:"use_case"`       // "recording", "viewing", "snapshot"
-	Priority      int           `json:"priority"`       // Priority level (1=high, 2=medium, 3=low)
-	AutoCleanup   bool          `json:"auto_cleanup"`   // Auto-cleanup when session ends
-	RetentionDays int           `json:"retention_days"` // Days to retain files
-	Quality       string        `json:"quality"`        // Recording quality (low, medium, high)
-	MaxDuration   time.Duration `json:"max_duration"`   // Maximum recording duration
-	AutoRotate    bool          `json:"auto_rotate"`    // Auto-rotate files
-	RotationSize  int64         `json:"rotation_size"`  // Size threshold for rotation
-}
-
 // Snapshot represents a camera snapshot
 type Snapshot struct {
 	ID       string                 `json:"id"`
@@ -242,9 +213,8 @@ type FileMetadata struct {
 	DownloadURL string    `json:"download_url"`
 }
 
-// ActiveRecording represents an active recording session (Phase 2 enhancement)
+// ActiveRecording represents an active recording (Phase 2 enhancement)
 type ActiveRecording struct {
-	SessionID  string    `json:"session_id"`
 	DevicePath string    `json:"device_path"`
 	StartTime  time.Time `json:"start_time"`
 	StreamName string    `json:"stream_name"`
@@ -326,10 +296,6 @@ type MediaMTXController interface {
 	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
 	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
 
-	// Camera abstraction layer (delegate to PathManager)
-	GetCameraForDevicePath(devicePath string) (string, bool) // /dev/video0 -> camera0
-	GetDevicePathForCamera(cameraID string) (string, bool)   // camera0 -> /dev/video0
-
 	// Health and status
 	GetHealth(ctx context.Context) (*HealthStatus, error)
 	GetMetrics(ctx context.Context) (*Metrics, error)
@@ -366,7 +332,7 @@ type MediaMTXController interface {
 	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
 
 	// Recording operations (device-based, no session IDs)
-	StartRecording(ctx context.Context, device string) (*RecordingSession, error)
+	StartRecording(ctx context.Context, device string, options map[string]interface{}) error
 	StopRecording(ctx context.Context, device string) error
 
 	// Streaming operations
@@ -382,14 +348,6 @@ type MediaMTXController interface {
 	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
 	DeleteRecording(ctx context.Context, filename string) error
 	DeleteSnapshot(ctx context.Context, filename string) error
-
-	// Advanced recording operations
-	StartAdvancedRecording(ctx context.Context, device string, options map[string]interface{}) (*RecordingSession, error)
-	StopAdvancedRecording(ctx context.Context, sessionID string) error
-	GetAdvancedRecordingSession(sessionID string) (*RecordingSession, bool)
-	ListAdvancedRecordingSessions() []*RecordingSession
-	RotateRecordingFile(ctx context.Context, sessionID string) error
-	GetSessionIDByDevice(device string) (string, bool)
 
 	// RTSP Connection Management
 	ListRTSPConnections(ctx context.Context, page, itemsPerPage int) (*RTSPConnectionList, error)
@@ -420,12 +378,7 @@ type MediaMTXController interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error
 
-	// Active recording management (Phase 2 enhancement)
-	IsDeviceRecording(devicePath string) bool
-	StartActiveRecording(devicePath, sessionID, streamName string) error
-	StopActiveRecording(devicePath string) error
-	GetActiveRecordings() map[string]*ActiveRecording
-	GetActiveRecording(devicePath string) *ActiveRecording
+	// No local recording state - query MediaMTX directly for recording status
 }
 
 // MediaMTXControllerAPI is a restricted interface for higher layers (e.g., WebSocket)
@@ -452,9 +405,9 @@ type MediaMTXControllerAPI interface {
 	GetStreamStatus(ctx context.Context, device string) (*Path, error)
 
 	// Recording and snapshots (device-based, no session IDs)
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
-	StartRecording(ctx context.Context, device string) (*RecordingSession, error)
+	StartRecording(ctx context.Context, device string, options map[string]interface{}) error
 	StopRecording(ctx context.Context, device string) error
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
 	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
 	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
 	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
@@ -598,16 +551,6 @@ type UseCaseConfig struct {
 	RunOnDemandStartTimeout string `json:"run_on_demand_start_timeout"`
 	Suffix                  string `json:"suffix"`
 }
-
-// SessionState represents the state of a recording session
-type SessionState string
-
-const (
-	SessionStateIdle      SessionState = "IDLE"
-	SessionStateRecording SessionState = "RECORDING"
-	SessionStateStopped   SessionState = "STOPPED"
-	SessionStateError     SessionState = "ERROR"
-)
 
 // FFmpegManager interface defines FFmpeg process management for snapshots only
 type FFmpegManager interface {

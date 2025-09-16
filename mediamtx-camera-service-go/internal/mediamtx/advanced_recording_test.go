@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestController_StartAdvancedRecording_ReqMTX002 tests advanced recording with options
-func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
+// TestController_StartRecording_ReqMTX002 tests advanced recording with options
+func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	EnsureSequentialExecution(t)
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -63,7 +63,7 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	// Try to record with simple retry
 	var session *RecordingSession
 	for i := 0; i < 3; i++ {
-		session, err = controller.StartAdvancedRecording(ctx, cameraID, options)
+		session, err = controller.StartRecording(ctx, cameraID, options)
 		if err == nil {
 			break
 		}
@@ -89,12 +89,12 @@ func TestController_StartAdvancedRecording_ReqMTX002(t *testing.T) {
 	assert.Equal(t, "active", session.Status)
 
 	// Stop recording
-	err = controller.StopAdvancedRecording(ctx, session.ID)
+	err = controller.StopRecording(ctx, session.ID)
 	require.NoError(t, err)
 }
 
-// TestController_StopAdvancedRecording_ReqMTX002 tests stopping advanced recording
-func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
+// TestController_StopRecording_ReqMTX002 tests stopping advanced recording
+func TestController_StopRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -133,12 +133,12 @@ func TestController_StopAdvancedRecording_ReqMTX002(t *testing.T) {
 		"duration":   5, // 5 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+	session, err := controller.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
 	// Stop the recording
-	err = controller.StopAdvancedRecording(ctx, session.ID)
+	err = controller.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Stopping advanced recording should succeed")
 
 	// Verify session is no longer active
@@ -194,7 +194,7 @@ func TestController_GetAdvancedRecordingSession_ReqMTX002(t *testing.T) {
 		"duration":   3, // 3 seconds
 	}
 
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+	session, err := controller.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -261,7 +261,7 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 			"duration":   2, // 2 seconds
 		}
 
-		session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
+		session, err := controller.StartRecording(ctx, cameraID, options)
 		require.NoError(t, err, "Advanced recording should start successfully")
 		require.NotNil(t, session, "Recording session should not be nil")
 		sessionIDs[i] = session.ID
@@ -283,70 +283,6 @@ func TestController_ListAdvancedRecordingSessions_ReqMTX002(t *testing.T) {
 		}
 		assert.True(t, found, "Session should be found in list")
 	}
-}
-
-// TestController_RotateRecordingFile_ReqMTX002 tests rotating recording files
-func TestController_RotateRecordingFile_ReqMTX002(t *testing.T) {
-	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t) // CRITICAL: Prevent concurrent MediaMTX server access
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Use proper orchestration following the Progressive Readiness Pattern
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller orchestration should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	ctx := context.Background()
-	err = controller.Start(ctx)
-	require.NoError(t, err)
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
-
-	// Create test output directory using configured path
-	outputDir := filepath.Join(helper.GetConfiguredRecordingPath(), "test_rotate_advanced_recordings")
-	err = os.MkdirAll(outputDir, 0755)
-	require.NoError(t, err, "Creating output directory should succeed")
-	defer os.RemoveAll(outputDir)
-
-	// Start advanced recording - get available camera identifier using optimized helper method
-	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
-	require.NoError(t, err, "Should be able to get available camera identifier")
-	outputPath := filepath.Join(outputDir, "rotate_test.mp4")
-	options := map[string]interface{}{
-		"quality":    "medium",
-		"resolution": "1280x720",
-		"framerate":  25,
-		"duration":   10, // 10 seconds
-	}
-
-	session, err := controller.StartAdvancedRecording(ctx, cameraID, options)
-	require.NoError(t, err, "Advanced recording should start successfully")
-	require.NotNil(t, session, "Recording session should not be nil")
-
-	// Rotate the recording file
-	err = controller.RotateRecordingFile(ctx, session.ID)
-	require.NoError(t, err, "Rotating recording file should succeed")
-
-	// Verify original file exists
-	_, err = os.Stat(outputPath)
-	assert.NoError(t, err, "Original file should exist")
-
-	// Verify rotated file exists (should have a timestamp or sequence number)
-	// The exact naming convention depends on implementation
-	files, err := filepath.Glob(filepath.Join(outputDir, "rotate_test*.mp4"))
-	require.NoError(t, err, "Globbing files should succeed")
-	assert.GreaterOrEqual(t, len(files), 1, "Should have at least one rotated file")
-
-	// Stop the recording
-	err = controller.StopAdvancedRecording(ctx, session.ID)
-	require.NoError(t, err, "Stopping advanced recording should succeed")
 }
 
 // TestController_AdvancedRecording_ErrorHandling_ReqMTX004 tests error handling for advanced recording
@@ -379,16 +315,13 @@ func TestController_AdvancedRecording_ErrorHandling_ReqMTX004(t *testing.T) {
 		"quality": "high",
 	}
 
-	_, err = controller.StartAdvancedRecording(ctx, invalidDevice, options)
+	_, err = controller.StartRecording(ctx, invalidDevice, options)
 	assert.Error(t, err, "Starting recording with invalid device should fail")
 
 	// Test stopping non-existent recording
-	err = controller.StopAdvancedRecording(ctx, "non-existent-session-id")
+	err = controller.StopRecording(ctx, "non-existent-session-id")
 	assert.Error(t, err, "Stopping non-existent recording should fail")
 
-	// Test rotating non-existent recording
-	err = controller.RotateRecordingFile(ctx, "non-existent-session-id")
-	assert.Error(t, err, "Rotating non-existent recording should fail")
 }
 
 // TestController_EventDrivenAdvancedRecording_ReqMTX002 tests event-driven advanced recording
@@ -436,7 +369,7 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 	recordingCtx, recordingCancel := context.WithTimeout(ctx, 15*time.Second)
 	defer recordingCancel()
 
-	session, err := controller.StartAdvancedRecording(recordingCtx, cameraID, options)
+	session, err := controller.StartRecording(recordingCtx, cameraID, options)
 	require.NoError(t, err, "Advanced recording should start successfully")
 	require.NotNil(t, session, "Recording session should not be nil")
 
@@ -464,7 +397,7 @@ func TestController_EventDrivenAdvancedRecording_ReqMTX002(t *testing.T) {
 	// This follows the Progressive Readiness Pattern
 
 	// Stop the recording
-	err = controller.StopAdvancedRecording(ctx, session.ID)
+	err = controller.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Stopping advanced recording should succeed")
 
 	// Verify output file was created

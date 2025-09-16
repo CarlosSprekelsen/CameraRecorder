@@ -95,7 +95,7 @@ func TestEndToEndEventDrivenWorkflow(t *testing.T) {
 		recordingCtx, recordingCancel := context.WithTimeout(ctx, 20*time.Second)
 		defer recordingCancel()
 
-		session, err := controller.StartAdvancedRecording(recordingCtx, source, recordingOptions)
+		session, err := controller.StartRecording(recordingCtx, source, recordingOptions)
 		require.NoError(t, err, "Advanced recording should start successfully")
 		require.NotNil(t, session, "Recording session should not be nil")
 
@@ -113,7 +113,7 @@ func TestEndToEndEventDrivenWorkflow(t *testing.T) {
 		// Events are recorded in background for verification
 
 		// Step 8: Stop recording
-		err = controller.StopAdvancedRecording(ctx, session.ID)
+		err = controller.StopRecording(ctx, session.ID)
 		require.NoError(t, err, "Stopping advanced recording should succeed")
 
 		// Step 9: Delete path

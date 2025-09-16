@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -35,13 +34,10 @@ type RecordingManager struct {
 	logger            *logging.Logger
 	pathManager       PathManager
 	streamManager     StreamManager
-	pathValidator     *PathValidator
+	keepaliveReader   *RTSPKeepaliveReader
 
-	// Recording sessions - using sync.Map for lock-free operations
-	sessions sync.Map // sessionID -> *RecordingSession
-
-	// Device to session mapping for efficient lookup - using sync.Map for lock-free operations
-	deviceToSession sync.Map // device path -> session ID
+	// Optional timers for auto-stop functionality
+	timers sync.Map // device -> *time.Timer
 }
 
 // MediaMTXRecordingConfig defines MediaMTX-specific recording configuration
@@ -90,18 +86,6 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
 
-	// Get full config for PathValidator
-	fullConfig, err := configIntegration.GetConfig()
-	if err != nil {
-		logger.WithError(err).Error("Failed to get full config for PathValidator")
-		// Continue without path validation - this will be handled at runtime
-	}
-
-	var pathValidator *PathValidator
-	if fullConfig != nil {
-		pathValidator = NewPathValidator(fullConfig, logger)
-	}
-
 	return &RecordingManager{
 		client:            client,
 		config:            config,
@@ -110,97 +94,76 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
-		pathValidator:     pathValidator,
-		// sessions and deviceToSession: sync.Map is zero-initialized, no need to initialize
+		keepaliveReader:   NewRTSPKeepaliveReader(config, logger),
+		// No local state needed - query MediaMTX directly for recording status
 	}
 }
 
-// StartRecording starts recording for a camera device using MediaMTX path-based recording
-func (rm *RecordingManager) StartRecording(ctx context.Context, devicePath string, options map[string]interface{}) (*RecordingSession, error) {
+// StartRecording starts recording by enabling the record flag in MediaMTX
+func (rm *RecordingManager) StartRecording(ctx context.Context, device string, options map[string]interface{}) error {
 	// Input validation
-	if strings.TrimSpace(devicePath) == "" {
-		return nil, fmt.Errorf("device path cannot be empty")
+	if strings.TrimSpace(device) == "" {
+		return fmt.Errorf("device cannot be empty")
 	}
 
-	// Validate path before starting (if pathValidator is available)
-	var pathResult *PathValidationResult
-	if rm.pathValidator != nil {
-		var err error
-		pathResult, err = rm.pathValidator.ValidateRecordingPath(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("recording path validation failed: %w", err)
+	// Convert camera identifier to device path for internal operations
+	// MediaMTX path name = camera identifier (camera0), but we need device path for validation
+	devicePath, exists := rm.pathManager.GetDevicePathForCamera(device)
+	if !exists {
+		return fmt.Errorf("camera '%s' not found or not accessible", device)
+	}
+
+	// Use camera identifier as MediaMTX path name
+	pathName := device
+
+	rm.logger.WithFields(logging.Fields{
+		"device":      device,
+		"device_path": devicePath,
+		"path_name":   pathName,
+		"options":     options,
+	}).Info("Starting recording by enabling record flag in MediaMTX")
+
+	// Check if already recording by querying MediaMTX
+	isRecording, err := rm.isPathRecording(ctx, pathName)
+	if err != nil {
+		return fmt.Errorf("failed to check recording status: %w", err)
+	}
+	if isRecording {
+		return fmt.Errorf("path %s is already recording", pathName)
+	}
+
+	// Enable recording by patching the path configuration
+	err = rm.enableRecordingOnPath(ctx, pathName, options)
+	if err != nil {
+		return fmt.Errorf("failed to enable recording on path: %w", err)
+	}
+
+	// Start RTSP keepalive reader to trigger on-demand publisher
+	err = rm.startRTSPKeepalive(ctx, pathName)
+	if err != nil {
+		// If keepalive fails, disable recording
+		rm.disableRecordingOnPath(ctx, pathName)
+		return fmt.Errorf("failed to start RTSP keepalive: %w", err)
+	}
+
+	// Set up auto-stop timer if duration_s is specified
+	if durationStr, ok := options["duration_s"].(string); ok && durationStr != "" {
+		if duration, err := time.ParseDuration(durationStr + "s"); err == nil {
+			rm.setAutoStopTimer(device, duration) // Use device (camera identifier) as key
+			rm.logger.WithFields(logging.Fields{
+				"device":   device,
+				"duration": duration,
+			}).Debug("Set auto-stop timer for recording")
+		} else {
+			rm.logger.WithError(err).WithField("duration_s", durationStr).Warn("Invalid duration_s format, ignoring auto-stop timer")
 		}
 	}
 
-	if pathResult != nil && pathResult.FallbackPath != "" {
-		rm.logger.WithFields(logging.Fields{
-			"primary":  rm.config.RecordingsPath,
-			"fallback": pathResult.FallbackPath,
-		}).Info("Using fallback recording path")
-	}
-
-	// Use validated path
-	recordPath := GenerateRecordingPath(rm.config, rm.recordingConfig)
-	rm.logger.WithField("record_path", recordPath).Debug("Using configuration-based recording path")
-
-	rm.logger.WithFields(logging.Fields{
-		"device_path": devicePath,
-		"record_path": recordPath,
-		"options":     options,
-	}).Info("Starting MediaMTX path-based recording")
-
-	// Check if device is already recording - lock-free read with sync.Map
-	if _, exists := rm.deviceToSession.Load(devicePath); exists {
-		return nil, fmt.Errorf("device %s is already recording", devicePath)
-	}
-
-	// Create path name from device path using unified function
-	pathName := GetMediaMTXPathName(devicePath)
-
-	// Use StreamManager's EnableRecording method for path-based recording
-	rm.logger.WithField("device_path", devicePath).Info("Enabling recording via StreamManager")
-	err := rm.streamManager.EnableRecording(ctx, devicePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to enable recording: %w", err)
-	}
-
-	// Create lightweight recording session (no session ID needed)
-	session := &RecordingSession{
-		ID:         "", // No session ID - path-based recording
-		DevicePath: devicePath,
-		Path:       pathName, // Use the stable path name
-		FilePath:   recordPath,
-		StartTime:  time.Now(),
-		Status:     "RECORDING", // Use API-compatible status
-		State:      SessionStateRecording,
-		UseCase:    UseCaseRecording,
-	}
-
-	// Store device mapping for stop recording lookup
-	rm.deviceToSession.Store(devicePath, devicePath) // Use devicePath as key and value
-
 	rm.logger.WithFields(logging.Fields{
 		"path_name": pathName,
-		"device":    devicePath,
-	}).Info("MediaMTX path-based recording started successfully")
+		"device":    device,
+	}).Info("Recording started successfully with RTSP keepalive")
 
-	return session, nil
-}
-
-// GetRecordingSession retrieves a recording session by ID
-func (rm *RecordingManager) GetRecordingSession(sessionID string) (*RecordingSession, bool) {
-	if session, exists := rm.sessions.Load(sessionID); exists {
-		return session.(*RecordingSession), true
-	}
-	return nil, false
-}
-
-// RotateRecordingFile rotates a recording file (MediaMTX handles this automatically)
-func (rm *RecordingManager) RotateRecordingFile(ctx context.Context, sessionID string) error {
-	rm.logger.WithField("session_id", sessionID).Info("Recording rotation requested - MediaMTX handles this automatically")
-
-	// MediaMTX automatically rotates recording files based on configuration
-	// This is a no-op for MediaMTX-based recording
 	return nil
 }
 
@@ -208,7 +171,7 @@ func (rm *RecordingManager) RotateRecordingFile(ctx context.Context, sessionID s
 func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
 	rm.logger.WithField("filename", filename).Info("Getting recording info")
 
-	// For MediaMTX-based recording, we would query the MediaMTX API
+	// TODO:For MediaMTX-based recording, we would query the MediaMTX API
 	// For now, return basic file metadata
 	return &FileMetadata{
 		FileName:   filename,
@@ -218,7 +181,7 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 	}, nil
 }
 
-// DeleteRecording deletes a recording segment via MediaMTX API
+// DeleteRecording deletes a recording file via MediaMTX API
 func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string) error {
 	rm.logger.WithField("filename", filename).Info("Deleting recording via MediaMTX API")
 
@@ -227,133 +190,58 @@ func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string
 		return fmt.Errorf("filename cannot be empty")
 	}
 
-	// Parse filename to extract path and segment info
-	// Expected format: {path}_segment_{index}.{ext} (e.g., "camera0_segment_2.mp4")
-	pathName, segmentStart, err := rm.parseRecordingFilename(filename)
-	if err != nil {
-		rm.logger.WithError(err).WithField("filename", filename).Error("Failed to parse recording filename")
-		return fmt.Errorf("invalid recording filename format: %w", err)
+	// For now, return an error indicating this feature needs MediaMTX API investigation
+	// The complex filename parsing was over-engineered and fragile
+	return fmt.Errorf("recording deletion not yet implemented - requires MediaMTX API investigation")
+}
+
+// StopRecording stops recording by disabling the record flag in MediaMTX
+func (rm *RecordingManager) StopRecording(ctx context.Context, device string) error {
+	// Convert camera identifier to device path for validation
+	devicePath, exists := rm.pathManager.GetDevicePathForCamera(device)
+	if !exists {
+		return fmt.Errorf("camera '%s' not found or not accessible", device)
 	}
 
-	// Call MediaMTX API to delete the segment
-	endpoint := fmt.Sprintf("/v3/recordings/deletesegment?path=%s&start=%s", pathName, segmentStart)
-	err = rm.client.Delete(ctx, endpoint)
+	// Use camera identifier as MediaMTX path name
+	pathName := device
+
+	rm.logger.WithFields(logging.Fields{
+		"device":      device,
+		"device_path": devicePath,
+		"path_name":   pathName,
+	}).Info("Stopping recording by disabling record flag in MediaMTX")
+
+	// Check if currently recording by querying MediaMTX
+	isRecording, err := rm.isPathRecording(ctx, pathName)
 	if err != nil {
-		rm.logger.WithError(err).WithFields(logging.Fields{
-			"filename": filename,
-			"path":     pathName,
-			"start":    segmentStart,
-		}).Error("Failed to delete recording segment via MediaMTX API")
-		return fmt.Errorf("failed to delete recording segment: %w", err)
+		return fmt.Errorf("failed to check recording status: %w", err)
+	}
+	if !isRecording {
+		return fmt.Errorf("path %s is not currently recording", pathName)
+	}
+
+	// Stop RTSP keepalive reader first
+	rm.stopRTSPKeepalive(pathName)
+
+	// Disable recording by patching the path configuration
+	err = rm.disableRecordingOnPath(ctx, pathName)
+	if err != nil {
+		return fmt.Errorf("failed to disable recording on path: %w", err)
+	}
+
+	// Cancel any auto-stop timer
+	if timer, exists := rm.timers.LoadAndDelete(device); exists {
+		timer.(*time.Timer).Stop()
+		rm.logger.WithField("device", device).Debug("Cancelled auto-stop timer")
 	}
 
 	rm.logger.WithFields(logging.Fields{
-		"filename": filename,
-		"path":     pathName,
-		"start":    segmentStart,
-	}).Info("Recording segment deleted successfully via MediaMTX API")
+		"path_name": pathName,
+		"device":    devicePath,
+	}).Info("Recording stopped successfully")
 
 	return nil
-}
-
-// parseRecordingFilename extracts path and segment start time from filename
-// Expected format: {path}_segment_{index}.{ext} -> needs to map to actual segment start time
-func (rm *RecordingManager) parseRecordingFilename(filename string) (pathName, segmentStart string, err error) {
-	// Remove extension
-	nameWithoutExt := strings.TrimSuffix(filename, filepath.Ext(filename))
-
-	// Split by "_segment_"
-	parts := strings.Split(nameWithoutExt, "_segment_")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("filename must be in format {path}_segment_{index}.{ext}")
-	}
-
-	pathName = parts[0]
-	segmentIndexStr := parts[1]
-
-	// Convert segment index to int
-	segmentIndex, err := fmt.Sscanf(segmentIndexStr, "%d", new(int))
-	if err != nil || segmentIndex != 1 {
-		return "", "", fmt.Errorf("invalid segment index: %s", segmentIndexStr)
-	}
-
-	// Get actual recording data to find segment start time
-	recording, err := rm.getRecordingByName(context.Background(), pathName)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get recording data: %w", err)
-	}
-
-	// Extract segment start time
-	segmentIdx, _ := fmt.Sscanf(segmentIndexStr, "%d", new(int))
-	if segmentIdx < 0 || segmentIdx >= len(recording.Segments) {
-		return "", "", fmt.Errorf("segment index %d out of range", segmentIdx)
-	}
-
-	segmentStart = recording.Segments[segmentIdx].Start
-	return pathName, segmentStart, nil
-}
-
-// getRecordingByName gets recording data by name (helper for deletion)
-func (rm *RecordingManager) getRecordingByName(ctx context.Context, name string) (*MediaMTXRecording, error) {
-	endpoint := fmt.Sprintf("/v3/recordings/get/%s", name)
-	data, err := rm.client.Get(ctx, endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get recording from MediaMTX: %w", err)
-	}
-
-	var recording MediaMTXRecording
-	if err := json.Unmarshal(data, &recording); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal recording data: %w", err)
-	}
-
-	return &recording, nil
-}
-
-// getSessionIDByDevice retrieves session ID by device path
-func (rm *RecordingManager) getSessionIDByDevice(device string) (string, bool) {
-	if sessionID, exists := rm.deviceToSession.Load(device); exists {
-		return sessionID.(string), true
-	}
-	return "", false
-}
-
-// StopRecording stops a recording session
-func (rm *RecordingManager) StopRecording(ctx context.Context, devicePath string) error {
-	rm.logger.WithField("device_path", devicePath).Info("Stopping MediaMTX path-based recording")
-
-	// Check if device is recording - lock-free read with sync.Map
-	if _, exists := rm.deviceToSession.Load(devicePath); !exists {
-		return fmt.Errorf("device %s is not currently recording", devicePath)
-	}
-
-	// Disable recording but keep path alive for streaming
-	err := rm.streamManager.DisableRecording(ctx, devicePath)
-	if err != nil {
-		rm.logger.WithError(err).WithField("device_path", devicePath).Warn("Failed to disable recording")
-		return fmt.Errorf("failed to disable recording: %w", err)
-	}
-
-	// Remove from device mapping - lock-free operation with sync.Map
-	rm.deviceToSession.Delete(devicePath)
-
-	rm.logger.WithFields(logging.Fields{
-		"device": devicePath,
-	}).Info("MediaMTX path-based recording stopped successfully")
-
-	return nil
-}
-
-// ListRecordingSessions returns all active recording sessions
-func (rm *RecordingManager) ListRecordingSessions() []*RecordingSession {
-	var sessions []*RecordingSession
-
-	// Iterate over sync.Map - lock-free operation
-	rm.sessions.Range(func(key, value interface{}) bool {
-		sessions = append(sessions, value.(*RecordingSession))
-		return true // Continue iteration
-	})
-
-	return sessions
 }
 
 // GetRecordingsList retrieves recordings from MediaMTX API
@@ -409,7 +297,7 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRecording) []*FileMetadata {
 	var files []*FileMetadata
 
-	for i, segment := range recording.Segments {
+	for _, segment := range recording.Segments {
 		// Parse segment start time
 		startTime, err := time.Parse(time.RFC3339, segment.Start)
 		if err != nil {
@@ -417,8 +305,8 @@ func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRe
 			startTime = time.Now() // fallback
 		}
 
-		// Generate filename based on recording name and segment
-		filename := fmt.Sprintf("%s_segment_%d.%s", recording.Name, i, rm.getRecordFormat())
+		// Generate filename based on recording name and segment start time
+		filename := fmt.Sprintf("%s_%s", recording.Name, segment.Start)
 
 		// Create file metadata
 		fileMetadata := &FileMetadata{
@@ -495,7 +383,99 @@ func (rm *RecordingManager) getRecordFormat() string {
 	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
 	if err != nil {
 		rm.logger.WithError(err).Warn("Failed to get recording config, using default format")
-		return "mp4" // fallback
+		return "fmp4" // fallback to fmp4 as per STANAG decision
 	}
 	return recordingConfig.Format
+}
+
+// isPathRecording checks if a path is currently recording by querying MediaMTX
+func (rm *RecordingManager) isPathRecording(ctx context.Context, pathName string) (bool, error) {
+	endpoint := fmt.Sprintf("/v3/config/paths/get/%s", pathName)
+	data, err := rm.client.Get(ctx, endpoint)
+	if err != nil {
+		return false, fmt.Errorf("failed to get path config: %w", err)
+	}
+
+	var pathConfig map[string]interface{}
+	if err := json.Unmarshal(data, &pathConfig); err != nil {
+		return false, fmt.Errorf("failed to parse path config: %w", err)
+	}
+
+	record, ok := pathConfig["record"].(bool)
+	return ok && record, nil
+}
+
+// enableRecordingOnPath enables recording on a MediaMTX path
+func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, pathName string, options map[string]interface{}) error {
+	recordConfig := map[string]interface{}{
+		"record": true,
+	}
+
+	// Add optional recording settings from options
+	if format, ok := options["format"].(string); ok && format != "" {
+		recordConfig["recordFormat"] = format
+	} else {
+		recordConfig["recordFormat"] = "fmp4" // Default to fmp4
+	}
+
+	if duration, ok := options["duration"].(string); ok && duration != "" {
+		recordConfig["recordSegmentDuration"] = duration
+	}
+
+	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", pathName)
+	jsonData, err := json.Marshal(recordConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record config: %w", err)
+	}
+	return rm.client.Patch(ctx, endpoint, jsonData)
+}
+
+// disableRecordingOnPath disables recording on a MediaMTX path
+func (rm *RecordingManager) disableRecordingOnPath(ctx context.Context, pathName string) error {
+	recordConfig := map[string]interface{}{
+		"record": false,
+	}
+
+	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", pathName)
+	jsonData, err := json.Marshal(recordConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record config: %w", err)
+	}
+	return rm.client.Patch(ctx, endpoint, jsonData)
+}
+
+// startRTSPKeepalive starts an RTSP reader to keep on-demand sources alive
+func (rm *RecordingManager) startRTSPKeepalive(ctx context.Context, pathName string) error {
+	// Use the RecordingManager's own RTSPKeepaliveReader
+	return rm.keepaliveReader.StartKeepalive(ctx, pathName)
+}
+
+// stopRTSPKeepalive stops the RTSP reader for a path
+func (rm *RecordingManager) stopRTSPKeepalive(pathName string) {
+	rm.keepaliveReader.StopKeepalive(pathName)
+}
+
+// setAutoStopTimer sets up an auto-stop timer for a recording
+func (rm *RecordingManager) setAutoStopTimer(device string, duration time.Duration) {
+	timer := time.AfterFunc(duration, func() {
+		rm.logger.WithField("device", device).Info("Auto-stopping recording after duration")
+
+		// Stop recording using device (camera identifier) as path name
+		ctx := context.Background()
+		if err := rm.disableRecordingOnPath(ctx, device); err != nil {
+			rm.logger.WithError(err).WithField("device", device).Error("Failed to auto-stop recording")
+		}
+
+		// Stop RTSP keepalive
+		rm.stopRTSPKeepalive(device)
+
+		// Remove timer
+		rm.timers.Delete(device)
+	})
+
+	rm.timers.Store(device, timer)
+	rm.logger.WithFields(logging.Fields{
+		"device":   device,
+		"duration": duration,
+	}).Debug("Set auto-stop timer for recording")
 }

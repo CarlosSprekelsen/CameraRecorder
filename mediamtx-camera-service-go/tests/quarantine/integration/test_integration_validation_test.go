@@ -145,7 +145,7 @@ func TestDataFlowIntegration(t *testing.T) {
 				"max_duration":   5 * time.Second,
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, camera.Path, "", options)
+			session, err := env.Controller.StartRecording(ctx, camera.Path, "", options)
 			if err == nil {
 				require.NotNil(t, session, "Recording session should be created")
 				assert.Equal(t, camera.Path, session.Device, "Session device should match camera")
@@ -159,7 +159,7 @@ func TestDataFlowIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 
 				// Stop recording
-				err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+				err = env.Controller.StopRecording(ctx, session.ID)
 				require.NoError(t, err, "Should stop recording")
 			} else {
 				t.Logf("Recording flow test skipped: %v", err)
@@ -494,7 +494,7 @@ func TestReliabilityIntegration(t *testing.T) {
 				"max_duration":   3 * time.Second,
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, camera.Path, "", options)
+			session, err := env.Controller.StartRecording(ctx, camera.Path, "", options)
 			if err == nil {
 				require.NotNil(t, session, "Recording session should be created")
 
@@ -510,7 +510,7 @@ func TestReliabilityIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 
 				// Stop recording
-				err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+				err = env.Controller.StopRecording(ctx, session.ID)
 				require.NoError(t, err, "Should stop recording")
 
 				// Check active recording state after stop

@@ -83,8 +83,8 @@ func (s *WebSocketServer) assertResponseFields(method string, result interface{}
 		"get_stream_url":    {"device", "stream_name", "stream_url", "available"},
 		"get_stream_status": {"device", "stream_name", "status", "ready"},
 		"take_snapshot":     {"device", "filename", "status", "timestamp", "file_size"},
-		"start_recording":   {"device", "session_id", "filename", "status", "start_time", "duration", "format"},
-		"stop_recording":    {"device", "session_id", "status"},
+		"start_recording":   {"device", "filename", "status", "start_time", "format"},
+		"stop_recording":    {"device", "status"},
 		"start_streaming":   {"device", "stream_name", "stream_url", "status", "start_time"},
 		"stop_streaming":    {"device", "stream_name", "status", "end_time", "duration"},
 		"list_recordings":   {"files", "total", "limit", "offset"},
@@ -995,7 +995,7 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		}
 
 		// Start recording using MediaMTX controller with path-based recording
-		session, err := s.mediaMTXController.StartRecording(context.Background(), devicePath)
+		err = s.mediaMTXController.StartRecording(context.Background(), devicePath, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start recording: %v", err)
 		}
@@ -1005,15 +1005,15 @@ func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, cl
 		if f, ok := options["format"].(string); ok && f != "" {
 			format = f
 		}
-		
+
 		// Generate filename without extension (MediaMTX adds it based on format)
-		filename := fmt.Sprintf("%s_%s", devicePath, session.StartTime.Format("2006-01-02_15-04-05"))
-		
+		filename := fmt.Sprintf("%s_%s", devicePath, time.Now().Format("2006-01-02_15-04-05"))
+
 		response := map[string]interface{}{
-			"device":     session.Device,
+			"device":     devicePath,
 			"filename":   filename,
-			"status":     session.Status,
-			"start_time": session.StartTime.Format(time.RFC3339),
+			"status":     "RECORDING",
+			"start_time": time.Now().Format(time.RFC3339),
 			"format":     format,
 		}
 

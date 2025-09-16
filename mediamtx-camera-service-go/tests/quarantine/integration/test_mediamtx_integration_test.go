@@ -154,7 +154,7 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 				"max_duration":   10 * time.Second, // Short duration for testing
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+			session, err := env.Controller.StartRecording(ctx, device, "", options)
 			if err != nil {
 				t.Logf("Stream creation failed for %s: %v", device, err)
 				// This is expected if no camera is available
@@ -177,7 +177,7 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			// Stop recording
-			err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+			err = env.Controller.StopRecording(ctx, session.ID)
 			require.NoError(t, err, "Should stop recording")
 
 			t.Logf("Recording session stopped: %s", session.ID)
@@ -198,7 +198,7 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 			"max_duration":   5 * time.Second, // Very short duration for testing
 		}
 
-		session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+		session, err := env.Controller.StartRecording(ctx, device, "", options)
 		if err != nil {
 			t.Logf("Stream lifecycle test skipped: %v", err)
 			t.Skip("No camera available for stream lifecycle test")
@@ -220,7 +220,7 @@ func TestMediaMTXStreamIntegration(t *testing.T) {
 		}
 
 		// Stop recording
-		err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+		err = env.Controller.StopRecording(ctx, session.ID)
 		require.NoError(t, err, "Should stop recording")
 
 		t.Logf("Stream lifecycle - Session stopped: %s", session.ID)
@@ -254,7 +254,7 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 				"max_duration":   3 * time.Second,
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+			session, err := env.Controller.StartRecording(ctx, device, "", options)
 			if err != nil {
 				t.Logf("Basic recording test skipped: %v", err)
 				t.Skip("No camera available for basic recording test")
@@ -267,7 +267,7 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			// Stop recording
-			err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+			err = env.Controller.StopRecording(ctx, session.ID)
 			require.NoError(t, err, "Should stop recording")
 
 			t.Logf("Basic recording - Completed: %s", session.ID)
@@ -284,7 +284,7 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 				"max_duration":   3 * time.Second,
 			}
 
-			session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+			session, err := env.Controller.StartRecording(ctx, device, "", options)
 			if err != nil {
 				t.Logf("High quality recording test skipped: %v", err)
 				t.Skip("No camera available for high quality recording test")
@@ -297,7 +297,7 @@ func TestMediaMTXRecordingIntegration(t *testing.T) {
 			time.Sleep(2 * time.Second)
 
 			// Stop recording
-			err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+			err = env.Controller.StopRecording(ctx, session.ID)
 			require.NoError(t, err, "Should stop recording")
 
 			t.Logf("High quality recording - Completed: %s", session.ID)
@@ -400,7 +400,7 @@ func TestMediaMTXActiveRecordingTracking(t *testing.T) {
 			"max_duration":   3 * time.Second,
 		}
 
-		session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+		session, err := env.Controller.StartRecording(ctx, device, "", options)
 		if err != nil {
 			t.Logf("Active recording tracking test skipped: %v", err)
 			t.Skip("No camera available for active recording tracking test")
@@ -424,7 +424,7 @@ func TestMediaMTXActiveRecordingTracking(t *testing.T) {
 		time.Sleep(2 * time.Second)
 
 		// Stop recording
-		err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+		err = env.Controller.StopRecording(ctx, session.ID)
 		require.NoError(t, err, "Should stop recording")
 
 		// Check if device is no longer recording
@@ -570,7 +570,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 			"max_duration":   3 * time.Second, // Very short duration for testing
 		}
 
-		session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+		session, err := env.Controller.StartRecording(ctx, device, "", options)
 		if err != nil {
 			t.Logf("Duration control test skipped: %v", err)
 			t.Skip("No camera available for duration control test")
@@ -623,7 +623,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 					"max_duration":   test.duration,
 				}
 
-				session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+				session, err := env.Controller.StartRecording(ctx, device, "", options)
 				if err != nil {
 					t.Logf("Duration accuracy test skipped for %s: %v", test.name, err)
 					return
@@ -664,7 +664,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 			"max_duration":   30 * time.Second, // Long duration
 		}
 
-		session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+		session, err := env.Controller.StartRecording(ctx, device, "", options)
 		if err != nil {
 			t.Logf("Duration override test skipped: %v", err)
 			t.Skip("No camera available for duration override test")
@@ -677,7 +677,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 		time.Sleep(2 * time.Second)
 
 		// Stop recording before duration expires
-		err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+		err = env.Controller.StopRecording(ctx, session.ID)
 		require.NoError(t, err, "Should stop recording before duration expires")
 
 		// Verify recording stopped
@@ -713,7 +713,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 					options[k] = v
 				}
 
-				session, err := env.Controller.StartAdvancedRecording(ctx, device, "", options)
+				session, err := env.Controller.StartRecording(ctx, device, "", options)
 				if err != nil {
 					t.Logf("Duration format test skipped: %v", err)
 					return
@@ -726,7 +726,7 @@ func TestMediaMTXDurationControl(t *testing.T) {
 				time.Sleep(4 * time.Second)
 
 				// Try to stop recording (may already be stopped due to duration)
-				err = env.Controller.StopAdvancedRecording(ctx, session.ID)
+				err = env.Controller.StopRecording(ctx, session.ID)
 				if err != nil {
 					// If recording already stopped due to duration, that's expected
 					if strings.Contains(err.Error(), "session is not recording") {

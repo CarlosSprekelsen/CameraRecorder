@@ -70,11 +70,6 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	assert.Equal(t, "camera0", session.DevicePath)
 	assert.NotEmpty(t, session.FilePath, "File path should not be empty")
 
-	// Verify session is tracked
-	sessions := recordingManager.ListRecordingSessions()
-	assert.Len(t, sessions, 1)
-	assert.Equal(t, session.ID, sessions[0].ID)
-
 	// Clean up
 	err = recordingManager.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Recording should stop successfully")
@@ -106,57 +101,10 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording should start successfully")
 
-	// Verify session is active
-	sessions := recordingManager.ListRecordingSessions()
-	assert.Len(t, sessions, 1)
-
 	// Stop recording
 	err = recordingManager.StopRecording(ctx, session.ID)
 	require.NoError(t, err, "Recording should stop successfully")
 
-	// Verify session is no longer active
-	sessions = recordingManager.ListRecordingSessions()
-	assert.Len(t, sessions, 0)
-}
-
-// TestRecordingManager_ListRecordingSessions_ReqMTX002 tests session listing with real server
-func TestRecordingManager_ListRecordingSessions_ReqMTX002(t *testing.T) {
-	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
-
-	// Use shared recording manager from test helper
-	recordingManager := helper.GetRecordingManager()
-	require.NotNil(t, recordingManager)
-
-	ctx := context.Background()
-
-	// Create temporary output directory
-	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0700)
-	require.NoError(t, err)
-
-	// Initially no sessions
-	sessions := recordingManager.ListRecordingSessions()
-	assert.Len(t, sessions, 0)
-
-	// Start multiple recordings
-	options := map[string]interface{}{}
-	session1, err := recordingManager.StartRecording(ctx, "/dev/video0", options)
-	require.NoError(t, err)
-
-	session2, err := recordingManager.StartRecording(ctx, "/dev/video1", options)
-	require.NoError(t, err)
-
-	// Verify both sessions are tracked
-	sessions = recordingManager.ListRecordingSessions()
-	assert.Len(t, sessions, 2)
-
-	// Clean up
-	recordingManager.StopRecording(ctx, session1.ID)
-	recordingManager.StopRecording(ctx, session2.ID)
 }
 
 // TestRecordingManager_GetRecordingsListAPI_ReqMTX002 tests MediaMTX API integration with real server
@@ -395,50 +343,6 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	t.Log("MediaMTX API error handling validation passed")
 }
 
-// TestRecordingManager_GetRecordingSession_ReqMTX002 tests session retrieval with real server
-func TestRecordingManager_GetRecordingSession_ReqMTX002(t *testing.T) {
-	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
-
-	// Use shared recording manager from test helper
-	recordingManager := helper.GetRecordingManager()
-	require.NotNil(t, recordingManager)
-
-	ctx := context.Background()
-
-	// Create temporary output directory
-	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
-	err := os.MkdirAll(tempDir, 0700)
-	require.NoError(t, err)
-
-	devicePath := "/dev/video0"
-	outputPath := filepath.Join(tempDir, "test_recording_get.mp4")
-
-	// Start recording
-	options := map[string]interface{}{}
-	session, err := recordingManager.StartRecording(ctx, devicePath, options)
-	require.NoError(t, err, "Recording should start successfully")
-
-	// Verify session is tracked in the list
-	sessions := recordingManager.ListRecordingSessions()
-	require.Len(t, sessions, 1, "Should have one active session")
-
-	retrievedSession := sessions[0]
-	assert.Equal(t, session.ID, retrievedSession.ID)
-	assert.Equal(t, "camera0", retrievedSession.DevicePath)
-	assert.Equal(t, outputPath, retrievedSession.FilePath)
-
-	// Test that session is properly managed
-	assert.NotEmpty(t, session.ID, "Session should have an ID")
-	assert.NotNil(t, session.StartTime, "Session should have start time")
-
-	// Clean up
-	recordingManager.StopRecording(ctx, session.ID)
-}
-
 // TestRecordingManager_ErrorHandling_ReqMTX007 tests error scenarios with real server
 func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
@@ -511,16 +415,6 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 		return
 	}
 
-	// Verify recordings started successfully (some may fail due to device conflicts)
-	activeSessions := recordingManager.ListRecordingSessions()
-	assert.GreaterOrEqual(t, len(activeSessions), 0, "Should handle concurrent recordings gracefully")
-
-	// Clean up all sessions
-	for _, session := range sessions {
-		if session != nil {
-			recordingManager.StopRecording(ctx, session.ID)
-		}
-	}
 }
 
 // TestRecordingManager_StartRecordingWithSegments_ReqMTX002 tests segmented recording with real server
