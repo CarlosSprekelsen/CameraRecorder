@@ -61,6 +61,13 @@ type SnapshotSettings struct {
 
 // NewSnapshotManagerWithConfig creates a new snapshot manager with configuration integration
 func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager StreamManager, cameraMonitor camera.CameraMonitor, config *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) *SnapshotManager {
+	// Get full config for PathValidator
+	fullConfig := configManager.GetConfig()
+	var pathValidator *PathValidator
+	if fullConfig != nil {
+		pathValidator = NewPathValidator(fullConfig, logger)
+	}
+
 	return &SnapshotManager{
 		ffmpegManager: ffmpegManager,
 		streamManager: streamManager,
@@ -68,6 +75,7 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 		config:        config,
 		configManager: configManager,
 		logger:        logger,
+		pathValidator: pathValidator,
 		// snapshots: sync.Map is zero-initialized, no need to initialize
 		snapshotSettings: &SnapshotSettings{
 			Format:      "jpg",

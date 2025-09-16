@@ -341,18 +341,23 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, logger)
 
 	// Configure MediaMTX paths if override is enabled
-	logger.Info("Checking MediaMTX override configuration", "override_enabled", mediaMTXConfig.OverrideMediaMTXPaths, "recordings_path", mediaMTXConfig.RecordingsPath, "config_source", "ControllerWithConfigManager")
+	logger.Info("Checking MediaMTX override configuration", "override_enabled", mediaMTXConfig.OverrideMediaMTXPaths, "recordings_path", mediaMTXConfig.RecordingsPath, "snapshots_path", mediaMTXConfig.SnapshotsPath, "config_source", "ControllerWithConfigManager")
 	if mediaMTXConfig.OverrideMediaMTXPaths {
-		// Get recording configuration for path generation
+		// Get configuration for path generation
 		cfg := configManager.GetConfig()
 		if cfg != nil {
-			// Generate MediaMTX record path pattern
+			// Generate MediaMTX record path pattern for recordings
 			recordPath := GenerateRecordingPath(mediaMTXConfig, &cfg.Recording)
+
+			// Generate snapshot path pattern for snapshots (for logging/debugging)
+			snapshotPath := GenerateSnapshotPath(mediaMTXConfig, &cfg.Snapshots, "camera0") // Use generic device name for global config
 
 			// Configure MediaMTX global settings via API
 			globalConfig := map[string]interface{}{
 				"recordPath":   recordPath,
 				"recordFormat": cfg.Recording.RecordFormat,
+				// Note: MediaMTX doesn't have a global snapshot path setting
+				// Snapshots are handled per-path or via FFmpeg directly
 			}
 
 			// Convert to JSON for API call
@@ -371,6 +376,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 				logger.WithFields(logging.Fields{
 					"recordPath":   recordPath,
 					"recordFormat": cfg.Recording.RecordFormat,
+					"snapshotPath": snapshotPath,
 				}).Info("MediaMTX paths overridden successfully")
 			}
 		}

@@ -57,17 +57,15 @@ func NewPathValidator(config *config.Config, logger *logging.Logger) *PathValida
 // ValidateRecordingPath validates and returns a usable recording path
 func (pv *PathValidator) ValidateRecordingPath(ctx context.Context) (*PathValidationResult, error) {
 	primaryPath := pv.config.MediaMTX.RecordingsPath
-	fallbackPath := pv.config.Storage.FallbackPath
-
-	return pv.validatePathWithFallback(ctx, "recordings", primaryPath, fallbackPath)
+	// Use centralized path management - no fallback needed as paths are validated during config loading
+	return pv.validatePathWithFallback(ctx, "recordings", primaryPath, "")
 }
 
 // ValidateSnapshotPath validates and returns a usable snapshot path
 func (pv *PathValidator) ValidateSnapshotPath(ctx context.Context) (*PathValidationResult, error) {
 	primaryPath := pv.config.MediaMTX.SnapshotsPath
-	fallbackPath := filepath.Join(pv.config.Storage.FallbackPath, "snapshots")
-
-	return pv.validatePathWithFallback(ctx, "snapshots", primaryPath, fallbackPath)
+	// With centralized path management, no fallback needed - paths are validated during config loading
+	return pv.validatePathWithFallback(ctx, "snapshots", primaryPath, "")
 }
 
 // validatePathWithFallback attempts primary path, falls back if needed
